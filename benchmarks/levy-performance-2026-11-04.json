@@ -1,0 +1,126 @@
+{
+  "method": "Independent bundled before/after levy modules against the actual captured live-game snapshot; only mass-levy.ts differs. Two alternating rounds, same returned statuses required, no simulation advancement. Warm calls precede timing. Node timings, not live-browser FPS.",
+  "cpu": "Apple M3 Pro",
+  "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+  "runs": [
+    {
+      "round": 1,
+      "name": "before",
+      "exact": {
+        "samples": 12,
+        "meanMs": 53.41388891666663,
+        "medianMs": 51.71825000000001,
+        "p95Ms": 73.15362499999992
+      },
+      "status": {
+        "active": 0,
+        "maximum": 82,
+        "available": 82,
+        "firstWages": 410,
+        "upkeep": 0,
+        "canLevy": true,
+        "reason": ""
+      }
+    },
+    {
+      "round": 1,
+      "name": "after",
+      "exact": {
+        "samples": 12,
+        "meanMs": 0.2779026666666482,
+        "medianMs": 0.25566699999990306,
+        "p95Ms": 0.6392499999999472
+      },
+      "status": {
+        "active": 0,
+        "maximum": 82,
+        "available": 82,
+        "firstWages": 410,
+        "upkeep": 0,
+        "canLevy": true,
+        "reason": ""
+      },
+      "cachedDisplay": {
+        "samples": 1200,
+        "meanMs": 0.006256875833335206,
+        "medianMs": 0.005665999999791893,
+        "p95Ms": 0.007875000000012733
+      },
+      "refreshedDisplay": {
+        "samples": 12,
+        "meanMs": 0.27134025000003703,
+        "medianMs": 0.2377080000001115,
+        "p95Ms": 0.5332500000001801
+      }
+    },
+    {
+      "round": 2,
+      "name": "after",
+      "exact": {
+        "samples": 12,
+        "meanMs": 0.2307780833333292,
+        "medianMs": 0.22316699999987577,
+        "p95Ms": 0.3171670000001541
+      },
+      "status": {
+        "active": 0,
+        "maximum": 82,
+        "available": 82,
+        "firstWages": 410,
+        "upkeep": 0,
+        "canLevy": true,
+        "reason": ""
+      },
+      "cachedDisplay": {
+        "samples": 1200,
+        "meanMs": 0.005358444166669756,
+        "medianMs": 0.005125000000134605,
+        "p95Ms": 0.006750000000010914
+      },
+      "refreshedDisplay": {
+        "samples": 12,
+        "meanMs": 0.22128825000000538,
+        "medianMs": 0.21824999999989814,
+        "p95Ms": 0.2492090000000644
+      }
+    },
+    {
+      "round": 2,
+      "name": "before",
+      "exact": {
+        "samples": 12,
+        "meanMs": 51.97456225000004,
+        "medianMs": 51.915083000000095,
+        "p95Ms": 53.386999999999944
+      },
+      "status": {
+        "active": 0,
+        "maximum": 82,
+        "available": 82,
+        "firstWages": 410,
+        "upkeep": 0,
+        "canLevy": true,
+        "reason": ""
+      }
+    }
+  ],
+  "pass": true,
+  "summary": {
+    "beforeExactMeanMs": 52.694225583333335,
+    "afterExactMeanMs": 0.2543403749999887,
+    "afterCachedDisplayMeanMs": 0.005807660000002481,
+    "afterRefreshedDisplayMeanMs": 0.24631425000002122,
+    "exactSpeedup": 207.1799476718381
+  },
+  "validation": {
+    "build": "npm run build passed (WASM, TypeScript, Vite)",
+    "tests": "9 levy performance regression tests passed; 53 existing supply/levy, navigation and formation-control tests passed.",
+    "statusParity": true
+  },
+  "behavior": "HUD eligible-worker count cached for one game second, refreshed earlier for topology, membership, forbidden or diplomacy changes. Budget, population and Leader gates stay live. Actual recruitment always validates fresh. No levy balance/rule changes.",
+  "productionSourceSha256": {
+    "src/game/mass-levy.ts": "bc0e7c9b6cd4f41419fb0706b8020de306e102c7141e4be3a050b5afa27683a9",
+    "src/main.ts": "ae55ced17fabb1b8ed3c21ff84dfed2fd7c92d6492d164901d46b4da4e38118d"
+  },
+  "artifacts": "scratch/2026-11-04-levy-optimization"
+}

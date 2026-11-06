@@ -1,0 +1,17 @@
+@font-face {
+  font-family: 'Pixel Operator';
+  src: url('/assets/fonts/pixel-operator/PixelOperator.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Pixel Operator';
+  src: url('/assets/fonts/pixel-operator/PixelOperator-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+}
+
+:root { --game-font: 'Pixel Operator'; }

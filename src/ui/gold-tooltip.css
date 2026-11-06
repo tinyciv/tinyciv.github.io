@@ -1,0 +1,25 @@
+.resource.gold { pointer-events: auto; }
+.resource.gold:focus-visible { outline: 2px solid #e6c479; outline-offset: -4px; border-radius: 3px; }
+.gold-flow-tooltip {
+  position: fixed; z-index: 8; width: 304px; max-width: calc(100vw - 16px); padding: 12px 14px;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; pointer-events: auto;
+  border: 1px solid #b18e50; border-radius: 4px 4px 8px 4px;
+  background: linear-gradient(135deg, #1c2b31f7, #101a20fa); box-shadow: inset 0 0 0 1px #070e13, inset 0 2px #d5b77824, 0 4px 12px #0008;
+  color: #e6ddc5; font: 15px/18px var(--game-font); font-variant-numeric: tabular-nums; user-select: none;
+  scrollbar-width: thin; scrollbar-color: #846b43 #0d181d;
+}
+.gold-flow-tooltip[hidden] { display: none; }
+.gold-flow-header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #78603b; }
+.gold-flow-header strong { color: #efd392; font-size: 19px; font-weight: 600; }
+.gold-flow-header span { color: #aaa997; font-size: 12px; }
+.gold-flow-section { margin-top: 9px; }
+.gold-flow-heading { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+.gold-flow-heading > span { color: #ddd4b8; }.gold-flow-heading strong { font-weight: 600; }
+.gold-flow-rows { margin: 4px 0 0; }.gold-flow-rows:empty { display: none; }
+.gold-flow-row { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0 1px 8px; font-size: 14px; line-height: 17px; }
+.gold-flow-row dt { min-width: 0; color: #bcbfae; }.gold-flow-row dd { margin: 0; flex: none; }
+.gold-flow-section.is-income dd, .gold-flow-section.is-income strong, .gold-flow-net .is-positive { color: #a7ce8c; }
+.gold-flow-section.is-outlay dd, .gold-flow-section.is-outlay strong, .gold-flow-net .is-negative { color: #e5aa87; }
+.gold-flow-net { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #78603b; color: #efd392; font-size: 17px; }
+.gold-flow-net strong { font-weight: 600; }
+@media(max-width: 600px) { .gold-flow-tooltip { width: 278px; padding: 10px 12px; }.gold-flow-header span { font-size: 11px; } }

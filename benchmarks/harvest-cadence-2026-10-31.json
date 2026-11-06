@@ -1,0 +1,1793 @@
+{
+  "date": "2026-10-31",
+  "change": "Double the harvest period30\u219260 game seconds and per-tile base batch0.4\u21920.8, keeping per-second production and per30s economy rates unchanged. Preserve11s spoilage, staggered farms and physical collection. Protect the first harvest from premature120s inactivity.",
+  "source": {
+    "comparison": "Cadence-only comparison: both variants use the same frozen engine, including unrelated concurrent work. The control changes only FIELD_HARVEST_SECONDS from60 to30; batch amount and economy conversion derive from that constant. This isolates harvest cadence from concurrent forbidden-zone implementation. Wall time is diagnostic only.",
+    "differingFiles": [
+      "src/game/farms.ts"
+    ],
+    "farmsSha256": {
+      "control": "ef48e604cd162423fced7ccaabbdd3abc9b17cc3d5f8ca52d9bfa4927a65b9da",
+      "current": "5b915bbf6b2eb8f3ce922faa4d71dd9d8f6123d3c375f5ac1daec8f9eaf4b35e"
+    },
+    "currentSourceManifestSha256": "d4074b4a587c008c8ce84d879cde5346ad578e8a5f987b676cb8e529d64c0a6a"
+  },
+  "controlled": {
+    "methodology": "Same fixed grassland fixtures, palace road ring and WASM bytes. Each variant initializes its own normal staggered harvest schedule, then runs 180 warmup seconds by default and 600 measured seconds at dt 0.1. Farms, housing and population are fixed; large food reserve prevents starvation and a negative birth accumulator prevents births. Expansion, raids and wildlife are absent. Benchmark-only recordTraffic bypass locks the road network; harvest, expiry, dispatch, movement, collision, pickup, delivery and farm inactivity use production code. Every findPath entry is counted, including JavaScript/native requests, failures and recursive fallbacks. These are pathfinder API calls, not just WASM searches. Per-step outside/moving counts measure simulated courier activity, not viewport-visible sprites or FPS. Wall time includes instrumentation and is diagnostic only.",
+    "roots": {
+      "baseline": "/tmp/btv-harvest-20261031/interval30",
+      "current": "/tmp/btv-harvest-20261031/current"
+    },
+    "bundles": {
+      "baseline": "79f547d18a85f42a0c0ef7130859dc6b3a1f93ab1d3bb7bf642425e6f3e1894c",
+      "current": "619d9afd017d0333b3d2b3dfb6195e085b7651a79efd0609d2a6c1506783d418"
+    },
+    "node": "v25.9.0",
+    "cpu": "Apple M3 Pro",
+    "navigationWasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf",
+    "dt": 0.1,
+    "warmupSeconds": 180,
+    "measuredSeconds": 600,
+    "rounds": 1,
+    "explicitPreWarmupGc": true,
+    "scenes": {
+      "small": {
+        "population": 20,
+        "farms": 15,
+        "initialFixtureSha256": "1da6a797386a5102f633c8d6e0c07d48a5aad739b188598197373da07f67bb08",
+        "runs": [
+          {
+            "name": "baseline",
+            "round": 1,
+            "initial": {
+              "harvestSeconds": 30,
+              "foodPerTilePerHarvest": 0.4,
+              "spoilSeconds": 11,
+              "population": 20,
+              "farms": 15,
+              "fields": 60,
+              "buildings": 28,
+              "collectors": 15,
+              "roads": 12,
+              "housing": 0,
+              "harvestSchedule": [
+                {
+                  "camp": 11,
+                  "nextHarvest": 53.951216287465314
+                },
+                {
+                  "camp": 12,
+                  "nextHarvest": 42.492235949962165
+                },
+                {
+                  "camp": 13,
+                  "nextHarvest": 31.033255612459012
+                },
+                {
+                  "camp": 14,
+                  "nextHarvest": 49.57427527495586
+                },
+                {
+                  "camp": 15,
+                  "nextHarvest": 38.1152949374527
+                },
+                {
+                  "camp": 16,
+                  "nextHarvest": 56.65631459994955
+                },
+                {
+                  "camp": 17,
+                  "nextHarvest": 45.197334262446404
+                },
+                {
+                  "camp": 18,
+                  "nextHarvest": 33.73835392494325
+                },
+                {
+                  "camp": 19,
+                  "nextHarvest": 52.27937358744009
+                },
+                {
+                  "camp": 20,
+                  "nextHarvest": 40.82039324993694
+                },
+                {
+                  "camp": 21,
+                  "nextHarvest": 59.36141291243379
+                },
+                {
+                  "camp": 22,
+                  "nextHarvest": 47.902432574930636
+                },
+                {
+                  "camp": 23,
+                  "nextHarvest": 36.44345223742748
+                },
+                {
+                  "camp": 24,
+                  "nextHarvest": 54.98447189992433
+                },
+                {
+                  "camp": 25,
+                  "nextHarvest": 43.52549156242118
+                }
+              ]
+            },
+            "measuredGameSeconds": 600.0000000001147,
+            "averageOutsideCollectors": 2.412,
+            "averageMovingCollectors": 2.2121666666666666,
+            "maxOutsideCollectors": 4,
+            "departures": 299,
+            "deliveredFood": 480.0000000000043,
+            "deliveredPer30": 23.999999999995627,
+            "pathfinderCalls": 1199,
+            "native": {
+              "enabled": true,
+              "ready": true,
+              "searches": 0,
+              "unsupported": 1199,
+              "instances": 1,
+              "unavailable": 0
+            },
+            "wallMs": 773.082541,
+            "final": {
+              "time": 780.0000000001088,
+              "population": 20,
+              "units": 20,
+              "fields": 60,
+              "fallowFarms": 0
+            }
+          },
+          {
+            "name": "current",
+            "round": 1,
+            "initial": {
+              "harvestSeconds": 60,
+              "foodPerTilePerHarvest": 0.8,
+              "spoilSeconds": 11,
+              "population": 20,
+              "farms": 15,
+              "fields": 60,
+              "buildings": 28,
+              "collectors": 15,
+              "roads": 12,
+              "housing": 0,
+              "harvestSchedule": [
+                {
+                  "camp": 11,
+                  "nextHarvest": 107.90243257493063
+                },
+                {
+                  "camp": 12,
+                  "nextHarvest": 84.98447189992433
+                },
+                {
+                  "camp": 13,
+                  "nextHarvest": 62.066511224918024
+                },
+                {
+                  "camp": 14,
+                  "nextHarvest": 99.14855054991172
+                },
+                {
+                  "camp": 15,
+                  "nextHarvest": 76.2305898749054
+                },
+                {
+                  "camp": 16,
+                  "nextHarvest": 113.3126291998991
+                },
+                {
+                  "camp": 17,
+                  "nextHarvest": 90.39466852489281
+                },
+                {
+                  "camp": 18,
+                  "nextHarvest": 67.4767078498865
+                },
+                {
+                  "camp": 19,
+                  "nextHarvest": 104.55874717488018
+                },
+                {
+                  "camp": 20,
+                  "nextHarvest": 81.64078649987388
+                },
+                {
+                  "camp": 21,
+                  "nextHarvest": 118.72282582486758
+                },
+                {
+                  "camp": 22,
+                  "nextHarvest": 95.80486514986127
+                },
+                {
+                  "camp": 23,
+                  "nextHarvest": 72.88690447485496
+                },
+                {
+                  "camp": 24,
+                  "nextHarvest": 109.96894379984866
+                },
+                {
+                  "camp": 25,
+                  "nextHarvest": 87.05098312484236
+                }
+              ]
+            },
+            "measuredGameSeconds": 600.0000000001147,
+            "averageOutsideCollectors": 1.201,
+            "averageMovingCollectors": 1.101,
+            "maxOutsideCollectors": 3,
+            "departures": 150,
+            "deliveredFood": 479.99999999999943,
+            "deliveredPer30": 23.99999999999538,
+            "pathfinderCalls": 600,
+            "native": {
+              "enabled": true,
+              "ready": true,
+              "searches": 0,
+              "unsupported": 600,
+              "instances": 1,
+              "unavailable": 0
+            },
+            "wallMs": 677.239417,
+            "final": {
+              "time": 780.0000000001088,
+              "population": 20,
+              "units": 20,
+              "fields": 60,
+              "fallowFarms": 0
+            }
+          }
+        ],
+        "summary": {
+          "averageOutsideCollectors": {
+            "baseline": 2.412,
+            "current": 1.201,
+            "currentToBaseline": 0.4979270315091211
+          },
+          "averageMovingCollectors": {
+            "baseline": 2.2121666666666666,
+            "current": 1.101,
+            "currentToBaseline": 0.4977021020116025
+          },
+          "departures": {
+            "baseline": 299,
+            "current": 150,
+            "currentToBaseline": 0.5016722408026756
+          },
+          "pathfinderCalls": {
+            "baseline": 1199,
+            "current": 600,
+            "currentToBaseline": 0.5004170141784821
+          },
+          "deliveredPer30": {
+            "baseline": 23.999999999995627,
+            "current": 23.99999999999538,
+            "currentToBaseline": 0.9999999999999898
+          }
+        }
+      },
+      "large": {
+        "population": 160,
+        "farms": 150,
+        "initialFixtureSha256": "83ed567dc2145c512723b5e90259a96c8901cadb6156a18c86bcd7925e26dc10",
+        "runs": [
+          {
+            "name": "baseline",
+            "round": 1,
+            "initial": {
+              "harvestSeconds": 30,
+              "foodPerTilePerHarvest": 0.4,
+              "spoilSeconds": 11,
+              "population": 160,
+              "farms": 150,
+              "fields": 600,
+              "buildings": 163,
+              "collectors": 150,
+              "roads": 12,
+              "housing": 0,
+              "harvestSchedule": [
+                {
+                  "camp": 11,
+                  "nextHarvest": 53.951216287465314
+                },
+                {
+                  "camp": 12,
+                  "nextHarvest": 42.492235949962165
+                },
+                {
+                  "camp": 13,
+                  "nextHarvest": 31.033255612459012
+                },
+                {
+                  "camp": 14,
+                  "nextHarvest": 49.57427527495586
+                },
+                {
+                  "camp": 15,
+                  "nextHarvest": 38.1152949374527
+                },
+                {
+                  "camp": 16,
+                  "nextHarvest": 56.65631459994955
+                },
+                {
+                  "camp": 17,
+                  "nextHarvest": 45.197334262446404
+                },
+                {
+                  "camp": 18,
+                  "nextHarvest": 33.73835392494325
+                },
+                {
+                  "camp": 19,
+                  "nextHarvest": 52.27937358744009
+                },
+                {
+                  "camp": 20,
+                  "nextHarvest": 40.82039324993694
+                },
+                {
+                  "camp": 21,
+                  "nextHarvest": 59.36141291243379
+                },
+                {
+                  "camp": 22,
+                  "nextHarvest": 47.902432574930636
+                },
+                {
+                  "camp": 23,
+                  "nextHarvest": 36.44345223742748
+                },
+                {
+                  "camp": 24,
+                  "nextHarvest": 54.98447189992433
+                },
+                {
+                  "camp": 25,
+                  "nextHarvest": 43.52549156242118
+                },
+                {
+                  "camp": 26,
+                  "nextHarvest": 32.066511224918024
+                },
+                {
+                  "camp": 27,
+                  "nextHarvest": 50.607530887414924
+                },
+                {
+                  "camp": 28,
+                  "nextHarvest": 39.14855054991172
+                },
+                {
+                  "camp": 29,
+                  "nextHarvest": 57.68957021240851
+                },
+                {
+                  "camp": 30,
+                  "nextHarvest": 46.23058987490541
+                },
+                {
+                  "camp": 31,
+                  "nextHarvest": 34.77160953740231
+                },
+                {
+                  "camp": 32,
+                  "nextHarvest": 53.312629199899106
+                },
+                {
+                  "camp": 33,
+                  "nextHarvest": 41.8536488623959
+                },
+                {
+                  "camp": 34,
+                  "nextHarvest": 30.3946685248928
+                },
+                {
+                  "camp": 35,
+                  "nextHarvest": 48.9356881873897
+                },
+                {
+                  "camp": 36,
+                  "nextHarvest": 37.476707849886495
+                },
+                {
+                  "camp": 37,
+                  "nextHarvest": 56.01772751238329
+                },
+                {
+                  "camp": 38,
+                  "nextHarvest": 44.55874717488019
+                },
+                {
+                  "camp": 39,
+                  "nextHarvest": 33.09976683737709
+                },
+                {
+                  "camp": 40,
+                  "nextHarvest": 51.64078649987388
+                },
+                {
+                  "camp": 41,
+                  "nextHarvest": 40.18180616237068
+                },
+                {
+                  "camp": 42,
+                  "nextHarvest": 58.72282582486758
+                },
+                {
+                  "camp": 43,
+                  "nextHarvest": 47.26384548736448
+                },
+                {
+                  "camp": 44,
+                  "nextHarvest": 35.80486514986127
+                },
+                {
+                  "camp": 45,
+                  "nextHarvest": 54.345884812358065
+                },
+                {
+                  "camp": 46,
+                  "nextHarvest": 42.886904474854965
+                },
+                {
+                  "camp": 47,
+                  "nextHarvest": 31.427924137351866
+                },
+                {
+                  "camp": 48,
+                  "nextHarvest": 49.96894379984866
+                },
+                {
+                  "camp": 49,
+                  "nextHarvest": 38.50996346234545
+                },
+                {
+                  "camp": 50,
+                  "nextHarvest": 57.050983124842354
+                },
+                {
+                  "camp": 51,
+                  "nextHarvest": 45.592002787339254
+                },
+                {
+                  "camp": 52,
+                  "nextHarvest": 34.13302244983605
+                },
+                {
+                  "camp": 53,
+                  "nextHarvest": 52.67404211233284
+                },
+                {
+                  "camp": 54,
+                  "nextHarvest": 41.21506177482985
+                },
+                {
+                  "camp": 55,
+                  "nextHarvest": 59.75608143732664
+                },
+                {
+                  "camp": 56,
+                  "nextHarvest": 48.297101099823436
+                },
+                {
+                  "camp": 57,
+                  "nextHarvest": 36.83812076232023
+                },
+                {
+                  "camp": 58,
+                  "nextHarvest": 55.379140424817024
+                },
+                {
+                  "camp": 59,
+                  "nextHarvest": 43.92016008731403
+                },
+                {
+                  "camp": 60,
+                  "nextHarvest": 32.461179749810825
+                },
+                {
+                  "camp": 61,
+                  "nextHarvest": 51.00219941230762
+                },
+                {
+                  "camp": 62,
+                  "nextHarvest": 39.543219074804625
+                },
+                {
+                  "camp": 63,
+                  "nextHarvest": 58.08423873730142
+                },
+                {
+                  "camp": 64,
+                  "nextHarvest": 46.62525839979821
+                },
+                {
+                  "camp": 65,
+                  "nextHarvest": 35.16627806229501
+                },
+                {
+                  "camp": 66,
+                  "nextHarvest": 53.7072977247918
+                },
+                {
+                  "camp": 67,
+                  "nextHarvest": 42.24831738728881
+                },
+                {
+                  "camp": 68,
+                  "nextHarvest": 30.7893370497856
+                },
+                {
+                  "camp": 69,
+                  "nextHarvest": 49.330356712282395
+                },
+                {
+                  "camp": 70,
+                  "nextHarvest": 37.8713763747794
+                },
+                {
+                  "camp": 71,
+                  "nextHarvest": 56.412396037276196
+                },
+                {
+                  "camp": 72,
+                  "nextHarvest": 44.95341569977299
+                },
+                {
+                  "camp": 73,
+                  "nextHarvest": 33.49443536226978
+                },
+                {
+                  "camp": 74,
+                  "nextHarvest": 52.03545502476658
+                },
+                {
+                  "camp": 75,
+                  "nextHarvest": 40.576474687263584
+                },
+                {
+                  "camp": 76,
+                  "nextHarvest": 59.11749434976038
+                },
+                {
+                  "camp": 77,
+                  "nextHarvest": 47.65851401225717
+                },
+                {
+                  "camp": 78,
+                  "nextHarvest": 36.19953367475418
+                },
+                {
+                  "camp": 79,
+                  "nextHarvest": 54.74055333725097
+                },
+                {
+                  "camp": 80,
+                  "nextHarvest": 43.281572999747766
+                },
+                {
+                  "camp": 81,
+                  "nextHarvest": 31.82259266224456
+                },
+                {
+                  "camp": 82,
+                  "nextHarvest": 50.363612324741354
+                },
+                {
+                  "camp": 83,
+                  "nextHarvest": 38.90463198723836
+                },
+                {
+                  "camp": 84,
+                  "nextHarvest": 57.445651649735154
+                },
+                {
+                  "camp": 85,
+                  "nextHarvest": 45.98667131223195
+                },
+                {
+                  "camp": 86,
+                  "nextHarvest": 34.527690974728955
+                },
+                {
+                  "camp": 87,
+                  "nextHarvest": 53.06871063722575
+                },
+                {
+                  "camp": 88,
+                  "nextHarvest": 41.60973029972254
+                },
+                {
+                  "camp": 89,
+                  "nextHarvest": 30.150749962219336
+                },
+                {
+                  "camp": 90,
+                  "nextHarvest": 48.69176962471613
+                },
+                {
+                  "camp": 91,
+                  "nextHarvest": 37.23278928721314
+                },
+                {
+                  "camp": 92,
+                  "nextHarvest": 55.77380894970993
+                },
+                {
+                  "camp": 93,
+                  "nextHarvest": 44.314828612206725
+                },
+                {
+                  "camp": 94,
+                  "nextHarvest": 32.85584827470373
+                },
+                {
+                  "camp": 95,
+                  "nextHarvest": 51.396867937200525
+                },
+                {
+                  "camp": 96,
+                  "nextHarvest": 39.93788759969732
+                },
+                {
+                  "camp": 97,
+                  "nextHarvest": 58.47890726219411
+                },
+                {
+                  "camp": 98,
+                  "nextHarvest": 47.01992692469091
+                },
+                {
+                  "camp": 99,
+                  "nextHarvest": 35.560946587187914
+                },
+                {
+                  "camp": 100,
+                  "nextHarvest": 54.10196624968471
+                },
+                {
+                  "camp": 101,
+                  "nextHarvest": 42.6429859121815
+                },
+                {
+                  "camp": 102,
+                  "nextHarvest": 31.18400557467851
+                },
+                {
+                  "camp": 103,
+                  "nextHarvest": 49.7250252371753
+                },
+                {
+                  "camp": 104,
+                  "nextHarvest": 38.266044899672096
+                },
+                {
+                  "camp": 105,
+                  "nextHarvest": 56.8070645621691
+                },
+                {
+                  "camp": 106,
+                  "nextHarvest": 45.34808422466568
+                },
+                {
+                  "camp": 107,
+                  "nextHarvest": 33.88910388716269
+                },
+                {
+                  "camp": 108,
+                  "nextHarvest": 52.4301235496597
+                },
+                {
+                  "camp": 109,
+                  "nextHarvest": 40.97114321215628
+                },
+                {
+                  "camp": 110,
+                  "nextHarvest": 59.512162874653285
+                },
+                {
+                  "camp": 111,
+                  "nextHarvest": 48.053182537149866
+                },
+                {
+                  "camp": 112,
+                  "nextHarvest": 36.59420219964687
+                },
+                {
+                  "camp": 113,
+                  "nextHarvest": 55.13522186214388
+                },
+                {
+                  "camp": 114,
+                  "nextHarvest": 43.67624152464046
+                },
+                {
+                  "camp": 115,
+                  "nextHarvest": 32.21726118713747
+                },
+                {
+                  "camp": 116,
+                  "nextHarvest": 50.75828084963405
+                },
+                {
+                  "camp": 117,
+                  "nextHarvest": 39.299300512131055
+                },
+                {
+                  "camp": 118,
+                  "nextHarvest": 57.84032017462806
+                },
+                {
+                  "camp": 119,
+                  "nextHarvest": 46.38133983712464
+                },
+                {
+                  "camp": 120,
+                  "nextHarvest": 34.92235949962165
+                },
+                {
+                  "camp": 121,
+                  "nextHarvest": 53.463379162118656
+                },
+                {
+                  "camp": 122,
+                  "nextHarvest": 42.00439882461524
+                },
+                {
+                  "camp": 123,
+                  "nextHarvest": 30.545418487112244
+                },
+                {
+                  "camp": 124,
+                  "nextHarvest": 49.08643814960925
+                },
+                {
+                  "camp": 125,
+                  "nextHarvest": 37.62745781210583
+                },
+                {
+                  "camp": 126,
+                  "nextHarvest": 56.16847747460284
+                },
+                {
+                  "camp": 127,
+                  "nextHarvest": 44.70949713709942
+                },
+                {
+                  "camp": 128,
+                  "nextHarvest": 33.250516799596426
+                },
+                {
+                  "camp": 129,
+                  "nextHarvest": 51.79153646209343
+                },
+                {
+                  "camp": 130,
+                  "nextHarvest": 40.33255612459001
+                },
+                {
+                  "camp": 131,
+                  "nextHarvest": 58.87357578708702
+                },
+                {
+                  "camp": 132,
+                  "nextHarvest": 47.4145954495836
+                },
+                {
+                  "camp": 133,
+                  "nextHarvest": 35.95561511208061
+                },
+                {
+                  "camp": 134,
+                  "nextHarvest": 54.496634774577615
+                },
+                {
+                  "camp": 135,
+                  "nextHarvest": 43.037654437074195
+                },
+                {
+                  "camp": 136,
+                  "nextHarvest": 31.578674099571202
+                },
+                {
+                  "camp": 137,
+                  "nextHarvest": 50.11969376206821
+                },
+                {
+                  "camp": 138,
+                  "nextHarvest": 38.66071342456479
+                },
+                {
+                  "camp": 139,
+                  "nextHarvest": 57.2017330870618
+                },
+                {
+                  "camp": 140,
+                  "nextHarvest": 45.742752749558804
+                },
+                {
+                  "camp": 141,
+                  "nextHarvest": 34.283772412055384
+                },
+                {
+                  "camp": 142,
+                  "nextHarvest": 52.82479207455239
+                },
+                {
+                  "camp": 143,
+                  "nextHarvest": 41.36581173704897
+                },
+                {
+                  "camp": 144,
+                  "nextHarvest": 59.90683139954598
+                },
+                {
+                  "camp": 145,
+                  "nextHarvest": 48.447851062042986
+                },
+                {
+                  "camp": 146,
+                  "nextHarvest": 36.98887072453957
+                },
+                {
+                  "camp": 147,
+                  "nextHarvest": 55.52989038703657
+                },
+                {
+                  "camp": 148,
+                  "nextHarvest": 44.070910049533154
+                },
+                {
+                  "camp": 149,
+                  "nextHarvest": 32.61192971203016
+                },
+                {
+                  "camp": 150,
+                  "nextHarvest": 51.15294937452717
+                },
+                {
+                  "camp": 151,
+                  "nextHarvest": 39.69396903702375
+                },
+                {
+                  "camp": 152,
+                  "nextHarvest": 58.234988699520756
+                },
+                {
+                  "camp": 153,
+                  "nextHarvest": 46.77600836201776
+                },
+                {
+                  "camp": 154,
+                  "nextHarvest": 35.31702802451434
+                },
+                {
+                  "camp": 155,
+                  "nextHarvest": 53.85804768701135
+                },
+                {
+                  "camp": 156,
+                  "nextHarvest": 42.39906734950836
+                },
+                {
+                  "camp": 157,
+                  "nextHarvest": 30.940087012004938
+                },
+                {
+                  "camp": 158,
+                  "nextHarvest": 49.481106674501945
+                },
+                {
+                  "camp": 159,
+                  "nextHarvest": 38.022126336998525
+                },
+                {
+                  "camp": 160,
+                  "nextHarvest": 56.56314599949553
+                }
+              ]
+            },
+            "measuredGameSeconds": 600.0000000001147,
+            "averageOutsideCollectors": 55.142,
+            "averageMovingCollectors": 53.953833333333336,
+            "maxOutsideCollectors": 61,
+            "departures": 5099,
+            "deliveredFood": 1878.0000000000716,
+            "deliveredPer30": 93.89999999998564,
+            "pathfinderCalls": 7246,
+            "native": {
+              "enabled": true,
+              "ready": true,
+              "searches": 117,
+              "unsupported": 7129,
+              "instances": 2,
+              "unavailable": 0
+            },
+            "wallMs": 9953.998583,
+            "final": {
+              "time": 780.0000000001088,
+              "population": 160,
+              "units": 183,
+              "fields": 600,
+              "fallowFarms": 0
+            }
+          },
+          {
+            "name": "current",
+            "round": 1,
+            "initial": {
+              "harvestSeconds": 60,
+              "foodPerTilePerHarvest": 0.8,
+              "spoilSeconds": 11,
+              "population": 160,
+              "farms": 150,
+              "fields": 600,
+              "buildings": 163,
+              "collectors": 150,
+              "roads": 12,
+              "housing": 0,
+              "harvestSchedule": [
+                {
+                  "camp": 11,
+                  "nextHarvest": 107.90243257493063
+                },
+                {
+                  "camp": 12,
+                  "nextHarvest": 84.98447189992433
+                },
+                {
+                  "camp": 13,
+                  "nextHarvest": 62.066511224918024
+                },
+                {
+                  "camp": 14,
+                  "nextHarvest": 99.14855054991172
+                },
+                {
+                  "camp": 15,
+                  "nextHarvest": 76.2305898749054
+                },
+                {
+                  "camp": 16,
+                  "nextHarvest": 113.3126291998991
+                },
+                {
+                  "camp": 17,
+                  "nextHarvest": 90.39466852489281
+                },
+                {
+                  "camp": 18,
+                  "nextHarvest": 67.4767078498865
+                },
+                {
+                  "camp": 19,
+                  "nextHarvest": 104.55874717488018
+                },
+                {
+                  "camp": 20,
+                  "nextHarvest": 81.64078649987388
+                },
+                {
+                  "camp": 21,
+                  "nextHarvest": 118.72282582486758
+                },
+                {
+                  "camp": 22,
+                  "nextHarvest": 95.80486514986127
+                },
+                {
+                  "camp": 23,
+                  "nextHarvest": 72.88690447485496
+                },
+                {
+                  "camp": 24,
+                  "nextHarvest": 109.96894379984866
+                },
+                {
+                  "camp": 25,
+                  "nextHarvest": 87.05098312484236
+                },
+                {
+                  "camp": 26,
+                  "nextHarvest": 64.13302244983605
+                },
+                {
+                  "camp": 27,
+                  "nextHarvest": 101.21506177482985
+                },
+                {
+                  "camp": 28,
+                  "nextHarvest": 78.29710109982344
+                },
+                {
+                  "camp": 29,
+                  "nextHarvest": 115.37914042481702
+                },
+                {
+                  "camp": 30,
+                  "nextHarvest": 92.46117974981082
+                },
+                {
+                  "camp": 31,
+                  "nextHarvest": 69.54321907480463
+                },
+                {
+                  "camp": 32,
+                  "nextHarvest": 106.62525839979821
+                },
+                {
+                  "camp": 33,
+                  "nextHarvest": 83.7072977247918
+                },
+                {
+                  "camp": 34,
+                  "nextHarvest": 60.7893370497856
+                },
+                {
+                  "camp": 35,
+                  "nextHarvest": 97.8713763747794
+                },
+                {
+                  "camp": 36,
+                  "nextHarvest": 74.95341569977299
+                },
+                {
+                  "camp": 37,
+                  "nextHarvest": 112.03545502476658
+                },
+                {
+                  "camp": 38,
+                  "nextHarvest": 89.11749434976038
+                },
+                {
+                  "camp": 39,
+                  "nextHarvest": 66.19953367475418
+                },
+                {
+                  "camp": 40,
+                  "nextHarvest": 103.28157299974777
+                },
+                {
+                  "camp": 41,
+                  "nextHarvest": 80.36361232474135
+                },
+                {
+                  "camp": 42,
+                  "nextHarvest": 117.44565164973515
+                },
+                {
+                  "camp": 43,
+                  "nextHarvest": 94.52769097472896
+                },
+                {
+                  "camp": 44,
+                  "nextHarvest": 71.60973029972254
+                },
+                {
+                  "camp": 45,
+                  "nextHarvest": 108.69176962471613
+                },
+                {
+                  "camp": 46,
+                  "nextHarvest": 85.77380894970993
+                },
+                {
+                  "camp": 47,
+                  "nextHarvest": 62.85584827470373
+                },
+                {
+                  "camp": 48,
+                  "nextHarvest": 99.93788759969732
+                },
+                {
+                  "camp": 49,
+                  "nextHarvest": 77.0199269246909
+                },
+                {
+                  "camp": 50,
+                  "nextHarvest": 114.10196624968471
+                },
+                {
+                  "camp": 51,
+                  "nextHarvest": 91.18400557467851
+                },
+                {
+                  "camp": 52,
+                  "nextHarvest": 68.2660448996721
+                },
+                {
+                  "camp": 53,
+                  "nextHarvest": 105.34808422466568
+                },
+                {
+                  "camp": 54,
+                  "nextHarvest": 82.4301235496597
+                },
+                {
+                  "camp": 55,
+                  "nextHarvest": 119.51216287465328
+                },
+                {
+                  "camp": 56,
+                  "nextHarvest": 96.59420219964687
+                },
+                {
+                  "camp": 57,
+                  "nextHarvest": 73.67624152464046
+                },
+                {
+                  "camp": 58,
+                  "nextHarvest": 110.75828084963405
+                },
+                {
+                  "camp": 59,
+                  "nextHarvest": 87.84032017462806
+                },
+                {
+                  "camp": 60,
+                  "nextHarvest": 64.92235949962165
+                },
+                {
+                  "camp": 61,
+                  "nextHarvest": 102.00439882461524
+                },
+                {
+                  "camp": 62,
+                  "nextHarvest": 79.08643814960925
+                },
+                {
+                  "camp": 63,
+                  "nextHarvest": 116.16847747460284
+                },
+                {
+                  "camp": 64,
+                  "nextHarvest": 93.25051679959643
+                },
+                {
+                  "camp": 65,
+                  "nextHarvest": 70.33255612459001
+                },
+                {
+                  "camp": 66,
+                  "nextHarvest": 107.4145954495836
+                },
+                {
+                  "camp": 67,
+                  "nextHarvest": 84.49663477457761
+                },
+                {
+                  "camp": 68,
+                  "nextHarvest": 61.5786740995712
+                },
+                {
+                  "camp": 69,
+                  "nextHarvest": 98.66071342456479
+                },
+                {
+                  "camp": 70,
+                  "nextHarvest": 75.7427527495588
+                },
+                {
+                  "camp": 71,
+                  "nextHarvest": 112.82479207455239
+                },
+                {
+                  "camp": 72,
+                  "nextHarvest": 89.90683139954598
+                },
+                {
+                  "camp": 73,
+                  "nextHarvest": 66.98887072453957
+                },
+                {
+                  "camp": 74,
+                  "nextHarvest": 104.07091004953315
+                },
+                {
+                  "camp": 75,
+                  "nextHarvest": 81.15294937452717
+                },
+                {
+                  "camp": 76,
+                  "nextHarvest": 118.23498869952076
+                },
+                {
+                  "camp": 77,
+                  "nextHarvest": 95.31702802451434
+                },
+                {
+                  "camp": 78,
+                  "nextHarvest": 72.39906734950836
+                },
+                {
+                  "camp": 79,
+                  "nextHarvest": 109.48110667450194
+                },
+                {
+                  "camp": 80,
+                  "nextHarvest": 86.56314599949553
+                },
+                {
+                  "camp": 81,
+                  "nextHarvest": 63.64518532448912
+                },
+                {
+                  "camp": 82,
+                  "nextHarvest": 100.72722464948271
+                },
+                {
+                  "camp": 83,
+                  "nextHarvest": 77.80926397447672
+                },
+                {
+                  "camp": 84,
+                  "nextHarvest": 114.89130329947031
+                },
+                {
+                  "camp": 85,
+                  "nextHarvest": 91.9733426244639
+                },
+                {
+                  "camp": 86,
+                  "nextHarvest": 69.05538194945791
+                },
+                {
+                  "camp": 87,
+                  "nextHarvest": 106.1374212744515
+                },
+                {
+                  "camp": 88,
+                  "nextHarvest": 83.21946059944509
+                },
+                {
+                  "camp": 89,
+                  "nextHarvest": 60.30149992443867
+                },
+                {
+                  "camp": 90,
+                  "nextHarvest": 97.38353924943226
+                },
+                {
+                  "camp": 91,
+                  "nextHarvest": 74.46557857442627
+                },
+                {
+                  "camp": 92,
+                  "nextHarvest": 111.54761789941986
+                },
+                {
+                  "camp": 93,
+                  "nextHarvest": 88.62965722441345
+                },
+                {
+                  "camp": 94,
+                  "nextHarvest": 65.71169654940746
+                },
+                {
+                  "camp": 95,
+                  "nextHarvest": 102.79373587440105
+                },
+                {
+                  "camp": 96,
+                  "nextHarvest": 79.87577519939464
+                },
+                {
+                  "camp": 97,
+                  "nextHarvest": 116.95781452438823
+                },
+                {
+                  "camp": 98,
+                  "nextHarvest": 94.03985384938181
+                },
+                {
+                  "camp": 99,
+                  "nextHarvest": 71.12189317437583
+                },
+                {
+                  "camp": 100,
+                  "nextHarvest": 108.20393249936942
+                },
+                {
+                  "camp": 101,
+                  "nextHarvest": 85.285971824363
+                },
+                {
+                  "camp": 102,
+                  "nextHarvest": 62.36801114935702
+                },
+                {
+                  "camp": 103,
+                  "nextHarvest": 99.4500504743506
+                },
+                {
+                  "camp": 104,
+                  "nextHarvest": 76.53208979934419
+                },
+                {
+                  "camp": 105,
+                  "nextHarvest": 113.6141291243382
+                },
+                {
+                  "camp": 106,
+                  "nextHarvest": 90.69616844933137
+                },
+                {
+                  "camp": 107,
+                  "nextHarvest": 67.77820777432538
+                },
+                {
+                  "camp": 108,
+                  "nextHarvest": 104.8602470993194
+                },
+                {
+                  "camp": 109,
+                  "nextHarvest": 81.94228642431256
+                },
+                {
+                  "camp": 110,
+                  "nextHarvest": 119.02432574930657
+                },
+                {
+                  "camp": 111,
+                  "nextHarvest": 96.10636507429973
+                },
+                {
+                  "camp": 112,
+                  "nextHarvest": 73.18840439929374
+                },
+                {
+                  "camp": 113,
+                  "nextHarvest": 110.27044372428776
+                },
+                {
+                  "camp": 114,
+                  "nextHarvest": 87.35248304928092
+                },
+                {
+                  "camp": 115,
+                  "nextHarvest": 64.43452237427493
+                },
+                {
+                  "camp": 116,
+                  "nextHarvest": 101.5165616992681
+                },
+                {
+                  "camp": 117,
+                  "nextHarvest": 78.59860102426211
+                },
+                {
+                  "camp": 118,
+                  "nextHarvest": 115.68064034925612
+                },
+                {
+                  "camp": 119,
+                  "nextHarvest": 92.76267967424928
+                },
+                {
+                  "camp": 120,
+                  "nextHarvest": 69.8447189992433
+                },
+                {
+                  "camp": 121,
+                  "nextHarvest": 106.92675832423731
+                },
+                {
+                  "camp": 122,
+                  "nextHarvest": 84.00879764923047
+                },
+                {
+                  "camp": 123,
+                  "nextHarvest": 61.09083697422449
+                },
+                {
+                  "camp": 124,
+                  "nextHarvest": 98.1728762992185
+                },
+                {
+                  "camp": 125,
+                  "nextHarvest": 75.25491562421166
+                },
+                {
+                  "camp": 126,
+                  "nextHarvest": 112.33695494920568
+                },
+                {
+                  "camp": 127,
+                  "nextHarvest": 89.41899427419884
+                },
+                {
+                  "camp": 128,
+                  "nextHarvest": 66.50103359919285
+                },
+                {
+                  "camp": 129,
+                  "nextHarvest": 103.58307292418687
+                },
+                {
+                  "camp": 130,
+                  "nextHarvest": 80.66511224918003
+                },
+                {
+                  "camp": 131,
+                  "nextHarvest": 117.74715157417404
+                },
+                {
+                  "camp": 132,
+                  "nextHarvest": 94.8291908991672
+                },
+                {
+                  "camp": 133,
+                  "nextHarvest": 71.91123022416122
+                },
+                {
+                  "camp": 134,
+                  "nextHarvest": 108.99326954915523
+                },
+                {
+                  "camp": 135,
+                  "nextHarvest": 86.07530887414839
+                },
+                {
+                  "camp": 136,
+                  "nextHarvest": 63.157348199142405
+                },
+                {
+                  "camp": 137,
+                  "nextHarvest": 100.23938752413642
+                },
+                {
+                  "camp": 138,
+                  "nextHarvest": 77.32142684912958
+                },
+                {
+                  "camp": 139,
+                  "nextHarvest": 114.4034661741236
+                },
+                {
+                  "camp": 140,
+                  "nextHarvest": 91.48550549911761
+                },
+                {
+                  "camp": 141,
+                  "nextHarvest": 68.56754482411077
+                },
+                {
+                  "camp": 142,
+                  "nextHarvest": 105.64958414910478
+                },
+                {
+                  "camp": 143,
+                  "nextHarvest": 82.73162347409794
+                },
+                {
+                  "camp": 144,
+                  "nextHarvest": 119.81366279909196
+                },
+                {
+                  "camp": 145,
+                  "nextHarvest": 96.89570212408597
+                },
+                {
+                  "camp": 146,
+                  "nextHarvest": 73.97774144907913
+                },
+                {
+                  "camp": 147,
+                  "nextHarvest": 111.05978077407315
+                },
+                {
+                  "camp": 148,
+                  "nextHarvest": 88.14182009906631
+                },
+                {
+                  "camp": 149,
+                  "nextHarvest": 65.22385942406032
+                },
+                {
+                  "camp": 150,
+                  "nextHarvest": 102.30589874905434
+                },
+                {
+                  "camp": 151,
+                  "nextHarvest": 79.3879380740475
+                },
+                {
+                  "camp": 152,
+                  "nextHarvest": 116.46997739904151
+                },
+                {
+                  "camp": 153,
+                  "nextHarvest": 93.55201672403552
+                },
+                {
+                  "camp": 154,
+                  "nextHarvest": 70.63405604902869
+                },
+                {
+                  "camp": 155,
+                  "nextHarvest": 107.7160953740227
+                },
+                {
+                  "camp": 156,
+                  "nextHarvest": 84.79813469901671
+                },
+                {
+                  "camp": 157,
+                  "nextHarvest": 61.880174024009875
+                },
+                {
+                  "camp": 158,
+                  "nextHarvest": 98.96221334900389
+                },
+                {
+                  "camp": 159,
+                  "nextHarvest": 76.04425267399705
+                },
+                {
+                  "camp": 160,
+                  "nextHarvest": 113.12629199899106
+                }
+              ]
+            },
+            "measuredGameSeconds": 600.0000000001147,
+            "averageOutsideCollectors": 27.725666666666665,
+            "averageMovingCollectors": 27.130666666666666,
+            "maxOutsideCollectors": 32,
+            "departures": 2575,
+            "deliveredFood": 1858.3999999999855,
+            "deliveredPer30": 92.91999999998151,
+            "pathfinderCalls": 3759,
+            "native": {
+              "enabled": true,
+              "ready": true,
+              "searches": 189,
+              "unsupported": 3570,
+              "instances": 2,
+              "unavailable": 0
+            },
+            "wallMs": 8136.5741659999985,
+            "final": {
+              "time": 780.0000000001088,
+              "population": 160,
+              "units": 183,
+              "fields": 600,
+              "fallowFarms": 0
+            }
+          }
+        ],
+        "summary": {
+          "averageOutsideCollectors": {
+            "baseline": 55.142,
+            "current": 27.725666666666665,
+            "currentToBaseline": 0.5028048795231704
+          },
+          "averageMovingCollectors": {
+            "baseline": 53.953833333333336,
+            "current": 27.130666666666666,
+            "currentToBaseline": 0.5028496585043386
+          },
+          "departures": {
+            "baseline": 5099,
+            "current": 2575,
+            "currentToBaseline": 0.5050009805844283
+          },
+          "pathfinderCalls": {
+            "baseline": 7246,
+            "current": 3759,
+            "currentToBaseline": 0.5187689759867513
+          },
+          "deliveredPer30": {
+            "baseline": 93.89999999998564,
+            "current": 92.91999999998151,
+            "currentToBaseline": 0.9895633652821696
+          }
+        }
+      }
+    },
+    "errors": [],
+    "pass": true
+  },
+  "physicalEconomyCalibration": {
+    "methodology": "Same frozen engine/period-only control; normal traffic road formation enabled, no WASM installation (JavaScript pathfinding),150s warmup and300s measured. Existing calibration asserts90\u2013110 food/30s for the100-person ring fixture and a deficit for140 people caused by distance/spoilage. Both pass. These measurements include changed road formation/door choices and finite collection windows, unlike the fixed-road cadence comparison.",
+    "control": {
+      "assumptions": "64x64 flat fertile grassland, no irrigation/bonuses; roads absent unless specified, 4-tile-radius urban core, farms packed around all 360 degrees. Real courier dispatch/pathfinding/speed/collection/expiry/delivery. 150s warmup then 300s measured. Population and housing growth held fixed; food reserve prevents starvation changes.",
+      "harvestSeconds": 30,
+      "yieldPerTile": 0.4,
+      "spoilSeconds": 11,
+      "rows": [
+        {
+          "population": 20,
+          "farmCount": 15,
+          "roads": "ring",
+          "plots": 60,
+          "deliveredPer30": 24.000000000000046,
+          "consumedPer30": 20,
+          "balancePer30": 4.000000000000046
+        },
+        {
+          "population": 60,
+          "farmCount": 45,
+          "roads": "ring",
+          "plots": 180,
+          "deliveredPer30": 63.80000000000049,
+          "consumedPer30": 60,
+          "balancePer30": 3.8000000000004874
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 107.40000000000194,
+          "consumedPer30": 100,
+          "balancePer30": 7.400000000001938
+        },
+        {
+          "population": 140,
+          "farmCount": 150,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 107.40000000000194,
+          "consumedPer30": 140,
+          "balancePer30": -32.59999999999806
+        },
+        {
+          "population": 140,
+          "farmCount": 150,
+          "noDecay": true,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 240.31999999998735,
+          "consumedPer30": 140,
+          "balancePer30": 100.31999999998735
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "detour": true,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 66.9599999999992,
+          "consumedPer30": 100,
+          "balancePer30": -33.0400000000008
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "plots": 600,
+          "deliveredPer30": 86.43999999999986,
+          "consumedPer30": 100,
+          "balancePer30": -13.560000000000144
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "roads": "arteries",
+          "plots": 600,
+          "deliveredPer30": 113.24000000000233,
+          "consumedPer30": 100,
+          "balancePer30": 13.240000000002325
+        }
+      ]
+    },
+    "current": {
+      "assumptions": "64x64 flat fertile grassland, no irrigation/bonuses; roads absent unless specified, 4-tile-radius urban core, farms packed around all 360 degrees. Real courier dispatch/pathfinding/speed/collection/expiry/delivery. 150s warmup then 300s measured. Population and housing growth held fixed; food reserve prevents starvation changes.",
+      "harvestSeconds": 60,
+      "yieldPerTile": 0.8,
+      "spoilSeconds": 11,
+      "rows": [
+        {
+          "population": 20,
+          "farmCount": 15,
+          "roads": "ring",
+          "plots": 60,
+          "deliveredPer30": 23.99999999999994,
+          "consumedPer30": 20,
+          "balancePer30": 3.9999999999999396
+        },
+        {
+          "population": 60,
+          "farmCount": 45,
+          "roads": "ring",
+          "plots": 180,
+          "deliveredPer30": 64.56000000000009,
+          "consumedPer30": 60,
+          "balancePer30": 4.5600000000000875
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 109.99999999999868,
+          "consumedPer30": 100,
+          "balancePer30": 9.999999999998678
+        },
+        {
+          "population": 140,
+          "farmCount": 150,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 109.99999999999868,
+          "consumedPer30": 140,
+          "balancePer30": -30.00000000000132
+        },
+        {
+          "population": 140,
+          "farmCount": 150,
+          "noDecay": true,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 239.99999999999628,
+          "consumedPer30": 140,
+          "balancePer30": 99.99999999999628
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "detour": true,
+          "roads": "ring",
+          "plots": 600,
+          "deliveredPer30": 67.67999999999977,
+          "consumedPer30": 100,
+          "balancePer30": -32.320000000000235
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "plots": 600,
+          "deliveredPer30": 87.75999999999915,
+          "consumedPer30": 100,
+          "balancePer30": -12.240000000000848
+        },
+        {
+          "population": 100,
+          "farmCount": 150,
+          "roads": "arteries",
+          "plots": 600,
+          "deliveredPer30": 106.7199999999987,
+          "consumedPer30": 100,
+          "balancePer30": 6.719999999998706
+        }
+      ]
+    }
+  },
+  "validation": {
+    "initialFullSuite": {
+      "files": 212,
+      "passed": 2117,
+      "failed": 1,
+      "failure": "An existing simulation test assumed delivery occurred in economy tick1. Updated it to capture the actual harvest tick while still asserting no consumption tick occurred during the delivery window."
+    },
+    "correctedSimulationAndInactivity": {
+      "files": 2,
+      "passed": 93
+    },
+    "focusedHarvestAndEconomy": {
+      "files": 17,
+      "passed": 170
+    },
+    "productionBuild": true,
+    "checks": [
+      "60s harvest timing and unchanged gross production",
+      "unchanged spoilage deadlines and storage/orchard bonuses",
+      "unchanged HUD/governor/growth/starting-layout economy rates",
+      "late first-harvest grace and established120s inactivity",
+      "fixed population, farm, collector and road counts during controlled comparison",
+      "exact simulation advancement"
+    ]
+  },
+  "limitations": [
+    "Counts describe all living outside collectors, not viewport-specific sprites or FPS.",
+    "Persistent collector entities remain one per farm; they spend more time hidden and idle.",
+    "Each scene has one deterministic control/current pair,180s warmup then600s measured atdt0.1.",
+    "Gross production rates are preserved exactly; actual delivered food depends on expiry, door choices and traffic. Fixed-road large fixture delivered1.04% less; normal-traffic calibration varies by layout.",
+    "New ordinary farms first ripen after60\u2013120s. Larger less-frequent batches change short-term food availability and loss per courier.",
+    "Fewer trips also reduce physical road-wear entries and exposed raid targets.",
+    "No function-level CPU profile or browser FPS measurement was made for this cadence change."
+  ]
+}

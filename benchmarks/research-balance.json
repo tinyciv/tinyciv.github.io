@@ -1,0 +1,536 @@
+{
+  "assumptions": "Single normal-start20-person city;64\u00d764 open fertile grassland;starting500food/500gold;1x simulation with real0.1s steps, automatic construction, population growth, farm pickup/decay, upkeep, tax and research completion effects. Library manually ordered at30s for200gold; real civilians finish it. No irrigation placements, well, expansion, trade, treasures or scholars. Combat held exogenous at0/2/4 defeated basic6gold warriors per30s; all loot uses production grantIncome. No income/production or growth overrides.",
+  "rows": [
+    {
+      "killsPer30": 0,
+      "allocation": 0.25,
+      "totalRequired": 330,
+      "libraryOrderedAt": 30,
+      "libraryReadyAt": 121,
+      "finishedAt": 1200,
+      "snapshots": [
+        {
+          "seconds": 60,
+          "population": 25,
+          "gold": 12,
+          "grossGold": 42,
+          "lootGold": 0,
+          "points": 0,
+          "completed": 0,
+          "farms": 54
+        },
+        {
+          "seconds": 120,
+          "population": 29,
+          "gold": 9,
+          "grossGold": 94,
+          "lootGold": 0,
+          "points": 0,
+          "completed": 0,
+          "farms": 58
+        },
+        {
+          "seconds": 180,
+          "population": 32,
+          "gold": 12,
+          "grossGold": 154,
+          "lootGold": 0,
+          "points": 15,
+          "completed": 1,
+          "farms": 61
+        },
+        {
+          "seconds": 240,
+          "population": 32,
+          "gold": 5,
+          "grossGold": 218,
+          "lootGold": 0,
+          "points": 31,
+          "completed": 3,
+          "farms": 65
+        },
+        {
+          "seconds": 300,
+          "population": 32,
+          "gold": 10,
+          "grossGold": 282,
+          "lootGold": 0,
+          "points": 47,
+          "completed": 5,
+          "farms": 68
+        },
+        {
+          "seconds": 360,
+          "population": 32,
+          "gold": 53,
+          "grossGold": 346,
+          "lootGold": 0,
+          "points": 63,
+          "completed": 6,
+          "farms": 68
+        },
+        {
+          "seconds": 420,
+          "population": 32,
+          "gold": 96,
+          "grossGold": 410,
+          "lootGold": 0,
+          "points": 79,
+          "completed": 7,
+          "farms": 68
+        },
+        {
+          "seconds": 480,
+          "population": 32,
+          "gold": 14,
+          "grossGold": 474,
+          "lootGold": 0,
+          "points": 95,
+          "completed": 8,
+          "farms": 68
+        },
+        {
+          "seconds": 540,
+          "population": 36,
+          "gold": 10,
+          "grossGold": 542,
+          "lootGold": 0,
+          "points": 112,
+          "completed": 9,
+          "farms": 72
+        },
+        {
+          "seconds": 600,
+          "population": 36,
+          "gold": 9,
+          "grossGold": 614,
+          "lootGold": 0,
+          "points": 130,
+          "completed": 10,
+          "farms": 76
+        },
+        {
+          "seconds": 660,
+          "population": 36,
+          "gold": 58,
+          "grossGold": 686,
+          "lootGold": 0,
+          "points": 148,
+          "completed": 10,
+          "farms": 76
+        },
+        {
+          "seconds": 720,
+          "population": 36,
+          "gold": 107,
+          "grossGold": 758,
+          "lootGold": 0,
+          "points": 166,
+          "completed": 11,
+          "farms": 76
+        },
+        {
+          "seconds": 780,
+          "population": 40,
+          "gold": 6,
+          "grossGold": 830,
+          "lootGold": 0,
+          "points": 184,
+          "completed": 12,
+          "farms": 78
+        },
+        {
+          "seconds": 840,
+          "population": 40,
+          "gold": 10,
+          "grossGold": 910,
+          "lootGold": 0,
+          "points": 204,
+          "completed": 13,
+          "farms": 82
+        },
+        {
+          "seconds": 900,
+          "population": 40,
+          "gold": 27,
+          "grossGold": 990,
+          "lootGold": 0,
+          "points": 224,
+          "completed": 14,
+          "farms": 85
+        },
+        {
+          "seconds": 960,
+          "population": 40,
+          "gold": 81,
+          "grossGold": 1070,
+          "lootGold": 0,
+          "points": 244,
+          "completed": 15,
+          "farms": 85
+        },
+        {
+          "seconds": 1020,
+          "population": 40,
+          "gold": 10,
+          "grossGold": 1150,
+          "lootGold": 0,
+          "points": 264,
+          "completed": 16,
+          "farms": 85
+        },
+        {
+          "seconds": 1080,
+          "population": 54,
+          "gold": 9,
+          "grossGold": 1240,
+          "lootGold": 0,
+          "points": 287,
+          "completed": 17,
+          "farms": 90
+        },
+        {
+          "seconds": 1140,
+          "population": 54,
+          "gold": 9,
+          "grossGold": 1348,
+          "lootGold": 0,
+          "points": 314,
+          "completed": 18,
+          "farms": 96
+        },
+        {
+          "seconds": 1200,
+          "population": 54,
+          "gold": 7,
+          "grossGold": 1456,
+          "lootGold": 0,
+          "points": 330,
+          "completed": 19,
+          "farms": 103
+        }
+      ]
+    },
+    {
+      "killsPer30": 2,
+      "allocation": 0.25,
+      "totalRequired": 330,
+      "libraryOrderedAt": 30,
+      "libraryReadyAt": 121,
+      "finishedAt": 930,
+      "snapshots": [
+        {
+          "seconds": 60,
+          "population": 25,
+          "gold": 12,
+          "grossGold": 54,
+          "lootGold": 12,
+          "points": 0,
+          "completed": 0,
+          "farms": 55
+        },
+        {
+          "seconds": 120,
+          "population": 29,
+          "gold": 8,
+          "grossGold": 130,
+          "lootGold": 36,
+          "points": 0,
+          "completed": 0,
+          "farms": 61
+        },
+        {
+          "seconds": 180,
+          "population": 32,
+          "gold": 6,
+          "grossGold": 214,
+          "lootGold": 60,
+          "points": 18,
+          "completed": 2,
+          "farms": 66
+        },
+        {
+          "seconds": 240,
+          "population": 32,
+          "gold": 42,
+          "grossGold": 302,
+          "lootGold": 84,
+          "points": 40,
+          "completed": 4,
+          "farms": 68
+        },
+        {
+          "seconds": 300,
+          "population": 32,
+          "gold": 103,
+          "grossGold": 390,
+          "lootGold": 108,
+          "points": 62,
+          "completed": 6,
+          "farms": 68
+        },
+        {
+          "seconds": 360,
+          "population": 36,
+          "gold": 2,
+          "grossGold": 478,
+          "lootGold": 132,
+          "points": 84,
+          "completed": 7,
+          "farms": 71
+        },
+        {
+          "seconds": 420,
+          "population": 36,
+          "gold": 6,
+          "grossGold": 574,
+          "lootGold": 156,
+          "points": 108,
+          "completed": 9,
+          "farms": 76
+        },
+        {
+          "seconds": 480,
+          "population": 36,
+          "gold": 73,
+          "grossGold": 670,
+          "lootGold": 180,
+          "points": 132,
+          "completed": 10,
+          "farms": 76
+        },
+        {
+          "seconds": 540,
+          "population": 36,
+          "gold": 15,
+          "grossGold": 766,
+          "lootGold": 204,
+          "points": 156,
+          "completed": 11,
+          "farms": 76
+        },
+        {
+          "seconds": 600,
+          "population": 40,
+          "gold": 10,
+          "grossGold": 866,
+          "lootGold": 228,
+          "points": 181,
+          "completed": 12,
+          "farms": 82
+        },
+        {
+          "seconds": 660,
+          "population": 40,
+          "gold": 44,
+          "grossGold": 970,
+          "lootGold": 252,
+          "points": 207,
+          "completed": 13,
+          "farms": 85
+        },
+        {
+          "seconds": 720,
+          "population": 40,
+          "gold": 116,
+          "grossGold": 1074,
+          "lootGold": 276,
+          "points": 233,
+          "completed": 15,
+          "farms": 85
+        },
+        {
+          "seconds": 780,
+          "population": 44,
+          "gold": 13,
+          "grossGold": 1178,
+          "lootGold": 300,
+          "points": 259,
+          "completed": 16,
+          "farms": 89
+        },
+        {
+          "seconds": 840,
+          "population": 54,
+          "gold": 11,
+          "grossGold": 1300,
+          "lootGold": 324,
+          "points": 290,
+          "completed": 17,
+          "farms": 96
+        },
+        {
+          "seconds": 900,
+          "population": 54,
+          "gold": 4,
+          "grossGold": 1432,
+          "lootGold": 348,
+          "points": 323,
+          "completed": 18,
+          "farms": 104
+        }
+      ]
+    },
+    {
+      "killsPer30": 4,
+      "allocation": 0.25,
+      "totalRequired": 330,
+      "libraryOrderedAt": 30,
+      "libraryReadyAt": 121,
+      "finishedAt": 780,
+      "snapshots": [
+        {
+          "seconds": 60,
+          "population": 25,
+          "gold": 24,
+          "grossGold": 66,
+          "lootGold": 24,
+          "points": 0,
+          "completed": 0,
+          "farms": 55
+        },
+        {
+          "seconds": 120,
+          "population": 29,
+          "gold": 19,
+          "grossGold": 166,
+          "lootGold": 72,
+          "points": 0,
+          "completed": 0,
+          "farms": 63
+        },
+        {
+          "seconds": 180,
+          "population": 32,
+          "gold": 39,
+          "grossGold": 275,
+          "lootGold": 120,
+          "points": 21,
+          "completed": 2,
+          "farms": 68
+        },
+        {
+          "seconds": 240,
+          "population": 32,
+          "gold": 118,
+          "grossGold": 387,
+          "lootGold": 168,
+          "points": 49,
+          "completed": 5,
+          "farms": 68
+        },
+        {
+          "seconds": 300,
+          "population": 36,
+          "gold": 22,
+          "grossGold": 499,
+          "lootGold": 216,
+          "points": 77,
+          "completed": 7,
+          "farms": 72
+        },
+        {
+          "seconds": 360,
+          "population": 36,
+          "gold": 57,
+          "grossGold": 619,
+          "lootGold": 264,
+          "points": 107,
+          "completed": 9,
+          "farms": 76
+        },
+        {
+          "seconds": 420,
+          "population": 36,
+          "gold": 17,
+          "grossGold": 739,
+          "lootGold": 312,
+          "points": 137,
+          "completed": 10,
+          "farms": 76
+        },
+        {
+          "seconds": 480,
+          "population": 40,
+          "gold": 4,
+          "grossGold": 863,
+          "lootGold": 360,
+          "points": 168,
+          "completed": 11,
+          "farms": 84
+        },
+        {
+          "seconds": 540,
+          "population": 40,
+          "gold": 82,
+          "grossGold": 991,
+          "lootGold": 408,
+          "points": 200,
+          "completed": 13,
+          "farms": 85
+        },
+        {
+          "seconds": 600,
+          "population": 44,
+          "gold": 9,
+          "grossGold": 1119,
+          "lootGold": 456,
+          "points": 232,
+          "completed": 14,
+          "farms": 88
+        },
+        {
+          "seconds": 660,
+          "population": 44,
+          "gold": 18,
+          "grossGold": 1255,
+          "lootGold": 504,
+          "points": 266,
+          "completed": 16,
+          "farms": 95
+        },
+        {
+          "seconds": 720,
+          "population": 54,
+          "gold": 21,
+          "grossGold": 1401,
+          "lootGold": 552,
+          "points": 303,
+          "completed": 18,
+          "farms": 103
+        },
+        {
+          "seconds": 780,
+          "population": 54,
+          "gold": 44,
+          "grossGold": 1557,
+          "lootGold": 600,
+          "points": 330,
+          "completed": 19,
+          "farms": 111
+        },
+        {
+          "seconds": 840,
+          "population": 54,
+          "gold": 107,
+          "grossGold": 1713,
+          "lootGold": 648,
+          "points": 330,
+          "completed": 19,
+          "farms": 118
+        },
+        {
+          "seconds": 900,
+          "population": 59,
+          "gold": 82,
+          "grossGold": 1869,
+          "lootGold": 696,
+          "points": 330,
+          "completed": 19,
+          "farms": 122
+        }
+      ]
+    }
+  ],
+  "costBasis": "Historical 330-science tree before the later3\u00d7cost increase to990science. These completion times are not current-balance predictions."
+}

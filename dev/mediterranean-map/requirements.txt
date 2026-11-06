@@ -1,0 +1,9 @@
+# Versions used with Python 3.9.6 to generate the Mediterranean map.
+et_xmlfile==2.0.0
+h5netcdf==1.8.2
+h5py==3.14.0
+numpy==2.0.2
+openpyxl==3.1.5
+packaging==26.3
+pillow==11.3.0
+scipy==1.13.1

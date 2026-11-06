@@ -1,0 +1,411 @@
+{
+  "createdOn": "2026-11-01",
+  "purpose": "Native asset manifest for compact marauder camp variants using only tents, timber palisades, guard towers, signs, and roads; no production art changes",
+  "nativeTileSize": 16,
+  "gameTileSize": 32,
+  "filter": "nearest",
+  "sources": {
+    "free": {
+      "path": "public/assets/puny-world/overworld.png",
+      "license": "CC0-1.0 \u2014 Shade"
+    },
+    "paid": {
+      "path": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "license": "Purchased Puny World Medieval project-use license",
+      "embedOnlyNeededCrops": true
+    }
+  },
+  "palisadeEmbedding": {
+    "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+    "rect": [
+      2640,
+      96,
+      160,
+      64
+    ],
+    "gateFrames": {
+      "count": 6,
+      "stride": 16,
+      "closed": 0,
+      "open": 5
+    }
+  },
+  "watchtowerHelper": {
+    "module": "src/game/wooden-building-art.ts",
+    "function": "drawWoodenTower",
+    "boundsAt32": [
+      0,
+      -24,
+      32,
+      56
+    ],
+    "footprint": [
+      1,
+      1
+    ],
+    "platform": {
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        112,
+        432,
+        16,
+        16
+      ],
+      "destination": [
+        0,
+        -24,
+        32,
+        32
+      ]
+    },
+    "posts": [
+      {
+        "sourcePath": "public/assets/puny-world/overworld.png",
+        "rect": [
+          352,
+          432,
+          4,
+          16
+        ],
+        "destination": [
+          4,
+          0,
+          8,
+          32
+        ]
+      },
+      {
+        "sourcePath": "public/assets/puny-world/overworld.png",
+        "rect": [
+          352,
+          432,
+          4,
+          16
+        ],
+        "destination": [
+          20,
+          0,
+          8,
+          32
+        ]
+      }
+    ]
+  },
+  "assets": [
+    {
+      "id": "palisade-horizontal",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2672,
+        144,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-vertical",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2640,
+        112,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-nw",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2656,
+        96,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-ne",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2688,
+        96,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-sw",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2656,
+        128,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-se",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2688,
+        128,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-gate-ns-closed",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2704,
+        96,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-gate-ew-closed",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2704,
+        112,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-gate-ns-open",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2784,
+        96,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "palisade-gate-ew-open",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2784,
+        112,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "verifiedAgainst": "Tiled/sample-overworld-2.tmj; six gate frames inspected directly"
+    },
+    {
+      "id": "round-timber-lookout",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2656,
+        320,
+        16,
+        32
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "anchor": [
+        8,
+        32
+      ],
+      "notes": "Keep both source rows: roof tip occupies the first row. Draw at16\u219232 scale with bottom-center footing."
+    },
+    {
+      "id": "round-timber-lookout-alt",
+      "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "rect": [
+        2704,
+        320,
+        16,
+        32
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "Purchased Puny World Medieval project-use license",
+      "anchor": [
+        8,
+        32
+      ]
+    },
+    {
+      "id": "tent",
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        64,
+        416,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "CC0-1.0 \u2014 Shade"
+    },
+    {
+      "id": "blank-wood-sign",
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        112,
+        480,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "groundAnchor": [
+        8,
+        15
+      ],
+      "alphaBounds": [
+        3,
+        3,
+        13,
+        15
+      ],
+      "license": "CC0-1.0 \u2014 Shade",
+      "notes": "Verified clean native sign with transparent background; no bundled foliage or props. Draw at exact 16\u219232 nearest-neighbor scale."
+    },
+    {
+      "id": "angled-wood-signpost",
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        128,
+        480,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "groundAnchor": [
+        8,
+        15
+      ],
+      "alphaBounds": [
+        3,
+        2,
+        13,
+        15
+      ],
+      "license": "CC0-1.0 \u2014 Shade",
+      "notes": "Verified clean native sign with transparent background; no bundled foliage or props. Draw at exact 16\u219232 nearest-neighbor scale."
+    },
+    {
+      "id": "arrow-wood-signpost",
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        144,
+        480,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "groundAnchor": [
+        8,
+        15
+      ],
+      "alphaBounds": [
+        2,
+        3,
+        14,
+        15
+      ],
+      "license": "CC0-1.0 \u2014 Shade",
+      "notes": "Verified clean native sign with transparent background; no bundled foliage or props. Draw at exact 16\u219232 nearest-neighbor scale."
+    },
+    {
+      "id": "dirt-road-source",
+      "sourcePath": "public/assets/puny-world/overworld.png",
+      "rect": [
+        48,
+        16,
+        16,
+        16
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "license": "CC0-1.0 \u2014 Shade",
+      "notes": "Native dirt center and shoulders used by production connected-road renderer. drawDirtRoad from src/game/road-sprites.ts builds joined roads from these source pixels."
+    }
+  ],
+  "allowedSceneAssets": [
+    "tent",
+    "wood wall",
+    "guard tower",
+    "sign",
+    "road"
+  ]
+}

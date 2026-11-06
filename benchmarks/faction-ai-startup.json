@@ -1,0 +1,23 @@
+{
+  "seed": "42",
+  "configuration": "createGame(structuredClone(pre-generated world)), one discarded warmup, three measured samples, sequential runs",
+  "before": {
+    "seed": "42",
+    "samplesMs": [
+      3947.530917000001,
+      3718.316999999999,
+      3771.0891659999998
+    ],
+    "meanMs": 3812.3123610000002
+  },
+  "after": {
+    "seed": "42",
+    "samplesMs": [
+      2399.678125000002,
+      3469.489708000001,
+      3804.8186659999956
+    ],
+    "meanMs": 3224.662166333333
+  },
+  "improvementPercent": 15.414534251661415
+}

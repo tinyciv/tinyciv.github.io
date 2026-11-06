@@ -1,0 +1,490 @@
+{
+  "date": "2026-11-05",
+  "request": "Cap recurring scans and checks to at most 3 Hz.",
+  "cadence": {
+    "maximumHz": 3,
+    "simulationClock": "game seconds; scales with simulation speed",
+    "uiClock": "wall time",
+    "existingSlowerCadencesPreserved": true,
+    "firstDecisionFollowup": "Initial observations are immediate; first follow-ups are staggered from one third to two thirds of a simulation second. Subsequent samples are at least one third second apart.",
+    "exceptions": [
+      "Continuous movement, drawing and animation",
+      "Swept collisions and scalar validation of current targets",
+      "Attack cooldowns, impacts and projectile movement",
+      "Continuous HP and culture integration from sampled eligibility/rates",
+      "Explicit user commands and exact validation before committing an action",
+      "Standalone editor/public reconciliation helpers"
+    ]
+  },
+  "coverage": [
+    "AI and combat acquisition, morale and casualty sensing",
+    "Formation membership/layouts, scout and raider plans",
+    "Path replanning and whole-route revalidation",
+    "Farms, staffing, builder access, fishing maintenance",
+    "Recruitment, construction completion, guard and levy maintenance, dead-entity cleanup",
+    "Visibility sources and remembered world observations",
+    "HUD, minimap, building availability and render-derived summaries"
+  ],
+  "validation": {
+    "build": "npm run build passed; existing Vite chunk-size warning",
+    "latestTargetedRegressionRun": {
+      "files": 6,
+      "passed": 126,
+      "log": "scratch/2026-11-05-three-hz/final-regressions.log"
+    },
+    "additionalTargetedRuns": "Tactical, economy and presentation agent suites passed; overlap is not summed.",
+    "fullSuite": {
+      "files": 330,
+      "passed": 3508,
+      "failed": 15,
+      "log": "scratch/2026-11-05-three-hz/verification.log",
+      "followup": "One battle-duration endpoint was adjusted to bounded return after defense and passes its targeted rerun. Thirteen failures reproduce on the pre-edit source snapshot. The additional world-repeatability failure passed isolated reruns on both original and current source; the full suite is not reported as clean."
+    },
+    "preexistingFailures": {
+      "worldGeneration": 8,
+      "housingTaxExpectations": 2,
+      "guardTaxExpectations": 2,
+      "factionAiBountyIntegration": 1
+    },
+    "measuredCadenceTests": [
+      "Repeated urgency/invalidation cannot bypass minimum decision spacing",
+      "Maintenance executes no more than three times per second while movement runs every step",
+      "Path searches remain capped despite repeated retry resets",
+      "Fog source/memory scans do not recur between samples",
+      "Fishing maintenance is capped while boats keep moving",
+      "Invalid refuges and newly occupied road sites are rejected before action"
+    ]
+  },
+  "performance": {
+    "method": "Simulation-only, navigation WASM enabled, alternating isolated replay order. Wall-clock CPU timings include normal GC, no profiler. Full serialized-state parity includes fog. No rendering/HUD or live FPS measurement.",
+    "cpu": "Apple M3 Pro",
+    "candidate": "current source",
+    "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+    "warm": 30,
+    "steps": 360,
+    "rounds": 2,
+    "initial": {
+      "units": 393,
+      "buildings": 2389,
+      "fields": 483
+    },
+    "updateMs": {
+      "before": {
+        "mean": 9.138773124999936,
+        "p50": 6.57854099999895,
+        "p95": 22.806958000000122,
+        "max": 160.36304199999995
+      },
+      "after": {
+        "mean": 4.811687269444438,
+        "p50": 2.517749999999978,
+        "p95": 18.587000000000444,
+        "max": 90.851584
+      }
+    },
+    "parity": [
+      {
+        "step": 1,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.172.facing",
+            "before": 1.5937017766717225,
+            "after": 1.5937017766717223
+          },
+          {
+            "key": "$.units.174.facing",
+            "before": -2.740535415707389,
+            "after": -2.7405354157073893
+          },
+          {
+            "key": "$.fog.buildings.0.foodDelivered",
+            "before": 138.05781591941033,
+            "after": 130.80980020785958
+          },
+          {
+            "key": "$.fog.buildings.774.construction.startedAt",
+            "before": 125.7893333335249,
+            "after": 120.1810000001916
+          },
+          {
+            "key": "$.fog.buildings.774.construction.waitingForBuilder",
+            "before": false,
+            "after": true
+          },
+          {
+            "key": "$.fog.buildings.774.construction.cleared",
+            "before": true
+          }
+        ]
+      },
+      {
+        "step": 30,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.1.x",
+            "before": 97.96202357082728,
+            "after": 97.5
+          },
+          {
+            "key": "$.units.1.y",
+            "before": 19.03797642917271,
+            "after": 19.088060000000002
+          },
+          {
+            "key": "$.units.1.hp",
+            "before": 81.17000000000003,
+            "after": 80.96000000000004
+          },
+          {
+            "key": "$.units.1.morale",
+            "before": 100,
+            "after": 97.79999999999995
+          },
+          {
+            "key": "$.units.1.cooldown",
+            "before": 0,
+            "after": 0.41666666666666674
+          },
+          {
+            "key": "$.units.1.lastCombat",
+            "before": 126.48933333352485,
+            "after": 126.38933333352486
+          },
+          {
+            "key": "$.units.1.moving",
+            "before": true,
+            "after": false
+          },
+          {
+            "key": "$.units.1.facing",
+            "before": -0.7853981633974559,
+            "after": -2.6099988276700747
+          },
+          {
+            "key": "$.units.1.lastDamagedAt",
+            "before": 126.48933333352485,
+            "after": 126.38933333352486
+          },
+          {
+            "key": "$.units.1.repathAt",
+            "before": 127.06600000019152,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.cavalryCharge.distance",
+            "before": 0.6533999999999969,
+            "after": 0.5880600000000022
+          },
+          {
+            "key": "$.units.1.cavalryCharge.dx",
+            "before": 0.7071067811865421,
+            "after": 0
+          }
+        ]
+      },
+      {
+        "step": 120,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.world.revision",
+            "before": 1264,
+            "after": 1261
+          },
+          {
+            "key": "$.units.0.leaderProgression.xp",
+            "before": 74,
+            "after": 76
+          },
+          {
+            "key": "$.units.1.x",
+            "before": 94.5,
+            "after": 97.5
+          },
+          {
+            "key": "$.units.1.y",
+            "before": 18.5,
+            "after": 19.088060000000002
+          },
+          {
+            "key": "$.units.1.hp",
+            "before": 76.41000000000004,
+            "after": 73.82000000000005
+          },
+          {
+            "key": "$.units.1.cooldown",
+            "before": 0.3500000000000001,
+            "after": 0.31666666666666676
+          },
+          {
+            "key": "$.units.1.lastCombat",
+            "before": 129.15600000019137,
+            "after": 129.12266666685804
+          },
+          {
+            "key": "$.units.1.facing",
+            "before": -2.9019103739661793,
+            "after": 0.7922060217184038
+          },
+          {
+            "key": "$.units.1.lastDamagedAt",
+            "before": 127.35600000019147,
+            "after": 128.18933333352476
+          },
+          {
+            "key": "$.units.1.repathAt",
+            "before": 129.86600000019135,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.stuckFor",
+            "before": 0.19999999999999998,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.cavalryCharge.distance",
+            "before": 1.3623617227294045,
+            "after": 0.5880600000000022
+          }
+        ]
+      },
+      {
+        "step": 240,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.world.tiles.6446.farm",
+            "before": 4
+          },
+          {
+            "key": "$.world.tiles.11109.farm",
+            "before": 4
+          },
+          {
+            "key": "$.world.revision",
+            "before": 1272,
+            "after": 1265
+          },
+          {
+            "key": "$.units.0.leaderProgression.xp",
+            "before": 76,
+            "after": 84
+          },
+          {
+            "key": "$.units.1.x",
+            "before": 95.28408000000002,
+            "after": 94.5
+          },
+          {
+            "key": "$.units.1.y",
+            "before": 18.5,
+            "after": 19.5
+          },
+          {
+            "key": "$.units.1.hp",
+            "before": 86.41000000000004,
+            "after": 79.27000000000005
+          },
+          {
+            "key": "$.units.1.cooldown",
+            "before": 0.31666666666666676,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.lastCombat",
+            "before": 133.1226666668578,
+            "after": 133.15600000019114
+          },
+          {
+            "key": "$.units.1.moving",
+            "before": true,
+            "after": false
+          },
+          {
+            "key": "$.units.1.facing",
+            "before": 0,
+            "after": 2.3561944901923533
+          },
+          {
+            "key": "$.units.1.lastDamagedAt",
+            "before": 127.35600000019147,
+            "after": 133.15600000019114
+          }
+        ]
+      },
+      {
+        "step": 360,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.world.tiles.5866.farm",
+            "before": 4
+          },
+          {
+            "key": "$.world.tiles.11388.farm",
+            "before": 5
+          },
+          {
+            "key": "$.world.tiles.14425.farm",
+            "before": 2
+          },
+          {
+            "key": "$.world.revision",
+            "before": 1286,
+            "after": 1276
+          },
+          {
+            "key": "$.units.0.leaderProgression.xp",
+            "before": 80,
+            "after": 86
+          },
+          {
+            "key": "$.units.1.x",
+            "before": 97.27404787625345,
+            "after": 95.08417878625544
+          },
+          {
+            "key": "$.units.1.y",
+            "before": 18.782801228358586,
+            "after": 18.915821213744564
+          },
+          {
+            "key": "$.units.1.hp",
+            "before": 84.03000000000004,
+            "after": 79.27000000000005
+          },
+          {
+            "key": "$.units.1.cooldown",
+            "before": 0.5166666666666667,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.lastCombat",
+            "before": 137.32266666685757,
+            "after": 133.15600000019114
+          },
+          {
+            "key": "$.units.1.moving",
+            "before": false,
+            "after": true
+          },
+          {
+            "key": "$.units.1.facing",
+            "before": 2.394297904890192,
+            "after": 2.356194490192345
+          }
+        ]
+      },
+      {
+        "step": 390,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.world.revision",
+            "before": 1286,
+            "after": 1280
+          },
+          {
+            "key": "$.units.0.leaderProgression.xp",
+            "before": 82,
+            "after": 86
+          },
+          {
+            "key": "$.units.1.x",
+            "before": 96.03797642917272,
+            "after": 95.4702494987373
+          },
+          {
+            "key": "$.units.1.y",
+            "before": 19.03797642917271,
+            "after": 18.529750501262697
+          },
+          {
+            "key": "$.units.1.hp",
+            "before": 81.65000000000005,
+            "after": 79.27000000000005
+          },
+          {
+            "key": "$.units.1.cooldown",
+            "before": 0.4833333333333334,
+            "after": 0
+          },
+          {
+            "key": "$.units.1.lastCombat",
+            "before": 138.28933333352418,
+            "after": 133.15600000019114
+          },
+          {
+            "key": "$.units.1.moving",
+            "before": false,
+            "after": true
+          },
+          {
+            "key": "$.units.1.facing",
+            "before": -2.3561944901923373,
+            "after": -0.7853981633974355
+          },
+          {
+            "key": "$.units.1.kills",
+            "before": 20,
+            "after": 18
+          },
+          {
+            "key": "$.units.1.lastDamagedAt",
+            "before": 138.05600000019086,
+            "after": 133.15600000019114
+          },
+          {
+            "key": "$.units.1.repathAt",
+            "before": 138.86600000019084,
+            "after": 139.09933333352416
+          }
+        ]
+      }
+    ],
+    "speedup": 1.899286593921784
+  },
+  "performanceInterpretation": {
+    "meanCpuReductionPercent": 47.34865168846751,
+    "p95CpuReductionPercent": 18.5029410761385,
+    "limits": "Simulation-only replay of the same captured starting world; no live FPS measurement. Exact replay state parity is intentionally not expected after changing sampling cadence. Timings include normal GC."
+  },
+  "sourceFilesChangedThisPass": [
+    "src/game/archery.ts",
+    "src/game/ballista.ts",
+    "src/game/battle-morale.ts",
+    "src/game/builders.ts",
+    "src/game/civilian-panic.ts",
+    "src/game/culture.ts",
+    "src/game/decision-schedule.ts",
+    "src/game/engagement.ts",
+    "src/game/farm-relocation.ts",
+    "src/game/farms.ts",
+    "src/game/fishing.ts",
+    "src/game/fog.ts",
+    "src/game/food-cargo.ts",
+    "src/game/formation.ts",
+    "src/game/forts.ts",
+    "src/game/guard-posts.ts",
+    "src/game/infantry-drill.ts",
+    "src/game/morale-perception.ts",
+    "src/game/peasant-capacity.ts",
+    "src/game/raider-motivations.ts",
+    "src/game/renderer.ts",
+    "src/game/scouts.ts",
+    "src/game/settlement-decisions.ts",
+    "src/game/simulation.ts",
+    "src/game/tower-combat.ts",
+    "src/game/traffic.ts",
+    "src/game/unit-health.ts",
+    "src/game/villages.ts",
+    "src/game/work-cadence.ts",
+    "src/main.ts",
+    "src/ui/building-activity.ts",
+    "src/ui/resource-rates.ts",
+    "src/world/mediterranean.ts",
+    "src/world/waterfalls.ts"
+  ]
+}

@@ -1,0 +1,11 @@
+import { build } from 'esbuild';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+await mkdir('output/navigation-lab', { recursive: true });
+const bundle = await build({ entryPoints: ['dev/navigation-lab/main.ts'], bundle: true, write: false, format: 'esm', target: 'es2022', minify: true });
+const template = await readFile('dev/navigation-lab/template.html', 'utf8');
+await writeFile('output/navigation-lab.html', template.replace('/*BUNDLE*/', () => bundle.outputFiles[0].text.replaceAll('</script', '<\\/script')));
+const benchmark = await build({ stdin: { contents: `import * as before from './dev/navigation-lab/baseline-simulation'; import * as after from './src/game/simulation'; import { run, SCENARIOS } from './dev/navigation-lab/scenarios'; export default SCENARIOS.map(scenario => ({ scenario, baseline: run(scenario, before), current: run(scenario, after) }));`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'esm', write: false });
+const { default: results } = await import(`data:text/javascript;base64,${Buffer.from(benchmark.outputFiles[0].text).toString('base64')}`);
+await writeFile('output/navigation-lab/comparison-results.json', JSON.stringify(results, null, 2));
+console.table(results.map(({ scenario, baseline, current }) => ({ scenario, beforeEngaged: baseline.engaged, currentEngaged: current.engaged, beforeArrived: baseline.arrived, currentArrived: current.arrived, beforeIdleSeconds: baseline.stalledUnitSeconds, currentIdleSeconds: current.stalledUnitSeconds, sharedCells: current.overlappingSamples })));
+console.log('Wrote output/navigation-lab.html and output/navigation-lab/comparison-results.json');

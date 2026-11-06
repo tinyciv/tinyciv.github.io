@@ -1,0 +1,13 @@
+import { build } from 'esbuild';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+const folder='scratch/2026-11-04-oxbow-tight-loops';
+await mkdir(folder,{recursive:true});await mkdir('output',{recursive:true});
+const files={world:'public/assets/puny-world/overworld.png',desert:'public/assets/puny-world/desert-ledges.png',vegetation:'public/assets/vegetation/medieval-nature.png',...Object.fromEntries(['2A','2B','2C','2D'].map((id,i)=>[`plant${i}`,`public/assets/vegetation/marsh/${id}.png`]))};
+const assets=Object.fromEntries(await Promise.all(Object.entries(files).map(async([id,path])=>[id,`data:image/png;base64,${(await readFile(path)).toString('base64')}`])));
+const font=`data:font/ttf;base64,${(await readFile('public/assets/fonts/pixel-operator/PixelOperator.ttf')).toString('base64')}`;
+const result=await build({entryPoints:['dev/swamp-valley-review/main.ts'],bundle:true,write:false,format:'esm',target:'es2022',minify:true,define:{'import.meta.env.BASE_URL':'"./"'}});
+const safe=s=>s.replaceAll('</script','<\\/script');
+const html=(await readFile('dev/swamp-valley-review/template.html','utf8')).replace('/*FONT*/',()=>font).replace('/*ASSETS*/',()=>safe(JSON.stringify(assets))).replace('/*BUNDLE*/',()=>safe(result.outputFiles[0].text));
+await writeFile('output/swamp-river-valley-designs.html',html);await writeFile('output/swamp-river-valley-designs-v3.html',html);await writeFile(`${folder}/review.html`,html);
+await writeFile(`${folder}/asset-sources.json`,JSON.stringify({files,font:'public/assets/fonts/pixel-operator/PixelOperator.ttf',plants:'Previously approved project wetland variants; native files unchanged. Only drawn scale varies.',terrain:'Native game rasterTerrain; all waterways use actual tiles.'},null,2));
+console.log(`Built output/swamp-river-valley-designs.html (${(Buffer.byteLength(html)/1024/1024).toFixed(2)} MB), four offline landscape studies.`);

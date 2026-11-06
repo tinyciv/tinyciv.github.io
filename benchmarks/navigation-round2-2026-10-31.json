@@ -1,0 +1,1924 @@
+{
+  "date": "2026-10-31",
+  "changes": [
+    "Palace-indexed building ownership and shared resident/needs calculations within mutation-aware planning scopes.",
+    "Courier route dependencies track actual navigation-region changes; larger bounded outbound cache; 120-game-second expiry.",
+    "Lazy bounded reverse destination searches shared by returning couriers, with A* fallback.",
+    "Reused movement occupancy/search/position/separation storage, deferred defensive masks, unchanged-geometry fast path, optional movement timings."
+  ],
+  "fixture": {
+    "path": "/Users/ckrapu/strongman/btv/scratch/2026-10-31-courier-optimization/live-final.json",
+    "sha256": "9e571b859d3b92709e66aa03c097fcd884d2ade4c260cb3b27ca6c8dea7a9e35",
+    "time": 4873.478599999764,
+    "units": 1294,
+    "buildings": 3506,
+    "fields": 2996,
+    "factions": [
+      {
+        "id": 0,
+        "population": 415,
+        "food": 72.80048611823142,
+        "gold": 69620.5,
+        "defeated": false
+      },
+      {
+        "id": 1,
+        "population": 130,
+        "food": 6.784743335045203,
+        "gold": 20608.5,
+        "defeated": false
+      },
+      {
+        "id": 2,
+        "population": 0,
+        "food": 91.16945277883019,
+        "gold": 8684,
+        "defeated": true
+      },
+      {
+        "id": 3,
+        "population": 69,
+        "food": 8.217466811144853,
+        "gold": 5721,
+        "defeated": false
+      },
+      {
+        "id": 4,
+        "population": 126,
+        "food": 19.70501211156006,
+        "gold": 15247,
+        "defeated": false
+      },
+      {
+        "id": 5,
+        "population": 0,
+        "food": 8.87238570007446,
+        "gold": 802,
+        "defeated": true
+      },
+      {
+        "id": 6,
+        "population": 19,
+        "food": 0,
+        "gold": 75,
+        "defeated": false
+      },
+      {
+        "id": 7,
+        "population": 15,
+        "food": 0,
+        "gold": 35,
+        "defeated": false
+      },
+      {
+        "id": 8,
+        "population": 13,
+        "food": 0,
+        "gold": 44,
+        "defeated": false
+      },
+      {
+        "id": 9,
+        "population": 14,
+        "food": 0,
+        "gold": 49,
+        "defeated": false
+      },
+      {
+        "id": 10,
+        "population": 5,
+        "food": 0,
+        "gold": 0,
+        "defeated": false
+      },
+      {
+        "id": 11,
+        "population": 7,
+        "food": 0,
+        "gold": 51,
+        "defeated": false
+      },
+      {
+        "id": 12,
+        "population": 5,
+        "food": 0,
+        "gold": 0,
+        "defeated": false
+      },
+      {
+        "id": 13,
+        "population": 5,
+        "food": 0,
+        "gold": 0,
+        "defeated": false
+      },
+      {
+        "id": 14,
+        "population": 7,
+        "food": 0,
+        "gold": 71,
+        "defeated": false
+      }
+    ]
+  },
+  "simulation": {
+    "methodology": "Identical saved-state clones, alternating baseline/current order, warmup excluded. Fixed timestep, WASM enabled. Simulation only; excludes rendering. Route selection can differ, so world totals are recorded instead of claiming exact trajectory parity.",
+    "environment": {
+      "node": "v25.9.0",
+      "cpu": "Apple M3 Pro",
+      "platform": "darwin arm64",
+      "gc": true
+    },
+    "dt": 0.03333333333333333,
+    "speed": 2,
+    "rounds": 3,
+    "frames": 900,
+    "warmup": 60,
+    "artifacts": {
+      "baseline": {
+        "bundleSha256": "0ec7b098ea336e3a12cb9b1a505e2805f1d333b35d00e525e61c8bbf72ffa634",
+        "wasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf"
+      },
+      "current": {
+        "bundleSha256": "2bff4488e58f6fc7a07cdddae023a66e4567eae6b99256b141cd6b3fdcd54db2",
+        "wasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf"
+      }
+    },
+    "summary": {
+      "baseline": {
+        "medianMeanMs": 31.26921438555534,
+        "pooledUpdateMs": {
+          "mean": 31.259118964074005,
+          "p50": 22.079209000003175,
+          "p95": 89.78341599999112,
+          "p99": 225.0324169999949,
+          "max": 490.56554199999664
+        }
+      },
+      "current": {
+        "medianMeanMs": 24.7403682866667,
+        "pooledUpdateMs": {
+          "mean": 24.52666806888877,
+          "p50": 21.443083999998635,
+          "p95": 46.29883300000074,
+          "p99": 74.12879200000316,
+          "max": 261.2068750000035
+        }
+      },
+      "speedup": 1.2638944587743757,
+      "timeReductionPercent": 20.879469558738272
+    },
+    "runs": [
+      {
+        "round": 1,
+        "name": "baseline",
+        "order": 1,
+        "updateMs": {
+          "mean": 28.37641800111111,
+          "p50": 20.33441700000003,
+          "p95": 76.54770800000006,
+          "p99": 212.3449580000015,
+          "max": 458.1459169999998
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1287,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 154.88519333611183,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 128,
+              "food": 24.87460784297191,
+              "gold": 21059.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.231423648483332,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 124,
+              "food": 43.76737209781994,
+              "gold": 15648,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 13543,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 5,
+          "searches": 114,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 1019,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333
+        },
+        "routesAfter": {
+          "hits": 166,
+          "searches": 1282,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 1528,
+          "outboundHits": 0,
+          "outboundSearches": 1469,
+          "outboundTargets": 334,
+          "outboundNodes": 3255
+        }
+      },
+      {
+        "round": 1,
+        "name": "current",
+        "order": 2,
+        "updateMs": {
+          "mean": 23.763000778888735,
+          "p50": 20.86883300000045,
+          "p95": 45.906542000004265,
+          "p99": 73.89020800000071,
+          "max": 261.2068750000035
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1293,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 155.47308023187165,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 130,
+              "food": 23.14243315141082,
+              "gold": 21035.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.2484040382903,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 125,
+              "food": 43.76737209781994,
+              "gold": 15649,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 12242,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 51,
+          "searches": 67,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 977,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333,
+          "reverseFields": 39,
+          "reverseNodes": 14247,
+          "reverseExpanded": 11789,
+          "reverseSearches": 67,
+          "reverseHits": 47
+        },
+        "routesAfter": {
+          "hits": 1206,
+          "searches": 243,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 3938,
+          "outboundHits": 114,
+          "outboundSearches": 1366,
+          "outboundTargets": 1338,
+          "outboundNodes": 13287,
+          "reverseFields": 44,
+          "reverseNodes": 21031,
+          "reverseExpanded": 30062,
+          "reverseSearches": 243,
+          "reverseHits": 880
+        },
+        "cityOwnership": {
+          "rebuilds": 1,
+          "hits": 142571,
+          "misses": 311
+        },
+        "cityPlanning": {
+          "summaries": 260,
+          "needs": 318,
+          "hits": 110
+        }
+      },
+      {
+        "round": 2,
+        "name": "current",
+        "order": 1,
+        "updateMs": {
+          "mean": 24.7403682866667,
+          "p50": 21.64020800000435,
+          "p95": 49.431415999999444,
+          "p99": 78.34420799999498,
+          "max": 215.7982919999995
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1293,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 155.47308023187165,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 130,
+              "food": 23.14243315141082,
+              "gold": 21035.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.2484040382903,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 125,
+              "food": 43.76737209781994,
+              "gold": 15649,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 12242,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 51,
+          "searches": 67,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 977,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333,
+          "reverseFields": 39,
+          "reverseNodes": 14247,
+          "reverseExpanded": 11789,
+          "reverseSearches": 67,
+          "reverseHits": 47
+        },
+        "routesAfter": {
+          "hits": 1206,
+          "searches": 243,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 3938,
+          "outboundHits": 114,
+          "outboundSearches": 1366,
+          "outboundTargets": 1338,
+          "outboundNodes": 13287,
+          "reverseFields": 44,
+          "reverseNodes": 21031,
+          "reverseExpanded": 30062,
+          "reverseSearches": 243,
+          "reverseHits": 880
+        },
+        "cityOwnership": {
+          "rebuilds": 1,
+          "hits": 142571,
+          "misses": 311
+        },
+        "cityPlanning": {
+          "summaries": 260,
+          "needs": 318,
+          "hits": 110
+        }
+      },
+      {
+        "round": 2,
+        "name": "baseline",
+        "order": 2,
+        "updateMs": {
+          "mean": 31.26921438555534,
+          "p50": 22.12341600000218,
+          "p95": 89.78341599999112,
+          "p99": 225.0324169999949,
+          "max": 473.15641699999105
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1287,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 154.88519333611183,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 128,
+              "food": 24.87460784297191,
+              "gold": 21059.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.231423648483332,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 124,
+              "food": 43.76737209781994,
+              "gold": 15648,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 13543,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 5,
+          "searches": 114,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 1019,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333
+        },
+        "routesAfter": {
+          "hits": 166,
+          "searches": 1282,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 1528,
+          "outboundHits": 0,
+          "outboundSearches": 1469,
+          "outboundTargets": 334,
+          "outboundNodes": 3255
+        }
+      },
+      {
+        "round": 3,
+        "name": "baseline",
+        "order": 1,
+        "updateMs": {
+          "mean": 34.13172450555556,
+          "p50": 23.684833999999682,
+          "p95": 99.8624589999963,
+          "p99": 249.29645899999014,
+          "max": 490.56554199999664
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1287,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 154.88519333611183,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 128,
+              "food": 24.87460784297191,
+              "gold": 21059.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.231423648483332,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 124,
+              "food": 43.76737209781994,
+              "gold": 15648,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 13543,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 5,
+          "searches": 114,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 1019,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333
+        },
+        "routesAfter": {
+          "hits": 166,
+          "searches": 1282,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 1528,
+          "outboundHits": 0,
+          "outboundSearches": 1469,
+          "outboundTargets": 334,
+          "outboundNodes": 3255
+        }
+      },
+      {
+        "round": 3,
+        "name": "current",
+        "order": 2,
+        "updateMs": {
+          "mean": 25.076635141110877,
+          "p50": 21.98758300000918,
+          "p95": 48.18995800000266,
+          "p99": 77.29304200000479,
+          "max": 244.98287499998696
+        },
+        "final": {
+          "time": 4937.478599999706,
+          "units": 1293,
+          "buildings": 3511,
+          "fields": 2996,
+          "factions": [
+            {
+              "id": 0,
+              "population": 415,
+              "food": 155.47308023187165,
+              "gold": 72390,
+              "defeated": false
+            },
+            {
+              "id": 1,
+              "population": 130,
+              "food": 23.14243315141082,
+              "gold": 21035.5,
+              "defeated": false
+            },
+            {
+              "id": 2,
+              "population": 0,
+              "food": 91.16945277883019,
+              "gold": 8684,
+              "defeated": true
+            },
+            {
+              "id": 3,
+              "population": 69,
+              "food": 22.2484040382903,
+              "gold": 5880,
+              "defeated": false
+            },
+            {
+              "id": 4,
+              "population": 125,
+              "food": 43.76737209781994,
+              "gold": 15649,
+              "defeated": false
+            },
+            {
+              "id": 5,
+              "population": 0,
+              "food": 8.87238570007446,
+              "gold": 802,
+              "defeated": true
+            },
+            {
+              "id": 6,
+              "population": 19,
+              "food": 0,
+              "gold": 25,
+              "defeated": false
+            },
+            {
+              "id": 7,
+              "population": 16,
+              "food": 0,
+              "gold": 63,
+              "defeated": false
+            },
+            {
+              "id": 8,
+              "population": 13,
+              "food": 0,
+              "gold": 28,
+              "defeated": false
+            },
+            {
+              "id": 9,
+              "population": 15,
+              "food": 0,
+              "gold": 34,
+              "defeated": false
+            },
+            {
+              "id": 10,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 11,
+              "population": 7,
+              "food": 0,
+              "gold": 36,
+              "defeated": false
+            },
+            {
+              "id": 12,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 13,
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "defeated": false
+            },
+            {
+              "id": 14,
+              "population": 7,
+              "food": 0,
+              "gold": 79,
+              "defeated": false
+            }
+          ]
+        },
+        "navigationDelta": {
+          "enabled": true,
+          "ready": true,
+          "searches": 12242,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "routesBefore": {
+          "hits": 51,
+          "searches": 67,
+          "fallbacks": 0,
+          "doors": 39,
+          "nodes": 977,
+          "outboundHits": 0,
+          "outboundSearches": 135,
+          "outboundTargets": 135,
+          "outboundNodes": 1333,
+          "reverseFields": 39,
+          "reverseNodes": 14247,
+          "reverseExpanded": 11789,
+          "reverseSearches": 67,
+          "reverseHits": 47
+        },
+        "routesAfter": {
+          "hits": 1206,
+          "searches": 243,
+          "fallbacks": 0,
+          "doors": 44,
+          "nodes": 3938,
+          "outboundHits": 114,
+          "outboundSearches": 1366,
+          "outboundTargets": 1338,
+          "outboundNodes": 13287,
+          "reverseFields": 44,
+          "reverseNodes": 21031,
+          "reverseExpanded": 30062,
+          "reverseSearches": 243,
+          "reverseHits": 880
+        },
+        "cityOwnership": {
+          "rebuilds": 1,
+          "hits": 142571,
+          "misses": 311
+        },
+        "cityPlanning": {
+          "summaries": 260,
+          "needs": 318,
+          "hits": 110
+        }
+      }
+    ]
+  },
+  "browser": {
+    "methodology": "Four serial 25-second headless Chrome replays, order baseline/current/current/baseline. Identical initial world and 1440×900 DPR 1 viewport. Both frozen copies use identical baseline main.ts, style.css, renderer.ts and UI modules, verified by hashes. Baseline includes the prior 1 Hz city-label cache. CPU sampling and detailed movement timing disabled. All earlier captures without the clean- prefix are excluded because concurrent HUD changes differed between snapshots.",
+    "baseline": {
+      "fps": 36.568883059689355,
+      "frameWorkMs": {
+        "mean": 26.418753415786092,
+        "p50": 18.200000047683716,
+        "p95": 72.89999985694885,
+        "p99": 170.59999990463257,
+        "max": 285.5
+      },
+      "simulationMs": {
+        "mean": 22.254784036164992,
+        "p50": 14.100000143051147,
+        "p95": 67.5,
+        "p99": 165.79999995231628,
+        "max": 279.60000014305115
+      },
+      "drawingMs": {
+        "mean": 4.03931109497233,
+        "p50": 3.8000001907348633,
+        "p95": 5.3999998569488525,
+        "p99": 7.099999904632568,
+        "max": 12.700000047683716
+      },
+      "over40ms": 225,
+      "runs": [
+        {
+          "label": "clean-baseline-1",
+          "fps": 38.3451220929205,
+          "elapsedMs": 25009.699999809265,
+          "frames": 959,
+          "gameSeconds": 48.964800000097966,
+          "units": 1292,
+          "buildings": 3511,
+          "backend": "pixi-webgl",
+          "viewport": [
+            1440,
+            900,
+            1
+          ],
+          "metrics": {
+            "total": {
+              "mean": 25.124191866179576,
+              "p50": 17.600000143051147,
+              "p95": 68.59999990463257,
+              "p99": 167.90000009536743,
+              "max": 285.5
+            },
+            "sim": {
+              "mean": 21.06298227429514,
+              "p50": 13.700000047683716,
+              "p95": 62.200000047683716,
+              "p99": 163.5,
+              "max": 279.60000014305115
+            },
+            "draw": {
+              "mean": 3.9411887354348574,
+              "p50": 3.700000047683716,
+              "p95": 5.199999809265137,
+              "p99": 6.799999952316284,
+              "max": 12.700000047683716
+            },
+            "prepare": {
+              "mean": 0.011574556979198276,
+              "p50": 0,
+              "p95": 0,
+              "p99": 0,
+              "max": 3.8999998569488525
+            },
+            "prepareFog": {
+              "mean": 0.126277373654999,
+              "p50": 0,
+              "p95": 0.40000009536743164,
+              "p99": 0.5,
+              "max": 1.4000000953674316
+            },
+            "drawMinimap": {
+              "mean": 0.26319082089087015,
+              "p50": 0.20000004768371582,
+              "p95": 0.5,
+              "p99": 0.7000000476837158,
+              "max": 1.5999999046325684
+            }
+          },
+          "errors": []
+        },
+        {
+          "label": "clean-baseline-2",
+          "fps": 34.79234568394953,
+          "elapsedMs": 25005.5,
+          "frames": 870,
+          "gameSeconds": 48.69780000009541,
+          "units": 1288,
+          "buildings": 3511,
+          "backend": "pixi-webgl",
+          "viewport": [
+            1440,
+            900,
+            1
+          ],
+          "metrics": {
+            "total": {
+              "mean": 27.845747123915572,
+              "p50": 18.799999952316284,
+              "p95": 79.60000014305115,
+              "p99": 177.69999980926514,
+              "max": 284.80000019073486
+            },
+            "sim": {
+              "mean": 23.56850574838704,
+              "p50": 14.600000143051147,
+              "p95": 72.60000014305115,
+              "p99": 167.39999985694885,
+              "max": 278.80000019073486
+            },
+            "draw": {
+              "mean": 4.147471259106164,
+              "p50": 4,
+              "p95": 5.5,
+              "p99": 7.3999998569488525,
+              "max": 11.5
+            },
+            "prepare": {
+              "mean": 0.013218390804597701,
+              "p50": 0,
+              "p95": 0,
+              "p99": 0,
+              "max": 4
+            },
+            "prepareFog": {
+              "mean": 0.11804597597012574,
+              "p50": 0,
+              "p95": 0.5,
+              "p99": 0.5999999046325684,
+              "max": 1
+            },
+            "drawMinimap": {
+              "mean": 0.29149424947541336,
+              "p50": 0.2999999523162842,
+              "p95": 0.5,
+              "p99": 0.7000000476837158,
+              "max": 1.2999999523162842
+            }
+          },
+          "errors": []
+        }
+      ]
+    },
+    "current": {
+      "fps": 45.407376749393585,
+      "frameWorkMs": {
+        "mean": 21.235006606720557,
+        "p50": 17.899999856948853,
+        "p95": 42.40000009536743,
+        "p99": 84,
+        "max": 249.79999995231628
+      },
+      "simulationMs": {
+        "mean": 17.23377367086423,
+        "p50": 14,
+        "p95": 38,
+        "p99": 76.79999995231628,
+        "max": 243.90000009536743
+      },
+      "drawingMs": {
+        "mean": 3.9004843669649474,
+        "p50": 3.700000047683716,
+        "p95": 5,
+        "p99": 6.299999952316284,
+        "max": 9.5
+      },
+      "over40ms": 128,
+      "runs": [
+        {
+          "label": "clean-current-1",
+          "fps": 46.14873970768737,
+          "elapsedMs": 25006.099999904633,
+          "frames": 1154,
+          "gameSeconds": 49.49760000009428,
+          "units": 1296,
+          "buildings": 3511,
+          "backend": "pixi-webgl",
+          "viewport": [
+            1440,
+            900,
+            1
+          ],
+          "metrics": {
+            "total": {
+              "mean": 20.821403811667984,
+              "p50": 17.5,
+              "p95": 42.09999990463257,
+              "p99": 93.90000009536743,
+              "max": 248.89999985694885
+            },
+            "sim": {
+              "mean": 16.83396880362228,
+              "p50": 13.600000143051147,
+              "p95": 37.5,
+              "p99": 78.10000014305115,
+              "max": 242.89999985694885
+            },
+            "draw": {
+              "mean": 3.8889947993296685,
+              "p50": 3.700000047683716,
+              "p95": 5,
+              "p99": 6.299999952316284,
+              "max": 9.5
+            },
+            "prepare": {
+              "mean": 0.009618717421692,
+              "p50": 0,
+              "p95": 0,
+              "p99": 0,
+              "max": 4
+            },
+            "prepareFog": {
+              "mean": 0.11507799121288122,
+              "p50": 0,
+              "p95": 0.40000009536743164,
+              "p99": 0.5,
+              "max": 1.5
+            },
+            "drawMinimap": {
+              "mean": 0.2666377802242233,
+              "p50": 0.20000004768371582,
+              "p95": 0.5,
+              "p99": 0.5,
+              "max": 1.2999999523162842
+            }
+          },
+          "errors": []
+        },
+        {
+          "label": "clean-current-2",
+          "fps": 44.66606418805852,
+          "elapsedMs": 25007.799999952316,
+          "frames": 1117,
+          "gameSeconds": 49.36480000008851,
+          "units": 1293,
+          "buildings": 3511,
+          "backend": "pixi-webgl",
+          "viewport": [
+            1440,
+            900,
+            1
+          ],
+          "metrics": {
+            "total": {
+              "mean": 21.66230976293422,
+              "p50": 18.300000190734863,
+              "p95": 42.5,
+              "p99": 81.5,
+              "max": 249.79999995231628
+            },
+            "sim": {
+              "mean": 17.646821850628967,
+              "p50": 14.5,
+              "p95": 38.39999985694885,
+              "p99": 73.79999995231628,
+              "max": 243.90000009536743
+            },
+            "draw": {
+              "mean": 3.912354520099336,
+              "p50": 3.700000047683716,
+              "p95": 5,
+              "p99": 6.299999952316284,
+              "max": 8.400000095367432
+            },
+            "prepare": {
+              "mean": 0.009847806624888093,
+              "p50": 0,
+              "p95": 0,
+              "p99": 0,
+              "max": 4
+            },
+            "prepareFog": {
+              "mean": 0.10823634573681182,
+              "p50": 0,
+              "p95": 0.40000009536743164,
+              "p99": 0.5,
+              "max": 0.6999998092651367
+            },
+            "drawMinimap": {
+              "mean": 0.2654431562073655,
+              "p50": 0.20000004768371582,
+              "p95": 0.40000009536743164,
+              "p99": 0.6000001430511475,
+              "max": 1.6999998092651367
+            }
+          },
+          "errors": []
+        }
+      ]
+    },
+    "change": {
+      "fpsIncreasePercent": 24.169438468431338,
+      "frameWorkReductionPercent": 19.621466340527917
+    }
+  },
+  "profile": {
+    "methodology": "Separate 20-second optimized browser replay with the identical baseline UI, CDP CPU sampling and opt-in movement timings. Instrumentation overhead makes its FPS unsuitable for the performance comparison. Inclusive groups overlap and cannot be summed.",
+    "groups": {
+      "cityPlanningAndSummaries": {
+        "milliseconds": 822.448,
+        "percent": 4.059891354881028
+      },
+      "navigationMaintenance": {
+        "milliseconds": 565.876,
+        "percent": 2.793362109622319
+      },
+      "spatialMaintenance": {
+        "milliseconds": 111.481,
+        "percent": 0.5503092574041057
+      },
+      "movement": {
+        "milliseconds": 2004.47,
+        "percent": 9.894765899021428
+      },
+      "localSteeringAndCollision": {
+        "milliseconds": 700.312,
+        "percent": 3.456985286023485
+      },
+      "pathSearches": {
+        "milliseconds": 537.575,
+        "percent": 2.653658462419714
+      },
+      "collectorUpdates": {
+        "milliseconds": 1001.875,
+        "percent": 4.945605863436266
+      },
+      "fogUpdates": {
+        "milliseconds": 2781.612,
+        "percent": 13.731010971433244
+      },
+      "drawing": {
+        "milliseconds": 3185.866,
+        "percent": 15.726550287932369
+      }
+    },
+    "movement": {
+      "calls": 259905,
+      "movementMs": 1863.0999855995178,
+      "pathSearches": 9371,
+      "pathSearchMs": 407.1999955177307,
+      "congestionMs": 766.5000021457672,
+      "routeValidationMs": 4.299999952316284,
+      "steeringMs": 292.40000915527344,
+      "spatialMs": 103.79999589920044,
+      "separationMs": 218.0000033378601
+    },
+    "topSelf": [
+      {
+        "name": "updateFog",
+        "url": "http://127.0.0.1:5221/src/game/fog.ts",
+        "line": 303,
+        "selfUs": 1624520,
+        "inclusiveUs": 2767901,
+        "selfPercent": 8.019199637948331,
+        "inclusivePercent": 13.663328673747829
+      },
+      {
+        "name": "stepGame",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 2079,
+        "selfUs": 1182441,
+        "inclusiveUs": 15568611,
+        "selfPercent": 5.836942874877048,
+        "inclusivePercent": 76.8521161294157
+      },
+      {
+        "name": "draw",
+        "url": "http://127.0.0.1:5221/src/game/renderer.ts",
+        "line": 298,
+        "selfUs": 876401,
+        "inclusiveUs": 3185866,
+        "selfPercent": 4.326222257588428,
+        "inclusivePercent": 15.726550287932369
+      },
+      {
+        "name": "advanceUnit",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 834,
+        "selfUs": 594752,
+        "inclusiveUs": 1599368,
+        "selfPercent": 2.935904158193833,
+        "inclusivePercent": 7.895040557546934
+      },
+      {
+        "name": "factionBlockers",
+        "url": "http://127.0.0.1:5221/src/game/pathfinding.ts",
+        "line": 126,
+        "selfUs": 575544,
+        "inclusiveUs": 770132,
+        "selfPercent": 2.8410867434216467,
+        "inclusivePercent": 3.8016412574621574
+      },
+      {
+        "name": "(program)",
+        "url": "",
+        "line": 0,
+        "selfUs": 467379,
+        "inclusiveUs": 467379,
+        "selfPercent": 2.307146423303285,
+        "inclusivePercent": 2.307146423303285
+      },
+      {
+        "name": "updateMarauder",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1319,
+        "selfUs": 336879,
+        "inclusiveUs": 1720650,
+        "selfPercent": 1.6629527213160782,
+        "inclusivePercent": 8.493730983327872
+      },
+      {
+        "name": "entityVisible",
+        "url": "http://127.0.0.1:5221/src/game/fog.ts",
+        "line": 435,
+        "selfUs": 333468,
+        "inclusiveUs": 1622619,
+        "selfPercent": 1.6461148307606885,
+        "inclusivePercent": 8.009815636205206
+      },
+      {
+        "name": "updateHarvests",
+        "url": "http://127.0.0.1:5221/src/game/farms.ts",
+        "line": 589,
+        "selfUs": 331248,
+        "inclusiveUs": 633533,
+        "selfPercent": 1.6351561333015958,
+        "inclusivePercent": 3.1273407555636865
+      },
+      {
+        "name": "rememberBuilding",
+        "url": "http://127.0.0.1:5221/src/game/fog.ts",
+        "line": 63,
+        "selfUs": 324337,
+        "inclusiveUs": 324337,
+        "selfPercent": 1.6010410170224112,
+        "inclusivePercent": 1.6010410170224112
+      },
+      {
+        "name": "sightDistance",
+        "url": "http://127.0.0.1:5221/src/game/sight.ts",
+        "line": 20,
+        "selfUs": 319071,
+        "inclusiveUs": 355662,
+        "selfPercent": 1.5750461968334104,
+        "inclusivePercent": 1.755672187250375
+      },
+      {
+        "name": "updateBuilder",
+        "url": "http://127.0.0.1:5221/src/game/builders.ts",
+        "line": 214,
+        "selfUs": 302172,
+        "inclusiveUs": 921123,
+        "selfPercent": 1.4916268146887222,
+        "inclusivePercent": 4.546985711536872
+      },
+      {
+        "name": "repairable",
+        "url": "http://127.0.0.1:5221/src/game/builders.ts",
+        "line": 23,
+        "selfUs": 269283,
+        "inclusiveUs": 453730,
+        "selfPercent": 1.3292751927373256,
+        "inclusivePercent": 2.239770179330692
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": 0,
+        "selfUs": 268565,
+        "inclusiveUs": 268565,
+        "selfPercent": 1.3257308932888443,
+        "inclusivePercent": 1.3257308932888443
+      },
+      {
+        "name": "territory",
+        "url": "http://127.0.0.1:5221/src/game/borders.ts",
+        "line": 74,
+        "selfUs": 256101,
+        "inclusiveUs": 500662,
+        "selfPercent": 1.2642042243113076,
+        "inclusivePercent": 2.47144296723616
+      }
+    ],
+    "topInclusive": [
+      {
+        "name": "(root)",
+        "url": "",
+        "line": 0,
+        "selfUs": 0,
+        "inclusiveUs": 20257882,
+        "selfPercent": 0,
+        "inclusivePercent": 100
+      },
+      {
+        "name": "pump",
+        "url": "",
+        "line": 1,
+        "selfUs": 6028,
+        "inclusiveUs": 19349624,
+        "selfPercent": 0.029756319046581475,
+        "inclusivePercent": 95.51652043387358
+      },
+      {
+        "name": "invoke",
+        "url": "",
+        "line": 1,
+        "selfUs": 1499,
+        "inclusiveUs": 19339942,
+        "selfPercent": 0.007399588959990981,
+        "inclusivePercent": 95.46872669117137
+      },
+      {
+        "name": "frame",
+        "url": "http://127.0.0.1:5221/src/main.ts",
+        "line": 1053,
+        "selfUs": 1510,
+        "inclusiveUs": 19333939,
+        "selfPercent": 0.007453888812265764,
+        "inclusivePercent": 95.43909378087996
+      },
+      {
+        "name": "updateGame",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 2270,
+        "selfUs": 145946,
+        "inclusiveUs": 15967376,
+        "selfPercent": 0.7204405672814167,
+        "inclusivePercent": 78.82055981962971
+      },
+      {
+        "name": "stepGame",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 2079,
+        "selfUs": 1182441,
+        "inclusiveUs": 15568611,
+        "selfPercent": 5.836942874877048,
+        "inclusivePercent": 76.8521161294157
+      },
+      {
+        "name": "r.<computed>",
+        "url": "",
+        "line": 1,
+        "selfUs": 98641,
+        "inclusiveUs": 3272350,
+        "selfPercent": 0.48692652074881276,
+        "inclusivePercent": 16.153465599217135
+      },
+      {
+        "name": "draw",
+        "url": "http://127.0.0.1:5221/src/game/renderer.ts",
+        "line": 298,
+        "selfUs": 876401,
+        "inclusiveUs": 3185866,
+        "selfPercent": 4.326222257588428,
+        "inclusivePercent": 15.726550287932369
+      },
+      {
+        "name": "updateFog",
+        "url": "http://127.0.0.1:5221/src/game/fog.ts",
+        "line": 303,
+        "selfUs": 1624520,
+        "inclusiveUs": 2767901,
+        "selfPercent": 8.019199637948331,
+        "inclusivePercent": 13.663328673747829
+      },
+      {
+        "name": "updateWarrior",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1644,
+        "selfUs": 28353,
+        "inclusiveUs": 2130087,
+        "selfPercent": 0.1399603374133584,
+        "inclusivePercent": 10.514855402948838
+      },
+      {
+        "name": "nearestEnemy",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 509,
+        "selfUs": 29366,
+        "inclusiveUs": 1908235,
+        "selfPercent": 0.14496086017284532,
+        "inclusivePercent": 9.419716236870173
+      },
+      {
+        "name": "moveUnit",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 822,
+        "selfUs": 154902,
+        "inclusiveUs": 1818608,
+        "selfPercent": 0.7646505197335042,
+        "inclusivePercent": 8.977285976885442
+      },
+      {
+        "name": "updateMarauder",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1319,
+        "selfUs": 336879,
+        "inclusiveUs": 1720650,
+        "selfPercent": 1.6629527213160782,
+        "inclusivePercent": 8.493730983327872
+      },
+      {
+        "name": "targetInSight",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 423,
+        "selfUs": 1505,
+        "inclusiveUs": 1630510,
+        "selfPercent": 0.007429207061231771,
+        "inclusivePercent": 8.048768375687052
+      },
+      {
+        "name": "entityVisible",
+        "url": "http://127.0.0.1:5221/src/game/fog.ts",
+        "line": 435,
+        "selfUs": 333468,
+        "inclusiveUs": 1622619,
+        "selfPercent": 1.6461148307606885,
+        "inclusivePercent": 8.009815636205206
+      },
+      {
+        "name": "advanceUnit",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 834,
+        "selfUs": 594752,
+        "inclusiveUs": 1599368,
+        "selfPercent": 2.935904158193833,
+        "inclusivePercent": 7.895040557546934
+      },
+      {
+        "name": "updateMorale",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1184,
+        "selfUs": 74602,
+        "inclusiveUs": 1567015,
+        "selfPercent": 0.36826159812758313,
+        "inclusivePercent": 7.735334819306382
+      },
+      {
+        "name": "senseMorale",
+        "url": "http://127.0.0.1:5221/src/game/morale-perception.ts",
+        "line": 7,
+        "selfUs": 33998,
+        "inclusiveUs": 1461933,
+        "selfPercent": 0.16782603433073606,
+        "inclusivePercent": 7.216613266875579
+      },
+      {
+        "name": "",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1188,
+        "selfUs": 24245,
+        "inclusiveUs": 1420406,
+        "selfPercent": 0.1196818107638301,
+        "inclusivePercent": 7.011621451837858
+      },
+      {
+        "name": "forEachNearbyUnit",
+        "url": "http://127.0.0.1:5221/src/game/spatial.ts",
+        "line": 233,
+        "selfUs": 89872,
+        "inclusiveUs": 1401259,
+        "selfPercent": 0.44363966578539654,
+        "inclusivePercent": 6.917105154428286
+      },
+      {
+        "name": "",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 1191,
+        "selfUs": 18320,
+        "inclusiveUs": 1307821,
+        "selfPercent": 0.09043393578854887,
+        "inclusivePercent": 6.455862463805446
+      },
+      {
+        "name": "",
+        "url": "http://127.0.0.1:5221/src/game/simulation.ts",
+        "line": 439,
+        "selfUs": 249075,
+        "inclusiveUs": 1278266,
+        "selfPercent": 1.229521427758341,
+        "inclusivePercent": 6.309968633443516
+      },
+      {
+        "name": "runSettlementDecision",
+        "url": "http://127.0.0.1:5221/src/game/settlement-decisions.ts",
+        "line": 42,
+        "selfUs": 1504,
+        "inclusiveUs": 1020895,
+        "selfPercent": 0.0074242707110249734,
+        "inclusivePercent": 5.039495244369574
+      },
+      {
+        "name": "updateCollector",
+        "url": "http://127.0.0.1:5221/src/game/farms.ts",
+        "line": 718,
+        "selfUs": 189492,
+        "inclusiveUs": 1001875,
+        "selfPercent": 0.935398873386665,
+        "inclusivePercent": 4.945605863436266
+      },
+      {
+        "name": "updateBuilder",
+        "url": "http://127.0.0.1:5221/src/game/builders.ts",
+        "line": 214,
+        "selfUs": 302172,
+        "inclusiveUs": 921123,
+        "selfPercent": 1.4916268146887222,
+        "inclusivePercent": 4.546985711536872
+      }
+    ],
+    "raw": "scratch/2026-10-31-navigation-round2/browser/clean-current-cpu.cpuprofile"
+  },
+  "validation": {
+    "productionBuild": "passed",
+    "fullSuite": {
+      "command": "npm test -- --maxWorkers=2",
+      "passed": 2234,
+      "failed": 1,
+      "note": "One assertion expected a second native A* search for a return trip. Updated to validate legal outbound/return paths and reverse search activity. The broad run also discovered 8 duplicate scratch-fixture tests."
+    },
+    "correctedIntegrationRerun": {
+      "passed": 34,
+      "failed": 0,
+      "files": [
+        "tests/farm-pickup-routes.test.ts",
+        "tests/courier-routes.test.ts",
+        "tests/courier-outbound-routes.test.ts",
+        "tests/navigation-reverse.test.ts"
+      ]
+    },
+    "typeScript": "passed",
+    "scriptSyntax": "passed",
+    "whitespace": "passed",
+    "browserErrors": []
+  },
+  "limitations": [
+    "Local measurements on one large settlement; timings vary by run and are not a universal speedup guarantee.",
+    "Equal-cost reverse routes and longer cache reuse can change trajectories; no exact whole-game state parity is claimed.",
+    "Still-valid routes can miss distant new shortcuts for up to 120 game seconds. Access-changing edits remain live.",
+    "Worst browser frame still reached 249.8 ms in optimized runs; stable 60 FPS is not achieved.",
+    "Paths remain arrays; spatial frame boundaries still compare scalar geometry to detect direct editor/test mutations. No speculative revision-only invalidation was introduced."
+  ],
+  "artifacts": {
+    "sourceManifest": "scratch/2026-10-31-navigation-round2/source-manifest.json",
+    "fixedStep": "scratch/2026-10-31-navigation-round2/simulation/simulation.json",
+    "browserSummary": "scratch/2026-10-31-navigation-round2/browser-summary.json",
+    "cpuSummary": "scratch/2026-10-31-navigation-round2/cpu-summary.json",
+    "screenshot": "scratch/2026-10-31-navigation-round2/browser/clean-current-2.png"
+  },
+  "reproduction": {
+    "simulation": "node --expose-gc scripts/benchmark-settlement-navigation.mjs --baseline=scratch/2026-10-31-navigation-round2/baseline --current=scratch/2026-10-31-navigation-round2/current --state=scratch/2026-10-31-courier-optimization/live-final.json --out=/tmp/btv-navigation-comparison",
+    "browser": "Serve frozen baseline/current snapshots separately, then run scripts/profile-live-state.mjs with --state=scratch/2026-10-31-courier-optimization/live-final.json --seconds=25 in alternating order.",
+    "cpu": "Add --cpu --movement to a separate profile-live-state.mjs run; summarize with scripts/summarize-cpu-profile.mjs."
+  }
+}

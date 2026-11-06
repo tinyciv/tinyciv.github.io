@@ -1,0 +1,685 @@
+{
+  "date": "2026-10-31",
+  "changes": [
+    "Runtime sleeping of healthy empty hidden farm couriers with event/deadline wakeups; retained entity identity and active order",
+    "Removed redundant unit occupancy masks from collector paths so WASM remains eligible",
+    "Local four-plot weighted pickup routing with safe full-search fallback",
+    "Separate bounded outbound route cache with live access validation"
+  ],
+  "methodology": {
+    "live": "Existing VS Code integrated browser game at127.0.0.1:5174. Carried its exact world/camera into a frozen development build at5210 to avoid concurrent hot reloads. Collected60s with DevTools sampling and30s without CPU sampling;2x speed,950x761 CSS viewport,DPR2,Pixi WebGL. Returned advanced world to5174, saved and paused at2x. No baseline comparison or claimed speedup.",
+    "cpu": "VS Code DevTools crashed during export, so function attribution comes from a separate30s headless Chrome CPU replay of the saved live-start world, using the same frozen source and viewport. Replay centers on the leader; its trajectory/view are not identical to live execution. Weighted inclusive sample shares overlap, particularly citySummaries within draw.",
+    "limitations": [
+      "Development builds on one local machine; concurrent unrelated workspace work was present, though this task ran no competing tests/builds during captures",
+      "First sampled run includes cold runtime caches after handoff; subsequent unsampled live run is warm and at a later game time",
+      "FPS/frame work are observed run values, not controlled before/after speedups",
+      "CPU samples estimate attribution, not exact per-function stopwatch costs"
+    ]
+  },
+  "liveSampled": {
+    "seconds": 60,
+    "elapsed": 60039.799999952316,
+    "gameSeconds": 114.25480000017524,
+    "frames": 1357,
+    "fps": 22.601674222783515,
+    "speed": 2,
+    "startTime": 4699.907599999491,
+    "endTime": 4814.162399999666,
+    "backend": "pixi-webgl",
+    "viewport": [
+      950,
+      761,
+      2
+    ],
+    "units": 1293,
+    "buildings": 3504,
+    "fields": 2996,
+    "populations": [
+      {
+        "id": 0,
+        "name": "Roma",
+        "population": 415
+      },
+      {
+        "id": 1,
+        "name": "Egyptians",
+        "population": 130
+      },
+      {
+        "id": 2,
+        "name": "Greeks",
+        "population": 0
+      },
+      {
+        "id": 3,
+        "name": "Persians",
+        "population": 69
+      },
+      {
+        "id": 4,
+        "name": "Babylonians",
+        "population": 124
+      },
+      {
+        "id": 5,
+        "name": "Assyrians",
+        "population": 0
+      },
+      {
+        "id": 6,
+        "name": "Sabine Crossing",
+        "population": 19
+      },
+      {
+        "id": 7,
+        "name": "Etruscan Hearth",
+        "population": 15
+      },
+      {
+        "id": 8,
+        "name": "Veneti Hollow",
+        "population": 13
+      },
+      {
+        "id": 9,
+        "name": "Sabine Rest",
+        "population": 14
+      },
+      {
+        "id": 10,
+        "name": "Veneti Grove",
+        "population": 5
+      },
+      {
+        "id": 11,
+        "name": "Veneti Crossing",
+        "population": 7
+      },
+      {
+        "id": 12,
+        "name": "Veneti Hearth",
+        "population": 5
+      },
+      {
+        "id": 13,
+        "name": "Veneti Hollow",
+        "population": 5
+      },
+      {
+        "id": 14,
+        "name": "Liguri Rest",
+        "population": 7
+      }
+    ],
+    "before": {
+      "activeUnits": 1293,
+      "sleepingUnits": 0,
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 0,
+        "unsupported": 0,
+        "instances": 0,
+        "unavailable": 0
+      },
+      "routes": {
+        "hits": 0,
+        "searches": 0,
+        "fallbacks": 0,
+        "doors": 0,
+        "nodes": 0,
+        "outboundHits": 0,
+        "outboundSearches": 0,
+        "outboundTargets": 0,
+        "outboundNodes": 0
+      },
+      "pickups": {
+        "local": 0,
+        "fallbacks": 0
+      }
+    },
+    "after": {
+      "activeUnits": 725,
+      "sleepingUnits": 568,
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 24959,
+        "unsupported": 0,
+        "instances": 16,
+        "unavailable": 0
+      },
+      "routes": {
+        "hits": 223,
+        "searches": 2225,
+        "fallbacks": 0,
+        "doors": 2,
+        "nodes": 25,
+        "outboundHits": 0,
+        "outboundSearches": 2415,
+        "outboundTargets": 1,
+        "outboundNodes": 19
+      },
+      "pickups": {
+        "local": 1320,
+        "fallbacks": 0
+      }
+    },
+    "metrics": {
+      "total": {
+        "mean": 43.73146646867891,
+        "p50": 27.5,
+        "p95": 134.5,
+        "p99": 215.39999985694885,
+        "max": 441
+      },
+      "sim": {
+        "mean": 36.417464997193875,
+        "p50": 20.40000009536743,
+        "p95": 119.60000014305115,
+        "p99": 206.59999990463257,
+        "max": 433.30000019073486
+      },
+      "draw": {
+        "mean": 6.8438467185288205,
+        "p50": 6.699999809265137,
+        "p95": 7.800000190734863,
+        "p99": 11.200000047683716,
+        "max": 28.09999990463257
+      },
+      "other": {
+        "mean": 0.4701547529562133,
+        "p50": 0,
+        "p95": 0.7999999523162842,
+        "p99": 0.9000000953674316,
+        "max": 99.29999995231628
+      },
+      "prepare": {
+        "mean": 0.03515106856866891,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 12.900000095367432
+      },
+      "prepareFog": {
+        "mean": 0.13345615514166317,
+        "p50": 0.09999990463256836,
+        "p95": 0.39999985694885254,
+        "p99": 0.5,
+        "max": 1.4000000953674316
+      },
+      "drawMinimap": {
+        "mean": 0.36845983752628064,
+        "p50": 0.3000001907348633,
+        "p95": 0.5,
+        "p99": 1,
+        "max": 1.2000000476837158
+      },
+      "interval": {
+        "mean": 44.041666666666664,
+        "p50": 25.90000000000873,
+        "p95": 132.5,
+        "p99": 216.6999999999971,
+        "max": 442.59999999999854
+      }
+    },
+    "error": null
+  },
+  "liveWithoutCpuSampling": {
+    "seconds": 30,
+    "elapsed": 30015.099999904633,
+    "gameSeconds": 59.316200000097524,
+    "frames": 804,
+    "fps": 26.78651745296716,
+    "speed": 2,
+    "startTime": 4814.162399999666,
+    "endTime": 4873.478599999764,
+    "backend": "pixi-webgl",
+    "viewport": [
+      950,
+      761,
+      2
+    ],
+    "units": 1294,
+    "buildings": 3506,
+    "fields": 2996,
+    "populations": [
+      {
+        "id": 0,
+        "name": "Roma",
+        "population": 415
+      },
+      {
+        "id": 1,
+        "name": "Egyptians",
+        "population": 130
+      },
+      {
+        "id": 2,
+        "name": "Greeks",
+        "population": 0
+      },
+      {
+        "id": 3,
+        "name": "Persians",
+        "population": 69
+      },
+      {
+        "id": 4,
+        "name": "Babylonians",
+        "population": 126
+      },
+      {
+        "id": 5,
+        "name": "Assyrians",
+        "population": 0
+      },
+      {
+        "id": 6,
+        "name": "Sabine Crossing",
+        "population": 19
+      },
+      {
+        "id": 7,
+        "name": "Etruscan Hearth",
+        "population": 15
+      },
+      {
+        "id": 8,
+        "name": "Veneti Hollow",
+        "population": 13
+      },
+      {
+        "id": 9,
+        "name": "Sabine Rest",
+        "population": 14
+      },
+      {
+        "id": 10,
+        "name": "Veneti Grove",
+        "population": 5
+      },
+      {
+        "id": 11,
+        "name": "Veneti Crossing",
+        "population": 7
+      },
+      {
+        "id": 12,
+        "name": "Veneti Hearth",
+        "population": 5
+      },
+      {
+        "id": 13,
+        "name": "Veneti Hollow",
+        "population": 5
+      },
+      {
+        "id": 14,
+        "name": "Liguri Rest",
+        "population": 7
+      }
+    ],
+    "before": {
+      "activeUnits": 725,
+      "sleepingUnits": 568,
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 24959,
+        "unsupported": 0,
+        "instances": 16,
+        "unavailable": 0
+      },
+      "routes": {
+        "hits": 223,
+        "searches": 2225,
+        "fallbacks": 0,
+        "doors": 2,
+        "nodes": 25,
+        "outboundHits": 0,
+        "outboundSearches": 2415,
+        "outboundTargets": 1,
+        "outboundNodes": 19
+      },
+      "pickups": {
+        "local": 1320,
+        "fallbacks": 0
+      }
+    },
+    "after": {
+      "activeUnits": 718,
+      "sleepingUnits": 576,
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 37406,
+        "unsupported": 0,
+        "instances": 16,
+        "unavailable": 0
+      },
+      "routes": {
+        "hits": 330,
+        "searches": 3409,
+        "fallbacks": 0,
+        "doors": 43,
+        "nodes": 783,
+        "outboundHits": 0,
+        "outboundSearches": 3722,
+        "outboundTargets": 169,
+        "outboundNodes": 1667
+      },
+      "pickups": {
+        "local": 2025,
+        "fallbacks": 0
+      }
+    },
+    "metrics": {
+      "total": {
+        "mean": 36.90597014581386,
+        "p50": 25.5,
+        "p95": 110.70000004768372,
+        "p99": 162.90000009536743,
+        "max": 206.40000009536743
+      },
+      "sim": {
+        "mean": 28.334452737919726,
+        "p50": 17.200000047683716,
+        "p95": 100.59999990463257,
+        "p99": 154.79999995231628,
+        "max": 195.30000019073486
+      },
+      "draw": {
+        "mean": 8.287313429277335,
+        "p50": 8.099999904632568,
+        "p95": 9.200000047683716,
+        "p99": 12.299999952316284,
+        "max": 30.800000190734863
+      },
+      "other": {
+        "mean": 0.28420397861679986,
+        "p50": 0,
+        "p95": 0.40000009536743164,
+        "p99": 0.5,
+        "max": 78.89999985694885
+      },
+      "prepare": {
+        "mean": 0.01405472660539162,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 11.300000190734863
+      },
+      "prepareFog": {
+        "mean": 0.06480100143015088,
+        "p50": 0,
+        "p95": 0.20000004768371582,
+        "p99": 0.3000001907348633,
+        "max": 1.1000001430511475
+      },
+      "drawMinimap": {
+        "mean": 0.3282338303713063,
+        "p50": 0.2999999523162842,
+        "p95": 0.5,
+        "p99": 0.6000001430511475,
+        "max": 1
+      },
+      "interval": {
+        "mean": 37.3389788293898,
+        "p50": 25,
+        "p95": 108.40000000002328,
+        "p99": 166.59999999997672,
+        "max": 208.29999999998836
+      }
+    },
+    "error": null
+  },
+  "cpuSampleGroups": {
+    "cityPlanningAndSummaries": {
+      "milliseconds": 7546.995,
+      "percent": 24.865631763241336
+    },
+    "pathSearches": {
+      "milliseconds": 769.781,
+      "percent": 2.5362532881417943
+    },
+    "collectorUpdates": {
+      "milliseconds": 984.997,
+      "percent": 3.2453410516235173
+    },
+    "fogUpdates": {
+      "milliseconds": 2413.738,
+      "percent": 7.95271764204728
+    },
+    "drawing": {
+      "milliseconds": 5175.566,
+      "percent": 17.052312651903428
+    }
+  },
+  "hotspots": [
+    {
+      "name": "City summaries and governor/development planning",
+      "samplePercent": 24.865631763241336,
+      "finding": "citySummaries runs from renderer.draw each frame before culling; cityDevelopmentNeeds repeats it and performs unnecessary nested ownership scans. For the saved player city, about1487 non-farm buildings each scan3491 buildings before irrelevant kinds are discarded.",
+      "next": "Filter to houses/farms before ownership, use the maintained palace group, share needs within planning passes, cache city ribbon summaries with explicit invalidation."
+    },
+    {
+      "name": "Fog updates",
+      "samplePercent": 7.95271764204728,
+      "next": "Profile source/membership checks and visibility bookkeeping after removing repeated city scans."
+    },
+    {
+      "name": "Full path searches",
+      "samplePercent": 2.5362532881417943,
+      "finding": "findPath/travelTimeMap sampling share; collectors recorded zero unsupported WASM masks and1320 local pickups with zero fallback in the first live run."
+    }
+  ],
+  "routeCacheLimitation": {
+    "outboundHits": 0,
+    "outboundSearches": 2415,
+    "returnHits": 223,
+    "returnSearches": 2225,
+    "worldRevisionDelta": 25,
+    "gameSeconds": 114.2548,
+    "farms": 749,
+    "outboundTargetCapacity": 512,
+    "finding": "Global farm-travel generations discard routes across all cities on critical edits; routine batches publish within6.67s, much sooner than60s harvest reuse. Queued empty house9078 invalidated caches0.0184s before snapshot end. Capacity can also evict destinations before reuse.",
+    "next": "Track invalidation/eviction reasons, ignore navigation-neutral queued sites, partition dirty regions/cities, and tune capacity for the observed working set while preserving live access checks."
+  },
+  "restoredGame": {
+    "url": "http://127.0.0.1:5174/",
+    "time": 4873.478599999764,
+    "paused": true,
+    "speed": 2,
+    "playerPopulation": 415,
+    "units": 1294
+  },
+  "validation": {
+    "fullSuite": "2189 passed,1 failed from source loaded before final unchanged-role sleep fix. After final fix,34 tests across courier-sleep/entity-store pass. All other217 suites passed.",
+    "focused": "90 sleep/ECS/spatial/farming lifecycle cases;23 pickup/forbidden/return tests;8 outbound tests passed.",
+    "build": "npm run build passed",
+    "profiler": "Live60s and30s captures completed with error=null; headless30s profile saved; summary script executed successfully."
+  },
+  "artifacts": {
+    "live-metrics.json": "scratch/2026-10-31-courier-optimization/live-metrics.json",
+    "live-unprofiled-metrics.json": "scratch/2026-10-31-courier-optimization/live-unprofiled-metrics.json",
+    "live-world-cpu-replay.cpuprofile": "scratch/2026-10-31-courier-optimization/live-world-cpu-replay.cpuprofile",
+    "live-world-cpu-replay.json": "scratch/2026-10-31-courier-optimization/live-world-cpu-replay.json",
+    "cpu-summary.json": "scratch/2026-10-31-courier-optimization/cpu-summary.json",
+    "live-start.json": "scratch/2026-10-31-courier-optimization/live-start.json",
+    "live-final.json": "scratch/2026-10-31-courier-optimization/live-final.json",
+    "source-manifest.json": "scratch/2026-10-31-courier-optimization/source-manifest.json"
+  },
+  "frozenSourceHashes": {
+    "src/main.ts": "f7c156f680137003760580e942aa0cfe04fd8521d1e8225a2ebaae65f5312cf7",
+    "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "src/ui/build-controls.ts": "20fad052f8a121563779934d460b794cd78b2b435d1b395690af2f84f9247b65",
+    "src/ui/research-icons.ts": "7bbbe1a589f7226a15961980b663380f55cdbb5f6c24b56b803962ee43dcb2fe",
+    "src/ui/retinue-controls.ts": "c2319af8d8a2f4024db428b443cac178e5ff983cb7e2e38127dcf97a49052ff8",
+    "src/ui/building-activity.ts": "7aaeb54a990484f0759a01a2a2b4920db110d1922bd2a70d512d8a98b8cba920",
+    "src/ui/research-tree.ts": "d1050a724ee79bccc122f533d1ba5f16a0ba4cecb5671516abb15964bb0d9e68",
+    "src/ui/icons.ts": "d53c691ff7f7fec027758d2e15c028648070273391d4e19ef808740dbc765c2a",
+    "src/world/starting-sites.ts": "0c790363106b3e32edb53c4ebca917e2b8f97cb9b49b40f472596956ba06d9c7",
+    "src/world/lakes.ts": "58a8b0fe2b36282e19aaa0e2eb1781fdf472eb2ea95a531a0f087aea465f657e",
+    "src/world/regional-relief.ts": "4179ea715016f7140917f0eb719d42fe8738db5c93489546a5058cee9df1269c",
+    "src/world/climate.ts": "324f91df0ff58d7cf49522c2c906d2ef65a5367cf86d787fc79d16f51952f54b",
+    "src/world/resources.ts": "43c9827cf9d4ba5781fa5e1b00e8e05919d071c38770bb4ae14754ee8c48cbca",
+    "src/world/environment-fields.ts": "3f9871e3ad4c333f055c3c6f3fd2b45daf6e83a49f5fad7b64a1f4c057a61f61",
+    "src/world/soil.ts": "6f788c3fc4623376a0e79900bbbe4a74d7d99cd8c27dc2c7359ce6e1088c455e",
+    "src/world/river-canyons.ts": "af0eb73f6d0d83bc4fee8296ee5ae225cc35e4212ce761a9abff4704bfa4a214",
+    "src/world/generator.ts": "fc767a8b254dfc68a467aae2e2dbef6ec66eb0c020e0a02ab6b3b20b5471df3d",
+    "src/world/terrain-ecology.ts": "cf615e70c4cacc179951a7163986e91c389321eb393fcaaa410cea818577cf1a",
+    "src/world/landforms.ts": "6d186ea83eca8207c98b0f5e37d6cd9dbb713e9dd2308a432c27a346991b474a",
+    "src/world/tree-climate.ts": "c78669272e166f47352c79b078a3b5107d4217f96e580c08783d57960149278b",
+    "src/world/hydrology.ts": "41ec27b789b7128c3aeec91a5256eeb5fc4866dd4cec138e67858868e7790368",
+    "src/world/ridges.ts": "327401cec7d68c6ca9b3322c572cb7c1811a621afa11df37dc35808a481a3839",
+    "src/world/river-network.ts": "0833f62a593465c670d2ec670a7904d0cce065ff4c20f074f5c6d377383bd683",
+    "src/world/islands.ts": "cd4879c4cf2c7303ab346815edc01f186f52028ede43718385ed94cb26ce58bf",
+    "src/world/options.ts": "5029d0bf73ba8d7a17f96993bf03b7cc21810f5f7ddcca63075afe72bd6b3bbf",
+    "src/world/data/earth-samples.ts": "2fc138d9a7605c9de219c70f98b49cbf6d3cc64f142a9bdf91957feceb264ca1",
+    "src/game/pixi-scene.ts": "f45ed14f8200a4e64d7a3a6c48ccf0ab81c4be44b55fb98c9c9dfd7283a8704e",
+    "src/game/research-bar.ts": "b0ac291815aac66efb4093595200e640cd52ec9a013e24df5bcd3069ddd25f71",
+    "src/game/village-marker.ts": "120e67f21d6682a7300412a94d7073ab87fadb496fcc526ec780274a5b89d164",
+    "src/game/puny-world.ts": "d8416a277eea96bfcdc4646d9cc4d9e47092c842ec5d8a8d1d3f0235c2bc05bd",
+    "src/game/orchards.ts": "c1b6ca55663d6497b82e74b7a0e1fb9867d01be8190c599da696c89acac3e3b9",
+    "src/game/tower-threats.ts": "bfe680f9beed7c64dc64bfceed5f7c1a32efc025e6f0ebde03701f2d06fa2c47",
+    "src/game/wall-ownership.ts": "ecb8b022588bfd941a783a0c95f753f0dab0ff06cc35c01418dc7569d5795c34",
+    "src/game/food-cargo.ts": "14e72cdc4cb7feb93f1b743fc6765a4e6ab2501279d4a61735e3980d552839e9",
+    "src/game/sight.ts": "ace7c3841f656c41c1a7065c9e882aa7775db8a1fd2295f5a5c0ddf96ca35aea",
+    "src/game/engagement.ts": "0a80f8af082d36722479e8c535595ac7c7a1f3fe1a648c924eb102db211ed47e",
+    "src/game/civilian-panic.ts": "e03b2d603adf0f629ac21c9bb9afadab2b060fdfe53b846a3d40ac8f4c694a2e",
+    "src/game/palace-roads.ts": "8a86455fec7da9b7ad43c02da0c75fafc688cc5ef42df64dbf381bf15fb362b6",
+    "src/game/library-art.ts": "2cc21a504f79140a00ac8544dfb029847d5a16ad6191836c30500ebfbeb4c995",
+    "src/game/blacksmith.ts": "11b35ad7f75eb83f13b5d72a51fe4a5e4be32e19164e6cfe4c3db6f868655644",
+    "src/game/pathfinding.ts": "2794e35959cf4464ff59a1208c942dc0cb9373329fde74383e8f8156f6d36e54",
+    "src/game/settlement-decisions.ts": "ecf2c9312987da822de7cc79475be6a9b63ccfff9019521bee8d533e4dfbd479",
+    "src/game/palm-art.ts": "659f11777a9b2d02ae1f1f64e14864ec392c6a0967c1b78fc32dd9dc07530cd6",
+    "src/game/regional-economy.ts": "1102e0661e00151001b6621b295b46a9f9efee90ea4a7cea4c41bb35c310f5f9",
+    "src/game/archery-art.ts": "a6fd69548c01fec82a5e157a1233447c6936803311064461823a9e41f7c793a4",
+    "src/game/property-territory.ts": "f83627379df3914bc94118775b245901a19dbf8c93489bc455c562e135fc9a8f",
+    "src/game/armor-art.ts": "83b427b44db3fc411a2ddac5bd96bc1d53620e2b1ad8fb26e468694e6ad33666",
+    "src/game/tower-combat.ts": "1657a310e72f30dcd8c5887c11a0075ae8ce0d60dbe48bcf2f9c36f9674a78da",
+    "src/game/treasure.ts": "b1995cd146a6665f0fcf64706771df911a46d0339c008db38e1cfa768dba64d6",
+    "src/game/wall-sprites.ts": "21d8585075a8c4b3b0929bf0ffb8857512ca4798e5870c0c42dd01afad47e38c",
+    "src/game/immigration.ts": "55fd2fcd3891b8668479926c95d890988c16a647b855b4d8d338a4260d71fdd2",
+    "src/game/decision-schedule.ts": "feef1eea47cb07d2884b1fea9e9768879ab64a1f544b1c60a71eda202494ce80",
+    "src/game/forbidden-zones.ts": "bf7a02ba4c349d46fdbf178a731479d1e0db71c603135c569e5f1d76e88fa271",
+    "src/game/wells.ts": "1cb9660b5d42d6fc56942d6ddbf8546b59f487b3702ce1b7e08fc79e7b810a5a",
+    "src/game/palace-capture.ts": "62e18446235c2caa9b768f0e08acd256e34e5350b44245ef5e966fb036675644",
+    "src/game/civilizations.ts": "67363cd497e83c9da4a746a9e9f874bd4489bea1c1799a082872f86089814e77",
+    "src/game/sprites.ts": "fec6ca9dd90b7dfb211379003654def41012b12906e8cf814ce0113e87596531",
+    "src/game/faction-defense.ts": "042c17ed4ce6b8c5768f4e19f529bde522432e631e53fec77b759f451296d9d7",
+    "src/game/hit-testing.ts": "37feaa9a427437a8a4e47b064b9807913adf17223527c29e32c34aad51a39f31",
+    "src/game/raid-targeting.ts": "a923f4b32f24afb6dc4c50245057120e916afb574731a3b9d9e7e29642d44293",
+    "src/game/raider-motivations.ts": "26b32ff8fc55de9172300cb2c619364e620552390aaad5a56bc1e2fe619119d0",
+    "src/game/placement.ts": "c5cbb1ab81b8850a08e8ada3400bb60f7a11819f3ac137040fdb51bc406bf9f9",
+    "src/game/culture.ts": "3691e1d72a7d65c414c71ea07cc003fc7f93915e30526585489af7b12e83a9f1",
+    "src/game/structures.ts": "a96e6a94dbc5e8966b989d6924909974a6a1fc0e0b150791bb61ceae09099b06",
+    "src/game/cities.ts": "9c55178652b68d345a0cd291477902056d965313a9268c4fc4154208854540d3",
+    "src/game/blacksmith-art.ts": "f4ff8ab87f08c3b0fc9b5f1d229b60ab350a601b79380166bfbbf2859104ebe8",
+    "src/game/entity-store.ts": "6f2d72ac2cd6751252d621331153cb0902951996912f97c95ce70ea72acf82d8",
+    "src/game/merchant-art.ts": "9a66cad874137cea5cc4d1ff6ef450aa2aadaafe74742529c498aa8cda5479fa",
+    "src/game/farm-siting.ts": "a359362122d17c13d7f64c63dc103ab0f63d862ce8570b6877f4e6109f4993c9",
+    "src/game/veterancy-art.ts": "a56f3cac0c89fd7bb6e438365a102de4b9195ef07ef8f7676571a0647087f087",
+    "src/game/village-art.ts": "9bee8a9061a3c33c01e8b3b163447d5c463fc1cfe9861b94d038e4b557b7ba16",
+    "src/game/navigation-wasm.ts": "e9e398946b394e50502f15551f5aa2c87948b5883ae9c9b7c7a63ae40dca20bc",
+    "src/game/marauder-leaders.ts": "1a658f301656a4f7fecb8d47f51f0ec97d0a77b0d2b579ad782b6c460f93136d",
+    "src/game/tree-clearing.ts": "e60bffeb48721a41bbaf8bc212995177b42e94edd0817b8ec348d974a5222ce9",
+    "src/game/peasant-capacity.ts": "c454793aa08650c325fcf04e8b7e91eea5119aec97fed09a17c262ffc28ba7b8",
+    "src/game/blood-effects.ts": "87fbcfbb65485164ebf66337a28d69793cbeda21a3e35e8dac1860584706044e",
+    "src/game/monument-art.ts": "cdfd8654ee58823ea3fdd8fbd8c1d5b3e643c2fee2681d89baa0d543b789ffb8",
+    "src/game/scout-art.ts": "947a76c463069f68a7a70ff202efa764f211854308796caf5149e50160eebfc1",
+    "src/game/traffic.ts": "324d5063c6c5d05b1ad43bf324e521b524ffb031c3b4fc0607a64d49fd549f8a",
+    "src/game/minimap.ts": "08b4d93dd0070ae08a7d64d0fad1f77f796e71cf9fc2fc46d7fed6cce12b35bc",
+    "src/game/villages.ts": "be74aad0d95c4170467439f55c116d834e3bd6fcbff7ade418850fb59a5754c6",
+    "src/game/border-placement.ts": "1b9bf2265bf7860dbca94604fd4f2fdb26b329a2b8a48be1ee0e7c5cfac44872",
+    "src/game/enclosures.ts": "a686b16b16d2fcdc78a0ff157e427bc103b6acc52aa06ce122bb450056abbe22",
+    "src/game/farm-travel.ts": "72c193fbf36feabe80ce90c41eca3d70054e752f7d777c5b9e575acb4bb31301",
+    "src/game/city-panel-art.ts": "ea514be86428aabbc2d6adc407b05847a246dfd6b2da110613ae549ffc337e56",
+    "src/game/irrigation.ts": "b2682ef22929f94ab16d925ab4422f3eb4eab6e696954d526682d10d61df0140",
+    "src/game/wall-towers.ts": "cb37cdfc5a03112308275edebbd53350de364a78aecba1aa2bee7ea6d5d64500",
+    "src/game/governor.ts": "6429950f583a29366283e24ad0c6fe13bcb227ec734af4cbc575ab3febecd587",
+    "src/game/building-activity.ts": "d66da3f61d9b739b24cfa10c10c0cdc43d80c3e54c6abfe85147c4c0042c9d6f",
+    "src/game/construction-cancellation.ts": "4c9f38620c462c763cc95264fe0afeba8396e50b43af8190b2a961398dc51aa6",
+    "src/game/roaming-marauders.ts": "5181b5c2a32a60be5fba79036fed9d559a9c09bc6f8c690c48820de0e5c287ab",
+    "src/game/archery.ts": "66aa191561c2071874a83741446926a9f659a6d8dc5fbf4a24f7278df5e7dcdc",
+    "src/game/scouts.ts": "4194de0e02ebe1263d651722b729cea9059650e05f564b9340170bfb19dd2015",
+    "src/game/building-activity-art.ts": "5da98ef01ba77425ebe6958f63569c17bbc4e9cbbcc48ffb9e94dd5abdd81a18",
+    "src/game/raider-camps.ts": "542ed64367f2acdbf025710ab070f184e00ddc021011f8ea6a4d58a53a0245c8",
+    "src/game/unit-health.ts": "c36179aae018b51c7b26e561cf0839bb553b2ea7e53d33d010c37518fb32660c",
+    "src/game/spatial.ts": "3935b76de88a5723ef238033dba71e3c49d5b73a2c7f6ef64de5c17007d8de11",
+    "src/game/unit-sprites.ts": "9f370a2b3b7c0876409abacab0729f3f51ded2bb48896380735f6b140be0a1ea",
+    "src/game/palace-sprite.ts": "355eecf43426876e814db9dc9f8cb47e866f2aa190fc716c2b3862f56edd5106",
+    "src/game/city-support.ts": "ebac9f17e95167a5d09e4d9211110cfc471788f6ba8be1a28c5c0d7fcd172b28",
+    "src/game/retinue-squads.ts": "aee09885c6205440debd90cdb9f080f3017620c3de24183f0d4be80391ad607e",
+    "src/game/fog.ts": "bacb45ab24abbfdf62673fa4ea73e7175cfe0069a7a3fa1cc83021d3cf4d5041",
+    "src/game/water-depth.ts": "bfbc4692d12f0ad992656bd20747eea673e7326c1c0a4ecabb1dd183ea12fdf8",
+    "src/game/construction-clearance.ts": "0386c8e02cbdcec22d8577a135e443c4f0e00dfd237e1cb58231d5e79eb2cf5d",
+    "src/game/types.ts": "923b6d533018f4010a5abe5b179e76c43e1c762ff4eb08b25b58d186207088be",
+    "src/game/wildlife-art.ts": "91a95a6e1e8136a6e59b0af3a1b547f49eb83d6e61ca633cb0f0696bed1615ac",
+    "src/game/morale-perception.ts": "cb81acc2e1d3be3ee4d4b47a11d837b0ba46620cf9a84702a8f2bb76fea9689f",
+    "src/game/wooden-building-art.ts": "c88932c38a3dea231d673e4a2f6c146357c331071cda0a266f4a221b77ade21e",
+    "src/game/collisions.ts": "3048705ac9c52ec994491343aff7691817684e8718983916433eaa84c66527f3",
+    "src/game/farms.ts": "e12ce9d17197285064f63094fac0220b7695cd2fa064fd5f442992d1fc686bf6",
+    "src/game/ford-art.ts": "d104d05fec3a9fc5ed537b1ba8625b36203159dd1c93a7df16ca012d9ff2ab56",
+    "src/game/terrain.ts": "8089887b5271beae9f69cbb10db73ccaa34cdd0ecccde057f086a0d74db47198",
+    "src/game/forbidden-art.ts": "edab6a36fba38d3401c57beca31c9965112f99b168b58351f4819d9b7a664e5b",
+    "src/game/battle-morale.ts": "4b56e1a58772a68170743d4e0f32c6d055c6a046f9578a64c644776c59ed302a",
+    "src/game/simulation-events.ts": "0174f9369df167014400e56fb92121c683573704da6b4b18154de811ed006814",
+    "src/game/farm-art.ts": "380b60486a66108fd73d04f458b6df03a8c685fef79e057f8cedb615ed26520b",
+    "src/game/formation.ts": "88b05e98338cb4a6d4089e0ff6965ebc86b86db11d8c7bfc229d2ef345ab26b8",
+    "src/game/faction-strategy.ts": "c3ea6a9f5f4358e011fa657ce6693cb60bc4979201d97b6064030bc0f5f90862",
+    "src/game/civilian-movement.ts": "51122ac2fef1c5e528a53a182532acee4046329c422570337d70448812e90b61",
+    "src/game/hunting.ts": "fbb311fdf6a6c2b59a567b53878d4bee7ec70dcd1341e8e9174b8ccbc09219a7",
+    "src/game/fog-raids.ts": "a60786a595fb5fcd1db3bb6598f82092842305680ea6e1b6adccc6f46784b178",
+    "src/game/borders.ts": "32cd024d26b4b860db85b1c12eb92c68e410bee8a028e53ce8048be959d551ab",
+    "src/game/food-art.ts": "06f03685448a919f36441f4b8282edf072bfa11d85f72311ed77c66ba3022afa",
+    "src/game/native-art.ts": "24b536b364dd3e1a6373538db05bf95d79862db79388259b1221a9b0e8590b54",
+    "src/game/settlement-layout.ts": "2c7af79d96e4daa5bf997d8b09ff65457a9db8b1e857c4e7eb91eab8803eed9f",
+    "src/game/area-tools.ts": "f925b89953661b7c7502571f6c7bb7069ebeaef645517c0e3bd5c6ced63467ca",
+    "src/game/courier-routes.ts": "6ff5a52eb8411e8a654d201239cf782d1759849e2fcba774d45f3c25fe231a44",
+    "src/game/guard-post-art.ts": "5dba7b8cb7530d1e10fe96f5a23838c6cc4d59314fb47fca0c3520245f7ba19d",
+    "src/game/faction-colors.ts": "f871521fd6e95bb7ded93605d230382a340abe38f1ee7735236ddd6e37957b77",
+    "src/game/courier-sleep.ts": "f635deb5b28d05d9f491b2bb8366531a151c1c59f567fee93f88b4c34fcfac2b",
+    "src/game/building-ground.ts": "d743947316cd9d8424b76b0e6a9288645187008e76a6d5f53a2bc1d7fde62a23",
+    "src/game/bridge-spans.ts": "7caef301f4902569f6bb229897b668fb68c642ae23c1159a3e8488b83ff2f65b",
+    "src/game/construction.ts": "89da14bea418b347386e1587b90c82a5739544ebed17df721bf6b05d745c4e1e",
+    "src/game/puny-building-art.ts": "de083373a1667d68131c2db804ea7b0445a9dd1adace0b3c65f59a8c655edaed",
+    "src/game/veterancy.ts": "4ac0a06a593391ca36cbabccd8ee66d04a7bbb7861989a3986f89f8169ba710b",
+    "src/game/renderer.ts": "c2b01028dcccd3332d7aa850da58371db07c6204bd92eb0cbb9ce995e368c2dc",
+    "src/game/forbidden-work.ts": "6690acd1ee653370788657ae3b3ffa4ed3b639a93778e3e4014aae0fba650859",
+    "src/game/farm-relocation.ts": "2b380d8f729230c2e6a295a9d22c59fa8d7d855efe7afcd4de5a86b2db51bfb2",
+    "src/game/trade.ts": "8128c7320ffda26763c6bd54d3573276bf9ace265a56ba0dbd00a598f61b7e56",
+    "src/game/building-aoe.ts": "17cdf65817f75d6868545c926ebd55a6f353a5d3f3f225e1c976a4414a07cd2f",
+    "src/game/guard-posts.ts": "26b62d0c9d937373d33d930e1a4e3a153b33d577209593295339253ce04af1df",
+    "src/game/research.ts": "5510f5c37c51ef8970761f1972ad47ad88175415b3dc7513efb9a29f881ec395",
+    "src/game/housing.ts": "e64fbf6a8c4ae0992b5b881889563b78cde5302658061e5420cbb7f358cc1c67",
+    "src/game/palace-clearing.ts": "ec9bf0b7d6e07b04e9ffd9821799cd5334e78bcac99ec209cd5d9ca0c98b14bf",
+    "src/game/city-ribbon.ts": "73803b895ae48ba46d92ab9d26fd37e1b7c476af5813bc9be45f68ac6d9fb016",
+    "src/game/arrows.ts": "a25e116b307acb51937c52f1426d63fc17f04f573a74e6d3c908df9fe2b21e76",
+    "src/game/world-revisions.ts": "b8c7d71bc3fad0698d2b90bcdfa6cfd3d4dba573a0c4cb84481618831814d5cc",
+    "src/game/geography.ts": "7b15369951031beb76da8cfbdbf12ca2c095cbf7a9cfc45dd4e9b763f55a6d6d",
+    "src/game/road-sprites.ts": "233cabe1879aa9824197cf635bde1fbc583946dccbd0a1f97b8435d7b3abe14f",
+    "src/game/covered-roads.ts": "5a86da391913f1a60b2eb9d8fb470df9848953857874f0be391621d83b3a8863",
+    "src/game/farm-pickup-routes.ts": "e513d1b5f4b860f360b01584f5c788c60b7564249cde019af30615e8b13957ed",
+    "src/game/defense-research.ts": "41ec57db12bde14845e6c14c110eba998ba039464001404049473f354df1922f",
+    "src/game/vegetation-art.ts": "1c585d151ddcf81ecd08bbf2050bf204535548a8bd6329f477e31ed5e8cb0ead",
+    "src/game/ridges.ts": "2b7eb99decdd223736f18f27af06b7bb4e27d577cd7c5e56267899d5999305c0",
+    "src/game/irrigation-art.ts": "6e3d2ebbfc25dedfbd8b9aa149e4809b2c928793b95f573a99179344f376dfaf",
+    "src/game/game-save.ts": "09467ccc1f4610cf8460055b628ff4fd0ac651a61dd882a7a39ae019e8bc9e03",
+    "src/game/network-placement.ts": "e42e8f979854b5697f4f27548779519f4ed194fad194c0c2b97b3186bcbbea51",
+    "src/game/command-effects.ts": "39c3acc47808e99c9f1fffeb73eb0fd9c60546d254cd84845d5d897a9dbba43e",
+    "src/game/faction-development.ts": "4e5b0273d9c4b9cd21f4d7e0ae70c945b424c7082e1e7fbe0f9c2ed4c7cabd95",
+    "src/game/economy-constants.ts": "e971b7ecc7b431140a1b4d0a0d653d8f4194a7e9268883337a402c92e196a3de",
+    "src/game/camp-spacing.ts": "564c4a72557e0b41e376f6e0851b1b77729953be2faad82a8983fbb0688c3b0b",
+    "src/game/research-bonuses.ts": "8a48e90dac6a8389e76e65150f28d24e82f4ab02a7c1f5bfdcc21f8c933011d2",
+    "src/game/ridge-art.ts": "b8ce6a681e81dd925a1ef8048b55b653695b2d090406c426fa917ab638aa2d8b",
+    "src/game/city-growth.ts": "735dd23423739de21d64849e449d2212a37439ab797030b7dfb65d797fb850e4",
+    "src/game/house-wells.ts": "4dcfc6f29322f63b6cca0317f20d1b1ca7c7a8324db178fa169f00c47ddc927b",
+    "src/game/simulation.ts": "6d2adc189ddf7ab6b03f45f8aa5d587ac53dcd150958f87c5b22fcc839970d6f",
+    "src/game/raider-pressure.ts": "a31b44e57081dbc0c8fe2531764e14c914ebfb2c2b03289375bb87bdc39c668b",
+    "src/game/builders.ts": "0e33fd37cd6114281ceff0df23bbc4abbc24aafc4e2ec5391152f3eb636d8e9d",
+    "src/game/equipment.ts": "488478c80f2bb34d07cdfc30a5ebf84a792aa1a7d769d0491b9aeef1ff8c876c"
+  },
+  "profileSha256": "8ed985665a6f271c612d8d31bed9816c47042fd85c50a19740a4dbe910217aa5"
+}

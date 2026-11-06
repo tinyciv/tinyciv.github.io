@@ -1,0 +1,151 @@
+/* Shared game typography, icons, and activity dialogs. HUD layout lives in ui/forged-hud.css. */
+:root {
+  font-family: var(--game-font); color: #f5e7c5; background: #101416;
+  font-synthesis: none; --panel: #1a2225; --muted: #b7b29a; --gold: #c7a66a;
+  --hud-scale: .36; --top-scale: .5; --bar-height: 66px;
+  --panel-art: url('/assets/ui/panels-reference.png');
+  --resource-art: url('/assets/ui/resources-reference.png');
+  --slate: url('/assets/ui/resource-texture.svg#slate');
+}
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+button, input, select, textarea, option, optgroup, output, kbd, code, pre, samp { font: inherit; }
+::placeholder { font-family: inherit; }
+button { cursor: pointer; color: inherit; border: 1px solid #a68d5b; background: #1d272a; }
+button:hover { background-color: #303b3b; }
+button:active { background-color: #121a1c; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, canvas:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #ffe2a0; outline-offset: -4px; }
+[hidden] { display: none !important; }
+.icon { --icon-size: 24px; width: var(--icon-size); height: var(--icon-size); display: inline-block; flex-shrink: 0; vertical-align: middle; image-rendering: pixelated; }
+.atlas-icon { background-image: url('/assets/puny-world/overworld.png'); background-repeat: no-repeat; background-size: calc(var(--icon-size) * 27) calc(var(--icon-size) * 65); background-position: calc(var(--tile-x) * var(--icon-size) * -1) calc(var(--tile-y) * var(--icon-size) * -1); }
+.character-icon { object-fit: contain; }
+.palace-icon { object-fit: contain; }
+.defense-icon { object-fit: contain; }
+.text-icon { display: inline-flex; align-items: center; justify-content: center; font: 600 20px/1 var(--game-font); color: #d6b879; }
+/* Control symbols stay crisp without asking the text font for missing glyphs. */
+.control-symbol { position: relative; color: #d6b879; }
+.control-symbol::before { content: ''; position: absolute; inset: 3px; background: currentColor; }
+.symbol-play::before { inset: 2px 3px 2px 5px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.symbol-pause::before { inset: 3px 4px; background: linear-gradient(to right, currentColor 0 31.25%, transparent 31.25% 68.75%, currentColor 68.75% 100%); }
+.symbol-check::before { clip-path: polygon(0 40%, 20% 40%, 40% 65%, 80% 10%, 100% 10%, 100% 35%, 40% 100%, 0 60%); }
+.symbol-minus::before { inset: calc(50% - 1px) 4px auto; height: 3px; }
+.symbol-compass::before { background: none; border: 2px solid currentColor; border-radius: 50%; }
+.symbol-compass::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to right, transparent 46%, currentColor 46% 54%, transparent 54%), linear-gradient(to bottom, transparent 46%, currentColor 46% 54%, transparent 54%); }
+.symbol-dot::before { inset: 9px; border-radius: 50%; }
+.retinue-icon { background: var(--panel-art) -1551px -598px / 1900px 828px no-repeat; width: 40px; height: 40px; image-rendering: auto; }
+.game-area { width: 100%; height: 100dvh; position: relative; isolation: isolate; }
+#world { display: block; width: 100%; height: 100%; outline: 0; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
+/* Pixel popup family, based on the imagegen capture-city draft. Native-size
+   controls stay sharp; four-pixel frame steps echo the Puny World sprites. */
+.building-activity, .dialog {
+  --popup-ink: #f2e6c9; --popup-muted: #b9c5ad; --popup-edge: #a28d60;
+  color: var(--popup-ink); background: #1a2a2b; border: 4px solid #30403b; border-bottom-color: #122022; border-right-color: #122022;
+  border-radius: 0; box-shadow: 0 -4px #b29b6b, -4px 0 #a28d60, 4px 0 #756444, 0 4px #756444,
+    0 -8px #0b1618, -8px 0 #0b1618, 8px 0 #0b1618, 0 8px #0b1618, 4px 8px 0 4px #07121399;
+  font-family: var(--game-font); line-height: 20px; text-shadow: none;
+  scrollbar-width: thin; scrollbar-color: #a28d60 #122022;
+}
+.building-activity { position: absolute; z-index: 4; width: 284px; max-width: calc(100vw - 40px); max-height: calc(100dvh - 72px); padding: 14px 16px 16px; overflow: auto; overscroll-behavior: contain; user-select: none; }
+.building-activity h2, .dialog h2 { margin: 0 0 16px; padding: 0 36px 12px 0; border-bottom: 4px solid #776a49; font-weight: 600; color: var(--popup-ink); line-height: 24px; }
+.building-activity h2 { font-size: 18px; }
+.activity-governor, .activity-upgrades { position: relative; }
+.building-activity label { display: flex; align-items: center; gap: 12px; min-height: 32px; font-size: 14px; cursor: pointer; color: var(--popup-ink); }
+.building-activity label:hover { color: #fff5db; }
+.building-activity input[type="checkbox"] { appearance: none; display: grid; place-items: center; flex: none; width: 20px; height: 20px; margin: 0; border: 2px solid #87917b; border-radius: 0; background: #102022; box-shadow: inset 2px 2px #091518; cursor: pointer; }
+.building-activity input[type="checkbox"]::after { content: ''; width: 8px; height: 8px; background: #e4e8b6; opacity: 0; }
+.building-activity input[type="checkbox"]:checked { background: #465c39; border-color: #a4ae77; }
+.building-activity input[type="checkbox"]:checked::after { opacity: 1; }
+.building-activity button, .dialog button { border: 2px solid #849181; border-right-color: #4d6055; border-bottom-color: #4d6055; border-radius: 0; background: #2c4140; box-shadow: inset 2px 2px #617164, inset -2px -2px #172b2b; color: var(--popup-ink); text-shadow: none; }
+.building-activity button:hover:not(:disabled), .dialog button:hover:not(:disabled) { background: #3b514a; border-top-color: #d7c798; border-left-color: #d7c798; }
+.building-activity button:active:not(:disabled), .dialog button:active:not(:disabled) { background: #1b302f; box-shadow: inset 2px 2px #0d1d1e; }
+.building-activity button:disabled, .dialog button:disabled { opacity: 1; color: #8f9b8d; border-color: #4c5a50; background: #243331; box-shadow: inset 2px 2px #303f39, inset -2px -2px #182827; cursor: not-allowed; }
+.building-activity :is(button,input,select):focus-visible, .dialog :is(button,input,select):focus-visible { outline: 2px solid #f6dfa4; outline-offset: 3px; }
+.building-activity .activity-close, .dialog .close-dialog { position: absolute; z-index: 1; top: 10px; right: 10px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 2px solid #9d7052; border-right-color: #5e3c31; border-bottom-color: #5e3c31; background: #563e32; box-shadow: inset 2px 2px #73543c, inset -2px -2px #342b27; color: #eac99b; font-size: 0; line-height: 0; }
+/* Keep the pixel X out of grid flow: the accessible text must not create an
+   extra row that pushes the visible icon below its button. */
+.building-activity .activity-close::after, .dialog .close-dialog::after { content: ''; position: absolute; inset: 0; margin: auto; width: 12px; height: 12px; background: #efd2a1; clip-path: polygon(0 0,33.33% 0,33.33% 16.67%,50% 33.33%,66.67% 16.67%,66.67% 0,100% 0,100% 33.33%,66.67% 50%,100% 66.67%,100% 100%,66.67% 100%,50% 66.67%,33.33% 100%,0 100%,0 66.67%,33.33% 50%,0 33.33%); }
+.dialog .close-dialog .icon { display: none; }
+.building-activity .activity-close:hover, .dialog .close-dialog:hover { background: #744a36; border-color: #c79164; }
+.building-activity.is-blacksmith { width: 300px; }
+.activity-upgrades { display: grid; gap: 12px; }
+.activity-upgrade { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 6px 10px; min-height: 60px; padding: 10px; text-align: left; }
+.activity-upgrade > * { pointer-events: none; }
+.upgrade-label { font-size: 14px; line-height: 18px; }
+.upgrade-levels { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.upgrade-levels > span { min-width: 0; display: grid; gap: 2px; padding: 3px 0; border: 2px solid #536355; color: #aeb8a2; font: 11px/14px var(--game-font); text-align: center; }
+.upgrade-levels b { font: inherit; color: inherit; }
+.activity-upgrades .upgrade-price { grid-row: 1; }
+.upgrade-levels > .complete { border-color: #758b57; color: #cdddab; background: #364c32; }
+.upgrade-levels > .current { background: #4b603b; color: #eff5cf; }
+.upgrade-levels > .next { border-color: #bda367; color: #ead9a4; }
+.upgrade-price { grid-column: 2; grid-row: 1 / 3; display: flex; align-items: center; gap: 4px; color: #e4ca89; font-size: 14px; font-variant-numeric: tabular-nums; }
+.upgrade-price .icon { --icon-size: 16px; }
+.activity-upgrade:disabled .upgrade-price { color: #a6ad91; }
+.activity-upgrade.is-max { border-color: #748554; }
+.activity-upgrade.is-max .upgrade-price { color: #c2d69c; font-size: 12px; }
+.activity-immigrants, .activity-keep, .activity-retinue { width: 100%; margin-top: 12px; }
+.activity-retinue .upgrade-price { grid-row: 1; }
+.retinue-slot-effect { grid-column: 1 / -1; color: var(--popup-muted); font-size: 12px; line-height: 16px; }
+.activity-keep { grid-template-columns: minmax(0, 1fr); }
+.keep-effect { color: var(--popup-muted); font-size: 12px; line-height: 16px; }
+.immigrant-effect { grid-column: 1; color: #c1d19e; font-size: 12px; }
+.activity-message { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: #071314a6; padding: 24px; z-index: 10; }
+.dialog { position: relative; width: min(472px,100%); max-height: calc(100dvh - 64px); overflow: auto; overscroll-behavior: contain; padding: 24px; font-size: 15px; }
+.dialog h2 { font-size: 24px; line-height: 28px; padding-bottom: 16px; overflow-wrap: anywhere; }
+.dialog p { margin: 16px 0 0; color: var(--popup-muted); font-size: 14px; line-height: 22px; }
+.dialog p:empty { display: none; }
+.dialog strong { color: var(--popup-ink); }
+.dialog button { padding: 10px 12px; font-size: 15px; min-height: 40px; }
+.dialog .close-dialog { min-height: 28px; }
+.dialog label { display: block; margin-bottom: 8px; color: var(--popup-muted); }
+.dialog input { width: 100%; min-width: 0; background: #102022; border: 2px solid #73816d; border-radius: 0; box-shadow: inset 2px 2px #091518; color: var(--popup-ink); padding: 10px; font-size: 15px; }
+#new-world-form { display: block; }
+.world-style-picker { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }
+.world-style-picker legend { color: var(--popup-muted); margin-bottom: 10px; }
+.world-style-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dialog .world-style { position: relative; margin: 0; cursor: pointer; }
+.dialog .world-style input { position: absolute; opacity: 0; width: 1px; height: 1px; padding: 0; }
+.world-style-card { display: flex; flex-direction: column; align-items: center; height: 100%; min-height: 155px; padding: 10px 7px; border: 1px solid #526052; border-radius: 8px; background: #102022; text-align: center; transition: border-color .15s, background .15s; }
+.world-style-card svg { width: 64px; max-width: 100%; height: 44px; margin-bottom: 8px; fill: #a4b36b; }
+.world-style-card strong { font-size: 14px; }
+.world-style-card small { font-size: 11px; line-height: 1.5; margin-top: 6px; color: var(--popup-muted); }
+.world-style input:checked + .world-style-card { border-color: #d1bc7f; background: #30412c; box-shadow: inset 0 0 0 1px #d1bc7f; }
+.world-style input:focus-visible + .world-style-card { outline: 2px solid #f0deb4; outline-offset: 3px; }
+.world-style:hover .world-style-card { border-color: #d1bc7f; }
+#new-landform { width: 100%; margin: 0 0 16px; padding: 9px; color: var(--popup-ink); background: #102022; border: 2px solid #73816d; font: inherit; }
+.world-seed-row { display: flex; gap: 10px; }
+.world-seed-row input { flex: 1; }
+.world-seed-row button { flex: 0 0 auto; }
+.dialog .primary, .building-activity .research-start { border-color: #a0ac70 #617345 #617345 #a0ac70; background: #4b6037; box-shadow: inset 2px 2px #6e814c, inset -2px -2px #2c402b; }
+.dialog .primary:hover:not(:disabled), .building-activity .research-start:hover:not(:disabled) { background: #5d7440; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.dialog-actions button { flex: 1 1 140px; }
+.diplomacy-stats { display: flex; flex-wrap: wrap; gap: 12px 20px; color: #c5d0b4; font-size: 14px; }
+.controls { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); margin: 0; gap: 10px 16px; font-size: 14px; line-height: 20px; }
+.controls dt { color: var(--popup-ink); }
+.controls dd { margin: 0; color: var(--popup-muted); }
+@media (max-width: 420px) {
+  .dialog { padding: 16px; }
+  .dialog h2 { font-size: 22px; }
+  .dialog-actions { gap: 10px; }
+}
+/* Building-specific content uses the shared popup frame and controls above. */
+.activity-stack { position: relative; display: grid; gap: 10px; }
+.activity-stack small { grid-column: 1; color: var(--popup-muted); font-size: 12px; line-height: 16px; }
+.activity-note { margin: 2px 0 0; color: var(--popup-muted); font-size: 12px; line-height: 16px; }
+.building-activity.is-village h2 { margin-bottom: 8px; }
+.activity-village { gap: 8px; }
+.activity-village .activity-upgrade { min-height: 46px; padding: 8px; gap: 3px 8px; }
+.activity-village .village-status { color: #e7e8da; margin: 0 0 2px; }
+.activity-village .village-war { min-height: 34px; background: #57372f; border-color: #9c6a50 #56392e #56392e #9c6a50; }
+.activity-village .village-war:hover:not(:disabled) { background: #704435; }
+.building-activity.is-archery { width: 300px; }
+.building-activity .composition-row { display: grid; grid-template-columns: 56px minmax(0,1fr) 26px; gap: 8px; font-size: 14px; min-height: 36px; }
+.composition-row input { appearance: none; width: 100%; height: 24px; min-width: 0; margin: 0; background: transparent; cursor: pointer; }
+.composition-row input::-webkit-slider-runnable-track { height: 8px; border: 2px solid #65745c; background: #102022; }
+.composition-row input::-moz-range-track { height: 4px; border: 2px solid #65745c; background: #102022; }
+.composition-row input::-webkit-slider-thumb { appearance: none; width: 16px; height: 20px; margin-top: -8px; border: 2px solid #dfcca0; border-bottom-color: #776644; border-right-color: #776644; border-radius: 0; background: #ad9663; box-shadow: 2px 2px #0b1618; }
+.composition-row input::-moz-range-thumb { width: 12px; height: 16px; border: 2px solid #dfcca0; border-bottom-color: #776644; border-right-color: #776644; border-radius: 0; background: #ad9663; box-shadow: 2px 2px #0b1618; }
+.composition-row output { color: var(--popup-ink); text-align: right; font-variant-numeric: tabular-nums; }

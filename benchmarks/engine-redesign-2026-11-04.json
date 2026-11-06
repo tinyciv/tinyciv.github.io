@@ -1,0 +1,952 @@
+{
+  "date": "2026-11-04",
+  "scope": "Implemented retained simulation views, scheduled economy work, local combat bookkeeping, active health sets, and retained presentation. Existing unrelated workspace edits preserved.",
+  "changes": [
+    "Trusted simulation/read-only presentation scopes reuse navigation, territory, enclosure and travel validation until relevant structural revisions change.",
+    "Field indexes, city/worker rosters, well relationships, repair jobs and farm deadlines are retained; quiet fields and healthy units avoid recurring maintenance.",
+    "Settlement wakeups distinguish cosmetic and unrelated military changes from relevant work; planned 3 Hz cadence remains.",
+    "Attack reservations use cell indexes and expiry events; formations/squads retain membership and shared strategy observers; boat obstacles and tower/depot roles are indexed.",
+    "Fog commits a presentation snapshot; renderer retains observed spatial indexes, scene child order and unchanged effects; minimap content is capped at 10 Hz with live camera outline.",
+    "Production mutation paths notify damage, ownership, death, construction and import/reset boundaries; standalone/editor queries keep explicit reconciliation."
+  ],
+  "validation": {
+    "tests": {
+      "passed": 3458,
+      "files": 322,
+      "command": "npx vitest run --exclude 'scratch/**' --maxWorkers=4 --testTimeout=30000",
+      "note": "The 30-second test limit accommodates generated-world tests that exceeded the default 5-second limit. No gameplay assertions were relaxed."
+    },
+    "build": {
+      "command": "npm run build",
+      "passed": true,
+      "warning": "Existing Vite large-chunk warning"
+    },
+    "originalSchedulingControl": {
+      "passed": true,
+      "checkpoints": [
+        {
+          "step": 1,
+          "equal": true,
+          "differences": []
+        },
+        {
+          "step": 30,
+          "equal": true,
+          "differences": []
+        },
+        {
+          "step": 120,
+          "equal": true,
+          "differences": []
+        },
+        {
+          "step": 240,
+          "equal": true,
+          "differences": []
+        },
+        {
+          "step": 360,
+          "equal": true,
+          "differences": []
+        },
+        {
+          "step": 390,
+          "equal": true,
+          "differences": []
+        }
+      ],
+      "includesFog": true,
+      "note": "Only settlement-decisions.ts is replaced by the frozen pre-change version. All retained views, event processing and other changes remain active."
+    },
+    "schedulingChange": "With new scheduling, unrelated cosmetic/military changes no longer cause extra settlement/idle-job decisions between normal deadlines. The full captured replay therefore has expected assignment/retry timing differences; strict byte-for-byte state parity is not claimed for that variant.",
+    "farmEventParity": "180-second exact reconcile-versus-scheduled comparison covers pickup, cargo, delivery, claims, spoilage, stationary visits, dormancy, orchards and abandonment.",
+    "graphics": "Real WebGL checks at DPR 1 and 2 passed. Representative city canvas is pixel-exact; other views differ only in approximately 1,200 blurred fort outline pixels by at most 3/255 per channel."
+  },
+  "capturedGame": {
+    "method": "Simulation-only, navigation WASM enabled, alternating isolated replay order. Wall-clock CPU timings include normal GC, no profiler. Full serialized-state parity includes fog. No rendering/HUD or live FPS measurement.",
+    "cpu": "Apple M3 Pro",
+    "candidate": "current source",
+    "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+    "warm": 30,
+    "steps": 360,
+    "rounds": 2,
+    "initial": {
+      "units": 393,
+      "buildings": 2389,
+      "fields": 483
+    },
+    "updateMs": {
+      "before": {
+        "mean": 14.669761751388927,
+        "p50": 11.002207999999882,
+        "p95": 33.79133400000046,
+        "max": 175.507791
+      },
+      "after": {
+        "mean": 10.176493898611087,
+        "p50": 7.455041000001074,
+        "p95": 23.817415999999866,
+        "max": 146.66620799999873
+      }
+    },
+    "parity": [
+      {
+        "step": 1,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 30,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 120,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.37.repathAt",
+            "before": 130.50600000019134,
+            "after": 130.40600000019134
+          },
+          {
+            "key": "$.units.42.repathAt",
+            "before": 130.50600000019134,
+            "after": 130.40600000019134
+          },
+          {
+            "key": "$.units.43.repathAt",
+            "before": 129.3060000001914,
+            "after": 129.53933333352472
+          },
+          {
+            "key": "$.units.50.repathAt",
+            "before": 129.53933333352472,
+            "after": 129.3060000001914
+          },
+          {
+            "key": "$.units.52.repathAt",
+            "before": 129.3060000001914,
+            "after": 129.53933333352472
+          },
+          {
+            "key": "$.units.53.collectorCamp",
+            "before": 217,
+            "after": 219
+          },
+          {
+            "key": "$.units.61.collectorCamp",
+            "before": 219,
+            "after": 217
+          },
+          {
+            "key": "$.units.61.repathAt",
+            "before": 130.50600000019134,
+            "after": 130.40600000019134
+          },
+          {
+            "key": "$.units.105.repathAt",
+            "before": 130.50600000019134,
+            "after": 130.40600000019134
+          }
+        ]
+      },
+      {
+        "step": 240,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.53.collectorCamp",
+            "before": 217,
+            "after": 219
+          },
+          {
+            "key": "$.units.58.collectorCamp",
+            "before": 258,
+            "after": 266
+          },
+          {
+            "key": "$.units.61.collectorCamp",
+            "before": 219,
+            "after": 217
+          },
+          {
+            "key": "$.units.81.collectorCamp",
+            "before": 266,
+            "after": 258
+          },
+          {
+            "key": "$.units.83.repathAt",
+            "before": 134.5060000001911,
+            "after": 134.47266666685778
+          },
+          {
+            "key": "$.units.113.repathAt",
+            "before": 133.9726666668578,
+            "after": 134.0726666668578
+          },
+          {
+            "key": "$.units.114.repathAt",
+            "before": 133.9726666668578,
+            "after": 134.0726666668578
+          },
+          {
+            "key": "$.units.303.repathAt",
+            "before": 133.9726666668578,
+            "after": 134.0726666668578
+          }
+        ]
+      },
+      {
+        "step": 360,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.53.collectorCamp",
+            "before": 217,
+            "after": 219
+          },
+          {
+            "key": "$.units.58.collectorCamp",
+            "before": 258,
+            "after": 266
+          },
+          {
+            "key": "$.units.61.collectorCamp",
+            "before": 219,
+            "after": 217
+          },
+          {
+            "key": "$.units.81.collectorCamp",
+            "before": 266,
+            "after": 258
+          },
+          {
+            "key": "$.units.113.repathAt",
+            "before": 137.80600000019092,
+            "after": 137.90600000019091
+          },
+          {
+            "key": "$.units.114.repathAt",
+            "before": 137.80600000019092,
+            "after": 137.90600000019091
+          },
+          {
+            "key": "$.units.302.repathAt",
+            "before": 137.80600000019092,
+            "after": 137.90600000019091
+          }
+        ]
+      },
+      {
+        "step": 390,
+        "equal": false,
+        "differences": [
+          {
+            "key": "$.units.53.collectorCamp",
+            "before": 217,
+            "after": 219
+          },
+          {
+            "key": "$.units.58.collectorCamp",
+            "before": 258,
+            "after": 266
+          },
+          {
+            "key": "$.units.61.collectorCamp",
+            "before": 219,
+            "after": 217
+          },
+          {
+            "key": "$.units.81.collectorCamp",
+            "before": 266,
+            "after": 258
+          },
+          {
+            "key": "$.units.113.repathAt",
+            "before": 139.33933333352417,
+            "after": 139.43933333352416
+          },
+          {
+            "key": "$.units.114.repathAt",
+            "before": 139.33933333352417,
+            "after": 139.43933333352416
+          },
+          {
+            "key": "$.units.302.repathAt",
+            "before": 139.33933333352417,
+            "after": 139.43933333352416
+          },
+          {
+            "key": "$.units.304.repathAt",
+            "before": 139.1726666668575,
+            "after": 139.03933333352418
+          },
+          {
+            "key": "$.units.358.repathAt",
+            "before": 139.1726666668575,
+            "after": 139.03933333352418
+          },
+          {
+            "key": "$.units.372.repathAt",
+            "before": 139.1726666668575,
+            "after": 139.03933333352418
+          },
+          {
+            "key": "$.units.391.repathAt",
+            "before": 139.1726666668575,
+            "after": 139.03933333352418
+          }
+        ]
+      }
+    ],
+    "speedup": 1.4415339799290887
+  },
+  "capturedSimulationCpuReductionPercent": 30.62945349028876,
+  "rendering": {
+    "viewport": [
+      1035,
+      1113
+    ],
+    "dpr": 1.5,
+    "units": 393,
+    "buildings": 2389,
+    "fields": 483,
+    "parity": {
+      "paused": {
+        "differentPixels": 1201,
+        "totalPixels": 2593510,
+        "maxChannelDelta": 3
+      },
+      "panning": {
+        "differentPixels": 1174,
+        "totalPixels": 2593510,
+        "maxChannelDelta": 3
+      },
+      "city": {
+        "differentPixels": 0,
+        "totalPixels": 2593510,
+        "maxChannelDelta": 0
+      }
+    },
+    "timings": {
+      "paused": {
+        "before": {
+          "samples": 120,
+          "mean": 3.1450000007947287,
+          "p50": 3.1999998092651367,
+          "p95": 3.9000000953674316,
+          "max": 5.299999713897705
+        },
+        "after": {
+          "samples": 120,
+          "mean": 2.40250004529953,
+          "p50": 2.4000000953674316,
+          "p95": 3.0999999046325684,
+          "max": 4.200000286102295
+        }
+      },
+      "panning": {
+        "before": {
+          "samples": 120,
+          "mean": 3.030833327770233,
+          "p50": 3,
+          "p95": 3.700000286102295,
+          "max": 4.400000095367432
+        },
+        "after": {
+          "samples": 120,
+          "mean": 2.390000037352244,
+          "p50": 2.3000001907348633,
+          "p95": 3.0999999046325684,
+          "max": 3.6999998092651367
+        }
+      },
+      "city": {
+        "before": {
+          "samples": 120,
+          "mean": 3.271666685740153,
+          "p50": 3.299999713897705,
+          "p95": 3.8000001907348633,
+          "max": 5.099999904632568
+        },
+        "after": {
+          "samples": 120,
+          "mean": 2.4108333349227906,
+          "p50": 2.4000000953674316,
+          "p95": 2.8999996185302734,
+          "max": 3.4000000953674316
+        }
+      }
+    },
+    "errors": [],
+    "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+    "method": "Alternating before/after rendered frames on frozen captured state, paused simulation, 30 warmup +120 measured frames for each static/panning scenario. Current uses published fog snapshot. Draw CPU includes renderer+minimap, excludes simulation, HUD and GPU completion; not an FPS estimate."
+  },
+  "syntheticScaling": {
+    "methodology": "Identical serialized fixture per engine. Real updateGame; no production systems patched or skipped. All requested units remain live outside soldiers; two living leaders and palaces prevent false game completion. Warmup and checksum work are excluded from timed calls. Same WASM bytes; engines alternate first position across scenarios and rounds. Exact game-time advancement, retained active population, real movement, and final gameplay parity are checked.",
+    "limitations": [
+      "Synthetic distributed armies on one fixed 224\u00d7160 open map, not a representative city or battle.",
+      "No rendering, browser UI or GPU cost; update milliseconds cannot be presented as measured FPS.",
+      "Peaceful hold soldiers remain on the ordinary active-unit path, including sensing, morale and collision bookkeeping.",
+      "Movement scene uses 998 simultaneous normal attack-return legs, eight tiles east on a two-tile-spaced grid; it is not dense combat, congested chokepoint or formation stress.",
+      "Two empty settlements, no farms or other buildings, zero civilian population/gold, and future recruitment/raid clocks keep population fixed during the short sample.",
+      "One short round is a scaling diagnostic. Repeated rounds and longer diverse scenarios are required for a general performance claim."
+    ],
+    "node": "v25.9.0",
+    "platform": "darwin arm64",
+    "cpu": "Apple M3 Pro",
+    "baselinePath": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/before.mjs",
+    "currentPath": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/scaling/current.mjs",
+    "baselineSha256": "4b40c7cf06565be0a3a148d5a887cf21616140caf6b6196609bb19d56073b9bd",
+    "currentSha256": "5a00e0361c6fe6430d84b9425b32171a61474bc82198ad72fcdea8dd3945c79d",
+    "navigationWasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf",
+    "dt": 0.016666666666666666,
+    "warmupUpdates": 30,
+    "measuredUpdates": 60,
+    "rounds": 1,
+    "explicitPreWarmupGc": true,
+    "scenarios": {
+      "hold-1000": {
+        "snapshot": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/scaling/fixtures/hold-1000.json",
+        "initialSha256": "0e561a85bd40e2f33a1f5a98d470352f81e35d14378729e57a27353101fc3c22",
+        "initial": {
+          "time": 0,
+          "tick": 0,
+          "gameOver": false,
+          "totalUnits": 1000,
+          "activeSoldiers": 1000,
+          "livingLeaders": 2,
+          "livingPalaces": 2,
+          "soldiersMovedFromInitial": 0,
+          "finalMovingSoldiers": 0,
+          "remainingReturnOrders": 0,
+          "returnMovers": 0,
+          "meanReturnDisplacement": 0,
+          "minimumReturnDisplacement": 0,
+          "maximumReturnDisplacement": 0,
+          "totalSoldierHp": 100000
+        },
+        "runs": [
+          {
+            "name": "baseline",
+            "round": 1,
+            "position": 1,
+            "meanUpdateMs": 1.5498729500000024,
+            "p50UpdateMs": 1.4818330000000515,
+            "p95UpdateMs": 2.174874999999986,
+            "maxUpdateMs": 2.837083000000007,
+            "gameplaySha256": "4bda84feaa7c5ee383f6b1be4e0729f9f65a008cf9c30c400d6435339f97f5d4",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 100000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 100000
+            }
+          },
+          {
+            "name": "current",
+            "round": 1,
+            "position": 2,
+            "meanUpdateMs": 1.258256966666668,
+            "p50UpdateMs": 1.2376669999999876,
+            "p95UpdateMs": 1.843708000000106,
+            "maxUpdateMs": 1.8578750000000355,
+            "gameplaySha256": "4bda84feaa7c5ee383f6b1be4e0729f9f65a008cf9c30c400d6435339f97f5d4",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 100000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 100000
+            }
+          }
+        ],
+        "parity": [
+          {
+            "round": 1,
+            "pass": true
+          }
+        ],
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 1.5498729500000024,
+            "p50UpdateMs": 1.4818330000000515,
+            "p95UpdateMs": 2.174874999999986
+          },
+          "current": {
+            "meanUpdateMs": 1.258256966666668,
+            "p50UpdateMs": 1.2376669999999876,
+            "p95UpdateMs": 1.843708000000106
+          },
+          "speedup": 1.2317618666605705,
+          "timeReductionPercent": 18.815476670738317
+        }
+      },
+      "hold-3000": {
+        "snapshot": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/scaling/fixtures/hold-3000.json",
+        "initialSha256": "4d4e1fcfd92835d20d5184f1a344349c72b91f8ee489048824ca752c902a8b95",
+        "initial": {
+          "time": 0,
+          "tick": 0,
+          "gameOver": false,
+          "totalUnits": 3000,
+          "activeSoldiers": 3000,
+          "livingLeaders": 2,
+          "livingPalaces": 2,
+          "soldiersMovedFromInitial": 0,
+          "finalMovingSoldiers": 0,
+          "remainingReturnOrders": 0,
+          "returnMovers": 0,
+          "meanReturnDisplacement": 0,
+          "minimumReturnDisplacement": 0,
+          "maximumReturnDisplacement": 0,
+          "totalSoldierHp": 300000
+        },
+        "runs": [
+          {
+            "name": "current",
+            "round": 1,
+            "position": 1,
+            "meanUpdateMs": 4.639668083333318,
+            "p50UpdateMs": 4.654374999999845,
+            "p95UpdateMs": 5.7139159999999265,
+            "maxUpdateMs": 5.957458000000088,
+            "gameplaySha256": "4cf848820e281560ee38981617c88b62ae2766df526b986090429db26c29c730",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 3000,
+              "activeSoldiers": 3000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 300000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 3000,
+              "activeSoldiers": 3000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 300000
+            }
+          },
+          {
+            "name": "baseline",
+            "round": 1,
+            "position": 2,
+            "meanUpdateMs": 4.82346658333333,
+            "p50UpdateMs": 4.774582999999893,
+            "p95UpdateMs": 6.019207999999935,
+            "maxUpdateMs": 6.44179199999985,
+            "gameplaySha256": "4cf848820e281560ee38981617c88b62ae2766df526b986090429db26c29c730",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 3000,
+              "activeSoldiers": 3000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 300000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 3000,
+              "activeSoldiers": 3000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 300000
+            }
+          }
+        ],
+        "parity": [
+          {
+            "round": 1,
+            "pass": true
+          }
+        ],
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 4.82346658333333,
+            "p50UpdateMs": 4.774582999999893,
+            "p95UpdateMs": 6.019207999999935
+          },
+          "current": {
+            "meanUpdateMs": 4.639668083333318,
+            "p50UpdateMs": 4.654374999999845,
+            "p95UpdateMs": 5.7139159999999265
+          },
+          "speedup": 1.0396145794696512,
+          "timeReductionPercent": 3.810506340711395
+        }
+      },
+      "hold-5000": {
+        "snapshot": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/scaling/fixtures/hold-5000.json",
+        "initialSha256": "bfb6fdc9b2244b929a1c327f987f4219bf27793ff42a03e6255360a46f39fd6e",
+        "initial": {
+          "time": 0,
+          "tick": 0,
+          "gameOver": false,
+          "totalUnits": 5000,
+          "activeSoldiers": 5000,
+          "livingLeaders": 2,
+          "livingPalaces": 2,
+          "soldiersMovedFromInitial": 0,
+          "finalMovingSoldiers": 0,
+          "remainingReturnOrders": 0,
+          "returnMovers": 0,
+          "meanReturnDisplacement": 0,
+          "minimumReturnDisplacement": 0,
+          "maximumReturnDisplacement": 0,
+          "totalSoldierHp": 500000
+        },
+        "runs": [
+          {
+            "name": "baseline",
+            "round": 1,
+            "position": 1,
+            "meanUpdateMs": 7.87635828333335,
+            "p50UpdateMs": 7.684375000000273,
+            "p95UpdateMs": 8.695208000000093,
+            "maxUpdateMs": 15.379542000000129,
+            "gameplaySha256": "b884f7fb4f5449020aa4531bffe89b8fe03a665c35159e5c88bb582f17d7d05f",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 5000,
+              "activeSoldiers": 5000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 500000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 5000,
+              "activeSoldiers": 5000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 500000
+            }
+          },
+          {
+            "name": "current",
+            "round": 1,
+            "position": 2,
+            "meanUpdateMs": 7.8293700999999905,
+            "p50UpdateMs": 7.619958000000224,
+            "p95UpdateMs": 9.13866599999983,
+            "maxUpdateMs": 15.596666999999798,
+            "gameplaySha256": "b884f7fb4f5449020aa4531bffe89b8fe03a665c35159e5c88bb582f17d7d05f",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 5000,
+              "activeSoldiers": 5000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 500000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 5000,
+              "activeSoldiers": 5000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 0,
+              "finalMovingSoldiers": 0,
+              "remainingReturnOrders": 0,
+              "returnMovers": 0,
+              "meanReturnDisplacement": 0,
+              "minimumReturnDisplacement": 0,
+              "maximumReturnDisplacement": 0,
+              "totalSoldierHp": 500000
+            }
+          }
+        ],
+        "parity": [
+          {
+            "round": 1,
+            "pass": true
+          }
+        ],
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 7.87635828333335,
+            "p50UpdateMs": 7.684375000000273,
+            "p95UpdateMs": 8.695208000000093
+          },
+          "current": {
+            "meanUpdateMs": 7.8293700999999905,
+            "p50UpdateMs": 7.619958000000224,
+            "p95UpdateMs": 9.13866599999983
+          },
+          "speedup": 1.0060015279304986,
+          "timeReductionPercent": 0.596572446847532
+        }
+      },
+      "move-1000": {
+        "snapshot": "/Users/ckrapu/strongman/btv/scratch/2026-11-04-engine-redesign/scaling/fixtures/move-1000.json",
+        "initialSha256": "8a3898bacacd0bf6c93cf425aaaeba4d207e967e5d386668f0fe7b8e316b83b9",
+        "initial": {
+          "time": 0,
+          "tick": 0,
+          "gameOver": false,
+          "totalUnits": 1000,
+          "activeSoldiers": 1000,
+          "livingLeaders": 2,
+          "livingPalaces": 2,
+          "soldiersMovedFromInitial": 0,
+          "finalMovingSoldiers": 0,
+          "remainingReturnOrders": 998,
+          "returnMovers": 998,
+          "meanReturnDisplacement": 0,
+          "minimumReturnDisplacement": 0,
+          "maximumReturnDisplacement": 0,
+          "totalSoldierHp": 100000
+        },
+        "runs": [
+          {
+            "name": "current",
+            "round": 1,
+            "position": 1,
+            "meanUpdateMs": 3.1534819666666407,
+            "p50UpdateMs": 2.587416999999732,
+            "p95UpdateMs": 10.011250000000473,
+            "maxUpdateMs": 11.787709000000177,
+            "gameplaySha256": "e0899d1d82773f5db663eccee10e341d61443feac9b04315812c6e4bdbbf9976",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 998,
+              "finalMovingSoldiers": 998,
+              "remainingReturnOrders": 998,
+              "returnMovers": 998,
+              "meanReturnDisplacement": 1.901945688964507,
+              "minimumReturnDisplacement": 1.899617204035032,
+              "maximumReturnDisplacement": 2.132000000000005,
+              "totalSoldierHp": 100000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 998,
+              "finalMovingSoldiers": 998,
+              "remainingReturnOrders": 998,
+              "returnMovers": 998,
+              "meanReturnDisplacement": 6.0116992677247305,
+              "minimumReturnDisplacement": 6.007809584199537,
+              "maximumReturnDisplacement": 6.396000000000015,
+              "totalSoldierHp": 100000
+            }
+          },
+          {
+            "name": "baseline",
+            "round": 1,
+            "position": 2,
+            "meanUpdateMs": 3.3231576333333277,
+            "p50UpdateMs": 2.6890830000002097,
+            "p95UpdateMs": 10.458083000000443,
+            "maxUpdateMs": 12.323209000000134,
+            "gameplaySha256": "e0899d1d82773f5db663eccee10e341d61443feac9b04315812c6e4bdbbf9976",
+            "warmup": {
+              "time": 0.49999999999999994,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 998,
+              "finalMovingSoldiers": 998,
+              "remainingReturnOrders": 998,
+              "returnMovers": 998,
+              "meanReturnDisplacement": 1.901945688964507,
+              "minimumReturnDisplacement": 1.899617204035032,
+              "maximumReturnDisplacement": 2.132000000000005,
+              "totalSoldierHp": 100000
+            },
+            "final": {
+              "time": 1.4999999999999996,
+              "tick": 0,
+              "gameOver": false,
+              "totalUnits": 1000,
+              "activeSoldiers": 1000,
+              "livingLeaders": 2,
+              "livingPalaces": 2,
+              "soldiersMovedFromInitial": 998,
+              "finalMovingSoldiers": 998,
+              "remainingReturnOrders": 998,
+              "returnMovers": 998,
+              "meanReturnDisplacement": 6.0116992677247305,
+              "minimumReturnDisplacement": 6.007809584199537,
+              "maximumReturnDisplacement": 6.396000000000015,
+              "totalSoldierHp": 100000
+            }
+          }
+        ],
+        "parity": [
+          {
+            "round": 1,
+            "pass": true
+          }
+        ],
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 3.3231576333333277,
+            "p50UpdateMs": 2.6890830000002097,
+            "p95UpdateMs": 10.458083000000443
+          },
+          "current": {
+            "meanUpdateMs": 3.1534819666666407,
+            "p50UpdateMs": 2.587416999999732,
+            "p95UpdateMs": 10.011250000000473
+          },
+          "speedup": 1.0538058147978062,
+          "timeReductionPercent": 5.105856699806688
+        }
+      }
+    },
+    "pass": true,
+    "errors": []
+  },
+  "limits": [
+    "Simulation and render timings are separate CPU measurements, not live-game FPS.",
+    "The proposed 5 ms average / 10 ms p95 captured-simulation targets were not reached: this pass measures approximately 10.18 ms average / 23.82 ms p95.",
+    "Large dispersed armies see smaller gains than the complex captured settlement; the 5,000 holding-unit result is effectively unchanged.",
+    "Synthetic scaling does not cover dense melee, congested chokepoints or a large army combined with the captured city economy.",
+    "Shared army route corridors, fully local military congestion maps, a fixed simulation/interpolation boundary, and worker/Rust changes remain future work."
+  ],
+  "artifacts": {
+    "sourceBaseline": "scratch/2026-11-04-engine-redesign/source-before.tar.gz",
+    "simulationReplay": "scripts/benchmark-engine-work.mjs",
+    "scalingHarness": "scripts/benchmark-unit-scaling.mjs",
+    "fullTestLog": "scratch/2026-11-04-engine-redesign/full-tests-final.log",
+    "buildLog": "scratch/2026-11-04-engine-redesign/build.log"
+  }
+}

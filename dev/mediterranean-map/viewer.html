@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mediterreanean • c.200 BC</title>
+  <style>
+    @font-face { font-family: 'Pixel Operator'; src: url('/*PIXEL_FONT*/') format('truetype'); font-display: swap; }
+    :root { color-scheme: dark; font-family: 'Pixel Operator', monospace; color: #e3ead9; background: #0b171a; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { display: flex; flex-direction: column; font-size: 18px; }
+    button, input, a { font: inherit; }
+    button, .download { min-height: 36px; border: 1px solid #3e5654; border-radius: 5px; background: #1b3031; color: #e3ead9; padding: 6px 12px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+    button:hover, .download:hover { background: #2a4441; border-color: #879b77; }
+    button:focus-visible, a:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid #e8c67d; outline-offset: 3px; }
+    button[aria-pressed="true"] { background: #3a4935; border-color: #9aa66d; color: #f2eccd; }
+    header { padding: 18px 22px 13px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #2b4241; }
+    h1 { font-size: clamp(25px, 3vw, 34px); line-height: 1; font-weight: normal; margin: 0 0 5px; letter-spacing: .3px; }
+    h1 span { color: #d6b775; }
+    .subtitle { color: #9eb4a8; margin: 0; font-size: 17px; }
+    .snapshot { text-align: right; color: #a8b9b0; font-size: 16px; line-height: 1.25; white-space: nowrap; }
+    .snapshot strong { display: block; color: #d9e0ce; font-weight: normal; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 22px; background: #112225; border-bottom: 1px solid #2b4241; }
+    .group { display: flex; align-items: center; gap: 5px; }
+    .group-label { color: #9bb3a6; margin-right: 3px; }
+    .zoom-button { width: 36px; padding: 2px; font-size: 24px; line-height: 1; }
+    #zoom { min-width: 53px; color: #d5c597; text-align: center; font-variant-numeric: tabular-nums; }
+    .layers { gap: 15px; }
+    label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
+    input { accent-color: #d3b675; width: 16px; height: 16px; margin: 0; }
+    .download { margin-left: auto; border-color: #85744d; color: #e8d6a7; }
+    #viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #0b1c21; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    canvas.dragging { cursor: grabbing; }
+    .compass { position: absolute; top: 15px; right: 18px; pointer-events: none; color: #d8d5b2; background: #102224cf; padding: 5px 9px; border: 1px solid #52615a; border-radius: 4px; }
+    #loading { position: absolute; inset: 0; display: grid; place-items: center; color: #d5c597; background: #0b1c21; font-size: 22px; }
+    #loading[hidden] { display: none; }
+    footer { display: flex; justify-content: space-between; gap: 10px; padding: 7px 22px; color: #9bb3a6; border-top: 1px solid #2b4241; background: #112225; font-size: 16px; }
+    #position { color: #d1d8bf; min-width: 145px; font-variant-numeric: tabular-nums; }
+    #about { min-height: 0; padding: 0 5px; border: 0; background: none; color: #d8cba5; font-size: 16px; text-decoration: underline; text-underline-offset: 3px; }
+    .touch-help { display: none; }
+    .key { color: #d8cba5; }
+    dialog { width: min(630px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 23px; border: 1px solid #74816a; border-radius: 8px; color: #dfe6d5; background: #122629; font: 18px/1.35 'Pixel Operator', monospace; }
+    dialog::backdrop { background: #071014d9; }
+    dialog h2 { font-size: 27px; font-weight: normal; color: #e8d6a7; margin: 0 0 14px; }
+    dialog p { margin: 12px 0; }
+    dialog a { color: #e8d6a7; text-underline-offset: 3px; }
+    dialog ul { padding-left: 20px; } dialog li { margin-bottom: 10px; }
+    .dialog-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+    @media (max-width: 900px) { .download { margin-left: 0; } .group-label { display: none; } header, .toolbar { padding-left: 14px; padding-right: 14px; } footer { padding-left: 14px; padding-right: 14px; } }
+    @media (max-width: 600px) {
+      header { padding-top: 13px; padding-bottom: 10px; align-items: flex-start; gap: 7px; }
+      h1 { font-size: 27px; } h1 span { display: block; font-size: 21px; margin-top: 3px; }
+      .subtitle { font-size: 15px; max-width: 240px; } .snapshot { font-size: 14px; padding-top: 2px; }
+      .toolbar { gap: 8px 12px; padding-top: 8px; padding-bottom: 8px; font-size: 16px; }
+      button, .download { min-height: 32px; padding: 4px 9px; } .zoom-button { width: 32px; padding: 1px; }
+      .layers { gap: 10px; } .regions { gap: 4px; } #zoom { min-width: 44px; }
+      .download { margin-left: auto; } footer { font-size: 14px; } .full-help { display: none; } .touch-help { display: inline; }
+      .compass { top: 9px; right: 9px; padding: 3px 6px; font-size: 16px; }
+    }
+    @media (max-width: 370px) { .snapshot { display: none; } .toolbar { gap: 7px; padding-left: 9px; padding-right: 9px; } .download { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Mediterreanean <span>• c.200 BC</span></h1><p class="subtitle">The full basin, from Iberia to the Levant</p></div>
+    <div class="snapshot">Map snapshot<strong id="seed"></strong><span id="dimensions"></span></div>
+  </header>
+  <nav class="toolbar" aria-label="Map controls">
+    <div class="group" aria-label="Zoom">
+      <button type="button" id="zoom-out" class="zoom-button" aria-label="Zoom out">−</button>
+      <output id="zoom" aria-label="Zoom level">—</output>
+      <button type="button" id="zoom-in" class="zoom-button" aria-label="Zoom in">+</button>
+      <button type="button" id="fit" aria-pressed="true">Fit map</button>
+      <button type="button" id="native" aria-label="Show at original image size">100%</button>
+    </div>
+    <div class="group layers">
+      <label><input type="checkbox" id="vegetation" checked>Vegetation</label>
+      <label><input type="checkbox" id="starts">Starting towns</label>
+    </div>
+    <div class="group" id="waterfall-controls" hidden>
+      <button type="button" id="animate" aria-pressed="true">Pause water</button>
+      <button type="button" id="next-waterfall">Next waterfall</button>
+      <label><input type="checkbox" id="show-waterfalls">Mark falls</label>
+    </div>
+    <div class="group regions" aria-label="Jump to region">
+      <span class="group-label">Explore</span>
+      <button type="button" data-region="iberia">Iberia</button>
+      <button type="button" data-region="alps">Alps</button>
+      <button type="button" data-region="italy">Italy</button>
+      <button type="button" data-region="nile">Nile</button>
+    </div>
+    <a id="download" class="download" download="mediterreanean-map.png">Save PNG ↓</a>
+  </nav>
+  <main id="viewport">
+    <canvas id="map" tabindex="0" role="img" aria-label="Full Mediterranean game map. Drag to move, scroll or pinch to zoom. Use plus, minus, zero, and arrow keys."></canvas>
+    <div class="compass" aria-label="North is up">N ↑</div>
+    <div id="loading" role="status">Opening the whole map…</div>
+  </main>
+  <footer>
+    <span id="position">North ↑ · Full basin</span>
+    <span class="full-help">Drag to pan · Scroll or pinch to zoom · <span class="key">0</span> to fit · <span class="key">← ↑ ↓ →</span> to move</span>
+    <span class="touch-help">Drag · Pinch</span>
+    <button type="button" id="about">About</button>
+  </footer>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <h2 id="about-title">About this map</h2>
+    <p>A playable Mediterranean landscape approximation around 200 BC, not an exact-year reconstruction. Local vegetation is inferred from regional evidence; elevation, shorelines and rivers use modern geographic proxies.</p>
+    <ul>
+      <li><strong>Vegetation:</strong> Fyfe et al. (2021), REVEALS / LandClimII, <a href="https://doi.org/10.1594/PANGAEA.937075" target="_blank" rel="noopener noreferrer">PANGAEA dataset</a>, CC BY 4.0. TW6 covers 2200–1700 cal BP, approximately 250 BC–AD 250. Methods: <a href="https://doi.org/10.5194/essd-14-1581-2022" target="_blank" rel="noopener noreferrer">Githumbi et al. (2022)</a>.</li>
+      <li><strong>Elevation:</strong> GMT earth relief, derived from SRTM15+ V2.7. <a href="https://doi.org/10.1029/2019EA000658" target="_blank" rel="noopener noreferrer">Tozer et al. (2019)</a>; original source grids released under CC BY 4.0.</li>
+      <li><strong>Coastlines and waterways:</strong> Natural Earth v5.1.2, <a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noopener noreferrer">public domain</a>.</li>
+      <li><strong>Game artwork:</strong> Shade’s Puny World (CC0) and Puny World Medieval (purchased project license), including the existing slim water artwork.</li>
+    </ul>
+    <div class="dialog-actions"><button type="button" id="close-about">Return to map</button></div>
+  </dialog>
+  <script>
+    'use strict';
+    const MAP = /*MAP_DATA*/;
+    const $ = selector => document.querySelector(selector);
+    const canvas = $('#map'), context = canvas.getContext('2d'), viewport = $('#viewport');
+    const loadFrames = urls => urls.map(url => { const image = new Image(); image.src = url; return image; });
+    const scenes = loadFrames(MAP.sceneFrames || [MAP.scene]), grounds = loadFrames(MAP.groundFrames || [MAP.ground]);
+    const falls = MAP.waterfalls || [], regional = !!MAP.name;
+    let frameIndex = 0, animating = scenes.length > 1, waterfallIndex = -1;
+    const regionCenters = { iberia: [-3.5, 40, .8], alps: [9, 46, 1.5], italy: [12.5, 42, 1], nile: [31, 30.5, 1.2] };
+    const pointers = new Map();
+    let width = 1, height = 1, zoom = 1, centerX = MAP.width / 2, centerY = MAP.height / 2;
+    let fitMode = true, ready = false, scheduled = false, gesture;
+    const limit = (value, low, high) => Math.max(low, Math.min(high, value));
+    const fitZoom = () => Math.min(Math.max(1, width - 36) / MAP.width, Math.max(1, height - 36) / MAP.height);
+    const local = event => { const r = canvas.getBoundingClientRect(); return { x: event.clientX - r.left, y: event.clientY - r.top }; };
+    const worldAt = (x, y) => ({ x: centerX + (x - width / 2) / zoom, y: centerY + (y - height / 2) / zoom });
+
+    function constrain() {
+      const halfX = width / (2 * zoom), halfY = height / (2 * zoom);
+      centerX = halfX >= MAP.width / 2 ? MAP.width / 2 : limit(centerX, halfX, MAP.width - halfX);
+      centerY = halfY >= MAP.height / 2 ? MAP.height / 2 : limit(centerY, halfY, MAP.height - halfY);
+    }
+    function schedule() { if (!scheduled) { scheduled = true; requestAnimationFrame(draw); } }
+    function draw() {
+      scheduled = false;
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.fillStyle = '#0b1c21'; context.fillRect(0, 0, width, height);
+      if (!ready) return;
+      const x = width / 2 - centerX * zoom, y = height / 2 - centerY * zoom;
+      context.imageSmoothingEnabled = zoom < 1;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage($('#vegetation').checked ? scenes[frameIndex % scenes.length] : grounds[frameIndex % grounds.length], x, y, MAP.width * zoom, MAP.height * zoom);
+      context.strokeStyle = '#617770'; context.lineWidth = 1;
+      context.strokeRect(x - .5, y - .5, MAP.width * zoom + 1, MAP.height * zoom + 1);
+      if ($('#show-waterfalls').checked) for (const [index, fall] of falls.entries()) {
+        const px = x + (fall.x + .5) / MAP.tilesWide * MAP.width * zoom;
+        const py = y + (fall.y + .5) / MAP.tilesHigh * MAP.height * zoom;
+        context.beginPath(); context.arc(px, py, Math.max(10, 10 * zoom), 0, Math.PI * 2);
+        context.strokeStyle = index === waterfallIndex ? '#ffe4a0' : '#e7f9ff'; context.lineWidth = 2; context.stroke();
+      }
+      if ($('#starts').checked) {
+        for (const start of MAP.starts || []) {
+          const px = x + start.x / MAP.tilesWide * MAP.width * zoom, py = y + start.y / MAP.tilesHigh * MAP.height * zoom;
+          if (px < -20 || py < -20 || px > width + 20 || py > height + 20) continue;
+          const radius = start.capital ? 5 : 3.5;
+          context.beginPath();
+          if (start.capital) { context.moveTo(px, py - radius - 1); context.lineTo(px + radius + 1, py); context.lineTo(px, py + radius + 1); context.lineTo(px - radius - 1, py); context.closePath(); }
+          else context.arc(px, py, radius, 0, Math.PI * 2);
+          context.fillStyle = start.capital ? '#edc578' : '#d5e6df'; context.fill();
+          context.strokeStyle = '#142025'; context.lineWidth = 2; context.stroke();
+          if (zoom >= .5) {
+            context.font = '16px "Pixel Operator"'; context.textBaseline = 'middle'; context.textAlign = 'left';
+            context.lineWidth = 3; context.strokeStyle = '#0b171a'; context.strokeText(String(start.label), px + 10, py);
+            context.fillStyle = '#f2e6c9'; context.fillText(String(start.label), px + 10, py);
+          }
+        }
+      }
+      $('#zoom').textContent = `${Math.round(zoom * 100)}%`;
+      $('#fit').setAttribute('aria-pressed', String(fitMode));
+      canvas.dataset.zoom = String(zoom);
+      canvas.dataset.frame = String(frameIndex);
+    }
+    function fit() { zoom = fitZoom(); centerX = MAP.width / 2; centerY = MAP.height / 2; fitMode = true; schedule(); }
+    function zoomAt(next, x = width / 2, y = height / 2) {
+      const anchor = worldAt(x, y);
+      zoom = limit(next, fitZoom() * .6, 8);
+      centerX = anchor.x - (x - width / 2) / zoom; centerY = anchor.y - (y - height / 2) / zoom;
+      fitMode = false; constrain(); schedule();
+    }
+    function resize() {
+      const bounds = viewport.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+      width = Math.max(1, Math.round(bounds.width)); height = Math.max(1, Math.round(bounds.height));
+      canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+      if (fitMode) fit(); else { constrain(); schedule(); }
+    }
+    function focusRegion(name) {
+      const [lon, lat, next] = regionCenters[name], bounds = MAP.bounds;
+      centerX = (lon - bounds.west) / (bounds.east - bounds.west) * MAP.width;
+      centerY = (bounds.north - lat) / (bounds.north - bounds.south) * MAP.height;
+      zoom = next; fitMode = false; constrain(); schedule();
+      $('#position').textContent = `${name[0].toUpperCase()}${name.slice(1)} · North ↑`;
+    }
+    function nextWaterfall() {
+      if (!falls.length) return;
+      waterfallIndex = (waterfallIndex + 1) % falls.length;
+      const fall = falls[waterfallIndex];
+      centerX = (fall.x + .5) / MAP.tilesWide * MAP.width;
+      centerY = (fall.y + .5) / MAP.tilesHigh * MAP.height;
+      zoom = 3; fitMode = false; constrain(); $('#show-waterfalls').checked = true; schedule();
+      $('#position').textContent = `Waterfall ${waterfallIndex + 1} / ${falls.length} · Level ${fall.fromTier} → ${fall.toTier}`;
+    }
+    function updateDownload() {
+      const vegetation = $('#vegetation').checked;
+      $('#download').href = vegetation ? MAP.scene : MAP.ground;
+      $('#download').download = `${MAP.name || 'mediterreanean'}-${MAP.seed}-${vegetation ? 'full-map' : 'terrain'}.png`;
+    }
+    function gestureState() {
+      const points = [...pointers.values()];
+      if (points.length === 1) return { ...points[0], distance: 0 };
+      if (points.length > 1) return { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2, distance: Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) };
+    }
+    function positionText(point) {
+      const p = worldAt(point.x, point.y);
+      if (p.x < 0 || p.y < 0 || p.x >= MAP.width || p.y >= MAP.height) { $('#position').textContent = regional ? 'North ↑ · Alps' : 'North ↑ · Full basin'; return; }
+      const b = MAP.bounds, lon = b.west + p.x / MAP.width * (b.east - b.west), lat = b.north - p.y / MAP.height * (b.north - b.south);
+      $('#position').textContent = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
+    }
+    canvas.addEventListener('pointerdown', event => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      canvas.focus({ preventScroll: true }); canvas.setPointerCapture(event.pointerId);
+      pointers.set(event.pointerId, local(event)); gesture = gestureState(); canvas.classList.add('dragging');
+    });
+    canvas.addEventListener('pointermove', event => {
+      const point = local(event); positionText(point);
+      if (!pointers.has(event.pointerId)) return;
+      pointers.set(event.pointerId, point);
+      const next = gestureState();
+      if (gesture && next) {
+        if (next.distance && gesture.distance) zoomAt(zoom * next.distance / Math.max(1, gesture.distance), gesture.x, gesture.y);
+        centerX -= (next.x - gesture.x) / zoom; centerY -= (next.y - gesture.y) / zoom;
+        fitMode = false; constrain(); schedule();
+      }
+      gesture = next;
+    });
+    const release = event => { pointers.delete(event.pointerId); gesture = gestureState(); if (!pointers.size) canvas.classList.remove('dragging'); };
+    canvas.addEventListener('pointerup', release); canvas.addEventListener('pointercancel', release); canvas.addEventListener('lostpointercapture', release);
+    canvas.addEventListener('wheel', event => { event.preventDefault(); const p = local(event); zoomAt(zoom * Math.exp(-limit(event.deltaY, -400, 400) * .0025), p.x, p.y); }, { passive: false });
+    canvas.addEventListener('dblclick', event => { const p = local(event); zoomAt(zoom * 2, p.x, p.y); });
+    canvas.addEventListener('keydown', event => {
+      if (event.key === '+' || event.key === '=') zoomAt(zoom * 1.5);
+      else if (event.key === '-') zoomAt(zoom / 1.5);
+      else if (event.key === '0' || event.key === 'Home') fit();
+      else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        centerX += (event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0) * width / zoom * .15;
+        centerY += (event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0) * height / zoom * .15;
+        fitMode = false; constrain(); schedule();
+      } else return;
+      event.preventDefault();
+    });
+    $('#zoom-in').addEventListener('click', () => zoomAt(zoom * 1.5));
+    $('#zoom-out').addEventListener('click', () => zoomAt(zoom / 1.5));
+    $('#fit').addEventListener('click', fit); $('#native').addEventListener('click', () => zoomAt(1));
+    $('#vegetation').addEventListener('change', () => { updateDownload(); schedule(); });
+    $('#starts').addEventListener('change', schedule);
+    $('#show-waterfalls').addEventListener('change', schedule);
+    $('#animate').addEventListener('click', () => {
+      animating = !animating; $('#animate').setAttribute('aria-pressed', String(animating));
+      $('#animate').textContent = animating ? 'Pause water' : 'Animate water';
+    });
+    $('#next-waterfall').addEventListener('click', nextWaterfall);
+    $('#about').addEventListener('click', () => $('#about-dialog').showModal());
+    $('#close-about').addEventListener('click', () => $('#about-dialog').close());
+    document.querySelectorAll('[data-region]').forEach(button => {
+      const [lon, lat] = regionCenters[button.dataset.region], b = MAP.bounds;
+      button.hidden = lon < b.west || lon > b.east || lat < b.south || lat > b.north;
+      button.addEventListener('click', () => focusRegion(button.dataset.region));
+    });
+    if (MAP.title) { document.title = MAP.title; $('h1').textContent = MAP.title; }
+    if (MAP.subtitle) $('.subtitle').textContent = MAP.subtitle;
+    if (regional) {
+      canvas.setAttribute('aria-label', 'Alpine game map. Drag to pan, scroll to zoom, or select Next waterfall.');
+      $('#position').textContent = 'North ↑ · Alps';
+      $('#loading').textContent = 'Opening the Alps…';
+      const note = document.createElement('p'); note.textContent = 'Small mountain tributaries are inferred downhill routes. Waterfalls use the supported south-facing ledges; they do not identify particular historical waterfalls.';
+      $('#about-dialog').insertBefore(note, $('#about-dialog ul'));
+    }
+    $('#waterfall-controls').hidden = !falls.length;
+    $('#animate').hidden = scenes.length < 2;
+    $('#starts').closest('label').hidden = !MAP.starts.length;
+    $('#seed').textContent = `Seed ${MAP.seed}`; $('#dimensions').textContent = `${MAP.tilesWide} × ${MAP.tilesHigh} tiles`;
+    new ResizeObserver(resize).observe(viewport); updateDownload(); resize();
+    window.__mapReview = {
+      get ready() { return ready; },
+      get view() { return { width, height, zoom, fitZoom: fitZoom(), centerX, centerY, fitMode, vegetation: $('#vegetation').checked, starts: $('#starts').checked, animating, frameIndex, waterfallIndex }; },
+      get map() { return { width: MAP.width, height: MAP.height, tilesWide: MAP.tilesWide, tilesHigh: MAP.tilesHigh, seed: MAP.seed, starts: MAP.starts.length, waterfalls: falls.length, frames: scenes.length }; },
+      fit, focusRegion, nextWaterfall,
+    };
+    if (scenes.length > 1) setInterval(() => {
+      if (!ready || !animating || document.hidden) return;
+      frameIndex = (frameIndex + 1) % scenes.length; schedule();
+    }, Math.max(40, (MAP.frameSeconds || .1) * 1000));
+    Promise.all([...scenes, ...grounds].map(image => image.decode()).concat(document.fonts.ready)).then(() => {
+      ready = true; $('#loading').hidden = true; document.documentElement.dataset.mapReady = 'true'; fit();
+    }).catch(error => { $('#loading').textContent = `The map could not open: ${error.message}`; console.error(error); });
+  </script>
+</body>
+</html>

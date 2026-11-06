@@ -1,0 +1,241 @@
+{
+  "minimap-frame.png": {
+    "source": "public/assets/ui/forged/minimap-frame.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "alphaBounds": [
+      14,
+      1,
+      1240,
+      1243
+    ],
+    "centerAlpha": 0,
+    "centerRowOpaqueRuns": [
+      [
+        60,
+        215
+      ],
+      [
+        1035,
+        1193
+      ]
+    ],
+    "centerColumnOpaqueRuns": [
+      [
+        1,
+        210
+      ],
+      [
+        928,
+        1241
+      ]
+    ]
+  },
+  "hotbar-frame.png": {
+    "source": "public/assets/ui/forged/hotbar-frame.png",
+    "size": [
+      2126,
+      740
+    ],
+    "alphaBounds": [
+      75,
+      175,
+      2052,
+      527
+    ],
+    "centerAlpha": 245,
+    "centerRowOpaqueRuns": [
+      [
+        100,
+        215
+      ],
+      [
+        1057,
+        1069
+      ],
+      [
+        1910,
+        2026
+      ]
+    ],
+    "centerColumnOpaqueRuns": [
+      [
+        281,
+        375
+      ],
+      [
+        468,
+        514
+      ]
+    ]
+  },
+  "panel-frame.png": {
+    "source": "public/assets/ui/forged/panel-frame.png",
+    "size": [
+      1586,
+      992
+    ],
+    "alphaBounds": [
+      14,
+      34,
+      1573,
+      953
+    ],
+    "centerAlpha": 253,
+    "centerRowOpaqueRuns": [
+      [
+        35,
+        1552
+      ]
+    ],
+    "centerColumnOpaqueRuns": [
+      [
+        57,
+        928
+      ]
+    ]
+  },
+  "approved-reference.png": {
+    "size": [
+      1584,
+      993
+    ],
+    "role": "Unmodified approved concept, available for CSS clipping of exact icon/frame source regions"
+  },
+  "action-symbols.png": {
+    "source": "public/assets/ui/forged/action-symbols.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "quadrants": {
+      "hammer": {
+        "column": 0,
+        "row": 0,
+        "cell": [
+          0,
+          0,
+          627,
+          627
+        ],
+        "localAlphaBounds": [
+          95,
+          97,
+          577,
+          577
+        ],
+        "backgroundPosition": "0% 0%"
+      },
+      "wall": {
+        "column": 1,
+        "row": 0,
+        "cell": [
+          627,
+          0,
+          1254,
+          627
+        ],
+        "localAlphaBounds": [
+          61,
+          221,
+          571,
+          534
+        ],
+        "backgroundPosition": "100% 0%"
+      },
+      "machete": {
+        "column": 0,
+        "row": 1,
+        "cell": [
+          0,
+          627,
+          627,
+          1254
+        ],
+        "localAlphaBounds": [
+          71,
+          57,
+          584,
+          537
+        ],
+        "backgroundPosition": "0% 100%"
+      },
+      "forbid": {
+        "column": 1,
+        "row": 1,
+        "cell": [
+          627,
+          627,
+          1254,
+          1254
+        ],
+        "localAlphaBounds": [
+          84,
+          62,
+          548,
+          517
+        ],
+        "backgroundPosition": "100% 100%"
+      }
+    },
+    "css": "Element size equal square; background-size: 200% 200%; positions 0 0, 100% 0, 0 100%, 100% 100%. A64px cell gives roughly48\u201352px visible symbol."
+  },
+  "action-symbols-pixel.png": {
+    "source": "scratch/2026-11-01-rounded-controls-and-icons/1B-puny-pixels.png",
+    "generator": "built-in imagegen",
+    "approved_variant": "1B balanced pixel style",
+    "size": [
+      2172,
+      724
+    ],
+    "cells": {
+      "build": [
+        0,
+        0,
+        724,
+        724
+      ],
+      "fortify": [
+        724,
+        0,
+        724,
+        724
+      ],
+      "clear": [
+        1448,
+        0,
+        724,
+        724
+      ]
+    },
+    "css": "background-size:300% 100%; positions0 0,50% 0,100% 0;46pxbox",
+    "prompt": "scratch/2026-11-01-rounded-controls-and-icons/prompt-1B.txt"
+  },
+  "retinue-actions-pixel.png": {
+    "source": "scratch/2026-11-01-rounded-controls-and-icons/2B-return-and-switch.png",
+    "generator": "built-in imagegen",
+    "approved_variant": "2B return and switch",
+    "size": [
+      1774,
+      887
+    ],
+    "cells": {
+      "recall": [
+        0,
+        0,
+        887,
+        887
+      ],
+      "stance": [
+        887,
+        0,
+        887,
+        887
+      ]
+    },
+    "css": "background-size: 200% 100%; positions: 0 0, 100% 0; 40px desktop box, 30px on narrow screens",
+    "prompt": "scratch/2026-11-01-rounded-controls-and-icons/prompt-2B.txt"
+  }
+}

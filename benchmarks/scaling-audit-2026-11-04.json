@@ -1,0 +1,5692 @@
+{
+  "date": "2026-11-04",
+  "scope": "Read-only current-source scaling audit, after levy HUD fix. No production code changes. Simulation profile and function-entry count run are separate isolated replays of captured live state.",
+  "profile": {
+    "method": "Current source simulation-only Node V8 CPU sample on captured live game, navigation WASM enabled. Warm30steps;360profiledsteps dt1/30=12game seconds. Movement instrumentation enabled. No rendering/HUD; no livegame interaction. Inclusive costs overlap; sampling/timing are diagnostic, not an FPS forecast.",
+    "cpu": "Apple M3 Pro",
+    "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+    "start": {
+      "time": 126.7560000001915,
+      "units": 398,
+      "active": 266,
+      "buildings": 2393,
+      "fields": 484,
+      "gameOver": false
+    },
+    "end": {
+      "time": 138.75600000019082,
+      "units": 407,
+      "active": 227,
+      "buildings": 2402,
+      "fields": 502,
+      "gameOver": false
+    },
+    "updateMs": {
+      "mean": 16.24427210833333,
+      "p50": 12.033999999999878,
+      "p95": 37.77783400000044,
+      "max": 185.28629200000023
+    },
+    "movement": {
+      "calls": 27968,
+      "movementMs": 385.4099129999861,
+      "pathSearches": 1129,
+      "pathSearchMs": 133.21932999999194,
+      "congestionMs": 116.96226099999762,
+      "routeValidationMs": 11.00854399998434,
+      "steeringMs": 57.97317199993131,
+      "spatialMs": 43.799094999996896,
+      "separationMs": 46.566752000004044
+    },
+    "navigation": {
+      "enabled": true,
+      "ready": true,
+      "searches": 1642,
+      "unsupported": 0,
+      "instances": 17,
+      "unavailable": 0
+    },
+    "sampledMs": 5916.879,
+    "self": [
+      {
+        "name": "(anonymous)",
+        "ms": 574.686,
+        "percent": 9.71265425573178
+      },
+      {
+        "name": "territory",
+        "ms": 362.81,
+        "percent": 6.131779946826697
+      },
+      {
+        "name": "updateFog",
+        "ms": 313.729,
+        "percent": 5.3022716874892994
+      },
+      {
+        "name": "stepGame",
+        "ms": 268.74,
+        "percent": 4.541921509633711
+      },
+      {
+        "name": "factionBlockers",
+        "ms": 123.87,
+        "percent": 2.0935023345922743
+      },
+      {
+        "name": "buildingMemoryCurrent",
+        "ms": 121.689,
+        "percent": 2.0566416855913396
+      },
+      {
+        "name": "updateHarvests",
+        "ms": 118.13,
+        "percent": 1.9964917315361697
+      },
+      {
+        "name": "travelCache",
+        "ms": 105.87,
+        "percent": 1.7892878999215636
+      },
+      {
+        "name": "updateFactionStrategies",
+        "ms": 96.061,
+        "percent": 1.623507933827952
+      },
+      {
+        "name": "wasm-function[3]",
+        "ms": 88.907,
+        "percent": 1.5025995968482708
+      },
+      {
+        "name": "navigationGrid",
+        "ms": 88.663,
+        "percent": 1.4984758011782902
+      },
+      {
+        "name": "buildingReady",
+        "ms": 88.176,
+        "percent": 1.4902451106402548
+      },
+      {
+        "name": "updateGuardPosts",
+        "ms": 84.728,
+        "percent": 1.4319711455988875
+      },
+      {
+        "name": "canWalk",
+        "ms": 79.319,
+        "percent": 1.340554707980339
+      },
+      {
+        "name": "synchronizeFarms",
+        "ms": 76.253,
+        "percent": 1.288736849274761
+      },
+      {
+        "name": "structures",
+        "ms": 71.164,
+        "percent": 1.2027286682725808
+      },
+      {
+        "name": "updateWallOwnership",
+        "ms": 67.214,
+        "percent": 1.1359705006642862
+      },
+      {
+        "name": "advanceUnit",
+        "ms": 66.46,
+        "percent": 1.1232272960119685
+      },
+      {
+        "name": "post",
+        "ms": 65.222,
+        "percent": 1.102304103227394
+      },
+      {
+        "name": "ensureCollectors",
+        "ms": 63.495,
+        "percent": 1.0731164183009319
+      },
+      {
+        "name": "travelTimeMapFrom",
+        "ms": 61.377,
+        "percent": 1.037320519821345
+      },
+      {
+        "name": "(garbage collector)",
+        "ms": 56.686,
+        "percent": 0.9580388579857726
+      },
+      {
+        "name": "updateBuilder",
+        "ms": 54.242,
+        "percent": 0.9167332980782604
+      },
+      {
+        "name": "hasAttackContact",
+        "ms": 52.078,
+        "percent": 0.8801599627100707
+      },
+      {
+        "name": "palaceOf",
+        "ms": 51.725,
+        "percent": 0.8741939796301396
+      },
+      {
+        "name": "(program)",
+        "ms": 45.382,
+        "percent": 0.7669921930125663
+      },
+      {
+        "name": "updateGame",
+        "ms": 45.33,
+        "percent": 0.7661133513124064
+      },
+      {
+        "name": "canTraverseEdge",
+        "ms": 45.228,
+        "percent": 0.7643894695159391
+      },
+      {
+        "name": "palaceEnclosures",
+        "ms": 45.135,
+        "percent": 0.7628176949368071
+      },
+      {
+        "name": "villageCamp",
+        "ms": 44.17,
+        "percent": 0.7465084210780717
+      },
+      {
+        "name": "unchanged",
+        "ms": 42.805,
+        "percent": 0.7234388264488762
+      },
+      {
+        "name": "raiderCampActive",
+        "ms": 42.106,
+        "percent": 0.7116251659024969
+      },
+      {
+        "name": "buildingPresent",
+        "ms": 41.25,
+        "percent": 0.697158079453712
+      },
+      {
+        "name": "enclosureTerrain",
+        "ms": 41.011,
+        "percent": 0.693118787793362
+      },
+      {
+        "name": "buildingSize",
+        "ms": 40.474,
+        "percent": 0.6840430571590191
+      },
+      {
+        "name": "villageClaims",
+        "ms": 40.236,
+        "percent": 0.6800206663005953
+      },
+      {
+        "name": "unitObstructs",
+        "ms": 39.882,
+        "percent": 0.6740377824187379
+      },
+      {
+        "name": "refreshSightSources",
+        "ms": 38.227,
+        "percent": 0.6460669552309587
+      },
+      {
+        "name": "unitAttackContact",
+        "ms": 33.181,
+        "percent": 0.5607855087116029
+      },
+      {
+        "name": "distance",
+        "ms": 32.564,
+        "percent": 0.5503577139231679
+      },
+      {
+        "name": "regenerateUnits",
+        "ms": 32.16,
+        "percent": 0.5435297899450031
+      },
+      {
+        "name": "beginCollectorFrame",
+        "ms": 28.783,
+        "percent": 0.48645578184039256
+      },
+      {
+        "name": "insideOwnBorders",
+        "ms": 27.875,
+        "percent": 0.47110985369144776
+      },
+      {
+        "name": "retinueFormation",
+        "ms": 27.354,
+        "percent": 0.46230453588792336
+      },
+      {
+        "name": "separateUnits",
+        "ms": 26.343,
+        "percent": 0.4452178251405851
+      },
+      {
+        "name": "neighbors",
+        "ms": 24.888,
+        "percent": 0.420627158338036
+      },
+      {
+        "name": "synchronizeWheatGroups",
+        "ms": 24.543,
+        "percent": 0.41479638167351407
+      },
+      {
+        "name": "nearbyUnits",
+        "ms": 24.488,
+        "percent": 0.41386683756757575
+      },
+      {
+        "name": "hasStaticPath",
+        "ms": 24.256,
+        "percent": 0.40994585152070884
+      },
+      {
+        "name": "beginUnitFrame",
+        "ms": 23.242,
+        "percent": 0.3928084383675921
+      },
+      {
+        "name": "updateSupplyDepots",
+        "ms": 23.014,
+        "percent": 0.38895505552842974
+      },
+      {
+        "name": "add",
+        "ms": 22.607,
+        "percent": 0.3820764291444865
+      },
+      {
+        "name": "updateWildlife",
+        "ms": 22.451,
+        "percent": 0.37943990404400696
+      },
+      {
+        "name": "ridgeEdgeAllowed",
+        "ms": 22.175,
+        "percent": 0.3747752827123894
+      },
+      {
+        "name": "updateRaiderReturn",
+        "ms": 22.054,
+        "percent": 0.3727302856793252
+      },
+      {
+        "name": "snapshotUnitPositions",
+        "ms": 21.81,
+        "percent": 0.3686064900093444
+      },
+      {
+        "name": "unitRespectsForbidden",
+        "ms": 21.515,
+        "percent": 0.36362075344113004
+      },
+      {
+        "name": "updateForts",
+        "ms": 21.252,
+        "percent": 0.3591758425345524
+      },
+      {
+        "name": "updateWoodenTowers",
+        "ms": 20.653,
+        "percent": 0.3490522621807882
+      },
+      {
+        "name": "resolveSailingPassengers",
+        "ms": 20.462,
+        "percent": 0.34582420901289346
+      },
+      {
+        "name": "moveUnit",
+        "ms": 20.352,
+        "percent": 0.3439651208010169
+      },
+      {
+        "name": "findPath",
+        "ms": 20.17,
+        "percent": 0.3408891748504575
+      },
+      {
+        "name": "updateFishing",
+        "ms": 20.163,
+        "percent": 0.3407708692369744
+      },
+      {
+        "name": "updateMorale",
+        "ms": 19.692,
+        "percent": 0.33281059152975745
+      },
+      {
+        "name": "updateMarauderPacks",
+        "ms": 19.591,
+        "percent": 0.3311036105352163
+      },
+      {
+        "name": "eligible2",
+        "ms": 18.598,
+        "percent": 0.3143211142225487
+      },
+      {
+        "name": "searchNearestEnemy",
+        "ms": 18.332,
+        "percent": 0.3098255009101927
+      },
+      {
+        "name": "updateWellUpgrades",
+        "ms": 18.318,
+        "percent": 0.30958888968322656
+      },
+      {
+        "name": "updateWarrior",
+        "ms": 17.25,
+        "percent": 0.29153883322609775
+      },
+      {
+        "name": "retain",
+        "ms": 16.822,
+        "percent": 0.2843052900017053
+      },
+      {
+        "name": "campPalaces",
+        "ms": 16.348,
+        "percent": 0.2762943098887099
+      },
+      {
+        "name": "buildingTerritoryOwner",
+        "ms": 16.21,
+        "percent": 0.2739619992229011
+      },
+      {
+        "name": "get",
+        "ms": 15.68,
+        "percent": 0.2650045742020413
+      },
+      {
+        "name": "citySummaries",
+        "ms": 15.497,
+        "percent": 0.26191172744955576
+      },
+      {
+        "name": "synchronizeWheatFields",
+        "ms": 15.152,
+        "percent": 0.2560809507850338
+      },
+      {
+        "name": "decisionRevision",
+        "ms": 14.811,
+        "percent": 0.2503177773282165
+      },
+      {
+        "name": "trafficStructures",
+        "ms": 14.535,
+        "percent": 0.2456531559965989
+      },
+      {
+        "name": "pop",
+        "ms": 14.301,
+        "percent": 0.24169836834587963
+      },
+      {
+        "name": "updateCivilianPanic",
+        "ms": 14.266,
+        "percent": 0.24110684027846438
+      },
+      {
+        "name": "villageHostility",
+        "ms": 14.111,
+        "percent": 0.23848721597991102
+      },
+      {
+        "name": "updateCollector",
+        "ms": 13.728,
+        "percent": 0.23201420884219537
+      },
+      {
+        "name": "canMove",
+        "ms": 13.308,
+        "percent": 0.2249158720332121
+      },
+      {
+        "name": "terrainNavigation",
+        "ms": 13.23,
+        "percent": 0.22359760948297236
+      },
+      {
+        "name": "rememberBuilding",
+        "ms": 12.731,
+        "percent": 0.21516410932182323
+      },
+      {
+        "name": "rallyGoals",
+        "ms": 12.573,
+        "percent": 0.2124937826174914
+      },
+      {
+        "name": "unchanged2",
+        "ms": 12.251,
+        "percent": 0.20705172439727093
+      },
+      {
+        "name": "settleCourier",
+        "ms": 12.12,
+        "percent": 0.20483771934494518
+      },
+      {
+        "name": "entityVisible",
+        "ms": 12.078,
+        "percent": 0.20412788566404688
+      },
+      {
+        "name": "attackSpots",
+        "ms": 12.068,
+        "percent": 0.20395887764478537
+      },
+      {
+        "name": "sightDistance",
+        "ms": 11.927,
+        "percent": 0.20157586457319812
+      },
+      {
+        "name": "wasmPath",
+        "ms": 11.873,
+        "percent": 0.200663221269186
+      },
+      {
+        "name": "swimFish",
+        "ms": 11.599,
+        "percent": 0.19603240154142076
+      },
+      {
+        "name": "refreshWheatReadiness",
+        "ms": 11.59,
+        "percent": 0.19588029432408538
+      },
+      {
+        "name": "arrowLineClear",
+        "ms": 11.445,
+        "percent": 0.19342967804479355
+      },
+      {
+        "name": "ridgeLevel",
+        "ms": 11.336,
+        "percent": 0.19158749063484312
+      },
+      {
+        "name": "nearestEnemy",
+        "ms": 11.185,
+        "percent": 0.18903546954399442
+      },
+      {
+        "name": "cityResidents",
+        "ms": 11.127,
+        "percent": 0.18805522303227767
+      },
+      {
+        "name": "movementCongestion",
+        "ms": 11.016,
+        "percent": 0.18617923401847494
+      },
+      {
+        "name": "ridgeIsLedge",
+        "ms": 10.688,
+        "percent": 0.18063577098669756
+      },
+      {
+        "name": "planAutomaticFarmSite",
+        "ms": 10.547,
+        "percent": 0.1782527579151103
+      },
+      {
+        "name": "civilianFootprint",
+        "ms": 10.383,
+        "percent": 0.1754810263992216
+      },
+      {
+        "name": "plan",
+        "ms": 10.377,
+        "percent": 0.1753796215876647
+      },
+      {
+        "name": "buildingInSight",
+        "ms": 10.164,
+        "percent": 0.17177975077739466
+      },
+      {
+        "name": "breachBlockingWall",
+        "ms": 10.123,
+        "percent": 0.17108681789842245
+      },
+      {
+        "name": "calculateYields",
+        "ms": 10.032,
+        "percent": 0.16954884492314276
+      },
+      {
+        "name": "senseMorale",
+        "ms": 9.942,
+        "percent": 0.1680277727497892
+      },
+      {
+        "name": "recordTraffic",
+        "ms": 9.92,
+        "percent": 0.1676559551074139
+      },
+      {
+        "name": "forEachNearbyUnit",
+        "ms": 9.867,
+        "percent": 0.16676021260532792
+      },
+      {
+        "name": "has",
+        "ms": 9.795,
+        "percent": 0.16554335486664506
+      },
+      {
+        "name": "refreshIndexedUnit",
+        "ms": 9.747,
+        "percent": 0.16473211637418986
+      },
+      {
+        "name": "maintainBoats",
+        "ms": 9.617,
+        "percent": 0.16253501212379026
+      },
+      {
+        "name": "casualtyPressure",
+        "ms": 9.577,
+        "percent": 0.16185898004674426
+      },
+      {
+        "name": "refreshPeasant",
+        "ms": 9.509,
+        "percent": 0.160709725515766
+      },
+      {
+        "name": "cityPopulations",
+        "ms": 9.497,
+        "percent": 0.1605069158926522
+      },
+      {
+        "name": "farmTopologyCurrent",
+        "ms": 9.484,
+        "percent": 0.16028720546761224
+      },
+      {
+        "name": "wheatFieldGroups",
+        "ms": 9.465,
+        "percent": 0.15996609023101538
+      },
+      {
+        "name": "criticalStructureQuery",
+        "ms": 8.839,
+        "percent": 0.1493861882252451
+      },
+      {
+        "name": "buildingHeight",
+        "ms": 8.814,
+        "percent": 0.14896366817709134
+      },
+      {
+        "name": "farmCityQuery",
+        "ms": 8.791,
+        "percent": 0.14857494973278987
+      },
+      {
+        "name": "palaceDefenses",
+        "ms": 8.741,
+        "percent": 0.14772990963648236
+      },
+      {
+        "name": "updateFriendlyYield",
+        "ms": 8.731,
+        "percent": 0.14756090161722085
+      },
+      {
+        "name": "tileAt",
+        "ms": 8.669,
+        "percent": 0.1465130518977995
+      },
+      {
+        "name": "updateFleeing",
+        "ms": 8.536,
+        "percent": 0.1442652452416215
+      },
+      {
+        "name": "isScheduledMarauder",
+        "ms": 8.497,
+        "percent": 0.14360611396650158
+      },
+      {
+        "name": "synchronizeRetinueSquads",
+        "ms": 8.483,
+        "percent": 0.1433695027395355
+      },
+      {
+        "name": "fieldClockChanged",
+        "ms": 8.23,
+        "percent": 0.1390935998522194
+      },
+      {
+        "name": "advanceInfantryFormations",
+        "ms": 8.216,
+        "percent": 0.13885698862525328
+      },
+      {
+        "name": "push",
+        "ms": 8.141,
+        "percent": 0.13758942848079198
+      },
+      {
+        "name": "criticalStructures",
+        "ms": 8.081,
+        "percent": 0.13657538036522296
+      },
+      {
+        "name": "ensureBuilders",
+        "ms": 8.079,
+        "percent": 0.13654157876137066
+      },
+      {
+        "name": "recordCivilianCasualties",
+        "ms": 8.019,
+        "percent": 0.1355275306458016
+      },
+      {
+        "name": "updateActiveConstruction",
+        "ms": 7.767,
+        "percent": 0.13126852856041166
+      },
+      {
+        "name": "ridgeGroundWalkable",
+        "ms": 7.664,
+        "percent": 0.12952774596201816
+      },
+      {
+        "name": "updateFactionMission",
+        "ms": 7.655,
+        "percent": 0.1293756387446828
+      },
+      {
+        "name": "updateRaiderEquipment",
+        "ms": 7.629,
+        "percent": 0.12893621789460288
+      },
+      {
+        "name": "expireFoodCargo",
+        "ms": 7.623,
+        "percent": 0.12883481308304598
+      },
+      {
+        "name": "initializeUnitDamageTimes",
+        "ms": 7.595,
+        "percent": 0.12836159062911376
+      },
+      {
+        "name": "isWallKind",
+        "ms": 7.587,
+        "percent": 0.12822638421370455
+      },
+      {
+        "name": "edgeDistance3",
+        "ms": 7.578,
+        "percent": 0.1280742769963692
+      },
+      {
+        "name": "secureEnclosures",
+        "ms": 7.529,
+        "percent": 0.1272461377019878
+      },
+      {
+        "name": "eligible",
+        "ms": 7.474,
+        "percent": 0.12631659359604955
+      },
+      {
+        "name": "query",
+        "ms": 7.383,
+        "percent": 0.12477862062076983
+      },
+      {
+        "name": "refreshFogUnit",
+        "ms": 7.145,
+        "percent": 0.12075622976234598
+      },
+      {
+        "name": "updateWallStats",
+        "ms": 7.101,
+        "percent": 0.12001259447759537
+      },
+      {
+        "name": "unitMaxHp",
+        "ms": 7.089,
+        "percent": 0.11980978485448156
+      },
+      {
+        "name": "updateVillages",
+        "ms": 6.97,
+        "percent": 0.11779858942526963
+      },
+      {
+        "name": "updateMarauder",
+        "ms": 6.956,
+        "percent": 0.11756197819830354
+      },
+      {
+        "name": "civilianThreat2",
+        "ms": 6.924,
+        "percent": 0.1170211525366667
+      },
+      {
+        "name": "indexOf",
+        "ms": 6.905,
+        "percent": 0.11670003730006985
+      },
+      {
+        "name": "visible",
+        "ms": 6.855,
+        "percent": 0.11585499720376231
+      },
+      {
+        "name": "entityStore",
+        "ms": 6.515,
+        "percent": 0.1101087245488711
+      },
+      {
+        "name": "visitFarm",
+        "ms": 6.511,
+        "percent": 0.11004112134116652
+      },
+      {
+        "name": "buildingMaintenance",
+        "ms": 6.372,
+        "percent": 0.10769190987343158
+      },
+      {
+        "name": "buildingOverlapsVillageBorders",
+        "ms": 6.365,
+        "percent": 0.10757360425994852
+      },
+      {
+        "name": "isSoldier",
+        "ms": 6.343,
+        "percent": 0.10720178661757322
+      },
+      {
+        "name": "updateHerdAnimal",
+        "ms": 6.312,
+        "percent": 0.10667786175786254
+      },
+      {
+        "name": "schedule",
+        "ms": 6.266,
+        "percent": 0.10590042486925962
+      },
+      {
+        "name": "updateSettlementGuard",
+        "ms": 6.202,
+        "percent": 0.10481877354598598
+      },
+      {
+        "name": "snapshot",
+        "ms": 6.031,
+        "percent": 0.10192873641661424
+      },
+      {
+        "name": "open",
+        "ms": 5.958,
+        "percent": 0.10069497787600523
+      },
+      {
+        "name": "claimAttackSpot",
+        "ms": 5.893,
+        "percent": 0.09959642575080546
+      },
+      {
+        "name": "autoHunt",
+        "ms": 5.799,
+        "percent": 0.0980077503697473
+      },
+      {
+        "name": "groundMovementMultiplier",
+        "ms": 5.761,
+        "percent": 0.09736551989655357
+      },
+      {
+        "name": "canRequestNeutralYield",
+        "ms": 5.704,
+        "percent": 0.09640217418676299
+      },
+      {
+        "name": "workerHomeCity",
+        "ms": 5.674,
+        "percent": 0.09589515012897848
+      },
+      {
+        "name": "spoilCargo",
+        "ms": 5.671,
+        "percent": 0.09584444772320001
+      },
+      {
+        "name": "unitCanMove",
+        "ms": 5.663,
+        "percent": 0.09570924130779081
+      },
+      {
+        "name": "canReachAttack",
+        "ms": 5.661,
+        "percent": 0.0956754397039385
+      },
+      {
+        "name": "isFarmKind",
+        "ms": 5.659,
+        "percent": 0.09564163810008622
+      },
+      {
+        "name": "prepareIrrigation",
+        "ms": 5.656,
+        "percent": 0.09559093569430775
+      },
+      {
+        "name": "atWar",
+        "ms": 5.633,
+        "percent": 0.09520221725000629
+      },
+      {
+        "name": "moveInFormation",
+        "ms": 5.587,
+        "percent": 0.09442478036140337
+      },
+      {
+        "name": "travelTimeMap",
+        "ms": 5.548,
+        "percent": 0.09376564908628349
+      },
+      {
+        "name": "navigation",
+        "ms": 5.521,
+        "percent": 0.09330932743427743
+      },
+      {
+        "name": "buildingBlockerView",
+        "ms": 5.097,
+        "percent": 0.08614338741758958
+      },
+      {
+        "name": "trafficBorders",
+        "ms": 5.034,
+        "percent": 0.0850786368962421
+      },
+      {
+        "name": "validTarget",
+        "ms": 4.949,
+        "percent": 0.0836420687325193
+      },
+      {
+        "name": "infantryFormationLeader",
+        "ms": 4.86,
+        "percent": 0.0821378973610919
+      },
+      {
+        "name": "playerFaction",
+        "ms": 4.838,
+        "percent": 0.08176607971871658
+      },
+      {
+        "name": "capitalId",
+        "ms": 4.72,
+        "percent": 0.0797717850914308
+      },
+      {
+        "name": "civilianCityPopulations",
+        "ms": 4.603,
+        "percent": 0.07779439126607118
+      },
+      {
+        "name": "clear",
+        "ms": 4.45,
+        "percent": 0.07520856857137014
+      },
+      {
+        "name": "buildingWorkForbidden",
+        "ms": 4.43,
+        "percent": 0.07487055253284712
+      },
+      {
+        "name": "updateRaiderActivity",
+        "ms": 4.423,
+        "percent": 0.07475224691936408
+      },
+      {
+        "name": "updateFogRaids",
+        "ms": 4.415,
+        "percent": 0.07461704050395487
+      },
+      {
+        "name": "movementMultiplier",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "contextKey",
+        "ms": 4.368,
+        "percent": 0.0738227028134258
+      },
+      {
+        "name": "canAddAll",
+        "ms": 4.293,
+        "percent": 0.07255514266896451
+      },
+      {
+        "name": "visibleEnemies",
+        "ms": 4.27,
+        "percent": 0.07216642422466303
+      },
+      {
+        "name": "recordMerchantRoad",
+        "ms": 4.126,
+        "percent": 0.06973270874729735
+      },
+      {
+        "name": "canDispatchPeasant",
+        "ms": 4.108,
+        "percent": 0.06942849431262664
+      },
+      {
+        "name": "region",
+        "ms": 4.089,
+        "percent": 0.06910737907602978
+      },
+      {
+        "name": "decisionDue",
+        "ms": 4.039,
+        "percent": 0.06826233897972225
+      },
+      {
+        "name": "danger",
+        "ms": 4.011,
+        "percent": 0.06778911652579003
+      },
+      {
+        "name": "updateVillageUnit",
+        "ms": 3.927,
+        "percent": 0.06636944916399337
+      },
+      {
+        "name": "isMilitary",
+        "ms": 3.892,
+        "percent": 0.06577792109657811
+      },
+      {
+        "name": "movementNeighbors",
+        "ms": 3.821,
+        "percent": 0.06457796415982142
+      },
+      {
+        "name": "cityDevelopmentNeeds",
+        "ms": 3.818,
+        "percent": 0.06452726175404297
+      },
+      {
+        "name": "nearbyThreats",
+        "ms": 3.791,
+        "percent": 0.0640709401020369
+      },
+      {
+        "name": "scheduleArcheryTraining",
+        "ms": 3.788,
+        "percent": 0.06402023769625845
+      },
+      {
+        "name": "clearShot",
+        "ms": 3.785,
+        "percent": 0.06396953529048
+      },
+      {
+        "name": "now",
+        "ms": 3.78,
+        "percent": 0.06388503128084924
+      },
+      {
+        "name": "indexedLeader",
+        "ms": 3.774,
+        "percent": 0.06378362646929234
+      },
+      {
+        "name": "withinMoraleRange",
+        "ms": 3.773,
+        "percent": 0.06376672566736619
+      },
+      {
+        "name": "constructionEdges",
+        "ms": 3.768,
+        "percent": 0.06368222165773543
+      },
+      {
+        "name": "settlementGoldBreakdown",
+        "ms": 3.733,
+        "percent": 0.06309069359032017
+      },
+      {
+        "name": "expandCamps",
+        "ms": 3.701,
+        "percent": 0.06254986792868335
+      },
+      {
+        "name": "isUnitSleeping",
+        "ms": 3.687,
+        "percent": 0.06231325670171724
+      },
+      {
+        "name": "isRetinueMember",
+        "ms": 3.644,
+        "percent": 0.06158652221889277
+      },
+      {
+        "name": "palaceEdges",
+        "ms": 3.595,
+        "percent": 0.060758382924511384
+      },
+      {
+        "name": "addOutside",
+        "ms": 3.5,
+        "percent": 0.05915280674152708
+      },
+      {
+        "name": "downhillRangeBonus",
+        "ms": 3.439,
+        "percent": 0.05812185782403189
+      },
+      {
+        "name": "O",
+        "ms": 3.394,
+        "percent": 0.057361321737355114
+      },
+      {
+        "name": "factionRespectsForbidden",
+        "ms": 3.375,
+        "percent": 0.05704020650075826
+      },
+      {
+        "name": "defensive2",
+        "ms": 3.186,
+        "percent": 0.05384595493671579
+      },
+      {
+        "name": "resolveFocus",
+        "ms": 3.174,
+        "percent": 0.05364314531360199
+      },
+      {
+        "name": "isHome",
+        "ms": 3.17,
+        "percent": 0.05357554210589738
+      },
+      {
+        "name": "fieldHarvestFood",
+        "ms": 3.168,
+        "percent": 0.05354174050204508
+      },
+      {
+        "name": "orderedMatches",
+        "ms": 3.165,
+        "percent": 0.05349103809626664
+      },
+      {
+        "name": "updateRaiderCamps",
+        "ms": 3.165,
+        "percent": 0.05349103809626664
+      },
+      {
+        "name": "isHuntable",
+        "ms": 3.157,
+        "percent": 0.053355831680857425
+      },
+      {
+        "name": "rememberFarmTopology",
+        "ms": 3.152,
+        "percent": 0.05327132767122667
+      },
+      {
+        "name": "harvestShelfLife",
+        "ms": 3.146,
+        "percent": 0.053169922859669774
+      },
+      {
+        "name": "prepareCourierUpdates",
+        "ms": 2.978,
+        "percent": 0.050330588136076465
+      },
+      {
+        "name": "nearbyBuildings",
+        "ms": 2.933,
+        "percent": 0.049570052049399696
+      },
+      {
+        "name": "farmDormantAt",
+        "ms": 2.915,
+        "percent": 0.04926583761472898
+      },
+      {
+        "name": "beginWork",
+        "ms": 2.887,
+        "percent": 0.04879261516079676
+      },
+      {
+        "name": "updateForcedAttack",
+        "ms": 2.828,
+        "percent": 0.047795467847153876
+      },
+      {
+        "name": "fieldMemoryCurrent",
+        "ms": 2.795,
+        "percent": 0.047237741383590916
+      },
+      {
+        "name": "requestFriendlyYield",
+        "ms": 2.783,
+        "percent": 0.04703493176047711
+      },
+      {
+        "name": "unitsCollide",
+        "ms": 2.776,
+        "percent": 0.04691662614699405
+      },
+      {
+        "name": "moveMarshBird",
+        "ms": 2.766,
+        "percent": 0.046747618127732544
+      },
+      {
+        "name": "targetInSight",
+        "ms": 2.712,
+        "percent": 0.04583497482372041
+      },
+      {
+        "name": "cell",
+        "ms": 2.658,
+        "percent": 0.04492233151970828
+      },
+      {
+        "name": "traversable",
+        "ms": 2.59,
+        "percent": 0.043773076988730036
+      },
+      {
+        "name": "fieldHarvestYield",
+        "ms": 2.532,
+        "percent": 0.0427928304770133
+      },
+      {
+        "name": "factionMaintenanceBreakdown",
+        "ms": 2.531,
+        "percent": 0.04277592967508716
+      },
+      {
+        "name": "updateMerchant",
+        "ms": 2.525,
+        "percent": 0.042674524863530246
+      },
+      {
+        "name": "cityOwnership",
+        "ms": 2.521,
+        "percent": 0.04260692165582565
+      },
+      {
+        "name": "scheduleFieldClock",
+        "ms": 2.521,
+        "percent": 0.04260692165582565
+      },
+      {
+        "name": "updateForbiddenEvacuation",
+        "ms": 2.52,
+        "percent": 0.0425900208538995
+      },
+      {
+        "name": "farmBlockPlacementQuery",
+        "ms": 2.52,
+        "percent": 0.0425900208538995
+      },
+      {
+        "name": "buildingSightRadius",
+        "ms": 2.516,
+        "percent": 0.042522417646194896
+      },
+      {
+        "name": "birdCellOpen",
+        "ms": 2.515,
+        "percent": 0.042505516844268745
+      },
+      {
+        "name": "sameSet",
+        "ms": 2.497,
+        "percent": 0.04220130240959803
+      },
+      {
+        "name": "beginPeasantFrame",
+        "ms": 2.403,
+        "percent": 0.04061262702853988
+      },
+      {
+        "name": "repairable",
+        "ms": 2.385,
+        "percent": 0.040308412593869164
+      },
+      {
+        "name": "validateBuildCellAt",
+        "ms": 2.357,
+        "percent": 0.03983519013993695
+      },
+      {
+        "name": "nearestHuntTarget",
+        "ms": 2.325,
+        "percent": 0.039294364478300134
+      },
+      {
+        "name": "fight",
+        "ms": 2.315,
+        "percent": 0.03912535645903863
+      },
+      {
+        "name": "withNavigationFrame",
+        "ms": 2.293,
+        "percent": 0.03875353881666331
+      },
+      {
+        "name": "harvestClock",
+        "ms": 2.221,
+        "percent": 0.03753668107798047
+      },
+      {
+        "name": "updateTraffic",
+        "ms": 2.209,
+        "percent": 0.03733387145486666
+      },
+      {
+        "name": "updateBallistae",
+        "ms": 1.981,
+        "percent": 0.033480488615704324
+      },
+      {
+        "name": "updateScout",
+        "ms": 1.966,
+        "percent": 0.03322697658681206
+      },
+      {
+        "name": "farmParcelPreferenceQuery",
+        "ms": 1.966,
+        "percent": 0.03322697658681206
+      },
+      {
+        "name": "idleJobDecisionDue",
+        "ms": 1.928,
+        "percent": 0.03258474611361835
+      },
+      {
+        "name": "cultureAmount2",
+        "ms": 1.928,
+        "percent": 0.03258474611361835
+      },
+      {
+        "name": "sees",
+        "ms": 1.925,
+        "percent": 0.032534043707839896
+      },
+      {
+        "name": "beginFogFrame",
+        "ms": 1.924,
+        "percent": 0.03251714290591374
+      },
+      {
+        "name": "farmCourierWakeAt",
+        "ms": 1.917,
+        "percent": 0.03239883729243069
+      },
+      {
+        "name": "pointInSight",
+        "ms": 1.915,
+        "percent": 0.03236503568857839
+      },
+      {
+        "name": "eligible4",
+        "ms": 1.895,
+        "percent": 0.032027019650055374
+      },
+      {
+        "name": "collectSpecialties",
+        "ms": 1.893,
+        "percent": 0.03199321804620307
+      },
+      {
+        "name": "runSettlementDecision",
+        "ms": 1.891,
+        "percent": 0.03195941644235077
+      },
+      {
+        "name": "priority2",
+        "ms": 1.889,
+        "percent": 0.03192561483849847
+      },
+      {
+        "name": "bucket",
+        "ms": 1.885,
+        "percent": 0.03185801163079387
+      },
+      {
+        "name": "rallyEnemy",
+        "ms": 1.881,
+        "percent": 0.03179040842308927
+      },
+      {
+        "name": "highGroundSightMultiplier",
+        "ms": 1.88,
+        "percent": 0.03177350762116311
+      },
+      {
+        "name": "unitOccupancy",
+        "ms": 1.879,
+        "percent": 0.03175660681923696
+      },
+      {
+        "name": "updateFactionDevelopment",
+        "ms": 1.866,
+        "percent": 0.03153689639419701
+      },
+      {
+        "name": "hasMoraleThreat",
+        "ms": 1.843,
+        "percent": 0.031148177949895547
+      },
+      {
+        "name": "reservations",
+        "ms": 1.813,
+        "percent": 0.030641153892111025
+      },
+      {
+        "name": "ownsHarvestClaim",
+        "ms": 1.804,
+        "percent": 0.03048904667477567
+      },
+      {
+        "name": "learned",
+        "ms": 1.792,
+        "percent": 0.030286237051661863
+      },
+      {
+        "name": "nearestCity",
+        "ms": 1.745,
+        "percent": 0.029491899361132785
+      },
+      {
+        "name": "getFactionStrategy",
+        "ms": 1.744,
+        "percent": 0.029474998559206638
+      },
+      {
+        "name": "unitAttackRange",
+        "ms": 1.735,
+        "percent": 0.02932289134187128
+      },
+      {
+        "name": "j",
+        "ms": 1.72,
+        "percent": 0.02906937931297902
+      },
+      {
+        "name": "factionCommittedBudget",
+        "ms": 1.671,
+        "percent": 0.02824124001859764
+      },
+      {
+        "name": "evadeMelee",
+        "ms": 1.622,
+        "percent": 0.027413100724216266
+      },
+      {
+        "name": "firingTowerThreats",
+        "ms": 1.62,
+        "percent": 0.027379299120363965
+      },
+      {
+        "name": "isKeep",
+        "ms": 1.587,
+        "percent": 0.026821572656800994
+      },
+      {
+        "name": "releaseStalledHarvestStops",
+        "ms": 1.559,
+        "percent": 0.026348350202868777
+      },
+      {
+        "name": "buildingWidth",
+        "ms": 1.491,
+        "percent": 0.025199095671890534
+      },
+      {
+        "name": "updateSailboatLaunches",
+        "ms": 1.468,
+        "percent": 0.02481037722758907
+      },
+      {
+        "name": "nearestPalace",
+        "ms": 1.461,
+        "percent": 0.024692071614106016
+      },
+      {
+        "name": "updateRoles",
+        "ms": 1.414,
+        "percent": 0.023897733923576938
+      },
+      {
+        "name": "history",
+        "ms": 1.412,
+        "percent": 0.023863932319724637
+      },
+      {
+        "name": "cell3",
+        "ms": 1.409,
+        "percent": 0.023813229913946188
+      },
+      {
+        "name": "marauderPackUpdateDue",
+        "ms": 1.389,
+        "percent": 0.023475213875423177
+      },
+      {
+        "name": "civilianWorkforcePopulations",
+        "ms": 1.356,
+        "percent": 0.022917487411860206
+      },
+      {
+        "name": "updateTradeRoutes",
+        "ms": 1.324,
+        "percent": 0.022376661750223386
+      },
+      {
+        "name": "completedCities",
+        "ms": 1.3,
+        "percent": 0.021971042503995772
+      },
+      {
+        "name": "claimedField",
+        "ms": 1.297,
+        "percent": 0.02192034009821732
+      },
+      {
+        "name": "aimPoint",
+        "ms": 1.291,
+        "percent": 0.021818935286660415
+      },
+      {
+        "name": "destroyTarget",
+        "ms": 1.275,
+        "percent": 0.021548522455842007
+      },
+      {
+        "name": "refreshCampRoadStyles",
+        "ms": 1.269,
+        "percent": 0.021447117644285103
+      },
+      {
+        "name": "updateMassLevy",
+        "ms": 1.269,
+        "percent": 0.021447117644285103
+      },
+      {
+        "name": "planFactionDevelopment",
+        "ms": 1.267,
+        "percent": 0.021413316040432805
+      },
+      {
+        "name": "member",
+        "ms": 1.266,
+        "percent": 0.02139641523850665
+      },
+      {
+        "name": "tower",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "respectsForbidden",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "updateSailingLeader",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "addResidents",
+        "ms": 1.264,
+        "percent": 0.02136261363465435
+      },
+      {
+        "name": "SimulationEvents.heap",
+        "ms": 1.264,
+        "percent": 0.02136261363465435
+      },
+      {
+        "name": "banditIntensity",
+        "ms": 1.263,
+        "percent": 0.0213457128327282
+      },
+      {
+        "name": "heuristic",
+        "ms": 1.262,
+        "percent": 0.02132881203080205
+      },
+      {
+        "name": "unitBlocksNavigationCell",
+        "ms": 1.261,
+        "percent": 0.0213119112288759
+      },
+      {
+        "name": "take",
+        "ms": 1.261,
+        "percent": 0.0213119112288759
+      },
+      {
+        "name": "unitSightRadius",
+        "ms": 1.26,
+        "percent": 0.02129501042694975
+      },
+      {
+        "name": "campSpawnTiles",
+        "ms": 1.26,
+        "percent": 0.02129501042694975
+      },
+      {
+        "name": "wrappedFn",
+        "ms": 1.259,
+        "percent": 0.021278109625023595
+      },
+      {
+        "name": "establishFactionVillageTrade",
+        "ms": 1.259,
+        "percent": 0.021278109625023595
+      },
+      {
+        "name": "unitCollisionRadius",
+        "ms": 1.258,
+        "percent": 0.021261208823097448
+      },
+      {
+        "name": "targetDistance",
+        "ms": 1.258,
+        "percent": 0.021261208823097448
+      },
+      {
+        "name": "H",
+        "ms": 1.257,
+        "percent": 0.021244308021171297
+      },
+      {
+        "name": "gap",
+        "ms": 1.255,
+        "percent": 0.021210506417318996
+      },
+      {
+        "name": "fieldHarvestFoodForState",
+        "ms": 1.252,
+        "percent": 0.021159804011540544
+      },
+      {
+        "name": "stampCell",
+        "ms": 1.25,
+        "percent": 0.021126002407688242
+      },
+      {
+        "name": "sharedStaticPath",
+        "ms": 1.248,
+        "percent": 0.02109220080383594
+      },
+      {
+        "name": "military",
+        "ms": 1.237,
+        "percent": 0.020906291982648283
+      },
+      {
+        "name": "isRaidObjective",
+        "ms": 1.171,
+        "percent": 0.019790839055522345
+      },
+      {
+        "name": "canAffordAutomatic",
+        "ms": 1.127,
+        "percent": 0.01904720377077172
+      },
+      {
+        "name": "collectTreasure",
+        "ms": 1.119,
+        "percent": 0.018911997355362517
+      },
+      {
+        "name": "cultureRates",
+        "ms": 1.111,
+        "percent": 0.018776790939953308
+      },
+      {
+        "name": "C",
+        "ms": 1.108,
+        "percent": 0.01872608853417486
+      },
+      {
+        "name": "updateMilitia",
+        "ms": 1.082,
+        "percent": 0.018286667684094943
+      },
+      {
+        "name": "canShareHouseWellTile",
+        "ms": 1.076,
+        "percent": 0.01818526287253804
+      },
+      {
+        "name": "sanctuary",
+        "ms": 0.993,
+        "percent": 0.01678249631266754
+      },
+      {
+        "name": "ensureMarauderLeaders",
+        "ms": 0.974,
+        "percent": 0.016461381076070678
+      },
+      {
+        "name": "center10",
+        "ms": 0.959,
+        "percent": 0.01620786904717842
+      },
+      {
+        "name": "campFields",
+        "ms": 0.958,
+        "percent": 0.01619096824525227
+      },
+      {
+        "name": "zoneCache",
+        "ms": 0.931,
+        "percent": 0.015734646593246204
+      },
+      {
+        "name": "refreshFrontiers",
+        "ms": 0.927,
+        "percent": 0.0156670433855416
+      },
+      {
+        "name": "factionAIProfile",
+        "ms": 0.911,
+        "percent": 0.015396630554723192
+      },
+      {
+        "name": "dueCityPlans",
+        "ms": 0.824,
+        "percent": 0.01392626078714809
+      },
+      {
+        "name": "palaceWalkingDistances",
+        "ms": 0.812,
+        "percent": 0.013723451164034282
+      },
+      {
+        "name": "applyDefensiveStats",
+        "ms": 0.769,
+        "percent": 0.012996716681209806
+      },
+      {
+        "name": "compileForInternalLoader",
+        "ms": 0.725,
+        "percent": 0.01225308139645918
+      },
+      {
+        "name": "collectorFarmHomes",
+        "ms": 0.72,
+        "percent": 0.012168577386828427
+      },
+      {
+        "name": "housingGoldBonus",
+        "ms": 0.71,
+        "percent": 0.011999569367566921
+      },
+      {
+        "name": "worldRevisions",
+        "ms": 0.686,
+        "percent": 0.011593950121339307
+      },
+      {
+        "name": "nearbyHarvests",
+        "ms": 0.679,
+        "percent": 0.011475644507856254
+      },
+      {
+        "name": "shallowEqual",
+        "ms": 0.676,
+        "percent": 0.011424942102077802
+      },
+      {
+        "name": "findReversePath",
+        "ms": 0.663,
+        "percent": 0.011205231677037844
+      },
+      {
+        "name": "updateFactionDefenses",
+        "ms": 0.658,
+        "percent": 0.011120727667407092
+      },
+      {
+        "name": "irrigationYieldMultiplier",
+        "ms": 0.657,
+        "percent": 0.011103826865480941
+      },
+      {
+        "name": "constructionSpeedMultiplier",
+        "ms": 0.654,
+        "percent": 0.011053124459702489
+      },
+      {
+        "name": "addTile",
+        "ms": 0.653,
+        "percent": 0.011036223657776338
+      },
+      {
+        "name": "changed",
+        "ms": 0.649,
+        "percent": 0.010968620450071735
+      },
+      {
+        "name": "applyConstructionSpeed",
+        "ms": 0.646,
+        "percent": 0.010917918044293283
+      },
+      {
+        "name": "inside2",
+        "ms": 0.645,
+        "percent": 0.010901017242367132
+      },
+      {
+        "name": "cellOccupant",
+        "ms": 0.639,
+        "percent": 0.01079961243081023
+      },
+      {
+        "name": "updateTreeStumps",
+        "ms": 0.639,
+        "percent": 0.01079961243081023
+      },
+      {
+        "name": "forbiddenRevision",
+        "ms": 0.638,
+        "percent": 0.010782711628884079
+      },
+      {
+        "name": "farms",
+        "ms": 0.638,
+        "percent": 0.010782711628884079
+      },
+      {
+        "name": "attempt",
+        "ms": 0.637,
+        "percent": 0.010765810826957928
+      },
+      {
+        "name": "fieldBatches",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "reset",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "tile",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "isHuman",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "shelterThreat",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "rewardHunt",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "removeAbandonedFarms",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "makeBuilding",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "Instance",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "Immediate",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "updateRaiderGroupMotivation",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "healerShackHealingQuery",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "moraleRally",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "merge",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "spawnCampWave",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "key2",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "withCitySummarySnapshot",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "returnToPost",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "validatedFrame",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "notify",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "infantryFormationSoldierCount",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "routineStructure",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "lastCollidingUnitInCell",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "targetSightQuery",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "launchJavelin",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "beginBattleRout",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "isRaiderEnemyFaction",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "_down",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "firesProjectiles",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "boardedBoat",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "human",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "edgeDistance2",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "membersOf",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "selectRaidTarget",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "clearJourney",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "updateLeader",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "deliverFoodCargo",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "fortState",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "js-to-wasm:iiiiiid:i",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "defensiveAnchor",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "farmAt",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "holdingContact",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "emitAfterScript",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "isBuilding2",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "releaseAttackSpot",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "allowHarvestDeparture",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "harvestDue",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "wakeCourier",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "movementModeFor",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "footprintOwners",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "kernelFor",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "trailPoint",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "refuge",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "mobOffset",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "zones",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "rawUnitAttack",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "savingForWell",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "recordIncome",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "releaseClaims",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "assignParty",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "wasm-function[0]",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "setUnitSleeping",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "unitPositionBlocked",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "syncRetinue",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "tileKey",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "moveSafely",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "canMarshBirdMove",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "expectedFarmDelivery",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "get revision",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "fortBrigadeLevel",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "reachableTower",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "clearJourney3",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "Be",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "walkingCost",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "(idle)",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "stampUnchanged",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "restoreCargo",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "cultureAmount",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "withPlayerFaction",
+        "ms": 0.624,
+        "percent": 0.01054610040191797
+      },
+      {
+        "name": "buildingAlignmentQuery",
+        "ms": 0.624,
+        "percent": 0.01054610040191797
+      },
+      {
+        "name": "matches",
+        "ms": 0.624,
+        "percent": 0.01054610040191797
+      },
+      {
+        "name": "targetEntity",
+        "ms": 0.623,
+        "percent": 0.01052919959999182
+      },
+      {
+        "name": "maximumUnitRange",
+        "ms": 0.622,
+        "percent": 0.010512298798065669
+      },
+      {
+        "name": "ridgeFootprintAllowed",
+        "ms": 0.622,
+        "percent": 0.010512298798065669
+      },
+      {
+        "name": "moveBucket",
+        "ms": 0.621,
+        "percent": 0.010495397996139518
+      },
+      {
+        "name": "updateDefenseRebuilds",
+        "ms": 0.62,
+        "percent": 0.01047849719421337
+      },
+      {
+        "name": "taxableFaction",
+        "ms": 0.62,
+        "percent": 0.01047849719421337
+      },
+      {
+        "name": "awardLeaderXp",
+        "ms": 0.62,
+        "percent": 0.01047849719421337
+      },
+      {
+        "name": "isPendingCampField",
+        "ms": 0.619,
+        "percent": 0.010461596392287217
+      },
+      {
+        "name": "marauderUpdateElapsed",
+        "ms": 0.618,
+        "percent": 0.010444695590361068
+      },
+      {
+        "name": "commandFormation",
+        "ms": 0.618,
+        "percent": 0.010444695590361068
+      },
+      {
+        "name": "isForbidden",
+        "ms": 0.612,
+        "percent": 0.010343290778804163
+      },
+      {
+        "name": "isNarrowPassage",
+        "ms": 0.604,
+        "percent": 0.01020808436339496
+      },
+      {
+        "name": "updateScoutLodges",
+        "ms": 0.602,
+        "percent": 0.010174282759542658
+      },
+      {
+        "name": "removeTile",
+        "ms": 0.602,
+        "percent": 0.010174282759542658
+      },
+      {
+        "name": "updateUnitDeaths",
+        "ms": 0.601,
+        "percent": 0.010157381957616507
+      },
+      {
+        "name": "clearJourney2",
+        "ms": 0.567,
+        "percent": 0.009582754692127387
+      },
+      {
+        "name": "enforceInfantryFormationStrength",
+        "ms": 0.556,
+        "percent": 0.009396845870939731
+      },
+      {
+        "name": "farmWalkingDistance",
+        "ms": 0.545,
+        "percent": 0.009210937049752073
+      },
+      {
+        "name": "canShareWallTowerTile",
+        "ms": 0.486,
+        "percent": 0.008213789736109188
+      },
+      {
+        "name": "unknownNearby",
+        "ms": 0.462,
+        "percent": 0.007808170489881575
+      },
+      {
+        "name": "ue",
+        "ms": 0.443,
+        "percent": 0.007487055253284713
+      },
+      {
+        "name": "observedThreats",
+        "ms": 0.419,
+        "percent": 0.007081436007057099
+      },
+      {
+        "name": "checkGameOver",
+        "ms": 0.403,
+        "percent": 0.00681102317623869
+      },
+      {
+        "name": "human2",
+        "ms": 0.397,
+        "percent": 0.006709618364681785
+      },
+      {
+        "name": "updateCulture",
+        "ms": 0.35,
+        "percent": 0.005915280674152708
+      },
+      {
+        "name": "dockBerthOccupiedByFootprint",
+        "ms": 0.339,
+        "percent": 0.0057293718529650515
+      },
+      {
+        "name": "tryCavalryCharge",
+        "ms": 0.336,
+        "percent": 0.005678669447186599
+      },
+      {
+        "name": "nearest2",
+        "ms": 0.322,
+        "percent": 0.005442058220220492
+      },
+      {
+        "name": "roadAt",
+        "ms": 0.321,
+        "percent": 0.005425157418294341
+      },
+      {
+        "name": "remove",
+        "ms": 0.216,
+        "percent": 0.0036505732160485287
+      },
+      {
+        "name": "charge",
+        "ms": 0.189,
+        "percent": 0.0031942515640424624
+      },
+      {
+        "name": "ownedByCity",
+        "ms": 0.184,
+        "percent": 0.0031097475544117096
+      },
+      {
+        "name": "rememberValidation",
+        "ms": 0.173,
+        "percent": 0.002923838733224053
+      },
+      {
+        "name": "takeDue",
+        "ms": 0.108,
+        "percent": 0.0018252866080242644
+      },
+      {
+        "name": "copy3",
+        "ms": 0.033,
+        "percent": 0.0005577264635629696
+      },
+      {
+        "name": "validateBuildAt",
+        "ms": 0.024,
+        "percent": 0.0004056192462276142
+      },
+      {
+        "name": "prepareFactionArmy",
+        "ms": 0.009,
+        "percent": 0.00015210721733535535
+      }
+    ],
+    "inclusive": [
+      {
+        "name": "(root)",
+        "ms": 5916.879,
+        "percent": 100
+      },
+      {
+        "name": "(anonymous)",
+        "ms": 5808.185,
+        "percent": 98.16298423543898
+      },
+      {
+        "name": "updateGame",
+        "ms": 5727.183,
+        "percent": 96.79398547781693
+      },
+      {
+        "name": "stepGame",
+        "ms": 5346.595,
+        "percent": 90.36174307434713
+      },
+      {
+        "name": "updateWarrior",
+        "ms": 784.457,
+        "percent": 13.257952376582317
+      },
+      {
+        "name": "updateFog",
+        "ms": 759.28,
+        "percent": 12.832440886487623
+      },
+      {
+        "name": "runSettlementDecision",
+        "ms": 575.582,
+        "percent": 9.727797374257612
+      },
+      {
+        "name": "territory",
+        "ms": 445.549,
+        "percent": 7.530135397394471
+      },
+      {
+        "name": "synchronizeFarms",
+        "ms": 427.96,
+        "percent": 7.232867192315408
+      },
+      {
+        "name": "moveUnit",
+        "ms": 394.182,
+        "percent": 6.661991904853894
+      },
+      {
+        "name": "advanceUnit",
+        "ms": 364.384,
+        "percent": 6.158381809058458
+      },
+      {
+        "name": "nearestEnemy",
+        "ms": 357.414,
+        "percent": 6.040583219633188
+      },
+      {
+        "name": "updateSettlementGuard",
+        "ms": 319.651,
+        "percent": 5.402358236495964
+      },
+      {
+        "name": "fight",
+        "ms": 297.275,
+        "percent": 5.024185892596418
+      },
+      {
+        "name": "targetInSight",
+        "ms": 278.777,
+        "percent": 4.711554858566484
+      },
+      {
+        "name": "updateFactionStrategies",
+        "ms": 277.802,
+        "percent": 4.695076576688487
+      },
+      {
+        "name": "withPlayerFaction",
+        "ms": 275.187,
+        "percent": 4.650880979651603
+      },
+      {
+        "name": "entityVisible",
+        "ms": 274.312,
+        "percent": 4.636092777966222
+      },
+      {
+        "name": "updateWellUpgrades",
+        "ms": 274.168,
+        "percent": 4.6336590624888565
+      },
+      {
+        "name": "withNavigationFrame",
+        "ms": 271.037,
+        "percent": 4.5807426516580785
+      },
+      {
+        "name": "canWalk",
+        "ms": 263.229,
+        "percent": 4.4487811902186944
+      },
+      {
+        "name": "ensureCollectors",
+        "ms": 253.738,
+        "percent": 4.2883756791376
+      },
+      {
+        "name": "palaceEnclosures",
+        "ms": 238.764,
+        "percent": 4.03530307109542
+      },
+      {
+        "name": "updateMarauder",
+        "ms": 238.708,
+        "percent": 4.034356626187556
+      },
+      {
+        "name": "factionBlockers",
+        "ms": 231.419,
+        "percent": 3.9111666809478445
+      },
+      {
+        "name": "constructionEdges",
+        "ms": 225.138,
+        "percent": 3.8050127440496926
+      },
+      {
+        "name": "travelCache",
+        "ms": 220.12,
+        "percent": 3.720204519984269
+      },
+      {
+        "name": "updateHarvests",
+        "ms": 209.798,
+        "percent": 3.5457544425025427
+      },
+      {
+        "name": "updateFactionMission",
+        "ms": 206.05,
+        "percent": 3.48241023688333
+      },
+      {
+        "name": "updateFactionDevelopment",
+        "ms": 202.412,
+        "percent": 3.420925119475994
+      },
+      {
+        "name": "withCitySummarySnapshot",
+        "ms": 198.652,
+        "percent": 3.357378104233668
+      },
+      {
+        "name": "withCityPlanning",
+        "ms": 198.652,
+        "percent": 3.357378104233668
+      },
+      {
+        "name": "planFactionDevelopment",
+        "ms": 198.019,
+        "percent": 3.3466798966144142
+      },
+      {
+        "name": "farmCityQuery",
+        "ms": 196.614,
+        "percent": 3.322934269908173
+      },
+      {
+        "name": "updateMorale",
+        "ms": 194.012,
+        "percent": 3.278958383296329
+      },
+      {
+        "name": "palaceWalkingDistances",
+        "ms": 191.509,
+        "percent": 3.2366556760751743
+      },
+      {
+        "name": "updateCollector",
+        "ms": 181.041,
+        "percent": 3.0597380815122297
+      },
+      {
+        "name": "farms",
+        "ms": 180.106,
+        "percent": 3.043935831711279
+      },
+      {
+        "name": "withLiveCitySummaries",
+        "ms": 179.468,
+        "percent": 3.033153120082395
+      },
+      {
+        "name": "withCityPlanningMutation",
+        "ms": 179.468,
+        "percent": 3.033153120082395
+      },
+      {
+        "name": "campPalaces",
+        "ms": 164.954,
+        "percent": 2.787854880926245
+      },
+      {
+        "name": "updateWallOwnership",
+        "ms": 162.518,
+        "percent": 2.7466845274341423
+      },
+      {
+        "name": "updateBuilder",
+        "ms": 157.26,
+        "percent": 2.6578201109064423
+      },
+      {
+        "name": "updateLeader",
+        "ms": 152.198,
+        "percent": 2.572268251556268
+      },
+      {
+        "name": "senseMorale",
+        "ms": 151.648,
+        "percent": 2.5629728104968854
+      },
+      {
+        "name": "updateMarauderPacks",
+        "ms": 151.484,
+        "percent": 2.5602010789809966
+      },
+      {
+        "name": "updateFogRaids",
+        "ms": 151.265,
+        "percent": 2.55649980335917
+      },
+      {
+        "name": "updateGuardPosts",
+        "ms": 149.644,
+        "percent": 2.5291036034368797
+      },
+      {
+        "name": "updateVillages",
+        "ms": 144.037,
+        "percent": 2.434340807036953
+      },
+      {
+        "name": "calculateYields",
+        "ms": 143.239,
+        "percent": 2.4208539670998848
+      },
+      {
+        "name": "approachPoint",
+        "ms": 142.378,
+        "percent": 2.4063023766414693
+      },
+      {
+        "name": "claimAttackSpot",
+        "ms": 141.747,
+        "percent": 2.395637970626068
+      },
+      {
+        "name": "findPath",
+        "ms": 136.921,
+        "percent": 2.3140747005304654
+      },
+      {
+        "name": "plan",
+        "ms": 132.522,
+        "percent": 2.239728072857329
+      },
+      {
+        "name": "marauderPackUpdateDue",
+        "ms": 126.85,
+        "percent": 2.1438667243322027
+      },
+      {
+        "name": "structures",
+        "ms": 125.596,
+        "percent": 2.12267311871681
+      },
+      {
+        "name": "neighbors",
+        "ms": 125.158,
+        "percent": 2.115270567473156
+      },
+      {
+        "name": "visible",
+        "ms": 124.971,
+        "percent": 2.1121101175129655
+      },
+      {
+        "name": "movementNeighbors",
+        "ms": 123.554,
+        "percent": 2.0881616811836103
+      },
+      {
+        "name": "forEachNearbyUnit",
+        "ms": 123.145,
+        "percent": 2.081249253195815
+      },
+      {
+        "name": "citySummaries",
+        "ms": 123.024,
+        "percent": 2.0792042561627504
+      },
+      {
+        "name": "attackSpots",
+        "ms": 122.966,
+        "percent": 2.078224009651034
+      },
+      {
+        "name": "buildingMemoryCurrent",
+        "ms": 122.365,
+        "percent": 2.068066627693417
+      },
+      {
+        "name": "travelTimeMapFrom",
+        "ms": 122.273,
+        "percent": 2.0665117539162114
+      },
+      {
+        "name": "humanVisibilityViews",
+        "ms": 121.053,
+        "percent": 2.045892775566308
+      },
+      {
+        "name": "navigationGrid",
+        "ms": 120.791,
+        "percent": 2.0414647654616562
+      },
+      {
+        "name": "farmTravelRevision",
+        "ms": 113.481,
+        "percent": 1.9179199033814955
+      },
+      {
+        "name": "regenerateUnits",
+        "ms": 107.801,
+        "percent": 1.82192334844096
+      },
+      {
+        "name": "searchNearestEnemy",
+        "ms": 107.128,
+        "percent": 1.8105491087446608
+      },
+      {
+        "name": "updateTradeRoutes",
+        "ms": 106.69,
+        "percent": 1.8031465575010068
+      },
+      {
+        "name": "wasmPath",
+        "ms": 103.3,
+        "percent": 1.7458528389713563
+      },
+      {
+        "name": "unitAttackContact",
+        "ms": 103.227,
+        "percent": 1.7446190804307475
+      },
+      {
+        "name": "clearShot",
+        "ms": 102.942,
+        "percent": 1.7398023518817944
+      },
+      {
+        "name": "hasStaticPath",
+        "ms": 99.422,
+        "percent": 1.6803115291017443
+      },
+      {
+        "name": "movementCongestion",
+        "ms": 95.181,
+        "percent": 1.6086352281329395
+      },
+      {
+        "name": "canTraverseEdge",
+        "ms": 90.68,
+        "percent": 1.532564718663336
+      },
+      {
+        "name": "hasAttackContact",
+        "ms": 90.512,
+        "percent": 1.5297253839397424
+      },
+      {
+        "name": "js-to-wasm:iiiiiid:i",
+        "ms": 90.164,
+        "percent": 1.523843904869442
+      },
+      {
+        "name": "updateRaiderActivity",
+        "ms": 90.098,
+        "percent": 1.522728451942316
+      },
+      {
+        "name": "wasm-function[3]",
+        "ms": 89.534,
+        "percent": 1.5131963996559674
+      },
+      {
+        "name": "buildingReady",
+        "ms": 88.176,
+        "percent": 1.4902451106402548
+      },
+      {
+        "name": "connection",
+        "ms": 85.709,
+        "percent": 1.4485508322884413
+      },
+      {
+        "name": "choosePartner",
+        "ms": 85.709,
+        "percent": 1.4485508322884413
+      },
+      {
+        "name": "refuge",
+        "ms": 84.604,
+        "percent": 1.429875446160045
+      },
+      {
+        "name": "moveInFormation",
+        "ms": 84.539,
+        "percent": 1.428776894034845
+      },
+      {
+        "name": "updateRaiderReturn",
+        "ms": 84.359,
+        "percent": 1.425734749688138
+      },
+      {
+        "name": "palaceOf",
+        "ms": 83.547,
+        "percent": 1.4120112985241038
+      },
+      {
+        "name": "insideOwnBorders",
+        "ms": 83.337,
+        "percent": 1.408462130119612
+      },
+      {
+        "name": "fightFactionTarget",
+        "ms": 83.209,
+        "percent": 1.4062988274730648
+      },
+      {
+        "name": "updateBallistae",
+        "ms": 81.659,
+        "percent": 1.3801025844875314
+      },
+      {
+        "name": "retinueFormation",
+        "ms": 72.798,
+        "percent": 1.230344578619911
+      },
+      {
+        "name": "unchanged",
+        "ms": 69.291,
+        "percent": 1.1710734662649007
+      },
+      {
+        "name": "updateWoodenTowers",
+        "ms": 68.454,
+        "percent": 1.1569274950527129
+      },
+      {
+        "name": "refreshSightSources",
+        "ms": 66.815,
+        "percent": 1.129227080695752
+      },
+      {
+        "name": "post",
+        "ms": 65.222,
+        "percent": 1.102304103227394
+      },
+      {
+        "name": "cacheFor",
+        "ms": 64.237,
+        "percent": 1.0856568133301356
+      },
+      {
+        "name": "villageCamp",
+        "ms": 62.501,
+        "percent": 1.0563170211863382
+      },
+      {
+        "name": "updateFishing",
+        "ms": 60.432,
+        "percent": 1.0213492620011326
+      },
+      {
+        "name": "expandCamps",
+        "ms": 60.126,
+        "percent": 1.0161776166117307
+      },
+      {
+        "name": "returnToCamp",
+        "ms": 59.751,
+        "percent": 1.0098398158894242
+      },
+      {
+        "name": "buildingBlockerView",
+        "ms": 59.195,
+        "percent": 1.0004429700184845
+      },
+      {
+        "name": "courierOutboundPath",
+        "ms": 58.564,
+        "percent": 0.9897785640030833
+      },
+      {
+        "name": "selectRaidTarget",
+        "ms": 57.903,
+        "percent": 0.9786071339298978
+      },
+      {
+        "name": "(garbage collector)",
+        "ms": 56.686,
+        "percent": 0.9580388579857726
+      },
+      {
+        "name": "recordTraffic",
+        "ms": 55.99,
+        "percent": 0.9462758998451717
+      },
+      {
+        "name": "updateVillageUnit",
+        "ms": 55.917,
+        "percent": 0.9450421413045628
+      },
+      {
+        "name": "canMove",
+        "ms": 53.607,
+        "percent": 0.906001288855155
+      },
+      {
+        "name": "raiderCampActive",
+        "ms": 53.118,
+        "percent": 0.8977367967132672
+      },
+      {
+        "name": "unitObstructs",
+        "ms": 52.088,
+        "percent": 0.8803289707293321
+      },
+      {
+        "name": "travelTimeMap",
+        "ms": 50.975,
+        "percent": 0.8615183781855265
+      },
+      {
+        "name": "unitBlocksNavigationCell",
+        "ms": 50.752,
+        "percent": 0.857749499355995
+      },
+      {
+        "name": "ridgeEdgeAllowed",
+        "ms": 45.452,
+        "percent": 0.7681752491473969
+      },
+      {
+        "name": "(program)",
+        "ms": 45.382,
+        "percent": 0.7669921930125663
+      },
+      {
+        "name": "villageClaims",
+        "ms": 44.906,
+        "percent": 0.7589474112957186
+      },
+      {
+        "name": "separateUnits",
+        "ms": 41.546,
+        "percent": 0.7021607168238525
+      },
+      {
+        "name": "buildingPresent",
+        "ms": 41.25,
+        "percent": 0.697158079453712
+      },
+      {
+        "name": "updateCivilianPanic",
+        "ms": 41.221,
+        "percent": 0.6966679561978537
+      },
+      {
+        "name": "enclosureTerrain",
+        "ms": 41.011,
+        "percent": 0.693118787793362
+      },
+      {
+        "name": "buildingSize",
+        "ms": 40.474,
+        "percent": 0.6840430571590191
+      },
+      {
+        "name": "cityDevelopmentNeeds",
+        "ms": 36.634,
+        "percent": 0.6191439777626009
+      },
+      {
+        "name": "breachBlockingWall",
+        "ms": 34.78,
+        "percent": 0.5878098909915176
+      },
+      {
+        "name": "eligible2",
+        "ms": 34.403,
+        "percent": 0.5814382886653588
+      },
+      {
+        "name": "updateRaiderCamps",
+        "ms": 33.948,
+        "percent": 0.5737484237889604
+      },
+      {
+        "name": "beginUnitFrame",
+        "ms": 32.664,
+        "percent": 0.552047794115783
+      },
+      {
+        "name": "distance",
+        "ms": 32.564,
+        "percent": 0.5503577139231679
+      },
+      {
+        "name": "unitCanMove",
+        "ms": 32.092,
+        "percent": 0.5423805354140249
+      },
+      {
+        "name": "chooseHarvestStop",
+        "ms": 30.923,
+        "percent": 0.5226234979623547
+      },
+      {
+        "name": "buildAt",
+        "ms": 30.813,
+        "percent": 0.5207644097504783
+      },
+      {
+        "name": "buildingInSight",
+        "ms": 30.787,
+        "percent": 0.5203249889003984
+      },
+      {
+        "name": "synchronizeWheatFields",
+        "ms": 30.531,
+        "percent": 0.5159983836073038
+      },
+      {
+        "name": "clear",
+        "ms": 30.103,
+        "percent": 0.5087648403829114
+      },
+      {
+        "name": "updateScout",
+        "ms": 30.004,
+        "percent": 0.5070916609922224
+      },
+      {
+        "name": "planAutomaticFarmSite",
+        "ms": 29.503,
+        "percent": 0.498624359227221
+      },
+      {
+        "name": "updateSupplyDepots",
+        "ms": 29.336,
+        "percent": 0.49580192530555384
+      },
+      {
+        "name": "settleCourier",
+        "ms": 29.15,
+        "percent": 0.4926583761472898
+      },
+      {
+        "name": "snapshotUnitPositions",
+        "ms": 28.967,
+        "percent": 0.48956552939480424
+      },
+      {
+        "name": "beginCollectorFrame",
+        "ms": 28.783,
+        "percent": 0.48645578184039256
+      },
+      {
+        "name": "updateWildlife",
+        "ms": 28.37,
+        "percent": 0.4794757506448924
+      },
+      {
+        "name": "nextHarvestPickup",
+        "ms": 28.064,
+        "percent": 0.4743041052554903
+      },
+      {
+        "name": "updateFactionDefenses",
+        "ms": 27.815,
+        "percent": 0.4700958055758788
+      },
+      {
+        "name": "buildingHeight",
+        "ms": 27.686,
+        "percent": 0.4679156021274053
+      },
+      {
+        "name": "updateHerdAnimal",
+        "ms": 27.631,
+        "percent": 0.46698605802146703
+      },
+      {
+        "name": "updateFriendlyYield",
+        "ms": 27.538,
+        "percent": 0.4654142834423351
+      },
+      {
+        "name": "updateFleeing",
+        "ms": 27.515,
+        "percent": 0.4650255649980336
+      },
+      {
+        "name": "ridgeGroundWalkable",
+        "ms": 27.164,
+        "percent": 0.4590933835219547
+      },
+      {
+        "name": "collectorFarmHomes",
+        "ms": 26.74,
+        "percent": 0.45192744350526687
+      },
+      {
+        "name": "nearbyUnits",
+        "ms": 26.382,
+        "percent": 0.44587695641570496
+      },
+      {
+        "name": "openNear",
+        "ms": 26.09,
+        "percent": 0.44094192225326895
+      },
+      {
+        "name": "destroyTarget",
+        "ms": 25.618,
+        "percent": 0.4329647437441259
+      },
+      {
+        "name": "attempt",
+        "ms": 25.194,
+        "percent": 0.42579880372743806
+      },
+      {
+        "name": "synchronizeWheatGroups",
+        "ms": 25.172,
+        "percent": 0.42542698608506274
+      },
+      {
+        "name": "updateForts",
+        "ms": 25.024,
+        "percent": 0.42292566739999243
+      },
+      {
+        "name": "unitRespectsForbidden",
+        "ms": 24.894,
+        "percent": 0.4207285631495929
+      },
+      {
+        "name": "recordMerchantRoad",
+        "ms": 24.497,
+        "percent": 0.4140189447849111
+      },
+      {
+        "name": "atWar",
+        "ms": 24.338,
+        "percent": 0.41133171727865314
+      },
+      {
+        "name": "factionCityDevelopmentPriority",
+        "ms": 23.343,
+        "percent": 0.39451541936213336
+      },
+      {
+        "name": "retain",
+        "ms": 23.11,
+        "percent": 0.3905775325133402
+      },
+      {
+        "name": "buildingWidth",
+        "ms": 23.093,
+        "percent": 0.3902902188805957
+      },
+      {
+        "name": "add",
+        "ms": 23.05,
+        "percent": 0.38956348439777116
+      },
+      {
+        "name": "updateProjectiles",
+        "ms": 22.889,
+        "percent": 0.386842455287661
+      },
+      {
+        "name": "criticalStructures",
+        "ms": 21.965,
+        "percent": 0.3712261143078978
+      },
+      {
+        "name": "autoHunt",
+        "ms": 20.951,
+        "percent": 0.3540887011547811
+      },
+      {
+        "name": "resolveSailingPassengers",
+        "ms": 20.462,
+        "percent": 0.34582420901289346
+      },
+      {
+        "name": "rallyGoals",
+        "ms": 20.165,
+        "percent": 0.3408046708408268
+      },
+      {
+        "name": "buildingOverlapsVillageBorders",
+        "ms": 20.093,
+        "percent": 0.33958781310214387
+      },
+      {
+        "name": "civilianThreat2",
+        "ms": 19.352,
+        "percent": 0.3270643188748663
+      },
+      {
+        "name": "launchSkirmish",
+        "ms": 19.337,
+        "percent": 0.3268108068459741
+      },
+      {
+        "name": "losePopulation",
+        "ms": 19.074,
+        "percent": 0.32236589593939646
+      },
+      {
+        "name": "buildingTerritoryOwner",
+        "ms": 18.877,
+        "percent": 0.31903643795994474
+      },
+      {
+        "name": "villageHostility",
+        "ms": 18.867,
+        "percent": 0.31886742994068323
+      },
+      {
+        "name": "validTarget",
+        "ms": 18.762,
+        "percent": 0.31709284573843743
+      },
+      {
+        "name": "ridgeIsLedge",
+        "ms": 18.233,
+        "percent": 0.3081523215195038
+      },
+      {
+        "name": "canReachAttack",
+        "ms": 17.871,
+        "percent": 0.30203423122223727
+      },
+      {
+        "name": "visibleEnemies",
+        "ms": 17.854,
+        "percent": 0.30174691758949274
+      },
+      {
+        "name": "updateDefenseRebuilds",
+        "ms": 17.582,
+        "percent": 0.29714989946557974
+      },
+      {
+        "name": "ensureBuilders",
+        "ms": 17.249,
+        "percent": 0.2915219324241716
+      },
+      {
+        "name": "wheatFieldGroups",
+        "ms": 17.247,
+        "percent": 0.29148813082031927
+      },
+      {
+        "name": "rallyEnemy",
+        "ms": 17.198,
+        "percent": 0.2906599915259379
+      },
+      {
+        "name": "refreshIndexedUnit",
+        "ms": 17.181,
+        "percent": 0.2903726778931933
+      },
+      {
+        "name": "get",
+        "ms": 17.03,
+        "percent": 0.28782065680234464
+      },
+      {
+        "name": "updateForbiddenEvacuation",
+        "ms": 16.87,
+        "percent": 0.2851165284941605
+      },
+      {
+        "name": "updateActiveConstruction",
+        "ms": 16.135,
+        "percent": 0.2726944390784398
+      },
+      {
+        "name": "attackTarget",
+        "ms": 16.021,
+        "percent": 0.2707677476588587
+      },
+      {
+        "name": "trafficStructures",
+        "ms": 15.805,
+        "percent": 0.26711717444281013
+      },
+      {
+        "name": "updateMerchant",
+        "ms": 15.194,
+        "percent": 0.2567907844659321
+      },
+      {
+        "name": "validateBuildAt",
+        "ms": 15.13,
+        "percent": 0.25570913314265853
+      },
+      {
+        "name": "validateBuildCellAt",
+        "ms": 15.106,
+        "percent": 0.25530351389643086
+      },
+      {
+        "name": "applyMeleeHit",
+        "ms": 15.06,
+        "percent": 0.2545260770078279
+      },
+      {
+        "name": "civilianCityPopulations",
+        "ms": 15.058,
+        "percent": 0.2544922754039756
+      },
+      {
+        "name": "maintainBoats",
+        "ms": 14.988,
+        "percent": 0.2533092192691451
+      },
+      {
+        "name": "pop",
+        "ms": 14.932,
+        "percent": 0.2523627743612807
+      },
+      {
+        "name": "palaceEdges",
+        "ms": 14.914,
+        "percent": 0.25205855992660997
+      },
+      {
+        "name": "decisionRevision",
+        "ms": 14.811,
+        "percent": 0.2503177773282165
+      },
+      {
+        "name": "cityPopulations",
+        "ms": 14.372,
+        "percent": 0.24289832528263633
+      },
+      {
+        "name": "has",
+        "ms": 14.178,
+        "percent": 0.23961956970896311
+      },
+      {
+        "name": "canDispatchPeasant",
+        "ms": 14.003,
+        "percent": 0.23666192937188676
+      },
+      {
+        "name": "build",
+        "ms": 13.851,
+        "percent": 0.23409300747911188
+      },
+      {
+        "name": "palaceDefenses",
+        "ms": 13.825,
+        "percent": 0.23365358662903196
+      },
+      {
+        "name": "unchanged2",
+        "ms": 13.52,
+        "percent": 0.22849884204155604
+      },
+      {
+        "name": "casualtyPressure",
+        "ms": 13.515,
+        "percent": 0.2284143380319253
+      },
+      {
+        "name": "terrainNavigation",
+        "ms": 13.23,
+        "percent": 0.22359760948297236
+      },
+      {
+        "name": "swimFish",
+        "ms": 13.018,
+        "percent": 0.22001463947462843
+      },
+      {
+        "name": "visitFarm",
+        "ms": 12.811,
+        "percent": 0.21651617347591526
+      },
+      {
+        "name": "rememberBuilding",
+        "ms": 12.731,
+        "percent": 0.21516410932182323
+      },
+      {
+        "name": "nearestHuntTarget",
+        "ms": 12.632,
+        "percent": 0.2134909299311343
+      },
+      {
+        "name": "chooseScoutExplorationRoute",
+        "ms": 12.547,
+        "percent": 0.2120543617674115
+      },
+      {
+        "name": "arrowLineClear",
+        "ms": 12.491,
+        "percent": 0.21110791685954705
+      },
+      {
+        "name": "unitsCollide",
+        "ms": 12.46,
+        "percent": 0.2105839919998364
+      },
+      {
+        "name": "sightDistance",
+        "ms": 11.927,
+        "percent": 0.20157586457319812
+      },
+      {
+        "name": "buildingMaintenance",
+        "ms": 11.901,
+        "percent": 0.2011364437231182
+      },
+      {
+        "name": "prepareCourierUpdates",
+        "ms": 11.892,
+        "percent": 0.20098433650578285
+      },
+      {
+        "name": "cityResidents",
+        "ms": 11.722,
+        "percent": 0.19811120017833728
+      },
+      {
+        "name": "refreshFogUnit",
+        "ms": 11.672,
+        "percent": 0.19726616008202974
+      },
+      {
+        "name": "refreshWheatReadiness",
+        "ms": 11.59,
+        "percent": 0.19588029432408538
+      },
+      {
+        "name": "query",
+        "ms": 11.379,
+        "percent": 0.1923142251176676
+      },
+      {
+        "name": "rememberFarmTopology",
+        "ms": 11.359,
+        "percent": 0.1919762090791446
+      },
+      {
+        "name": "nearbyThreats",
+        "ms": 11.347,
+        "percent": 0.19177339945603078
+      },
+      {
+        "name": "ridgeLevel",
+        "ms": 11.336,
+        "percent": 0.19158749063484312
+      },
+      {
+        "name": "updateMilitia",
+        "ms": 11.223,
+        "percent": 0.18967770001718812
+      },
+      {
+        "name": "navigation",
+        "ms": 11.208,
+        "percent": 0.18942418798829586
+      },
+      {
+        "name": "trafficBorders",
+        "ms": 11.167,
+        "percent": 0.18873125510932368
+      },
+      {
+        "name": "synchronizeRetinueSquads",
+        "ms": 11.007,
+        "percent": 0.1860271268011396
+      },
+      {
+        "name": "courierReturnPath",
+        "ms": 10.866,
+        "percent": 0.18364411372955236
+      },
+      {
+        "name": "fieldHarvestYield",
+        "ms": 10.754,
+        "percent": 0.18175122391382348
+      },
+      {
+        "name": "validate",
+        "ms": 10.706,
+        "percent": 0.18093998542136827
+      },
+      {
+        "name": "civilianFootprint",
+        "ms": 10.383,
+        "percent": 0.1754810263992216
+      },
+      {
+        "name": "buildingWorkForbidden",
+        "ms": 10.367,
+        "percent": 0.17521061356840323
+      },
+      {
+        "name": "hostile",
+        "ms": 10.28,
+        "percent": 0.1737402438008281
+      },
+      {
+        "name": "requestFriendlyYield",
+        "ms": 10.246,
+        "percent": 0.173165616535339
+      },
+      {
+        "name": "movementMultiplier",
+        "ms": 10.165,
+        "percent": 0.17179665157932078
+      },
+      {
+        "name": "setUnitSleeping",
+        "ms": 10.148,
+        "percent": 0.17150933794657622
+      },
+      {
+        "name": "farmTopologyCurrent",
+        "ms": 10.115,
+        "percent": 0.17095161148301324
+      },
+      {
+        "name": "updateWallStats",
+        "ms": 10.114,
+        "percent": 0.17093471068108712
+      },
+      {
+        "name": "fieldHarvestFoodForState",
+        "ms": 10.102,
+        "percent": 0.17073190105797328
+      },
+      {
+        "name": "criticalStructureQuery",
+        "ms": 10.095,
+        "percent": 0.17061359544449023
+      },
+      {
+        "name": "reachableTower",
+        "ms": 10.084,
+        "percent": 0.1704276866233026
+      },
+      {
+        "name": "harvestReturn",
+        "ms": 9.65,
+        "percent": 0.16309273858735324
+      },
+      {
+        "name": "spoilCargo",
+        "ms": 9.532,
+        "percent": 0.16109844396006745
+      },
+      {
+        "name": "establishFactionVillageTrade",
+        "ms": 9.521,
+        "percent": 0.16091253513887982
+      },
+      {
+        "name": "updateRoles",
+        "ms": 9.521,
+        "percent": 0.16091253513887982
+      },
+      {
+        "name": "refreshPeasant",
+        "ms": 9.509,
+        "percent": 0.160709725515766
+      },
+      {
+        "name": "edgeDistance3",
+        "ms": 9.473,
+        "percent": 0.16010129664642458
+      },
+      {
+        "name": "moveSafely",
+        "ms": 9.422,
+        "percent": 0.1592393557481909
+      },
+      {
+        "name": "workerHomeCity",
+        "ms": 8.875,
+        "percent": 0.1499946170945865
+      },
+      {
+        "name": "scheduleFieldClock",
+        "ms": 8.784,
+        "percent": 0.1484566441193068
+      },
+      {
+        "name": "push",
+        "ms": 8.774,
+        "percent": 0.14828763610004533
+      },
+      {
+        "name": "advanceInfantryFormations",
+        "ms": 8.772,
+        "percent": 0.148253834496193
+      },
+      {
+        "name": "tileAt",
+        "ms": 8.669,
+        "percent": 0.1465130518977995
+      },
+      {
+        "name": "isScheduledMarauder",
+        "ms": 8.497,
+        "percent": 0.14360611396650158
+      },
+      {
+        "name": "respectsForbidden",
+        "ms": 8.473,
+        "percent": 0.143200494720274
+      },
+      {
+        "name": "harvestClock",
+        "ms": 8.324,
+        "percent": 0.14068227523327753
+      },
+      {
+        "name": "fieldClockChanged",
+        "ms": 8.23,
+        "percent": 0.1390935998522194
+      },
+      {
+        "name": "beginPeasantFrame",
+        "ms": 8.187,
+        "percent": 0.1383668653693949
+      },
+      {
+        "name": "recordCivilianCasualties",
+        "ms": 8.019,
+        "percent": 0.1355275306458016
+      },
+      {
+        "name": "indexedLeader",
+        "ms": 8,
+        "percent": 0.13520641540920475
+      },
+      {
+        "name": "getLeader",
+        "ms": 8,
+        "percent": 0.13520641540920475
+      },
+      {
+        "name": "moveMarshBird",
+        "ms": 7.844,
+        "percent": 0.13256989030872524
+      },
+      {
+        "name": "updateRaiderEquipment",
+        "ms": 7.629,
+        "percent": 0.12893621789460288
+      },
+      {
+        "name": "expireFoodCargo",
+        "ms": 7.623,
+        "percent": 0.12883481308304598
+      },
+      {
+        "name": "initializeUnitDamageTimes",
+        "ms": 7.595,
+        "percent": 0.12836159062911376
+      },
+      {
+        "name": "settlementGoldBreakdown",
+        "ms": 7.595,
+        "percent": 0.12836159062911376
+      },
+      {
+        "name": "settlementGoldIncome",
+        "ms": 7.595,
+        "percent": 0.12836159062911376
+      },
+      {
+        "name": "isWallKind",
+        "ms": 7.587,
+        "percent": 0.12822638421370455
+      },
+      {
+        "name": "schedule",
+        "ms": 7.53,
+        "percent": 0.12726303850391396
+      },
+      {
+        "name": "secureEnclosures",
+        "ms": 7.529,
+        "percent": 0.1272461377019878
+      },
+      {
+        "name": "spawnCampWave",
+        "ms": 7.529,
+        "percent": 0.1272461377019878
+      },
+      {
+        "name": "canRequestNeutralYield",
+        "ms": 7.524,
+        "percent": 0.12716163369235708
+      },
+      {
+        "name": "eligible",
+        "ms": 7.474,
+        "percent": 0.12631659359604955
+      },
+      {
+        "name": "inSight",
+        "ms": 7.316,
+        "percent": 0.12364626689171776
+      },
+      {
+        "name": "unitMaxHp",
+        "ms": 7.089,
+        "percent": 0.11980978485448156
+      },
+      {
+        "name": "engage",
+        "ms": 6.94,
+        "percent": 0.11729156536748513
+      },
+      {
+        "name": "nearestCamp",
+        "ms": 6.922,
+        "percent": 0.11698735093281443
+      },
+      {
+        "name": "indexOf",
+        "ms": 6.905,
+        "percent": 0.11670003730006985
+      },
+      {
+        "name": "campSpawnTiles",
+        "ms": 6.896,
+        "percent": 0.1165479300827345
+      },
+      {
+        "name": "entityStore",
+        "ms": 6.515,
+        "percent": 0.1101087245488711
+      },
+      {
+        "name": "civilianWorkforcePopulations",
+        "ms": 6.514,
+        "percent": 0.11009182374694497
+      },
+      {
+        "name": "snapshot",
+        "ms": 6.47,
+        "percent": 0.10934818846219435
+      },
+      {
+        "name": "repairable",
+        "ms": 6.351,
+        "percent": 0.10733699303298243
+      },
+      {
+        "name": "isSoldier",
+        "ms": 6.343,
+        "percent": 0.10720178661757322
+      },
+      {
+        "name": "refreshFrontiers",
+        "ms": 6.312,
+        "percent": 0.10667786175786254
+      },
+      {
+        "name": "scheduleArcheryTraining",
+        "ms": 6.299,
+        "percent": 0.10645815133282259
+      },
+      {
+        "name": "downhillRangeBonus",
+        "ms": 6.231,
+        "percent": 0.10530889680184435
+      },
+      {
+        "name": "farmDormantAt",
+        "ms": 6.061,
+        "percent": 0.10243576047439876
+      },
+      {
+        "name": "factionAIProfile",
+        "ms": 5.964,
+        "percent": 0.10079638268756214
+      },
+      {
+        "name": "open",
+        "ms": 5.958,
+        "percent": 0.10069497787600523
+      },
+      {
+        "name": "unitAttackRange",
+        "ms": 5.862,
+        "percent": 0.09907250089109478
+      },
+      {
+        "name": "isMilitary",
+        "ms": 5.788,
+        "percent": 0.09782184154855963
+      },
+      {
+        "name": "groundMovementMultiplier",
+        "ms": 5.761,
+        "percent": 0.09736551989655357
+      },
+      {
+        "name": "irrigationYieldMultiplier",
+        "ms": 5.682,
+        "percent": 0.09603035654438767
+      },
+      {
+        "name": "now",
+        "ms": 5.673,
+        "percent": 0.09587824932705231
+      },
+      {
+        "name": "isFarmKind",
+        "ms": 5.659,
+        "percent": 0.09564163810008622
+      },
+      {
+        "name": "prepareIrrigation",
+        "ms": 5.656,
+        "percent": 0.09559093569430775
+      },
+      {
+        "name": "farmCourierWakeAt",
+        "ms": 5.394,
+        "percent": 0.0911629255896563
+      },
+      {
+        "name": "explorationFog",
+        "ms": 5.385,
+        "percent": 0.09101081837232095
+      },
+      {
+        "name": "evadeMelee",
+        "ms": 5.252,
+        "percent": 0.08876301171614291
+      },
+      {
+        "name": "birdCellOpen",
+        "ms": 5.071,
+        "percent": 0.08570396656750966
+      },
+      {
+        "name": "isHome",
+        "ms": 5.026,
+        "percent": 0.08494343048083289
+      },
+      {
+        "name": "infantryFormationLeader",
+        "ms": 4.86,
+        "percent": 0.0821378973610919
+      },
+      {
+        "name": "playerFaction",
+        "ms": 4.838,
+        "percent": 0.08176607971871658
+      },
+      {
+        "name": "marauderUpdateElapsed",
+        "ms": 4.772,
+        "percent": 0.08065062679159064
+      },
+      {
+        "name": "capitalId",
+        "ms": 4.72,
+        "percent": 0.0797717850914308
+      },
+      {
+        "name": "C",
+        "ms": 4.672,
+        "percent": 0.07896054659897557
+      },
+      {
+        "name": "sharedStaticPath",
+        "ms": 4.561,
+        "percent": 0.07708455758517285
+      },
+      {
+        "name": "sees",
+        "ms": 4.431,
+        "percent": 0.07488745333477329
+      },
+      {
+        "name": "collectSpecialties",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "citySpecialties",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "regionalTradeMultiplier",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "quoteDomesticLeg",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "planDomesticLeg",
+        "ms": 4.404,
+        "percent": 0.07443113168276722
+      },
+      {
+        "name": "cityOwnership",
+        "ms": 4.397,
+        "percent": 0.07431282606928416
+      },
+      {
+        "name": "contextKey",
+        "ms": 4.368,
+        "percent": 0.0738227028134258
+      },
+      {
+        "name": "canAddAll",
+        "ms": 4.293,
+        "percent": 0.07255514266896451
+      },
+      {
+        "name": "canAdd",
+        "ms": 4.293,
+        "percent": 0.07255514266896451
+      },
+      {
+        "name": "nearbyBuildings",
+        "ms": 4.204,
+        "percent": 0.0710509712975371
+      },
+      {
+        "name": "wakeCourier",
+        "ms": 4.181,
+        "percent": 0.07066225285323563
+      },
+      {
+        "name": "indexedBuilding",
+        "ms": 4.149,
+        "percent": 0.0701214271915988
+      },
+      {
+        "name": "region",
+        "ms": 4.089,
+        "percent": 0.06910737907602978
+      },
+      {
+        "name": "decisionDue",
+        "ms": 4.039,
+        "percent": 0.06826233897972225
+      },
+      {
+        "name": "danger",
+        "ms": 4.011,
+        "percent": 0.06778911652579003
+      },
+      {
+        "name": "factionRespectsForbidden",
+        "ms": 4.008,
+        "percent": 0.06773841412001158
+      },
+      {
+        "name": "buildingWithinBorders",
+        "ms": 3.841,
+        "percent": 0.06491598019834444
+      },
+      {
+        "name": "center8",
+        "ms": 3.826,
+        "percent": 0.06466246816945218
+      },
+      {
+        "name": "resolveFocus",
+        "ms": 3.806,
+        "percent": 0.06432445213092916
+      },
+      {
+        "name": "farmBlockPlacementQuery",
+        "ms": 3.782,
+        "percent": 0.06391883288470154
+      },
+      {
+        "name": "withinMoraleRange",
+        "ms": 3.773,
+        "percent": 0.06376672566736619
+      },
+      {
+        "name": "isUnitSleeping",
+        "ms": 3.687,
+        "percent": 0.06231325670171724
+      },
+      {
+        "name": "isRetinueMember",
+        "ms": 3.644,
+        "percent": 0.06158652221889277
+      },
+      {
+        "name": "beginWork",
+        "ms": 3.513,
+        "percent": 0.05937251716656703
+      },
+      {
+        "name": "addOutside",
+        "ms": 3.5,
+        "percent": 0.05915280674152708
+      },
+      {
+        "name": "indexedUnit",
+        "ms": 3.467,
+        "percent": 0.058595080277964104
+      },
+      {
+        "name": "O",
+        "ms": 3.394,
+        "percent": 0.057361321737355114
+      },
+      {
+        "name": "membersOf",
+        "ms": 3.331,
+        "percent": 0.056296571216007625
+      },
+      {
+        "name": "defensive2",
+        "ms": 3.186,
+        "percent": 0.05384595493671579
+      },
+      {
+        "name": "savingForWell",
+        "ms": 3.179,
+        "percent": 0.05372764932323274
+      },
+      {
+        "name": "updateResearch",
+        "ms": 3.171,
+        "percent": 0.05359244290782353
+      },
+      {
+        "name": "fieldHarvestFood",
+        "ms": 3.168,
+        "percent": 0.05354174050204508
+      },
+      {
+        "name": "orderedMatches",
+        "ms": 3.165,
+        "percent": 0.05349103809626664
+      },
+      {
+        "name": "patrolGoal",
+        "ms": 3.165,
+        "percent": 0.05349103809626664
+      },
+      {
+        "name": "isHuntable",
+        "ms": 3.157,
+        "percent": 0.053355831680857425
+      },
+      {
+        "name": "harvestShelfLife",
+        "ms": 3.146,
+        "percent": 0.053169922859669774
+      },
+      {
+        "name": "buildingSightRadius",
+        "ms": 3.141,
+        "percent": 0.05308541885003902
+      },
+      {
+        "name": "nearestConstructionJourney",
+        "ms": 3.128,
+        "percent": 0.052865708424999054
+      },
+      {
+        "name": "isRaidObjective",
+        "ms": 3.059,
+        "percent": 0.05169955309209467
+      },
+      {
+        "name": "herdGoal",
+        "ms": 3.002,
+        "percent": 0.05073620738230408
+      },
+      {
+        "name": "reserveHarvestStops",
+        "ms": 2.859,
+        "percent": 0.04831939270686455
+      },
+      {
+        "name": "gap",
+        "ms": 2.836,
+        "percent": 0.04793067426256308
+      },
+      {
+        "name": "updateForcedAttack",
+        "ms": 2.828,
+        "percent": 0.047795467847153876
+      },
+      {
+        "name": "j",
+        "ms": 2.802,
+        "percent": 0.047356046997073964
+      },
+      {
+        "name": "fieldMemoryCurrent",
+        "ms": 2.795,
+        "percent": 0.047237741383590916
+      },
+      {
+        "name": "$",
+        "ms": 2.735,
+        "percent": 0.04622369326802187
+      },
+      {
+        "name": "cell",
+        "ms": 2.658,
+        "percent": 0.04492233151970828
+      },
+      {
+        "name": "traversable",
+        "ms": 2.59,
+        "percent": 0.043773076988730036
+      },
+      {
+        "name": "factionMaintenanceBreakdown",
+        "ms": 2.531,
+        "percent": 0.04277592967508716
+      },
+      {
+        "name": "unitSightRadius",
+        "ms": 2.53,
+        "percent": 0.042759028873161
+      },
+      {
+        "name": "wrappedFn",
+        "ms": 2.52,
+        "percent": 0.0425900208538995
+      },
+      {
+        "name": "sameSet",
+        "ms": 2.497,
+        "percent": 0.04220130240959803
+      },
+      {
+        "name": "observedThreats",
+        "ms": 2.314,
+        "percent": 0.039108455657112476
+      },
+      {
+        "name": "assignParty",
+        "ms": 2.238,
+        "percent": 0.037823994710725034
+      },
+      {
+        "name": "dockBerthOccupiedByFootprint",
+        "ms": 2.237,
+        "percent": 0.037807093908798876
+      },
+      {
+        "name": "updateTraffic",
+        "ms": 2.209,
+        "percent": 0.03733387145486666
+      },
+      {
+        "name": "releaseStalledHarvestStops",
+        "ms": 2.182,
+        "percent": 0.03687754980286059
+      },
+      {
+        "name": "canAffordAutomatic",
+        "ms": 2.165,
+        "percent": 0.03659023617011604
+      },
+      {
+        "name": "dueCityPlans",
+        "ms": 2.091,
+        "percent": 0.03533957682758089
+      },
+      {
+        "name": "updateCulture",
+        "ms": 2.089,
+        "percent": 0.03530577522372859
+      },
+      {
+        "name": "applyDefensiveStats",
+        "ms": 2.034,
+        "percent": 0.034376231117790305
+      },
+      {
+        "name": "farmParcelPreferenceQuery",
+        "ms": 1.966,
+        "percent": 0.03322697658681206
+      },
+      {
+        "name": "aimPoint",
+        "ms": 1.931,
+        "percent": 0.032635448519396794
+      },
+      {
+        "name": "idleJobDecisionDue",
+        "ms": 1.928,
+        "percent": 0.03258474611361835
+      },
+      {
+        "name": "cultureAmount2",
+        "ms": 1.928,
+        "percent": 0.03258474611361835
+      },
+      {
+        "name": "beginFogFrame",
+        "ms": 1.924,
+        "percent": 0.03251714290591374
+      },
+      {
+        "name": "pointInSight",
+        "ms": 1.915,
+        "percent": 0.03236503568857839
+      },
+      {
+        "name": "findReversePath",
+        "ms": 1.913,
+        "percent": 0.03233123408472609
+      },
+      {
+        "name": "military",
+        "ms": 1.905,
+        "percent": 0.03219602766931688
+      },
+      {
+        "name": "returnToPost",
+        "ms": 1.904,
+        "percent": 0.03217912686739073
+      },
+      {
+        "name": "updateSailingLeader",
+        "ms": 1.896,
+        "percent": 0.032043920451981525
+      },
+      {
+        "name": "eligible4",
+        "ms": 1.895,
+        "percent": 0.032027019650055374
+      },
+      {
+        "name": "priority2",
+        "ms": 1.889,
+        "percent": 0.03192561483849847
+      },
+      {
+        "name": "allowHarvestDeparture",
+        "ms": 1.887,
+        "percent": 0.03189181323464617
+      },
+      {
+        "name": "member",
+        "ms": 1.885,
+        "percent": 0.03185801163079387
+      },
+      {
+        "name": "friendlyGateAccess",
+        "ms": 1.885,
+        "percent": 0.03185801163079387
+      },
+      {
+        "name": "bucket",
+        "ms": 1.885,
+        "percent": 0.03185801163079387
+      },
+      {
+        "name": "members",
+        "ms": 1.883,
+        "percent": 0.03182421002694157
+      },
+      {
+        "name": "highGroundSightMultiplier",
+        "ms": 1.88,
+        "percent": 0.03177350762116311
+      },
+      {
+        "name": "unitOccupancy",
+        "ms": 1.879,
+        "percent": 0.03175660681923696
+      },
+      {
+        "name": "hasMoraleThreat",
+        "ms": 1.843,
+        "percent": 0.031148177949895547
+      },
+      {
+        "name": "applyConstructionSpeed",
+        "ms": 1.827,
+        "percent": 0.03087776511907713
+      },
+      {
+        "name": "reservations",
+        "ms": 1.813,
+        "percent": 0.030641153892111025
+      },
+      {
+        "name": "ownsHarvestClaim",
+        "ms": 1.804,
+        "percent": 0.03048904667477567
+      },
+      {
+        "name": "learned",
+        "ms": 1.792,
+        "percent": 0.030286237051661863
+      },
+      {
+        "name": "isNarrowPassage",
+        "ms": 1.752,
+        "percent": 0.029610204974615837
+      },
+      {
+        "name": "nearestCity",
+        "ms": 1.745,
+        "percent": 0.029491899361132785
+      },
+      {
+        "name": "getFactionStrategy",
+        "ms": 1.744,
+        "percent": 0.029474998559206638
+      },
+      {
+        "name": "factionCommittedBudget",
+        "ms": 1.671,
+        "percent": 0.02824124001859764
+      },
+      {
+        "name": "human2",
+        "ms": 1.646,
+        "percent": 0.02781871997044388
+      },
+      {
+        "name": "firingTowerThreats",
+        "ms": 1.62,
+        "percent": 0.027379299120363965
+      },
+      {
+        "name": "harvestDue",
+        "ms": 1.619,
+        "percent": 0.02736239831843781
+      },
+      {
+        "name": "healerShackHealingQuery",
+        "ms": 1.598,
+        "percent": 0.02700748147798865
+      },
+      {
+        "name": "center10",
+        "ms": 1.59,
+        "percent": 0.026872275062579443
+      },
+      {
+        "name": "isKeep",
+        "ms": 1.587,
+        "percent": 0.026821572656800994
+      },
+      {
+        "name": "takeCampParty",
+        "ms": 1.545,
+        "percent": 0.02611173897590267
+      },
+      {
+        "name": "collectTreasure",
+        "ms": 1.526,
+        "percent": 0.02579062373930581
+      },
+      {
+        "name": "updateTreasureChests",
+        "ms": 1.526,
+        "percent": 0.02579062373930581
+      },
+      {
+        "name": "lastCollidingUnitInCell",
+        "ms": 1.51,
+        "percent": 0.025520210908487394
+      },
+      {
+        "name": "Be",
+        "ms": 1.478,
+        "percent": 0.024979385246850578
+      },
+      {
+        "name": "updateSailboatLaunches",
+        "ms": 1.468,
+        "percent": 0.02481037722758907
+      },
+      {
+        "name": "nearestPalace",
+        "ms": 1.461,
+        "percent": 0.024692071614106016
+      },
+      {
+        "name": "isRaiderEnemyFaction",
+        "ms": 1.432,
+        "percent": 0.02420194835824765
+      },
+      {
+        "name": "history",
+        "ms": 1.412,
+        "percent": 0.023863932319724637
+      },
+      {
+        "name": "cell3",
+        "ms": 1.409,
+        "percent": 0.023813229913946188
+      },
+      {
+        "name": "compileForInternalLoader",
+        "ms": 1.35,
+        "percent": 0.0228160826003033
+      },
+      {
+        "name": "requireBuiltin",
+        "ms": 1.35,
+        "percent": 0.0228160826003033
+      },
+      {
+        "name": "completedCities",
+        "ms": 1.3,
+        "percent": 0.021971042503995772
+      },
+      {
+        "name": "claimedField",
+        "ms": 1.297,
+        "percent": 0.02192034009821732
+      },
+      {
+        "name": "canEngage",
+        "ms": 1.297,
+        "percent": 0.02192034009821732
+      },
+      {
+        "name": "roadAt",
+        "ms": 1.294,
+        "percent": 0.02186963769243887
+      },
+      {
+        "name": "unitSightSource",
+        "ms": 1.28,
+        "percent": 0.02163302646547276
+      },
+      {
+        "name": "validateNetworkPlacement",
+        "ms": 1.279,
+        "percent": 0.02161612566354661
+      },
+      {
+        "name": "ridgeFootprintAllowed",
+        "ms": 1.273,
+        "percent": 0.02151472085198971
+      },
+      {
+        "name": "refreshCampRoadStyles",
+        "ms": 1.269,
+        "percent": 0.021447117644285103
+      },
+      {
+        "name": "updateMassLevy",
+        "ms": 1.269,
+        "percent": 0.021447117644285103
+      },
+      {
+        "name": "tower",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "fortificationArmorMultiplier",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "defenseHealthMultiplier",
+        "ms": 1.265,
+        "percent": 0.0213795144365805
+      },
+      {
+        "name": "addResidents",
+        "ms": 1.264,
+        "percent": 0.02136261363465435
+      },
+      {
+        "name": "SimulationEvents.heap",
+        "ms": 1.264,
+        "percent": 0.02136261363465435
+      },
+      {
+        "name": "banditIntensity",
+        "ms": 1.263,
+        "percent": 0.0213457128327282
+      },
+      {
+        "name": "kernelFor",
+        "ms": 1.263,
+        "percent": 0.0213457128327282
+      },
+      {
+        "name": "heuristic",
+        "ms": 1.262,
+        "percent": 0.02132881203080205
+      },
+      {
+        "name": "_down",
+        "ms": 1.262,
+        "percent": 0.02132881203080205
+      },
+      {
+        "name": "take",
+        "ms": 1.261,
+        "percent": 0.0213119112288759
+      },
+      {
+        "name": "farmAt",
+        "ms": 1.259,
+        "percent": 0.021278109625023595
+      },
+      {
+        "name": "holdingContact",
+        "ms": 1.259,
+        "percent": 0.021278109625023595
+      },
+      {
+        "name": "unitCollisionRadius",
+        "ms": 1.258,
+        "percent": 0.021261208823097448
+      },
+      {
+        "name": "targetDistance",
+        "ms": 1.258,
+        "percent": 0.021261208823097448
+      },
+      {
+        "name": "footprintOwners",
+        "ms": 1.258,
+        "percent": 0.021261208823097448
+      },
+      {
+        "name": "harvestDispatchInterval",
+        "ms": 1.257,
+        "percent": 0.021244308021171297
+      },
+      {
+        "name": "H",
+        "ms": 1.257,
+        "percent": 0.021244308021171297
+      },
+      {
+        "name": "targetEntity",
+        "ms": 1.251,
+        "percent": 0.021142903209614393
+      },
+      {
+        "name": "stampCell",
+        "ms": 1.25,
+        "percent": 0.021126002407688242
+      },
+      {
+        "name": "commandFormation",
+        "ms": 1.25,
+        "percent": 0.021126002407688242
+      },
+      {
+        "name": "isForbidden",
+        "ms": 1.24,
+        "percent": 0.02095699438842674
+      },
+      {
+        "name": "supportsProperty",
+        "ms": 1.238,
+        "percent": 0.020923192784574433
+      },
+      {
+        "name": "constructionSpeedMultiplier",
+        "ms": 1.181,
+        "percent": 0.019959847074783852
+      },
+      {
+        "name": "makeBuilding",
+        "ms": 1.137,
+        "percent": 0.019216211790033223
+      },
+      {
+        "name": "invalidateFog",
+        "ms": 1.122,
+        "percent": 0.018962699761140966
+      },
+      {
+        "name": "buildingBlockers",
+        "ms": 1.117,
+        "percent": 0.018878195751510212
+      },
+      {
+        "name": "cultureRates",
+        "ms": 1.111,
+        "percent": 0.018776790939953308
+      },
+      {
+        "name": "canShareHouseWellTile",
+        "ms": 1.076,
+        "percent": 0.01818526287253804
+      },
+      {
+        "name": "checkGameOver",
+        "ms": 1.027,
+        "percent": 0.01735712357815666
+      },
+      {
+        "name": "sanctuary",
+        "ms": 0.993,
+        "percent": 0.01678249631266754
+      },
+      {
+        "name": "queueConstruction",
+        "ms": 0.981,
+        "percent": 0.016579686689553733
+      },
+      {
+        "name": "ensureMarauderLeaders",
+        "ms": 0.974,
+        "percent": 0.016461381076070678
+      },
+      {
+        "name": "campFields",
+        "ms": 0.958,
+        "percent": 0.01619096824525227
+      },
+      {
+        "name": "zoneCache",
+        "ms": 0.931,
+        "percent": 0.015734646593246204
+      },
+      {
+        "name": "forbiddenCells",
+        "ms": 0.931,
+        "percent": 0.015734646593246204
+      },
+      {
+        "name": "createReachabilityQuery",
+        "ms": 0.922,
+        "percent": 0.015582539375910847
+      },
+      {
+        "name": "campReserves",
+        "ms": 0.916,
+        "percent": 0.015481134564353943
+      },
+      {
+        "name": "matches",
+        "ms": 0.878,
+        "percent": 0.014838904091160222
+      },
+      {
+        "name": "It",
+        "ms": 0.852,
+        "percent": 0.014399483241080306
+      },
+      {
+        "name": "ownedByCity",
+        "ms": 0.809,
+        "percent": 0.01367274875825583
+      },
+      {
+        "name": "takeDue",
+        "ms": 0.739,
+        "percent": 0.012489692623425289
+      },
+      {
+        "name": "housingGoldBonus",
+        "ms": 0.71,
+        "percent": 0.011999569367566921
+      },
+      {
+        "name": "shelterThreat",
+        "ms": 0.698,
+        "percent": 0.011796759744453114
+      },
+      {
+        "name": "worldRevisions",
+        "ms": 0.686,
+        "percent": 0.011593950121339307
+      },
+      {
+        "name": "nearbyHarvests",
+        "ms": 0.679,
+        "percent": 0.011475644507856254
+      },
+      {
+        "name": "shallowEqual",
+        "ms": 0.676,
+        "percent": 0.011424942102077802
+      },
+      {
+        "name": "addTile",
+        "ms": 0.653,
+        "percent": 0.011036223657776338
+      },
+      {
+        "name": "changed",
+        "ms": 0.649,
+        "percent": 0.010968620450071735
+      },
+      {
+        "name": "inside2",
+        "ms": 0.645,
+        "percent": 0.010901017242367132
+      },
+      {
+        "name": "move",
+        "ms": 0.644,
+        "percent": 0.010884116440440983
+      },
+      {
+        "name": "cellOccupant",
+        "ms": 0.639,
+        "percent": 0.01079961243081023
+      },
+      {
+        "name": "factionOf",
+        "ms": 0.639,
+        "percent": 0.01079961243081023
+      },
+      {
+        "name": "updateTreeStumps",
+        "ms": 0.639,
+        "percent": 0.01079961243081023
+      },
+      {
+        "name": "forbiddenRevision",
+        "ms": 0.638,
+        "percent": 0.010782711628884079
+      },
+      {
+        "name": "defendRaiderCamp",
+        "ms": 0.637,
+        "percent": 0.010765810826957928
+      },
+      {
+        "name": "fieldBatches",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "reset",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "tile",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "isHuman",
+        "ms": 0.636,
+        "percent": 0.010748910025031777
+      },
+      {
+        "name": "wallSeparates",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "rewardHunt",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "removeAbandonedFarms",
+        "ms": 0.635,
+        "percent": 0.010732009223105627
+      },
+      {
+        "name": "isDefensiveBuilding",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "buildingWeaponMultiplier",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "woodenTowerAttack",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "Instance",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "Immediate",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "setImmediate",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "profile.profile",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "updateRaiderGroupMotivation",
+        "ms": 0.634,
+        "percent": 0.010715108421179478
+      },
+      {
+        "name": "moraleRally",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "_up",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "rememberFieldClock",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "merge",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "key2",
+        "ms": 0.633,
+        "percent": 0.010698207619253325
+      },
+      {
+        "name": "updateSupplyCart",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "validatedFrame",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "notify",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "_",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "infantryFormationSoldierCount",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "routineStructure",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "targetSightQuery",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "factionBuildingMaintenance",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "launchJavelin",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "shoot",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "beginBattleRout",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "re",
+        "ms": 0.632,
+        "percent": 0.010681306817327174
+      },
+      {
+        "name": "TinyQueue",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "compact",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "firesProjectiles",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "boardedBoat",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "human",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "edgeDistance2",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "clearJourney",
+        "ms": 0.631,
+        "percent": 0.010664406015401025
+      },
+      {
+        "name": "deliverFoodCargo",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "fortState",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "defensiveAnchor",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "emitAfterScript",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "processTicksAndRejections",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "isBuilding2",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "releaseAttackSpot",
+        "ms": 0.63,
+        "percent": 0.010647505213474875
+      },
+      {
+        "name": "movementModeFor",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "trailPoint",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "mobOffset",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "reserveExit",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "releaseRaiderReserve",
+        "ms": 0.629,
+        "percent": 0.010630604411548724
+      },
+      {
+        "name": "prepareFactionArmy",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "zones",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "rawUnitAttack",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "unitAttack",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "strength",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "unitsWithRole",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "recordIncome",
+        "ms": 0.628,
+        "percent": 0.010613703609622573
+      },
+      {
+        "name": "releaseClaims",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "wasm-function[0]",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "isPendingCampField",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "unitPositionBlocked",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "syncRetinue",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "tileKey",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "canMarshBirdMove",
+        "ms": 0.627,
+        "percent": 0.010596802807696423
+      },
+      {
+        "name": "expectedFarmDelivery",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "get revision",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "fortBrigadeLevel",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "fortBrigadeCapacity",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "clearJourney3",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "walkingCost",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "updateRaiderMotivation",
+        "ms": 0.626,
+        "percent": 0.010579902005770272
+      },
+      {
+        "name": "(idle)",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "stampUnchanged",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "navigationRouteUnchanged",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "restoreCargo",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "cultureAmount",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "cultureLevel",
+        "ms": 0.625,
+        "percent": 0.010563001203844121
+      },
+      {
+        "name": "buildingAlignmentQuery",
+        "ms": 0.624,
+        "percent": 0.01054610040191797
+      },
+      {
+        "name": "changed2",
+        "ms": 0.624,
+        "percent": 0.01054610040191797
+      },
+      {
+        "name": "maximumUnitRange",
+        "ms": 0.622,
+        "percent": 0.010512298798065669
+      },
+      {
+        "name": "moveBucket",
+        "ms": 0.621,
+        "percent": 0.010495397996139518
+      },
+      {
+        "name": "taxableFaction",
+        "ms": 0.62,
+        "percent": 0.01047849719421337
+      },
+      {
+        "name": "awardLeaderXp",
+        "ms": 0.62,
+        "percent": 0.01047849719421337
+      },
+      {
+        "name": "updateScoutLodges",
+        "ms": 0.602,
+        "percent": 0.010174282759542658
+      },
+      {
+        "name": "removeTile",
+        "ms": 0.602,
+        "percent": 0.010174282759542658
+      },
+      {
+        "name": "updateUnitDeaths",
+        "ms": 0.601,
+        "percent": 0.010157381957616507
+      },
+      {
+        "name": "clearJourney2",
+        "ms": 0.567,
+        "percent": 0.009582754692127387
+      },
+      {
+        "name": "enforceInfantryFormationStrength",
+        "ms": 0.556,
+        "percent": 0.009396845870939731
+      },
+      {
+        "name": "farmWalkingDistance",
+        "ms": 0.545,
+        "percent": 0.009210937049752073
+      },
+      {
+        "name": "canShareWallTowerTile",
+        "ms": 0.486,
+        "percent": 0.008213789736109188
+      },
+      {
+        "name": "unknownNearby",
+        "ms": 0.462,
+        "percent": 0.007808170489881575
+      },
+      {
+        "name": "ue",
+        "ms": 0.443,
+        "percent": 0.007487055253284713
+      },
+      {
+        "name": "Ne",
+        "ms": 0.443,
+        "percent": 0.007487055253284713
+      },
+      {
+        "name": "register",
+        "ms": 0.443,
+        "percent": 0.007487055253284713
+      },
+      {
+        "name": "createCollector",
+        "ms": 0.443,
+        "percent": 0.007487055253284713
+      },
+      {
+        "name": "spawnFish",
+        "ms": 0.383,
+        "percent": 0.006473007137715678
+      },
+      {
+        "name": "marauderBandDepleted",
+        "ms": 0.349,
+        "percent": 0.005898379872226557
+      },
+      {
+        "name": "tryCavalryCharge",
+        "ms": 0.336,
+        "percent": 0.005678669447186599
+      },
+      {
+        "name": "wakeFarmCouriers",
+        "ms": 0.333,
+        "percent": 0.005627967041408148
+      },
+      {
+        "name": "nearest2",
+        "ms": 0.322,
+        "percent": 0.005442058220220492
+      },
+      {
+        "name": "nextId3",
+        "ms": 0.217,
+        "percent": 0.0036674740179746786
+      },
+      {
+        "name": "remove",
+        "ms": 0.216,
+        "percent": 0.0036505732160485287
+      },
+      {
+        "name": "recordBattleDeath",
+        "ms": 0.196,
+        "percent": 0.0033125571775255167
+      },
+      {
+        "name": "charge",
+        "ms": 0.189,
+        "percent": 0.0031942515640424624
+      },
+      {
+        "name": "rememberValidation",
+        "ms": 0.173,
+        "percent": 0.002923838733224053
+      },
+      {
+        "name": "copy3",
+        "ms": 0.033,
+        "percent": 0.0005577264635629696
+      }
+    ]
+  },
+  "callCounts": {
+    "method": "Diagnostic-only AST instrumentation in a temporary bundle, function entry counts over360updates/12game seconds after30warmupsteps on capturedstate. No source edits; counts include cache hits and gated calls, and are not full recomputation counts.",
+    "counts": [
+      {
+        "name": "canWalk",
+        "calls": 469821,
+        "perUpdate": 1305.0583333333334
+      },
+      {
+        "name": "structures",
+        "calls": 329076,
+        "perUpdate": 914.1
+      },
+      {
+        "name": "recordTraffic",
+        "calls": 106973,
+        "perUpdate": 297.14722222222224
+      },
+      {
+        "name": "idleJobDecisionDue",
+        "calls": 23156,
+        "perUpdate": 64.32222222222222
+      },
+      {
+        "name": "nearestEnemy",
+        "calls": 21198,
+        "perUpdate": 58.88333333333333
+      },
+      {
+        "name": "senseMorale",
+        "calls": 19160,
+        "perUpdate": 53.22222222222222
+      },
+      {
+        "name": "updateFog",
+        "calls": 6750,
+        "perUpdate": 18.75
+      },
+      {
+        "name": "hasStaticPath",
+        "calls": 3362,
+        "perUpdate": 9.338888888888889
+      },
+      {
+        "name": "territory",
+        "calls": 3020,
+        "perUpdate": 8.38888888888889
+      },
+      {
+        "name": "travelCache",
+        "calls": 2287,
+        "perUpdate": 6.352777777777778
+      },
+      {
+        "name": "findPath",
+        "calls": 2283,
+        "perUpdate": 6.341666666666667
+      },
+      {
+        "name": "updateMarauder",
+        "calls": 1947,
+        "perUpdate": 5.408333333333333
+      },
+      {
+        "name": "attackSpots",
+        "calls": 1817,
+        "perUpdate": 5.0472222222222225
+      },
+      {
+        "name": "palaceWalkingDistances",
+        "calls": 1315,
+        "perUpdate": 3.6527777777777777
+      },
+      {
+        "name": "refreshSightSources",
+        "calls": 1185,
+        "perUpdate": 3.2916666666666665
+      },
+      {
+        "name": "updateMassLevy",
+        "calls": 1080,
+        "perUpdate": 3
+      },
+      {
+        "name": "movementCongestion",
+        "calls": 1045,
+        "perUpdate": 2.9027777777777777
+      },
+      {
+        "name": "synchronizeRetinueSquads",
+        "calls": 720,
+        "perUpdate": 2
+      },
+      {
+        "name": "farmCityQuery",
+        "calls": 652,
+        "perUpdate": 1.8111111111111111
+      },
+      {
+        "name": "updateWallOwnership",
+        "calls": 361,
+        "perUpdate": 1.0027777777777778
+      },
+      {
+        "name": "updateResearch",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateCulture",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateForts",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateSupplyDepots",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateHarvests",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateFogRaids",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateGuardPosts",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "updateFactionStrategies",
+        "calls": 360,
+        "perUpdate": 1
+      },
+      {
+        "name": "ensureCollectors",
+        "calls": 97,
+        "perUpdate": 0.26944444444444443
+      },
+      {
+        "name": "synchronizeFarms",
+        "calls": 85,
+        "perUpdate": 0.2361111111111111
+      },
+      {
+        "name": "updateWellUpgrades",
+        "calls": 85,
+        "perUpdate": 0.2361111111111111
+      },
+      {
+        "name": "palaceEnclosures",
+        "calls": 85,
+        "perUpdate": 0.2361111111111111
+      },
+      {
+        "name": "ensureBuilders",
+        "calls": 77,
+        "perUpdate": 0.21388888888888888
+      },
+      {
+        "name": "visibleEnemies",
+        "calls": 61,
+        "perUpdate": 0.16944444444444445
+      },
+      {
+        "name": "updateTradeRoutes",
+        "calls": 60,
+        "perUpdate": 0.16666666666666666
+      }
+    ]
+  },
+  "findings": [
+    {
+      "priority": 1,
+      "area": "Territory and farm-travel cache validation",
+      "cadence": "Many queries per substep; territory averaged 8.39 calls per update in replay",
+      "sources": [
+        "src/game/borders.ts:51",
+        "src/game/borders.ts:155",
+        "src/game/farm-travel.ts:60"
+      ],
+      "risk": "Cache hits still scan all buildings or critical structures; repeated O(B) validation fans out through fog, traffic, healing and city logic.",
+      "alternative": "Explicit claim/topology revisions and retained village/source indexes. Recompute only on relevant source or culture-radius threshold changes."
+    },
+    {
+      "priority": 2,
+      "area": "Fog source and memory reconciliation",
+      "cadence": "updateFog 18.75 entries/update, refreshSightSources 3.29/update in replay; memory roughly 10 Hz plus invalidations",
+      "sources": [
+        "src/game/fog.ts:169",
+        "src/game/fog.ts:426",
+        "src/game/fog.ts:512"
+      ],
+      "risk": "Incremental coverage still surrounded by global U+B source discovery and B+fields memory validation; presentation scans map cells.",
+      "alternative": "Dirty source/entity/cell queues populated by movement, spawn, death, ownership and completion events; reuse one validated view per phase."
+    },
+    {
+      "priority": 3,
+      "area": "Farm/housing/staffing reconciliation and broad invalidation",
+      "cadence": "Nominal 3 Hz; synchronizeFarms 85, ensureCollectors 97, ensureBuilders 77 calls in 12 game seconds",
+      "sources": [
+        "src/game/settlement-decisions.ts:34",
+        "src/game/farms.ts:227",
+        "src/game/farms.ts:452",
+        "src/game/wells.ts:40"
+      ],
+      "risk": "Generic world/entity revisions wake whole-world reconciliation; well/neighborhood/enclosure checks run before farm-topology early return.",
+      "alternative": "Per-city workforce/farm/route revisions. Update housing on local well/post/population/enclosure changes; schedule downgrade deadlines."
+    },
+    {
+      "priority": 4,
+      "area": "Target validation and failed weapon sensing",
+      "cadence": "Retained target LOS/contact before the 3/8 Hz gate; failed tower/ballista searches each step at zero cooldown",
+      "sources": [
+        "src/game/simulation.ts:544",
+        "src/game/tower-combat.ts:23",
+        "src/game/ballista.ts:32"
+      ],
+      "risk": "Throttles do not gate all expensive work; out-of-range building urgency repeatedly bypasses sensing limits.",
+      "alternative": "Cheap live validity checks; geometry checks on cell/topology changes and immediately before firing; idle sensor deadlines and threat-entry wakeups."
+    },
+    {
+      "priority": 5,
+      "area": "Attack reservations, route congestion and global route revisions",
+      "cadence": "Per candidate attack target and per reroute; route nodes checked after a global world revision",
+      "sources": [
+        "src/game/engagement.ts:26",
+        "src/game/engagement.ts:97",
+        "src/game/simulation.ts:993"
+      ],
+      "risk": "Global reservation scan per target; O(queries*(units+reservations)) congestion rebuild; O(movers*route length) broad invalidation.",
+      "alternative": "Cell/target reservation indexes, shared incremental faction congestion fields and regional route stamps."
+    },
+    {
+      "priority": 6,
+      "area": "Builder job selection and guard-post planning",
+      "cadence": "Idle builder decisions at 3 Hz with a two-second no-job backoff; guard-post bookkeeping every substep",
+      "sources": [
+        "src/game/builders.ts:261",
+        "src/game/builders.ts:284",
+        "src/game/guard-posts.ts:229"
+      ],
+      "risk": "Each idle worker scans same construction/repair roster; each post filters civilians and associates cities.",
+      "alternative": "Per-city job queues/reservations; maintained post/worker membership and shared local threat snapshots."
+    },
+    {
+      "priority": 7,
+      "area": "Faction strategy preprocessing",
+      "cadence": "Leader/city scans every substep before the one-second planning gate",
+      "sources": [
+        "src/game/faction-strategy.ts:66",
+        "src/game/faction-strategy.ts:333"
+      ],
+      "risk": "Faction*(units+buildings) preprocessing and enemy*observer tests; duplicated rosters.",
+      "alternative": "Indexed faction rosters, early deadline gate, shared spatial threat snapshot per planning epoch."
+    },
+    {
+      "priority": 8,
+      "area": "Formation reassignment and dense collisions",
+      "cadence": "Moving formations every substep; costly reassignment on transitions; separation every substep",
+      "sources": [
+        "src/game/formation.ts:39",
+        "src/game/formation.ts:143",
+        "src/game/formation.ts:208",
+        "src/game/simulation.ts:2137"
+      ],
+      "risk": "Repeated member assignment can approach quadratic; local-density pair work grows even with spatial buckets.",
+      "alternative": "Persistent slot ownership, changed-member assignment, unique collision pairs and bounded yield-chain work."
+    },
+    {
+      "priority": 9,
+      "area": "Harvest validation and collector maps",
+      "cadence": "Every substep despite event heap",
+      "sources": [
+        "src/game/farms.ts:593",
+        "src/game/farms.ts:704",
+        "src/game/farms.ts:798"
+      ],
+      "risk": "Linear world scans/allocations evenwhen no harvest is due; notthe previously fixed quadratic validation per visit.",
+      "alternative": "Persistent field indexes, occupied-farm updates on cell transitions, dirty claims and deadline queues."
+    },
+    {
+      "priority": 10,
+      "area": "River-trade navigation",
+      "cadence": "Every movingmerchant update before route retry gate",
+      "sources": [
+        "src/game/river-trade.ts:190",
+        "src/game/sailing.ts:20"
+      ],
+      "risk": "Perboat rebuilding of building/unit obstacle maps scalesboats × (buildings+units).",
+      "alternative": "Shared static water topology and incremental boat occupancy; only local exception per boat."
+    },
+    {
+      "priority": 11,
+      "area": "Lifecycle, squad, supply and levy maintenance",
+      "cadence": "Unconditional lifecycle passes each step; squads twice and levy three times per step",
+      "sources": [
+        "src/game/simulation.ts:2255",
+        "src/game/unit-health.ts:10",
+        "src/game/entity-store.ts:57",
+        "src/game/supply-train.ts:18"
+      ],
+      "risk": "Repeated O(U+B) loops/temporary arrays evenwhen no changes; supply ID scan before the 30-second deadline. Low current measured priority for levy/squads.",
+      "alternative": "Creation/death/role events, injured/due sets, retained rosters, monotonic ID allocator and deadlines before prep."
+    },
+    {
+      "priority": 12,
+      "area": "Rendering and HUD",
+      "cadence": "Every rendered frame; HUD every 150 ms; detailed activity when open",
+      "sources": [
+        "src/game/renderer.ts:327",
+        "src/game/renderer.ts:524",
+        "src/game/renderer.ts:927",
+        "src/game/enclosures.ts:267",
+        "src/main.ts:662"
+      ],
+      "risk": "Rebuild global building/field maps, scan all units, sort/rebuild display list, redraw minimap; shimmer uses 256 samples per protected tile.",
+      "alternative": "Retained static/entity layers, viewport spatial queries, minimap dots at 5–10 Hz, shader/cached shimmer and HUD updates when values change."
+    },
+    {
+      "priority": 13,
+      "area": "Periodic or input-triggered stalls",
+      "cadence": "Autosave every 15 seconds; hit-testingon pointer-down",
+      "sources": [
+        "src/main.ts:397",
+        "src/main.ts:1135",
+        "src/game/hit-testing.ts:11"
+      ],
+      "risk": "Synchronous full-world serialization/localStorage; visibility checks before geometric rejection may repeat global fog validation per click.",
+      "alternative": "Worker/asynchronoussnapshot persistence; one fog view and spatial/geometric culling per click."
+    }
+  ],
+  "notes": [
+    "Inclusive profile percentages overlap and cannot be added.",
+    "Function entry counts include cheap cache hits and early returns; do not treat all calls as full recomputation.",
+    "The snapshot has about 400 units; it is not a thousands-unit stress test. Scaling risks are derived from code, not an FPS forecast.",
+    "Already working: levy HUD cache, one-second city ribbon cache, courier sleep, incremental fog coverage, spatial buckets, formation width/column traversal optimizations, and empty-wildlife early return."
+  ]
+}

@@ -1,0 +1,66 @@
+import { chromium } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
+const output=process.env.ARTIFACT_DIR||'scratch/2026-11-04-garrison';mkdirSync(output,{recursive:true});
+const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+const page=await browser.newPage({viewport:{width:1440,height:950}}),errors=[],checks=[];
+page.on('pageerror',e=>errors.push(String(e)));await page.routeWebSocket('**',s=>s.close());
+const check=(name,value)=>{checks.push({name,pass:!!value});assert.ok(value,name);console.log(name)};
+const garrison=page.locator('[data-hotbar-action="garrison"]'), levy=page.locator('[data-hotbar-action="levy"]');
+async function run(seconds){await page.evaluate(seconds=>{const s=__game.state;s.paused=false;for(let i=0;i<seconds*10;i++)__game.step(.1);s.paused=true;},seconds)}
+async function settleUI(){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))}
+try{
+ await page.goto(process.env.GAME_URL||'http://127.0.0.1:5177/',{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__game&&document.documentElement.dataset.assets==='ready');
+ await page.evaluate(async()=>{
+  const {scoutRealm}=await import('/tests/helpers/scouts.ts'),s=scoutRealm(),leader=s.units[0];
+  s.paused=true;s.banditIntensity=0;s.factions[0].research=undefined;s.factions[0].population=30;s.factions[0].gold=5000;s.factions[0].nextRetinueAt=1e9;
+  Object.assign(leader,{x:35.5,y:15.5,order:'hold',hp:100,attack:0});
+  s.buildings=[{id:1000,kind:'palace',faction:0,x:12,y:12,hp:650,maxHp:650,capacity:30,unhousedResidents:30,populationGrowth:-10000,cityName:'Roma',governorPermissions:{housing:false,farms:false}}];
+  s.units=[leader,...Array.from({length:8},(_,i)=>({...leader,id:10+i,kind:i%3===0?'archer':'warrior',x:11.5+i%4,y:17.5+Math.floor(i/4),order:'follow',retinueStance:'aggressive',range:i%3===0?4:1.1,attack:10,speed:3.3,humanControlled:undefined})),...Array.from({length:10},(_,i)=>({...leader,id:100+i,kind:'worker',x:11.5+i%5,y:19.5+Math.floor(i/5),order:'work',hp:50,maxHp:50,home:1000,attack:0,speed:2.2,collector:true,humanControlled:undefined}))];
+  s.fogRaids={nextAt:1e9,nextSmallAt:1e9,waves:0,pressureVersion:2};s.retinueStance='aggressive';s.movementMode='travel';
+  __game.replaceState(s);__game.renderer.prepare(s);__game.renderer.follow=false;__game.renderer.camera={x:22,y:14};__game.renderer.zoom=1.5;
+  const latest=path=>{const urls=performance.getEntriesByType('resource').map(entry=>entry.name).filter(url=>new URL(url).pathname===path);return urls.at(-1)||path};
+  window.__garrisonQA={garrison:await import(latest('/src/game/garrison.ts'))};
+ });
+ await page.waitForFunction(()=>document.querySelector('[data-hotbar-action="garrison"]').disabled);
+ check('Garrison is disabled outside city borders',await garrison.isDisabled());
+ check('Garrison starts with no research requirement',await page.evaluate(()=>!__game.state.factions[0].research));
+ check('One levy button replaces separate levy/dismiss slots',await levy.count()===1&&await page.locator('[data-hotbar-action="dismiss-levy"]').count()===0);
+ await page.screenshot({path:`${output}/outside-city.png`});
+ await page.evaluate(()=>{const leader=__game.state.units[0];leader.x=12.5;leader.y=15.5});
+ await page.waitForFunction(()=>!document.querySelector('[data-hotbar-action="garrison"]').disabled);
+ check('Garrison enables inside city without a technology',!(await garrison.isDisabled()));
+ await garrison.click();
+ check('Garrison assigns all eight active retinue',await page.evaluate(()=>__game.state.units.filter(u=>u.garrison?.city===1000).length===8));
+ check('Button becomes Recall Garrison',await garrison.getAttribute('aria-label')==='Recall Garrison'&&await garrison.getAttribute('aria-pressed')==='true');
+ check('Civilian workers are not garrisoned',await page.evaluate(()=>__game.state.units.filter(u=>u.kind==='worker').every(u=>!u.garrison)));
+ await page.evaluate(()=>{const leader=__game.state.units[0];leader.x=35.5;leader.y=15.5});await run(12);await settleUI();
+ check('Retinue stays inside assigned city while Leader leaves',await page.evaluate(()=>__game.state.units.filter(u=>u.garrison).every(u=>__garrisonQA.garrison.garrisonCityAt(__game.state,u)?.id===1000)));
+ check('Recall Garrison stays enabled outside city borders',!(await garrison.isDisabled())&&await garrison.getAttribute('aria-label')==='Recall Garrison');
+ const settled=await page.evaluate(()=>__game.state.units.filter(u=>u.garrison).map(u=>({id:u.id,x:u.x,y:u.y})));await run(2);
+ check('Defenders settle without milling at rest',await page.evaluate(previous=>previous.every(p=>{const u=__game.state.units.find(u=>u.id===p.id);return Math.hypot(p.x-u.x,p.y-u.y)<.01}),settled));
+ await page.screenshot({path:`${output}/garrison-holds-city.png`});
+ const before=await page.evaluate(()=>__game.state.units.filter(u=>u.garrison).reduce((n,u)=>n+Math.hypot(u.x-__game.state.units[0].x,u.y-__game.state.units[0].y),0));
+ await garrison.click();
+ check('Recall removes all garrison assignments',await page.evaluate(()=>__game.state.units.every(u=>!u.garrison)));
+ await run(6);await settleUI();
+ const after=await page.evaluate(()=>__game.state.units.filter(u=>u.id>=10&&u.id<18).reduce((n,u)=>n+Math.hypot(u.x-__game.state.units[0].x,u.y-__game.state.units[0].y),0));
+ check('Recalled soldiers move back toward Leader',after<before-30);
+ check('Inactive Garrison is disabled again in wilderness',await garrison.isDisabled()&&await garrison.getAttribute('aria-label')==='Garrison');
+ await page.screenshot({path:`${output}/recalled-retinue.png`});
+ await page.evaluate(()=>{const s=__game.state,leader=s.units[0];leader.x=12.5;leader.y=15.5;for(const [i,u]of s.units.filter(u=>u.id>=10&&u.id<18).entries()){u.x=11.5+i%4;u.y=17.5+Math.floor(i/4);delete u.path;delete u.pathGoal;delete u.destination;delete u.recallIssuedAt;delete u.joiningRetinue;u.order='follow'}});await settleUI();
+ await page.locator('#world').focus();await page.keyboard.press('5');
+ check('Keyboard5 assigns garrison',await page.evaluate(()=>__game.state.units.filter(u=>u.garrison).length===8));
+ await page.keyboard.press('5');check('Keyboard5 recalls same garrison',await page.evaluate(()=>__game.state.units.every(u=>!u.garrison)));
+ await page.evaluate(()=>{const s=__game.state,leader=s.units[0];s.factions[0].research={focus:'massLevy',levels:{massLevy:1},progress:{}};const units=__game.entities(s).units;units.retain(u=>u.kind!=='worker');units.add(...Array.from({length:10},(_,i)=>({...leader,id:100+i,kind:'worker',x:11.5+i%5,y:19.5+Math.floor(i/5),order:'work',hp:50,maxHp:50,home:1000,attack:0,speed:2.2,collector:true,humanControlled:undefined})));});
+ await page.waitForFunction(()=>!document.querySelector('[data-hotbar-action="levy"]').disabled);
+ await levy.click();check('Levy click raises10 civilian soldiers',await page.evaluate(()=>__game.state.units.filter(u=>u.kind==='levyInfantry').length===10));
+ check('Same levy button now reads Dismiss levy',await levy.getAttribute('aria-label')==='Dismiss levy'&&await levy.getAttribute('aria-pressed')==='true');
+ await page.screenshot({path:`${output}/levy-active.png`});
+ await levy.click();check('Same button dismisses levy',await page.evaluate(()=>__game.state.units.every(u=>u.kind!=='levyInfantry')));
+ check('Dismissal restores Mass levy label',await levy.getAttribute('aria-label')==='Mass levy'&&await levy.getAttribute('aria-pressed')==='false');
+ await page.locator('#world').focus();await page.keyboard.press('4');check('Keyboard4 raises levy',await page.evaluate(()=>__game.state.units.filter(u=>u.kind==='levyInfantry').length===10));await page.keyboard.press('4');check('Keyboard4 dismisses levy',await page.evaluate(()=>__game.state.units.every(u=>u.kind!=='levyInfantry')));
+ check('Garrison and levy use Pixel Operator',await page.locator('.hotbar-auxiliary').evaluateAll(buttons=>buttons.every(button=>getComputedStyle(button).fontFamily.includes('Pixel Operator'))));
+ check('Garrison and levy icons are loaded',await page.locator('.hotbar-auxiliary img').evaluateAll(images=>images.length===2&&images.every(image=>image.complete&&image.naturalWidth>0)));
+ check('No browser runtime errors',errors.length===0);
+}finally{writeFileSync(`${output}/checks.json`,JSON.stringify({checks,errors},null,2));await browser.close()}

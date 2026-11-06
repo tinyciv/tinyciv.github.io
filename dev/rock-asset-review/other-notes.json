@@ -1,0 +1,398 @@
+{
+  "scope": "Original, locally available MiniWorld / Cozy Farm sprites and downloaded open-game / OGA relief art. Research collections contain samples of upstream games, not their complete asset libraries. Full relevant original sheets remain included even when individual cells are not all separately indexed.",
+  "sourcePolicy": "No downloads, generated art, repainting, palette edits, or bitmap resizing. Crop rectangles reference original native-resolution source PNGs. Existing duplicate PNG exports are represented once where decoded RGBA pixels match.",
+  "packs": [
+    {
+      "pack": "MiniWorld Sprites",
+      "author": "Shade",
+      "license": "CC0-1.0",
+      "url": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "inventory": "scratch/2026-10-26-miniworld-assets/manifest.json",
+      "coverage": "Complete rock/cliff/cave sheets from the current full official pack; 12 native rocks plus cliff platform crops."
+    },
+    {
+      "pack": "Cozy Farm Lite",
+      "author": "Bramble & Byte",
+      "license": "CC BY 4.0",
+      "url": "https://aquumgifts.itch.io",
+      "coverage": "The original 1x rock sprite; enlarged variants and duplicate compatible exports excluded."
+    },
+    {
+      "pack": "Wesnoth",
+      "author": "Wesnoth terrain art contributors",
+      "license": "GPL-2.0-or-later or CC BY-SA 4.0 (asset dependent)",
+      "url": "https://github.com/wesnoth/wesnoth/tree/master/data/core/images/terrain",
+      "licenseUrl": "https://wiki.wesnoth.org/Wesnoth:Copyrights",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Freeciv Amplio2",
+      "author": "Peter Arbor and Hogne Håskjold",
+      "license": "GPL v2 (printed in the atlas)",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/amplio2",
+      "licenseUrl": "https://raw.githubusercontent.com/freeciv/freeciv/main/data/amplio2/hills.png",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Freeciv Hexemplio",
+      "author": "Peter Arbor and GriffonSpade",
+      "license": "GPL v2 (printed in the atlas)",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/hexemplio",
+      "licenseUrl": "https://raw.githubusercontent.com/freeciv/freeciv/main/data/hexemplio/mountains.png",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Freeciv Trident",
+      "author": "Tatu Rissanen and Freeciv contributors",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/trident",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Freeciv IsoTrident",
+      "author": "Tim F. Smith and Daniel Speyer",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/isotrident",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "FreeCol",
+      "author": "FreeCol art contributors (Stephen Echavia and later contributors)",
+      "license": "GPL v2 (no local exception for these terrain folders)",
+      "url": "https://github.com/FreeCol/freecol/tree/master/data/default/resources/images/terrain",
+      "licenseUrl": "https://github.com/FreeCol/freecol#license",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Unciv HexaRealm",
+      "author": "The Bucketeer / GeneralWadaling",
+      "license": "CC BY-SA 3.0",
+      "url": "https://github.com/yairm210/Unciv/tree/master/android/Images.Tilesets/TileSets/HexaRealm/Tiles",
+      "licenseUrl": "https://github.com/yairm210/Unciv/blob/master/docs/Credits.md#hexarealm",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Unciv Fantasy Hex",
+      "author": "CuddlyClover; Unciv contributors",
+      "license": "CC BY 4.0",
+      "url": "https://github.com/yairm210/Unciv/tree/master/android/Images.Tilesets/TileSets/FantasyHex/Tiles",
+      "licenseUrl": "https://github.com/yairm210/Unciv/blob/master/docs/Credits.md",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Widelands",
+      "author": "Widelands Development Team",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/widelands/widelands/tree/master/data/world/immovables/rocks",
+      "licenseUrl": "https://github.com/widelands/widelands/blob/master/debian/copyright",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Flare",
+      "author": "Clint Bellanger, rubberduck and Flare contributors",
+      "license": "CC BY-SA 3.0",
+      "url": "https://github.com/flareteam/flare-game/tree/master/tiled/tilesheets",
+      "licenseUrl": "https://github.com/flareteam/flare-game/wiki/Credits",
+      "inventory": "output/overlay-research/open-games.json",
+      "coverage": "All relevant original files downloaded locally; not a claim to include the complete upstream game library."
+    },
+    {
+      "pack": "Flare",
+      "author": "Clint Bellanger and Flare contributors",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://github.com/flareteam/flare-game/tree/master/tiled/tilesheets",
+      "licenseUrl": "https://github.com/flareteam/flare-game/blob/master/LICENSE.txt",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Flare",
+      "author": "Clint Bellanger and Flare contributors",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://github.com/flareteam/flare-game/tree/master/tiled/tilesheets",
+      "licenseUrl": "https://github.com/flareteam/flare-game/blob/master/LICENSE.txt",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Flare",
+      "author": "Flare contributors; see project CREDITS.txt",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://github.com/flareteam/flare-game/tree/master/mods/fantasycore/images/tilesets",
+      "licenseUrl": "https://github.com/flareteam/flare-game/blob/master/LICENSE.txt",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Flare",
+      "author": "Flare contributors; see project CREDITS.txt",
+      "license": "CC-BY-SA 3.0",
+      "url": "https://github.com/flareteam/flare-game/tree/master/mods/fantasycore/images/tilesets",
+      "licenseUrl": "https://github.com/flareteam/flare-game/blob/master/LICENSE.txt",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv Trident",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/trident",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv Amplio2",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/amplio2",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv Amplio2",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/amplio2",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv Hexemplio",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/hexemplio",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv Hexemplio",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/hexemplio",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv IsoTrident",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/isotrident",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Freeciv IsoTrident",
+      "author": "Freeciv tileset contributors; artist credits in adjacent .spec files",
+      "license": "GPL-2.0-or-later",
+      "url": "https://github.com/freeciv/freeciv/tree/main/data/isotrident",
+      "licenseUrl": "https://github.com/freeciv/freeciv/blob/main/COPYING",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "OpenGFX",
+      "author": "OpenGFX team; detailed artist list in docs/authoroverview.csv",
+      "license": "GPL-2.0",
+      "url": "https://github.com/OpenTTD/OpenGFX/tree/master/sprites/png/terrain",
+      "licenseUrl": "https://github.com/OpenTTD/OpenGFX/blob/master/README.md#50-license",
+      "inventory": "output/terrain-catalog/games.json"
+    },
+    {
+      "pack": "Buch Overworld",
+      "author": "Buch; commissioned by Jeffrey Kern / bukketgames",
+      "license": "CC-BY 3.0",
+      "url": "https://opengameart.org/content/overworld-tiles-0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "inventory": "output/overlay-research/oga.json"
+    },
+    {
+      "pack": "MrBeast Worldmap",
+      "author": "MrBeast; commissioned by OpenGameArt.org",
+      "license": "CC-BY 3.0",
+      "url": "https://opengameart.org/content/worldmapoverworld-tileset",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "inventory": "output/overlay-research/oga.json"
+    },
+    {
+      "pack": "Robson Michel Overworld",
+      "author": "Robson Michel; assets released by Da’markeus Brumfield / Ironthunder",
+      "license": "CC-BY 3.0",
+      "url": "https://opengameart.org/content/rpg-overworld-images",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "inventory": "output/overlay-research/oga.json"
+    },
+    {
+      "pack": "Wyrmsun World Map",
+      "author": "Jinn; commissioned by Andrettin",
+      "license": "GPL 2.0 or CC-BY-SA 3.0",
+      "url": "https://opengameart.org/content/world-map-tiles",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "inventory": "output/overlay-research/oga.json",
+      "coverage": "All original mountain tiles and the hill sprite extracted from the locally downloaded publisher archive."
+    }
+  ],
+  "creditPaths": [
+    "scratch/2026-10-26-miniworld-assets/manifest.json",
+    "scratch/2026-10-26-miniworld-assets/LICENSE.txt",
+    "scratch/2026-10-26-grain-field-search/packs/cozy-farm-lite/cozy-farm-lite/LICENSE.txt",
+    "output/overlay-research/open-games.json",
+    "output/overlay-research/oga.json",
+    "output/terrain-catalog/games.json",
+    "output/overlay-research/sources/wesnoth-data-COPYING.txt",
+    "output/overlay-research/sources/wesnoth-legacy-pixel-comparison.json",
+    "output/overlay-research/sources/freeciv-README.md",
+    "output/overlay-research/sources/freecol-LICENSE",
+    "output/overlay-research/sources/Unciv-docs-Credits.md",
+    "output/overlay-research/sources/widelands-debian-copyright",
+    "output/overlay-research/sources/flare-grassland-CREDITS.txt",
+    "output/overlay-research/sources/flare-snowplains-CREDITS.txt"
+  ],
+  "duplicates": [
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-hills-desert.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-hills-desert.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-hills-dry.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-hills-dry.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-hills-regular.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-hills-regular.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-hills-regular2.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-hills-regular2.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-hills-snow.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-hills-snow.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-basic_range1_1.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-basic_range1_1.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-basic_range1_2.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-basic_range1_2.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-basic_range1_3.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-basic_range1_3.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-basic_range3_3.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-basic_range3_3.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-peak.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-peak.png"
+    },
+    {
+      "source": "output/overlay-research/sources/wesnoth-1.12-mountains-peak_large1.png",
+      "representedBy": "output/overlay-research/assets/open-wesnoth-relief-mountains-peak_large1.png"
+    },
+    {
+      "source": "output/overlay-research/assets/open-unciv-hexarealm-Mountain-1.png",
+      "representedBy": "output/overlay-research/assets/open-unciv-hexarealm-Mountain.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-flare-grassland-grassland.png",
+      "representedBy": "output/overlay-research/assets/open-flare-relief-grassland.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-trident-tiles.png",
+      "representedBy": "output/overlay-research/assets/open-freeciv-trident-tiles.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-amplio2-mountains.png",
+      "representedBy": "output/overlay-research/assets/open-freeciv-amplio2-mountains.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-hexemplio-mountains.png",
+      "representedBy": "output/overlay-research/assets/open-freeciv-hexemplio-mountains.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-isotrident-terrain1.png",
+      "representedBy": "output/overlay-research/assets/open-freeciv-isotrident-terrain1.png"
+    },
+    {
+      "source": "output/terrain-catalog/assets/game-isotrident-terrain2.png",
+      "representedBy": "output/overlay-research/assets/open-freeciv-isotrident-terrain2.png"
+    }
+  ],
+  "missingCatalogFiles": [],
+  "additionalAudit": "Ecology agent checked remaining cached OGA collections: original Forest Tilemap and Adventure Tileset added to lpc.json. Community Nature, Grass Biome, Greenlands, Top Down Season and Simple Tile Set images are composed/branded previews; Colony Sim source atlas contains architecture, no natural rock objects. Kenney, itch and cartographic collections are cached promotional previews, not downloaded original sprite packs.",
+  "excluded": [
+    {
+      "sources": [
+        "output/overlay-research/assets/buch-overworld.png",
+        "output/overlay-research/assets/beast-worldmap.png"
+      ],
+      "reason": "Publisher example maps, not source sprites."
+    },
+    {
+      "sources": [
+        "output/overlay-research/assets/nirdia-mountains.png",
+        "output/overlay-research/assets/nirdia-grass.png",
+        "output/overlay-research/assets/nirdia-desert.png"
+      ],
+      "reason": "Publisher promotional previews; original pack not available locally."
+    },
+    {
+      "sources": [
+        "output/overlay-research/assets/dustdfg-rocks.png",
+        "output/overlay-research/assets/brown-rock.png",
+        "output/overlay-research/assets/lpc-mountains.png",
+        "output/terrain-catalog/assets/koa-oga-lpc-mountains-0.png",
+        "output/terrain-catalog/assets/koa-oga-lpc-mountains-1.png",
+        "output/overlay-research/assets/shiny-boulders.png"
+      ],
+      "reason": "Promotional/example previews only; original loose-rock packs unavailable locally. Shiny Boulders preview is 64 enlarged specimens from a 3072-sprite pack."
+    },
+    {
+      "sources": [
+        "output/overlay-research/assets/open-flare-relief-grassland_2x2.png",
+        "output/overlay-research/assets/open-flare-relief-snowplains_2x2.png"
+      ],
+      "reason": "Constructed teleport platforms rather than natural rock/relief assets."
+    },
+    {
+      "sources": [
+        "public/assets/vegetation/medieval-nature.png"
+      ],
+      "reason": "Vegetation-only crop of Puny paid atlas. Puny original atlas covered by the dedicated Puny manifest."
+    }
+  ],
+  "counts": {
+    "MiniWorld Sprites": 23,
+    "Cozy Farm Lite": 1,
+    "Wesnoth": 26,
+    "Freeciv Amplio2": 24,
+    "Freeciv Hexemplio": 24,
+    "Freeciv Trident": 14,
+    "Freeciv IsoTrident": 39,
+    "FreeCol": 8,
+    "Unciv HexaRealm": 9,
+    "Unciv Fantasy Hex": 4,
+    "Widelands": 9,
+    "Flare": 5,
+    "OpenGFX": 1,
+    "Buch Overworld": 2,
+    "MrBeast Worldmap": 5,
+    "Robson Michel Overworld": 2,
+    "Wyrmsun World Map": 48
+  },
+  "validation": {
+    "entryCount": 244,
+    "uniqueSources": 128,
+    "allCropBoundsValid": true,
+    "allCropsNonempty": true
+  }
+}

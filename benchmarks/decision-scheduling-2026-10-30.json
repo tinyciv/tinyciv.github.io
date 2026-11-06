@@ -1,0 +1,887 @@
+{
+  "date": "2026-10-30",
+  "change": "Stagger quiet and background decisions at 3 Hz; active combat sensing at 8 Hz; retain fast execution and urgent overrides.",
+  "validation": {
+    "vitest": {
+      "filesPassed": 184,
+      "testsPassed": 1866
+    },
+    "productionBuild": "passed",
+    "browserErrors": 0,
+    "candidateMatchesWorkingProductionSource": true
+  },
+  "source": {
+    "baseline": "Snapshot of working tree at task start, including existing uncommitted gameplay work. Not a clean HEAD checkout.",
+    "changedProductionHashes": {
+      "src/game/builders.ts": {
+        "baseline": "c9a9d9334e561746c04efe2389c3a0d372cb42d0a39f6178faa695e2a7ff9ef5",
+        "current": "217c8000bcebb763d90ff3f06723aa9e8289cdd16b617b110c540718160e8913"
+      },
+      "src/game/decision-schedule.ts": {
+        "baseline": null,
+        "current": "feef1eea47cb07d2884b1fea9e9768879ab64a1f544b1c60a71eda202494ce80"
+      },
+      "src/game/entity-store.ts": {
+        "baseline": "2569c46f208a5c09cd240f6acf4a5eaad0456323dc72ecac986b398e6e4b4e5a",
+        "current": "3da54eeca9ecf7a07f1b66f6861f370548b0de19b5f9d6df1d931e99ed42d368"
+      },
+      "src/game/farms.ts": {
+        "baseline": "c7e8aceac7b0de8e11b4f32a341dde1aaee3beada7b504f3fb2d7aa410b2422f",
+        "current": "c69f6694c1eb2fe95beb0896b6fd421fc819a47aaa561dd992609ad7c91b2c12"
+      },
+      "src/game/formation.ts": {
+        "baseline": "540706163a11d1b35f774dd8d13cc56e0e46bd4eddb70b41d63be56d1d2495e4",
+        "current": "88b05e98338cb4a6d4089e0ff6965ebc86b86db11d8c7bfc229d2ef345ab26b8"
+      },
+      "src/game/morale-perception.ts": {
+        "baseline": null,
+        "current": "cb81acc2e1d3be3ee4d4b47a11d837b0ba46620cf9a84702a8f2bb76fea9689f"
+      },
+      "src/game/settlement-decisions.ts": {
+        "baseline": null,
+        "current": "ecf2c9312987da822de7cc79475be6a9b63ccfff9019521bee8d533e4dfbd479"
+      },
+      "src/game/simulation.ts": {
+        "baseline": "2a657c5252d47944de5c6d179f3e87ff82f75d964a26bd9194d6d7574ba36df2",
+        "current": "1d5f81b5d35e966a80ba033d994b3dd228c9109d0375f6b8cf5ae3872ef725a6"
+      }
+    }
+  },
+  "fixedStepSimulation": {
+    "methodology": "Identical initial states; 60 warmup then 300 timed updateGame calls per round, three alternating baseline/current rounds. Settlement runs at 2x; deterministic idle/combat fixtures run at 1x. Same WASM bytes. Cloning, explicit pre-warmup GC, checksums and presentation are outside timings. Exact advancement and deterministic repetitions are required separately for each variant; final baseline/current parity is intentionally not required after changing decision timing.",
+    "node": "v25.9.0",
+    "platform": "darwin arm64",
+    "cpu": "Apple M3 Pro",
+    "roots": {
+      "baseline": "/tmp/btv-decision-baseline-20261030",
+      "current": "/tmp/btv-decision-current-20261030"
+    },
+    "statePath": "/Users/ckrapu/strongman/btv/scratch/2026-10-29-live-performance/optimization/paused-live-state.json",
+    "stateSha256": "cb5adec8dbf996dc9aae14b8df48fa21c5ef260204bc7b650594a3a98602fe31",
+    "navigationWasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf",
+    "dt": 0.016666666666666666,
+    "warmupUpdates": 60,
+    "measuredUpdates": 300,
+    "rounds": 3,
+    "explicitPreWarmupGc": true,
+    "scenes": {
+      "settlement": {
+        "speed": 2,
+        "initial": {
+          "time": 7567.049400011164,
+          "gameOver": false,
+          "units": 1036,
+          "visibleUnits": 597,
+          "movingUnits": 365,
+          "engagedUnits": 0,
+          "totalUnitHp": 58164.226240002645,
+          "projectiles": 0,
+          "bloodEffects": 0,
+          "buildings": 1706,
+          "fields": 1524
+        },
+        "initialGameplaySha256": "b197f69bbe2aaf1a7fc7f30b3645318ed6138996778663c2968c38670961508f",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 7457.225958000001,
+            "meanUpdateMs": 24.851954576666675,
+            "p50UpdateMs": 20.798999999999978,
+            "p95UpdateMs": 47.72783300000083,
+            "gameplaySha256": "7460161b706bc1f1f6db0299636fecfd4c14939626cdec3a6d0e2a4d24a5f023",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 410,
+            "engagedUnits": 0,
+            "totalUnitHp": 61117.32978666839,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 265.75,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 3169,
+              "unsupported": 1369,
+              "instances": 6,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 5758.731666999998,
+            "meanUpdateMs": 19.19397192666669,
+            "p50UpdateMs": 14.941625000001295,
+            "p95UpdateMs": 39.432833000000755,
+            "gameplaySha256": "7b42ac4b4c4158dedd67af516e583c3ba6169d650f0a52c0f7924e46b8b07175",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 405,
+            "engagedUnits": 2,
+            "totalUnitHp": 61076.409786668395,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 290.25,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 3123,
+              "unsupported": 1369,
+              "instances": 6,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 5372.336791999998,
+            "meanUpdateMs": 17.906191783333416,
+            "p50UpdateMs": 14.646334000000934,
+            "p95UpdateMs": 28.799291999999696,
+            "gameplaySha256": "7b42ac4b4c4158dedd67af516e583c3ba6169d650f0a52c0f7924e46b8b07175",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 405,
+            "engagedUnits": 2,
+            "totalUnitHp": 61076.409786668395,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 290.25,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6246,
+              "unsupported": 2738,
+              "instances": 12,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 5828.83525,
+            "meanUpdateMs": 19.428168619999898,
+            "p50UpdateMs": 16.506083000000217,
+            "p95UpdateMs": 27.313332999998238,
+            "gameplaySha256": "7460161b706bc1f1f6db0299636fecfd4c14939626cdec3a6d0e2a4d24a5f023",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 410,
+            "engagedUnits": 0,
+            "totalUnitHp": 61117.32978666839,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 265.75,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6338,
+              "unsupported": 2738,
+              "instances": 12,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 5759.5380829999995,
+            "meanUpdateMs": 19.196965033333157,
+            "p50UpdateMs": 16.682999999997264,
+            "p95UpdateMs": 27.982167000001937,
+            "gameplaySha256": "7460161b706bc1f1f6db0299636fecfd4c14939626cdec3a6d0e2a4d24a5f023",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 410,
+            "engagedUnits": 0,
+            "totalUnitHp": 61117.32978666839,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 265.75,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9507,
+              "unsupported": 4107,
+              "instances": 18,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 5793.293959000002,
+            "meanUpdateMs": 19.309340110000267,
+            "p50UpdateMs": 14.919167000000016,
+            "p95UpdateMs": 34.66762500000186,
+            "gameplaySha256": "7b42ac4b4c4158dedd67af516e583c3ba6169d650f0a52c0f7924e46b8b07175",
+            "time": 7579.049400011317,
+            "gameOver": false,
+            "units": 1067,
+            "visibleUnits": 592,
+            "movingUnits": 405,
+            "engagedUnits": 2,
+            "totalUnitHp": 61076.409786668395,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 1782,
+            "fields": 1524,
+            "healthLost": 290.25,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9369,
+              "unsupported": 4107,
+              "instances": 18,
+              "unavailable": 0
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 21.15902940999991,
+            "p50UpdateMs": 17.483832999998413,
+            "p95UpdateMs": 38.183250000000044,
+            "medianMeanUpdateMs": 19.428168619999898
+          },
+          "current": {
+            "meanUpdateMs": 18.803167940000122,
+            "p50UpdateMs": 14.744749999998021,
+            "p95UpdateMs": 34.66762500000186,
+            "medianMeanUpdateMs": 19.19397192666669
+          },
+          "medianSpeedup": 1.0122015752772793,
+          "timeReductionPercent": 1.20544914919114
+        }
+      },
+      "idle-600": {
+        "speed": 1,
+        "initial": {
+          "time": 0,
+          "gameOver": false,
+          "units": 620,
+          "visibleUnits": 600,
+          "movingUnits": 0,
+          "engagedUnits": 0,
+          "totalUnitHp": 6001000,
+          "projectiles": 0,
+          "bloodEffects": 0,
+          "buildings": 128,
+          "fields": 16
+        },
+        "initialGameplaySha256": "712f8257618cdfc1df7956d5a854539593382606bc3d9bdbca9aa13611b5965f",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 2613.242459000001,
+            "meanUpdateMs": 8.709713573332944,
+            "p50UpdateMs": 8.28387500000099,
+            "p95UpdateMs": 10.350832999996783,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9508,
+              "unsupported": 4107,
+              "instances": 19,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 1274.583583000007,
+            "meanUpdateMs": 4.247808026666584,
+            "p50UpdateMs": 4.137040999994497,
+            "p95UpdateMs": 5.116707999994105,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9370,
+              "unsupported": 4107,
+              "instances": 19,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 1196.3600000000006,
+            "meanUpdateMs": 3.987037413333431,
+            "p50UpdateMs": 3.908167000001413,
+            "p95UpdateMs": 4.750708999999915,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9371,
+              "unsupported": 4107,
+              "instances": 20,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 2541.509417000001,
+            "meanUpdateMs": 8.47079836000019,
+            "p50UpdateMs": 8.25762499999837,
+            "p95UpdateMs": 9.643292000000656,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9509,
+              "unsupported": 4107,
+              "instances": 20,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 2473.2423340000023,
+            "meanUpdateMs": 8.242486970000197,
+            "p50UpdateMs": 8.070749999998952,
+            "p95UpdateMs": 9.20625000000291,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9510,
+              "unsupported": 4107,
+              "instances": 21,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 1350.9955000000045,
+            "meanUpdateMs": 4.502068483333035,
+            "p50UpdateMs": 4.4383749999979045,
+            "p95UpdateMs": 5.54754099999991,
+            "gameplaySha256": "f04f58ec4d1f56ce5a3198465182c6e385cb407a2954d0945ac5a736c5a9801e",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 0,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9372,
+              "unsupported": 4107,
+              "instances": 21,
+              "unavailable": 0
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 8.474332967777777,
+            "p50UpdateMs": 8.194416999998793,
+            "p95UpdateMs": 9.709125000001222,
+            "medianMeanUpdateMs": 8.47079836000019
+          },
+          "current": {
+            "meanUpdateMs": 4.2456379744443495,
+            "p50UpdateMs": 4.116542000003392,
+            "p95UpdateMs": 5.265707999998995,
+            "medianMeanUpdateMs": 4.247808026666584
+          },
+          "medianSpeedup": 1.9941575294417313,
+          "timeReductionPercent": 49.85351030517874
+        }
+      },
+      "combat-600": {
+        "speed": 1,
+        "initial": {
+          "time": 0,
+          "gameOver": false,
+          "units": 620,
+          "visibleUnits": 600,
+          "movingUnits": 0,
+          "engagedUnits": 0,
+          "totalUnitHp": 6001000,
+          "projectiles": 0,
+          "bloodEffects": 0,
+          "buildings": 128,
+          "fields": 16
+        },
+        "initialGameplaySha256": "18e13f45582b8c2d35fa97c0195819c70bf5e2dc192c0a935d7418472058e1af",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 5821.35325,
+            "meanUpdateMs": 19.403627653333388,
+            "p50UpdateMs": 18.48404200001096,
+            "p95UpdateMs": 25.5841250000085,
+            "gameplaySha256": "f8da1a1802b328986f3ab603818ce8a75e2a2626fb71e66c66b575a830d782e1",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 277,
+            "engagedUnits": 39,
+            "totalUnitHp": 6000107.499999999,
+            "projectiles": 0,
+            "bloodEffects": 6,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 892.5000000000728,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 13709,
+              "unsupported": 4107,
+              "instances": 23,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 4025.5936250000086,
+            "meanUpdateMs": 13.417869443333572,
+            "p50UpdateMs": 13.621624999999767,
+            "p95UpdateMs": 16.03079100001196,
+            "gameplaySha256": "c9f14e7f75a2a025c623c25a497e0c64566e349da47cd04c63e302b433b32ba0",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 311,
+            "engagedUnits": 52,
+            "totalUnitHp": 6000201.999999999,
+            "projectiles": 0,
+            "bloodEffects": 5,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 798.0000000000655,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 13135,
+              "unsupported": 4107,
+              "instances": 23,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 4328.034375000003,
+            "meanUpdateMs": 14.425695709999806,
+            "p50UpdateMs": 14.142624999993131,
+            "p95UpdateMs": 19.038834000006318,
+            "gameplaySha256": "c9f14e7f75a2a025c623c25a497e0c64566e349da47cd04c63e302b433b32ba0",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 311,
+            "engagedUnits": 52,
+            "totalUnitHp": 6000201.999999999,
+            "projectiles": 0,
+            "bloodEffects": 5,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 798.0000000000655,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 16898,
+              "unsupported": 4107,
+              "instances": 25,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 5501.778334000002,
+            "meanUpdateMs": 18.33849766333379,
+            "p50UpdateMs": 18.136625000013737,
+            "p95UpdateMs": 21.164875000002212,
+            "gameplaySha256": "f8da1a1802b328986f3ab603818ce8a75e2a2626fb71e66c66b575a830d782e1",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 277,
+            "engagedUnits": 39,
+            "totalUnitHp": 6000107.499999999,
+            "projectiles": 0,
+            "bloodEffects": 6,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 892.5000000000728,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 17908,
+              "unsupported": 4107,
+              "instances": 25,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 5820.264875000008,
+            "meanUpdateMs": 19.39987680666682,
+            "p50UpdateMs": 18.672707999998238,
+            "p95UpdateMs": 25.514125000001513,
+            "gameplaySha256": "f8da1a1802b328986f3ab603818ce8a75e2a2626fb71e66c66b575a830d782e1",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 277,
+            "engagedUnits": 39,
+            "totalUnitHp": 6000107.499999999,
+            "projectiles": 0,
+            "bloodEffects": 6,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 892.5000000000728,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 22107,
+              "unsupported": 4107,
+              "instances": 27,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 4112.5625,
+            "meanUpdateMs": 13.70747016000023,
+            "p50UpdateMs": 13.6725829999923,
+            "p95UpdateMs": 16.786957999996957,
+            "gameplaySha256": "c9f14e7f75a2a025c623c25a497e0c64566e349da47cd04c63e302b433b32ba0",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 311,
+            "engagedUnits": 52,
+            "totalUnitHp": 6000201.999999999,
+            "projectiles": 0,
+            "bloodEffects": 5,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 798.0000000000655,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 20661,
+              "unsupported": 4107,
+              "instances": 27,
+              "unavailable": 0
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 19.047334041111334,
+            "p50UpdateMs": 18.378834000002826,
+            "p95UpdateMs": 23.931416999999783,
+            "medianMeanUpdateMs": 19.39987680666682
+          },
+          "current": {
+            "meanUpdateMs": 13.850345104444536,
+            "p50UpdateMs": 13.748584000000847,
+            "p95UpdateMs": 17.49100000000908,
+            "medianMeanUpdateMs": 13.70747016000023
+          },
+          "medianSpeedup": 1.4152776975052335,
+          "timeReductionPercent": 29.342488632249353
+        }
+      }
+    },
+    "errors": [],
+    "pass": true
+  },
+  "browser": {
+    "methodology": "Two 30-second sequential normal-gameplay replays of the same saved state at 2x speed in fresh headless Chrome profiles, 1440x900, DPR 1. Startup world picker closed. CPU profiler disabled. Baseline then current. No concurrent tests or benchmarks.",
+    "runs": {
+      "baseline": {
+        "label": "baseline-gameplay",
+        "url": "http://127.0.0.1:5197/",
+        "backend": "pixi-webgl",
+        "elapsed": 30009.5,
+        "gameSeconds": 59.4976000001343,
+        "units": 1054,
+        "buildings": 1788,
+        "fields": 1536,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 14439,
+          "unsupported": 4342,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 20.135423845130767,
+            "p50": 16.299999952316284,
+            "p95": 35.60000014305115,
+            "p99": 116.09999990463257,
+            "max": 413.5
+          },
+          "sim": {
+            "mean": 16.66781529404228,
+            "p50": 13,
+            "p95": 31.799999952316284,
+            "p99": 107,
+            "max": 350.60000014305115
+          },
+          "draw": {
+            "mean": 3.3707787767104,
+            "p50": 3.200000047683716,
+            "p95": 4.200000047683716,
+            "p99": 7.599999904632568,
+            "max": 62.89999985694885
+          },
+          "prepare": {
+            "mean": 0.05389386616765344,
+            "p50": 0,
+            "p95": 0,
+            "p99": 2.700000047683716,
+            "max": 8.600000143051147
+          },
+          "prepareFog": {
+            "mean": 0.11977946470722012,
+            "p50": 0.09999990463256836,
+            "p95": 0.39999985694885254,
+            "p99": 0.5,
+            "max": 1.7999999523162842
+          },
+          "drawMinimap": {
+            "mean": 0.23507925446981565,
+            "p50": 0.20000004768371582,
+            "p95": 0.40000009536743164,
+            "p99": 0.5,
+            "max": 2
+          }
+        },
+        "fps": 48.35135540412203,
+        "over40": 64,
+        "errors": []
+      },
+      "current": {
+        "label": "current-gameplay",
+        "url": "http://127.0.0.1:5198/",
+        "backend": "pixi-webgl",
+        "elapsed": 30000.099999904633,
+        "gameSeconds": 59.597800000153256,
+        "units": 1057,
+        "buildings": 1788,
+        "fields": 1536,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 15373,
+          "unsupported": 4301,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 17.434748526261103,
+            "p50": 13.799999952316284,
+            "p95": 33.59999990463257,
+            "p99": 110.09999990463257,
+            "max": 381.2000000476837
+          },
+          "sim": {
+            "mean": 13.958915739414506,
+            "p50": 10.5,
+            "p95": 28.299999952316284,
+            "p99": 106.40000009536743,
+            "max": 318
+          },
+          "draw": {
+            "mean": 3.3872632234412654,
+            "p50": 3.200000047683716,
+            "p95": 4.299999952316284,
+            "p99": 7.299999952316284,
+            "max": 63.200000047683716
+          },
+          "prepare": {
+            "mean": 0.04637491788683492,
+            "p50": 0,
+            "p95": 0,
+            "p99": 2.5999999046325684,
+            "max": 7.599999904632568
+          },
+          "prepareFog": {
+            "mean": 0.12220771136741714,
+            "p50": 0.09999990463256836,
+            "p95": 0.39999985694885254,
+            "p99": 0.5,
+            "max": 1.3999998569488525
+          },
+          "drawMinimap": {
+            "mean": 0.23997386665144907,
+            "p50": 0.20000004768371582,
+            "p95": 0.40000009536743164,
+            "p99": 0.5999999046325684,
+            "max": 1.0999999046325684
+          }
+        },
+        "fps": 51.03316322295149,
+        "over40": 59,
+        "errors": []
+      }
+    },
+    "meanFrameWorkReductionPercent": 13.41255758826627,
+    "fpsRatio": 1.0554649977526964
+  },
+  "limitations": [
+    "Decision timing deliberately changes battle and movement trajectories; exact baseline/current final gameplay parity is not expected. Repetitions within each variant are deterministic.",
+    "Simulation speedups use the median of three trial mean update times, not pooled medians or FPS. Settlement timing is variable and its median mean gain is small.",
+    "Browser replays use variable frame intervals and finish with different entity counts. This single pair measures the observed integrated result, not an isolated causal speedup or a guaranteed FPS target.",
+    "Large frame spikes remain. Topology changes can bypass 3/8 Hz clocks globally; automatic paving still causes some extra refreshes.",
+    "Preliminary CPU-profiled browser runs had the startup world-picker overlay visible; they were excluded from the reported normal-gameplay pair."
+  ]
+}

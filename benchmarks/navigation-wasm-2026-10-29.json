@@ -1,0 +1,209 @@
+{
+  "date": "2026-10-29",
+  "method": "Isolated checkpoint 8a45a1b plus the native-navigation backend, using the captured paused settlement. Full frames include simulation and rendering. Same machine, sequential 30-second Chrome headless runs, 1440x900 DPR 1, 2x game speed. Frame-driven timestep differences mean replay end states differ slightly; fixed-step digest comparison checks semantic parity separately.",
+  "initialState": {
+    "units": 1036,
+    "buildings": 1706,
+    "fields": 1524,
+    "world": [
+      224,
+      176
+    ]
+  },
+  "microbenchmark": {
+    "requests": 250,
+    "js": [
+      137.030667,
+      187.455959,
+      152.2299579999999,
+      142.69608300000004,
+      138.682458,
+      139.05729199999996
+    ],
+    "wasm": [
+      54.816374999999994,
+      62.82529199999999,
+      56.850459,
+      58.71966599999996,
+      54.100208000000066,
+      55.52541700000006
+    ],
+    "jsMedian": 142.69608300000004,
+    "wasmMedian": 56.850459,
+    "speedup": 2.5100251697176277,
+    "sum": 18464,
+    "status": {
+      "enabled": false,
+      "ready": true,
+      "searches": 1616,
+      "unsupported": 0,
+      "instances": 6,
+      "unavailable": 0
+    }
+  },
+  "browser": {
+    "javascript": {
+      "label": "navigation-final-js",
+      "metrics": {
+        "total": {
+          "mean": 20.50895522618514,
+          "p50": 18.300000190734863,
+          "p95": 32.200000047683716,
+          "p99": 50.89999985694885,
+          "max": 235.30000019073486
+        },
+        "sim": {
+          "mean": 17.21606254509856,
+          "p50": 15.100000143051147,
+          "p95": 28.59999990463257,
+          "p99": 45.60000014305115,
+          "max": 229.60000014305115
+        },
+        "draw": {
+          "mean": 3.2368159231431277,
+          "p50": 3.1999998092651367,
+          "p95": 3.8000001907348633,
+          "p99": 4.5,
+          "max": 13.299999952316284
+        },
+        "prepare": {
+          "mean": 0.014001421497998377,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 5.799999952316284
+        },
+        "prepareFog": {
+          "mean": 0.15039090357863827,
+          "p50": 0.10000014305114746,
+          "p95": 0.40000009536743164,
+          "p99": 0.40000009536743164,
+          "max": 0.7000000476837158
+        },
+        "drawMinimap": {
+          "mean": 0.21257995779665126,
+          "p50": 0.20000004768371582,
+          "p95": 0.40000009536743164,
+          "p99": 0.5,
+          "max": 1
+        }
+      },
+      "fps": 46.871408440925535,
+      "frames": 1407,
+      "framesOver40ms": 35,
+      "gameSeconds": 59.86400000007961,
+      "units": 1046,
+      "buildings": 1714,
+      "navigation": {
+        "enabled": false,
+        "ready": true,
+        "searches": 0,
+        "unsupported": 0,
+        "shortSearches": 0,
+        "instances": 0,
+        "unavailable": 0
+      },
+      "errors": []
+    },
+    "wasm": {
+      "label": "navigation-release-wasm",
+      "metrics": {
+        "total": {
+          "mean": 18.51037371266134,
+          "p50": 17,
+          "p95": 26.700000047683716,
+          "p99": 37.299999952316284,
+          "max": 177.59999990463257
+        },
+        "sim": {
+          "mean": 15.23588917949765,
+          "p50": 13.699999809265137,
+          "p95": 23.299999952316284,
+          "p99": 32.40000009536743,
+          "max": 171.89999985694885
+        },
+        "draw": {
+          "mean": 3.225773193940674,
+          "p50": 3.1999998092651367,
+          "p95": 3.8999998569488525,
+          "p99": 4.5,
+          "max": 10.399999856948853
+        },
+        "prepare": {
+          "mean": 0.007989690783097572,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 5.700000047683716
+        },
+        "prepareFog": {
+          "mean": 0.18563144369838164,
+          "p50": 0.19999980926513672,
+          "p95": 0.5,
+          "p99": 0.5,
+          "max": 2.5
+        },
+        "drawMinimap": {
+          "mean": 0.21623711334061377,
+          "p50": 0.20000004768371582,
+          "p95": 0.40000009536743164,
+          "p99": 0.5,
+          "max": 0.9000000953674316
+        }
+      },
+      "fps": 51.7204032325252,
+      "frames": 1552,
+      "framesOver40ms": 12,
+      "gameSeconds": 59.964200000111305,
+      "units": 1048,
+      "buildings": 1712,
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 22032,
+        "unsupported": 44419,
+        "instances": 6,
+        "unavailable": 0
+      },
+      "errors": []
+    }
+  },
+  "meanFrameReductionPercent": 9.744921140459063,
+  "p95FrameReductionPercent": 17.0807453163207,
+  "fixedStepParity": {
+    "purpose": "Correctness only; timing of this run was not isolated from the test suite.",
+    "steps": 300,
+    "simulatedSeconds": 60,
+    "results": [
+      {
+        "backend": "js",
+        "steps": 300,
+        "nativeSearches": 0,
+        "gameTime": 7627.049400011382,
+        "units": 1054,
+        "buildings": 1712,
+        "rng": 3624267631,
+        "digest": "1072e0023eaaee138c5a8a30443cee5315ebf61e0e4e6fc53f1225fc3bca988c"
+      },
+      {
+        "backend": "wasm",
+        "steps": 300,
+        "nativeSearches": 21106,
+        "gameTime": 7627.049400011382,
+        "units": 1054,
+        "buildings": 1712,
+        "rng": 3624267631,
+        "digest": "1072e0023eaaee138c5a8a30443cee5315ebf61e0e4e6fc53f1225fc3bca988c"
+      }
+    ],
+    "navigation": {
+      "enabled": true,
+      "ready": true,
+      "searches": 21106,
+      "unsupported": 39725,
+      "instances": 6,
+      "unavailable": 0
+    },
+    "errors": []
+  }
+}

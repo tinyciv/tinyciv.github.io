@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadExistingGameStack",
+      "Effect": "Allow",
+      "Action": "cloudformation:DescribeStacks",
+      "Resource": "arn:aws:cloudformation:us-west-2:780705957578:stack/btv-multiplayer/*"
+    },
+    {
+      "Sid": "UploadReleaseBundle",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:AbortMultipartUpload"],
+      "Resource": "arn:aws:s3:::btv-multiplayer-releasebucket-5khoxayaqmw7/releases/*"
+    },
+    {
+      "Sid": "InstallOnExistingGameServer",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": [
+        "arn:aws:ssm:us-west-2::document/AWS-RunShellScript",
+        "arn:aws:ec2:us-west-2:780705957578:instance/i-047a731995c08404d"
+      ]
+    },
+    {
+      "Sid": "ReadCommandAndAgentStatus",
+      "Effect": "Allow",
+      "Action": ["ssm:GetCommandInvocation", "ssm:DescribeInstanceInformation"],
+      "Resource": "*",
+      "Condition": {"StringEquals": {"aws:RequestedRegion": "us-west-2"}}
+    },
+    {
+      "Sid": "VerifyDeploymentAccount",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}

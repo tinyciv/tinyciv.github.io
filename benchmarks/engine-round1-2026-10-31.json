@@ -1,0 +1,1377 @@
+{
+  "date": "2026-10-31",
+  "change": [
+    "Remove unused road connectivity traversal and flag.",
+    "Use semantic world revisions for sight, territory, terrain and water-depth caches; upload only dirty terrain chunks.",
+    "Maintain bitECS construction, library and monument groups; use indexed builder lookup.",
+    "Reuse bounded courier return-route suffixes to the selected entrance, with live access validation and A* fallback."
+  ],
+  "source": {
+    "comparison": "Frozen task-start and completed working-tree copies. Only the 26 production files listed below differ; pre-existing unrelated work is shared by both snapshots. No source or tests changed between final validation and benchmark completion.",
+    "sha256": {
+      "src/game/borders.ts": {
+        "baseline": "074380434b0313e74a279e547f32893cfce0aceabe17ff5d89d41f4a37ace152",
+        "current": "32cd024d26b4b860db85b1c12eb92c68e410bee8a028e53ce8048be959d551ab"
+      },
+      "src/game/construction-cancellation.ts": {
+        "baseline": "6f9a7a12b7a162788c1f749933ec228215763d0f1ba800d82f3d3aaa5667739d",
+        "current": "4c9f38620c462c763cc95264fe0afeba8396e50b43af8190b2a961398dc51aa6"
+      },
+      "src/game/construction.ts": {
+        "baseline": "da15a2c0aac860fa9ba58d08eca2ed5906c87f89f1c0a51b1f942b34c0947b28",
+        "current": "89da14bea418b347386e1587b90c82a5739544ebed17df721bf6b05d745c4e1e"
+      },
+      "src/game/courier-routes.ts": {
+        "baseline": null,
+        "current": "f48aebf1377548500f6fb7a8e022f419f477ffe232d2ac1dda4d998615b950a3"
+      },
+      "src/game/culture.ts": {
+        "baseline": "f754a346e103faf3151c01cba4c0784efab9139bb2c15d7c8ed723e10e94ea0f",
+        "current": "3691e1d72a7d65c414c71ea07cc003fc7f93915e30526585489af7b12e83a9f1"
+      },
+      "src/game/entity-store.ts": {
+        "baseline": "99302f167347128ac46fc784de9427a79c18245e28766408e49613576c18e597",
+        "current": "511d35fa2d912ab7289cfb53b4a021644768ca872d7eef5e73bbf94186b5dff6"
+      },
+      "src/game/farm-relocation.ts": {
+        "baseline": "9760a123e96efd380195690111d2b5d6c425960eaf746860e1aea5fb21e39dc4",
+        "current": "1d144df4232c18ecb8d14dfae66553a20bdb4c8a618b518f45422ad61b454873"
+      },
+      "src/game/farms.ts": {
+        "baseline": "2b9a5660e260bf30674f25fd0c59ddef76bb0c361ce63f2a6a98b3e19a98a7c6",
+        "current": "16605e1cac5e2dbbbf5f23b9c3df45f15682b05c7685c57ee5206f91d5fe441e"
+      },
+      "src/game/fog.ts": {
+        "baseline": "1d2975d61fa890f6574ca7a555957f8831ba39bc3ea9d4be675a6af27f3d4045",
+        "current": "bacb45ab24abbfdf62673fa4ea73e7175cfe0069a7a3fa1cc83021d3cf4d5041"
+      },
+      "src/game/palace-clearing.ts": {
+        "baseline": "8e818a84bca3a00a6812b7042e86a656bdece395f2edc0d6a2d4e5ceef91f5e3",
+        "current": "ec9bf0b7d6e07b04e9ffd9821799cd5334e78bcac99ec209cd5d9ca0c98b14bf"
+      },
+      "src/game/palace-roads.ts": {
+        "baseline": "19342b6e2ca7d104b7bb8a857a294d8d2be91d725a95284ab041280a3b9589d7",
+        "current": "354e68aa985079cd13df219ca2479959d22f9f101777955cc0dd9866b164cf8b"
+      },
+      "src/game/pixi-scene.ts": {
+        "baseline": "bbfbca7a3b375cc0a119b1a4575555c59ddef9fd47d7924d7e77d5a921636b1d",
+        "current": "f45ed14f8200a4e64d7a3a6c48ccf0ab81c4be44b55fb98c9c9dfd7283a8704e"
+      },
+      "src/game/raider-camps.ts": {
+        "baseline": "8c65338f8fb2c71faf6adfa327da47f5562738c2f7a804f9731f6c47001eafb3",
+        "current": "542ed64367f2acdbf025710ab070f184e00ddc021011f8ea6a4d58a53a0245c8"
+      },
+      "src/game/renderer.ts": {
+        "baseline": "e847f651c35649b6696079e791e5068a0601b9345a1c09d486dcdcf8d08275a0",
+        "current": "bff2e328b101d3b76bdd52aebf2afc3ca89e9b82d7be46c2ca069f09bb674f08"
+      },
+      "src/game/research.ts": {
+        "baseline": "be7308d835567b7577009e8f661b8d29e0d2cc20ef5a362103ff3dc466ac8dda",
+        "current": "5510f5c37c51ef8970761f1972ad47ad88175415b3dc7513efb9a29f881ec395"
+      },
+      "src/game/simulation.ts": {
+        "baseline": "78b89107246d3dfb764ca3b9e291407a87d597863c66b5e999916d1e8e96989b",
+        "current": "98aec8f981270e38210f0a520743137bf992ca7ef27a24d7a6fef84ecdc479ab"
+      },
+      "src/game/structures.ts": {
+        "baseline": "4e71dc4e8f6e5924aa1e0aab8bcf713188dab9a6b7b625851b69527a1d85e660",
+        "current": "3c058dc6d848e3f310fa2e051374c71c7454940d76026075b058215550f14c41"
+      },
+      "src/game/terrain.ts": {
+        "baseline": "c95844aa4fd55b0efda93a60a28670e7971ac772de56c52adafe9bc7be8fe702",
+        "current": "8089887b5271beae9f69cbb10db73ccaa34cdd0ecccde057f086a0d74db47198"
+      },
+      "src/game/trade.ts": {
+        "baseline": "bcd24e3a15b9dce729ec50a598547b064fc91794b1d56a46e5bbba1837101246",
+        "current": "566811385cdaaddec537163471b438620e36147f4cae060b8f6c30398c728c16"
+      },
+      "src/game/traffic.ts": {
+        "baseline": "c9026573ef0dabed64fa2414ad159b6a4fc34c35d57b62e621ab4a22f726bef4",
+        "current": "b55d112390ed212699992b7463b5782e29b0a400aa365689279a3cf83cfd88bc"
+      },
+      "src/game/tree-clearing.ts": {
+        "baseline": "8c54a7158ed1e9661226faf5d04c626e957582deeba62742b34bd0bae4ed2699",
+        "current": "9af44f7234abcc199a12f4303fd1a1534bc04887339191bc4c5b5ba4957392ed"
+      },
+      "src/game/types.ts": {
+        "baseline": "6625efc5dea7a937ca100f0e0e0b7da2f8ff23a00d81f8cf619e2202dc1afab3",
+        "current": "3404c421dc270c38a5607148c0e971ed78c7b6463b8081ccaffdba3b333f291c"
+      },
+      "src/game/villages.ts": {
+        "baseline": "8cd91cdc2c5c03fe850f681d2bac6b282365550d7fb113bb8dcf53cab33d2932",
+        "current": "8b384a0c7a55257c0be1ab676ad106c03d0767c117f97e7b15d3a2249b244f6a"
+      },
+      "src/game/wall-ownership.ts": {
+        "baseline": "227170d54eac52890b088422d53c2b3e9d4fd14c52a03ce4e44e80dbb4770629",
+        "current": "ecb8b022588bfd941a783a0c95f753f0dab0ff06cc35c01418dc7569d5795c34"
+      },
+      "src/game/water-depth.ts": {
+        "baseline": "40c31513a8ce548000effcc78a7bd9acc5990546d6293b38c96f3c3952e59d48",
+        "current": "bfbc4692d12f0ad992656bd20747eea673e7326c1c0a4ecabb1dd183ea12fdf8"
+      },
+      "src/game/world-revisions.ts": {
+        "baseline": null,
+        "current": "b8c7d71bc3fad0698d2b90bcdfa6cfd3d4dba573a0c4cb84481618831814d5cc"
+      }
+    },
+    "baselineManifestSha256": "4f310a93bffd73732266293bf4799bf12587a8cd97973d482e257b855de8a66f",
+    "currentManifestSha256": "dc90a0def7b4a27e131501c026fe97ca66433ca91696a7fa8bdf001b998acb01"
+  },
+  "input": {
+    "savedState": "scratch/2026-10-29-live-performance/state.json",
+    "sha256": "da208125d0b5606279a02a2e92da34dc47729143072a9b9e25a1f388f17c5383",
+    "playerPopulation": 262,
+    "units": 778,
+    "buildings": 1247,
+    "fields": 952,
+    "world": [
+      224,
+      176
+    ]
+  },
+  "controlled": {
+    "methodology": "Identical initial states; 60 warmup then 300 timed updateGame calls per round, three alternating baseline/current rounds. Settlement runs at 2x; deterministic idle/combat fixtures run at 1x. Same WASM bytes. Cloning, explicit pre-warmup GC, checksums and presentation are outside timings. Exact advancement and deterministic repetitions are required separately for each variant; final baseline/current parity is intentionally not required after changing decision timing or route selection. Optional courier counters include warmup.",
+    "node": "v25.9.0",
+    "platform": "darwin arm64",
+    "cpu": "Apple M3 Pro",
+    "roots": {
+      "baseline": "/tmp/btv-engine-round1-20261031/baseline",
+      "current": "/tmp/btv-engine-round1-20261031/current"
+    },
+    "statePath": "/Users/ckrapu/strongman/btv/scratch/2026-10-29-live-performance/state.json",
+    "stateSha256": "da208125d0b5606279a02a2e92da34dc47729143072a9b9e25a1f388f17c5383",
+    "navigationWasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf",
+    "dt": 0.016666666666666666,
+    "warmupUpdates": 60,
+    "measuredUpdates": 300,
+    "rounds": 3,
+    "explicitPreWarmupGc": true,
+    "scenes": {
+      "settlement": {
+        "speed": 2,
+        "initial": {
+          "time": 4950.513400001645,
+          "gameOver": false,
+          "units": 778,
+          "visibleUnits": 456,
+          "movingUnits": 274,
+          "engagedUnits": 7,
+          "totalUnitHp": 42402.52000000078,
+          "projectiles": 0,
+          "bloodEffects": 4,
+          "buildings": 1247,
+          "fields": 952
+        },
+        "initialGameplaySha256": "dd1459e4233c952ac17976035173938c8b5d1b20d67e9871a4f39973f028309a",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 3326.49975,
+            "meanUpdateMs": 11.087419333333337,
+            "p50UpdateMs": 8.621208000000024,
+            "p95UpdateMs": 29.868209000000206,
+            "gameplaySha256": "1dd4f4c92421b44041811687cd89c7f2be05c67114ebb083f475c915a13db6a2",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 2286,
+              "unsupported": 628,
+              "instances": 5,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 3058.8979169999993,
+            "meanUpdateMs": 10.196070429999969,
+            "p50UpdateMs": 8.348665999999866,
+            "p95UpdateMs": 21.85779199999979,
+            "gameplaySha256": "8ea1845ea01d6bf383eb098a686c39a21b54b0216b630f8ad3be0cf77bdfcf2d",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 2463,
+              "unsupported": 447,
+              "instances": 5,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 4,
+              "searches": 177,
+              "fallbacks": 0,
+              "doors": 10,
+              "nodes": 157
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 2942.841375,
+            "meanUpdateMs": 9.80928387999996,
+            "p50UpdateMs": 8.055834000000687,
+            "p95UpdateMs": 19.55304100000103,
+            "gameplaySha256": "8ea1845ea01d6bf383eb098a686c39a21b54b0216b630f8ad3be0cf77bdfcf2d",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 4926,
+              "unsupported": 894,
+              "instances": 10,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 4,
+              "searches": 177,
+              "fallbacks": 0,
+              "doors": 10,
+              "nodes": 157
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 3161.1478750000006,
+            "meanUpdateMs": 10.536961769999985,
+            "p50UpdateMs": 8.198249999999462,
+            "p95UpdateMs": 28.917958,
+            "gameplaySha256": "1dd4f4c92421b44041811687cd89c7f2be05c67114ebb083f475c915a13db6a2",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 4572,
+              "unsupported": 1256,
+              "instances": 10,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 3094.807499999999,
+            "meanUpdateMs": 10.315836769999986,
+            "p50UpdateMs": 8.043249999998807,
+            "p95UpdateMs": 27.614749999997002,
+            "gameplaySha256": "1dd4f4c92421b44041811687cd89c7f2be05c67114ebb083f475c915a13db6a2",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6858,
+              "unsupported": 1884,
+              "instances": 15,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 2902.471042000001,
+            "meanUpdateMs": 9.67474610999999,
+            "p50UpdateMs": 7.970624999998108,
+            "p95UpdateMs": 20.834999999999127,
+            "gameplaySha256": "8ea1845ea01d6bf383eb098a686c39a21b54b0216b630f8ad3be0cf77bdfcf2d",
+            "time": 4962.513400001798,
+            "gameOver": false,
+            "units": 788,
+            "visibleUnits": 463,
+            "movingUnits": 206,
+            "engagedUnits": 11,
+            "totalUnitHp": 42949.54800000049,
+            "projectiles": 0,
+            "bloodEffects": 3,
+            "buildings": 1301,
+            "fields": 956,
+            "healthLost": 1057.152,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 7389,
+              "unsupported": 1341,
+              "instances": 15,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 4,
+              "searches": 177,
+              "fallbacks": 0,
+              "doors": 10,
+              "nodes": 157
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 10.646739291111105,
+            "p50UpdateMs": 8.271124999999984,
+            "p95UpdateMs": 28.196749999999156,
+            "medianMeanUpdateMs": 10.536961769999985
+          },
+          "current": {
+            "meanUpdateMs": 9.89336680666664,
+            "p50UpdateMs": 8.1152919999995,
+            "p95UpdateMs": 20.47899999999936,
+            "medianMeanUpdateMs": 9.80928387999996
+          },
+          "medianSpeedup": 1.0741825701959427,
+          "timeReductionPercent": 6.905955491570759
+        }
+      },
+      "idle-300": {
+        "speed": 1,
+        "initial": {
+          "time": 0,
+          "gameOver": false,
+          "units": 320,
+          "visibleUnits": 300,
+          "movingUnits": 0,
+          "engagedUnits": 0,
+          "totalUnitHp": 3001000,
+          "projectiles": 0,
+          "bloodEffects": 0,
+          "buildings": 128,
+          "fields": 16
+        },
+        "initialGameplaySha256": "a432f6a7376ecec9a903f331b7a3ff66a204e4f86c505ec5a99b939d697b4c2d",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 569.2743750000009,
+            "meanUpdateMs": 1.8975024933334013,
+            "p50UpdateMs": 1.8317910000005213,
+            "p95UpdateMs": 2.3415419999982987,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6859,
+              "unsupported": 1884,
+              "instances": 16,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 569.9995830000007,
+            "meanUpdateMs": 1.8999251633332823,
+            "p50UpdateMs": 1.827583999998751,
+            "p95UpdateMs": 2.343833999999333,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 7390,
+              "unsupported": 1341,
+              "instances": 16,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 561.7968329999967,
+            "meanUpdateMs": 1.8725874733333574,
+            "p50UpdateMs": 1.797999999998865,
+            "p95UpdateMs": 2.2912499999983993,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 7391,
+              "unsupported": 1341,
+              "instances": 17,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 540.4022920000025,
+            "meanUpdateMs": 1.8012731233333397,
+            "p50UpdateMs": 1.7022909999977855,
+            "p95UpdateMs": 2.2094169999982114,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6860,
+              "unsupported": 1884,
+              "instances": 17,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 492.3092089999991,
+            "meanUpdateMs": 1.6409688799998912,
+            "p50UpdateMs": 1.6024169999982405,
+            "p95UpdateMs": 1.9466659999998228,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 6861,
+              "unsupported": 1884,
+              "instances": 18,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 501.81195899999875,
+            "meanUpdateMs": 1.6726479266665895,
+            "p50UpdateMs": 1.6335839999992459,
+            "p95UpdateMs": 1.9822500000009313,
+            "gameplaySha256": "1fb12a795276a18800ca7f25f8a2a1fd171df1dde3a5c86f9ce6c5b18a0b6044",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 0,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 7392,
+              "unsupported": 1341,
+              "instances": 18,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 1.7799148322222107,
+            "p50UpdateMs": 1.7244590000009339,
+            "p95UpdateMs": 2.2002919999977166,
+            "medianMeanUpdateMs": 1.8012731233333397
+          },
+          "current": {
+            "meanUpdateMs": 1.8150535211110763,
+            "p50UpdateMs": 1.7747079999971902,
+            "p95UpdateMs": 2.256708000000799,
+            "medianMeanUpdateMs": 1.8725874733333574
+          },
+          "medianSpeedup": 0.9619166789185701,
+          "timeReductionPercent": -3.959108092838659
+        }
+      },
+      "combat-300": {
+        "speed": 1,
+        "initial": {
+          "time": 0,
+          "gameOver": false,
+          "units": 320,
+          "visibleUnits": 300,
+          "movingUnits": 0,
+          "engagedUnits": 0,
+          "totalUnitHp": 3001000,
+          "projectiles": 0,
+          "bloodEffects": 0,
+          "buildings": 128,
+          "fields": 16
+        },
+        "initialGameplaySha256": "efa3b5a8be4bb781cd6bc66b9877e689b6b3de0f1e9bdd1f13e66f8d7ac1b2d0",
+        "runs": [
+          {
+            "round": 1,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 1320.7422079999997,
+            "meanUpdateMs": 4.402376953333236,
+            "p50UpdateMs": 4.395625000001019,
+            "p95UpdateMs": 5.045332999998209,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 8543,
+              "unsupported": 1884,
+              "instances": 20,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 1,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 1339.3482919999988,
+            "meanUpdateMs": 4.4643871900001,
+            "p50UpdateMs": 4.460250000000087,
+            "p95UpdateMs": 5.090875000001688,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 9074,
+              "unsupported": 1341,
+              "instances": 20,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "current",
+            "position": 1,
+            "elapsedMs": 1309.4421669999974,
+            "meanUpdateMs": 4.364711756666693,
+            "p50UpdateMs": 4.367500000000291,
+            "p95UpdateMs": 5.018958000000566,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 10756,
+              "unsupported": 1341,
+              "instances": 22,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          },
+          {
+            "round": 2,
+            "name": "baseline",
+            "position": 2,
+            "elapsedMs": 1310.517875000005,
+            "meanUpdateMs": 4.368302789999895,
+            "p50UpdateMs": 4.379249999998137,
+            "p95UpdateMs": 4.966333999997005,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 10225,
+              "unsupported": 1884,
+              "instances": 22,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "baseline",
+            "position": 1,
+            "elapsedMs": 1314.1898329999967,
+            "meanUpdateMs": 4.380551633333331,
+            "p50UpdateMs": 4.356332999996084,
+            "p95UpdateMs": 5.022499999999127,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 11907,
+              "unsupported": 1884,
+              "instances": 24,
+              "unavailable": 0
+            }
+          },
+          {
+            "round": 3,
+            "name": "current",
+            "position": 2,
+            "elapsedMs": 1323.4964169999948,
+            "meanUpdateMs": 4.411551419999839,
+            "p50UpdateMs": 4.402957999998762,
+            "p95UpdateMs": 4.988791999996465,
+            "gameplaySha256": "d50be8598bc4da6e55e8e1b9de2133ab847538cfd8be80b7ae3ea0a8d90dc599",
+            "time": 5.999999999999984,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 158,
+            "engagedUnits": 34,
+            "totalUnitHp": 3000328.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 8,
+            "buildings": 128,
+            "fields": 16,
+            "healthLost": 671.650000000056,
+            "navigation": {
+              "enabled": true,
+              "ready": true,
+              "searches": 12438,
+              "unsupported": 1341,
+              "instances": 24,
+              "unavailable": 0
+            },
+            "courierRoutes": {
+              "hits": 0,
+              "searches": 0,
+              "fallbacks": 0,
+              "doors": 0,
+              "nodes": 0
+            }
+          }
+        ],
+        "deterministic": {
+          "baseline": true,
+          "current": true
+        },
+        "summary": {
+          "baseline": {
+            "meanUpdateMs": 4.383743792222154,
+            "p50UpdateMs": 4.378584000001865,
+            "p95UpdateMs": 5.015709000002971,
+            "medianMeanUpdateMs": 4.380551633333331
+          },
+          "current": {
+            "meanUpdateMs": 4.413550122222211,
+            "p50UpdateMs": 4.418291999994835,
+            "p95UpdateMs": 5.045624999998836,
+            "medianMeanUpdateMs": 4.411551419999839
+          },
+          "medianSpeedup": 0.9929730419720443,
+          "timeReductionPercent": -0.7076685600648558
+        }
+      }
+    },
+    "errors": [],
+    "pass": true
+  },
+  "browser": {
+    "methodology": "Four serial 25-second headless Chrome replays in baseline/current/current/baseline order, using the same frozen source copies and saved state, 2x speed, 1440x900 at DPR1, normal game view with startup dialog closed, navigation WASM enabled and CPU profiling disabled. No tests/builds or other benchmark ran concurrently. Summary pools frame samples across the two runs per variant; FPS uses total frames/total elapsed time. Frame work measures JavaScript simulation and rendering submission, not time waiting for the next display refresh.",
+    "order": [
+      "baseline-1",
+      "current-1",
+      "current-2",
+      "baseline-2"
+    ],
+    "runs": [
+      {
+        "label": "baseline-1",
+        "url": "http://127.0.0.1:5201/",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 0,
+          "rasterCacheHits": 998,
+          "textureUploads": 0,
+          "atlasPages": 9,
+          "sprites": 1003,
+          "directImages": 1003
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25009.60000014305,
+        "gameSeconds": 49.86460000011175,
+        "units": 786,
+        "buildings": 1348,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9086,
+          "unsupported": 1862,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 13.240383198969313,
+            "p50": 10.299999952316284,
+            "p95": 33.09999990463257,
+            "p99": 58.90000009536743,
+            "max": 233.70000004768372
+          },
+          "sim": {
+            "mean": 9.973544584799972,
+            "p50": 7.299999952316284,
+            "p95": 26.799999952316284,
+            "p99": 51.799999952316284,
+            "max": 221.29999995231628
+          },
+          "draw": {
+            "mean": 3.1914517299691454,
+            "p50": 2.8999998569488525,
+            "p95": 6,
+            "p99": 7.299999952316284,
+            "max": 20.09999990463257
+          },
+          "prepare": {
+            "mean": 0.13942520251235455,
+            "p50": 0,
+            "p95": 2.299999952316284,
+            "p99": 3,
+            "max": 5.5
+          },
+          "prepareFog": {
+            "mean": 0.0775239481676477,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.40000009536743164,
+            "max": 1.2000000476837158
+          },
+          "drawMinimap": {
+            "mean": 0.17494472845916637,
+            "p50": 0.19999980926513672,
+            "p95": 0.39999985694885254,
+            "p99": 0.40000009536743164,
+            "max": 1.2000000476837158
+          }
+        },
+        "fps": 54.259164480529,
+        "over40": 36,
+        "errors": []
+      },
+      {
+        "label": "current-1",
+        "url": "http://127.0.0.1:5202/",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 0,
+          "rasterCacheHits": 999,
+          "textureUploads": 0,
+          "atlasPages": 10,
+          "sprites": 1004,
+          "directImages": 1004
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25000.700000047684,
+        "gameSeconds": 49.96440000011353,
+        "units": 774,
+        "buildings": 1356,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 10234,
+          "unsupported": 1128,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 11.95703343063344,
+            "p50": 10.200000047683716,
+            "p95": 20.90000009536743,
+            "p99": 41.40000009536743,
+            "max": 191.20000004768372
+          },
+          "sim": {
+            "mean": 8.83377437654644,
+            "p50": 7.200000047683716,
+            "p95": 17.299999952316284,
+            "p99": 36,
+            "max": 183.5
+          },
+          "draw": {
+            "mean": 3.054178272615236,
+            "p50": 2.8999998569488525,
+            "p95": 3.799999952316284,
+            "p99": 6.599999904632568,
+            "max": 21.09999990463257
+          },
+          "prepare": {
+            "mean": 0.058426183910423,
+            "p50": 0,
+            "p95": 0,
+            "p99": 3,
+            "max": 6.299999952316284
+          },
+          "prepareFog": {
+            "mean": 0.07694986089026364,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.40000009536743164,
+            "max": 1.9000000953674316
+          },
+          "drawMinimap": {
+            "mean": 0.16392757666808316,
+            "p50": 0.10000014305114746,
+            "p95": 0.39999985694885254,
+            "p99": 0.40000009536743164,
+            "max": 1.1000001430511475
+          }
+        },
+        "fps": 57.43839172492215,
+        "over40": 18,
+        "errors": []
+      },
+      {
+        "label": "current-2",
+        "url": "http://127.0.0.1:5202/",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 0,
+          "rasterCacheHits": 990,
+          "textureUploads": 0,
+          "atlasPages": 8,
+          "sprites": 995,
+          "directImages": 995
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25003.199999809265,
+        "gameSeconds": 49.96460000011302,
+        "units": 792,
+        "buildings": 1347,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9741,
+          "unsupported": 1131,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 11.795086503606354,
+            "p50": 10.100000143051147,
+            "p95": 20.90000009536743,
+            "p99": 39.19999980926514,
+            "max": 193
+          },
+          "sim": {
+            "mean": 8.68588235056524,
+            "p50": 7.200000047683716,
+            "p95": 16.799999952316284,
+            "p99": 33.5,
+            "max": 185.09999990463257
+          },
+          "draw": {
+            "mean": 3.0392387548532454,
+            "p50": 2.8000001907348633,
+            "p95": 3.700000047683716,
+            "p99": 6.799999952316284,
+            "max": 22.59999990463257
+          },
+          "prepare": {
+            "mean": 0.0553633216343124,
+            "p50": 0,
+            "p95": 0,
+            "p99": 2.9000000953674316,
+            "max": 6.1000001430511475
+          },
+          "prepareFog": {
+            "mean": 0.07432526073653806,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.40000009536743164,
+            "max": 1.5
+          },
+          "drawMinimap": {
+            "mean": 0.16221453524790833,
+            "p50": 0.10000014305114746,
+            "p95": 0.3000001907348633,
+            "p99": 0.40000009536743164,
+            "max": 1.7999999523162842
+          }
+        },
+        "fps": 57.792602547314864,
+        "over40": 13,
+        "errors": []
+      },
+      {
+        "label": "baseline-2",
+        "url": "http://127.0.0.1:5201/",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 2,
+          "rasterCacheHits": 1007,
+          "textureUploads": 1,
+          "atlasPages": 10,
+          "sprites": 1014,
+          "directImages": 1014
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25007.699999809265,
+        "gameSeconds": 49.864600000101746,
+        "units": 777,
+        "buildings": 1365,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9709,
+          "unsupported": 1867,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 14.00150375886071,
+            "p50": 10.700000047683716,
+            "p95": 34.299999952316284,
+            "p99": 62.700000047683716,
+            "max": 231.60000014305115
+          },
+          "sim": {
+            "mean": 10.655338346510005,
+            "p50": 7.6000001430511475,
+            "p95": 27.800000190734863,
+            "p99": 55.5,
+            "max": 219.29999995231628
+          },
+          "draw": {
+            "mean": 3.2677443583208814,
+            "p50": 3,
+            "p95": 6.299999952316284,
+            "p99": 7.200000047683716,
+            "max": 20
+          },
+          "prepare": {
+            "mean": 0.15639097690582277,
+            "p50": 0,
+            "p95": 2.299999952316284,
+            "p99": 3,
+            "max": 5.599999904632568
+          },
+          "prepareFog": {
+            "mean": 0.07849623834280144,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.39999985694885254,
+            "max": 1.4000000953674316
+          },
+          "drawMinimap": {
+            "mean": 0.17571428700497277,
+            "p50": 0.10000014305114746,
+            "p95": 0.39999985694885254,
+            "p99": 0.40000009536743164,
+            "max": 1.0999999046325684
+          }
+        },
+        "fps": 53.18361944561651,
+        "over40": 42,
+        "errors": []
+      }
+    ],
+    "summary": {
+      "baseline": {
+        "frames": 2687,
+        "elapsedSeconds": 50.017299999952314,
+        "fps": 53.72141239136382,
+        "metrics": {
+          "total": {
+            "mean": 13.617119464192818,
+            "p50": 10.400000095367432,
+            "p95": 33.5,
+            "p99": 60.700000047683716,
+            "max": 233.70000004768372
+          },
+          "sim": {
+            "mean": 10.311016003882347,
+            "p50": 7.400000095367432,
+            "p95": 27.09999990463257,
+            "p99": 54.200000047683716,
+            "max": 221.29999995231628
+          },
+          "draw": {
+            "mean": 3.229214735442837,
+            "p50": 2.9000000953674316,
+            "p95": 6.200000047683716,
+            "p99": 7.200000047683716,
+            "max": 20.09999990463257
+          },
+          "prepare": {
+            "mean": 0.14782285042575713,
+            "p50": 0,
+            "p95": 2.299999952316284,
+            "p99": 3,
+            "max": 5.599999904632568
+          },
+          "prepareFog": {
+            "mean": 0.07800520828411754,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.40000009536743164,
+            "max": 1.4000000953674316
+          },
+          "drawMinimap": {
+            "mean": 0.17532564132329828,
+            "p50": 0.10000014305114746,
+            "p95": 0.39999985694885254,
+            "p99": 0.40000009536743164,
+            "max": 1.2000000476837158
+          }
+        },
+        "over40": 78,
+        "errors": []
+      },
+      "current": {
+        "frames": 2881,
+        "elapsedSeconds": 50.00389999985695,
+        "fps": 57.615505990697564,
+        "metrics": {
+          "total": {
+            "mean": 11.87580701287775,
+            "p50": 10.199999809265137,
+            "p95": 20.90000009536743,
+            "p99": 41,
+            "max": 193
+          },
+          "sim": {
+            "mean": 8.759597362473954,
+            "p50": 7.200000047683716,
+            "p95": 17,
+            "p99": 34.700000047683716,
+            "max": 185.09999990463257
+          },
+          "draw": {
+            "mean": 3.0466851788401312,
+            "p50": 2.8999998569488525,
+            "p95": 3.799999952316284,
+            "p99": 6.700000047683716,
+            "max": 22.59999990463257
+          },
+          "prepare": {
+            "mean": 0.05688996871119363,
+            "p50": 0,
+            "p95": 0,
+            "p99": 3,
+            "max": 6.299999952316284
+          },
+          "prepareFog": {
+            "mean": 0.07563346129910312,
+            "p50": 0,
+            "p95": 0.2999999523162842,
+            "p99": 0.40000009536743164,
+            "max": 1.9000000953674316
+          },
+          "drawMinimap": {
+            "mean": 0.16306838025983858,
+            "p50": 0.10000014305114746,
+            "p95": 0.3000001907348633,
+            "p99": 0.40000009536743164,
+            "max": 1.7999999523162842
+          }
+        },
+        "over40": 31,
+        "errors": []
+      },
+      "frameWorkReductionPercent": 12.787671106903131,
+      "over40ReductionPercent": 60.25641025641026
+    }
+  },
+  "validation": {
+    "baselineTests": {
+      "files": 204,
+      "passed": 2080
+    },
+    "finalTests": {
+      "files": 212,
+      "passed": 2115,
+      "command": "npm test -- --maxWorkers=4"
+    },
+    "productionBuild": {
+      "command": "npm run build",
+      "passed": true
+    },
+    "pixi": {
+      "command": "GAME_URL=<current-server> CHECK_OUT=<results> node scripts/check-pixi-rendering.mjs",
+      "passed": true,
+      "checks": "Real WebGL pixels at DPR1 and DPR2: atlas caching, fog updates, resize/reset, dirty terrain upload, clean chunk reuse and offscreen catchup."
+    },
+    "fixedStepDeterministic": true,
+    "browserErrors": 0
+  },
+  "limitations": [
+    "Local Apple M3 Pro measurements; frame rate is not a hardware-independent guarantee.",
+    "Browser variable frame intervals and route choices produce different replay trajectories; final baseline/current gameplay parity is not claimed.",
+    "Fixed-step settlement covers 12 game seconds including warmup; each browser replay covers approximately 50 game seconds.",
+    "Idle/combat fixtures show no throughput improvement: median trial mean changed by +4.0% and +0.7%, respectively.",
+    "Courier suffix reuse was limited in the construction-heavy fixed-step settlement: 4 hits and 177 A* searches per run including warmup.",
+    "Large individual frame spikes remain; inspect pooled max and p99 values."
+  ],
+  "reproduce": {
+    "simulation": "node --expose-gc scripts/benchmark-decision-scheduling.mjs --baseline=<before-snapshot> --current=<after-snapshot> --state=scratch/2026-10-29-live-performance/state.json --scenarios=settlement,idle-300,combat-300 --out=<results>",
+    "browser": "node scripts/profile-live-state.mjs --url=<snapshot-server> --label=<variant-trial> --seconds=25 --state=scratch/2026-10-29-live-performance/state.json --out=<results>"
+  }
+}

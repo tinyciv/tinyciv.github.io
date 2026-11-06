@@ -1,0 +1,1492 @@
+{
+  "date": "2026-10-30",
+  "baselineCommit": "e629c56",
+  "scope": "Native Pixi composition and entity ownership simplification, excluding concurrent world-generation and food-art work.",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M3 Pro",
+    "logicalCpus": 12,
+    "browser": "156.0.8078.74",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "headless": true,
+    "url": "http://127.0.0.1:5195/",
+    "simulationUrl": "/src/game/simulation.ts",
+    "dt": 0.016666666666666666,
+    "frames": 180,
+    "warmup": 60,
+    "rafStart": 0,
+    "fixtureHp": 10000
+  },
+  "sourceLineDelta": -311,
+  "controlledScenes": [
+    {
+      "id": "idle-100",
+      "baseline": {
+        "update": {
+          "mean": 0.6900000135103862,
+          "p50": 0.6000001430511475,
+          "p95": 1,
+          "p99": 1.7999999523162842,
+          "max": 11
+        },
+        "render": {
+          "mean": 1.9816666550106472,
+          "p50": 1.9000000953674316,
+          "p95": 3.1000001430511475,
+          "p99": 3.700000047683716,
+          "max": 3.9000000953674316
+        },
+        "total": {
+          "mean": 2.6716666685210333,
+          "p50": 2.5,
+          "p95": 3.8999998569488525,
+          "p99": 4.400000095367432,
+          "max": 13.699999809265137
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 0.5044444521268209,
+          "p50": 0.5,
+          "p95": 0.7000000476837158,
+          "p99": 1,
+          "max": 1.2000000476837158
+        },
+        "render": {
+          "mean": 0.6849999917878045,
+          "p50": 0.6999998092651367,
+          "p95": 1,
+          "p99": 1.0999999046325684,
+          "max": 1.5
+        },
+        "total": {
+          "mean": 1.1894444439146254,
+          "p50": 1.1000001430511475,
+          "p95": 1.5999999046325684,
+          "p99": 1.9000000953674316,
+          "max": 2
+        }
+      },
+      "renderTimeReductionPercent": 63.15790662474849
+    },
+    {
+      "id": "idle-300",
+      "baseline": {
+        "update": {
+          "mean": 1.6633333378367954,
+          "p50": 1.5,
+          "p95": 2.200000047683716,
+          "p99": 3.8000001907348633,
+          "max": 11.5
+        },
+        "render": {
+          "mean": 2.2722222169240314,
+          "p50": 2.200000047683716,
+          "p95": 3.1000001430511475,
+          "p99": 3.799999952316284,
+          "max": 4.6000001430511475
+        },
+        "total": {
+          "mean": 3.935555554760827,
+          "p50": 3.799999952316284,
+          "p95": 5,
+          "p99": 6.300000190734863,
+          "max": 15
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 1.3966666632228428,
+          "p50": 1.3999998569488525,
+          "p95": 1.6000001430511475,
+          "p99": 1.7000000476837158,
+          "max": 2
+        },
+        "render": {
+          "mean": 1.0005555589993795,
+          "p50": 1,
+          "p95": 1.2999999523162842,
+          "p99": 1.4000000953674316,
+          "max": 1.5
+        },
+        "total": {
+          "mean": 2.397222222222222,
+          "p50": 2.3999998569488525,
+          "p95": 2.700000047683716,
+          "p99": 3.0999999046325684,
+          "max": 3.1000001430511475
+        }
+      },
+      "renderTimeReductionPercent": 54.54545553065526
+    },
+    {
+      "id": "idle-600",
+      "baseline": {
+        "update": {
+          "mean": 3.8572222219573127,
+          "p50": 3.700000047683716,
+          "p95": 4.799999952316284,
+          "p99": 6.099999904632568,
+          "max": 14.599999904632568
+        },
+        "render": {
+          "mean": 2.981111114554935,
+          "p50": 2.8999998569488525,
+          "p95": 4,
+          "p99": 4.400000095367432,
+          "max": 5.6000001430511475
+        },
+        "total": {
+          "mean": 6.838333336512248,
+          "p50": 6.599999904632568,
+          "p95": 8.200000047683716,
+          "p99": 9.599999904632568,
+          "max": 19
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 3.2777777791023253,
+          "p50": 3.200000047683716,
+          "p95": 3.9000000953674316,
+          "p99": 4.700000047683716,
+          "max": 5.599999904632568
+        },
+        "render": {
+          "mean": 1.7205555505222745,
+          "p50": 1.6999998092651367,
+          "p95": 2.0999999046325684,
+          "p99": 2.6999998092651367,
+          "max": 3.799999952316284
+        },
+        "total": {
+          "mean": 4.9983333296246,
+          "p50": 4.8999998569488525,
+          "p95": 5.700000047683716,
+          "p99": 7.300000190734863,
+          "max": 7.8999998569488525
+        }
+      },
+      "renderTimeReductionPercent": 41.3793140302517
+    },
+    {
+      "id": "combat-100",
+      "baseline": {
+        "update": {
+          "mean": 2.0633333285649615,
+          "p50": 1.8999998569488525,
+          "p95": 3.299999952316284,
+          "p99": 5.599999904632568,
+          "max": 9.900000095367432
+        },
+        "render": {
+          "mean": 2.070000002119276,
+          "p50": 2,
+          "p95": 3,
+          "p99": 6.700000047683716,
+          "max": 7.5
+        },
+        "total": {
+          "mean": 4.133333330684238,
+          "p50": 3.799999952316284,
+          "p95": 5.799999952316284,
+          "p99": 9.400000095367432,
+          "max": 13
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 1.8316666695806716,
+          "p50": 1.7000000476837158,
+          "p95": 3.0999999046325684,
+          "p99": 5.199999809265137,
+          "max": 5.200000047683716
+        },
+        "render": {
+          "mean": 0.8733333283000522,
+          "p50": 0.7999999523162842,
+          "p95": 1.5,
+          "p99": 1.9000000953674316,
+          "max": 8.5
+        },
+        "total": {
+          "mean": 2.7049999978807238,
+          "p50": 2.5,
+          "p95": 4.3999998569488525,
+          "p99": 6,
+          "max": 10.600000143051147
+        }
+      },
+      "renderTimeReductionPercent": 60.00000238418579
+    },
+    {
+      "id": "combat-300",
+      "baseline": {
+        "update": {
+          "mean": 4.46277778810925,
+          "p50": 4.200000047683716,
+          "p95": 5.5,
+          "p99": 12.899999856948853,
+          "max": 13.799999952316284
+        },
+        "render": {
+          "mean": 2.2905555460188123,
+          "p50": 2.200000047683716,
+          "p95": 3,
+          "p99": 3.6000001430511475,
+          "max": 3.6999998092651367
+        },
+        "total": {
+          "mean": 6.753333334128062,
+          "p50": 6.5,
+          "p95": 8.100000143051147,
+          "p99": 15.899999856948853,
+          "max": 17.09999990463257
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 4.1800000098016525,
+          "p50": 4.1000001430511475,
+          "p95": 5,
+          "p99": 5.5,
+          "max": 5.5
+        },
+        "render": {
+          "mean": 1.1355555401908026,
+          "p50": 1.1000001430511475,
+          "p95": 1.5,
+          "p99": 1.6000001430511475,
+          "max": 1.7000000476837158
+        },
+        "total": {
+          "mean": 5.315555549992455,
+          "p50": 5.200000047683716,
+          "p95": 6.200000047683716,
+          "p99": 6.400000095367432,
+          "max": 6.599999904632568
+        }
+      },
+      "renderTimeReductionPercent": 49.999994581396045
+    },
+    {
+      "id": "combat-600",
+      "baseline": {
+        "update": {
+          "mean": 9.490555557939741,
+          "p50": 9.200000047683716,
+          "p95": 12.200000047683716,
+          "p99": 16.399999856948853,
+          "max": 18.5
+        },
+        "render": {
+          "mean": 2.9422222137451173,
+          "p50": 2.8999998569488525,
+          "p95": 3.5999999046325684,
+          "p99": 4.3999998569488525,
+          "max": 5.200000047683716
+        },
+        "total": {
+          "mean": 12.432777771684858,
+          "p50": 12.099999904632568,
+          "p95": 15.299999952316284,
+          "p99": 20.399999856948853,
+          "max": 22.40000009536743
+        }
+      },
+      "native": {
+        "update": {
+          "mean": 9.091666654745739,
+          "p50": 9,
+          "p95": 11.299999952316284,
+          "p99": 12.399999856948853,
+          "max": 15.700000047683716
+        },
+        "render": {
+          "mean": 1.6150000121858386,
+          "p50": 1.5999999046325684,
+          "p95": 1.8999998569488525,
+          "p99": 2.1000001430511475,
+          "max": 3.5
+        },
+        "total": {
+          "mean": 10.706666666931577,
+          "p50": 10.600000143051147,
+          "p95": 12.900000095367432,
+          "p99": 14,
+          "max": 17.700000047683716
+        }
+      },
+      "renderTimeReductionPercent": 44.827586773884875
+    }
+  ],
+  "settlementSimulation": {
+    "methodology": "Fresh identical saved-state clones; 60 warmup then 300 timed updateGame calls; three rounds with alternating baseline/current order. Same WASM navigation backend. Cloning, explicit pre-warmup GC, checksums and all presentation work excluded from timings.",
+    "node": "v25.9.0",
+    "platform": "darwin arm64",
+    "cpu": "Apple M3 Pro",
+    "baselineRoot": "/tmp/btv-simplify-baseline-20261030",
+    "currentRoot": "/Users/ckrapu/strongman/btv",
+    "statePath": "/Users/ckrapu/strongman/btv/scratch/2026-10-29-live-performance/optimization/paused-live-state.json",
+    "stateSha256": "cb5adec8dbf996dc9aae14b8df48fa21c5ef260204bc7b650594a3a98602fe31",
+    "navigationWasmSha256": "add2cfa87e881252ec003aac88950b36063ae7a795315cd1dd6af04e7e620bcf",
+    "dt": 0.016666666666666666,
+    "speed": 2,
+    "warmupUpdates": 60,
+    "measuredUpdates": 300,
+    "rounds": 3,
+    "explicitPreWarmupGc": true,
+    "initial": {
+      "time": 7567.049400011164,
+      "units": 1036,
+      "buildings": 1706,
+      "fields": 1524
+    },
+    "runs": [
+      {
+        "round": 1,
+        "name": "baseline",
+        "position": 1,
+        "elapsedMs": 5282.546,
+        "meanUpdateMs": 17.608486666666668,
+        "p50UpdateMs": 15.170374999999694,
+        "p95UpdateMs": 26.45358299999998,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 3010,
+          "unsupported": 1369,
+          "instances": 6,
+          "unavailable": 0
+        }
+      },
+      {
+        "round": 1,
+        "name": "current",
+        "position": 2,
+        "elapsedMs": 5199.404708,
+        "meanUpdateMs": 17.33134902666667,
+        "p50UpdateMs": 14.650332999999591,
+        "p95UpdateMs": 24.697915999999168,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 3010,
+          "unsupported": 1369,
+          "instances": 6,
+          "unavailable": 0
+        }
+      },
+      {
+        "round": 2,
+        "name": "current",
+        "position": 1,
+        "elapsedMs": 5162.5365409999995,
+        "meanUpdateMs": 17.208455136666664,
+        "p50UpdateMs": 14.291541999999026,
+        "p95UpdateMs": 24.90662499999962,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 6020,
+          "unsupported": 2738,
+          "instances": 12,
+          "unavailable": 0
+        }
+      },
+      {
+        "round": 2,
+        "name": "baseline",
+        "position": 2,
+        "elapsedMs": 5325.990250000003,
+        "meanUpdateMs": 17.75330083333334,
+        "p50UpdateMs": 14.959584000000177,
+        "p95UpdateMs": 27.493249999999534,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 6020,
+          "unsupported": 2738,
+          "instances": 12,
+          "unavailable": 0
+        }
+      },
+      {
+        "round": 3,
+        "name": "baseline",
+        "position": 1,
+        "elapsedMs": 5287.897459000003,
+        "meanUpdateMs": 17.626324863333345,
+        "p50UpdateMs": 14.86845799999719,
+        "p95UpdateMs": 28.653833000000304,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9030,
+          "unsupported": 4107,
+          "instances": 18,
+          "unavailable": 0
+        }
+      },
+      {
+        "round": 3,
+        "name": "current",
+        "position": 2,
+        "elapsedMs": 5034.735917000005,
+        "meanUpdateMs": 16.782453056666686,
+        "p50UpdateMs": 14.180416000002879,
+        "p95UpdateMs": 24.465917000001355,
+        "gameplaySha256": "a2f314b2e448bc2a491b0fb79d81e53515e539cd977e7785a6b7274f2653e577",
+        "finalTime": 7579.049400011317,
+        "units": 1067,
+        "buildings": 1782,
+        "fields": 1524,
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9030,
+          "unsupported": 4107,
+          "instances": 18,
+          "unavailable": 0
+        }
+      }
+    ],
+    "parity": true,
+    "summary": {
+      "baseline": {
+        "roundTotalMs": [
+          5282.546,
+          5325.990250000003,
+          5287.897459000003
+        ],
+        "medianTotalMs": 5287.897459000003,
+        "medianMeanUpdateMs": 17.626324863333345
+      },
+      "current": {
+        "roundTotalMs": [
+          5199.404708,
+          5162.5365409999995,
+          5034.735917000005
+        ],
+        "medianTotalMs": 5162.5365409999995,
+        "medianMeanUpdateMs": 17.208455136666664
+      },
+      "speedup": 1.0242828146598884,
+      "timeReductionPercent": 2.3707138606978817
+    },
+    "repeatedGameplayParity": true
+  },
+  "liveReplay": {
+    "baseline": {
+      "label": "baseline",
+      "url": "http://127.0.0.1:5194/",
+      "backend": "pixi-webgl",
+      "renderStats": {
+        "sprites": 546,
+        "directImages": 424,
+        "rasterized": 1,
+        "rasterCacheHits": 120,
+        "textureUploads": 2,
+        "atlasPages": 6
+      },
+      "navigationStart": {
+        "enabled": true,
+        "ready": true,
+        "searches": 0,
+        "unsupported": 0,
+        "instances": 0,
+        "unavailable": 0
+      },
+      "elapsed": 30003.900000095367,
+      "gameSeconds": 59.76460000011957,
+      "units": 1036,
+      "buildings": 1787,
+      "fields": 1536,
+      "speed": 2,
+      "gameOver": false,
+      "viewport": [
+        1440,
+        900,
+        1
+      ],
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 14425,
+        "unsupported": 4266,
+        "instances": 6,
+        "unavailable": 0
+      },
+      "metrics": {
+        "total": {
+          "mean": 21.12898135458893,
+          "p50": 17.699999809265137,
+          "p95": 33.799999952316284,
+          "p99": 110.5,
+          "max": 266.40000009536743
+        },
+        "sim": {
+          "mean": 16.92926829104102,
+          "p50": 13.5,
+          "p95": 29.09999990463257,
+          "p99": 104.5,
+          "max": 250
+        },
+        "draw": {
+          "mean": 4.13837877270823,
+          "p50": 4,
+          "p95": 5.200000047683716,
+          "p99": 8,
+          "max": 16.40000009536743
+        },
+        "prepare": {
+          "mean": 0.035222381225104314,
+          "p50": 0,
+          "p95": 0,
+          "p99": 2.3999998569488525,
+          "max": 5.199999809265137
+        },
+        "prepareFog": {
+          "mean": 0.12252510808290676,
+          "p50": 0.09999990463256836,
+          "p95": 0.39999985694885254,
+          "p99": 0.5,
+          "max": 1.1000001430511475
+        },
+        "drawMinimap": {
+          "mean": 0.2373027305520932,
+          "p50": 0.20000004768371582,
+          "p95": 0.40000009536743164,
+          "p99": 0.5,
+          "max": 1.2000000476837158
+        }
+      },
+      "fps": 46.460626785036915,
+      "over40": 59,
+      "errors": []
+    },
+    "native": {
+      "label": "native",
+      "url": "http://127.0.0.1:5195/",
+      "backend": "pixi-webgl",
+      "renderStats": {
+        "rasterized": 4,
+        "rasterCacheHits": 869,
+        "textureUploads": 1,
+        "atlasPages": 8,
+        "sprites": 878,
+        "directImages": 878
+      },
+      "navigationStart": {
+        "enabled": true,
+        "ready": true,
+        "searches": 0,
+        "unsupported": 0,
+        "instances": 0,
+        "unavailable": 0
+      },
+      "elapsed": 30005,
+      "gameSeconds": 59.864400000131354,
+      "units": 1053,
+      "buildings": 1790,
+      "fields": 1536,
+      "speed": 2,
+      "gameOver": false,
+      "viewport": [
+        1440,
+        900,
+        1
+      ],
+      "navigation": {
+        "enabled": true,
+        "ready": true,
+        "searches": 14402,
+        "unsupported": 4335,
+        "instances": 6,
+        "unavailable": 0
+      },
+      "metrics": {
+        "total": {
+          "mean": 18.196917148300983,
+          "p50": 15.299999952316284,
+          "p95": 27,
+          "p99": 98.5,
+          "max": 243.70000004768372
+        },
+        "sim": {
+          "mean": 15.117276811109726,
+          "p50": 12.300000190734863,
+          "p95": 24.299999952316284,
+          "p99": 85.70000004768372,
+          "max": 231.20000004768372
+        },
+        "draw": {
+          "mean": 3.0073217756103534,
+          "p50": 2.8999998569488525,
+          "p95": 3.700000047683716,
+          "p99": 7,
+          "max": 14.200000047683716
+        },
+        "prepare": {
+          "mean": 0.04232498431098561,
+          "p50": 0,
+          "p95": 0,
+          "p99": 2.4000000953674316,
+          "max": 10.100000143051147
+        },
+        "prepareFog": {
+          "mean": 0.11939627387696684,
+          "p50": 0.09999990463256836,
+          "p95": 0.39999985694885254,
+          "p99": 0.40000009536743164,
+          "max": 1
+        },
+        "drawMinimap": {
+          "mean": 0.21310212295179423,
+          "p50": 0.20000004768371582,
+          "p95": 0.40000009536743164,
+          "p99": 0.5,
+          "max": 0.9000000953674316
+        }
+      },
+      "fps": 51.89135144142643,
+      "over40": 51,
+      "errors": []
+    }
+  },
+  "rendering": {
+    "baseline": "http://127.0.0.1:5194/",
+    "current": "http://127.0.0.1:5195/",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "cases": [
+      {
+        "id": "idle-600",
+        "zoom": 1,
+        "baseline": {
+          "units": 620,
+          "buildings": 128,
+          "time": 1.0000000000000013,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 2271,
+            "directImages": 746,
+            "rasterized": 0,
+            "rasterCacheHits": 324,
+            "textureUploads": 0,
+            "atlasPages": 1
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 620,
+          "buildings": 128,
+          "time": 1.0000000000000013,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 787,
+            "textureUploads": 0,
+            "atlasPages": 1,
+            "sprites": 792,
+            "directImages": 792
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.04645498971193416,
+          "changedFraction": 0.0006342592592592592
+        },
+        "pass": true
+      },
+      {
+        "id": "combat-600",
+        "zoom": 1,
+        "baseline": {
+          "units": 620,
+          "buildings": 128,
+          "time": 1.0000000000000013,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 1255,
+            "directImages": 746,
+            "rasterized": 0,
+            "rasterCacheHits": 324,
+            "textureUploads": 0,
+            "atlasPages": 1
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 620,
+          "buildings": 128,
+          "time": 1.0000000000000013,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 787,
+            "textureUploads": 0,
+            "atlasPages": 1,
+            "sprites": 792,
+            "directImages": 792
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.04645498971193416,
+          "changedFraction": 0.0006342592592592592
+        },
+        "pass": true
+      },
+      {
+        "id": "settlement-0.65",
+        "zoom": 0.65,
+        "baseline": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 4202,
+            "directImages": 3701,
+            "rasterized": 10,
+            "rasterCacheHits": 484,
+            "textureUploads": 10,
+            "atlasPages": 3
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 2840,
+            "textureUploads": 0,
+            "atlasPages": 2,
+            "sprites": 2847,
+            "directImages": 2847
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.6268847736625515,
+          "changedFraction": 0.009156635802469136
+        },
+        "pass": true
+      },
+      {
+        "id": "settlement-1.35",
+        "zoom": 1.35,
+        "baseline": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 547,
+            "directImages": 424,
+            "rasterized": 2,
+            "rasterCacheHits": 120,
+            "textureUploads": 2,
+            "atlasPages": 2
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 886,
+            "textureUploads": 0,
+            "atlasPages": 2,
+            "sprites": 891,
+            "directImages": 891
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.34797119341563787,
+          "changedFraction": 0.0053395061728395065
+        },
+        "pass": true
+      },
+      {
+        "id": "settlement-2",
+        "zoom": 2,
+        "baseline": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 283,
+            "directImages": 228,
+            "rasterized": 0,
+            "rasterCacheHits": 54,
+            "textureUploads": 0,
+            "atlasPages": 3
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 1036,
+          "buildings": 1706,
+          "time": 7567.049400011164,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 530,
+            "textureUploads": 0,
+            "atlasPages": 2,
+            "sprites": 535,
+            "directImages": 535
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.06701183127572016,
+          "changedFraction": 0.0006967592592592593
+        },
+        "pass": true
+      },
+      {
+        "id": "new-world",
+        "zoom": 1,
+        "baseline": {
+          "units": 461,
+          "buildings": 491,
+          "time": 0,
+          "backend": "pixi-webgl",
+          "stats": {
+            "sprites": 530,
+            "directImages": 469,
+            "rasterized": 0,
+            "rasterCacheHits": 60,
+            "textureUploads": 0,
+            "atlasPages": 1
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "current": {
+          "units": 461,
+          "buildings": 491,
+          "time": 0,
+          "backend": "pixi-webgl",
+          "stats": {
+            "rasterized": 0,
+            "rasterCacheHits": 210,
+            "textureUploads": 0,
+            "atlasPages": 1,
+            "sprites": 215,
+            "directImages": 215
+          },
+          "canvas": [
+            1440,
+            900
+          ]
+        },
+        "comparison": {
+          "meanChannelError": 0.1077337962962963,
+          "changedFraction": 0.00235570987654321
+        },
+        "pass": true
+      }
+    ],
+    "errors": [],
+    "pass": true
+  },
+  "validation": {
+    "nativeScene": {
+      "pass": true,
+      "results": [
+        {
+          "dpr": 1,
+          "cached": {
+            "rasterized": 0,
+            "rasterCacheHits": 2,
+            "textureUploads": 0,
+            "atlasPages": 1,
+            "sprites": 2,
+            "directImages": 2
+          },
+          "green": [
+            39,
+            169,
+            100,
+            255
+          ],
+          "orange": [
+            230,
+            160,
+            46,
+            255
+          ],
+          "shape": [
+            92,
+            181,
+            214,
+            255
+          ],
+          "red": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "blue": [
+            0,
+            0,
+            255,
+            255
+          ],
+          "resized": [
+            400,
+            280
+          ],
+          "resetGreen": [
+            39,
+            169,
+            100,
+            255
+          ],
+          "maxAtlasPages": 9,
+          "finalGreen": [
+            39,
+            169,
+            100,
+            255
+          ]
+        },
+        {
+          "dpr": 2,
+          "cached": {
+            "rasterized": 0,
+            "rasterCacheHits": 2,
+            "textureUploads": 0,
+            "atlasPages": 1,
+            "sprites": 2,
+            "directImages": 2
+          },
+          "green": [
+            39,
+            169,
+            100,
+            255
+          ],
+          "orange": [
+            230,
+            160,
+            46,
+            255
+          ],
+          "shape": [
+            92,
+            181,
+            214,
+            255
+          ],
+          "red": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "blue": [
+            0,
+            0,
+            255,
+            255
+          ],
+          "resized": [
+            800,
+            560
+          ],
+          "resetGreen": [
+            39,
+            169,
+            100,
+            255
+          ],
+          "maxAtlasPages": 9,
+          "finalGreen": [
+            39,
+            169,
+            100,
+            255
+          ]
+        }
+      ]
+    },
+    "engineParity": {
+      "baseline": "scratch/2026-10-30-native-simplification/baseline-simulation.mjs",
+      "baselineSha256": "7f09f17a38ea9d1b2cca5e1dfb9fe8f436dc3f1876e9875e308f98accb93592b",
+      "scenarios": [
+        {
+          "id": "idle-100",
+          "metadata": {
+            "id": "idle-100",
+            "mode": "idle",
+            "requestedVisibleUnits": 100,
+            "visibleUnits": 100,
+            "totalUnits": 120,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "295b2b80c03cfd48f090ab4206573840b27de463601146572f78fecf83700346",
+          "finalWorldSha256": "dee55e5e675be00d90aaeeb48123930332fb1ad15f584e8870fd89c1c6d85c4a",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 120,
+            "visibleUnits": 100,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 1001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 120,
+            "visibleUnits": 100,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 1001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          }
+        },
+        {
+          "id": "idle-300",
+          "metadata": {
+            "id": "idle-300",
+            "mode": "idle",
+            "requestedVisibleUnits": 300,
+            "visibleUnits": 300,
+            "totalUnits": 320,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "43cd60a574e043ce136105ec900eae3c6134f1e109921653dae9d3259f7dd590",
+          "finalWorldSha256": "d87115c879e4594f3780e527e418a4b0429e994ca8ec76b6465f33bd6194e9ec",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 3001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          }
+        },
+        {
+          "id": "idle-600",
+          "metadata": {
+            "id": "idle-600",
+            "mode": "idle",
+            "requestedVisibleUnits": 600,
+            "visibleUnits": 600,
+            "totalUnits": 620,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "6dda483a67ebef00032343b6d339fb7ff611d310963c16d7a83979095df62bf1",
+          "finalWorldSha256": "31d36bbbdd8d228966cc3d9e80552d0e8846aa29dfc07c82deaf03dbf7633cb6",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 1,
+            "engagedUnits": 0,
+            "totalUnitHp": 6001000,
+            "projectiles": 0,
+            "bloodEffects": 0,
+            "buildings": 128,
+            "fields": 16
+          }
+        },
+        {
+          "id": "combat-100",
+          "metadata": {
+            "id": "combat-100",
+            "mode": "combat",
+            "requestedVisibleUnits": 100,
+            "visibleUnits": 100,
+            "totalUnits": 120,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "7f15f12a61ed02dc1accc9a296f5711bfda17076dbb5e898b96abdaf98e4e10f",
+          "finalWorldSha256": "9e3d9f63719b2d39a68b197894ed4d7ff4eb5a918502fa25cd5194006f249286",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 120,
+            "visibleUnits": 100,
+            "movingUnits": 41,
+            "engagedUnits": 38,
+            "totalUnitHp": 999925.8500000002,
+            "projectiles": 1,
+            "bloodEffects": 6,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 120,
+            "visibleUnits": 100,
+            "movingUnits": 41,
+            "engagedUnits": 38,
+            "totalUnitHp": 999925.8500000002,
+            "projectiles": 1,
+            "bloodEffects": 6,
+            "buildings": 128,
+            "fields": 16
+          }
+        },
+        {
+          "id": "combat-300",
+          "metadata": {
+            "id": "combat-300",
+            "mode": "combat",
+            "requestedVisibleUnits": 300,
+            "visibleUnits": 300,
+            "totalUnits": 320,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "59e2b05c7ad8b75a7339dbc31821644500420c17b7080226a3fcb2197df71fdb",
+          "finalWorldSha256": "4c3519efa6ea14521fbeed4672dc7cbeaf3e18775b30bbfb5a3e6bf7c37e9f8a",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 109,
+            "engagedUnits": 49,
+            "totalUnitHp": 2999754.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 17,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 320,
+            "visibleUnits": 300,
+            "movingUnits": 109,
+            "engagedUnits": 49,
+            "totalUnitHp": 2999754.3500000006,
+            "projectiles": 0,
+            "bloodEffects": 17,
+            "buildings": 128,
+            "fields": 16
+          }
+        },
+        {
+          "id": "combat-600",
+          "metadata": {
+            "id": "combat-600",
+            "mode": "combat",
+            "requestedVisibleUnits": 600,
+            "visibleUnits": 600,
+            "totalUnits": 620,
+            "buildings": 128,
+            "fields": 16,
+            "map": [
+              112,
+              88
+            ],
+            "unitHp": 10000,
+            "suggestedMaximumSimSeconds": 15,
+            "notes": [
+              "112\u00d788 map matches the default generated-world dimensions; terrain is deterministic open grassland around the camera.",
+              "Both sides use 10,000 maximum/current HP solely to keep unit population stable; normal attack, defense, speed, range, AI and cooldown processing remain active.",
+              "Idle and combat counts include two leaders. Hidden builders/couriers are reported separately in totalUnits.",
+              "Palaces, houses, roads, walls, towers, and four real 3\u00d73 farms exercise settlement rendering and bookkeeping.",
+              "No gold, distant scheduled raids, and runs below 15 simulated seconds prevent automatic defense expansion and 30-second economy ticks.",
+              "Use the same viewport, deviceScaleFactor, camera, zoom, warmup, simulation dt and measured frame count before/after."
+            ]
+          },
+          "dynamicChecks": 301,
+          "worldChecks": 11,
+          "lastFrame": 300,
+          "pass": true,
+          "finalStateSha256": "9bef0df1ec39d80a91ad29a45ec84a7c0ccc687506e8676249330211d24cea51",
+          "finalWorldSha256": "8ee0195c6f3fcd02d1223851448e1f233ccc1b3e26da67550e7561ae259e75f0",
+          "baselineFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 260,
+            "engagedUnits": 39,
+            "totalUnitHp": 6000009.499999996,
+            "projectiles": 0,
+            "bloodEffects": 5,
+            "buildings": 128,
+            "fields": 16
+          },
+          "currentFinal": {
+            "time": 4.999999999999988,
+            "gameOver": false,
+            "units": 620,
+            "visibleUnits": 600,
+            "movingUnits": 260,
+            "engagedUnits": 39,
+            "totalUnitHp": 6000009.499999996,
+            "projectiles": 0,
+            "bloodEffects": 5,
+            "buildings": 128,
+            "fields": 16
+          }
+        }
+      ],
+      "frames": 300,
+      "dt": 0.016666666666666666,
+      "checks": {
+        "initialCaches": "One prepared fixture is structured-cloned twice, so both engine modules start with identical state and empty per-state WeakMap caches.",
+        "dynamicState": "Every frame: all state except world, including unit order/positions/HP/morale/targets/paths, projectiles, blood, fog exploration/memories, buildings, fields, economy and RNG.",
+        "world": "Initial, every30 frames and final: complete world/tiles, including topology, revision and farm assignment.",
+        "numericComparison": "Exact; no rounding or tolerance."
+      },
+      "pass": true
+    },
+    "settlementParity": {
+      "baselineRoot": "/tmp/btv-simplify-baseline-20261030",
+      "optimizedRoot": "/Users/ckrapu/strongman/btv",
+      "statePath": "/Users/ckrapu/strongman/btv/scratch/2026-10-29-live-performance/optimization/paused-live-state.json",
+      "frames": 300,
+      "dt": 0.1,
+      "pass": true,
+      "checked": 301,
+      "finalSha256": "ff8d580b90fd0e5d2dd4c0f12cf8e436d442ec89af990d71c2b49db9ede27226",
+      "finalTime": 7567.049400011164
+    },
+    "unitTests": {
+      "files": 161,
+      "tests": 1680,
+      "passed": true,
+      "command": "vitest run --maxWorkers=2 --testTimeout=60000",
+      "scope": "Isolated refactor candidate with committed world generation; concurrent world/art work excluded."
+    },
+    "builds": [
+      "Isolated candidate: passed",
+      "Working tree with concurrent world/art changes: passed"
+    ],
+    "browserChecks": {
+      "nativeSceneLifecycle": "passed; includes disposal while initializing, repeated disposal and resize after disposal",
+      "fog": "passed; concealment, exploration, occlusion and both tree depth orders",
+      "monumentAndTreasureArt": "passed",
+      "territoryAndTreasure": "passed",
+      "fordArt": "passed; six exact atlas compositions, animation and bridge layering",
+      "legacyHudSmoke": "Pre-existing assertion at scripts/browser-check.mjs:35 expects the build panel to be hidden; fails identically on baseline e629c56 and candidate."
+    }
+  },
+  "caveats": [
+    "Rendering measurements time CPU work and command submission, not GPU completion.",
+    "30-second real-time replays use variable frame intervals and diverge in gameplay trajectory; controlled fixed-step simulation runs retain exact gameplay digests.",
+    "One browser run per side; no confidence intervals or universal speedup claim.",
+    "Atlas art uses small offscreen Canvas bakes; terrain and minimap still use Canvas."
+  ]
+}

@@ -1,0 +1,478 @@
+{
+  "date": "2026-11-04",
+  "scope": "Farm bookkeeping, fog memory allocations, idle hunting scans, civilian shelter lookup, formation construction, and friendly yield occupancy. No update cadence or balance changes.",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M3 Pro",
+    "logicalCpus": 12,
+    "browser": "156.0.8078.81",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "headless": true,
+    "url": "http://127.0.0.1:5231/",
+    "simulationUrl": "/src/game/simulation.ts",
+    "dt": 0.016666666666666666,
+    "frames": 240,
+    "warmup": 60,
+    "rafStart": 0,
+    "fixtureHp": 10000
+  },
+  "method": {
+    "baseline": "Fresh workspace snapshot before this optimization round; includes preexisting uncommitted changes.",
+    "economy": "Two alternating before/after rounds per population, deterministic 96x96 economy with two farm tiles per resident and real housing, harvesting, traffic and fog. Warm 120 game seconds at dt=0.1; measure 60 game seconds at dt=1/30 (1800 updates). Population held fixed; no enemies, wildlife, scheduled raids or expansion. Simulation only.",
+    "browser": "Isolated headless Chrome; six deterministic idle/combat scenarios at 100/300/600 visible units. Identical UI and assets, only nine optimized engine files differ. Warm 60 updates, measure 240 updates at dt=1/60; also capture 240 native RAF frames after 60 warmup frames for the 600-unit scenarios. Existing live game left untouched.",
+    "limitations": [
+      "Synthetic representative scenes, not every possible live-game state.",
+      "Browser timings are one before/after pair and show host scheduling variability, especially idle p95.",
+      "Observed RAF cadence was about 30 FPS before and after; CPU savings are not a measured delivered-FPS increase.",
+      "Economy timing precedes the final mid-frame newcomer occupancy edge-case refinement; that refinement does not affect civilian-only movement in these fixtures. Final browser timing and gameplay parity include it."
+    ]
+  },
+  "economy": [
+    {
+      "population": 150,
+      "beforeMeanMsPerUpdate": 1.3591574533333395,
+      "afterMeanMsPerUpdate": 0.9579352433333282,
+      "cpuReductionPercent": 29.51992125827747,
+      "throughputRatio": 1.4188406395863231
+    },
+    {
+      "population": 300,
+      "beforeMeanMsPerUpdate": 3.2149264627778056,
+      "afterMeanMsPerUpdate": 1.9849190113888753,
+      "cpuReductionPercent": 38.25927173233574,
+      "throughputRatio": 1.6196763919996298
+    },
+    {
+      "population": 600,
+      "beforeMeanMsPerUpdate": 8.515710945277714,
+      "afterMeanMsPerUpdate": 5.053552017777733,
+      "cpuReductionPercent": 40.65613487526699,
+      "throughputRatio": 1.6850941506727468
+    }
+  ],
+  "browser": [
+    {
+      "scenario": "idle-100",
+      "beforeMs": {
+        "update": {
+          "mean": 0.8124999860922496,
+          "p50": 0.7999997138977051,
+          "p95": 1.200000286102295,
+          "p99": 1.6999998092651367,
+          "max": 2
+        },
+        "render": {
+          "mean": 1.336250013113022,
+          "p50": 1.299999713897705,
+          "p95": 1.799999713897705,
+          "p99": 2.3000001907348633,
+          "max": 4.200000286102295
+        },
+        "total": {
+          "mean": 2.1487499992052714,
+          "p50": 2.0999999046325684,
+          "p95": 2.8000001907348633,
+          "p99": 3.5,
+          "max": 4.900000095367432
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 0.4608333309491475,
+          "p50": 0.40000009536743164,
+          "p95": 0.7999997138977051,
+          "p99": 2.799999713897705,
+          "max": 4
+        },
+        "render": {
+          "mean": 1.295416671037674,
+          "p50": 1.200000286102295,
+          "p95": 1.5999999046325684,
+          "p99": 3.9000000953674316,
+          "max": 3.9000000953674316
+        },
+        "total": {
+          "mean": 1.7562500019868215,
+          "p50": 1.5999999046325684,
+          "p95": 3.6999998092651367,
+          "p99": 4.300000190734863,
+          "max": 5.700000286102295
+        }
+      },
+      "updateCpuReductionPercent": 43.28205060463528,
+      "totalFrameCpuReductionPercent": 18.266433850546527
+    },
+    {
+      "scenario": "idle-300",
+      "beforeMs": {
+        "update": {
+          "mean": 2.321249983708064,
+          "p50": 2.299999713897705,
+          "p95": 2.9000000953674316,
+          "p99": 3.200000286102295,
+          "max": 3.3000001907348633
+        },
+        "render": {
+          "mean": 2.136250015099843,
+          "p50": 2.0999999046325684,
+          "p95": 2.6000003814697266,
+          "p99": 2.9000000953674316,
+          "max": 7
+        },
+        "total": {
+          "mean": 4.457499998807907,
+          "p50": 4.400000095367432,
+          "p95": 5.200000286102295,
+          "p99": 5.700000286102295,
+          "max": 9.399999618530273
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 1.065416661898295,
+          "p50": 0.9000000953674316,
+          "p95": 1.5,
+          "p99": 5.199999809265137,
+          "max": 5.400000095367432
+        },
+        "render": {
+          "mean": 2.39166667064031,
+          "p50": 2.0999999046325684,
+          "p95": 5.799999713897705,
+          "p99": 6.5,
+          "max": 7.099999904632568
+        },
+        "total": {
+          "mean": 3.4570833325386046,
+          "p50": 3,
+          "p95": 7.099999904632568,
+          "p99": 7.600000381469727,
+          "max": 8
+        }
+      },
+      "updateCpuReductionPercent": 54.10159744206642,
+      "totalFrameCpuReductionPercent": 22.443447370428473
+    },
+    {
+      "scenario": "idle-600",
+      "beforeMs": {
+        "update": {
+          "mean": 4.812500009934108,
+          "p50": 4.699999809265137,
+          "p95": 5.700000286102295,
+          "p99": 6.100000381469727,
+          "max": 6.5
+        },
+        "render": {
+          "mean": 3.368333327770233,
+          "p50": 3.3000001907348633,
+          "p95": 4.200000286102295,
+          "p99": 4.900000095367432,
+          "max": 6
+        },
+        "total": {
+          "mean": 8.18083333770434,
+          "p50": 8.099999904632568,
+          "p95": 9.599999904632568,
+          "p99": 10.299999713897705,
+          "max": 11.400000095367432
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 2.1300000071525576,
+          "p50": 1.700000286102295,
+          "p95": 6.400000095367432,
+          "p99": 7.5,
+          "max": 10.599999904632568
+        },
+        "render": {
+          "mean": 3.816666666666667,
+          "p50": 3.4000000953674316,
+          "p95": 7.900000095367432,
+          "p99": 9.400000095367432,
+          "max": 10.099999904632568
+        },
+        "total": {
+          "mean": 5.946666673819224,
+          "p50": 5.200000286102295,
+          "p95": 10.5,
+          "p99": 12.099999904632568,
+          "max": 14.700000286102295
+        }
+      },
+      "updateCpuReductionPercent": 55.74025968299746,
+      "totalFrameCpuReductionPercent": 27.309768719870487
+    },
+    {
+      "scenario": "combat-100",
+      "beforeMs": {
+        "update": {
+          "mean": 1.8679166674613952,
+          "p50": 1.799999713897705,
+          "p95": 2.8000001907348633,
+          "p99": 3.1000003814697266,
+          "max": 3.5
+        },
+        "render": {
+          "mean": 1.4658333341280618,
+          "p50": 1.4000000953674316,
+          "p95": 2,
+          "p99": 2.6999998092651367,
+          "max": 3.1999998092651367
+        },
+        "total": {
+          "mean": 3.3337500015894572,
+          "p50": 3.200000286102295,
+          "p95": 4.5,
+          "p99": 5.099999904632568,
+          "max": 5.5
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 1.5741666495800017,
+          "p50": 1.5,
+          "p95": 2.5,
+          "p99": 3.200000286102295,
+          "max": 3.5999999046325684
+        },
+        "render": {
+          "mean": 1.4800000170866647,
+          "p50": 1.4000000953674316,
+          "p95": 2.1999998092651367,
+          "p99": 3.1999998092651367,
+          "max": 3.3999996185302734
+        },
+        "total": {
+          "mean": 3.0541666666666667,
+          "p50": 2.9000000953674316,
+          "p95": 4.599999904632568,
+          "p99": 5,
+          "max": 5.800000190734863
+        }
+      },
+      "updateCpuReductionPercent": 15.726077238799762,
+      "totalFrameCpuReductionPercent": 8.386451737217593
+    },
+    {
+      "scenario": "combat-300",
+      "beforeMs": {
+        "update": {
+          "mean": 5.845833327372869,
+          "p50": 5.800000190734863,
+          "p95": 7,
+          "p99": 7.5,
+          "max": 7.900000095367432
+        },
+        "render": {
+          "mean": 1.789583335320155,
+          "p50": 1.700000286102295,
+          "p95": 2.3000001907348633,
+          "p99": 2.8000001907348633,
+          "max": 7.599999904632568
+        },
+        "total": {
+          "mean": 7.635416662693023,
+          "p50": 7.599999904632568,
+          "p95": 9.299999713897705,
+          "p99": 9.900000095367432,
+          "max": 13.799999713897705
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 3.359583326180776,
+          "p50": 3.200000286102295,
+          "p95": 4.700000286102295,
+          "p99": 5.400000095367432,
+          "max": 7
+        },
+        "render": {
+          "mean": 1.7433333456516267,
+          "p50": 1.6999998092651367,
+          "p95": 2.5,
+          "p99": 3.3000001907348633,
+          "max": 10.399999618530273
+        },
+        "total": {
+          "mean": 5.102916671832403,
+          "p50": 5,
+          "p95": 6.599999904632568,
+          "p99": 8.100000381469727,
+          "max": 13.199999809265137
+        }
+      },
+      "updateCpuReductionPercent": 42.53029229469016,
+      "totalFrameCpuReductionPercent": 33.16780344463093
+    },
+    {
+      "scenario": "combat-600",
+      "beforeMs": {
+        "update": {
+          "mean": 14.879583332935969,
+          "p50": 14.799999713897705,
+          "p95": 18.09999990463257,
+          "p99": 19.699999809265137,
+          "max": 20.5
+        },
+        "render": {
+          "mean": 2.507083342472712,
+          "p50": 2.4000000953674316,
+          "p95": 3.0999999046325684,
+          "p99": 3.4000000953674316,
+          "max": 6.100000381469727
+        },
+        "total": {
+          "mean": 17.38666667540868,
+          "p50": 17.199999809265137,
+          "p95": 20.800000190734863,
+          "p99": 22.700000286102295,
+          "max": 23.100000381469727
+        }
+      },
+      "afterMs": {
+        "update": {
+          "mean": 7.266666656732559,
+          "p50": 7.099999904632568,
+          "p95": 10.400000095367432,
+          "p99": 12.5,
+          "max": 13.300000190734863
+        },
+        "render": {
+          "mean": 2.461250013113022,
+          "p50": 2.4000000953674316,
+          "p95": 3,
+          "p99": 3.9000000953674316,
+          "max": 5.5
+        },
+        "total": {
+          "mean": 9.72791666984558,
+          "p50": 9.5,
+          "p95": 13,
+          "p99": 14.800000190734863,
+          "max": 15.800000190734863
+        }
+      },
+      "updateCpuReductionPercent": 51.163507108107076,
+      "totalFrameCpuReductionPercent": 44.049559058928
+    }
+  ],
+  "raf": [
+    {
+      "scenario": "idle-600",
+      "beforeWorkMs": {
+        "mean": 8.660833336909612,
+        "p50": 8.599999904632568,
+        "p95": 9.699999809265137,
+        "p99": 10.399999618530273,
+        "max": 11.300000190734863
+      },
+      "afterWorkMs": {
+        "mean": 5.232083346446355,
+        "p50": 5.199999809265137,
+        "p95": 6,
+        "p99": 6.5,
+        "max": 11.5
+      },
+      "beforeObservedFps": 30.001500075003754,
+      "afterObservedFps": 30.001125042189077
+    },
+    {
+      "scenario": "combat-600",
+      "beforeWorkMs": {
+        "mean": 15.474583331743876,
+        "p50": 16.200000286102295,
+        "p95": 20.699999809265137,
+        "p99": 22.59999990463257,
+        "max": 31.59999990463257
+      },
+      "afterWorkMs": {
+        "mean": 9.868750005960464,
+        "p50": 9.699999809265137,
+        "p95": 11.800000190734863,
+        "p99": 13.400000095367432,
+        "max": 21.100000381469727
+      },
+      "beforeObservedFps": 30.000750018750484,
+      "afterObservedFps": 30.001500075003754
+    }
+  ],
+  "validation": {
+    "productionBuild": "npm run build passed, including WASM, TypeScript and Vite.",
+    "fullSuite": {
+      "passedFiles": 309,
+      "passedTests": 3390,
+      "failedTests": 1,
+      "failure": "One CROWN world-civilization case exceeded 15 seconds. Runner also reported an onTaskUpdate RPC timeout; full suite did not exit cleanly."
+    },
+    "reruns": "World-civilizations and six movement/entity/hunting files passed: 63 tests. Final movement/entity/hunting run passed 55 tests after occupancy overlay refinement. Added sensing-isolation regression passed (3 movement-bookkeeping tests). The 100-world generation sweep passed separately without a runner error.",
+    "economyGameplayParity": true,
+    "unitGameplayParity": "Six idle/combat scenarios matched canonical gameplay at initial state and 90/180/270/360 updates at dt=1/30. Excludes presentation fog only.",
+    "formationParity": "4752 formation states matched exactly across group sizes, modes and trails.",
+    "browserPassed": true,
+    "browserErrors": []
+  },
+  "sources": {
+    "src/game/civilian-panic.ts": {
+      "beforeSha256": "93f62ad9003bd1cdb31e6ec48c360f7f4920d73fbf7d11077d3afbec7ae3eb93",
+      "afterSha256": "9ee9907e156f3ce292538499ee7a9321d9d7c5410cf442cc712857121e0ec41d"
+    },
+    "src/game/entity-store.ts": {
+      "beforeSha256": "7c9ad73ca9859d9aee823afba797013938b5cf725e663e9b27655983f0e5af83",
+      "afterSha256": "4703475766f0a2a7ae7d46a3550229ee51e6dafbf93e1c108c561d7b07d6e901"
+    },
+    "src/game/farms.ts": {
+      "beforeSha256": "384f5d90430c9fc671286dac376c154e80b7100ecc6eec845fbeeb4d9486bd75",
+      "afterSha256": "8f20c518ae81303c6564bff5fcb89cd42376a9049d668ff89e79902eac84ff1f"
+    },
+    "src/game/fog.ts": {
+      "beforeSha256": "5febd5626372f5d95e73692b794e79549e21d6abad9fef35fb1bc6c924af3bdd",
+      "afterSha256": "0d11a6a892a8666ad809c7281f917fc0424fba27ba1d8df28cd875aaaeabc57c"
+    },
+    "src/game/formation.ts": {
+      "beforeSha256": "2b8e29919cc3e66b89d0e8706409ab8f99503023f4edfff6446b86781bfdf1c2",
+      "afterSha256": "4cbc94c69d2f4dc8e5aeefa3e388d4ddf12a93b4b40fe834e4213658ec1bffef"
+    },
+    "src/game/hunting.ts": {
+      "beforeSha256": "0d694955ccaaae0da20ff20ecdb7312689775e36e48e76fde7823dc926ac6cbb",
+      "afterSha256": "6e66a6e4dd980ea9972e778d654926c3ea750d3673f2ca5c777cddbc906ba16a"
+    },
+    "src/game/simulation.ts": {
+      "beforeSha256": "c0b9454e9dae81ad3c97611fad4733acf79855312ff41edf876be44155eca828",
+      "afterSha256": "943f7780ef7340391c6408f7b00fc47ec56915be0f4800b38d4243be1ca4e4cb"
+    },
+    "src/game/spatial.ts": {
+      "beforeSha256": "9288b11681e6a71f1cd64c6ce87bc4fbe4d2ed1ece364e1f213f76a332be784d",
+      "afterSha256": "77c278d3fc8bb47d0e3ab3d6ac6a8030962b15b2e1d0e3a1668d14e125814943"
+    },
+    "src/game/wheat-fields.ts": {
+      "beforeSha256": "d7120704961523de8df08f2e71f5f266a1eb31b909cf78deeaee296a5bdf5846",
+      "afterSha256": "dd448ec778541ac50b0ca321471158b18fe7ec27bb99a269009164d4688cdfad"
+    }
+  },
+  "artifacts": {
+    "directory": "scratch/2026-11-04-performance-optimization",
+    "economy": "economy-comparison.json",
+    "economyHarness": "compare-economy.mjs",
+    "browserBefore": "browser/before.json",
+    "browserAfter": "browser/after.json",
+    "browserSourceManifest": "browser-source-manifest.json",
+    "unitParity": "unit-parity.json",
+    "unitParityHarness": "unit-parity.mjs",
+    "formationParity": "formation/parity.json",
+    "logs": [
+      "tests.log",
+      "recheck.log",
+      "final-movement-tests.log",
+      "occupancy-regression.log",
+      "world-sweep-recheck.log",
+      "final-build.log"
+    ]
+  }
+}

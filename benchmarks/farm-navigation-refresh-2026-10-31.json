@@ -1,0 +1,494 @@
+{
+  "date": "2026-10-31",
+  "change": "Batch routine farming travel-map invalidations every 20 edits, with a 20/3 game-second maximum delay. Refresh critical access changes immediately and key courier homes to the published map generation.",
+  "source": {
+    "comparison": "Frozen copies of the task-start working tree; the only production source differences between snapshots are the two files below. Other concurrent working-tree edits were excluded from the comparison.",
+    "sha256": {
+      "baseline": {
+        "src/game/farm-travel.ts": "e73e4cf426dc95c42be463d486bd407a42aa6a3f2462f65698cafdcda578b84e",
+        "src/game/farms.ts": "3167e1b1c4aab726f8ccbdffe88b471f371e6c3ac1e9cd01cb92cff602dc95c8"
+      },
+      "current": {
+        "src/game/farm-travel.ts": "944d474417fcd3e8436f60075be76704ca7ef908a1d878bfe61fc369e6df4094",
+        "src/game/farms.ts": "2b9a5660e260bf30674f25fd0c59ddef76bb0c361ce63f2a6a98b3e19a98a7c6"
+      }
+    }
+  },
+  "controlled": {
+    "methodology": "Three alternating baseline/current rounds with fresh identical clones. Twenty warm summary calls prime caches. Then forty distant ordinary roads are added one per 1/60 game second, incrementing the world revision each time. Only citySummaries calls are timed; mutation, cloning, initial maps and checks are excluded. Benchmark-only esbuild instrumentation counts actual travelTimeMapFrom executions. No rendering, movement, save I/O, or full-game FPS is measured.",
+    "bundles": {
+      "baseline": "b27be28cbe1db32f4b61343aac695b8255e667d78b8f719e869021cfa21c3d82",
+      "current": "da3212261ddbc948c7c7ddfb7dd1a449d4aa0d27bae566783bdcf274f2854068"
+    },
+    "node": "v25.9.0",
+    "cpu": "Apple M3 Pro",
+    "explicitGc": true,
+    "rounds": 3,
+    "warmupCalls": 20,
+    "roadEdits": 40,
+    "dt": 0.016666666666666666,
+    "initial": {
+      "population": 150,
+      "palaces": 11,
+      "factions": 11,
+      "farms": 94,
+      "fields": 376,
+      "buildings": 130,
+      "world": [
+        194,
+        153
+      ]
+    },
+    "runs": [
+      {
+        "round": 1,
+        "name": "baseline",
+        "position": 1,
+        "warmupMaps": 11,
+        "mapRebuilds": 440,
+        "meanMs": 45.320479099999986,
+        "p50Ms": 44.85970899999995,
+        "p95Ms": 50.12670800000001,
+        "p99Ms": 58.69570900000008,
+        "maxMs": 58.69570900000008,
+        "rebuildEdits": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40
+        ]
+      },
+      {
+        "round": 1,
+        "name": "current",
+        "position": 2,
+        "warmupMaps": 11,
+        "mapRebuilds": 22,
+        "meanMs": 2.533309250000002,
+        "p50Ms": 0.1661669999998594,
+        "p95Ms": 45.72791600000028,
+        "p99Ms": 48.98462500000005,
+        "maxMs": 48.98462500000005,
+        "rebuildEdits": [
+          20,
+          40
+        ]
+      },
+      {
+        "round": 2,
+        "name": "current",
+        "position": 1,
+        "warmupMaps": 11,
+        "mapRebuilds": 22,
+        "meanMs": 2.39921877500002,
+        "p50Ms": 0.11920800000007148,
+        "p95Ms": 45.414000000000215,
+        "p99Ms": 46.05591600000025,
+        "maxMs": 46.05591600000025,
+        "rebuildEdits": [
+          20,
+          40
+        ]
+      },
+      {
+        "round": 2,
+        "name": "baseline",
+        "position": 2,
+        "warmupMaps": 11,
+        "mapRebuilds": 440,
+        "meanMs": 45.11496140000004,
+        "p50Ms": 44.88658399999986,
+        "p95Ms": 48.59087500000078,
+        "p99Ms": 54.53712499999983,
+        "maxMs": 54.53712499999983,
+        "rebuildEdits": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40
+        ]
+      },
+      {
+        "round": 3,
+        "name": "baseline",
+        "position": 1,
+        "warmupMaps": 11,
+        "mapRebuilds": 440,
+        "meanMs": 45.15730205000004,
+        "p50Ms": 44.76774999999998,
+        "p95Ms": 48.58208399999967,
+        "p99Ms": 55.632958000000144,
+        "maxMs": 55.632958000000144,
+        "rebuildEdits": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40
+        ]
+      },
+      {
+        "round": 3,
+        "name": "current",
+        "position": 2,
+        "warmupMaps": 11,
+        "mapRebuilds": 22,
+        "meanMs": 2.363310450000063,
+        "p50Ms": 0.10950000000048021,
+        "p95Ms": 44.466042000000016,
+        "p99Ms": 45.92254199999934,
+        "maxMs": 45.92254199999934,
+        "rebuildEdits": [
+          20,
+          40
+        ]
+      }
+    ],
+    "errors": [],
+    "pass": true,
+    "summary": {
+      "baseline": {
+        "meanMs": 45.19758085000002,
+        "p50Ms": 44.84450000000015,
+        "p95Ms": 48.58208399999967,
+        "p99Ms": 55.632958000000144,
+        "maxMs": 58.69570900000008,
+        "totalMapRebuilds": 1320
+      },
+      "current": {
+        "meanMs": 2.4319461583333615,
+        "p50Ms": 0.1169169999998303,
+        "p95Ms": 44.466042000000016,
+        "p99Ms": 46.05591600000025,
+        "maxMs": 48.98462500000005,
+        "totalMapRebuilds": 66
+      },
+      "mapRebuildReductionFactor": 20,
+      "meanCallSpeedup": 18.58494304864644
+    },
+    "limitations": [
+      "This isolates repeated farm-planning invalidation, not overall simulation or FPS.",
+      "Coalescing reduces rebuild frequency; the frames which rebuild eleven maps can still be slow. Inspect p95 and maximum as well as mean."
+    ]
+  },
+  "browser": {
+    "methodology": "One sequential 25-second baseline/current headless Chrome replay pair, identical saved initial state, 2x game speed, 1440x900 at DPR 1, Pixi WebGL, navigation Wasm enabled, startup dialog closed, CPU profiler disabled. No concurrent tests or benchmarks. Values in metrics are milliseconds of frame work, not wall-clock frame intervals.",
+    "initialState": "scratch/2026-10-29-live-performance/state.json",
+    "initialStateSha256": "da208125d0b5606279a02a2e92da34dc47729143072a9b9e25a1f388f17c5383",
+    "runs": {
+      "baseline": {
+        "label": "baseline-settlement",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 0,
+          "rasterCacheHits": 1000,
+          "textureUploads": 4,
+          "atlasPages": 10,
+          "sprites": 1005,
+          "directImages": 1005
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25022.60000014305,
+        "gameSeconds": 49.86480000010397,
+        "units": 781,
+        "buildings": 1353,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9099,
+          "unsupported": 1863,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 17.97315833812846,
+            "p50": 12.5,
+            "p95": 60,
+            "p99": 84.20000004768372,
+            "max": 313.30000019073486
+          },
+          "sim": {
+            "mean": 13.509991531145966,
+            "p50": 8.600000143051147,
+            "p95": 51.89999985694885,
+            "p99": 75.69999980926514,
+            "max": 296.7000000476837
+          },
+          "draw": {
+            "mean": 4.355715493041514,
+            "p50": 3.700000047683716,
+            "p95": 7.700000047683716,
+            "p99": 21.5,
+            "max": 28.09999990463257
+          },
+          "prepare": {
+            "mean": 0.18831498737965066,
+            "p50": 0,
+            "p95": 2.5999999046325684,
+            "p99": 3.5,
+            "max": 8.700000047683716
+          },
+          "prepareFog": {
+            "mean": 0.09974598137631849,
+            "p50": 0.09999990463256836,
+            "p95": 0.3000001907348633,
+            "p99": 0.5,
+            "max": 1.5
+          },
+          "drawMinimap": {
+            "mean": 0.21955969149939192,
+            "p50": 0.20000004768371582,
+            "p95": 0.40000009536743164,
+            "p99": 0.5,
+            "max": 1.6000001430511475
+          }
+        },
+        "fps": 47.197333610146366,
+        "over40": 85,
+        "errors": [],
+        "frameCount": 1181
+      },
+      "current": {
+        "label": "current-settlement",
+        "backend": "pixi-webgl",
+        "renderStats": {
+          "rasterized": 0,
+          "rasterCacheHits": 1015,
+          "textureUploads": 0,
+          "atlasPages": 10,
+          "sprites": 1020,
+          "directImages": 1020
+        },
+        "navigationStart": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "elapsed": 25013.199999809265,
+        "gameSeconds": 49.897800000107964,
+        "units": 785,
+        "buildings": 1359,
+        "fields": 1008,
+        "speed": 2,
+        "gameOver": false,
+        "viewport": [
+          1440,
+          900,
+          1
+        ],
+        "navigation": {
+          "enabled": true,
+          "ready": true,
+          "searches": 9853,
+          "unsupported": 1865,
+          "instances": 6,
+          "unavailable": 0
+        },
+        "metrics": {
+          "total": {
+            "mean": 14.810917363011358,
+            "p50": 11.299999952316284,
+            "p95": 36,
+            "p99": 66.20000004768372,
+            "max": 244.70000004768372
+          },
+          "sim": {
+            "mean": 11.30674754136254,
+            "p50": 8.100000143051147,
+            "p95": 29.600000143051147,
+            "p99": 59.60000014305115,
+            "max": 231.5
+          },
+          "draw": {
+            "mean": 3.420849124801439,
+            "p50": 3.1000001430511475,
+            "p95": 6.299999952316284,
+            "p99": 7.5,
+            "max": 20.899999856948853
+          },
+          "prepare": {
+            "mean": 0.15526914397724836,
+            "p50": 0,
+            "p95": 2.3000001907348633,
+            "p99": 3.0999999046325684,
+            "max": 6
+          },
+          "prepareFog": {
+            "mean": 0.08430629358588068,
+            "p50": 0,
+            "p95": 0.3000001907348633,
+            "p99": 0.40000009536743164,
+            "max": 1.3000001907348633
+          },
+          "drawMinimap": {
+            "mean": 0.1844579231748082,
+            "p50": 0.19999980926513672,
+            "p95": 0.40000009536743164,
+            "p99": 0.5,
+            "max": 1
+          }
+        },
+        "fps": 52.73215742128387,
+        "over40": 50,
+        "errors": [],
+        "frameCount": 1319
+      }
+    },
+    "comparison": {
+      "meanFrameWorkReductionPercent": 17.594242011481587,
+      "fpsIncreasePercent": 11.7269841064658,
+      "p95FrameWorkReductionPercent": 40.0
+    },
+    "limitations": [
+      "Single browser pair, not a statistical estimate or guaranteed FPS improvement. Variable frame intervals produce different simulation trajectories; end-state unit and building counts differ.",
+      "Large spikes remain: batching reduces the frequency of expensive map work, not the cost of an individual map rebuild."
+    ]
+  },
+  "validation": {
+    "testFilesPassed": 205,
+    "testsPassed": 2074,
+    "productionBuild": "passed",
+    "buildWarning": "Existing Vite chunk-size warning",
+    "focusedCases": [
+      "20-edit boundary",
+      "multiple edits between queries",
+      "timeout with no further edits",
+      "pause and game speed",
+      "courier reassignment",
+      "bridge and gate access",
+      "same-step wall death and gate-road removal",
+      "palace and diplomacy changes",
+      "world replacement and rewind"
+    ]
+  },
+  "reproduction": {
+    "controlled": "node --expose-gc scripts/benchmark-farm-refresh.mjs --baseline=<pre-change-source> --current=<current-source> --out=<results>",
+    "browser": "Serve both source snapshots separately, then run scripts/profile-live-state.mjs serially with --url=<server> --label=<name> --seconds=25 --state=scratch/2026-10-29-live-performance/state.json --out=<results>."
+  }
+}

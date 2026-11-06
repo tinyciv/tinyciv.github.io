@@ -1,0 +1,15 @@
+.research-toolbar { position: absolute; left: 604px; top: 3px; display: flex; align-items: center; gap: 8px; width: 250px; height: 40px; padding: 5px 9px; border: 1px solid #967343; border-radius: 3px 3px 8px 3px; background: #101c21ed; box-shadow: inset 0 0 0 1px #060f15, 0 2px 3px #0008; color: #e8d4a4; font-family: var(--game-font); pointer-events: auto; }
+.research-toolbar-icon { width: 28px; height: 28px; flex: none; object-fit: contain; image-rendering: pixelated; }
+.research-toolbar-copy { display: grid; min-width: 0; flex: 1; gap: 5px; }
+.research-toolbar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; line-height: 14px; }
+.research-toolbar-track { display: block; height: 3px; background: #060e14; border-radius: 1px; overflow: hidden; }
+.research-toolbar-track > span { display: block; height: 100%; background: #c5b36c; }
+.research-toolbar-percent { flex: none; font-size: 12px; color: #dcca8f; }
+.research-toolbar.is-inactive .research-toolbar-track > span { background: #7c8460; }
+@media(max-width:1250px) { .research-toolbar { left: 512px; width: 220px; height: 36px; top: 2px; padding: 4px 7px; gap: 6px; }.research-toolbar-icon { width: 23px; height: 23px; }.research-toolbar-name { font-size: 13px; } }
+@media(max-width:1000px) { .research-toolbar { width: min(220px, calc(100vw - 758px)); }.research-toolbar-icon { display: none; } }
+@media(min-width:761px) and (max-width:920px) { .research-toolbar { left: 512px; top: 42px; width: 220px; }.selection-panel { top: 86px; } }
+@media(max-width:760px) { .research-toolbar { left: 392px; width: calc(100vw - 573px); height: 29px; padding: 3px 5px; gap: 4px; }.research-toolbar-name { font-size: 11px; line-height: 11px; }.research-toolbar-percent { font-size: 10px; } }
+@media(max-width:650px) { .research-toolbar { left: auto; right: 4px; top: 34px; width: 194px; height: 29px; }.research-toolbar-name { font-size: 12px; } }
+@media(min-width:601px) and (max-width:650px) { .selection-panel { top: 70px; } }
+@media(max-width:600px) { .research-toolbar { left: 5px; right: auto; width: min(205px, calc(100vw - 180px)); } }

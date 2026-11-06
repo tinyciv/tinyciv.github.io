@@ -1,0 +1,91 @@
+.mobile-controls { display: none; }
+@media (pointer: coarse) {
+  html, body, #app, .game-area { overscroll-behavior: none; }
+  #world, .mobile-controls { touch-action: none; }
+  .mobile-controls:not([hidden]) { display: block; position: absolute; inset: 0; z-index: 3; pointer-events: none; user-select: none; }
+  .mobile-stick { position: absolute; left: max(16px,env(safe-area-inset-left)); bottom: 82px; width: 112px; height: 112px; border: 2px solid #c6ad776b; border-radius: 50%; background: #111d25a6; box-shadow: inset 0 0 16px #0007; pointer-events: auto; }
+  .mobile-stick-cross::before, .mobile-stick-cross::after { content: ''; position: absolute; background: #b8b4a133; left: 24px; top: 55px; width: 64px; height: 1px; }
+  .mobile-stick-cross::after { transform: rotate(90deg); }
+  .mobile-stick-knob { position: absolute; left: 34px; top: 34px; width: 40px; height: 40px; border: 2px ridge #bba36c; border-radius: 50%; background: #2a3a40de; box-shadow: 0 2px 6px #0007; pointer-events: none; }
+  .mobile-center, .mobile-turns button { min-width: 44px; min-height: 44px; border: 2px ridge #b59963; border-radius: 7px; background: #14252adc; color: #f3e5bc; pointer-events: auto; font: 18px/1 var(--game-font); }
+  .mobile-center { position: absolute; left: 138px; bottom: 85px; padding: 0 9px; }
+  .mobile-turns { position: absolute; left: 138px; bottom: 136px; display: flex; width: 98px; justify-content: space-between; pointer-events: auto; }
+  .mobile-turns[hidden] { display: none; }
+  .mobile-turns button { font-size: 30px; }
+  .mobile-rotate-hint { display: none; }
+  .hud { --hud-scale: 1; transform: none; width: 100%; height: 100%; }
+  .hotbar { left: 12px; right: 158px; bottom: max(8px,env(safe-area-inset-bottom)); height: 58px; padding: 0; gap: 4px; grid-template-columns: repeat(5,minmax(0,1fr)); background: none; }
+  .hotbar::before, .action-slot:not([data-hotbar-action]), .action-slot kbd { display: none; }
+  .action-slot { height: 58px; min-width: 44px; }
+  .hotbar-art { width: 27px; height: 27px; }
+  .hotbar-label { font-size: 12px; }
+  .special-actions { width: 142px; height: 118px; right: 4px; bottom: max(4px,env(safe-area-inset-bottom)); padding: 5px; gap: 3px; }
+  .special-actions button { min-height: 50px; justify-content: center; }
+  .special-actions .command-art { width: 23px; height: 23px; flex-basis: 23px; }
+  .special-actions .action-label { font-size: 15px; padding: 0; }
+  .special-actions kbd { display: none; }
+  .build-panel, .build-panel.is-building-menu { right: 5px; bottom: 126px; width: 294px; max-height: calc(100dvh - 180px); padding: 38px 8px 8px; overflow-y: auto; overscroll-behavior: contain; }
+  .build-actions { gap: 3px; }
+  .build-actions button { height: 48px; }
+  .build-actions .action-label { font-size: 15px; }
+  #close-build { min-width: 44px; min-height: 36px; top: 1px; }
+  .game-area:has(.build-panel:not([hidden])) .selection-panel { visibility: hidden; }
+  .minimap-panel { width: 112px; height: 112px; left: 2px; top: 48px; bottom: auto; }
+  #minimap { left: 19px; top: 15px; width: 75px; height: 75px; }
+  .minimap-north { left: 48px; top: 7px; font-size: 11px; width: 16px; }
+  .minimap-control { bottom: 9px; width: 32px; height: 32px; font-size: 20px; }
+  #minimap-zoom-in { left: 0; } #minimap-zoom-out { right: 0; }
+  .resource-bar { height: 44px; }
+  .research-toolbar { left: 362px; right: auto; top: 3px; width: max(70px,calc(100vw - 516px)); max-width: 210px; height: 37px; }
+  .research-toolbar-name { font-size: 13px; line-height: 13px; }
+  .research-toolbar-percent { font-size: 12px; }
+  .resources { transform: none; height: 44px; }
+  .resource { height: 38px; }
+  .resource.food, .resource.gold { width: 83px; }
+  .resource.population { width: 98px; }
+  .resource.culture { width: 75px; }
+  .resource-icon { left: 5px; top: 10px; width: 18px; height: 18px; }
+  .resource-values { inset: 0 4px 0 27px; gap: 2px; }
+  .resource strong { font-size: calc(16px * var(--value-fit,1)); }
+  .resource.population .resource-values > span { font-size: 15px; }
+  #food-yield, #gold-yield, #culture-rate { font-size: 12px; }
+  .time-controls { top: 0; right: max(4px,env(safe-area-inset-right)); height: 44px; transform: none; gap: 2px; }
+  .time-controls button, .time-controls button#speed { min-width: 44px; width: 44px; height: 44px; }
+  .time-controls button#menu { width: 48px; min-width: 48px; gap: 0; font-size: 16px; }
+  #menu .text-icon { display: none; }
+  .selection-panel { top: 49px; right: 4px; width: 194px; height: 88px; padding: 9px; transform: none; gap: 6px; }
+  .portrait { width: 40px; flex-basis: 40px; height: 60px; }
+  .selection-name { font-size: 15px; margin-bottom: 3px; }
+  .selection-stats { font-size: 12px; gap: 1px; }
+  .health-track { margin-top: 3px; }
+  .leader-xp { left: 208px; right: 156px; bottom: 78px; height: 25px; gap: 4px; }
+  .leader-level-badge, .leader-xp-points { height: 38px; flex-basis: 38px; }
+  .leader-xp-text { font-size: 14px; }
+  .leader-skills { left: auto; right: 10px; bottom: 75px; width: 430px; max-height: calc(100dvh - 125px); font-size: 17px; padding: 12px; }
+  .leader-skills [data-leader-close] { width: 44px; height: 44px; flex-basis: 44px; }
+  .build-status { top: 46px; left: 124px; max-width: calc(100% - 330px); font-size: 14px; }
+  #tile-tooltip { display: none; }
+  .dialog { max-height: calc(100dvh - 16px); overflow-y: auto; }
+  .building-activity { max-height: calc(100dvh - 72px); overflow-y: auto; }
+  .frontend { padding: 12px; }
+  .frontend button, .dialog button { min-height: 44px; }
+}
+@media (pointer: coarse) and (max-height: 360px) {
+  .minimap-panel { width: 90px; height: 90px; }
+  #minimap { left: 15px; top: 12px; width: 61px; height: 61px; }
+  .minimap-north { left: 37px; top: 4px; }
+  .minimap-control { bottom: 2px; }
+  .mobile-stick { width: 96px; height: 96px; }
+  .mobile-stick-knob { left: 26px; top: 26px; }
+  .mobile-stick-cross::before, .mobile-stick-cross::after { left: 16px; top: 47px; }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  .mobile-rotate-hint { display: block; position: absolute; top: 100px; left: 50%; width: 180px; transform: translateX(-50%); padding: 7px; text-align: center; background: #101e24c9; border-radius: 6px; color: #ead8ad; font: 17px/1.1 var(--game-font); }
+  .resource.culture { display: none; }
+  .research-toolbar { left: 116px; top: 47px; width: calc(100% - 274px); }
+  .time-controls { top: 45px; }
+  .leader-xp { left: 144px; right: 15px; bottom: 138px; }
+  .selection-panel { top: 92px; }
+  .hotbar { left: 5px; right: 151px; }
+  .hotbar-label { display: none; }
+}

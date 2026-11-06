@@ -1,0 +1,172 @@
+name: Test and deploy TinyCiv
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A release must finish its server and Pages deployments before the next starts.
+# Pull requests use separate groups and never receive deployment credentials.
+concurrency:
+  group: tinyciv-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Test and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    outputs:
+      manifest-sha256: ${{ steps.manifest.outputs.sha256 }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build navigation WASM for tests
+        run: npm run build:wasm
+      - name: Run game tests
+        run: npm run test:ci
+      - name: Test deployment safeguards
+        run: python3 -m unittest discover -s tests -p 'test_actions_deploy.py'
+      - name: Build production client
+        run: npm run build
+      - name: Build multiplayer server
+        run: npm run build:server
+      - name: Install Chromium for browser smoke test
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Verify production browser and multiplayer
+        run: node scripts/ci-smoke.mjs
+      - name: Prepare Pages site
+        run: npm run pages:prepare
+      - name: Record tested artifact checksums
+        id: manifest
+        run: python3 scripts/ci-release.py prepare
+      - name: Keep test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-${{ github.run_attempt }}
+          path: |
+            output/ci-tests/
+            output/ci-smoke/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload tested server and client
+        if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: multiplayer-release
+          path: |
+            dist/
+            server-dist/
+            output/ci-release.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload tested Pages site
+        if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: output/tinyciv-pages
+          include-hidden-files: true
+          retention-days: 7
+
+  deploy-server:
+    name: Deploy multiplayer server
+    needs: build
+    if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      release-sha256: ${{ steps.deployment-report.outputs.release }}
+    # No environment here: AWS trusts only this repository's main-branch OIDC subject.
+    steps:
+      - name: Check out deployment scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download tested build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: multiplayer-release
+          path: .
+      - name: Verify artifact source and checksums
+        env:
+          EXPECTED_MANIFEST_SHA256: ${{ needs.build.outputs.manifest-sha256 }}
+        run: python3 scripts/ci-release.py verify
+      - name: Check deployment configuration
+        env:
+          DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [[ -z "$DEPLOY_ROLE_ARN" ]]; then
+            echo '::error::Set the repository variable AWS_DEPLOY_ROLE_ARN to the TinyCiv GitHub OIDC role.'
+            exit 1
+          fi
+      - name: Obtain temporary AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: tinyciv-${{ github.run_id }}-${{ github.run_attempt }}
+          aws-region: us-west-2
+          allowed-account-ids: '780705957578'
+          role-duration-seconds: 3600
+          unset-current-credentials: true
+          action-timeout-s: 120
+      - name: Deploy to existing AWS stack after matches finish
+        run: |
+          mkdir -p output/ci-deploy
+          python3 scripts/deploy-multiplayer.py \
+            --apply --existing-only --wait-for-idle 1200 \
+            --origins 'https://tinyciv.github.io,https://d120onxzjgx6ss.cloudfront.net,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:5177,http://localhost:5177' \
+            2>&1 | tee output/ci-deploy/deploy.log
+      - name: Record deployment result
+        id: deployment-report
+        if: always()
+        run: python3 scripts/ci-release.py report
+      - name: Keep deployment report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: deployment-report-${{ github.run_attempt }}
+          path: output/ci-deploy/
+          if-no-files-found: warn
+          retention-days: 30
+
+  deploy-pages:
+    name: Deploy GitHub Pages
+    needs: [build, deploy-server]
+    if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish tested site after the server is healthy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

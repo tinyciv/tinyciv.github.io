@@ -1,0 +1,14 @@
+node_modules/
+dist/
+output/
+server-dist/
+scratch/
+.DS_Store
+*.log
+
+# Local deployment records and environment credentials never enter Pages.
+infra/.state/
+.env
+.env.*
+!.env.example
+!.env.production

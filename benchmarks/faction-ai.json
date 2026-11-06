@@ -1,0 +1,612 @@
+{
+  "configuration": {
+    "seconds": 90,
+    "seeds": 3,
+    "scenarios": [
+      "open-battle",
+      "fortified-assault",
+      "outnumbered-defense"
+    ],
+    "step": 0.2,
+    "score": "100 for Leader survival + surviving retinue HP / 20 + enemy kills * 10 + enemy palace damage / 100"
+  },
+  "summary": [
+    {
+      "profile": "coordinated",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 261.33,
+      "meanKills": 11.44,
+      "meanSurvivors": 10.44,
+      "meanFormationSeconds": 20.89
+    },
+    {
+      "profile": "aggressive",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 238.09,
+      "meanKills": 10.78,
+      "meanSurvivors": 7.33,
+      "meanFormationSeconds": 16.93
+    },
+    {
+      "profile": "legacy",
+      "runs": 9,
+      "survivalRate": 0.89,
+      "meanScore": 221.18,
+      "meanKills": 9,
+      "meanSurvivors": 10.44,
+      "meanFormationSeconds": 0
+    }
+  ],
+  "rows": [
+    {
+      "scenario": "open-battle",
+      "seed": 1,
+      "profile": "legacy",
+      "simulatedSeconds": 45.4,
+      "leaderAlive": true,
+      "leaderHP": 126.40000000000003,
+      "survivors": 12,
+      "survivingHP": 950.4200000000009,
+      "kills": 13,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 30.263740508918836,
+      "score": 277.52,
+      "missions": {
+        "attack": 39.40000000000002,
+        "regroup": 6.000000000000003
+      },
+      "elapsedMs": 811
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 1,
+      "profile": "aggressive",
+      "simulatedSeconds": 16,
+      "leaderAlive": true,
+      "leaderHP": 139.73333333333335,
+      "survivors": 11,
+      "survivingHP": 889.7666666666667,
+      "kills": 7,
+      "palaceDamage": 217.875,
+      "formationSeconds": 16,
+      "maximumLeaderDistance": 33,
+      "score": 216.67,
+      "missions": {
+        "attack": 15.999999999999975
+      },
+      "elapsedMs": 143
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 1,
+      "profile": "coordinated",
+      "simulatedSeconds": 27.1,
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 897.6,
+      "kills": 13,
+      "palaceDamage": 47.25,
+      "formationSeconds": 27.2,
+      "maximumLeaderDistance": 31.67373143347247,
+      "score": 275.35,
+      "missions": {
+        "attack": 27.199999999999935
+      },
+      "elapsedMs": 114
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 2,
+      "profile": "legacy",
+      "simulatedSeconds": 50.5,
+      "leaderAlive": true,
+      "leaderHP": 148.8,
+      "survivors": 12,
+      "survivingHP": 936.0400000000005,
+      "kills": 13,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 29.68316404741586,
+      "score": 276.8,
+      "missions": {
+        "attack": 40.60000000000004,
+        "regroup": 9.999999999999996
+      },
+      "elapsedMs": 196
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 2,
+      "profile": "aggressive",
+      "simulatedSeconds": 16.3,
+      "leaderAlive": true,
+      "leaderHP": 144.86666666666667,
+      "survivors": 11,
+      "survivingHP": 961.1666666666667,
+      "kills": 6,
+      "palaceDamage": 217.875,
+      "formationSeconds": 16.4,
+      "maximumLeaderDistance": 33,
+      "score": 210.24,
+      "missions": {
+        "attack": 16.399999999999974
+      },
+      "elapsedMs": 61
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 2,
+      "profile": "coordinated",
+      "simulatedSeconds": 28.9,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 11,
+      "survivingHP": 865.9666666666667,
+      "kills": 13,
+      "palaceDamage": 81.375,
+      "formationSeconds": 29,
+      "maximumLeaderDistance": 31.775689395028476,
+      "score": 274.11,
+      "missions": {
+        "attack": 28.99999999999993
+      },
+      "elapsedMs": 77
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 3,
+      "profile": "legacy",
+      "simulatedSeconds": 50.6,
+      "leaderAlive": true,
+      "leaderHP": 120.80000000000004,
+      "survivors": 12,
+      "survivingHP": 934.660000000001,
+      "kills": 13,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 30.263740508918836,
+      "score": 276.73,
+      "missions": {
+        "attack": 44.600000000000094,
+        "regroup": 6.000000000000003
+      },
+      "elapsedMs": 186
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 3,
+      "profile": "aggressive",
+      "simulatedSeconds": 14.9,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 11,
+      "survivingHP": 873.6666666666666,
+      "kills": 4,
+      "palaceDamage": 189,
+      "formationSeconds": 15,
+      "maximumLeaderDistance": 33,
+      "score": 185.57,
+      "missions": {
+        "attack": 14.999999999999979
+      },
+      "elapsedMs": 57
+    },
+    {
+      "scenario": "open-battle",
+      "seed": 3,
+      "profile": "coordinated",
+      "simulatedSeconds": 30.3,
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 11,
+      "survivingHP": 889.5333333333334,
+      "kills": 13,
+      "palaceDamage": 211.04999999999927,
+      "formationSeconds": 30.4,
+      "maximumLeaderDistance": 32.0436863260009,
+      "score": 276.59,
+      "missions": {
+        "attack": 30.399999999999924
+      },
+      "elapsedMs": 90
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 1,
+      "profile": "legacy",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 1000.789999999987,
+      "kills": 0,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 24.083189157584588,
+      "score": 150.04,
+      "missions": {
+        "attack": 26.399999999999938,
+        "regroup": 7.200000000000004,
+        "recover": 14.79999999999998,
+        "patrol": 41.60000000000005
+      },
+      "elapsedMs": 900823
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 1,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 144.87999999999795,
+      "survivors": 7,
+      "survivingHP": 422.4633333333334,
+      "kills": 9,
+      "palaceDamage": 0,
+      "formationSeconds": 18,
+      "maximumLeaderDistance": 30.523499999999867,
+      "score": 211.12,
+      "missions": {
+        "attack": 34.59999999999995,
+        "recover": 46.800000000000125,
+        "patrol": 7.600000000000004,
+        "regroup": 1
+      },
+      "elapsedMs": 291
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 1,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 1172.3766666666588,
+      "kills": 0,
+      "palaceDamage": 0,
+      "formationSeconds": 17.2,
+      "maximumLeaderDistance": 24.00760712440157,
+      "score": 158.62,
+      "missions": {
+        "attack": 17.19999999999997,
+        "recover": 14.999999999999979,
+        "patrol": 51.60000000000019,
+        "regroup": 6.200000000000003
+      },
+      "elapsedMs": 284
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 2,
+      "profile": "legacy",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 909.809999999987,
+      "kills": 1,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 24.241254092971346,
+      "score": 155.49,
+      "missions": {
+        "attack": 28.199999999999932,
+        "regroup": 8.400000000000002,
+        "recover": 14.999999999999979,
+        "patrol": 38.400000000000006
+      },
+      "elapsedMs": 224
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 2,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 138.8,
+      "survivors": 5,
+      "survivingHP": 422.700000000001,
+      "kills": 9,
+      "palaceDamage": 0,
+      "formationSeconds": 21,
+      "maximumLeaderDistance": 33,
+      "score": 211.14,
+      "missions": {
+        "attack": 34.199999999999946,
+        "recover": 28.79999999999993,
+        "patrol": 24.799999999999944,
+        "regroup": 2.1999999999999997
+      },
+      "elapsedMs": 170
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 2,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 1163.8266666666632,
+      "kills": 0,
+      "palaceDamage": 0,
+      "formationSeconds": 18.2,
+      "maximumLeaderDistance": 24.419019946990275,
+      "score": 158.19,
+      "missions": {
+        "attack": 18.199999999999967,
+        "recover": 16.199999999999974,
+        "patrol": 49.40000000000016,
+        "regroup": 6.200000000000003
+      },
+      "elapsedMs": 204
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 3,
+      "profile": "legacy",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 1011.0599999999893,
+      "kills": 0,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 24.241254092971346,
+      "score": 150.55,
+      "missions": {
+        "attack": 24.799999999999944,
+        "recover": 15.199999999999978,
+        "patrol": 45.0000000000001,
+        "regroup": 5.000000000000002
+      },
+      "elapsedMs": 216
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 3,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 6,
+      "survivingHP": 437.40333333333035,
+      "kills": 5,
+      "palaceDamage": 0,
+      "formationSeconds": 16,
+      "maximumLeaderDistance": 30.62445953908996,
+      "score": 171.87,
+      "missions": {
+        "attack": 36.199999999999974,
+        "recover": 25.79999999999994,
+        "patrol": 26.999999999999936,
+        "regroup": 1
+      },
+      "elapsedMs": 159
+    },
+    {
+      "scenario": "fortified-assault",
+      "seed": 3,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 12,
+      "survivingHP": 1156.3466666666636,
+      "kills": 0,
+      "palaceDamage": 0,
+      "formationSeconds": 16.2,
+      "maximumLeaderDistance": 23.429951262091684,
+      "score": 157.82,
+      "missions": {
+        "attack": 16.199999999999974,
+        "recover": 15.999999999999975,
+        "regroup": 6.000000000000003,
+        "patrol": 51.800000000000196
+      },
+      "elapsedMs": 195
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 1,
+      "profile": "legacy",
+      "simulatedSeconds": 74,
+      "leaderAlive": false,
+      "leaderHP": 0,
+      "survivors": 3,
+      "survivingHP": 300,
+      "kills": 7,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 8.469499204996012,
+      "score": 85,
+      "missions": {
+        "defend": 30.599999999999923,
+        "recover": 43.200000000000074,
+        "none": 0.2
+      },
+      "elapsedMs": 978
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 1,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 142.92773166666672,
+      "survivors": 6,
+      "survivingHP": 585.6775406666665,
+      "kills": 20,
+      "palaceDamage": 0,
+      "formationSeconds": 13.6,
+      "maximumLeaderDistance": 9.8435090771761,
+      "score": 329.28,
+      "missions": {
+        "defend": 65.40000000000039,
+        "recover": 6.400000000000003,
+        "hunt": 7.600000000000004,
+        "regroup": 10.599999999999994
+      },
+      "elapsedMs": 1855
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 1,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 98.739395,
+      "survivors": 7,
+      "survivingHP": 538.6843026666616,
+      "kills": 18,
+      "palaceDamage": 0,
+      "formationSeconds": 4.4,
+      "maximumLeaderDistance": 6.293647591023825,
+      "score": 306.93,
+      "missions": {
+        "defend": 58.000000000000284,
+        "recover": 28.79999999999993,
+        "patrol": 3.2000000000000006
+      },
+      "elapsedMs": 1878
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 2,
+      "profile": "legacy",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 10,
+      "survivingHP": 966.3875296666649,
+      "kills": 18,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 10.702256876714513,
+      "score": 328.32,
+      "missions": {
+        "defend": 54.00000000000023,
+        "recover": 17.59999999999997,
+        "hunt": 3.400000000000001,
+        "regroup": 12.799999999999986,
+        "patrol": 2.1999999999999997
+      },
+      "elapsedMs": 1601
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 2,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 61.83857533333464,
+      "survivors": 5,
+      "survivingHP": 416.9565283333299,
+      "kills": 19,
+      "palaceDamage": 0,
+      "formationSeconds": 27.8,
+      "maximumLeaderDistance": 8.02555917055005,
+      "score": 310.85,
+      "missions": {
+        "defend": 59.80000000000031,
+        "recover": 26.19999999999994,
+        "patrol": 4.000000000000001
+      },
+      "elapsedMs": 1348
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 2,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 12,
+      "survivingHP": 1199.2852367777775,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 44.4,
+      "maximumLeaderDistance": 14.866068747318506,
+      "score": 459.96,
+      "missions": {
+        "defend": 47.00000000000013,
+        "recover": 6.200000000000003,
+        "hunt": 17.39999999999997,
+        "patrol": 6.600000000000003,
+        "regroup": 12.799999999999986
+      },
+      "elapsedMs": 1423
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 3,
+      "profile": "legacy",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 98.85592499999755,
+      "survivors": 9,
+      "survivingHP": 603.3439956666626,
+      "kills": 16,
+      "palaceDamage": 0,
+      "formationSeconds": 0,
+      "maximumLeaderDistance": 6.0827625302982185,
+      "score": 290.17,
+      "missions": {
+        "defend": 54.80000000000024,
+        "recover": 35.19999999999996
+      },
+      "elapsedMs": 1752
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 3,
+      "profile": "aggressive",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 98.63725466666793,
+      "survivors": 4,
+      "survivingHP": 320.9463897777767,
+      "kills": 18,
+      "palaceDamage": 0,
+      "formationSeconds": 8.6,
+      "maximumLeaderDistance": 8.032334654382872,
+      "score": 296.05,
+      "missions": {
+        "defend": 40.80000000000004,
+        "recover": 42.20000000000006,
+        "hunt": 1,
+        "patrol": 6.000000000000003
+      },
+      "elapsedMs": 1045
+    },
+    {
+      "scenario": "outnumbered-defense",
+      "seed": 3,
+      "profile": "coordinated",
+      "simulatedSeconds": 90,
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 5,
+      "survivingHP": 487.3258630000006,
+      "kills": 16,
+      "palaceDamage": 0,
+      "formationSeconds": 1,
+      "maximumLeaderDistance": 11.002202955813633,
+      "score": 284.37,
+      "missions": {
+        "defend": 39.20000000000002,
+        "recover": 30.399999999999924,
+        "hunt": 5.400000000000002,
+        "regroup": 11.59999999999999,
+        "patrol": 3.400000000000001
+      },
+      "elapsedMs": 1124
+    }
+  ]
+}

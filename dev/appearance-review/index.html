@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>BTV · Appearance review</title>
+<style>body{margin:0;padding:24px;background:#18211c;color:#e6dec6;font:16px system-ui}h1{font-size:23px;margin:0 0 6px}p{color:#b5bea8;margin:0 0 18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1200px}article{background:#263226;border:1px solid #515c43;padding:12px;border-radius:8px}h2{font-size:15px;font-weight:500;margin:0 0 10px}canvas{display:block;width:100%;image-rendering:pixelated;background:#89a64e}a{color:#c4e595}</style>
+<h1>TinyCiv · Appearance review</h1><p>Live game art at enlarged scale. <a href="/">Open game</a></p>
+<div class="grid"><article><h2>Timber worship building</h2><canvas id="temple" width="320" height="240"></canvas></article><article><h2>Fallow · tilled · grain</h2><canvas id="fields" width="320" height="240"></canvas></article><article><h2>Leader · javelin throw</h2><canvas id="leader" width="320" height="240"></canvas></article></div>
+<p id="status">Loading art…</p>
+<script type="module">
+import {loadPunyWorld} from '/src/game/puny-world.ts';
+import {loadPunyCharacters} from '/src/game/unit-sprites.ts';
+import {loadFarmArt,drawFarmField,drawFarmFence} from '/src/game/farm-art.ts';
+import {drawBuilding,drawUnit} from '/src/game/sprites.ts';
+import {drawJavelins} from '/src/game/command-effects.ts';
+import {paintTerrain} from '/src/game/terrain.ts';
+await Promise.all([loadPunyWorld(),loadPunyCharacters(),loadFarmArt()]);
+const world={width:10,height:8,seed:'art-review',source:'fixture',spawns:[],tiles:Array.from({length:80},(_,i)=>({terrain:'grassland',overlay:'none',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:(i%17)/17}))};
+const ground=document.createElement('canvas');paintTerrain(ground,world);
+const cs=Object.fromEntries(['temple','fields','leader'].map(id=>[id,document.getElementById(id).getContext('2d')]));
+const field={id:1,x:0,y:0,faction:0,camp:1,planted:true,food:0,nextHarvest:30};
+const soldier={id:1,kind:'leader',x:1.8,y:3.5,hp:100,morale:100,attack:25,defense:5,speed:3.6,range:4,order:'hold',faction:0,cooldown:0,lastCombat:0,moving:false,facing:0,attackTime:0};
+const fog={width:10,height:8,visible:new Uint8Array(80).fill(1),explored:Array(80).fill(1),sources:[],buildings:[],fields:[],revision:0,explorationRevision:0};
+function frame(now){const t=now/1000;for(const c of Object.values(cs)){c.imageSmoothingEnabled=false;c.drawImage(ground,0,0,320,240);}
+drawBuilding(cs.temple,{id:1,kind:'temple',x:0,y:0,faction:0,hp:600,maxHp:600,capacity:0},64,20,96,t,'#3988ff');
+const phases=[{planted:false},{planted:true,harvestedAt:t},{planted:true}];phases.forEach((phase,i)=>{const plot={...field,...phase,x:i};drawFarmField(cs.fields,24+i*96,70,80,t,plot);drawFarmFence(cs.fields,24+i*96,70,80,{north:true,east:true,south:true,west:true});});
+const cycle=t%1.6;drawUnit(cs.leader,{...soldier,attackTime:cycle<.28?.28-cycle:0},28,60,96,t,'#3988ff');
+if(cycle<.5){const start={x:2,y:4},end={x:8,y:4},p=cycle/.5;drawJavelins(cs.leader,[{start,end,x:start.x+(end.x-start.x)*p,y:4,attacker:1,target:2,faction:0,damage:25,elapsed:cycle,duration:.5}],fog,0,0,32);}
+requestAnimationFrame(frame)}requestAnimationFrame(frame);document.getElementById('status').textContent='Art loaded.';
+</script></html>

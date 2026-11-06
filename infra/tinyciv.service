@@ -1,0 +1,45 @@
+[Unit]
+Description=TinyCiv authoritative multiplayer server
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=btv
+Group=btv
+WorkingDirectory=/opt/btv/current
+EnvironmentFile=/etc/btv.env
+ExecStart=/usr/bin/node-22 /opt/btv/current/server-dist/server.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0077
+LimitNOFILE=16384
+MemoryMax=1400M
+TasksMax=128
+StateDirectory=btv
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/btv
+IPAddressDeny=169.254.169.254/32
+
+[Install]
+WantedBy=multi-user.target

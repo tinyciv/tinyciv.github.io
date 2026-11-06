@@ -1,0 +1,81 @@
+{
+  "assumptions": "64x64 flat fertile grassland, no irrigation/bonuses; roads absent unless specified, 4-tile-radius urban core, farms packed around all 360 degrees. Real courier dispatch/pathfinding/speed/collection/expiry/delivery. 150s warmup then 300s measured. Population and housing growth held fixed; food reserve prevents starvation changes.",
+  "harvestSeconds": 60,
+  "yieldPerTile": 0.8,
+  "spoilSeconds": 11,
+  "rows": [
+    {
+      "population": 20,
+      "farmCount": 15,
+      "roads": "ring",
+      "plots": 60,
+      "deliveredPer30": 23.99999999999994,
+      "consumedPer30": 20,
+      "balancePer30": 3.9999999999999396
+    },
+    {
+      "population": 60,
+      "farmCount": 45,
+      "roads": "ring",
+      "plots": 180,
+      "deliveredPer30": 64.56000000000009,
+      "consumedPer30": 60,
+      "balancePer30": 4.5600000000000875
+    },
+    {
+      "population": 100,
+      "farmCount": 150,
+      "roads": "ring",
+      "plots": 600,
+      "deliveredPer30": 109.99999999999868,
+      "consumedPer30": 100,
+      "balancePer30": 9.999999999998678
+    },
+    {
+      "population": 140,
+      "farmCount": 150,
+      "roads": "ring",
+      "plots": 600,
+      "deliveredPer30": 109.99999999999868,
+      "consumedPer30": 140,
+      "balancePer30": -30.00000000000132
+    },
+    {
+      "population": 140,
+      "farmCount": 150,
+      "noDecay": true,
+      "roads": "ring",
+      "plots": 600,
+      "deliveredPer30": 239.99999999999628,
+      "consumedPer30": 140,
+      "balancePer30": 99.99999999999628
+    },
+    {
+      "population": 100,
+      "farmCount": 150,
+      "detour": true,
+      "roads": "ring",
+      "plots": 600,
+      "deliveredPer30": 67.67999999999977,
+      "consumedPer30": 100,
+      "balancePer30": -32.320000000000235
+    },
+    {
+      "population": 100,
+      "farmCount": 150,
+      "plots": 600,
+      "deliveredPer30": 87.75999999999915,
+      "consumedPer30": 100,
+      "balancePer30": -12.240000000000848
+    },
+    {
+      "population": 100,
+      "farmCount": 150,
+      "roads": "arteries",
+      "plots": 600,
+      "deliveredPer30": 106.7199999999987,
+      "consumedPer30": 100,
+      "balancePer30": 6.719999999998706
+    }
+  ]
+}
