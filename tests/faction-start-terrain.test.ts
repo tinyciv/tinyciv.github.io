@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { constructionEdges } from '../src/game/builders';
 import { entityStore } from '../src/game/entity-store';
 import { ensureFactionStartingExits, establishFactionStartingDefenses } from '../src/game/faction-start';
-import { canTraverseEdge, canWalk, withNavigationFrame } from '../src/game/pathfinding';
+import { canTraverseEdge, canWalk, hasStaticPath, withNavigationFrame } from '../src/game/pathfinding';
+import { validateNetworkPlacement } from '../src/game/network-placement';
 import { ridgeGroundWalkable } from '../src/game/ridges';
 import type { Building, GameState, Point } from '../src/game/types';
 
@@ -48,8 +49,16 @@ function defend(state: GameState): void {
   ensureFactionStartingExits(state, 1, create);
 }
 
-describe('complete starting palisades on traversable terrain', () => {
-  it.each(['flat', 'marsh', 'ford', 'farm', 'stairs'] as const)('closes hostile routes around %s while preserving friendly exits', terrain => {
+describe('separate tower enclosures on traversable terrain', () => {
+  it('reuses an existing approach road as the gate without duplicating its layer', () => {
+    const state = fixture();
+    entityStore(state).buildings.add({ id: 2, kind: 'road', faction: 1, x: 17, y: 16, hp: 100, maxHp: 100, capacity: 0 });
+    defend(state);
+    expect(state.buildings.filter(building => building.kind === 'road' && building.x === 17 && building.y === 16)).toHaveLength(1);
+    expect(state.buildings.some(building => building.kind === 'palisade' && building.x === 17 && building.y === 16)).toBe(true);
+  });
+
+  it.each(['flat', 'marsh', 'ford', 'farm', 'stairs'] as const)('protects tower contacts around %s while keeping the city and countryside connected', terrain => {
     const state = fixture(), palace = state.buildings[0], width = state.world.width;
     if (terrain === 'marsh' || terrain === 'ford') for (let x = 0; x < width; x++) {
       if (x >= 18 && x <= 23) continue;
@@ -64,9 +73,24 @@ describe('complete starting palisades on traversable terrain', () => {
     }
     expect(exteriorRoute(state, palace, 0)).toBeDefined();
     defend(state);
-    expect(exteriorRoute(state, palace, 0)).toBeUndefined();
+    expect(exteriorRoute(state, palace, 0)).toBeDefined();
     expect(exteriorRoute(state, palace, 1)).toBeDefined();
-    expect(state.buildings.filter(building => building.kind === 'woodenTower').length).toBeGreaterThanOrEqual(3);
+    const towers = state.buildings.filter(building => building.kind === 'woodenTower');
+    expect(towers).toHaveLength(4);
+    const walls = state.buildings.filter(building => building.kind === 'palisade');
+    expect(walls).toHaveLength(32);
+    for (const tower of towers) {
+      const ring = walls.filter(wall => Math.max(Math.abs(wall.x - tower.x), Math.abs(wall.y - tower.y)) === 1);
+      expect(ring).toHaveLength(8);
+      const contacts = constructionEdges(state, tower);
+      expect(contacts).toHaveLength(1);
+      expect(constructionEdges(state, palace).some(exit => hasStaticPath(state, exit, contacts[0], 1))).toBe(true);
+      expect(canWalk(state, contacts[0].x, contacts[0].y, 0)).toBe(false);
+    }
+    for (const wall of walls) {
+      expect(towers.filter(tower => Math.max(Math.abs(wall.x - tower.x), Math.abs(wall.y - tower.y)) === 1)).toHaveLength(1);
+      expect(validateNetworkPlacement(state, 'palisade', wall.x, wall.y, 1).ok).toBe(true);
+    }
     if (terrain === 'farm') expect(state.buildings.filter(building => building.kind === 'camp')).toHaveLength(7);
   });
 });

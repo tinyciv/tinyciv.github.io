@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, createDuelGame } from '../src/game/simulation';
+import { createGame, createDuelGame, moveUnit, updateGame } from '../src/game/simulation';
 import { RIVAL_STARTING_GOLD } from '../src/game/civilizations';
 import { entityStore } from '../src/game/entity-store';
 import { factionAIProfile, setFactionAIProfile } from '../src/game/faction-ai-profile';
 import { updateFactionStrategies, getFactionStrategy } from '../src/game/faction-strategy';
 import { prepareFactionArmy } from '../src/game/faction-military';
 import { hasStaticPath } from '../src/game/pathfinding';
+import { constructionEdges, notifyRepairJobChanged, updateBuilder } from '../src/game/builders';
+import { factionCityTowers } from '../src/game/faction-tower-layout';
 import { type GameState, type Unit, type World } from '../src/game/types';
 
 function world(): World {
@@ -34,7 +36,7 @@ function army(): GameState {
 const queries = { hostile: (a: number, b: number) => a !== b, visible: () => true };
 
 describe('fortified, coordinated faction AI', () => {
-  it('grants exactly 100 additional gold and a full gated timber ring with four towers to each rival city', () => {
+  it('grants exactly 100 additional gold and four separate gated tower enclosures to each rival city', () => {
     const state = createGame(world());
     expect(RIVAL_STARTING_GOLD).toBe(1600);
     expect(state.factions[1].gold).toBe(1600);
@@ -44,18 +46,22 @@ describe('fortified, coordinated faction AI', () => {
     for (const city of cities) {
       const walls = state.buildings.filter(building => building.faction === 1 && building.kind === 'palisade'
         && Math.abs(building.x - city.x) <= 11 && Math.abs(building.y - city.y) <= 11);
-      const left = Math.min(...walls.map(wall => wall.x)), right = Math.max(...walls.map(wall => wall.x));
-      const top = Math.min(...walls.map(wall => wall.y)), bottom = Math.max(...walls.map(wall => wall.y));
-      expect(walls.length).toBeGreaterThanOrEqual(36);
-      expect(walls).toHaveLength(2 * (right - left + bottom - top));
-      expect(walls.every(wall => wall.x === left || wall.x === right || wall.y === top || wall.y === bottom)).toBe(true);
-      expect(state.buildings.filter(building => building.faction === 1 && building.kind === 'woodenTower'
-        && Math.hypot(building.x - city.x, building.y - city.y) < 12)).toHaveLength(4);
+      const towers = factionCityTowers(state, city);
+      expect(walls).toHaveLength(32);
+      expect(towers).toHaveLength(4);
       expect(walls.every(building => building.hp === building.maxHp && !building.construction)).toBe(true);
       const gates = walls.filter(wall => state.buildings.some(road => road.kind === 'road' && road.x === wall.x && road.y === wall.y));
       expect(gates).toHaveLength(4);
+      for (const tower of towers) {
+        expect(walls.filter(wall => Math.max(Math.abs(wall.x - tower.x), Math.abs(wall.y - tower.y)) === 1)).toHaveLength(8);
+        const contacts = constructionEdges(state, tower);
+        expect(contacts).toHaveLength(1);
+        expect(constructionEdges(state, city).some(exit => hasStaticPath(state, exit, contacts[0], 1))).toBe(true);
+        expect(hasStaticPath(state, { x: city.x - .5, y: city.y + .5 }, contacts[0], 0)).toBe(false);
+      }
+      expect(walls.every(wall => towers.filter(tower => Math.max(Math.abs(wall.x - tower.x), Math.abs(wall.y - tower.y)) === 1).length === 1)).toBe(true);
       expect(hasStaticPath(state, { x: city.x - .5, y: city.y + .5 }, { x: city.x - 6.5, y: city.y + .5 }, 1)).toBe(true);
-      expect(hasStaticPath(state, { x: city.x - 6.5, y: city.y + .5 }, { x: city.x - .5, y: city.y + .5 }, 0)).toBe(false);
+      expect(hasStaticPath(state, { x: city.x - 6.5, y: city.y + .5 }, { x: city.x - .5, y: city.y + .5 }, 0)).toBe(true);
     }
     expect(state.buildings.some(building => building.faction === 0 && building.kind === 'palisade')).toBe(false);
   });
@@ -65,6 +71,44 @@ describe('fortified, coordinated faction AI', () => {
     expect(state.factions.map(faction => faction.gold)).toEqual([500, 500]);
     expect(state.buildings.some(building => building.faction >= 0 && ['palisade', 'woodenTower'].includes(building.kind))).toBe(false);
   });
+
+  it('sends real civilians through each tower gate to repair and return home', () => {
+    const state = createGame(world(), undefined, { banditIntensity: 0 });
+    const towers = state.buildings.filter(building => building.kind === 'woodenTower' && building.faction === 1);
+    const workers = state.units.filter(unit => unit.builder && unit.faction === 1);
+    entityStore(state).units.replace(workers);
+    for (const tower of towers) { tower.hp = tower.maxHp / 2; tower.lastAttacked = -100; notifyRepairJobChanged(state, tower); }
+    const repairedAt = new Set<number>();
+    for (let step = 0; step < 1600; step++) {
+      state.time += .1;
+      for (const worker of workers) {
+        updateBuilder(state, worker, .1, moveUnit);
+        if (worker.buildPhase === 'repairing' && worker.repairSite !== undefined) {
+          repairedAt.add(worker.repairSite);
+          const tower = towers.find(tower => tower.id === worker.repairSite)!;
+          expect(constructionEdges(state, tower).some(point => Math.hypot(point.x - worker.x, point.y - worker.y) < .7)).toBe(true);
+        }
+      }
+    }
+    expect(repairedAt.size).toBe(8);
+    expect(towers.every(tower => tower.hp === tower.maxHp)).toBe(true);
+    expect(workers.every(worker => worker.inside)).toBe(true);
+  });
+
+  it('continues opening housing, food and population development while paying four towers per city', () => {
+    const state = createGame(world(), undefined, { banditIntensity: 0 }), faction = state.factions[1];
+    for (const realm of state.factions) { realm.nextRaid = Infinity; if (realm.id) realm.relation = 'peace'; }
+    const startingPopulation = faction.population;
+    const productive = () => state.buildings.filter(building => building.faction === 1 && ['house', 'camp', 'library'].includes(building.kind) && building.hp > 0).length;
+    const initialProductive = productive();
+    const idle = { up: false, down: false, left: false, right: false };
+    for (let step = 0; step < 900; step++) updateGame(state, .2, idle);
+    expect(faction.population).toBeGreaterThan(startingPopulation);
+    expect(productive()).toBeGreaterThan(initialProductive);
+    expect(faction.gold).toBeGreaterThan(0);
+    expect(state.buildings.filter(building => building.faction === 1 && building.kind === 'woodenTower')).toHaveLength(8);
+    expect(state.buildings.filter(building => building.faction === 1 && building.kind === 'palisade')).toHaveLength(64);
+  }, 60000);
 
   it('orders an eligible researched army into an attacking formation and releases it to retreat', () => {
     const state = army(), leader = state.units[0];

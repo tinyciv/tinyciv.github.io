@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { entityVisible } from '../src/game/fog';
+import { entityVisible, FOG_SAMPLE_INTERVAL } from '../src/game/fog';
 import { HIDDEN_MARAUDER_UPDATE_DIVISOR } from '../src/game/marauder-schedule';
 import { updateGame } from '../src/game/simulation';
 import { type Building, type GameState, type Unit } from '../src/game/types';
@@ -102,7 +102,7 @@ describe('cover-limited combat sight', () => {
     expect(entityVisible(state, target)).toBe(true);
     updateGame(state, .1, idle);
     expect(scout.hp).toBeLessThanOrEqual(0);
-    updateGame(state, .4, idle);
+    updateGame(state, FOG_SAMPLE_INTERVAL + .1, idle);
     expect(escort.target).toBeUndefined();
     expect(entityVisible(state, target)).toBe(false);
   });

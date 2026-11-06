@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { beginFogFrame, endFogFrame, invalidateFog, pointInSight, presentationFog, publishFog, refreshFogUnit, updateFog } from '../src/game/fog';
+import { FOG_SAMPLE_INTERVAL, beginFogFrame, endFogFrame, invalidateFog, pointInSight, presentationFog, publishFog, refreshFogUnit, updateFog } from '../src/game/fog';
 import { type Building, type GameState, type Unit } from '../src/game/types';
 
 function fixture(): GameState {
@@ -174,7 +174,7 @@ it('renders committed fog without rediscovering sources and invalidates paused b
     expect(pointInSight(presentationFog(state), 3.5, 15.5)).toBe(true);
 });
 
-it('samples live simulation sight and memories at most three times a second despite invalidations', async () => {
+it('samples live simulation sight and memories at most 1.5 times a second despite invalidations', async () => {
     const { withSimulationReads } = await import('../src/game/simulation-reads');
     const state = fixture(), unit = scout(1, 12.5), building = house(10, 1, 14);
     entityStore(state).units.add(unit); entityStore(state).buildings.add(building);
@@ -184,14 +184,14 @@ it('samples live simulation sight and memories at most three times a second desp
         let reads = 0;
         Object.defineProperty(unit, 'faction', { enumerable: true, get: () => { reads++; return 0; } });
         unit.x = 32.5; building.hp = 50;
-        for (let frame = 1; frame < 20; frame++) {
+        for (let frame = 1; frame < 40; frame++) {
             state.time = frame / 60; invalidateFog(state); beginFogFrame(state); refreshFogUnit(state, unit);
             publishFog(state); endFogFrame(state);
             expect(pointInSight(fog, 3.5, 15.5)).toBe(true);
             expect(fog.buildings.find(b => b.id === 10)!.hp).toBe(100);
         }
         expect(reads).toBe(0);
-        state.time = 1 / 3; publishFog(state);
+        state.time = FOG_SAMPLE_INTERVAL; publishFog(state);
         expect(reads).toBeGreaterThan(0);
         expect(pointInSight(fog, 3.5, 15.5)).toBe(false);
         expect(pointInSight(fog, 41.5, 15.5)).toBe(true);

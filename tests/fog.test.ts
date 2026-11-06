@@ -2,8 +2,10 @@ import { recordNativeFrame } from './helpers/native-renderer';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import type { Building, FarmField, GameState, Unit, World } from '../src/game/types';
-import { pointInSight, entityVisible, isExplored, isVisible, updateFog } from '../src/game/fog';
+import { FOG_SAMPLE_INTERVAL, pointInSight, entityVisible, isExplored, isVisible, updateFog } from '../src/game/fog';
 import { fieldGrowth } from '../src/game/farm-art';
+import { withSimulationReads } from '../src/game/simulation-reads';
+import { CHECK_INTERVAL } from '../src/game/work-cadence';
 
 const unit = (x: number, y: number, faction = 0, kind: Unit['kind'] = 'leader'): Unit => ({
     id: 1 + faction, x, y, faction, kind, hp: 100, morale: 100, attack: 25, defense: 5,
@@ -24,6 +26,38 @@ function fixture(): GameState {
 }
 
 describe('fog of war', () => {
+    it.each([30, 60, 120])('samples production sight at half the sensing rate with %i simulation steps/second', hz => {
+        const state = fixture(), sampled: number[] = [];
+        let revision = -1;
+        for (let frame = 0; frame <= hz * 2; frame++) {
+            state.time = frame / hz;
+            state.units[0].x = 10.5 + state.time * 10;
+            withSimulationReads(state, () => {
+                const fog = updateFog(state);
+                if (fog.revision !== revision) { sampled.push(state.time); revision = fog.revision; }
+                expect(updateFog(state).revision).toBe(revision);
+            });
+        }
+        expect(FOG_SAMPLE_INTERVAL).toBe(CHECK_INTERVAL * 2);
+        expect(sampled).toHaveLength(4); // Initial sample plus 1.5 samples/second.
+        for (let i = 1; i < sampled.length; i++) expect(sampled[i] - sampled[i - 1]).toBeCloseTo(2 / 3, 8);
+    });
+
+    it('updates last-seen building details on the slower sight clock while presentation time advances', () => {
+        const state = fixture(), enemy = building(20, 12, 12, 1, 'house');
+        entityStore(state).buildings.add(enemy);
+        withSimulationReads(state, () => {
+            const first = updateFog(state);
+            expect(first.buildings.find(b => b.id === enemy.id)?.hp).toBe(100);
+            enemy.hp = 40; state.time = CHECK_INTERVAL;
+            const held = updateFog(state);
+            expect(held.buildings.find(b => b.id === enemy.id)?.hp).toBe(100);
+            expect(held.presentationTime).toBe(CHECK_INTERVAL);
+            state.time = FOG_SAMPLE_INTERVAL;
+            expect(updateFog(state).buildings.find(b => b.id === enemy.id)?.hp).toBe(40);
+        });
+    });
+
     it('samples circular sight once per cell across moving-source replacements', () => {
         const state = fixture();
         entityStore(state).units.replace(Array.from({ length: 32 }, (_, i) => ({ ...unit((i * 11.75) % 64, (i * 7.125) % 48), id: i + 1 })));

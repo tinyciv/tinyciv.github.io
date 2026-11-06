@@ -14,17 +14,17 @@
   .mobile-turns button { font-size: 30px; }
   .mobile-rotate-hint { display: none; }
   .hud { --hud-scale: 1; transform: none; width: 100%; height: 100%; }
-  .hotbar { left: 12px; right: 158px; bottom: max(8px,env(safe-area-inset-bottom)); height: 58px; padding: 0; gap: 4px; grid-template-columns: repeat(5,minmax(0,1fr)); background: none; }
+  .hotbar { left: auto; right: 112px; width: calc(100% - 170px); transform: scale(.7); transform-origin: bottom right; bottom: max(8px,env(safe-area-inset-bottom)); height: 58px; padding: 0; gap: 4px; grid-template-columns: repeat(5,minmax(0,1fr)); background: none; }
   .hotbar::before, .action-slot:not([data-hotbar-action]), .action-slot kbd { display: none; }
   .action-slot { height: 58px; min-width: 44px; }
   .hotbar-art { width: 27px; height: 27px; }
   .hotbar-label { font-size: 12px; }
-  .special-actions { width: 142px; height: 118px; right: 4px; bottom: max(4px,env(safe-area-inset-bottom)); padding: 5px; gap: 3px; }
+  .special-actions { transform: scale(.7); transform-origin: bottom right; width: 142px; height: 118px; right: 4px; bottom: max(4px,env(safe-area-inset-bottom)); padding: 5px; gap: 3px; }
   .special-actions button { min-height: 50px; justify-content: center; }
   .special-actions .command-art { width: 23px; height: 23px; flex-basis: 23px; }
-  .special-actions .action-label { font-size: 15px; padding: 0; }
+  .special-actions .action-label { font-size: 18px; padding: 0; }
   .special-actions kbd { display: none; }
-  .build-panel, .build-panel.is-building-menu { right: 5px; bottom: 120px; width: min(354px,calc(100vw - 10px)); max-height: calc(100dvh - 164px); padding: 38px 8px 14px; }
+  .build-panel, .build-panel.is-building-menu { transform: scale(.7); transform-origin: bottom right; right: 5px; bottom: 88px; width: min(354px,calc(100vw - 10px)); max-height: calc(100dvh - 164px); padding: 38px 8px 14px; }
   .build-actions { gap: 3px; max-height: calc(100dvh - 216px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
   .build-actions button { height: 56px; padding-top: 9px; }
   .build-actions .action-label { font-size: 20px; }
@@ -58,10 +58,10 @@
   .selection-name { font-size: 15px; margin-bottom: 3px; }
   .selection-stats { font-size: 12px; gap: 1px; }
   .health-track { margin-top: 3px; }
-  .leader-xp { left: 208px; right: 156px; bottom: 78px; height: 25px; gap: 4px; }
+  .leader-xp { left: 208px; right: 112px; bottom: 61px; height: 25px; gap: 4px; }
   .leader-level-badge, .leader-xp-points { height: 38px; flex-basis: 38px; }
   .leader-xp-text { font-size: 14px; }
-  .leader-skills { left: auto; right: 10px; bottom: 75px; width: 430px; max-height: calc(100dvh - 125px); font-size: 17px; padding: 12px; }
+  .leader-skills { top: 46px; bottom: 8px; left: 50%; right: auto; transform: translateX(-50%); width: min(560px,calc(100vw - 24px)); max-height: calc(100dvh - 54px); font-size: 17px; padding: 10px; }
   .leader-skills [data-leader-close] { width: 44px; height: 44px; flex-basis: 44px; }
   .build-status { top: 46px; left: 124px; max-width: calc(100% - 330px); font-size: 14px; }
   #tile-tooltip { display: none; }
@@ -86,6 +86,6 @@
   .time-controls { top: 45px; }
   .leader-xp { left: 144px; right: 15px; bottom: 138px; }
   .selection-panel { top: 92px; }
-  .hotbar { left: 5px; right: 151px; }
+  .hotbar { left: auto; right: 110px; width: calc(100% - 156px); }
   .hotbar-label { display: none; }
 }

@@ -12,6 +12,7 @@ import { buildingWithinBorders } from './border-placement';
 import { territory } from './borders';
 import { farmCompactnessQuery, FARM_CLUSTER_WALKING_BIAS } from './farm-clusters';
 import { farmBlockPlacementQuery } from './farm-blocks';
+import TinyQueue from 'tinyqueue';
 
 export interface FarmRelocationPlan { camp: number; palace: number; from: Point; to: Point; }
 export interface FarmRelocationOptions {
@@ -34,6 +35,16 @@ export interface FarmRelocationOptions {
 }
 const CLEARABLE = new Set(['none', 'forest', 'jungle', 'swamp']);
 const distanceSquared = (a: Point, b: Point): number => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+const orderedWalkingCells = new WeakMap<Float32Array, number[]>();
+function walkingCells(distances: Float32Array): number[] {
+  let cells = orderedWalkingCells.get(distances);
+  if (!cells) {
+    cells = Array.from({ length: distances.length }, (_, i) => i).sort((a, b) => distances[a] - distances[b] || a - b);
+    orderedWalkingCells.set(distances, cells);
+  }
+  return cells;
+}
+interface RelocationCandidate { point: Point; distance: number; walking: number; score: number }
 
 /** Find a replacement crop tile before touching the existing farm. Farms
  * may move outside borders, but stay with this city and cannot cover roads. */
@@ -58,16 +69,25 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
   const removedCells = new Set(options.removedFarmCells); removedCells.add(camp.y * width + camp.x);
   const geometry = farmBlockPlacementQuery(state, { removedCells, addedCells: options.reservedPlots });
   const borders = state.villages?.length ? territory(state) : undefined;
-  const oldDistance = distanceSquared(camp, palace), candidates: { point: Point; distance: number; walking: number; score: number }[] = [];
+  const oldDistance = distanceSquared(camp, palace);
   const target = options.destination;
-  for (let y = target?.y ?? 0; y < (target ? target.y + 1 : height); y++) for (let x = target?.x ?? 0; x < (target ? target.x + 1 : width); x++) {
-    if (!reachable[y * width + x] || occupied.has(y * width + x)) continue;
-    const point = { x, y }, d = distanceSquared(point, palace);
-    if (!options.wall && !options.nearby && d <= oldDistance) continue;
-    const travel = farmWalkingDistance(walking, width, x, y);
-    candidates.push({ point, distance: d, walking: travel, score: travel - compactness(x, y) * FARM_CLUSTER_WALKING_BIAS });
+  function* candidates(): Generator<RelocationCandidate> {
+    const queue = new TinyQueue<RelocationCandidate>([], (a, b) => a.score - b.score || a.walking - b.walking
+      || a.distance - b.distance || a.point.y - b.point.y || a.point.x - b.point.x);
+    // Compactness can improve a score by at most 1.5 walking tiles. Stream
+    // candidates in exactly the previous order, stopping as soon as one fits;
+    // a distant cell cannot outrank a nearer queued candidate beyond that band.
+    const cells = target ? [target.y * width + target.x] : walkingCells(walking);
+    for (const cell of cells) {
+      while (queue.length && walking[cell] - FARM_CLUSTER_WALKING_BIAS > queue.peek()!.score) yield queue.pop()!;
+      if (!reachable[cell] || occupied.has(cell)) continue;
+      const point = { x: cell % width, y: Math.floor(cell / width) }, d = distanceSquared(point, palace);
+      if (!options.wall && !options.nearby && d <= oldDistance) continue;
+      const travel = farmWalkingDistance(walking, width, point.x, point.y);
+      queue.push({ point, distance: d, walking: travel, score: travel - compactness(point.x, point.y) * FARM_CLUSTER_WALKING_BIAS });
+    }
+    while (queue.length) yield queue.pop()!;
   }
-  candidates.sort((a, b) => a.score - b.score || a.walking - b.walking || a.distance - b.distance || a.point.y - b.point.y || a.point.x - b.point.x);
   return withNavigationFrame(state, () => {
     const reserved = new Set(options.road ? [] : options.reservedTiles ?? []);
     if (!options.road) reserved.add(house.y * width + house.x);
@@ -86,7 +106,7 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
     const blocked = { has: (cell: number) => reserved.has(cell) };
     const access = constructionEdges(state, palace, true).filter(exit => !blocked.has(Math.floor(exit.y) * width + Math.floor(exit.x)))
       .map(exit => createReachabilityQuery(state, exit, palace.faction, blocked, true));
-    for (const { point } of candidates) {
+    for (const { point } of candidates()) {
       // Test detailed ledge geometry after ordering nearby candidates. Scanning
       // every distant ledge apron dominated large-map drag previews.
       if (!geometry.canAdd(point).ok || farmCity(point)?.id !== palace.id
@@ -220,6 +240,32 @@ export function relocateFarm(state: GameState, plan: FarmRelocationPlan, house: 
   applyFarmRelocation(state, plan);
   finishFarmRelocations(state);
   return true;
+}
+
+/** Apply an already validated move to a private placement-preview snapshot.
+ * Only occupancy and terrain affect later stroke cells. Do not reconcile the
+ * entire farming economy, rebuild worker roles, or edit shared courier records.
+ * Authoritative purchases still use relocateFarm and its live revalidation. */
+export function previewFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
+  const farm = state.buildings.find(building => building.id === plan.camp)!;
+  const dx = plan.to.x - farm.x, dy = plan.to.y - farm.y;
+  for (const field of state.fields ?? []) if (field.camp === farm.id) {
+    const old = tileAt(state.world, field.x, field.y);
+    if (old?.farm === farm.faction) delete old.farm;
+    field.x += dx; field.y += dy; field.id = field.y * state.world.width + field.x + 1;
+    const tile = tileAt(state.world, field.x, field.y);
+    if (tile) {
+      tile.farm = farm.faction;
+      if (['forest', 'jungle', 'swamp'].includes(tile.overlay)) {
+        tile.overlay = 'none'; delete tile.palm; delete tile.marsh;
+        Object.assign(tile, terrainYields(tile.terrain, 'none'));
+        markWorldChanged(state.world, 'sight');
+      }
+    }
+  }
+  farm.x = plan.to.x; farm.y = plan.to.y;
+  if (farm.construction) { farm.construction.waitingForBuilder = true; farm.construction.cleared = false; }
+  invalidateNavigation(state);
 }
 
 /** Called only after every move in the transaction has passed validation. */

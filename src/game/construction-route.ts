@@ -5,7 +5,8 @@ import { validateBuildAt } from './simulation';
 import { playerFaction } from './player-context';
 import { isFreshwaterSource } from './irrigation';
 import { bridgeSpanAt } from './bridge-spans';
-import { validateNetworkPlacement } from './network-placement';
+import { createNetworkPlacementQuery } from './network-placement';
+import { constructionPreviewContext, rememberConstructionPreview } from './construction-preview-cache';
 
 export const isLinearPlacement = (kind: BuildSelection): kind is 'road' | 'wall' | 'palisade' | 'bridge' | 'irrigation' => ['road', 'wall', 'palisade', 'bridge', 'irrigation'].includes(kind);
 const key = (p: Point) => `${p.x},${p.y}`;
@@ -17,13 +18,20 @@ const adjacent = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1
 export function constructionRoute(state: GameState, kind: BuildSelection, from: Point, to: Point): Point[] {
   const start = { x: Math.floor(from.x), y: Math.floor(from.y) }, end = { x: Math.floor(to.x), y: Math.floor(to.y) };
   if (!isLinearPlacement(kind)) return [end];
+  const context = constructionPreviewContext(state), id = `${kind}:${key(start)}:${key(end)}`;
+  const previous = context.routes.get(id);
+  return previous ?? rememberConstructionPreview(context.routes, id, findConstructionRoute(state, kind, start, end));
+}
+
+function findConstructionRoute(state: GameState, kind: 'road' | 'wall' | 'palisade' | 'bridge' | 'irrigation', start: Point, end: Point): Point[] {
   const direct = constructionLine(start, end), faction = playerFaction(state);
   // Crop relocation is a transaction, not a search-cell predicate. Omitting
   // friendly crops here gives an optimistic geometry check without hundreds
   // of speculative relocation searches; accepted routes still use the full
   // live-state planner below, including every displaced crop and its cost.
   const crops = new Set(state.buildings.filter(b => b.hp > 0 && b.faction === faction && isFarmKind(b.kind)).map(b => b.id));
-  const searchState: GameState = crops.size && (kind === 'road' || isWallKind(kind)) ? {
+  const context = constructionPreviewContext(state);
+  const searchState: GameState = crops.size && (kind === 'road' || isWallKind(kind)) ? context.cropFreeState ??= {
     ...state, buildings: state.buildings.filter(b => !crops.has(b.id)), fields: state.fields?.filter(f => !crops.has(f.camp)),
   } : state;
   const complete = (points: Point[]) => {
@@ -71,10 +79,11 @@ export function constructionRoute(state: GameState, kind: BuildSelection, from: 
   if (!canVisit(start)) return [start];
   const networkBuildings = state.buildings.filter(b => b.hp > 0 && (isWallKind(b.kind) || b.kind === 'road' || b.kind === 'bridge'));
   const upgrades = new Set(kind === 'wall' ? networkBuildings.filter(b => b.kind === 'palisade' && (b.faction === faction || b.faction === -1)).map(key) : []);
+  const networkQuery = createNetworkPlacementQuery(state);
   type Node = { p: Point; cost: number; parent?: Node; score: number; additions: Building[] };
   const reservation = (p: Point): Building => ({ id: -1, kind: kind as Building['kind'], faction, ...p, hp: 1, maxHp: 1, capacity: 0 });
   const networkFits = (p: Point, additions: Building[]) => kind === 'irrigation' || existing.has(key(p)) || upgrades.has(key(p))
-    || validateNetworkPlacement({ ...state, buildings: [...networkBuildings, ...additions] }, kind as Building['kind'], p.x, p.y, faction).ok;
+    || networkQuery(kind as Building['kind'], p.x, p.y, faction, additions).ok;
   const initialAdditions = existing.has(key(start)) || upgrades.has(key(start)) ? [] : [reservation(start)];
   let closest: Point[] = [start], closestDistance = manhattan(start, end);
   for (let attempt = 0; attempt < 6; attempt++) {

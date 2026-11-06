@@ -12,6 +12,10 @@ import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision, withSimulationReads } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
 
+/** Visibility and last-seen memories are sampled at half the ordinary sensing
+ * rate. Rendering can continue interpolating fades between these snapshots. */
+export const FOG_SAMPLE_INTERVAL = CHECK_INTERVAL * 2;
+
 export interface SightSource extends Point { radius: number; highGround?: boolean }
 export interface FogView {
     faction?: number;
@@ -108,7 +112,7 @@ export function withPresentationReads<T>(state: GameState, read: () => T): T {
 /** Repeated visibility queries in the unit phase share validation work. The
  * view is invalidated as soon as a sight source changes, not once per frame. */
 export function beginFogFrame(state: GameState): void {
-    // Production takes one complete sight sample at most three times a second.
+    // Production takes one complete sight sample at most 1.5 times a second.
     // Standalone queries still support explicit live editing within a frame.
     if (simulationReadsActive(state)) return;
     const frame: FogFrame = { sources: new Map() };
@@ -504,9 +508,9 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     const previous = cache.get(contextKey(state));
     const retained = trusted && !!previous && previous.sampledStore === store && previous.world === state.world && previous.persisted === state.fog;
     const sampleSight = !retained || previous.sampledAt === undefined || state.time < previous.sampledAt
-        || state.time + 1e-9 >= previous.sampledAt + CHECK_INTERVAL;
+        || state.time + 1e-9 >= previous.sampledAt + FOG_SAMPLE_INTERVAL;
     const sampleMemories = remember && (!retained || previous.rememberedAt === undefined || state.time < previous.rememberedAt
-        || state.time + 1e-9 >= previous.rememberedAt + CHECK_INTERVAL);
+        || state.time + 1e-9 >= previous.rememberedAt + FOG_SAMPLE_INTERVAL);
     if (!sampleSight && !sampleMemories) { previous!.presentationTime = state.time; return previous!; }
     const frame = frames.get(contextKey(state)), validated = frame && validatedFrame(state, frame);
     if (validated && (!remember || frame!.remembered)) return validated;

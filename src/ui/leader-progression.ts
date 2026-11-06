@@ -19,9 +19,8 @@ const number = (value: number) => String(Number(value.toFixed(1)));
 type LearnResult = { ok: boolean; message?: string; pending?: boolean };
 
 export class LeaderProgressionUI {
-  private selected: LeaderSkillId = 'power';
   private previousLeader?: number;
-  private pending?: { signature: string; until: number };
+  private pending?: { leaderId: number; skill: LeaderSkillId; rank: number; until: number };
   private message = '';
   private opened = false;
 
@@ -36,21 +35,18 @@ export class LeaderProgressionUI {
       <div class="leader-skills-list" aria-label="Leader skills">${LEADER_SKILL_IDS.slice(0, 3).map(skill => this.skillRow(skill)).join('')}</div>
       <div class="leader-advanced-heading">Technology skills</div>
       <div class="leader-skills-list leader-advanced-skills" aria-label="Technology skills">${LEADER_SKILL_IDS.slice(3).map(skill => this.skillRow(skill)).join('')}</div>
-      <footer class="leader-skill-detail"><span class="leader-detail-art">${skillIcon('power')}</span><span class="leader-skill-copy"><strong class="leader-detail-name">Power</strong><span class="leader-detail-stat"></span></span><button type="button" data-leader-learn>Learn</button></footer>
       <p class="leader-skill-status" role="status" aria-live="polite"></p>`;
     rail.querySelectorAll<HTMLButtonElement>('button').forEach(button => button.onclick = () => this.toggle());
     popup.querySelector<HTMLButtonElement>('[data-leader-close]')!.onclick = () => this.close(true);
-    popup.querySelectorAll<HTMLButtonElement>('[data-leader-skill]').forEach(button => button.onclick = () => {
-      this.selected = button.dataset.leaderSkill as LeaderSkillId; this.message = ''; this.refresh();
-    });
-    popup.querySelector<HTMLButtonElement>('[data-leader-learn]')!.onclick = () => {
-      const view = leaderProgressionView(this.getState());
-      if (!view || this.pending || !view.skills.find(skill => skill.id === this.selected)?.canLearn) return;
-      const result = this.learn(this.selected);
+    popup.querySelectorAll<HTMLButtonElement>('[data-leader-learn]').forEach(button => button.onclick = () => {
+      const view = leaderProgressionView(this.getState()), id = button.dataset.leaderLearn as LeaderSkillId;
+      const skill = view?.skills.find(skill => skill.id === id);
+      if (!view || this.pending || !skill?.canLearn) return;
+      const result = this.learn(id);
       this.message = result.ok ? '' : result.message ?? 'Unable to learn this skill.';
-      if (result.pending) this.pending = { signature: this.signature(view), until: performance.now() + 2500 };
+      if (result.ok && result.pending) this.pending = { leaderId: view.leader.id, skill: id, rank: skill.rank, until: performance.now() + 8000 };
       this.refresh();
-    };
+    });
     for (const element of [rail, popup]) {
       element.addEventListener('pointerdown', event => event.stopPropagation());
       element.addEventListener('wheel', event => event.stopPropagation());
@@ -59,17 +55,13 @@ export class LeaderProgressionUI {
   }
 
   private skillRow(skill: LeaderSkillId): string {
-    return `<button type="button" class="leader-skill-row" data-leader-skill="${skill}" aria-pressed="false">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong><span>${skillEffect[skill]}</span><small class="leader-skill-tech"></small></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span></button>`;
+    return `<article class="leader-skill-row" data-leader-skill="${skill}">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong><span>${skillEffect[skill]}</span><small class="leader-skill-preview"></small><small class="leader-skill-tech"></small></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span><button type="button" data-leader-learn="${skill}" aria-label="Learn ${skillName[skill]}">+</button></article>`;
   }
 
   get isOpen(): boolean { return this.opened; }
 
   reset(): void {
-    this.close(); this.previousLeader = undefined; this.selected = 'power';
-  }
-
-  private signature(view: NonNullable<ReturnType<typeof leaderProgressionView>>): string {
-    return `${view.leader.id}:${view.skillPoints}:${view.skills.map(skill => skill.rank).join(',')}`;
+    this.close(); this.previousLeader = undefined; this.pending = undefined;
   }
 
   toggle(): void { this.opened ? this.close(true) : this.open(); }
@@ -81,7 +73,7 @@ export class LeaderProgressionUI {
   }
 
   close(focus = false): void {
-    this.opened = false; this.popup.hidden = true; this.pending = undefined; this.message = '';
+    this.opened = false; this.popup.hidden = true; this.message = '';
     this.rail.querySelectorAll('button').forEach(button => button.setAttribute('aria-expanded', 'false'));
     if (focus) this.focusWorld();
   }
@@ -89,12 +81,19 @@ export class LeaderProgressionUI {
   refresh(): void {
     const view = leaderProgressionView(this.getState());
     this.rail.hidden = !view;
-    if (!view) { this.close(); this.previousLeader = undefined; return; }
+    if (!view) { this.reset(); return; }
     if (this.previousLeader !== undefined && this.previousLeader !== view.leader.id) {
-      this.close(); this.selected = 'power';
+      this.close(); this.pending = undefined;
     }
     this.previousLeader = view.leader.id;
-    if (this.pending && (this.pending.signature !== this.signature(view) || performance.now() >= this.pending.until)) this.pending = undefined;
+    if (this.pending) {
+      const learned = view.skills.find(skill => skill.id === this.pending!.skill)!.rank > this.pending.rank;
+      if (this.pending.leaderId !== view.leader.id || learned) this.pending = undefined;
+      else if (performance.now() >= this.pending.until) {
+        this.pending = undefined;
+        this.message = 'No confirmation received. Try again.';
+      }
+    }
     this.rail.querySelector('.leader-level-badge')!.textContent = String(view.level);
     this.rail.querySelector('.leader-xp-text')!.textContent = `${view.xp} / ${view.xpRequired} XP`;
     this.rail.querySelector<HTMLElement>('.leader-xp-fill')!.style.width = `${Math.min(100, view.xp / view.xpRequired * 100)}%`;
@@ -113,27 +112,29 @@ export class LeaderProgressionUI {
     this.popup.querySelector('.leader-skills-level')!.textContent = `Level ${view.level}`;
     this.popup.querySelector('.leader-skills-points')!.textContent = pointText;
     for (const skill of view.skills) {
-      const row = this.popup.querySelector<HTMLButtonElement>(`[data-leader-skill="${skill.id}"]`)!;
-      row.setAttribute('aria-pressed', String(skill.id === this.selected));
+      const row = this.popup.querySelector<HTMLElement>(`[data-leader-skill="${skill.id}"]`)!;
       row.setAttribute('aria-label', `${skill.name}, ${skill.rank} of ${skill.maxRank}, ${skill.effect}`);
       row.title = `${skill.name} · ${skill.effect}${skill.requiredTech ? ` · ${skill.requiredTech}` : ' per rank'}`;
       row.classList.toggle('is-locked', !skill.unlocked);
       row.querySelector('.leader-skill-tech')!.textContent = skill.requiredTech ? `${skill.unlocked ? 'Unlocked' : 'Requires'}: ${skill.requiredTech}` : '';
       row.querySelector('.leader-skill-rank')!.textContent = `${skill.rank}/${skill.maxRank}`;
       row.querySelectorAll('.leader-skill-pips i').forEach((pip, index) => pip.classList.toggle('earned', index < skill.rank));
+      const label = skill.id === 'power' ? 'Attack' : skill.id === 'guard' ? 'Defense' : 'Retinue';
+      const current = skill.id === 'power' ? view.attack : skill.id === 'guard' ? view.defense : view.retinueBonus;
+      const next = skill.id === 'power' ? skill.nextAttack : skill.id === 'guard' ? skill.nextDefense : skill.nextRetinueBonus;
+      row.querySelector('.leader-skill-preview')!.textContent = skill.requiredTech ? ''
+        : `${label} ${number(current)}${skill.rank < skill.maxRank ? ` → ${number(next)}` : ''}`;
+      const learn = row.querySelector<HTMLButtonElement>('[data-leader-learn]')!;
+      const waiting = this.pending?.skill === skill.id;
+      learn.disabled = !skill.canLearn || !!this.pending;
+      learn.textContent = waiting ? '…' : '+';
+      const reason = waiting ? `Learning ${skill.name}…` : !skill.unlocked ? `${skill.name}: requires ${skill.requiredTech}`
+        : skill.rank === skill.maxRank ? `${skill.name}: maximum rank` : this.pending ? `${skill.name}: waiting for the previous skill purchase`
+        : view.skillPoints === 0 ? `${skill.name}: level up to earn a skill point` : `Learn ${skill.name} — 1 skill point`;
+      learn.title = reason; learn.setAttribute('aria-label', reason);
+      learn.setAttribute('aria-busy', String(waiting));
+      row.classList.toggle('is-pending', waiting);
     }
-    const selected = view.skills.find(skill => skill.id === this.selected)!;
-    this.popup.querySelector('.leader-detail-art')!.innerHTML = skillIcon(this.selected);
-    this.popup.querySelector('.leader-detail-name')!.textContent = selected.name;
-    const advanced = !!selected.requiredTech;
-    const label = this.selected === 'power' ? 'Attack' : this.selected === 'guard' ? 'Defense' : 'Retinue bonus';
-    const current = this.selected === 'power' ? view.attack : this.selected === 'guard' ? view.defense : view.retinueBonus;
-    const next = this.selected === 'power' ? selected.nextAttack : this.selected === 'guard' ? selected.nextDefense : selected.nextRetinueBonus;
-    this.popup.querySelector('.leader-detail-stat')!.innerHTML = advanced ? selected.effect : `${label} ${number(current)}${selected.rank < selected.maxRank ? ` <em>(+${number(next - current)})</em>` : ''}`;
-    const learn = this.popup.querySelector<HTMLButtonElement>('[data-leader-learn]')!;
-    learn.disabled = !selected.canLearn || !!this.pending;
-    learn.textContent = this.pending ? 'Learning…' : !selected.unlocked ? 'Locked' : selected.rank === selected.maxRank ? advanced ? 'Learned' : 'Max rank' : 'Learn';
-    learn.title = !selected.unlocked ? `Requires ${selected.requiredTech}` : selected.rank === selected.maxRank ? 'Maximum rank' : view.skillPoints === 0 ? 'Level up to earn a skill point' : `Learn ${selected.name}`;
     this.popup.querySelector('.leader-skill-status')!.textContent = this.message;
   }
 }

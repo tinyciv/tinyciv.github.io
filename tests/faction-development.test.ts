@@ -373,8 +373,11 @@ describe('rival city development', () => {
     expect(canSustainFactionDefense(state, faction, 'guardPost')).toBe(false);
   });
 
-  it('starts palisade defenses before research and excludes neutral villages from both planners', () => {
+  it('encloses an existing watchtower before stone-wall research and excludes neutral villages from both planners', () => {
     const state = realm(); state.time = 10;
+    const palace = own(state, 'palace')[0];
+    entityStore(state).buildings.add({ id: 30001, kind: 'woodenTower', faction: 1, x: palace.x - 4, y: palace.y - 4,
+      hp: 600, maxHp: 600, capacity: 0 });
     updateFactionDefenses(state, { validate: (id, kind, x, y) => validateBuildAt(state, kind, x, y, id), build: (id, kind, x, y) => buildAt(state, kind, x, y, id) });
     expect(own(state, 'palisade').length).toBeGreaterThan(0);
     expect(state.factions[1].research?.levels.wall).toBeUndefined();

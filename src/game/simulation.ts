@@ -2901,6 +2901,33 @@ export function validateBuildAt(state: GameState, kind: BuildSelection, x: numbe
   return farmBlockPlacementQuery(state).canAdd({ x: Math.floor(x), y: Math.floor(y) });
 }
 
+const constructionBatches = new WeakMap<GameState, Set<number>>();
+
+/** A linear order still validates and pays for each tile immediately. Reconcile
+ * city rates and worker assignments once after all accepted tiles are present,
+ * instead of rebuilding those derived views for every segment of the stroke. */
+export function withConstructionBatch<T>(state: GameState, run: () => T): T {
+  if (constructionBatches.has(state)) return run();
+  const factions = new Set<number>(); constructionBatches.set(state, factions);
+  try { return run(); }
+  finally {
+    constructionBatches.delete(state);
+    if (factions.size) {
+      ensureBuilders(state);
+      scheduleArcheryTraining(state);
+      for (const id of factions) { const faction = factionOf(state, id); if (faction) calculateYields(state, faction); }
+    }
+  }
+}
+
+function refreshAfterConstructionOrder(state: GameState, faction: Faction): void {
+  const batch = constructionBatches.get(state);
+  if (batch) { batch.add(faction.id); return; }
+  ensureBuilders(state);
+  scheduleArcheryTraining(state);
+  calculateYields(state, faction);
+}
+
 export function buildAt(state: GameState, selection: BuildSelection, x: number, y: number, factionId = playerFaction(state), reservedTiles?: ReadonlySet<number>, rebuilding?: DefenseRebuild & { minimumId?: number }): { ok: boolean; message: string } {
   const kind = selection === 'clearTrees' ? selection : buildingKindForSelection(selection);
   const validation = validateBuildAt(state, kind, x, y, factionId, reservedTiles, !!rebuilding);
@@ -2929,9 +2956,7 @@ export function buildAt(state: GameState, selection: BuildSelection, x: number, 
   queueConstruction(building, state.time, cost.gold, state);
   if (replacedPalisade && building.construction) building.construction.replacesPalisade = replacedPalisade.id;
   if (homePlan?.farmMove || wallFarmMove || buildingFarmMoves?.farms.length) { synchronizeFarms(state); ensureCollectors(state); }
-  ensureBuilders(state);
-  scheduleArcheryTraining(state);
-  calculateYields(state, faction);
+  refreshAfterConstructionOrder(state, faction);
   const message = kind === 'ballista' ? 'Ballista ordered. Assembly starts automatically without a civilian.' : `${kind === 'palace' ? 'Settlement' : kind === 'guardPost' ? 'Guard post' : kind.charAt(0).toUpperCase() + kind.slice(1)} ordered. A settlement peasant will begin construction.`;
   return { ok: true, message };
 }

@@ -1,164 +1,148 @@
 import { chromium } from '@playwright/test';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-const output = process.env.LEADER_QA_OUTPUT || 'scratch/2026-11-02-leader-progression-implementation';
+const output = process.env.LEADER_QA_OUTPUT || 'scratch/2026-11-06-skill-card-controls';
 mkdirSync(output, { recursive: true });
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_EXECUTABLE || (existsSync(chrome) ? chrome : undefined) });
-const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
-const page = await context.newPage();
-await page.routeWebSocket(/.*/, () => {}); // Keep this isolated QA session stable during source edits.
 const report = { checks: [], layouts: [], errors: [] };
-page.on('pageerror', error => report.errors.push(error.stack || String(error)));
-page.on('response', response => { if (response.status() >= 400 && !response.url().endsWith('/favicon.ico')) report.errors.push(`HTTP ${response.status()} ${response.url()}`); });
-const check = (name, pass, detail) => { report.checks.push({ name, pass: Boolean(pass), ...(pass || detail === undefined ? {} : { detail }) }); console.log(`${pass ? 'PASS' : 'FAIL'} ${name}${pass || detail === undefined ? '' : ` ${JSON.stringify(detail)}`}`); };
-const settle = () => page.waitForTimeout(220);
-const popup = page.locator('#leader-skills');
-const learn = page.locator('[data-leader-learn]');
-const leader = () => page.evaluate(() => { const state = window.__game.state; return structuredClone(state.units.find(unit => unit.kind === 'leader' && unit.faction === (state.playerFaction ?? 0))); });
-const award = async amount => { await page.evaluate(async amount => { const { awardLeaderXp } = await import('/src/game/leader-progression.ts'); awardLeaderXp(window.__game.state, amount); }, amount); await settle(); };
-const pick = async skill => { await page.locator(`[data-leader-skill="${skill}"]`).click(); await settle(); };
-async function fixture() {
-  if (await popup.isVisible()) await page.locator('[data-leader-close]').click();
-  await page.evaluate(() => {
-    const game = window.__game;
-    const state = structuredClone(window.__leaderQaInitial);
-    state.paused = true; state.gameOver = false; state.victory = false;
-    const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === 0);
-    state.selected = leader.id; state.selectedType = 'unit'; state.buildMode = null; state.diplomacy = null;
-    game.replaceState(state); game.renderer.center(state);
-  });
-  await settle();
-}
-async function capture(name) { await page.mouse.move(10, 90); await settle(); await page.screenshot({ path: `${output}/${name}.png` }); }
-async function layout(width, height) {
-  await page.setViewportSize({ width, height }); await settle();
-  if (!(await popup.isVisible())) await page.locator('.leader-xp-open').click();
-  const controls = [];
-  for (const skill of ['power', 'guard', 'command']) {
-    await pick(skill);
-    controls.push(await page.evaluate(skill => {
-      const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
-      const panel = rect('#leader-skills'), close = rect('[data-leader-close]'), learn = rect('[data-leader-learn]');
-      const inside = box => box.left >= panel.left && box.right <= panel.right && box.top >= panel.top && box.bottom <= panel.bottom
-        && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
-      const receivesPointer = (box, selector) => Boolean(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest(selector));
-      return { skill, panel, close, learn, fit: inside(close) && inside(learn),
-        reachable: receivesPointer(close, '[data-leader-close]') && receivesPointer(learn, '[data-leader-learn]') };
-    }, skill));
-  }
-  check(`${width}×${height}: close and Learn stay visible for every skill`, controls.every(control => control.fit && control.reachable), controls);
-  if (width >= 1024) await pick('power');
-  const measured = await page.evaluate(() => {
-    const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
-    const panel = document.querySelector('#leader-skills');
-    const text = [...panel.querySelectorAll('h2,strong,span,button')].filter(node => node.children.length === 0 && node.textContent.trim()).map(node => {
-      const range = document.createRange(); range.selectNodeContents(node);
-      const r = range.getBoundingClientRect(), box = node.getBoundingClientRect();
-      return { text: node.textContent.trim(), fits: r.left >= box.left - 1 && r.right <= box.right + 1, font: getComputedStyle(node).fontFamily, rect: r.toJSON(), box: box.toJSON() };
-    });
-    return { width: innerWidth, height: innerHeight, xp: rect('#leader-xp'), hotbar: rect('.hotbar'), popup: rect('#leader-skills'),
-      points: rect('.leader-xp-points'), minimap: rect('.minimap-panel'), actions: rect('.special-actions'),
-      overflow: panel.scrollWidth > panel.clientWidth + 1, scrollable: panel.scrollHeight > panel.clientHeight + 1, text,
-      horizontalPageOverflow: document.documentElement.scrollWidth > innerWidth,
-      fontLoaded: document.fonts.check('16px "Pixel Operator"') };
-  });
-  report.layouts.push({ ...measured, text: measured.text.map(({ text, fits, font }) => ({ text, fits, font })), controls });
-  check(`${width}×${height}: XP rail sits above action slots`, measured.xp.bottom <= measured.hotbar.top - 3, measured);
-  check(`${width}×${height}: rail and points stay on screen`, measured.xp.left >= 0 && measured.xp.right <= width && measured.points.top >= 0 && measured.points.bottom <= height, measured);
-  check(`${width}×${height}: popup stays on screen and above rail`, measured.popup.left >= 0 && measured.popup.right <= width && measured.popup.top >= 0 && measured.popup.bottom <= measured.xp.top, measured);
-  check(`${width}×${height}: popup has no horizontal overflow`, !measured.overflow && !measured.horizontalPageOverflow, measured);
-  check(`${width}×${height}: all popup text fits its element`, measured.text.every(text => text.fits), measured.text.filter(text => !text.fits));
-  check(`${width}×${height}: all text uses loaded Pixel Operator`, measured.fontLoaded && measured.text.every(text => text.font.includes('Pixel Operator')), measured.text.map(({ text, font }) => ({ text, font })));
-  await capture(`leader-skills-${width}x${height}`);
-  await page.locator('[data-leader-close]').click();
-  check(`${width}×${height}: close works and focuses game`, !(await popup.isVisible()) && await page.evaluate(() => document.activeElement?.id === 'world'));
-  await page.locator('.leader-xp-points').click();
-  check(`${width}×${height}: skill point badge reopens popup`, await popup.isVisible());
-}
-
-try {
-  await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => window.__game && document.documentElement.dataset.assets === 'ready', { timeout: 90_000 });
+const check = (name, pass, detail) => {
+  report.checks.push({ name, pass: Boolean(pass), detail }); console.log(`${pass ? 'PASS' : 'FAIL'} ${name}`);
+  if (!pass) throw new Error(`${name}: ${JSON.stringify(detail)}`);
+};
+const url = process.env.GAME_URL || 'http://127.0.0.1:5173/';
+let page;
+const settle = () => page.waitForTimeout(380);
+const award = async amount => { await page.evaluate(async amount => {
+  const { awardLeaderXp } = await import('/src/game/leader-progression.ts'); awardLeaderXp(__game.state, amount);
+}, amount); await settle(); };
+const leader = () => page.evaluate(() => structuredClone(__game.state.units.find(u => u.kind === 'leader' && u.faction === 0)));
+const buy = skill => page.locator(`[data-leader-learn="${skill}"]`);
+const popup = () => page.locator('#leader-skills');
+const capture = async name => { await page.mouse.move(4, 200); await settle(); await page.screenshot({ path: `${output}/${name}.png` }); };
+async function launch(width, height, mobile) {
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: mobile, isMobile: mobile });
+  page = await context.newPage();
+  await page.routeWebSocket('**', socket => socket.close());
+  page.on('pageerror', error => report.errors.push(String(error)));
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => window.__game && document.documentElement.dataset.assets === 'ready', undefined, { timeout: 90_000 });
   if (await page.locator('#frontend').isVisible()) {
     await page.locator('[data-view="single"]').click();
     await page.locator('[name="seed"]').fill('BTV-847');
     await page.locator('[data-form="single"] button[type="submit"]').click();
     await page.locator('#frontend').waitFor({ state: 'hidden', timeout: 60_000 });
   }
-  await page.evaluate(() => {
-    window.__game.state.paused = true;
-    window.__leaderQaInitial = structuredClone(window.__game.state);
-    window.__leaderQaPointerDown = 0;
-    document.querySelector('#world').addEventListener('pointerdown', () => window.__leaderQaPointerDown++);
-  });
-  await fixture();
-  check('New leader displays level 1, zero XP and zero points', (await page.locator('.leader-level-badge').innerText()) === '1' && (await page.locator('.leader-xp-text').innerText()) === '0 / 800 XP' && (await page.locator('.leader-xp-points').innerText()) === '0');
-  await page.locator('.leader-xp-points').click();
-  check('Zero-point badge opens skill inspection', await popup.isVisible());
-  check('Learn is disabled without skill points', await learn.isDisabled());
-  await page.keyboard.press('Escape');
-  check('Escape closes popup and returns focus to game', !(await popup.isVisible()) && await page.evaluate(() => document.activeElement?.id === 'world'));
-  await award(640);
-  check('Partial XP updates rail without opening popup', (await page.locator('.leader-xp-text').innerText()) === '640 / 800 XP' && !(await popup.isVisible()));
-  const beforeLevel = await leader();
-  await award(160);
-  const afterLevel = await leader();
-  check('Level up updates the point indicator without opening the popup or stealing focus', !(await popup.isVisible())
-    && (await page.locator('.leader-xp-points').innerText()) === '1'
-    && await page.locator('.leader-xp-points').getAttribute('aria-expanded') === 'false'
-    && await page.evaluate(() => document.activeElement?.id === 'world'));
-  check('Level up adds HP, Attack and one spendable point', afterLevel.maxHp === beforeLevel.maxHp + 10 && afterLevel.attack === beforeLevel.attack + 1 && afterLevel.leaderProgression.skillPoints === 1, { beforeLevel, afterLevel });
-  await page.locator('.leader-xp-points').click();
-  check('Point indicator opens the updated level-two popup on demand', await popup.isVisible()
-    && (await page.locator('.leader-skills-level').innerText()) === 'Level 2'
-    && await page.locator('.leader-xp-points').getAttribute('aria-expanded') === 'true');
-  await page.locator('.leader-xp-points').click();
-  check('Clicking the point indicator again closes the popup', !(await popup.isVisible())
-    && await page.locator('.leader-xp-points').getAttribute('aria-expanded') === 'false');
-  await page.locator('.leader-xp-points').click();
-  await pick('power'); await learn.click(); await settle();
-  const powered = await leader();
-  check('Learn Power changes base attack, rank, point and pips', powered.attack === afterLevel.attack + 2 && powered.leaderProgression.skills.power === 1 && powered.leaderProgression.skillPoints === 0 && await page.locator('[data-leader-skill="power"] .earned').count() === 1, powered);
-  check('Popup remains open after learning; no points cannot be overspent', await popup.isVisible() && await learn.isDisabled());
-  await award(7200);
-  check('An already-open popup stays open and refreshes after another level up', await popup.isVisible()
-    && (await page.locator('.leader-skills-level').innerText()) === `Level ${(await leader()).leaderProgression.level}`);
-  await pick('power'); await learn.click(); await settle(); await learn.click(); await settle();
-  const maxPower = await leader();
-  check('Power caps at three ranks and disables Learn', maxPower.leaderProgression.skills.power === 3 && await learn.isDisabled() && (await learn.innerText()) === 'Max rank', maxPower.leaderProgression);
-  await pick('guard'); const beforeGuard = await leader(); await learn.click(); await settle();
-  const guarded = await leader();
-  check('Guard increases defense and spends one point', guarded.defense === beforeGuard.defense + 1 && guarded.leaderProgression.skills.guard === 1 && guarded.leaderProgression.skillPoints === beforeGuard.leaderProgression.skillPoints - 1);
-  await award(4000); await pick('command'); await learn.click(); await settle();
-  const commanded = await leader();
-  check('Command gains one retinue rank', commanded.leaderProgression.skills.command === 1 && (await page.locator('.leader-detail-stat').innerText()).includes('1'), commanded.leaderProgression);
-  check('UI clicks do not reach the world canvas', await page.evaluate(() => window.__leaderQaPointerDown === 0));
-  const persistence = await page.evaluate(async () => {
-    const { parseGameSave } = await import('/src/game/game-save.ts');
-    const saved = parseGameSave(localStorage.getItem('tinyciv-save-v3'));
-    const unit = saved.units.find(unit => unit.kind === 'leader' && unit.faction === 0);
-    const now = window.__game.state.units.find(unit => unit.kind === 'leader' && unit.faction === 0);
-    return { saved: unit.leaderProgression, now: now.leaderProgression, stats: unit.attack === now.attack && unit.defense === now.defense && unit.maxHp === now.maxHp };
-  });
-  check('Learn persists progression and stat bonuses in actual save', JSON.stringify(persistence.saved) === JSON.stringify(persistence.now) && persistence.stats, persistence);
-  await fixture(); await award(800); await award(1600);
-  check('Repeated level ups keep the popup closed while points accumulate', !(await popup.isVisible())
-    && (await page.locator('.leader-xp-points').innerText()) === '2');
-  await award(3840); await page.locator('.leader-xp-points').click();
-  await pick('power'); await learn.click(); await settle(); await pick('guard'); await learn.click(); await settle(); await pick('power');
-  await capture('leader-skills-desktop-power');
-  for (const [width, height] of [[1600, 1000], [1440, 900], [1024, 768], [390, 844], [320, 700], [844, 390]]) await layout(width, height);
-  await page.setViewportSize({ width: 1600, height: 1000 }); await fixture();
-  await page.locator('.leader-xp-open').click();
-  await page.evaluate(() => { const game = window.__game; game.state.units.find(unit => unit.kind === 'leader' && unit.faction === 0).hp = 0; }); await settle();
-  check('Leader death hides XP rail and closes popup', !(await page.locator('#leader-xp').isVisible()) && !(await popup.isVisible()));
-  check('No browser runtime or asset errors', report.errors.length === 0, report.errors);
-} catch (error) {
-  report.errors.push(error.stack || String(error)); check('Browser check completes', false, String(error));
-  await page.screenshot({ path: `${output}/failure.png` }).catch(() => {});
-} finally {
-  writeFileSync(`${output}/browser-report.json`, JSON.stringify(report, null, 2) + '\n');
-  await browser.close();
+  await page.evaluate(() => { __game.state.paused = true; window.__skillCanvasClicks = 0;
+    document.querySelector('#world').addEventListener('pointerdown', () => window.__skillCanvasClicks++); });
+  await settle();
+  return context;
 }
-if (report.checks.some(check => !check.pass) || report.errors.length) process.exitCode = 1;
+async function inspectSkillCards(label) {
+  const cards = [];
+  for (const skill of ['power', 'guard', 'command', 'engineer', 'brace', 'discretion']) {
+    await buy(skill).scrollIntoViewIfNeeded(); await settle();
+    cards.push(await page.evaluate(skill => {
+      const row = document.querySelector(`[data-leader-skill="${skill}"]`), button = row.querySelector('button');
+      const panel = document.querySelector('#leader-skills').getBoundingClientRect(), rect = button.getBoundingClientRect();
+      const text = [...row.querySelectorAll('strong,small,.leader-skill-copy > span')].filter(n => n.textContent).map(n => {
+        const range = document.createRange(); range.selectNodeContents(n); const r = range.getBoundingClientRect(), b = n.getBoundingClientRect();
+        return { text: n.textContent, fit: r.width <= b.width + 1, font: getComputedStyle(n).fontFamily };
+      });
+      return { skill, text, width: rect.width, height: rect.height,
+        visible: rect.top >= panel.top && rect.bottom <= panel.bottom && rect.right <= panel.right && rect.left >= panel.left,
+        reachable: document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === button,
+        overflow: row.scrollWidth > row.clientWidth + 1 };
+    }, skill));
+  }
+  check(`${label}: every card has a reachable 44px purchase button`, cards.every(c => c.visible && c.reachable && c.width >= 43 && c.height >= 43), cards);
+  check(`${label}: effects and tech requirements fit in Pixel Operator`, cards.every(c => !c.overflow && c.text.every(t => t.fit && t.font.includes('Pixel Operator'))), cards);
+  const bounds = await popup().boundingBox(), viewport = page.viewportSize();
+  check(`${label}: panel fits on screen`, bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= viewport.width + 1 && bounds.y + bounds.height <= viewport.height + 1, bounds);
+  await page.locator('.leader-advanced-skills').evaluate(e => e.scrollTop = 0);
+  report.layouts.push({ label, bounds, cards });
+}
+async function controls(label, mobile) {
+  await page.locator('[data-action="build"]').click(); await settle();
+  const measure = () => page.evaluate(() => Object.fromEntries(['.special-actions', '.special-actions button', '.build-panel', '.build-actions button', '.hotbar', '.action-slot[data-hotbar-action]'].map(selector => {
+    const e = document.querySelector(selector), r = e.getBoundingClientRect(); return [selector, { width: r.width, height: r.height }];
+  })));
+  const after = await measure();
+  const beforePath = 'scratch/2026-11-06-skill-card-controls/mobile-controls-before.css';
+  if (existsSync(beforePath)) {
+    const old = await page.addStyleTag({ content: readFileSync(beforePath, 'utf8') + '\n@media(pointer:coarse){.special-actions,.build-panel,.build-panel.is-building-menu,.hotbar{transform:none}.hotbar{width:auto;left:12px;right:158px}}' });
+    const before = await measure(); await old.evaluate(e => e.remove());
+    check(`${label}: ${mobile ? 'action and build controls shrink by 30%' : 'desktop control dimensions are unchanged'}`, Object.keys(after).every(selector => {
+      const a = after[selector], b = before[selector], scale = mobile ? .7 : 1;
+      return Math.abs(a.width - b.width * scale) < 1 && Math.abs(a.height - b.height * scale) < 1;
+    }), { before, after });
+  }
+  await capture(`${label}-build`);
+  await page.locator('#close-build').click(); await settle();
+  check(`${label}: smaller Build and close controls respond to actual clicks`, await page.locator('.build-panel').isHidden());
+}
+try {
+  const desktop = await launch(1440, 900, false);
+  await controls('desktop', false);
+  await page.locator('.leader-xp-points').click();
+  check('Every skill has its own + purchase; no Learn footer remains', await buy('power').innerText() === '+' && await page.locator('[data-leader-learn]').count() === 6 && await page.locator('.leader-skill-detail').count() === 0);
+  check('No skill points disables every purchase', await page.locator('[data-leader-learn]:disabled').count() === 6);
+  await capture('desktop-no-points');
+  await page.keyboard.press('Escape'); await award(800);
+  check('Level-up updates points without opening popup', await popup().isHidden() && await page.locator('.leader-xp-points').innerText() === '1');
+  await page.locator('.leader-xp-points').click();
+  check('Advanced skills show required technology and remain locked', await buy('engineer').isDisabled() && (await page.locator('[data-leader-skill="engineer"] .leader-skill-tech').innerText()).startsWith('Requires:'));
+  const before = await leader(); await buy('power').click(); await settle(); const powered = await leader();
+  check('A single + click learns Power, spends one point and updates its preview', powered.attack === before.attack + 2 && powered.leaderProgression.skills.power === 1 && powered.leaderProgression.skillPoints === 0
+    && (await page.locator('[data-leader-skill="power"] .leader-skill-preview').innerText()).includes('→'));
+  check('Purchase stays open without allowing overspending', await popup().isVisible() && await page.locator('[data-leader-learn]:disabled').count() === 6);
+  await award(7200);
+  await buy('power').click(); await settle(); await buy('power').click(); await settle();
+  check('Maximum rank cannot be purchased again', await buy('power').isDisabled() && await buy('power').innerText() === '+' && (await leader()).leaderProgression.skills.power === 3);
+  await buy('guard').click(); await settle();
+  check('Guard purchases directly from its own card', (await leader()).leaderProgression.skills.guard === 1);
+  await award(4000); await buy('command').click(); await settle();
+  check('Command purchases directly from its own card', (await leader()).leaderProgression.skills.command === 1);
+  await award(4800);
+  await page.evaluate(() => { (__game.state.factions[0].research ??= { levels: {}, progress: {}, focus: 'wall' }).levels.metalTools = 1; }); await settle();
+  await buy('engineer').click(); await settle();
+  check('An unlocked technology skill purchases from its card', (await leader()).leaderProgression.skills.engineer === 1 && await buy('engineer').isDisabled());
+  await inspectSkillCards('desktop'); await capture('desktop-skills');
+  check('Skill card clicks never reach world canvas', await page.evaluate(() => window.__skillCanvasClicks === 0));
+  const pending = await page.evaluate(async () => {
+    const { LeaderProgressionUI } = await import('/src/ui/leader-progression.ts');
+    const { initialLeaderProgression, awardLeaderXp, learnLeaderSkill } = await import('/src/game/leader-progression.ts');
+    const state = structuredClone(__game.state), l = state.units.find(u => u.kind === 'leader' && u.faction === 0);
+    l.leaderProgression = { ...initialLeaderProgression(), skillPoints: 2 };
+    const rail = document.createElement('div'), panel = document.createElement('div'); let calls = 0, reject = false;
+    const ui = new LeaderProgressionUI(rail, panel, () => state, () => { calls++; return reject ? { ok: false, message: 'Not connected to the match.' } : { ok: true, pending: true }; }, () => {}, () => {}, () => true);
+    const button = id => panel.querySelector(`[data-leader-learn="${id}"]`);
+    ui.open(); button('power').click(); button('power').click(); button('guard').click();
+    const duplicateBlocked = calls === 1 && button('power').disabled && button('power').getAttribute('aria-busy') === 'true';
+    ui.close(); ui.open(); const reopenBlocked = button('power').disabled;
+    awardLeaderXp(state, 800); ui.refresh(); const unrelatedLevelBlocked = button('power').disabled;
+    learnLeaderSkill(state, 'power'); ui.refresh(); const confirmed = !button('guard').disabled;
+    reject = true; button('guard').click(); const rejectionShown = panel.querySelector('.leader-skill-status').textContent.includes('Not connected');
+    ui.close(); awardLeaderXp(state, 1600); ui.refresh(); const stayedClosed = !ui.isOpen;
+    return { duplicateBlocked, reopenBlocked, unrelatedLevelBlocked, confirmed, rejectionShown, stayedClosed };
+  });
+  check('Pending multiplayer purchases survive close/reopen and unrelated levels, then reconcile on rank confirmation', Object.values(pending).every(Boolean), pending);
+  await desktop.close();
+  for (const [width, height] of [[1044, 480], [844, 390]]) {
+    const context = await launch(width, height, true), label = `mobile-${width}x${height}`;
+    await controls(label, true); await award(800); await page.locator('.leader-xp-points').tap(); await settle();
+    await inspectSkillCards(label); await capture(`${label}-skills`);
+    await buy('guard').tap(); await settle();
+    check(`${label}: tapping a skill + spends exactly one point`, (await leader()).leaderProgression.skills.guard === 1 && (await leader()).leaderProgression.skillPoints === 0);
+    await capture(`${label}-purchased`);
+    await page.locator('[data-leader-close]').tap();
+    check(`${label}: close works`, await popup().isHidden());
+    await context.close();
+  }
+  check('No browser runtime errors', report.errors.length === 0, report.errors);
+} catch (error) {
+  report.errors.push(String(error)); console.error(error); await page?.screenshot({ path: `${output}/failure.png` }).catch(() => {});
+  process.exitCode = 1;
+} finally {
+  writeFileSync(`${output}/browser-report.json`, JSON.stringify(report, null, 2)); await browser.close();
+}

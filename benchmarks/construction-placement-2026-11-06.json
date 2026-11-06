@@ -1,0 +1,171 @@
+{
+  "method": "Headless synchronous route+quote and purchase CPU, alternating engines. Each fresh fixture has 1082 buildings, 320 farms in 4x4 parcels, 301 units and 192x144 tiles. Preview spans 17 cells; changed endpoints span 9\u201316 cells. Quotes/purchases must preserve costs, layouts, crops and food. No rendering, live FPS or WASM.",
+  "cpu": "Apple M3 Pro",
+  "rounds": 4,
+  "bundles": {
+    "beforeSha256": "82ff1b0ee07926747a39e78c51dc1f63630851f1a52516d3b66e9f68059f3a16",
+    "afterSha256": "3c41116efb807d506f17271a389e947a7b11a4fbe2492866da04a2b7d01a8216"
+  },
+  "timings": {
+    "before": {
+      "road": {
+        "coldPreview": {
+          "samples": 4,
+          "meanMs": 230.30557300000004,
+          "medianMs": 222.02829199999996,
+          "p95Ms": 269.762
+        },
+        "unchangedPreview": {
+          "samples": 80,
+          "meanMs": 7.832475587500005,
+          "medianMs": 7.726375000000189,
+          "p95Ms": 8.422457999999097
+        },
+        "changedEndpoint": {
+          "samples": 32,
+          "meanMs": 148.64781381249998,
+          "medianMs": 151.92737500000112,
+          "p95Ms": 184.9783749999997
+        },
+        "commit": {
+          "samples": 4,
+          "meanMs": 221.42625024999973,
+          "medianMs": 223.39574999999968,
+          "p95Ms": 243.7007920000001
+        }
+      },
+      "irrigation": {
+        "coldPreview": {
+          "samples": 4,
+          "meanMs": 5.769291500000179,
+          "medianMs": 5.915291000000252,
+          "p95Ms": 6.286749999999984
+        },
+        "unchangedPreview": {
+          "samples": 80,
+          "meanMs": 5.5170849000000715,
+          "medianMs": 5.288833000000523,
+          "p95Ms": 6.891458000000057
+        },
+        "changedEndpoint": {
+          "samples": 32,
+          "meanMs": 4.321673218750007,
+          "medianMs": 4.221542000000227,
+          "p95Ms": 6.4189580000002024
+        },
+        "commit": {
+          "samples": 4,
+          "meanMs": 30.89780200000007,
+          "medianMs": 33.735875000000306,
+          "p95Ms": 34.15695800000003
+        }
+      }
+    },
+    "after": {
+      "road": {
+        "coldPreview": {
+          "samples": 4,
+          "meanMs": 58.02414599999986,
+          "medianMs": 60.38733299999967,
+          "p95Ms": 79.03629199999978
+        },
+        "unchangedPreview": {
+          "samples": 80,
+          "meanMs": 0.3065167125000244,
+          "medianMs": 0.2704589999993914,
+          "p95Ms": 0.5451250000000982
+        },
+        "changedEndpoint": {
+          "samples": 32,
+          "meanMs": 34.167837187500126,
+          "medianMs": 33.8454999999999,
+          "p95Ms": 40.92808299999979
+        },
+        "commit": {
+          "samples": 4,
+          "meanMs": 95.42328099999997,
+          "medianMs": 101.90958300000011,
+          "p95Ms": 108.52495799999997
+        }
+      },
+      "irrigation": {
+        "coldPreview": {
+          "samples": 4,
+          "meanMs": 6.088520750000043,
+          "medianMs": 5.874166000000514,
+          "p95Ms": 7.236209000000144
+        },
+        "unchangedPreview": {
+          "samples": 80,
+          "meanMs": 0.2867552249999846,
+          "medianMs": 0.23741599999993923,
+          "p95Ms": 0.5277920000003178
+        },
+        "changedEndpoint": {
+          "samples": 32,
+          "meanMs": 2.5527761562499762,
+          "medianMs": 2.555790999999772,
+          "p95Ms": 3.0880419999998594
+        },
+        "commit": {
+          "samples": 4,
+          "meanMs": 12.384489750000057,
+          "medianMs": 13.467083000000002,
+          "p95Ms": 13.950624999999945
+        }
+      }
+    }
+  },
+  "parity": [
+    {
+      "round": 0,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 0,
+      "kind": "irrigation",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "irrigation",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "irrigation",
+      "equal": true
+    },
+    {
+      "round": 3,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 3,
+      "kind": "irrigation",
+      "equal": true
+    }
+  ],
+  "decisionParity": {
+    "networkDecisions": 6400,
+    "farmDestinations": 24,
+    "matched": true,
+    "seed": 9143,
+    "method": "Seeded comparison against the frozen pre-change implementation; network decisions include roads, bridges, stone walls, palisades, dead structures and multiple owners. Farm destinations include randomized forest/swamp coverage on the dense district."
+  },
+  "diagnosis": "Cold road previews were dominated by whole-map relocation candidate scoring/sorting, allocation and navigation preparation. Every pointer move recreated farm-free geometry and network sets. Irrigation did not retain a complete quote. Real purchases also repeated city/worker bookkeeping for every tile.",
+  "limitations": "Synthetic headless fixture, not live FPS. Cold navigation preparation and physical farm relocation still cost time; substantial farm-crossing orders can still cause a short pause. Timings are diagnostics, not CI thresholds.",
+  "reproduce": "node scripts/benchmark-construction-placement.mjs --before scratch/2026-11-06-construction-placement/before.mjs --out scratch/2026-11-06-construction-placement --rounds 4"
+}
