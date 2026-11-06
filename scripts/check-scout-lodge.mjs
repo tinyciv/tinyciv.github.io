@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const output = process.env.SCOUT_QA_OUTPUT || 'scratch/2026-11-02-scout-exploration';
+const output = process.env.SCOUT_QA_OUTPUT || 'scratch/2026-11-05-scout-lodge-no-autoscouts';
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ headless: true, executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
 const checks = [], errors = [];
@@ -12,7 +12,7 @@ page.on('pageerror', error => errors.push(String(error)));
 // A fresh browser context never reads or modifies the user's live settlement.
 await page.routeWebSocket('**', socket => socket.close());
 const settle = () => page.waitForTimeout(160), popup = page.locator('#building-activity');
-const ready = () => page.waitForFunction(() => window.__game && document.documentElement.dataset.assets === 'ready', { timeout: 60000 });
+const ready = () => page.waitForFunction(() => window.__game && document.documentElement.dataset.assets === 'ready', undefined, { timeout: 60000 });
 async function simulate(seconds) {
   await page.evaluate(seconds => {
     const s = __game.state; s.paused = false;
@@ -30,12 +30,12 @@ async function openLodge(id) {
   }, id); await settle(); await page.mouse.click(point.x, point.y); await popup.waitFor({ state: 'visible' }); await settle();
 }
 const scoutState = () => page.evaluate(() => __game.state.units.filter(u => u.kind === 'scout' && u.hp > 0)
-  .map(u => ({ id: u.id, lodge: u.scoutLodge, x: u.x, y: u.y, speed: u.speed, attack: u.attack, squad: u.retinueSquad })));
+  .map(u => ({ id: u.id, x: u.x, y: u.y, observationPost: !!u.observationPost })));
 
 try {
   await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5173/', { waitUntil: 'networkidle' }); await ready();
   await page.evaluate(async () => {
-    const world = { width: 96, height: 64, seed: 'scout-exploration-browser', source: 'isolated QA', spawns: [], revision: 1,
+    const world = { width: 96, height: 64, seed: 'scout-lodge-no-autoscouts', source: 'isolated QA', spawns: [], revision: 1,
       tiles: Array.from({ length: 6144 }, (_, i) => ({ terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .7,
         food: 3, production: 1, gold: 0, variation: i % 13 / 13 })) };
     const building = (id, kind, x, y, extra = {}) => ({ id, kind, x, y, faction: 0, hp: 250, maxHp: 250, capacity: 0, ...extra });
@@ -58,6 +58,8 @@ try {
     const { updateFog } = await import('/src/game/fog.ts'); updateFog(state);
     __game.renderer.prepare(state); __game.renderer.follow = false; __game.renderer.camera = { x: 21, y: 31 }; __game.renderer.zoom = 1.65;
   }); await settle();
+  await page.keyboard.press('f'); await settle();
+  check('observation posts are locked before a lodge is completed', await page.locator('[data-build="observationPost"]').isDisabled());
   await page.keyboard.press('b'); await settle();
   check('Exploration unlocks the Scouts’ Lodge build button', await page.locator('[data-build="scoutLodge"]').isEnabled());
   await page.keyboard.press('o'); await settle();
@@ -65,66 +67,55 @@ try {
   await page.mouse.click(site.x, site.y); await settle();
   const lodgeId = await page.evaluate(() => __game.state.buildings.find(b => b.kind === 'scoutLodge')?.id);
   check('placing the lodge starts paid construction without producing scouts early', !!lodgeId && (await scoutState()).length === 0
-    && await page.evaluate(id => !!__game.state.buildings.find(b => b.id === id)?.construction && __game.state.factions[0].gold === 1800, lodgeId));
+    && await page.evaluate(id => !!__game.state.buildings.find(b => b.id === id)?.construction && __game.state.factions[0].gold === 1900, lodgeId));
   const retinueBefore = await page.evaluate(() => __game.state.units.filter(u => u.kind === 'warrior').map(u => u.id));
   await simulate(58);
   check('a civilian completes the lodge through the normal construction simulation', await page.evaluate(id => {
     const b = __game.state.buildings.find(b => b.id === id); return b?.hp > 0 && !b.construction;
   }, lodgeId));
-  const initial = await scoutState();
-  check('the completed lodge automatically produces exactly two dedicated noncombat scouts', initial.length === 2
-    && initial.every(u => u.lodge === lodgeId && u.attack === 0 && Math.abs(u.speed - 4.752) < 1e-8 && u.squad === undefined), initial);
-  check('lodge scouts do not take soldiers from the retinue', await page.evaluate(ids => {
+  check('the completed lodge produces no automatic scouts', (await scoutState()).length === 0);
+  check('completing a lodge does not take soldiers from the retinue', await page.evaluate(ids => {
     return JSON.stringify(__game.state.units.filter(u => u.kind === 'warrior' && u.hp > 0).map(u => u.id)) === JSON.stringify(ids);
   }, retinueBefore));
+  await page.keyboard.press('Escape');
   await openLodge(lodgeId);
-  check('lodge popup reports its scouts instead of a retinue allocation slider', await page.locator('[name="scouts"]').count() === 0
-    && (await page.locator('.scout-count').textContent()).trim() === '2 / 2');
+  const text = await page.locator('.activity-scouts').innerText();
+  check('lodge popup explains observation posts without a recruitment counter or slider',
+    text.includes('Observation posts unlocked') && text.includes('outside all borders')
+    && await page.locator('[name="scouts"], .scout-count').count() === 0, text);
   const panel = await popup.boundingBox();
-  check('lodge status occupies less than ten percent of the desktop', panel.width * panel.height < 1440 * 900 * .1, panel);
+  check('lodge popup occupies less than ten percent of the desktop', panel.width * panel.height < 1440 * 900 * .1, panel);
   await page.screenshot({ path: `${output}/popup-desktop.png` });
   await page.locator('.activity-close').click();
-  const before = await page.evaluate(() => ({ explored: __game.state.fog.explored.reduce((sum, n) => sum + Number(!!n), 0),
-    leader: { x: __game.state.units[0].x, y: __game.state.units[0].y } }));
-  const routes = [];
-  for (let i = 0; i < 4; i++) { await simulate(30); routes.push(await scoutState()); }
-  const after = await page.evaluate(() => ({ explored: __game.state.fog.explored.reduce((sum, n) => sum + Number(!!n), 0),
-    leader: { x: __game.state.units[0].x, y: __game.state.units[0].y } }));
-  check('scouts reveal substantial new terrain with a stationary Leader', after.explored > before.explored + 400
-    && JSON.stringify(before.leader) === JSON.stringify(after.leader), { before, after });
-  check('exploration travels beyond the former Leader patrol radius', routes.flat().some(u => Math.hypot(u.x - before.leader.x, u.y - before.leader.y) > 22), routes);
-  check('scouts spread out instead of repeatedly sharing a destination', routes.some(([a, b]) => Math.hypot(a.x - b.x, a.y - b.y) > 8), routes);
-  check('ongoing exploration never creates extra scouts', (await scoutState()).length === 2);
-  await page.evaluate(() => { __game.renderer.zoom = .65; __game.renderer.camera = { x: 44, y: 32 }; }); await settle();
-  await page.screenshot({ path: `${output}/world-exploration.png` });
-  const lostId = (await scoutState())[0].id;
-  await page.evaluate(id => { __game.state.units.find(u => u.id === id).hp = 0; }, lostId); await simulate(.1);
-  check('a casualty leaves one scout while the lodge recruits a replacement', (await scoutState()).length === 1);
-  await simulate(14);
-  check('replacement recruitment waits fifteen seconds', (await scoutState()).length === 1);
-  await simulate(1.2);
-  check('replacement restores the lodge to two scouts', (await scoutState()).length === 2);
-  await page.locator('#menu').click(); await page.locator('[data-frontend-action="save"]').click();
-  await page.reload({ waitUntil: 'networkidle' }); await ready(); await simulate(.1);
-  check('save/reload retains lodge scouts without duplicating them', (await scoutState()).length === 2
-    && (await scoutState()).every(u => u.lodge === lodgeId));
+  await simulate(180);
+  check('three minutes after completion there are still no automatic scouts', (await scoutState()).length === 0);
   await page.evaluate(async () => {
-    const { entityStore } = await import('/src/game/entity-store.ts'); const s = __game.state;
-    entityStore(s).buildings.add({ id: 10000, kind: 'scoutLodge', x: 12, y: 34, faction: 0, hp: 250, maxHp: 250, capacity: 0 });
-    __game.replaceState(s);
-  }); await simulate(.1);
-  const multiple = await scoutState();
-  check('each additional completed lodge independently maintains two scouts', multiple.length === 4
-    && multiple.filter(u => u.lodge === lodgeId).length === 2 && multiple.filter(u => u.lodge === 10000).length === 2, multiple);
-  const art = await page.evaluate(async () => {
-    const { drawBuilding } = await import('/src/game/sprites.ts'), { drawPerson } = await import('/src/game/unit-sprites.ts');
-    const s = __game.state, lodge = s.buildings.find(b => b.kind === 'scoutLodge'), scout = s.units.find(u => u.kind === 'scout');
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64; const c = canvas.getContext('2d');
-    const count = () => c.getImageData(0, 0, 64, 64).data.reduce((sum, v, i) => sum + Number(i % 4 === 3 && v > 0), 0);
-    drawBuilding(c, lodge, 0, 0, 32, 0, '#c94c4c'); const lodgePixels = count(); c.clearRect(0, 0, 64, 64);
-    c.translate(32, 40); drawPerson(c, scout, s.time, '#c94c4c'); return { lodgePixels, scoutPixels: count() };
-  }); check('existing native lodge and scout artwork render', art.lodgePixels > 0 && art.scoutPixels > 0, art);
-  await page.setViewportSize({ width: 750, height: 500 }); await openLodge(lodgeId);
+    const { entityStore } = await import('/src/game/entity-store.ts');
+    entityStore(__game.state).buildings.add({ id: 10000, kind: 'scoutLodge', x: 12, y: 34, faction: 0, hp: 250, maxHp: 250, capacity: 0 });
+  });
+  await simulate(30);
+  check('additional lodges also produce no automatic scouts', (await scoutState()).length === 0);
+  await page.keyboard.press('f'); await settle();
+  check('a completed lodge enables Observation post in Fortify', await page.locator('[data-build="observationPost"]').isEnabled());
+  const deployment = await page.evaluate(() => {
+    const s = __game.state, leader = s.units.find(u => u.kind === 'leader' && u.faction === 0);
+    Object.assign(leader, { x: 45.5, y: 31.5 }); delete leader.path; delete leader.destination;
+    __game.renderer.camera = { x: 47, y: 31 }; __game.renderer.follow = false;
+    return { gold: s.factions[0].gold, population: s.factions[0].population,
+      point: __game.renderer.screenPoint({ x: 47.5, y: 31.5 }) };
+  });
+  await page.locator('[data-build="observationPost"]').click();
+  await settle(); await page.mouse.click(deployment.point.x, deployment.point.y); await settle();
+  const deployed = await page.evaluate(() => ({ gold: __game.state.factions[0].gold, population: __game.state.factions[0].population,
+    posts: __game.state.units.filter(u => u.hp > 0 && u.observationPost).map(u => ({ x: u.x, y: u.y, attack: u.attack })) }));
+  check('manually placing an observation post spends twenty gold and one resident', deployed.posts.length === 1
+    && deployed.gold === deployment.gold - 20 && deployed.population === deployment.population - 1, deployed);
+  await simulate(31);
+  const posted = await scoutState();
+  check('the only scout remains stationed at the manually placed post', posted.length === 1 && posted[0].observationPost
+    && posted[0].x === 47.5 && posted[0].y === 31.5, posted);
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 750, height: 500 }); await settle(); await openLodge(lodgeId);
   const compact = await popup.boundingBox();
   check('compact lodge status stays inside the viewport', compact.x >= 0 && compact.y >= 0 && compact.x + compact.width <= 750 && compact.y + compact.height <= 500, compact);
   await page.screenshot({ path: `${output}/popup-compact.png` });

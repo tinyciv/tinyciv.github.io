@@ -125,7 +125,10 @@ describe('cover-limited combat sight', () => {
     expect(attacker.target).toBe(target.id);
     target.x = 20.5;
     hiddenSensingCycle(state);
-    expect(attacker.target).toBeUndefined();
+    expect(attacker.target).not.toBe(target.id);
+    // An active band resumes its known settlement objective when it loses
+    // the mobile target; it should not resume tracking the hidden unit.
+    expect(attacker.target).toBe(kind === 'marauder' ? state.buildings[0].id : undefined);
   });
 
   it.each([0, -2])('prevents faction %s towers from firing farther into forest than they can see', faction => {

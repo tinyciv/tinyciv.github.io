@@ -3,6 +3,7 @@ import { playerFaction } from './player-context';
 import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-activity';
 import { synchronizeFarms } from './farms';
 import { governingPalace } from './governor';
+import { cityResidents, invalidateCitySummarySnapshot, withLiveCitySummaries } from './cities';
 import { buildingReady, type Building, type GameState } from './types';
 
 export const IMMIGRANT_COST = 100;
@@ -14,12 +15,15 @@ export function immigrationStatus(state: GameState, palace: Building): { availab
   else if (palace.kind !== 'palace' || palace.faction !== playerFaction(state) || !faction || !state.buildings.includes(palace)) reason = 'Choose your own settlement.';
   else if (!buildingReady(palace)) reason = 'Complete the settlement first.';
   else if (!buildingActivityAvailable(state, palace)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the settlement.`;
+  else if (withLiveCitySummaries(state, () => {
+    const city = cityResidents(state).find(city => city.palace.id === palace.id);
+    return !city || city.population + 1 > city.housing;
+  })) reason = 'No vacant housing in this settlement.';
   else if (faction.gold < IMMIGRANT_COST) reason = `Need ${IMMIGRANT_COST} gold.`;
   return { available: !reason, reason };
 }
 
-/** One paid resident joins the selected city immediately. A city without a
- * vacant bed keeps the resident locally until its housing catches up. */
+/** One paid resident joins an available bed in the selected city immediately. */
 export function importImmigrant(state: GameState, palace: Building): { ok: boolean; message: string } {
   const status = immigrationStatus(state, palace);
   if (!status.available) return { ok: false, message: status.reason };
@@ -32,6 +36,7 @@ export function importImmigrant(state: GameState, palace: Building): { ok: boole
   faction.population++; delete palace.depopulated;
   if (home) home.residents = (home.residents ?? 0) + 1;
   else palace.unhousedResidents = (palace.unhousedResidents ?? 0) + 1;
+  invalidateCitySummarySnapshot(state);
   synchronizeFarms(state);
   return { ok: true, message: `${palace.cityName ?? 'Your city'} welcomed an immigrant: +1 population.` };
 }

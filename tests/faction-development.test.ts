@@ -276,7 +276,7 @@ describe('rival city development', () => {
     const state = realm(), faction = state.factions[1], palace = own(state, 'palace')[0];
     supplyFood(state, 21); faction.population = 20; faction.food = 100;
     expect(factionCityDevelopmentPriority(state, palace)).toBe('house');
-    expect(factionDevelopmentReserve(state, faction)).toBe(62.5); // Housing is the bottleneck; the smaller town is not ready for a library.
+    expect(factionDevelopmentReserve(state, faction)).toBe(BUILD_COSTS.house.gold); // Housing is the bottleneck; the smaller town is not ready for a library.
     faction.food = 20;
     expect(factionCityDevelopmentPriority(state, palace)).toBe('farm');
     faction.food = 100; faction.population = 22;

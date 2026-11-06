@@ -33,10 +33,10 @@ describe('roads opening existing walls', () => {
       expect(hasGateWall(state, 16, 12)).toBe(true);
       expect(validateBuildAt(state, 'road', 16, 12).ok).toBe(true);
       const plan = planConstruction(state, 'road', [{ x: 16, y: 12 }]);
-      expect(plan).toMatchObject({ ok: true, cost: 2, skipped: 0, tiles: [{ x: 16, y: 12 }] });
+      expect(plan).toMatchObject({ ok: true, cost: 10, skipped: 0, tiles: [{ x: 16, y: 12 }] });
       expect(state.factions[0].gold).toBe(100);
       expect(buildStroke(state, 'road', [{ x: 16, y: 12 }])).toMatchObject({ ok: true, placed: 1, skipped: 0 });
-      expect(state.factions[0].gold).toBe(98);
+      expect(state.factions[0].gold).toBe(90);
       expect(canWalk(state, 16.5, 12.5, 0)).toBe(true);
     }
   });
@@ -71,14 +71,14 @@ describe('roads opening existing walls', () => {
     expect(plan.tiles).toEqual([16, 17, 18, 19].map(x => ({ x, y: 12 })));
     expect(plan.cells.every(cell => cell.ok)).toBe(true);
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 4, skipped: 0 });
-    expect(state.factions[0].gold).toBe(92);
+    expect(state.factions[0].gold).toBe(60);
   });
 
   it('opens a wall on a ford rather than skipping it as a free natural crossing', () => {
     const state = fixture(); add(state, 'wall');
     Object.assign(state.world.tiles[12 * 36 + 16], { terrain: 'river', overlay: 'ford' });
     expect(canWalk(state, 16.5, 12.5, 0)).toBe(false);
-    expect(planConstruction(state, 'road', [{ x: 16, y: 12 }])).toMatchObject({ ok: true, cost: 2, tiles: [{ x: 16, y: 12 }] });
+    expect(planConstruction(state, 'road', [{ x: 16, y: 12 }])).toMatchObject({ ok: true, cost: 10, tiles: [{ x: 16, y: 12 }] });
     expect(buildStroke(state, 'road', [{ x: 16, y: 12 }])).toMatchObject({ ok: true, placed: 1 });
     expect(canWalk(state, 16.5, 12.5, 0)).toBe(true);
   });

@@ -144,6 +144,6 @@ describe('civilian traffic, bridges and palace clearances', () => {
     const resources = state.factions[0].gold;
     expect(buildAt(state, 'road', 5, 10).ok).toBe(true);
     expect(state.buildings.find(building => building.kind === 'road' && building.y === 10)).toMatchObject({ x: 5, y: 10, construction: { waitingForBuilder: true } });
-    expect(state.factions[0].gold).toBe(resources - 2);
+    expect(state.factions[0].gold).toBe(resources - 10);
   });
 });

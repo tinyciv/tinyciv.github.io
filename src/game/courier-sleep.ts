@@ -2,6 +2,7 @@ import { forbiddenRevision } from './forbidden-zones';
 import { decisionRevision } from './decision-schedule';
 import { entityStore, type EntityStore } from './entity-store';
 import { farmCourierWakeAt } from './farms';
+import { farmWorkGroups } from './farm-work-groups';
 import { SimulationEvents } from './simulation-events';
 import { unitMaxHp, type GameState, type Unit } from './types';
 
@@ -70,10 +71,16 @@ export function wakeCourier(state: GameState, unit: Unit): void {
   schedule.store.setUnitSleeping(unit, false);
 }
 
-/** Harvest, spoilage and fallow transitions wake only the owning farm. */
+/** Any plot in a parcel can wake its one assigned gatherer. */
 export function wakeFarmCouriers(state: GameState, campId: number): void {
-  const units = schedules.get(state)?.camps.get(campId);
-  if (units) for (const unit of units) wakeCourier(state, unit);
+  const schedule = schedules.get(state);
+  if (!schedule?.sleepers.size) return;
+  const group = farmWorkGroups(state).byCamp.get(campId);
+  const camps = group ? group.fields.map(field => field.camp) : [campId];
+  for (const camp of camps) {
+    const units = schedule.camps.get(camp);
+    if (units) for (const unit of units) wakeCourier(state, unit);
+  }
 }
 
 /** Staffing already visits assignments at 3 Hz. Reconcile those rare edits on

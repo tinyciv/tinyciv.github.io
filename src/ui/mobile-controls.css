@@ -24,10 +24,10 @@
   .special-actions .command-art { width: 23px; height: 23px; flex-basis: 23px; }
   .special-actions .action-label { font-size: 15px; padding: 0; }
   .special-actions kbd { display: none; }
-  .build-panel, .build-panel.is-building-menu { right: 5px; bottom: 126px; width: 294px; max-height: calc(100dvh - 180px); padding: 38px 8px 8px; overflow-y: auto; overscroll-behavior: contain; }
-  .build-actions { gap: 3px; }
-  .build-actions button { height: 48px; }
-  .build-actions .action-label { font-size: 15px; }
+  .build-panel, .build-panel.is-building-menu { right: 5px; bottom: 120px; width: min(354px,calc(100vw - 10px)); max-height: calc(100dvh - 164px); padding: 38px 8px 14px; }
+  .build-actions { gap: 3px; max-height: calc(100dvh - 216px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
+  .build-actions button { height: 56px; padding-top: 9px; }
+  .build-actions .action-label { font-size: 20px; }
   #close-build { min-width: 44px; min-height: 36px; top: 1px; }
   .game-area:has(.build-panel:not([hidden])) .selection-panel { visibility: hidden; }
   .minimap-panel { width: 112px; height: 112px; left: 2px; top: 48px; bottom: auto; }

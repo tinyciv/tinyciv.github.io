@@ -47,7 +47,7 @@ describe('village trade integration', () => {
     expect(route.merchantId).toBe(merchant.id);
   });
 
-  it.each([[100, 120, 2988], [3, 3, 3000]])('triples the base %i-tile village delivery after rounding without paying for partial travel', (tiles, payout, allianceCost) => {
+  it.each([[100, 120, 2990], [3, 3, 3000]])('triples the base %i-tile village delivery after rounding without paying for partial travel', (tiles, payout, allianceCost) => {
     const state = fixture(), { route, merchant } = openTrade(state), gold = state.factions[0].gold;
     state.time = .1; updateMerchant(state, merchant, .1, moveUnit);
     expect(route.distance).toBeGreaterThan(0); expect(state.factions[0].gold).toBe(gold);

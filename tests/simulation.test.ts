@@ -1,3 +1,4 @@
+import { farmWorkGroups } from '../src/game/farm-work-groups';
 import { CHECK_INTERVAL } from '../src/game/work-cadence';
 import { constructionWorkerAllowance } from '../src/game/civilian-population';
 import { roadsReachPalaces } from './helpers/roads';
@@ -8,7 +9,7 @@ import { type GameState, type InputState, type Overlay, type World, distance, ti
 import { atWar, buildAt, createGame, diplomacyAction, getLeader, housingCapacity, interactAt, MARAUDER_FACTION, migrateGame, recallRetinue, setRetinueOrder, updateGame, updateLeaderRespawns, validateBuildAt } from '../src/game/simulation';
 import { canMove, canWalk, findPath, movementMultiplier } from '../src/game/pathfinding';
 import { generateWorld, terrainYields } from '../src/world/generator';
-import { FARM_TILES_PER_COURIER, FIELD_HARVEST_SECONDS, synchronizeFarms } from '../src/game/farms';
+import { FIELD_HARVEST_SECONDS, synchronizeFarms } from '../src/game/farms';
 import { updateFogRaids } from '../src/game/fog-raids';
 import { getFactionStrategy } from '../src/game/faction-strategy';
 import { citySummaries } from '../src/game/cities';
@@ -81,7 +82,7 @@ describe('settlements and economy', () => {
       expect(a.buildings.filter(building => building.faction === faction.id && building.kind === 'road')).toHaveLength(faction.id === 0 ? 12 : 16);
       expect(a.units.filter(unit => unit.faction === faction.id && unit.kind === 'warrior')).toHaveLength(faction.id === 0 ? 5 : 4);
       const workers = a.units.filter(unit => unit.faction === faction.id && unit.collector);
-      const sharedFarmWorkforce = Math.ceil(camps.length / FARM_TILES_PER_COURIER);
+      const sharedFarmWorkforce = farmWorkGroups(a).groups.filter(group => group.faction === faction.id).length;
       const availableResidents = faction.population - constructionWorkerAllowance(faction.population);
       expect(workers).toHaveLength(Math.min(sharedFarmWorkforce, availableResidents));
       expect(workers.length).toBeLessThanOrEqual(faction.population);
@@ -344,7 +345,7 @@ describe('movement, construction and roads', () => {
     extendFixtureRoad(state, 21, 10);
     expect(buildAt(state, first, 22, 10).ok).toBe(true);
     expect(buildAt(state, second, 22, 10).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(18);
+    expect(state.factions[0].gold).toBe(10);
     expect(state.buildings.filter(building => building.x === 22 && building.y === 10).map(building => building.kind).sort()).toEqual(['road', 'wall']);
     expect(canWalk(state, 22.5, 10.5, 0)).toBe(true);
     finishOrders(state);
@@ -494,7 +495,7 @@ describe('movement, construction and roads', () => {
     const disconnectedFood = citySummaries(state).filter(city => city.palace.faction === 0).reduce((sum, city) => sum + city.food, 0);
     const before = state.factions[0].gold;
     expect(buildAt(state, 'bridge', palace.x + 3, palace.y).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(before - 8);
+    expect(state.factions[0].gold).toBe(before - 10);
     expect(buildAt(state, 'road', palace.x + 4, palace.y).ok).toBe(true);
     expect(state.factions[0].yields.food).toBe(disconnectedFood);
     expect(canWalk(state, palace.x + 3.5, palace.y + .5, 0)).toBe(false);
@@ -986,10 +987,19 @@ describe('independent raider camps', { timeout: 120_000 }, () => {
     expect(state.buildings.some(building => building.kind === 'palace' && building.faction === 0 && building.hp > 0)).toBe(true);
   }, 120_000);
 
-  it('keeps camps separate from diplomacy factions and creates full-health raiders at their first departure', () => {
+  it('keeps camps separate from diplomacy factions, shelters reserves, and deploys full-health raiders at their first departure', () => {
     const state = createGame(generateWorld('marauder-counts'));
     const factionCount = state.factions.length;
-    expect(state.marauderPacks!.every(pack => pack.raiderCamp === undefined)).toBe(true);
+    const reserves = state.units.filter(unit => unit.faction === MARAUDER_FACTION && unit.inside);
+    expect(reserves.length).toBeGreaterThan(0);
+    for (const unit of reserves) {
+      const pack = state.marauderPacks!.find(candidate => candidate.id === unit.marauderPack)!;
+      const camp = state.raiderCamps!.find(candidate => candidate.id === pack.raiderCamp)!;
+      expect(pack).toMatchObject({ raid: false, returning: true });
+      expect(camp.houses).toContain(unit.raiderGarrison);
+      expect(entityStore(state).units.query('active')).not.toContain(unit);
+    }
+    expect(state.marauderPacks!.filter(pack => pack.raid).every(pack => pack.microRaid && pack.raiderCamp === undefined)).toBe(true);
     expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(['large', 'medium', 'small']);
     for (const camp of state.raiderCamps!) {
       const [minimum, maximum] = { small: [3, 5], medium: [6, 9], large: [10, 18] }[camp.size];

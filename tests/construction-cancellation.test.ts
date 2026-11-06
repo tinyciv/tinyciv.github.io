@@ -45,12 +45,12 @@ function advanceBuilders(state: GameState, seconds: number): void {
 describe('construction cancellation', () => {
   it('refunds the full paid price of an unstarted order and releases its reservation and selected panel', () => {
     const state = fixture(), house = order(state);
-    expect(house.construction!.paidGold).toBe(62.5);
-    expect(state.factions[0].gold).toBe(937.5);
+    expect(house.construction!.paidGold).toBe(65);
+    expect(state.factions[0].gold).toBe(935);
     expect(validateBuildAt(state, 'house', 11, 8).ok).toBe(false);
     state.selected = house.id; state.selectedType = 'building';
     state.time = 120;
-    expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: 62.5 });
+    expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: 65 });
     expect(state.factions[0].gold).toBe(1000);
     expect(state.buildings.some(building => building.id === house.id)).toBe(false);
     expect(validateBuildAt(state, 'house', 11, 8).ok).toBe(true);
@@ -90,15 +90,15 @@ describe('construction cancellation', () => {
   });
 
   it.each([
-    { phase: 'active', time: 15, pausedAt: undefined, waitingForBuilder: false, expected: 39.06 },
-    { phase: 'paused', time: 100, pausedAt: 17, waitingForBuilder: true, expected: 29.69 },
+    { phase: 'active', time: 15, pausedAt: undefined, waitingForBuilder: false, expected: 40.63 },
+    { phase: 'paused', time: 100, pausedAt: 17, waitingForBuilder: true, expected: 30.88 },
   ])('refunds only remaining work, with fractional gold preserved, for $phase construction', ({ time, pausedAt, waitingForBuilder, expected }) => {
     const state = fixture(), house = order(state);
     Object.assign(house.construction!, { startedAt: 10, pausedAt, waitingForBuilder });
     state.time = time;
     expect(cancellationRefund(state, house)).toBe(expected);
     expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: expected });
-    expect(state.factions[0].gold).toBe(937.5 + expected);
+    expect(state.factions[0].gold).toBe(935 + expected);
     expect(canWalk(state, house.x + .5, house.y + .5, 0)).toBe(true);
   });
 
@@ -116,13 +116,13 @@ describe('construction cancellation', () => {
 
   it('frees the crop reservation and their traffic reservations without creating crop fields', () => {
     const state = fixture(), farm = order(state, 'camp', 13, 8);
-    expect(farm.construction!.paidGold).toBe(12.5);
+    expect(farm.construction!.paidGold).toBe(15);
     state.traffic = {};
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       expect(isPendingCampField(state, farm.x + dx, farm.y + dy)).toBe(true);
       state.traffic[(farm.y + dy) * state.world.width + farm.x + dx] = [0];
     }
-    expect(cancelConstruction(state, farm.id)).toEqual({ ok: true, refund: 12.5 });
+    expect(cancelConstruction(state, farm.id)).toEqual({ ok: true, refund: 15 });
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       expect(isPendingCampField(state, farm.x + dx, farm.y + dy)).toBe(false);
       expect(state.world.tiles[(farm.y + dy) * state.world.width + farm.x + dx].farm).toBeUndefined();
@@ -150,7 +150,7 @@ describe('construction cancellation', () => {
     const wall = extra(state, 'wall', 12, 10), road = order(state, 'road', 12, 10);
     expect(canWalk(state, 12.5, 10.5, 0)).toBe(true);
     expect(canWalk(state, 12.5, 10.5, -2)).toBe(false);
-    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 2 });
+    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 10 });
     expect(state.buildings).toContain(wall);
     expect(canWalk(state, 12.5, 10.5, 0)).toBe(false);
     expect(canWalk(state, 12.5, 10.5, -2)).toBe(false);
@@ -162,7 +162,7 @@ describe('construction cancellation', () => {
     const road = order(state, 'road', 12, 10), leader = state.units[0];
     leader.x = 12.5; leader.y = 10.5;
     expect(canWalk(state, leader.x, leader.y, 0)).toBe(true);
-    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 2 });
+    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 10 });
     expect(canWalk(state, leader.x, leader.y, 0)).toBe(true);
     expect(Math.floor(leader.x) !== 12 || Math.floor(leader.y) !== 10).toBe(true);
     expect(canWalk(state, 12.5, 10.5, 0)).toBe(false);
@@ -184,12 +184,12 @@ describe('construction cancellation', () => {
     expect(canWalk(state, leader.x, leader.y, 0)).toBe(true);
     // Once an actual exit opens, the same cancellation can safely complete.
     state.world.tiles[10 * state.world.width + 11].terrain = 'grassland';
-    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 2 });
+    expect(cancelConstruction(state, road.id)).toEqual({ ok: true, refund: 10 });
     expect(leader).toMatchObject({ x: 11.5, y: 10.5 });
     expect(canWalk(state, leader.x, leader.y, 0)).toBe(true);
   });
 
-  it.each([['camp', 12.5, 13, 8], ['house', 62.5, 11, 8]] as const)('preserves the actual paid price of a new %s through save migration', (kind, paid, x, y) => {
+  it.each([['camp', 15, 13, 8], ['house', 65, 11, 8]] as const)('preserves the actual paid price of a new %s through save migration', (kind, paid, x, y) => {
     const state = fixture(), site = order(state, kind, x, y);
     const restored = migrateGame(JSON.parse(JSON.stringify(state)) as GameState);
     const loaded = restored.buildings.find(building => building.id === site.id)!;
@@ -226,14 +226,14 @@ describe('construction cancellation', () => {
     site.construction!.waitingForBuilder = false;
     site.construction!.startedAt = 10;
     state.time = 5;
-    expect(constructionProgress(state, site)).toBe(0); expect(cancellationRefund(state, site)).toBe(62.5);
+    expect(constructionProgress(state, site)).toBe(0); expect(cancellationRefund(state, site)).toBe(65);
     state.time = 100;
     expect(constructionProgress(state, site)).toBe(1); expect(cancellationRefund(state, site)).toBe(0);
     site.construction!.paidGold = -10;
     expect(cancellationRefund(state, site)).toBe(0);
   });
 
-  it.each([['camp', 12.5, 13, 8], ['house', 62.5, 11, 8]] as const)('still accepts manual %s orders during the automatic expansion pause', (kind, price, x, y) => {
+  it.each([['camp', 15, 13, 8], ['house', 65, 11, 8]] as const)('still accepts manual %s orders during the automatic expansion pause', (kind, price, x, y) => {
     const state = fixture(), site = order(state, kind, x, y);
     expect(cancelConstruction(state, site.id).ok).toBe(true);
     expect(state.buildings.find(building => building.kind === 'palace')!.governorPauseUntil?.[kind]).toBe(30);

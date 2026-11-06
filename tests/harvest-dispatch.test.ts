@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
-import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FARM_COURIER_MAX_PICKUPS, FIELD_SPOIL_SECONDS,
+import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FIELD_SPOIL_SECONDS,
   synchronizeFarms, updateCollector, updateHarvests } from '../src/game/farms';
 import { beginNavigationFrame, endNavigationFrame } from '../src/game/pathfinding';
 import { panicCivilian } from '../src/game/civilian-panic';
@@ -49,10 +49,10 @@ function frame(state: GameState, dt = .05, move = moveUnit): number {
 const block = (x: number, y: number): Point[] => Array.from({ length: 4 }, (_, i) => ({ x: x + i % 2, y: y + Math.floor(i / 2) }));
 
 describe('staggered, coordinated harvest dispatch', () => {
-  it.each([0, 1, 2, 3, 4, 5, 8, 9, 16, 64])('allocates one shared gatherer per four completed farm tiles (%i tiles)', count => {
+  it.each([0, 1, 2, 3, 4, 5, 8, 9, 16, 64])('allocates one gatherer to each contiguous parcel (%i connected tiles)', count => {
     const points = Array.from({ length: count }, (_, i) => ({ x: 2 + i % 10, y: 2 + Math.floor(i / 10) }));
     const state = fixture(points);
-    expect(state.units.filter(unit => unit.collector)).toHaveLength(Math.ceil(count / 4));
+    expect(state.units.filter(unit => unit.collector)).toHaveLength(count ? 1 : 0);
     const ids = state.units.map(unit => unit.id);
     ensureCollectors(state);
     expect(state.units.map(unit => unit.id)).toEqual(ids);
@@ -70,7 +70,7 @@ describe('staggered, coordinated harvest dispatch', () => {
     expect(state.units.filter(unit => unit.collector)).toHaveLength(0);
   });
 
-  it('rounds partial blocks independently for each city', () => {
+  it('assigns disconnected parcels independently to their nearest city', () => {
     const state = fixture([{ x: 19, y: 16 }, ...block(6, 5).slice(0, 3)]);
     entityStore(state).buildings.add(building(2, 'palace', 3, 5));
     state.factions[0].population = 200;
@@ -97,7 +97,7 @@ describe('staggered, coordinated harvest dispatch', () => {
     expect(state.units.filter(unit => unit.collector)).toHaveLength(1);
     expect(frame(state)).toBe(1);
     const worker = state.units.find(unit => unit.collector && !unit.inside)!;
-    expect(worker.collectorStops).toHaveLength(FARM_COURIER_MAX_PICKUPS - 1);
+    expect(worker.collectorStops).toHaveLength(3);
     expect(state.fields!.every(field => field.claimedBy === worker.id)).toBe(true);
     ensureCollectors(state); updateHarvests(state);
     expect(state.fields!.every(field => field.claimedBy === worker.id)).toBe(true);
@@ -147,7 +147,7 @@ describe('staggered, coordinated harvest dispatch', () => {
   });
 
   it('does not delay a separate urgent crop past its last viable departure', () => {
-    // Five farm tiles fund two gatherers; three unripe fields remain idle.
+    // Two ripe parcels dispatch; the third unripe parcel remains idle.
     const state = fixture([{ x: 19, y: 16 }, { x: 13, y: 16 }, ...block(3, 3).slice(0, 3)]);
     for (const field of state.fields!.slice(2)) { field.food = 0; field.foodBatches = []; field.expiresAt = undefined; }
     const urgent = state.fields![1]; urgent.expiresAt = state.time + 2.1;
@@ -172,13 +172,12 @@ describe('staggered, coordinated harvest dispatch', () => {
 
   it('delivers a 64-plot simultaneous harvest with fewer trips and a bounded departure peak', () => {
     const points: Point[] = [];
-    for (let y = 11; y <= 22; y++) for (let x = 11; x <= 22; x++)
-      if (!(x >= 16 && x < 18 && y >= 16 && y < 18)) points.push({ x, y });
-    points.sort((a, b) => Math.hypot(a.x - 16.5, a.y - 16.5) - Math.hypot(b.x - 16.5, b.y - 16.5));
-    const state = fixture(points.slice(0, 64));
+    for (const [ox, oy] of [[11, 11], [18, 11], [11, 18], [18, 18]])
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) points.push({ x: ox + x, y: oy + y });
+    const state = fixture(points);
     let departures = 0, peakDepartures = 0, peakActive = 0, largestLoad = 0;
     const startedAt = performance.now();
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 600; i++) {
       const leaving = frame(state); departures += leaving; peakDepartures = Math.max(peakDepartures, leaving);
       peakActive = Math.max(peakActive, state.units.filter(unit => unit.collector && !unit.inside).length);
       largestLoad = Math.max(largestLoad, ...state.units.map(unit => unit.cargo ?? 0));
@@ -187,11 +186,10 @@ describe('staggered, coordinated harvest dispatch', () => {
     console.log(JSON.stringify({ harvestPlots: 64, departures, peakDepartures, peakActive, largestLoad, delivered,
       cpuMs: Math.round(performance.now() - startedAt) }));
     expect(delivered).toBe(64);
-    expect(departures).toBeLessThanOrEqual(24);
-    expect(peakActive).toBeLessThanOrEqual(24);
+    expect(departures).toBe(4);
     expect(peakDepartures).toBeLessThanOrEqual(3);
-    expect(largestLoad).toBe(4);
-    expect(state.units.filter(unit => unit.collector)).toHaveLength(16);
-    expect(peakActive).toBeLessThanOrEqual(16);
+    expect(largestLoad).toBe(16);
+    expect(state.units.filter(unit => unit.collector)).toHaveLength(4);
+    expect(peakActive).toBeLessThanOrEqual(4);
   });
 });

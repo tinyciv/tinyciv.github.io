@@ -40,15 +40,15 @@ function noOverlap(state: GameState): void {
 }
 
 describe('single crop tiles and displaced roads', () => {
-  it('charges one quarter of the former farm cost and build time for a single reserved tile', () => {
+  it('charges a rounded fifteen-gold farm price and one quarter of the former build time for a single reserved tile', () => {
     const state = fixture(), gold = state.factions[0].gold;
     expect(buildAt(state, 'camp', 13, 8).ok).toBe(true);
     const farm = state.buildings.at(-1)!;
     expect([buildingWidth(farm), buildingHeight(farm)]).toEqual([1, 1]);
-    expect(BUILD_COSTS.camp.gold).toBe(12.5); expect(CONSTRUCTION_SECONDS.camp).toBe(3.75);
-    expect(farm.construction).toMatchObject({ duration: 3.75, paidGold: 12.5 });
-    expect(state.factions[0].gold).toBe(gold - 12.5);
-    expect(cancelConstruction(state, farm.id)).toMatchObject({ ok: true, refund: 12.5 });
+    expect(BUILD_COSTS.camp.gold).toBe(15); expect(CONSTRUCTION_SECONDS.camp).toBe(3.75);
+    expect(farm.construction).toMatchObject({ duration: 3.75, paidGold: 15 });
+    expect(state.factions[0].gold).toBe(gold - 15);
+    expect(cancelConstruction(state, farm.id)).toMatchObject({ ok: true, refund: 15 });
     expect(state.factions[0].gold).toBe(gold);
   });
 
@@ -56,10 +56,10 @@ describe('single crop tiles and displaced roads', () => {
     const state = fixture(), farm = state.buildings[1], field = state.fields![0];
     field.food = 1.2; field.expiresAt = 120; field.foodBatches = [{ amount: 1.2, expiresAt: 120 }]; field.nextHarvest = 99;
     const points = [{ x: 12, y: 8 }, { x: 13, y: 8 }, { x: 14, y: 8 }], before = JSON.stringify(state);
-    expect(planConstruction(state, 'road', points)).toMatchObject({ ok: true, skipped: 0, cost: 6 });
+    expect(planConstruction(state, 'road', points)).toMatchObject({ ok: true, skipped: 0, cost: 30 });
     expect(JSON.stringify(state)).toBe(before);
     expect(buildStroke(state, 'road', points)).toMatchObject({ ok: true, placed: 3, skipped: 0 });
-    expect(state.factions[0].gold).toBe(494); expect(state.buildings).toContain(farm);
+    expect(state.factions[0].gold).toBe(470); expect(state.buildings).toContain(farm);
     expect(state.fields).toEqual([field]); expect(field).toMatchObject({ food: 1.2, expiresAt: 120, nextHarvest: 99 });
     expect(points.some(point => point.x === farm.x && point.y === farm.y)).toBe(false);
     noOverlap(state); expect(canWalk(state, field.x + .5, field.y + .5, 0)).toBe(true);
@@ -79,7 +79,7 @@ describe('single crop tiles and displaced roads', () => {
   it('blocks new farms on completed or pending roads in manual and automatic placement', () => {
     for (const pending of [false, true]) {
       const state = fixture(), road = state.buildings[2];
-      if (pending) queueConstruction(road, 0, 2, state);
+      if (pending) queueConstruction(road, 0, 10, state);
       expect(validateBuildAt(state, 'camp', road.x, road.y).ok).toBe(false);
       const site = planAutomaticFarmSite(state, state.buildings[0]);
       expect(site?.point).not.toEqual({ x: road.x, y: road.y }); noOverlap(state);
@@ -87,23 +87,23 @@ describe('single crop tiles and displaced roads', () => {
   });
 
   it('moves a queued farm order without charging it again or starting crops early', () => {
-    const state = fixture(), farm = state.buildings[1]; queueConstruction(farm, 0, 12.5, state); synchronizeFarms(state);
+    const state = fixture(), farm = state.buildings[1]; queueConstruction(farm, 0, 15, state); synchronizeFarms(state);
     const old = { x: farm.x, y: farm.y }, gold = state.factions[0].gold;
     expect(buildAt(state, 'road', old.x, old.y).ok).toBe(true);
-    expect(farm).not.toMatchObject(old); expect(farm.construction).toMatchObject({ paidGold: 12.5, duration: 3.75, waitingForBuilder: true });
+    expect(farm).not.toMatchObject(old); expect(farm.construction).toMatchObject({ paidGold: 15, duration: 3.75, waitingForBuilder: true });
     expect(farm.construction!.pausedAt).toBeUndefined(); expect(state.fields).toHaveLength(0);
-    expect(state.factions[0].gold).toBe(gold - 2); noOverlap(state);
+    expect(state.factions[0].gold).toBe(gold - 10); noOverlap(state);
   });
 
   it('preserves unfinished work and makes its builder walk to the relocated plot', () => {
     const state = fixture(), farm = state.buildings[1]; state.time = 10;
-    farm.construction = { startedAt: 8, duration: 3.75, paidGold: 12.5, waitingForBuilder: false, cleared: true, builderId: 99 };
+    farm.construction = { startedAt: 8, duration: 3.75, paidGold: 15, waitingForBuilder: false, cleared: true, builderId: 99 };
     const worker = { ...state.units[0], id: 99, kind: 'worker' as const, x: 11.5, y: 8.5, home: 1,
       builder: true, buildSite: farm.id, buildPhase: 'working' as const, inside: false,
       destination: { x: 11.5, y: 8.5 }, path: [{ x: 11.5, y: 8.5 }], moving: true };
     entityStore(state).units.add(worker); synchronizeFarms(state);
     expect(buildAt(state, 'road', 12, 8).ok).toBe(true);
-    expect(farm.construction).toMatchObject({ startedAt: 8, duration: 3.75, paidGold: 12.5, pausedAt: 10, waitingForBuilder: true, cleared: false });
+    expect(farm.construction).toMatchObject({ startedAt: 8, duration: 3.75, paidGold: 15, pausedAt: 10, waitingForBuilder: true, cleared: false });
     expect(worker).toMatchObject({ x: 11.5, y: 8.5, buildSite: farm.id, buildPhase: 'outbound', moving: false });
     expect(worker.path).toBeUndefined(); expect(worker.destination).toBeUndefined(); noOverlap(state);
   });

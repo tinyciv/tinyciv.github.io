@@ -1,8 +1,9 @@
+import { farmWorkGroups } from '../src/game/farm-work-groups';
 import { ensureBuilders } from '../src/game/builders';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { createGame, getLeader, migrateGame, moveUnit, updateGame } from '../src/game/simulation';
-import { ensureCollectors, fieldHarvestFood, FARM_TILES_PER_COURIER, FIELD_HARVEST_FOOD, FIELD_HARVEST_SECONDS, FIELD_SPOIL_SECONDS, synchronizeFarms, updateCollector, updateHarvests } from '../src/game/farms';
+import { ensureCollectors, fieldHarvestFood, FIELD_HARVEST_FOOD, FIELD_HARVEST_SECONDS, FIELD_SPOIL_SECONDS, synchronizeFarms, updateCollector, updateHarvests } from '../src/game/farms';
 import { type GameState, type World, tileAt } from '../src/game/types';
 import { buildingBlockers, canWalk } from '../src/game/pathfinding';
 import { startConstruction } from '../src/game/structures';
@@ -66,13 +67,14 @@ describe('compact farmland and food deliveries', () => {
     expect(camp.construction).toBeUndefined();
     expect(state.fields!.filter(field => field.camp === camp.id)).toHaveLength(1);
     expect(state.fields!.filter(field => field.camp === camp.id).every(field => field.nextHarvest >= 3.75 + FIELD_HARVEST_SECONDS - 1e-5)).toBe(true);
-    expect(state.units.filter(unit => unit.collectorCamp === camp.id)).toHaveLength(1);
+    const parcel = farmWorkGroups(state).byCamp.get(camp.id);
+    expect(state.units.filter(unit => unit.collector && farmWorkGroups(state).byCamp.get(unit.collectorCamp!) === parcel)).toHaveLength(1);
   });
 
   it('retires farm allocations when the city has no residents', () => {
     const state = realm(), camps = state.buildings.filter(building => building.kind === 'camp');
     const initialIds = state.units.filter(unit => unit.collector).map(unit => unit.id);
-    expect(initialIds).toHaveLength(Math.ceil(camps.length / FARM_TILES_PER_COURIER));
+    expect(initialIds).toHaveLength(farmWorkGroups(state).groups.filter(group => group.faction === 0).length);
     state.factions[0].population = 0;
     synchronizeFarms(state);
     for (let step = 0; step < 5; step++) ensureCollectors(state);
@@ -176,7 +178,8 @@ describe('compact farmland and food deliveries', () => {
     synchronizeFarms(state); ensureCollectors(state);
     expect(state.fields!.some(field => field.camp === camp.id)).toBe(false);
     expect(camp.storedFood).toBe(9);
-    expect(state.units.filter(unit => unit.collectorCamp === camp.id)).toHaveLength(1);
+    // Suppressed ground has no parcel job until its plot becomes available.
+    expect(state.units.filter(unit => unit.collectorCamp === camp.id)).toHaveLength(0);
     camp.farmSuppressed = false;
     synchronizeFarms(state);
     expect(state.fields!.filter(field => field.camp === camp.id).reduce((food, field) => food + field.food, 0)).toBe(9);

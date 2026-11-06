@@ -10,7 +10,7 @@ const definitions = new Map(RESEARCH_BRANCHES.map(branch => [branch.id, branch])
 const summaries: Partial<Record<ResearchBranchId, string>> = {
   woodenTower: 'Unlocks wooden towers, guard posts and settlement upgrades to Keeps.',
   traditionalMedicine: 'Healers’ shacks triple nearby healing inside your borders.',
-  scoutLodge: 'Each Scouts’ Lodge sends two fast scouts to explore the world.',
+  scoutLodge: 'Build Scouts’ Lodges to unlock concealed observation posts.',
   sailing: 'Unlocks docks, exploration sailboats and automatic river trade.',
   militaryTactics: 'Train defensive spearmen whose thrusts pierce multiple enemies.',
   infantryDrill: 'Close ranks with stronger frontal combat. Requires eight retinue soldiers.',

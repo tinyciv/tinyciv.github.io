@@ -48,9 +48,9 @@ export function villageTradeActive(state: GameState, village: NeutralVillage, fa
     && !!partner && !partner.defeated && partner.villageId === undefined && partner.relation !== 'confederated'
     && !villageHostility(state, village.faction, faction) && !!villageCamp(state, village);
 }
-export function villageAllianceCost(village: NeutralVillage, faction = 0): number {
+export function villageAllianceCost(village: Pick<NeutralVillage, 'tradeGoldByFaction'>, faction = 0): number {
   const traded = Math.max(0, village.tradeGoldByFaction?.[faction] ?? 0);
-  return Math.max(VILLAGE_ALLIANCE_MIN_COST, VILLAGE_ALLIANCE_COST - Math.floor(traded / 10));
+  return Math.max(VILLAGE_ALLIANCE_MIN_COST, VILLAGE_ALLIANCE_COST - Math.round(traded / 50) * 5);
 }
 /** Both partners earn the delivered leg's revenue. Agreement fees, unfinished
  * journeys and combat bounties never count toward the lifetime trade discount. */

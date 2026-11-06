@@ -51,13 +51,13 @@ describe('technology Leader abilities', () => {
     expect(engineer).toMatchObject({ kind: 'worker', hp: 100, maxHp: 100, attack: 0 });
     expect(engineer.builder).toBeUndefined(); expect(engineer.collector).toBeUndefined();
     expect(state.factions[0]).toMatchObject({ population: 0, food: 500 });
-    expect(buildCostAt(state, 'road', 6, 5).gold).toBe(1);
-    expect(buildCostAt(state, 'bridge', 6, 5).gold).toBe(4);
+    expect(buildCostAt(state, 'road', 6, 5).gold).toBe(5);
+    expect(buildCostAt(state, 'bridge', 6, 5).gold).toBe(5);
     const gold = state.factions[0].gold, result = buildAt(state, 'road', 6, 5);
     expect(result.ok, result.message).toBe(true);
     const road = state.buildings.find(building => building.kind === 'road' && building.x === 6 && building.y === 5)!;
     expect(road.construction).toMatchObject({ waitingForBuilder: false, engineerId: engineer.id });
-    expect(state.factions[0].gold).toBe(gold - 1);
+    expect(state.factions[0].gold).toBe(gold - 5);
     updateGame(state, 2.2, idle);
     expect(road.construction).toBeUndefined();
     expect(state.units.filter(unit => unit.builder)).toHaveLength(0);
@@ -136,11 +136,11 @@ describe('real-time Leader recovery', () => {
     expect(state.factions[0].gold).toBe(700); expect(state.factions[1].gold).toBe(300);
     expect(state.factions[1].leaderRespawn).toBeDefined(); expect(state.factions[1].defeated).toBe(false); expect(state.gameOver).toBe(false);
   });
-  it('rewards marauder commander kills equally without assigning faction respawns to marauders', () => {
+  it('rewards marauder commander kills with 50 gold without assigning faction respawns to marauders', () => {
     const state = fixture(), leader = getLeader(state)!;
     const marauder = { ...person(20, 'warrior', 15.5, 15.5, -2), marauderLeader: true };
     entityStore(state).units.add(marauder); shot(state, leader, marauder); updateGame(state, .1, idle);
-    expect(leader.leaderProgression?.level).toBe(2); expect(state.factions[0].gold).toBe(700);
+    expect(leader.leaderProgression?.level).toBe(2); expect(state.factions[0].gold).toBe(550);
   });
   it('cannot postpone death penalties by repeated death handling, and has no respawn without a city', () => {
     const state = fixture(), leader = getLeader(state)!; leader.hp = 0;

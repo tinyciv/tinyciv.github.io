@@ -50,7 +50,7 @@ describe('Leader construction', () => {
     extra(state, 'road', 11, 9);
     expect(buildStroke(state, first, line).placed).toBe(4);
     expect(buildStroke(state, second, line).placed).toBe(2);
-    expect(state.factions[0].gold).toBe(second === 'wall' ? 432 : 376);
+    expect(state.factions[0].gold).toBe(second === 'wall' ? 400 : 360);
     expect(canWalk(state, 12.5, 9.5, 0)).toBe(true);
     for (const b of state.buildings) delete b.construction;
     expect(canWalk(state, 12.5, 9.5, 0)).toBe(true);
@@ -126,7 +126,7 @@ describe('Leader construction', () => {
     expect(validateBuildAt(state, 'wall', 12, 7).ok).toBe(true);
     expect(validateBuildAt(state, 'woodenTower', 12, 7).ok).toBe(false);
     expect(state.buildings.filter(b => b.kind === 'house').every(b => b.capacity === 2 && b.construction?.waitingForBuilder
-      && b.construction.paidGold === 62.5 && b.construction.duration === 40 / 3)).toBe(true);
+      && b.construction.paidGold === 65 && b.construction.duration === 40 / 3)).toBe(true);
   });
 
   it('allows detached manual houses within borders while enforcing the Leader’s 10-tile range', () => {

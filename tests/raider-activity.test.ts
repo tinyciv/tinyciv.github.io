@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { canReleaseRaiderReserve, defendRaiderCamp, initializeRaiderSkirmishes, releaseRaiderReserve, updateRaiderActivity, updateRaiderReturn, RAIDER_CAMP_RESERVES } from '../src/game/raider-activity';
 import { beginBattleRout } from '../src/game/battle-morale';
+import { notifyRaiderAttack, updateRaiderAlert, RAIDER_ALARM_RADIUS, RAIDER_ALARM_SECONDS } from '../src/game/raider-alerts';
 import { MAX_LIVE_RAIDERS, MAX_LIVE_RAIDERS_PER_CAMP } from '../src/game/raider-camps';
 import { continueAfterVictory, updateGame } from '../src/game/simulation';
 import { canWalk, travelTimeMap } from '../src/game/pathfinding';
@@ -34,6 +35,63 @@ function returned(state: GameState, count = 1): { pack: MarauderPack; members: U
 const defenders = (state: GameState) => state.units.filter(unit => state.marauderPacks?.some(pack => pack.campDefense && pack.id === unit.marauderPack));
 
 describe('camp activity and small raids', () => {
+  it('broadcasts attacks to allies fourteen tiles away without revealing hidden enemy movement', () => {
+    const state = fixture(), { pack, members } = returned(state, 3);
+    Object.assign(pack, { returning: false, raid: true, targetBuilding: 2 });
+    const [victim, ally, distant] = members;
+    Object.assign(victim, { x: 26.5, y: 25.5, hp: 100 });
+    Object.assign(ally, { x: victim.x + RAIDER_ALARM_RADIUS - 1, y: victim.y, hp: 100 });
+    Object.assign(distant, { x: victim.x + RAIDER_ALARM_RADIUS + 1, y: victim.y, hp: 100 });
+    const attacker = state.units[0]; attacker.x = 25.5; attacker.y = 25.5;
+    expect(notifyRaiderAttack(state, victim, attacker)).toBe(2);
+    const goals: { x: number; y: number }[] = [];
+    const orders = { move: (point: { x: number; y: number }) => goals.push({ ...point }), attack: () => { throw Error('Enemy is not visible'); }, visible: () => false };
+    expect(updateRaiderAlert(state, ally, .1, orders)).toBe(true);
+    expect(goals).toEqual([{ x: 25.5, y: 25.5 }]);
+    attacker.x = 10.5;
+    updateRaiderAlert(state, ally, .1, orders);
+    expect(goals.at(-1)).toEqual({ x: 25.5, y: 25.5 });
+    expect(updateRaiderAlert(state, distant, .1, orders)).toBe(false);
+    state.time = RAIDER_ALARM_SECONDS;
+    expect(updateRaiderAlert(state, ally, .1, orders)).toBe(false);
+  });
+
+  it('wakes nearby tent occupants on an attack but leaves routed and wounded retreating leaders sheltered', () => {
+    const state = fixture(), { members } = returned(state, 3);
+    const [reserve, routed, commander] = members;
+    for (const unit of members) {
+      Object.assign(unit, { inside: true, raiderGarrison: 3, x: 38.5, y: 18.5 });
+      entityStore(state).setUnitSleeping(unit, true);
+    }
+    beginBattleRout(state, routed);
+    Object.assign(commander, { marauderLeader: true, marauderRetreating: true });
+    const attacker = { x: 37.5, y: 18.5, faction: 0 };
+    expect(notifyRaiderAttack(state, state.buildings[1], attacker)).toBe(1);
+    expect(reserve.inside).toBe(false); expect(entityStore(state).units.query('active')).toContain(reserve);
+    expect(routed.inside).toBe(true); expect(commander.inside).toBe(true);
+    expect(state.units).toHaveLength(4); // The alarm reuses bodies, never spawns them.
+    expect(notifyRaiderAttack(state, state.buildings[1], attacker)).toBe(0); // Event throttled.
+  });
+
+  it.each(['melee', 'arrow', 'ballistaBolt'] as const)('shares a real %s attack with a distant ally beyond ordinary sensing', source => {
+    const state = fixture(), { pack, members } = returned(state, 2);
+    const [victim, ally] = members;
+    Object.assign(pack, { returning: false, raid: true, targetBuilding: 2, motivation: 'assault' });
+    Object.assign(victim, { x: 24.5, y: 25.5, hp: 100, attack: 0 });
+    Object.assign(ally, { x: 36.5, y: 25.5, hp: 100, attack: 0 });
+    const attacker = { ...person(20, 23.5, 25.5, 0), attack: source === 'melee' ? 5 : 0,
+      speed: 0, target: victim.id, forcedAttack: { target: victim.id } };
+    entityStore(state).units.add(attacker);
+    if (source !== 'melee') state.projectiles = [{ x: attacker.x, y: attacker.y, start: { x: attacker.x, y: attacker.y },
+      end: { x: victim.x, y: victim.y }, attacker: attacker.id, target: victim.id, faction: 0, damage: 5,
+      kind: source, elapsed: 0, duration: .01, startHeight: .5 }];
+    for (let step = 0; step < 5; step++) updateGame(state, .1, idle);
+    expect(victim.hp).toBeLessThan(100);
+    const goals: { x: number; y: number }[] = [];
+    expect(updateRaiderAlert(state, ally, .1, { move: goal => goals.push(goal), attack: () => {}, visible: () => false })).toBe(true);
+    expect(goals.at(-1)).toEqual({ x: attacker.x, y: attacker.y });
+  });
+
   it('does not redeploy routed camp reserves before their fifteen-second deadline', () => {
     const state = fixture(), { members } = returned(state), reserve = members[0];
     beginBattleRout(state, reserve);

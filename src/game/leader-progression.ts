@@ -16,7 +16,7 @@ export const LEADER_SKILL_TECH: Partial<Record<LeaderSkillId, ResearchBranchId>>
 export const leaderSkillMaxRank = (skill: LeaderSkillId): number => LEADER_SKILL_TECH[skill] ? 1 : LEADER_SKILL_MAX_RANK;
 export const leaderSkillUnlocked = (faction: Faction | undefined, skill: LeaderSkillId): boolean => !LEADER_SKILL_TECH[skill] || researchLevel(faction, LEADER_SKILL_TECH[skill]!) > 0;
 
-export const leaderXpRequired = (level: number): number => Math.max(1, Math.floor(level)) * 100;
+export const leaderXpRequired = (level: number): number => Math.max(1, Math.floor(level)) * 800;
 export const initialLeaderProgression = (): LeaderProgression => ({ level: 1, xp: 0, skillPoints: 0,
   skills: { power: 0, guard: 0, command: 0, engineer: 0, brace: 0, discretion: 0 } });
 

@@ -24,10 +24,10 @@ function fixture(count = 1): GameState {
 const farm = (state: GameState): Building => state.buildings[1];
 
 describe('orchard upgrades', () => {
-  it('charges6.25 gold, suspends growing for120 seconds, and then yields50% more food', () => {
+  it('charges5 gold, suspends growing for120 seconds, and then yields50% more food', () => {
     const state = fixture();
     expect(purchaseOrchardUpgrade(state, farm(state))).toMatchObject({ ok: true });
-    expect(state.factions[0].gold).toBe(993.75);
+    expect(state.factions[0].gold).toBe(995);
     expect(farm(state).orchard).toEqual({ startedAt: 0, readyAt: ORCHARD_ESTABLISH_SECONDS });
     state.time = 119.99; synchronizeFarms(state); updateHarvests(state);
     expect(state.fields!.every(field => !field.planted && field.food === 0)).toBe(true);
@@ -50,12 +50,12 @@ describe('orchard upgrades', () => {
     expect(farm(state).orchard?.readyAt).toBe(120);
   });
 
-  it('atomically upgrades the nearest ten eligible farms, with fixed62.5gold cost', () => {
-    const state = fixture(12); state.factions[0].gold = 62.49;
-    expect(orchardUpgradeStatus(state, farm(state), 10)).toMatchObject({ available: false, cost: 62.5 });
+  it('atomically upgrades the nearest ten eligible farms, with fixed50gold cost', () => {
+    const state = fixture(12); state.factions[0].gold = 49.99;
+    expect(orchardUpgradeStatus(state, farm(state), 10)).toMatchObject({ available: false, cost: 50 });
     expect(purchaseOrchardUpgrade(state, farm(state), 10).ok).toBe(false);
     expect(state.buildings.some(building => building.orchard)).toBe(false);
-    state.factions[0].gold = 62.5;
+    state.factions[0].gold = 50;
     expect(purchaseOrchardUpgrade(state, farm(state), 10).ok).toBe(true);
     expect(state.factions[0].gold).toBe(0);
     expect(state.buildings.filter(building => building.orchard).map(building => building.id)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
@@ -69,7 +69,7 @@ describe('orchard upgrades', () => {
     expect(state.factions[0].gold).toBe(gold);
     state.units[0].x = 7.5; expect(purchaseOrchardUpgrade(state, farm(state)).ok).toBe(true);
     expect(purchaseOrchardUpgrade(state, farm(state)).ok).toBe(false);
-    expect(state.factions[0].gold).toBe(gold - 6.25);
+    expect(state.factions[0].gold).toBe(gold - 5);
   });
 
   it('preserves desert yield, governor planned capacity, and orchard appearance in fog memories', () => {

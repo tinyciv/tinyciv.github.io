@@ -66,7 +66,7 @@ describe('automatic residential housing', () => {
     expect(houses(state)).toHaveLength(6);
     const house = houses(state).find(home => home.construction)!;
     expect(house.capacity).toBe(2); expect(buildingSize(house)).toBe(1);
-    expect(house.construction).toMatchObject({ waitingForBuilder: true, paidGold: 62.5, duration: 40 / 3 });
+    expect(house.construction).toMatchObject({ waitingForBuilder: true, paidGold: 65, duration: 40 / 3 });
     expect(housingCapacity(state)).toBe(12);
     expect(fields).not.toContain(`${house.x},${house.y}`);
     expect(roads.some(road => road.x === house.x && road.y === house.y)).toBe(false);
@@ -86,7 +86,7 @@ describe('automatic residential housing', () => {
   });
 
   it('orders only one house when gold cannot pay for the second', () => {
-    const state = realm(); state.factions[0].gold = 62.5;
+    const state = realm(); state.factions[0].gold = 65;
     state.factions[0].population = 12; synchronizeFarms(state);
     economy(state);
     expect(houses(state)).toHaveLength(5);

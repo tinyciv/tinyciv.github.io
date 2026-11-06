@@ -36,7 +36,7 @@ function villageFixture(): GameState {
 }
 
 describe('gold ledger records actual gameplay transactions', () => {
-  it('categorizes successful purchases, preserves fractional prices, and ignores rejected purchases', () => {
+  it('categorizes successful purchases at rounded prices and ignores rejected purchases', () => {
     const state = fixture(), faction = state.factions[0], keep = state.buildings[0];
     keep.palaceLevel = 2; keep.capacity = 10;
     const smith = building(2, 'blacksmith', 12, 10), farm = building(3, 'camp', 15, 10), post = building(4, 'guardPost', 18, 10);
@@ -54,7 +54,7 @@ describe('gold ledger records actual gameplay transactions', () => {
     const summary = goldFlowSummary(state, faction);
     expect(summary.inputs).toEqual([]);
     expect(summary.outlays.map(row => [row.category, row.amount])).toEqual([
-      ['army', 1000], ['upgrades', 1506.25], ['immigration', 100],
+      ['army', 1000], ['upgrades', 1505], ['immigration', 100],
     ]);
     expect(faction.gold - 10000).toBe(summary.net);
     expect(faction.incomeTotals?.gold ?? 0).toBe(0);

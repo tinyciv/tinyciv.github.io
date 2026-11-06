@@ -6,8 +6,9 @@ import { nearbyUnits } from './spatial';
 import { spendGold } from './gold-ledger';
 import { canWalk, createReachabilityQuery } from './pathfinding';
 import { invalidateSettlementDecisions } from './settlement-decisions';
-import { LODGE_SCOUT_SPEED } from './scout-lodges';
 import { buildingHeight, buildingReady, buildingWidth, distance, type Building, type GameState, type Point, type Unit } from './types';
+
+const SCOUT_SPEED = 3.6 * 1.1 * 1.2;
 
 export const OBSERVATION_POST_COST = 20;
 export const OBSERVATION_POST_UPKEEP = 3;
@@ -15,7 +16,7 @@ export const OBSERVATION_POST_UPKEEP_SECONDS = 30;
 export const OBSERVATION_POST_SIGHT = 21;
 export const OBSERVATION_POST_SMOKE_SECONDS = 60;
 export const OBSERVATION_POST_SMOKE_DURATION = 5;
-export const OBSERVATION_POST_FLEE_SPEED = LODGE_SCOUT_SPEED * 1.3;
+export const OBSERVATION_POST_FLEE_SPEED = SCOUT_SPEED * 1.3;
 
 export function hasObservationLodge(state: GameState, faction: number): boolean {
   return entityStore(state).buildings.query('scoutLodge').some(lodge => lodge.faction === faction && buildingReady(lodge));
@@ -54,7 +55,7 @@ export function placeObservationPost(state: GameState, factionId: number, point:
   spendGold(state, faction, OBSERVATION_POST_COST, 'construction');
   const x = Math.floor(point.x) + .5, y = Math.floor(point.y) + .5, store = entityStore(state);
   store.units.add({ id: Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id)) + 1, kind: 'scout', faction: factionId, x, y,
-    hp: 100, maxHp: 100, morale: 100, attack: 0, defense: 4, speed: LODGE_SCOUT_SPEED, range: 0,
+    hp: 100, maxHp: 100, morale: 100, attack: 0, defense: 4, speed: SCOUT_SPEED, range: 0,
     order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60, facing: Math.PI / 2, moving: false, attackTime: 0,
     observationPost: { x, y, city: city.id, discoveredBy: [], nextUpkeepAt: state.time + OBSERVATION_POST_UPKEEP_SECONDS,
       nextSmokeAt: state.time + OBSERVATION_POST_SMOKE_SECONDS } });

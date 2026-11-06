@@ -18,6 +18,7 @@ export const RAIDER_OPENING_TRAVEL_SECONDS = 18;
 export const RAIDER_CAMP_RESERVES = 30;
 export const RAIDER_DEFENDER_COOLDOWN = 30;
 const planningAt = new WeakMap<GameState, number>();
+const shelterJourneys = new WeakMap<Unit, { camp: number; house: Building; exit: Point; revision: number; until: number }>();
 const center = (building: Building): Point => ({ x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 });
 const edgeDistance = (point: Point, building: Building): number => Math.hypot(Math.max(building.x - point.x, 0, point.x - building.x - buildingWidth(building)),
   Math.max(building.y - point.y, 0, point.y - building.y - buildingHeight(building)));
@@ -117,7 +118,9 @@ function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendi
   attackedBuilding?: Building, attacker?: Point): Unit[] {
   size = defense ? Math.max(2, raiderCampPartySize(state, camp, size)) : raiderCampPartySize(state, camp, size);
   const units: Unit[] = [], previous = new Map<Unit, Unit>();
-  for (const reserve of campReserves(state, camp)) {
+  const reserves = campReserves(state, camp);
+  if (attackedBuilding) reserves.sort((a, b) => Number(b.raiderGarrison === attackedBuilding.id) - Number(a.raiderGarrison === attackedBuilding.id));
+  for (const reserve of reserves) {
     if (units.length >= size) break;
     if (reserve.marauderLeader && (defense || units.some(unit => unit.marauderLeader))) continue;
     const before = { ...reserve };
@@ -228,16 +231,24 @@ export function updateRaiderReturn(state: GameState, unit: Unit, pack: MarauderP
   if (unit.marauderLeader && distance(unit, refuge) > .7) { move(refuge); return true; }
   const shelterIds = unit.marauderLeader || !camp.houses.some(id => state.buildings.some(b => b.id === id && buildingReady(b)))
     ? camp.coreTowers ?? [] : camp.houses;
-  const houses = state.buildings.filter(building => shelterIds.includes(building.id) && buildingReady(building));
-  const entrances = houses.flatMap(house => constructionEdges(state, house).map(point => ({ house, point })))
-    .filter(({ point }) => canWalk(state, point.x, point.y, -2))
-    .sort((a, b) => distance(unit, a.point) - distance(unit, b.point));
-  const entrance = entrances.find(({ point }) => hasStaticPath(state, unit, point, -2));
+  const revision = entityStore(state).buildings.revision;
+  let journey = shelterJourneys.get(unit);
+  if (!journey || journey.camp !== camp.id || journey.revision !== revision || state.time >= journey.until
+    || !buildingReady(journey.house) || journey.house.faction !== -2 || !shelterIds.includes(journey.house.id)) {
+    const houses = state.buildings.filter(building => shelterIds.includes(building.id) && buildingReady(building));
+    const entrances = houses.flatMap(house => constructionEdges(state, house).map(point => ({ house, point })))
+      .filter(({ point }) => canWalk(state, point.x, point.y, -2))
+      .sort((a, b) => distance(unit, a.point) - distance(unit, b.point));
+    const entrance = entrances.find(({ point }) => hasStaticPath(state, unit, point, -2));
+    journey = entrance && { camp: camp.id, house: entrance.house, exit: entrance.point, revision, until: state.time + 5 };
+    if (journey) shelterJourneys.set(unit, journey); else shelterJourneys.delete(unit);
+  }
+  const entrance = journey;
   if (!entrance) {
     pack.returning = false; pack.raid = true; pack.campDefense = false; pack.motivation = 'assault';
     pack.targetBuilding = undefined; pack.lastProgressAt = state.time; unit.marauderRetreating = false; return false;
   }
-  const { house, point: exit } = entrance;
+  const { house, exit } = entrance;
   const sleeping = state.units.filter(other => other.hp > 0 && other.inside && other.raiderGarrison !== undefined && [...camp.houses, ...(camp.coreTowers ?? [])].includes(other.raiderGarrison)).length;
   if (sleeping >= Math.min(RAIDER_CAMP_RESERVES, raiderCampPopulationCap(state, camp))) {
     pack.returning = false; pack.raid = true; pack.campDefense = false; pack.motivation = 'assault';
@@ -311,10 +322,16 @@ export function updateRaiderActivity(state: GameState): void {
       // an actual muster may wait in place; it has its own 90-second deadline.
       || pack.phase !== 'muster' && state.time - (pack.lastProgressAt ?? state.time) > 30)
       returnToCamp(state, pack, members);
-    // Independent wanderers receive a real attack objective after a brief patrol.
-    if (!pack.raid && !pack.returning && pack.raiderCamp === undefined && state.time - (pack.spawnedAt ?? 0) > 20) {
+    // No idle patrols: a camp band goes indoors; an independent active band
+    // immediately acquires an actual faction objective.
+    if (!pack.raid && !pack.returning && !pack.campDefense && pack.raiderCamp !== undefined) returnToCamp(state, pack, members);
+    if (!pack.raid && !pack.returning && !pack.campDefense && pack.raiderCamp === undefined) {
       const target = selectRaidTarget(state, position, pack.id);
-      if (target) { pack.raid = true; pack.microRaid = true; pack.targetBuilding = target.id; pack.targetFaction = target.faction; pack.waypoint = center(target); }
+      if (target) {
+        pack.raid = true; pack.microRaid = true; pack.motivation = 'assault';
+        pack.targetBuilding = target.id; pack.targetFaction = target.faction; pack.waypoint = center(target);
+        for (const unit of active) if (unit.order !== 'flee' && !unit.routed) { clearOrders(unit); unit.order = 'raid'; }
+      } else returnToCamp(state, pack, members);
     }
   }
   const clock = state.raiderSkirmishes; if (!banditIntensity(state) || !clock || state.gameOver || state.paused || state.victory && !state.victoryContinued) return;

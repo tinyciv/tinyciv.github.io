@@ -27,7 +27,10 @@ export function scenario(name: ScenarioName): GameState {
     const unit=add(10.5-col,10.5+row,-2);unit.marauderPack=1;unit.order='wander';
   }
   for(let row=0;row<4;row++)for(let col=0;col<2;col++)add(20.5+col,10.5+row,0);
-  state.marauderPacks=[{id:1,name:'Attackers',color:'#ed9d45',targetFaction:0,home:{x:10.5,y:12.5},waypoint:{x:20.5,y:12.5},nextWanderAt:Infinity}];
+  // A fixed defensive response supplies the engagement waypoint. Free-roaming
+  // bands now acquire settlement objectives instead of patrolling arbitrary points.
+  state.marauderPacks=[{id:1,name:'Attackers',color:'#ed9d45',targetFaction:0,home:{x:10.5,y:12.5},waypoint:{x:20.5,y:12.5},nextWanderAt:Infinity,
+    campDefense:true,defenseUntil:Number.MAX_SAFE_INTEGER}];
   return state;
 }
 export interface Metrics { arrived:number; engaged:number; meanEngaged:number; maxStall:number; stalledUnitSeconds:number; overlappingSamples:number; elapsed:number; }

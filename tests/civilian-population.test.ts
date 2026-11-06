@@ -48,7 +48,8 @@ describe('real civilian population', () => {
     tick(state, 60); // Establish the first crops before measuring sustainable delivery.
     const food = state.factions[0].food, delivered = state.buildings[0].foodDelivered ?? 0;
     let maximum = 0;
-    for (let time = 0; time < 130; time += .1) {
+    // A single worker now sweeps this deliberately oversized connected parcel.
+    for (let time = 0; time < 240; time += .1) {
       updateGame(state, .1, idle); maximum = Math.max(maximum, workers(state).length);
     }
     expect(maximum).toBeLessThanOrEqual(20);
@@ -66,7 +67,7 @@ describe('real civilian population', () => {
       worker.hp = 0;
       expect(recordCivilianCasualty(state, worker)).toBe(true);
       expect(recordCivilianCasualty(state, worker)).toBe(false);
-      ensureBuilders(state); ensureCollectors(state); deaths++;
+      ensureCollectors(state); ensureBuilders(state); deaths++;
     }
     expect(deaths).toBe(5); expect(workers(state)).toHaveLength(0); expect(state.buildings[0].depopulated).toBe(true);
     for (let i = 0; i < 8; i++) advanceCityPopulation(state, state.factions[0], citySummaries(state), 1);

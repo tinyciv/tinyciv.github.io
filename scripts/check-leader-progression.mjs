@@ -93,16 +93,16 @@ try {
     document.querySelector('#world').addEventListener('pointerdown', () => window.__leaderQaPointerDown++);
   });
   await fixture();
-  check('New leader displays level 1, zero XP and zero points', (await page.locator('.leader-level-badge').innerText()) === '1' && (await page.locator('.leader-xp-text').innerText()) === '0 / 100 XP' && (await page.locator('.leader-xp-points').innerText()) === '0');
+  check('New leader displays level 1, zero XP and zero points', (await page.locator('.leader-level-badge').innerText()) === '1' && (await page.locator('.leader-xp-text').innerText()) === '0 / 800 XP' && (await page.locator('.leader-xp-points').innerText()) === '0');
   await page.locator('.leader-xp-points').click();
   check('Zero-point badge opens skill inspection', await popup.isVisible());
   check('Learn is disabled without skill points', await learn.isDisabled());
   await page.keyboard.press('Escape');
   check('Escape closes popup and returns focus to game', !(await popup.isVisible()) && await page.evaluate(() => document.activeElement?.id === 'world'));
-  await award(80);
-  check('Partial XP updates rail without opening popup', (await page.locator('.leader-xp-text').innerText()) === '80 / 100 XP' && !(await popup.isVisible()));
+  await award(640);
+  check('Partial XP updates rail without opening popup', (await page.locator('.leader-xp-text').innerText()) === '640 / 800 XP' && !(await popup.isVisible()));
   const beforeLevel = await leader();
-  await award(20);
+  await award(160);
   const afterLevel = await leader();
   check('Level up updates the point indicator without opening the popup or stealing focus', !(await popup.isVisible())
     && (await page.locator('.leader-xp-points').innerText()) === '1'
@@ -121,7 +121,7 @@ try {
   const powered = await leader();
   check('Learn Power changes base attack, rank, point and pips', powered.attack === afterLevel.attack + 2 && powered.leaderProgression.skills.power === 1 && powered.leaderProgression.skillPoints === 0 && await page.locator('[data-leader-skill="power"] .earned').count() === 1, powered);
   check('Popup remains open after learning; no points cannot be overspent', await popup.isVisible() && await learn.isDisabled());
-  await award(900);
+  await award(7200);
   check('An already-open popup stays open and refreshes after another level up', await popup.isVisible()
     && (await page.locator('.leader-skills-level').innerText()) === `Level ${(await leader()).leaderProgression.level}`);
   await pick('power'); await learn.click(); await settle(); await learn.click(); await settle();
@@ -130,7 +130,7 @@ try {
   await pick('guard'); const beforeGuard = await leader(); await learn.click(); await settle();
   const guarded = await leader();
   check('Guard increases defense and spends one point', guarded.defense === beforeGuard.defense + 1 && guarded.leaderProgression.skills.guard === 1 && guarded.leaderProgression.skillPoints === beforeGuard.leaderProgression.skillPoints - 1);
-  await award(500); await pick('command'); await learn.click(); await settle();
+  await award(4000); await pick('command'); await learn.click(); await settle();
   const commanded = await leader();
   check('Command gains one retinue rank', commanded.leaderProgression.skills.command === 1 && (await page.locator('.leader-detail-stat').innerText()).includes('1'), commanded.leaderProgression);
   check('UI clicks do not reach the world canvas', await page.evaluate(() => window.__leaderQaPointerDown === 0));
@@ -142,10 +142,10 @@ try {
     return { saved: unit.leaderProgression, now: now.leaderProgression, stats: unit.attack === now.attack && unit.defense === now.defense && unit.maxHp === now.maxHp };
   });
   check('Learn persists progression and stat bonuses in actual save', JSON.stringify(persistence.saved) === JSON.stringify(persistence.now) && persistence.stats, persistence);
-  await fixture(); await award(100); await award(200);
+  await fixture(); await award(800); await award(1600);
   check('Repeated level ups keep the popup closed while points accumulate', !(await popup.isVisible())
     && (await page.locator('.leader-xp-points').innerText()) === '2');
-  await award(480); await page.locator('.leader-xp-points').click();
+  await award(3840); await page.locator('.leader-xp-points').click();
   await pick('power'); await learn.click(); await settle(); await pick('guard'); await learn.click(); await settle(); await pick('power');
   await capture('leader-skills-desktop-power');
   for (const [width, height] of [[1600, 1000], [1440, 900], [1024, 768], [390, 844], [320, 700], [844, 390]]) await layout(width, height);

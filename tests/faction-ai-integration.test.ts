@@ -103,8 +103,8 @@ describe('rival leader and army operations in the live simulation', () => {
       .reduce((sum, squad) => sum + squad.kills, 0);
     expect(individualKills + squadKills).toBe(2);
     // Five residents at 0.7 tax minus upkeep for four escorts gives 1.5 gold per economy
-    // tick; the remaining 206 is the actual 6 + 200 raider bounty.
-    expect(state.factions[1].gold).toBeCloseTo(206 + state.tick * 1.5);
+    // tick; the remaining 56 is the actual 6 + 50 raider bounty.
+    expect(state.factions[1].gold).toBeCloseTo(56 + state.tick * 1.5);
     expect(returnedAfterHunt).toBe(true);
   });
 

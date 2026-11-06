@@ -28,7 +28,6 @@ import { recordGuardKill, recordGuardCasualty } from './guard-posts';
 import { recordCavalryMovement, tryCavalryCharge } from './cavalry';
 import { isSoldier, isRetinueMember, buildingKindForSelection } from './types';
 import { updateScout } from './scouts';
-import { updateScoutLodges } from './scout-lodges';
 import { IRRIGATION_GOLD, irrigationConnects } from './irrigation';
 import { entityStore, resetEntities } from './entity-store';
 import { prepareCourierUpdates, settleCourier, wakeCourier } from './courier-sleep';
@@ -103,6 +102,7 @@ import { factionCityDevelopmentPriority, updateFactionDevelopment } from './fact
 import { getFactionStrategy, updateFactionStrategies, type FactionMission } from './faction-strategy';
 import { initializeTreasureChests, updateTreasureChests } from './treasure';
 import { defendRaiderCamp, updateRaiderReturn } from './raider-activity';
+import { notifyRaiderAttack, updateRaiderAlert } from './raider-alerts';
 import { marauderBandDepleted, marauderLeaderInDanger } from './marauder-leaders';
 import { advanceCityPopulation } from './city-growth';
 import { updateCulture } from './culture';
@@ -134,7 +134,7 @@ export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; pro
   fort: { food: 0, gold: FORT_GOLD, production: 0 }, supplyDepot: { food: 0, gold: 120, production: 0 },
   palace: { food: 0, gold: 100, production: 0 }, camp: { food: 0, gold: FARM_BUILD_GOLD, production: 0 },
   house: { food: 0, gold: HOUSE_BUILD_GOLD, production: 0 }, shack: { food: 0, gold: 250, production: 0 }, cottage: { food: 0, gold: 250, production: 0 },
-  road: { food: 0, gold: 2, production: 0 }, wall: { food: 0, gold: STONE_WALL_GOLD, production: 0 }, palisade: { food: 0, gold: 3, production: 0 }, bridge: { food: 0, gold: 8, production: 0 },
+  road: { food: 0, gold: 10, production: 0 }, wall: { food: 0, gold: STONE_WALL_GOLD, production: 0 }, palisade: { food: 0, gold: 5, production: 0 }, bridge: { food: 0, gold: 10, production: 0 },
   irrigation: { food: 0, gold: IRRIGATION_GOLD, production: 0 },
   ruin: { food: 0, gold: 0, production: 0 },
   well: { food: 0, gold: 50, production: 0 }, monument: { food: 0, gold: 200, production: 0 },
@@ -393,7 +393,6 @@ export function createGame(world: World, duel?: { names?: string[]; colors?: str
     syncRetinue(state, faction, true);
   });
   synchronizeFarms(state); ensureCollectors(state); ensureBuilders(state);
-  updateScoutLodges(state);
   initializeFogRaids(state);
   initializeRoamingMarauders(state);
   if (!duel) initializeVillages(state);
@@ -1143,7 +1142,7 @@ function destroyTarget(state: GameState, attacker: Pick<Unit, 'faction' | 'targe
     if (!defeatedLeader && (projectileLeaderXp ?? leaderCombatXp(killer)) && isMilitary(target) && atWar(state, attacker.faction, target.faction))
       awardLeaderXp(state, projectileLeaderXp ?? leaderCombatXp(killer), attacker.faction);
     if (killer && !recordGuardKill(state, killer) && !recordRetinueKill(state, killer)) recordKill(killer);
-    const bounty = target.kind === 'supplyCart' ? 0 : (defeatedLeader ? 200 : target.observationPost ? 20 : target.kind === 'merchant' ? MERCHANT_BOUNTY : target.kind === 'warrior' || target.kind === 'spearman' ? 6 : 8) + (target.stolenGold ?? 0);
+    const bounty = target.kind === 'supplyCart' ? 0 : (defeatedLeader ? target.marauderLeader ? 50 : 200 : target.observationPost ? 20 : target.kind === 'merchant' ? MERCHANT_BOUNTY : target.kind === 'warrior' || target.kind === 'spearman' ? 6 : 8) + (target.stolenGold ?? 0);
     target.stolenGold = 0;
     if (faction) grantIncome(faction, { gold: bounty }, state, 'loot');
     if (bounty > 0 && isHumanFaction(state, attacker.faction)) particle(state, target, `+${bounty} gold`);
@@ -1261,6 +1260,7 @@ function applyMeleeHit(state: GameState, attacker: Unit, target: Unit | Building
       target.lastDamagedAt = state.time; wakeCourier(state, target); panicCivilian(state, target, attacker); beginObservationPostRetreat(target);
       entityStore(state).units.updateRoles(target, false);
     }
+    if (target.hp < previousHp) notifyRaiderAttack(state, target, attacker);
     if (target.hp <= 0) destroyTarget(state, attacker, target);
 }
 
@@ -1319,6 +1319,8 @@ function updateProjectiles(state: GameState, dt: number): void {
         if (projectile.damage > 0) { target.lastDamagedAt = state.time; wakeCourier(state, target); panicCivilian(state, target, projectile.start); beginObservationPostRetreat(target); }
         entityStore(state).units.updateRoles(target, false);
       }
+      if (target.hp < previousHp) notifyRaiderAttack(state, target,
+        entityStore(state).units.get(projectile.attacker) ?? sourceBuilding ?? { ...projectile.start, faction: projectile.faction });
       if (target.hp <= 0) {
         // A thrown weapon remains lethal if its thrower dies during its flight.
         const attacker = entityStore(state).units.get(projectile.attacker) ?? sourceBuilding ?? { faction: projectile.faction };
@@ -1484,31 +1486,8 @@ function updateMarauderPacks(state: GameState): void {
       // A raid remains committed after the old patrol's 45-second wander timer.
       continue;
     }
-    if (pack.approachAt !== undefined && state.time >= pack.approachAt) {
-      const palace = palaceOf(state, pack.targetFaction);
-      const approach = palace && approachPoint(state, members[0], palace);
-      if (approach) {
-        pack.waypoint = approach;
-        pack.nextWanderAt = state.time + 45;
-        for (const unit of members) { unit.path = undefined; unit.repathAt = 0; }
-      }
-      pack.approachAt = undefined;
-      continue;
-    }
-    if (state.time < pack.nextWanderAt && members.some(member => !member.inside && distance(member, pack.waypoint) > 1.35)) continue;
-    const radius = pack.approachAt !== undefined ? 2 : 7;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const angle = random(state) * Math.PI * 2, range = 1 + random(state) * radius;
-      const goal = { x: Math.floor(pack.home.x + Math.cos(angle) * range) + .5, y: Math.floor(pack.home.y + Math.sin(angle) * range) + .5 };
-      if (distance(members[0], goal) <= 1.35 || !canWalk(state, goal.x, goal.y, MARAUDER_FACTION)) continue;
-      const patrol = findPath(state, members[0], goal, MARAUDER_FACTION);
-      // A nearby point across a river can require a detour through a settlement.
-      // Wandering stays local; the scheduled approach is the deliberate march.
-      if (!patrol.length || patrol.some(point => distance(point, pack.home) > radius + 2)) continue;
-      pack.waypoint = goal;
-      break;
-    }
-    pack.nextWanderAt = state.time + 12 + random(state) * 14;
+    // The activity lifecycle assigns either a faction attack or a shelter.
+    // Unassigned bands never spend this frame calculating random patrol paths.
   }
 }
 const commanderObservations = new WeakMap<Unit, DecisionClock & {
@@ -1517,6 +1496,12 @@ const commanderObservations = new WeakMap<Unit, DecisionClock & {
 function updateMarauder(state: GameState, unit: Unit, dt: number): void {
   const pack = state.marauderPacks?.find(pack => pack.id === unit.marauderPack);
   if (unit.inside) return;
+  if (updateRaiderAlert(state, unit, dt, {
+    move: (goal, elapsed) => { releaseAttackSpot(state, unit); moveUnit(state, unit, goal, elapsed); },
+    attack: (target, elapsed) => fight(state, unit, target, elapsed),
+    visible: target => targetInSight(state, unit, target),
+    localEnemy: () => nearestEnemy(state, unit, EnemyQuery.Marauder, 5.5, true, candidate => !pack?.raid || !isBuilding(candidate) || !isWallKind(candidate.kind)),
+  })) return;
   if (pack && updateRaiderReturn(state, unit, pack, goal => { releaseAttackSpot(state, unit); moveUnit(state, unit, goal, dt); })) return;
   if (evadeMelee(state, unit, dt, (game, archer, goal, elapsed) => moveUnit(game, archer, goal, elapsed, false, false, true), (a, b) => atWar(state, a, b), target => targetInSight(state, unit, target))) return;
   if (updateRaiderMotivation(state, unit, dt, {
@@ -1606,7 +1591,6 @@ function updateMarauder(state: GameState, unit: Unit, dt: number): void {
     }
   }
   unit.target = undefined;
-  if (pack && !pack.raid && distance(unit, pack.waypoint) > 1.35) moveUnit(state, unit, pack.waypoint, dt);
 }
 const fleeingPlans = new WeakMap<Unit, DecisionClock & { state: GameState; edges?: Point[]; edgeOwners?: Map<Point, Building>; threat?: Unit; refuge?: Building; goal?: Point }>();
 function updateFleeing(state: GameState, unit: Unit, dt: number): void {
@@ -2340,7 +2324,6 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
     }); } finally { automaticUpkeepReserves.delete(state); }
   });
   ensureBuilders(state);
-  runRecurringWork(state, 'scout-lodges', dt, () => updateScoutLodges(state));
   runRecurringWork(state, 'forts', dt, () => updateForts(state));
   runRecurringWork(state, 'supply-depots', dt, () => updateSupplyDepots(state));
   runRecurringWork(state, 'mass-levy', dt, () => updateMassLevy(state));

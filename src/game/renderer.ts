@@ -56,7 +56,7 @@ import { punyWorldImage } from './puny-world';
 import { HOUSE_WELL_OFFSET, sharedHouseForWell, sharedWellForHouse } from './house-wells';
 import { canShareWallTowerTile, sharedWallForTower, sharedTowerForWall } from './wall-towers';
 import { drawWallCliffJoin, wallCliffJoins, wallCliffKey, wallLinksWithCliffs } from './wall-cliffs';
-import { drawCityRibbon, CITY_RIBBON_HEIGHT, CITY_NAME_RIBBON_HEIGHT } from './city-ribbon';
+import { drawCityRibbon, CITY_RIBBON_HEIGHT, CITY_NAME_RIBBON_HEIGHT, CITY_RIBBON_MAX_WIDTH } from './city-ribbon';
 import { citySummaries, type CitySummary } from './cities';
 import { RESEARCH_BAR_WIDTH, RESEARCH_BAR_HEIGHT, RESEARCH_BAR_GAP } from './research-bar';
 import { researchStatus } from './research';
@@ -895,7 +895,7 @@ export class Renderer {
             const height = city.palace.faction === playerFaction(state) ? CITY_RIBBON_HEIGHT : CITY_NAME_RIBBON_HEIGHT;
             const x = ox + (city.palace.x + buildingWidth(city.palace) / 2) * s, y = oy + city.palace.y * s - 6 - height / 2;
             const key = `city:${playerFaction(state)}:${city.name}:${city.palace.faction}:${city.population}:${city.housing}:${Math.round(city.food)}:${Math.round(city.gold)}`;
-            scene.sprite(art.paint(key, { x: -140, y: -height / 2 - 1, width: 280, height: height + 2 }, c => drawCityRibbon(c, city, 0, 0, Math.max(180, this.width - 16), playerFaction(state))), x, y);
+            scene.sprite(art.paint(key, { x: -CITY_RIBBON_MAX_WIDTH / 2, y: -height / 2 - 1, width: CITY_RIBBON_MAX_WIDTH, height: height + 2 }, c => drawCityRibbon(c, city, 0, 0, Math.max(180, this.width - 16), playerFaction(state))), x, y);
         }
         for (const { camp, center } of checks.alliedCamps) {
             if (!buildingReady(camp) || !buildingInSight(fog, camp) || !visible(camp, 2)) continue;

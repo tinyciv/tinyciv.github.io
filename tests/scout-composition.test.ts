@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { archerFraction, nextRecruitRole, retinueComposition, scheduleArcheryTraining, setArcherFraction, setSpearmanFraction } from '../src/game/archery';
 import { entityStore } from '../src/game/entity-store';
-import { updateScoutLodges } from '../src/game/scout-lodges';
+
 import { synchronizeRetinueSquads } from '../src/game/retinue-squads';
 import { isRetinueMember } from '../src/game/types';
 
-import { scoutRealm } from './helpers/scouts';
+import { addTestScouts, scoutRealm } from './helpers/scouts';
 
 describe('dedicated scouts and combat composition', () => {
-  it('creates two extra explorers without reducing combat slots or assigning squads', () => {
-    const state = scoutRealm(); updateScoutLodges(state); synchronizeRetinueSquads(state);
+  it('keeps explicitly placed scouts outside combat slots and squads', () => {
+    const state = scoutRealm(); addTestScouts(state); synchronizeRetinueSquads(state);
     const scouts = state.units.filter(unit => unit.kind === 'scout');
     expect(scouts).toHaveLength(2);
     expect(state.units.filter(isRetinueMember)).toHaveLength(4);
@@ -19,7 +19,7 @@ describe('dedicated scouts and combat composition', () => {
   });
 
   it('keeps archer and spearman allocations independent of the lodge explorers', () => {
-    const state = scoutRealm(); updateScoutLodges(state);
+    const state = scoutRealm(); addTestScouts(state);
     const smithy = { ...state.buildings[0], id: 102, kind: 'blacksmith' as const, x: 14 }; entityStore(state).buildings.add(smithy);
     expect(setArcherFraction(state, state.buildings[0], .5)).toBe(true);
     expect(setSpearmanFraction(state, smithy, .5)).toBe(true);
@@ -33,7 +33,7 @@ describe('dedicated scouts and combat composition', () => {
   });
 
   it('never recruits a retinue scout even with Exploration and a completed lodge', () => {
-    const state = scoutRealm(); entityStore(state).units.retain(unit => unit.kind === 'leader'); updateScoutLodges(state);
+    const state = scoutRealm(); entityStore(state).units.retain(unit => unit.kind === 'leader'); addTestScouts(state);
     expect(nextRecruitRole(state, state.factions[0])).toBe('warrior');
     expect(retinueComposition(state, 0).warriors).toBe(4);
   });

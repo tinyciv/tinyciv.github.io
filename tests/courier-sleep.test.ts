@@ -16,7 +16,7 @@ function fixture(): GameState {
       { id: 1, kind: 'palace', x: 2, y: 7, faction: 0, hp: 650, maxHp: 650, capacity: 0 },
       { id: 2, kind: 'camp', x: 6, y: 7, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
       { id: 3, kind: 'camp', x: 10, y: 7, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
-      // Five tiles fund the two gatherers needed by independent wake/sleep tests.
+      // Three residents leave two gatherers after reserving one builder.
       { id: 4, kind: 'camp', x: 14, y: 12, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
       { id: 5, kind: 'camp', x: 18, y: 12, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
       { id: 6, kind: 'camp', x: 20, y: 12, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
@@ -24,7 +24,7 @@ function fixture(): GameState {
     units: [{ id: 10, kind: 'leader', faction: 0, x: 3.5, y: 10.5, hp: 100, morale: 100, attack: 1,
       defense: 0, speed: 2.2, range: 1.1, order: 'hold', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0 }],
     fields: [], factions: [{ id: 0, name: 'Test', color: '#f34f59', affinity: 100, relation: 'self',
-      food: 20, gold: 20, production: 0, population: 4, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false }],
+      food: 20, gold: 20, production: 0, population: 3, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'sleeping-couriers', rngState: 1,
   };

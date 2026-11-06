@@ -13,7 +13,6 @@ import { icon } from './icons';
 import { orchardUpgradeStatus, purchaseOrchardUpgrade, orchardReady, ORCHARD_UPGRADE_COST } from '../game/orchards';
 import { guardPostUpgradeStatus, upgradeGuardPost, setGuardPostWallsOnly, guardPostUpkeep, guardPostLevel, GUARD_POST_UPKEEPS, GUARD_POST_UPKEEP_INTERVAL } from '../game/guard-posts';
 import { archerFraction, spearmanFraction, horsemanFraction, retinueComposition, setArcherFraction, setSpearmanFraction, setHorsemanFraction } from '../game/archery';
-import { scoutLodgeStatus, SCOUT_RECRUIT_SECONDS } from '../game/scout-lodges';
 import { areArchersUnlocked, areSpearmenUnlocked, areHorsemenUnlocked, researchLevel, setResearchAllocation, prioritizeResearch, removeResearchPriority } from '../game/research';
 import { isKeep, KEEP_MAX_HP, KEEP_HOUSING, KEEP_HOUSING_BONUS, KEEP_HOUSING_COST, settlementLabel, settlementUpgradeStatus,
   upgradeSettlement, keepHousingUpgradeStatus, purchaseKeepHousing } from '../game/settlement-upgrades';
@@ -98,10 +97,8 @@ export class BuildingActivityPopup {
         <p class="activity-note">Charge from 3 tiles · Area damage</p>
       </div>
       <div class="activity-scouts activity-stack" hidden>
-        <p class="activity-note">Scouts <strong class="scout-count"></strong></p>
-        <p class="activity-note scout-status"></p>
-        <p class="activity-note">Maps unexplored land · 20% faster · Avoids combat</p>
-        <p class="activity-note">Replacements in ${SCOUT_RECRUIT_SECONDS}s · No retinue slots</p>
+        <p class="activity-note">Observation posts unlocked</p>
+        <p class="activity-note">Place posts outside all borders from Fortify.</p>
       </div>
       <div class="activity-research" hidden></div>
       <div class="activity-village activity-stack" hidden>
@@ -341,11 +338,6 @@ export class BuildingActivityPopup {
       input.disabled = !areHorsemenUnlocked(faction); input.value = String(Math.round(horsemanFraction(faction) * 100));
       this.element.querySelector<HTMLOutputElement>('.horseman-count')!.textContent = String(counts.horsemen);
       this.element.querySelector<HTMLElement>('.stable-status')!.textContent = `${counts.currentHorsemen} mounted · ${counts.horsemen} assigned${counts.training ? ` · ${counts.training} retraining` : ''}`;
-    } else if (kind === 'scoutLodge') {
-      const status = scoutLodgeStatus(this.getState(), building);
-      this.element.querySelector<HTMLElement>('.scout-count')!.textContent = `${status.alive} / ${status.capacity}`;
-      this.element.querySelector<HTMLElement>('.scout-status')!.textContent = status.blocked ? 'Waiting for a clear exit.'
-        : status.recruitingIn !== null ? `Recruiting · ${Math.ceil(status.recruitingIn)}s` : 'Automatic exploration';
     } else if (kind === 'library') this.researchTree.refresh(this.getState(), building);
     else if (kind === 'village') {
       const status = villageDiplomacyStatus(this.getState(), building);

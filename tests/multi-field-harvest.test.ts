@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
-import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FIELD_HARVEST_FOOD, FARM_COURIER_MAX_PICKUPS,
+import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FIELD_HARVEST_FOOD,
   harvestFoodPerEconomyCycle, synchronizeFarms, updateCollector, updateHarvests } from '../src/game/farms';
 import { setForbiddenRectangle } from '../src/game/forbidden-zones';
 import { cityDevelopmentNeeds } from '../src/game/governor';
@@ -55,7 +55,7 @@ describe('multi-field harvest trips', () => {
     expect(cityDevelopmentNeeds(state, state.buildings[0]).foodCapacity).toBeCloseTo(4 + 3 * perCycle * .9);
   });
 
-  it('one real walker picks up four separate farms, retains each deadline and delivers them in one trip', () => {
+  it('one real walker sweeps all six connected plots and pauses their deadlines during collection', () => {
     const state = fixture(), worker = arriveAtFirst(state), home = worker.home, assignment = worker.collectorCamp;
     tick(state, worker);
     expect(worker.cargo).toBe(1); expect(worker.field).toBe(state.fields![1].id);
@@ -64,14 +64,17 @@ describe('multi-field harvest trips', () => {
     expect(worker.collectorCamp).toBe(assignment); expect(worker.home).toBe(home);
     expect(worker.cargoBatches).toEqual([{ amount: 1, expiresAt: 40 }]);
     expect(state.fields![1].claimedBy).toBe(worker.id);
-    for (let i = 0; i < 200 && (worker.collectorPickups ?? 0) < FARM_COURIER_MAX_PICKUPS; i++) tick(state, worker);
-    expect(worker.collectorPickups).toBe(4); expect(worker.collectPhase).toBe('returning');
-    expect(worker.cargoBatches).toEqual([40, 42, 44, 46].map(expiresAt => ({ amount: 1, expiresAt })));
-    expect(state.fields!.filter(field => field.food > 0)).toHaveLength(2);
+    for (let i = 0; i < 200 && worker.collectPhase === 'outbound'; i++) tick(state, worker);
+    expect(worker.collectorPickups).toBe(6); expect(worker.collectPhase).toBe('returning');
+    expect(worker.cargoBatches).toHaveLength(6);
+    worker.cargoBatches!.forEach((batch, i) => {
+      expect(batch.amount).toBe(1); expect(batch.expiresAt).toBeGreaterThan(40 + i * 2);
+    });
+    expect(state.fields!.filter(field => field.food > 0)).toHaveLength(0);
     const foodBefore = state.factions[0].food;
     for (let i = 0; i < 200 && !worker.inside; i++) tick(state, worker);
     expect(worker.inside).toBe(true); expect(worker.cargo).toBe(0);
-    expect(state.factions[0].food).toBe(foodBefore + 4); expect(worker.collectorPickups).toBe(0);
+    expect(state.factions[0].food).toBe(foodBefore + 6); expect(worker.collectorPickups).toBe(0);
   });
 
   it('returns its first bag when an extra stop would spoil that older cargo', () => {

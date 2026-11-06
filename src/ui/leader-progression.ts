@@ -29,7 +29,7 @@ export class LeaderProgressionUI {
     private learn: (skill: LeaderSkillId) => LearnResult, private beforeOpen: () => void,
     private focusWorld: () => void, private canOpen: () => boolean) {
     rail.innerHTML = `<button type="button" class="leader-xp-open" aria-haspopup="dialog" aria-controls="leader-skills" aria-expanded="false" title="Leader skills">
-      <span class="leader-level-badge">1</span><span class="leader-xp-track" role="progressbar" aria-label="Leader experience" aria-valuemin="0"><span class="leader-xp-fill"></span><span class="leader-xp-text">0 / 100 XP</span></span>
+      <span class="leader-level-badge">1</span><span class="leader-xp-track" role="progressbar" aria-label="Leader experience" aria-valuemin="0"><span class="leader-xp-fill"></span><span class="leader-xp-text">0 / 800 XP</span></span>
       </button><button type="button" class="leader-xp-points" aria-haspopup="dialog" aria-controls="leader-skills" aria-expanded="false" title="Leader skill points">0</button>`;
     popup.innerHTML = `<header class="leader-skills-header"><h2 id="leader-skills-title">Leader</h2><span class="leader-skills-level">Level 1</span><button type="button" data-leader-close aria-label="Close Leader skills">×</button></header>
       <div class="leader-skills-bonuses"><strong class="leader-skills-points">0 skill points</strong><span>Level bonus</span><span>+10 HP</span><span>+1 Attack</span></div>

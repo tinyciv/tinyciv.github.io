@@ -9,7 +9,7 @@ import type { Building, GameState } from '../src/game/types';
 
 function fixture(): GameState {
   const palace = (id: number, x: number, cityName: string): Building => ({ id, kind: 'palace', faction: 0, x, y: 10,
-    cityName, hp: 650, maxHp: 650, capacity: 0, governorPermissions: { farms: false, housing: false } });
+    cityName, hp: 650, maxHp: 650, capacity: 4, governorPermissions: { farms: false, housing: false } });
   const house = (id: number, x: number, residents: number): Building => ({ id, kind: 'house', faction: 0,
     x, y: 10, hp: 160, maxHp: 160, capacity: 2, residents });
   return {
@@ -31,6 +31,25 @@ function fixture(): GameState {
 }
 
 describe('palace immigration', () => {
+  it('rejects a full selected city even when another city has vacant beds', () => {
+    const state = fixture(), palace = state.buildings[1];
+    palace.capacity = 0;
+    const before = structuredClone(state);
+    expect(immigrationStatus(state, palace)).toEqual({ available: false, reason: 'No vacant housing in this settlement.' });
+    expect(importImmigrant(state, palace)).toEqual({ ok: false, message: 'No vacant housing in this settlement.' });
+    expect(state).toEqual(before);
+  });
+
+  it('fills the last bed once and rejects further purchases without spending gold', () => {
+    const state = fixture(), palace = state.buildings[1];
+    palace.capacity = 1;
+    expect(importImmigrant(state, palace).ok).toBe(true);
+    const before = structuredClone(state);
+    expect(importImmigrant(state, palace).ok).toBe(false);
+    expect(state).toEqual(before);
+    expect(citySummaries(state).find(city => city.palace.id === palace.id)).toMatchObject({ population: 3, housing: 3 });
+  });
+
   it('adds exactly one resident to the selected city for 100 gold without taking food or growth credit', () => {
     const state = fixture(), palace = state.buildings[1], faction = state.factions[0];
     state.buildings[0].populationGrowth = .25; palace.populationGrowth = .75;
@@ -43,13 +62,13 @@ describe('palace immigration', () => {
     expect(citySummaries(state).map(city => city.population)).toEqual([2, 3]);
   });
 
-  it('keeps an immigrant in a new city without housing and moves them into that city’s next house', () => {
+  it('uses settlement beds before new houses and keeps residents assigned to their city', () => {
     const state = fixture(), palace = state.buildings[1];
     entityStore(state).buildings.replace(state.buildings.filter(building => building.id !== 4));
     state.factions[0].population = 2;
     expect(importImmigrant(state, palace).ok).toBe(true);
     expect(palace.unhousedResidents).toBe(1);
-    expect(citySummaries(state).map(city => [city.population, city.housing])).toEqual([[2, 2], [1, 0]]);
+    expect(citySummaries(state).map(city => [city.population, city.housing])).toEqual([[2, 6], [1, 4]]);
     for (let step = 0; step < 10; step++) synchronizeFarms(state);
     expect(state.buildings.find(building => building.id === 3)!.residents).toBe(2);
     const house: Building = { id: 4, kind: 'house', faction: 0, x: 38, y: 10, hp: 160, maxHp: 160, capacity: 4 };

@@ -176,8 +176,8 @@ describe('city ribbon presentation', () => {
             expect(context.labels.slice(0, 4).map(label => label.text)).toEqual(['Ravenna', '6 / 6', '-4', '+4']);
             expect(context.labels[2].color).toBe(CITY_FOOD_COLOR); expect(context.labels[3].color).toBe(CITY_GOLD_COLOR);
             const top = 10 * size - 6 - CITY_RIBBON_HEIGHT;
-            expect(context.labels[0].y).toBe(top + 13);
-            expect(context.labels.slice(1, 4).map(label => label.y)).toEqual(Array(3).fill(top + 28));
+            expect(context.labels[0].y).toBe(top + 17);
+            expect(context.labels.slice(1, 4).map(label => label.y)).toEqual(Array(3).fill(top + 40));
             expect(context.boxes[0].height).toBe(CITY_RIBBON_HEIGHT);
         }
     });
@@ -207,7 +207,7 @@ describe('city ribbon presentation', () => {
         const bounds = imageBounds(context.images);
         expect(bounds.width % 2).toBe(0);
         expect(context.labels.every(label => label.font.includes('"Pixel Operator"'))).toBe(true);
-        expect(context.labels.map(label => label.font.match(/\d+px/)?.[0])).toEqual(['14px', ...Array(3).fill('11px')]);
+        expect(context.labels.map(label => label.font.match(/\d+px/)?.[0])).toEqual(['18px', ...Array(3).fill('20px')]);
         expect(context.labels.slice(1).map(label => label.text)).toEqual(['1234 / 1600', '-1234', '+5678']);
         for (const label of context.labels) {
             expect(label.x).toBeGreaterThanOrEqual(bounds.x + 12);
@@ -215,7 +215,7 @@ describe('city ribbon presentation', () => {
         }
     });
 
-    it.each([28, 40])('preserves corners and whole 2× source pixels at %spx height', height => {
+    it.each([CITY_NAME_RIBBON_HEIGHT, CITY_RIBBON_HEIGHT])('preserves corners and whole 2× source pixels at %spx height', height => {
         for (const width of [38, 120, 300]) {
             const context = new TextCanvas();
             drawCityPanelBackground(context as unknown as CanvasRenderingContext2D, 0, 0, width, height);

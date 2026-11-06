@@ -1,140 +1,100 @@
-import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { createGame, getLeader, migrateGame, updateGame } from '../src/game/simulation';
-import { initializeRoamingMarauders, ROAMING_PACK_SPACING, ROAMING_PALACE_CLEARANCE, roamingPackTarget } from '../src/game/roaming-marauders';
-import { fogRaidProfile, initializeFogRaids, updateFogRaids } from '../src/game/fog-raids';
+import { entityStore } from '../src/game/entity-store';
+import { initializeRoamingMarauders, roamingPackTarget } from '../src/game/roaming-marauders';
+import { defendRaiderCamp, updateRaiderActivity } from '../src/game/raider-activity';
 import { MAX_LIVE_RAIDERS } from '../src/game/raider-camps';
-import { pointInSight, updateFog } from '../src/game/fog';
-import { canWalk, findPath, staticReachabilityMask } from '../src/game/pathfinding';
-import { distance, type GameState } from '../src/game/types';
+import { createGame, updateGame } from '../src/game/simulation';
 import { generateWorld } from '../src/world/generator';
+import type { GameState, Unit } from '../src/game/types';
 
-const roamers = (state: GameState) => (state.marauderPacks ?? []).filter(pack => !pack.raid && pack.raiderCamp === undefined);
-function removeRoamers(state: GameState): void {
-  const ids = new Set(roamers(state).map(pack => pack.id));
-  entityStore(state).units.replace(state.units.filter(unit => !ids.has(unit.marauderPack ?? -1)));
-  state.marauderPacks = state.marauderPacks?.filter(pack => !ids.has(pack.id));
-  delete state.roamingMaraudersVersion;
+const idle = { up: false, down: false, left: false, right: false };
+function fixture(): GameState {
+  const person: Unit = { id: 1, x: 6.5, y: 12.5, faction: 0, kind: 'leader', hp: 100, attack: 0, defense: 0,
+    morale: 100, speed: 0, range: 1.1, order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60, moving: false, facing: 0, attackTime: 0 };
+  return { world: { seed: 'sleeping-reserves', source: 'test', width: 60, height: 32, spawns: [], tiles: Array.from({ length: 1920 }, () =>
+    ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .5, food: 1, production: 0, gold: 0, variation: .5 })) },
+    units: [person], buildings: [{ id: 2, kind: 'palace', x: 5, y: 10, faction: 0, hp: 10000, maxHp: 10000, capacity: 0 },
+      { id: 3, kind: 'villageTent', x: 40, y: 12, faction: -2, hp: 200, maxHp: 200, capacity: 0, raiderCamp: 1 },
+      { id: 4, kind: 'woodenTower', x: 44, y: 12, faction: -2, hp: 200, maxHp: 200, capacity: 0, raiderCamp: 1 }],
+    factions: [{ id: 0, name: 'Test', color: '#f00', affinity: 100, relation: 'self', food: 0, gold: 0, production: 0, population: 0,
+      yields: { food: 0, gold: 0, production: 0 }, nextRaid: 1e9, defeated: false }],
+    time: 0, tick: 0, paused: false, speed: 1, seed: 'sleeping-reserves', rngState: 1, events: [], particles: [], fields: [], projectiles: [], selected: null,
+    selectedType: null, buildMode: null, diplomacy: null, gameOver: false, victory: false, marauderPacks: [],
+    raiderCamps: [{ id: 1, size: 'small', x: 38, y: 10, width: 9, height: 7, gate: { x: 38, y: 13 }, houses: [3], coreTowers: [4], name: 'Camp', waves: 0, nextRaidAt: 1e9 }],
+    fogRaids: { nextAt: 1e9, waves: 0, pressureVersion: 2 }, raiderSkirmishes: { nextByFaction: { 0: 1e9 }, wavesByFaction: { 0: 0 } } };
 }
+const sleepers = (state: GameState) => state.units.filter(unit => unit.faction === -2 && unit.inside);
 
-describe('independent wilderness marauders', { timeout: 120_000 }, () => {
-  it.each(['willow-raid', 'river-raid', 'coastal-raid'])('scatters many small, full-health packs over reachable wilderness on %s', seed => {
-    const state = createGame(generateWorld(seed)), packs = roamers(state), fog = updateFog(state);
-    const palaces = state.buildings.filter(building => building.kind === 'palace');
-    // Satellite islands and ocean are not wilderness a land-only pack can
-    // patrol. Measure spread across the connected starting landmass instead
-    // of requiring marauders to span the entire rectangular map.
-    const mainland = staticReachabilityMask({ ...state, buildings: [] }, [state.world.spawns[0]], -2);
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (let i = 0; i < mainland.length; i++) if (mainland[i]) {
-      const x = i % state.world.width, y = Math.floor(i / state.world.width);
-      minX = Math.min(minX, x); minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-    }
-    expect(roamingPackTarget(state)).toBe(12);
-    const opening = state.marauderPacks!.filter(pack => pack.microRaid);
-    expect(packs.length + opening.length).toBe(roamingPackTarget(state));
-    const cells: string[] = [];
-    for (const pack of packs) {
-      expect(mainland[Math.floor(pack.home.y) * state.world.width + Math.floor(pack.home.x)], 'pack stays on the reachable mainland').toBe(1);
-      const members = state.units.filter(unit => unit.marauderPack === pack.id);
-      expect(members.length).toBeGreaterThanOrEqual(2); expect(members.length).toBeLessThanOrEqual(6);
-      expect(pack.raid).toBeUndefined(); expect(pack.raiderCamp).toBeUndefined(); expect(pack.approachAt).toBeUndefined();
-      for (const other of packs) if (other !== pack) expect(distance(pack.home, other.home)).toBeGreaterThanOrEqual(ROAMING_PACK_SPACING);
-      for (const unit of members) {
-        const hp = unit.marauderLeader ? 78 : 65;
-        expect(unit).toMatchObject({ faction: -2, order: 'wander', hp, maxHp: hp });
-        expect(unit.speed).toBeCloseTo(unit.marauderLeader ? 3.525 : 2.35);
-        expect(pointInSight(fog, unit.x, unit.y)).toBe(false); expect(canWalk(state, unit.x, unit.y, -2)).toBe(true);
-        expect(distance(unit, pack.home)).toBeLessThanOrEqual(2.5);
-        expect(findPath(state, unit, pack.home, -2).length).toBeGreaterThan(0);
-        for (const palace of palaces) expect(distance(unit, { x: palace.x + 1, y: palace.y + 1 })).toBeGreaterThanOrEqual(ROAMING_PALACE_CLEARANCE);
-        cells.push(`${Math.floor(unit.x)},${Math.floor(unit.y)}`);
-      }
-    }
-    expect(new Set(cells).size).toBe(cells.length);
-    // Large camp wards remove nearby wilderness spawn sites. Still require
-    // independent bands to span at least half the usable land in both axes.
-    expect(Math.max(...packs.map(pack => pack.home.x)) - Math.min(...packs.map(pack => pack.home.x))).toBeGreaterThan((maxX - minX + 1) * .5);
-    expect(Math.max(...packs.map(pack => pack.home.y)) - Math.min(...packs.map(pack => pack.home.y))).toBeGreaterThan((maxY - minY + 1) * .5);
-  });
-
-  it('is deterministic and leaves camp clocks and the simulation RNG untouched', () => {
-    const state = createGame(generateWorld('deterministic-wilderness')); removeRoamers(state);
-    const clone = structuredClone(state), rng = state.rngState, clocks = structuredClone([state.fogRaids, state.raiderCamps]);
+describe('camp reserves instead of wilderness milling', () => {
+  it('starts extra bands asleep in actual tents, with zero active pathing bodies', () => {
+    const state = fixture(), originalRng = state.rngState, clocks = structuredClone([state.fogRaids, state.raiderCamps]);
+    const clone = structuredClone(state);
     initializeRoamingMarauders(state); initializeRoamingMarauders(clone);
-    expect([state.units, state.marauderPacks]).toEqual([clone.units, clone.marauderPacks]); expect(state.rngState).toBe(rng);
-    expect([state.fogRaids, state.raiderCamps]).toEqual(clocks);
-    const originalUnits = state.units.map(unit => unit.id);
-    state.time = state.fogRaids!.nextAt; updateFogRaids(state);
-    const raids = state.marauderPacks!.filter(pack => pack.raid && !pack.microRaid), ids = new Set(raids.map(pack => pack.id));
-    expect(state.units.filter(unit => ids.has(unit.marauderPack ?? -1))).toHaveLength(fogRaidProfile(2, state.time).total);
-    expect(originalUnits.every(id => state.units.some(unit => unit.id === id))).toBe(true); // Idle bands may join camps, but no one disappears.
+    expect([state.units, state.marauderPacks]).toEqual([clone.units, clone.marauderPacks]);
+    expect(state.marauderPacks).toHaveLength(roamingPackTarget(state));
+    expect(sleepers(state).length).toBeGreaterThanOrEqual(4);
+    expect(state.units.filter(unit => unit.faction === -2 && !unit.inside)).toHaveLength(0);
+    expect(entityStore(state).units.query('active').filter(unit => unit.faction === -2)).toHaveLength(0);
+    for (const unit of sleepers(state)) expect(unit).toMatchObject({ x: 40.5, y: 12.5, raiderGarrison: 3, order: 'hold' });
+    expect(state.rngState).toBe(originalRng); expect([state.fogRaids, state.raiderCamps]).toEqual(clocks);
+    const snapshots = structuredClone(sleepers(state));
+    for (let step = 0; step < 120; step++) updateGame(state, .1, idle);
+    expect(sleepers(state).map(unit => [unit.id, unit.x, unit.y])).toEqual(snapshots.map(unit => [unit.id, unit.x, unit.y]));
+    expect(sleepers(state).every(unit => !unit.path?.length && !unit.moving)).toBe(true);
+    expect(entityStore(state).units.query('active').filter(unit => unit.faction === -2)).toHaveLength(0);
   });
 
-  it('shares the total population budget with raiders that already exist', () => {
-    const state = createGame(generateWorld('bounded-wilderness')); removeRoamers(state);
-    const source = getLeader(state)!;
-    const existing = state.units.filter(unit => unit.faction === -2 && unit.hp > 0).length;
-    for (let i = 0; i < MAX_LIVE_RAIDERS - existing - 2; i++) entityStore(state).units.add({ ...source,
-      id: 90000 + i, kind: 'warrior', faction: -2, marauderPack: undefined });
+  it('reuses tent occupants as defenders without replacing wounds or experience', () => {
+    const state = fixture(); initializeRoamingMarauders(state);
+    const reserves = sleepers(state); for (const unit of reserves) { unit.hp *= .8; unit.kills = 12; }
+    const ids = new Set(reserves.map(unit => unit.id));
+    const responding = defendRaiderCamp(state, state.buildings[1], { x: 39.5, y: 12.5, faction: 0 });
+    expect(responding).toBeGreaterThanOrEqual(2); expect(responding).toBeLessThanOrEqual(5);
+    const active = state.units.filter(unit => unit.faction === -2 && !unit.inside);
+    expect(active.some(unit => ids.has(unit.id))).toBe(true);
+    for (const unit of active.filter(unit => ids.has(unit.id))) {
+      expect(unit.kills).toBe(12); expect(unit.hp / unit.maxHp!).toBeCloseTo(.8);
+      expect(entityStore(state).units.query('active')).toContain(unit);
+    }
+  });
+
+  it('bounds sleepers under the same global cap and initializes them only once', () => {
+    const state = fixture(), source = state.units[0];
+    entityStore(state).units.add(...Array.from({ length: MAX_LIVE_RAIDERS - 2 }, (_, i) => ({ ...source, id: 100 + i, faction: -2, kind: 'warrior' as const })));
     initializeRoamingMarauders(state);
-    expect(state.units.filter(unit => unit.faction === -2 && unit.hp > 0)).toHaveLength(MAX_LIVE_RAIDERS);
-    expect(roamers(state)).toHaveLength(1);
-    const pack = roamers(state)[0];
-    expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(2);
+    expect(state.units.filter(unit => unit.faction === -2)).toHaveLength(MAX_LIVE_RAIDERS);
+    expect(sleepers(state)).toHaveLength(2);
+    const first = sleepers(state)[0]; first.hp = 0;
+    initializeRoamingMarauders(state);
+    expect(sleepers(state)).toHaveLength(2); expect(first.hp).toBe(0);
   });
 
-  it('keeps roaming packs independent when every camp is destroyed, and never refills killed packs on load', () => {
-    const state = createGame(generateWorld('independent-wilderness')), packs = structuredClone(roamers(state));
-    for (const building of state.buildings) if (building.raiderCamp !== undefined && building.kind === 'woodenTower') building.hp = 0;
-    state.time = 600; updateFogRaids(state);
-    expect(state.marauderPacks!.filter(pack => packs.some(old => old.id === pack.id))).toHaveLength(packs.length);
-    expect(state.marauderPacks!.every(pack => pack.raiderCamp === undefined)).toBe(true);
-    expect(state.marauderPacks!.some(pack => pack.raid)).toBe(true); // Surviving wanderers now actively seek combat.
-    const dead = packs[0].id; entityStore(state).units.replace(state.units.filter(unit => unit.marauderPack !== dead));
-    const count = state.units.length;
-    const saved = migrateGame(structuredClone(state));
-    expect(saved.units).toHaveLength(count); expect(saved.units.some(unit => unit.marauderPack === dead)).toBe(false);
-    initializeRoamingMarauders(saved); expect(saved.units).toHaveLength(count);
+  it('assigns existing unsheltered bands a real attack immediately, with no patrol grace period', () => {
+    const state = fixture(); state.roamingMaraudersVersion = 1;
+    const pack = { id: 10, name: 'Band', color: '#000', targetFaction: 0, home: { x: 25.5, y: 12.5 },
+      waypoint: { x: 25.5, y: 12.5 }, nextWanderAt: 0, spawnedAt: 0 };
+    state.marauderPacks!.push(pack);
+    entityStore(state).units.add({ ...state.units[0], id: 11, x: 25.5, y: 12.5, faction: -2, kind: 'warrior', marauderPack: 10, order: 'wander', speed: 2.35 });
+    updateRaiderActivity(state);
+    expect(pack).toMatchObject({ raid: true, targetBuilding: 2, targetFaction: 0, motivation: 'assault' });
+    expect(state.units.at(-1)!.order).toBe('raid');
   });
 
-  it('adds the wilderness population to existing saves once, outside sight, without changing raids', () => {
-    const state = createGame(generateWorld('wilderness-migration')); removeRoamers(state); state.time = 140;
-    const fog = updateFog(state), clock = structuredClone(state.fogRaids), camps = structuredClone(state.raiderCamps);
-    const saved = migrateGame(structuredClone(state));
-    expect(saved.marauderPacks!.filter(pack => pack.raiderCamp === undefined)).toHaveLength(roamingPackTarget(saved)); expect(saved.fogRaids).toEqual(clock); expect(saved.raiderCamps).toEqual(camps);
-    for (const unit of saved.units) if (unit.marauderPack !== undefined) expect(pointInSight(fog, unit.x, unit.y)).toBe(false);
-    const ids = saved.units.map(unit => unit.id); migrateGame(saved); expect(saved.units.map(unit => unit.id)).toEqual(ids);
+  it('does not manufacture unsheltered idle packs when no camp exists', () => {
+    const state = fixture(); state.raiderCamps = [];
+    initializeRoamingMarauders(state);
+    expect(state.units.filter(unit => unit.faction === -2)).toHaveLength(0);
   });
 
-  it('splits oversized legacy bands while retaining wounds and depleted survivors', () => {
-    const state = createGame(generateWorld('legacy-wilderness')); removeRoamers(state);
-    const source = getLeader(state)!;
-    state.marauderPacks!.push({ id: 99, name: 'Old band', color: '#191b22', targetFaction: 0,
-      home: { x: 90.5, y: 70.5 }, waypoint: { x: 90.5, y: 70.5 }, nextWanderAt: 500 });
-    const members = Array.from({ length: 13 }, (_, i) => ({ ...source, id: 90000 + i, kind: 'warrior' as const,
-      faction: -2, marauderPack: 99, x: 90.5 + i % 4, y: 70.5 + Math.floor(i / 4), hp: 17, maxHp: 65, order: 'wander' as const }));
-    entityStore(state).units.add(...members); initializeRoamingMarauders(state);
-    const groups = new Set(members.map(unit => unit.marauderPack)); expect(groups.size).toBe(3);
-    for (const id of groups) expect(members.filter(unit => unit.marauderPack === id).length).toBeLessThanOrEqual(6);
-    for (const unit of members) expect(unit.hp / unit.maxHp!).toBeCloseTo(17 / 65);
-    const survivor = members[0], oldIds = new Set(members.map(unit => unit.id));
-    entityStore(state).units.replace(state.units.filter(unit => !oldIds.has(unit.id) || unit === survivor));
-    const count = state.units.length; initializeRoamingMarauders(state); expect(state.units).toHaveLength(count);
-  });
-
-  it('uses local wandering during its brief opening patrol', () => {
-    const state = createGame(generateWorld('wander-check')), pack = roamers(state)[0];
-    const members = state.units.filter(unit => unit.marauderPack === pack.id);
-    entityStore(state).units.replace([getLeader(state)!, ...members]); state.factions[0].population = 0;
-    state.marauderPacks = [pack]; state.raiderCamps = []; state.fields = [];
-    entityStore(state).buildings.replace(state.buildings.filter(building => building.kind === 'palace' && building.faction === 0));
-    pack.nextWanderAt = 0;
-    // Hidden pack planning runs on one of five staggered simulation steps.
-    updateGame(state, .5, { up: false, down: false, left: false, right: false });
-    expect(distance(pack.home, pack.waypoint)).toBeGreaterThan(0);
-    expect(distance(pack.home, pack.waypoint)).toBeLessThan(9);
-    expect(pack.targetBuilding).toBeUndefined(); expect(pack.approachAt).toBeUndefined();
-  });
+  it('keeps real opening attacks while every other starting marauder sleeps in a camp', () => {
+    const state = createGame(generateWorld('willow-raid'));
+    const raiders = state.units.filter(unit => unit.faction === -2);
+    expect(sleepers(state).length).toBeGreaterThan(0);
+    for (const unit of raiders.filter(unit => !unit.inside)) {
+      const pack = state.marauderPacks!.find(pack => pack.id === unit.marauderPack)!;
+      expect(pack.microRaid).toBe(true); expect(pack.raid).toBe(true); expect(pack.targetBuilding).toBeDefined();
+      expect(unit.order).toBe('raid');
+    }
+    expect(raiders.length).toBeLessThanOrEqual(MAX_LIVE_RAIDERS);
+  }, 120_000);
 });

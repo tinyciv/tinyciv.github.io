@@ -105,12 +105,12 @@ describe('bounded construction search work', () => {
     const a=[{x:19,y:14},{x:20,y:14}], b=[...a,{x:21,y:14}];
     const before=JSON.stringify([state.buildings,state.fields,state.factions]);
     const first=planConstruction(state,'road',a),second=planConstruction(state,'road',b);
-    expect(first).toMatchObject({ok:true,skipped:0,cost:1});expect(second).toMatchObject({ok:true,skipped:0,cost:2});
+    expect(first).toMatchObject({ok:true,skipped:0,cost:5});expect(second).toMatchObject({ok:true,skipped:0,cost:10});
     expect(planConstruction(state,'road',a)).toBe(first);
     expect(planConstruction(state,'road',b)).toBe(second);
     expect(JSON.stringify([state.buildings,state.fields,state.factions])).toBe(before);
     engineer.hp=0;
-    expect(planConstruction(state,'road',a)).toMatchObject({ok:true,skipped:0,cost:2});
-    expect(planConstruction(state,'road',b)).toMatchObject({ok:true,skipped:0,cost:4});
+    expect(planConstruction(state,'road',a)).toMatchObject({ok:true,skipped:0,cost:10});
+    expect(planConstruction(state,'road',b)).toMatchObject({ok:true,skipped:0,cost:20});
   });
 });

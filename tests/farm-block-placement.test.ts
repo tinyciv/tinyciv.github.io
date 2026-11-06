@@ -21,12 +21,12 @@ function plot(state: GameState, x: number, y: number, extra: Partial<Building> =
 describe('manual farm block limits', () => {
   it('keeps one-cell farm placement and ordinary per-cell pricing', () => {
     const state = realm(), preview = planConstruction(state, 'camp', [{ x: 20, y: 15 }]);
-    expect(preview).toMatchObject({ ok: true, cost: 12.5, tiles: [{ x: 20, y: 15 }] });
+    expect(preview).toMatchObject({ ok: true, cost: 15, tiles: [{ x: 20, y: 15 }] });
     expect(state.factions[0].gold).toBe(1000);
     expect(buildStroke(state, 'camp', [{ x: 20, y: 15 }])).toMatchObject({ ok: true, placed: 1 });
-    expect(state.factions[0].gold).toBe(987.5);
+    expect(state.factions[0].gold).toBe(985);
     expect(state.buildings.filter(b => b.kind === 'camp')).toHaveLength(1);
-    expect(state.buildings.find(b => b.kind === 'camp')).toMatchObject({ construction: { duration: 3.75, paidGold: 12.5 } });
+    expect(state.buildings.find(b => b.kind === 'camp')).toMatchObject({ construction: { duration: 3.75, paidGold: 15 } });
   });
 
   it('allows any shape through six cells, then rejects an elongated seventh without spending', () => {

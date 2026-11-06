@@ -36,7 +36,7 @@ function settlement() {
   entityStore(state).buildings.replace(state.buildings.filter(b=>b.kind==='palace'));
   entityStore(state).buildings.add({id:900,kind:'road',faction:0,x:24,y:14,hp:100,maxHp:100,capacity:0});
   Object.assign(state.units[0],{x:24.5,y:14.5});
-  state.factions[0].gold=40;
+  state.factions[0].gold=200;
   state.factions[0].culture=30000; // Keep the stroke fixtures inside established territory.
   return state;
 }
@@ -49,7 +49,7 @@ describe('drag construction commits',()=>{
     expect(insideOwnBorders(state, 0, x + .5, y + .5)).toBe(false);
     expect(validateBuildAt(state, 'road', x, y).ok).toBe(true);
     expect(buildAt(state, 'road', x, y).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(38);
+    expect(state.factions[0].gold).toBe(190);
     expect(state.buildings.filter(building => building.kind === 'road')).toMatchObject([{ x, y, construction: { waitingForBuilder: true } }]);
   });
 
@@ -59,13 +59,13 @@ describe('drag construction commits',()=>{
     for (const x of [24, 25, 26]) Object.assign(state.world.tiles[14 * 48 + x], { terrain: 'river', overlay: 'ford' });
     const line = constructionLine({ x: reverse ? 28 : 22, y: 14 }, { x: reverse ? 22 : 28, y: 14 });
     const plan = planConstruction(state, 'road', line);
-    expect(plan).toMatchObject({ ok: true, skipped: 0, cost: 8 });
+    expect(plan).toMatchObject({ ok: true, skipped: 0, cost: 40 });
     expect(plan.cells.every(cell => cell.ok)).toBe(true);
     expect(plan.cells.filter(cell => cell.existing).map(cell => cell.x).sort()).toEqual([24, 25, 26]);
     expect(plan.tiles.map(tile => tile.x).sort()).toEqual([22, 23, 27, 28]);
-    expect(state.factions[0].gold).toBe(40); // Planning is read-only.
+    expect(state.factions[0].gold).toBe(200); // Planning is read-only.
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 4, skipped: 0 });
-    expect(state.factions[0].gold).toBe(32);
+    expect(state.factions[0].gold).toBe(160);
     const roads = state.buildings.filter(building => building.kind === 'road');
     expect(roads.map(road => road.x).sort()).toEqual([22, 23, 27, 28]);
     for (const road of roads) delete road.construction;
@@ -80,7 +80,7 @@ describe('drag construction commits',()=>{
     expect(planConstruction(state, 'road', line)).toMatchObject({ ok: true, tiles: [], skipped: 0, cost: 0 });
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 0, skipped: 0 });
     expect(buildAt(state, 'road', 25, 14)).toEqual({ ok: false, message: 'Fords already provide a crossing. Start the road on either bank.' });
-    expect(state.factions[0].gold).toBe(40);
+    expect(state.factions[0].gold).toBe(200);
     expect(state.buildings.some(building => building.kind === 'road')).toBe(false);
     expect(movementMultiplier(state, 25.5, 14.5)).toBe(.45);
   });
@@ -91,7 +91,7 @@ describe('drag construction commits',()=>{
     expect(buildStroke(state, first, line).placed).toBe(4);
     const placed = 2;
     expect(buildStroke(state, second, line).placed).toBe(placed);
-    const remaining = second === 'wall' ? 232 : 176;
+    const remaining = second === 'wall' ? 200 : 160;
     expect(state.factions[0].gold).toBe(remaining);
     expect(buildStroke(state, second, line).placed).toBe(0);
     expect(state.factions[0].gold).toBe(remaining);
@@ -107,30 +107,30 @@ describe('drag construction commits',()=>{
     expect(plan.cells.map(cell => cell.ok)).toEqual([true, false, true, false, false, true]);
     expect(plan.cells.find(cell => cell.x === 29)).toMatchObject({ ok: false, message: 'Tile occupied.' });
     expect(plan.cells.filter(cell => !cell.ok).map(cell => cell.x)).toEqual([26, 28, 29]);
-    expect(plan).toMatchObject({ ok: true, cost: 6, skipped: 3 });
+    expect(plan).toMatchObject({ ok: true, cost: 30, skipped: 3 });
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 3, skipped: 3 });
-    expect(state.factions[0].gold).toBe(114);
+    expect(state.factions[0].gold).toBe(90);
     expect(state.buildings.filter(building => building.kind === 'road')).toHaveLength(4);
   });
   it('places a complete line once and charges only new segments when extending',()=>{
     const state=settlement();
     expect(buildStroke(state,'road',constructionLine({x:25,y:14},{x:30,y:14})).placed).toBe(6);
-    expect(state.factions[0].gold).toBe(28);
+    expect(state.factions[0].gold).toBe(140);
     expect(buildStroke(state,'road',constructionLine({x:28,y:14},{x:32,y:14})).placed).toBe(2);
-    expect(state.factions[0].gold).toBe(24);
+    expect(state.factions[0].gold).toBe(120);
     expect(state.buildings.filter(b=>b.kind==='road')).toHaveLength(9);
   });
   it('purchases only the affordable connected part and previews later cells as invalid',()=>{
     const state=settlement(),line=constructionLine({x:25,y:14},{x:29,y:14});
-    state.factions[0].gold=5;
+    state.factions[0].gold=25;
     const plan = planConstruction(state, 'road', line);
-    expect(plan).toMatchObject({ ok: true, cost: 4, skipped: 3, costs: { production: 0, food: 0, gold: 4 } });
+    expect(plan).toMatchObject({ ok: true, cost: 20, skipped: 3, costs: { production: 0, food: 0, gold: 20 } });
     expect(plan.cells.map(cell => cell.ok)).toEqual([true, true, false, false, false]);
     // A preview never spends the actual treasury or reserves an actual building.
-    expect(state.factions[0].gold).toBe(5);
+    expect(state.factions[0].gold).toBe(25);
     expect(state.buildings.filter(b=>b.kind==='road')).toHaveLength(1);
     expect(buildStroke(state,'road',line)).toMatchObject({ ok: true, placed: 2, skipped: 3 });
-    expect(state.factions[0].gold).toBe(1);
+    expect(state.factions[0].gold).toBe(5);
     expect(state.buildings.filter(b=>b.kind==='road')).toHaveLength(3);
   });
   it('builds walls on both sides of a rejected tile without charging for the gap', () => {
@@ -154,7 +154,7 @@ describe('drag construction commits',()=>{
     expect(plan.cells.map(cell => cell.ok)).toEqual([true, true, false, true, true]);
     expect(plan.tiles.map(tile => tile.x)).toEqual([25, 26, 29, 28]);
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 4, skipped: 1 });
-    expect(state.factions[0].gold).toBe(32);
+    expect(state.factions[0].gold).toBe(160);
   });
   it('marks existing segments valid and free while skipping occupied cells in the same stroke', () => {
     const state = settlement();
@@ -200,7 +200,7 @@ describe('drag construction commits',()=>{
     const plan = planConstruction(state, 'road', line);
     expect(plan.cells.every(cell => cell.ok)).toBe(true);
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 10, skipped: 0 });
-    expect(state.factions[0].gold).toBe(180);
+    expect(state.factions[0].gold).toBe(100);
     expect(isVisible(state, 34.5, 14.5)).toBe(false);
   });
   it('builds a stroke dragged toward the network in connection order', () => {
@@ -210,12 +210,12 @@ describe('drag construction commits',()=>{
     expect(plan.ok).toBe(true);
     expect(plan.tiles).toEqual([25, 26, 27, 28, 29, 30].map(x => ({ x, y: 14 })));
     expect(buildStroke(state, 'road', line).placed).toBe(6);
-    expect(state.factions[0].gold).toBe(28);
+    expect(state.factions[0].gold).toBe(140);
   });
   it('rejects disconnected strokes without spending gold', () => {
     const state = settlement();
     expect(buildStroke(state, 'road', constructionLine({ x: 26, y: 14 }, { x: 30, y: 14 }))).toMatchObject({ ok: false, placed: 0 });
-    expect(state.factions[0].gold).toBe(40);
+    expect(state.factions[0].gold).toBe(200);
     expect(state.buildings.filter(b => b.kind === 'road')).toHaveLength(1);
   });
 });

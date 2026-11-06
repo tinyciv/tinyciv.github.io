@@ -4,7 +4,7 @@ import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-a
 import { buildingReady, distance, isFarmKind, type Building, type GameState } from './types';
 import { invalidateScheduledHarvests } from './farms';
 
-export const ORCHARD_UPGRADE_COST = 6.25;
+export const ORCHARD_UPGRADE_COST = 5;
 export const ORCHARD_ESTABLISH_SECONDS = 120;
 export const ORCHARD_YIELD_MULTIPLIER = 1.5;
 export type OrchardUpgradeCount = 1 | 10;

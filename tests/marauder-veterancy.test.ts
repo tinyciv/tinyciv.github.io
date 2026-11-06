@@ -137,7 +137,7 @@ describe('marauder leaders', () => {
     expect(pack.leaderId).toBe(leader.id);
     expect(state.units.some(unit => unit.marauderPack === pack.id && unit.marauderLeader)).toBe(false);
   });
-  it('uses melee and awards exactly 200 gold when killed', () => {
+  it('uses melee and awards exactly 50 gold when killed', () => {
     const state = fixture(), { leader } = addBand(state);
     leader.x = 10.5; leader.y = 10.5;
     const enemy = { ...soldier(100, 11.5, 10.5), attack: 0 }; entityStore(state).units.add(enemy);
@@ -145,7 +145,7 @@ describe('marauder leaders', () => {
     expect(enemy.hp).toBeLessThan(100); expect(state.projectiles ?? []).toHaveLength(0);
     enemy.attack = 1000; enemy.cooldown = 0;
     updateGame(state, .1, idle);
-    expect(leader.hp).toBe(0); expect(state.factions[0].gold).toBe(200); expect(enemy.kills).toBe(1);
+    expect(leader.hp).toBe(0); expect(state.factions[0].gold).toBe(50); expect(enemy.kills).toBe(1);
   });
   it('immediately flees danger and returns home after its troop count falls', () => {
     const state = fixture(), { pack, leader } = addBand(state);

@@ -33,7 +33,7 @@ describe('research receives every positive gold source',()=>{
   expect(commandAttackAt(state,16.5,15.5)).toBe(true);
   for(let i=0;i<20 && !(faction.incomeTotals?.gold);i++) updateGame(state,.05,idle);
   updateResearch(state,1000);
-  const reward=kind==='building'?10:kind==='merchant'?204:kind==='marauder leader'?204:10;
+  const reward=kind==='building'?10:kind==='merchant'?204:kind==='marauder leader'?54:10;
   expect(faction.incomeTotals?.gold).toBe(reward);expect(faction.gold).toBeCloseTo(2000+reward*.75);expect(points(state)).toBeCloseTo(reward*.25);
  });
  it('uses the same split for completed domestic merchant deliveries',()=>{

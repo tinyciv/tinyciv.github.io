@@ -118,12 +118,12 @@
 .command-clear { background-position: 100% 0; }
 .command-forbid { background-position: 100% 100%; }
 /* A titleless three-column flyout. Keyboard hints remain in each upper-right corner. */
-.build-panel { position: absolute; right: 6px; bottom: 218px; width: 320px; height: auto; padding: 36px 12px 12px; transform: none; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: 0 4px 12px #0006; pointer-events: auto; }
+.build-panel { position: absolute; right: 6px; bottom: 218px; width: 372px; height: auto; padding: 36px 12px 12px; transform: none; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: 0 4px 12px #0006; pointer-events: auto; }
 .build-panel.is-building-menu { padding-bottom: 32px; }
 #close-build { position: absolute; right: 12px; top: 9px; width: 25px; height: 23px; padding: 0; border: 1px solid #bd9155; border-radius: 3px; background: #0b1519; color: #e5c184; font: 22px/19px var(--game-font); }
 .build-actions { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
-.build-actions button { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; text-shadow: 1px 1px #000; height: 50px; min-width: 0; padding: 11px 4px 3px; gap: 0; border: 0; border-radius: 3px; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: none; }
-.build-actions .action-label { font-size: 14px; line-height: 1.05; text-wrap: balance; max-width: 100%; }
+.build-actions button { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; text-shadow: 1px 1px #000; height: 64px; min-width: 0; padding: 15px 5px 5px; gap: 0; border: 0; border-radius: 3px; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: none; }
+.build-actions .action-label { font: 20px/1.05 var(--game-font); text-wrap: balance; white-space: normal; max-width: 100%; }
 .build-actions kbd { position: absolute; top: 5px; right: 7px; color: #e5c389; font: 13px/1 var(--game-font); }
 .build-actions button:hover:not(:disabled) { background: var(--forged-panel) center / 100% 100% no-repeat; filter: brightness(1.25); box-shadow: none; }
 .build-actions button.active { background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: inset 0 0 0 2px #d6b666; }

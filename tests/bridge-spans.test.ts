@@ -85,20 +85,20 @@ describe('complete water crossings', () => {
     expect(insideOwnBorders(state, 0, 20.5, 15.5)).toBe(false);
     expect(validateBuildAt(state, 'bridge', 20, 15).ok).toBe(true);
     const plan = planConstruction(state, 'bridge', [{ x: 20, y: 15 }]);
-    expect(plan).toMatchObject({ ok: true, skipped: 0, cost: 64 });
+    expect(plan).toMatchObject({ ok: true, skipped: 0, cost: 80 });
     expect(plan.tiles).toHaveLength(8); expect(plan.cells).toHaveLength(10);
     expect(plan.cells.filter(cell => cell.existing)).toHaveLength(2);
     expect(state.factions[0].gold).toBe(1000);
     expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }])).toMatchObject({ ok: true, placed: 8, skipped: 0 });
-    expect(state.factions[0].gold).toBe(936);
+    expect(state.factions[0].gold).toBe(920);
     expect(state.buildings.filter(building => building.kind === 'bridge')).toHaveLength(8);
   });
 
   it('rejects an unaffordable or obstructed span without purchasing a partial pier', () => {
-    const state = crossing(); state.factions[0].gold = 63;
-    expect(planConstruction(state, 'bridge', [{ x: 20, y: 15 }]).message).toBe('Need 64 gold for this complete bridge.');
-    expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }])).toMatchObject({ ok: false, placed: 0, message: 'Need 64 gold for this complete bridge.' });
-    expect(state.factions[0].gold).toBe(63);
+    const state = crossing(); state.factions[0].gold = 79;
+    expect(planConstruction(state, 'bridge', [{ x: 20, y: 15 }]).message).toBe('Need 80 gold for this complete bridge.');
+    expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }])).toMatchObject({ ok: false, placed: 0, message: 'Need 80 gold for this complete bridge.' });
+    expect(state.factions[0].gold).toBe(79);
     expect(state.buildings.some(building => building.kind === 'bridge')).toBe(false);
     state.factions[0].gold = 1000;
     entityStore(state).buildings.add({ id: 10000, kind: 'bridge', faction: 1, x: 20, y: 15, hp: 100, maxHp: 100, capacity: 0 });
@@ -110,7 +110,7 @@ describe('complete water crossings', () => {
     const state = crossing();
     entityStore(state).buildings.add({ id: 10000, kind: 'bridge', faction: 0, x: 20, y: 15, hp: 100, maxHp: 100, capacity: 0 });
     const plan = planConstruction(state, 'bridge', constructionLine({ x: 24, y: 15 }, { x: 15, y: 15 }));
-    expect(plan).toMatchObject({ ok: true, cost: 56, skipped: 0 }); expect(plan.tiles).toHaveLength(7);
+    expect(plan).toMatchObject({ ok: true, cost: 70, skipped: 0 }); expect(plan.tiles).toHaveLength(7);
     expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }])).toMatchObject({ ok: true, placed: 7, skipped: 0 });
   });
 

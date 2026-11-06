@@ -59,6 +59,7 @@ describe('farm-to-house redevelopment', () => {
     oldFields.forEach((field, index) => { field.food = index + 1; field.foodBatches = [{ amount: index + 1, expiresAt: 200 }]; field.expiresAt = 200; });
     oldCamp.storedFood = 9; oldCamp.storedFoodBatches = [{ amount: 9, expiresAt: 210 }];
     const courier = state.units.find(unit => unit.collectorCamp === oldCamp.id)!;
+    const collectors = state.units.filter(unit => unit.collector);
     Object.assign(courier, { cargo: 7, cargoBatches: [{ amount: 7, expiresAt: 190 }], cargoExpiresAt: 190,
       cargoField: oldFields[0].id, inside: false, x: 14.5, y: 15.5,
       collectPhase: 'outbound', field: oldFields[0].id });
@@ -86,7 +87,7 @@ describe('farm-to-house redevelopment', () => {
     expect(state.fields!.find(field => field.id === courier.field)?.claimedBy).toBe(courier.id);
     expect(courier.cargoBatches).toEqual([{ amount: 7, expiresAt: 190 }]);
     expect(oldFields.every(field => field.nextHarvest === 1000)).toBe(true);
-    expect(state.units.filter(unit => unit.collector)).toEqual([courier]);
+    expect(state.units.filter(unit => unit.collector)).toEqual(collectors);
     expect(state.selected).toBe(courier.id);
     expect(state.factions[0].yields.food).toBeGreaterThan(0);
   });

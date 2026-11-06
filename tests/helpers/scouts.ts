@@ -1,4 +1,12 @@
 import type { Building, GameState, Unit } from '../../src/game/types';
+import { entityStore } from '../../src/game/entity-store';
+
+/** Explicit explorers for movement/combat isolation tests; lodges never recruit them. */
+export function addTestScouts(state: GameState): void {
+  const next = Math.max(...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id)) + 1;
+  for (let i = 0; i < 2; i++) entityStore(state).units.add({ ...person(next + i, 'scout'), x: 16.5 + i, y: 12.5,
+    attack: 0, range: 0, speed: 3.96 * 1.2 });
+}
 
 const person = (id: number, kind: Unit['kind'] = 'warrior'): Unit => ({ id, kind, faction: 0, x: 12.5 + id % 3, y: 13.5,
   hp: 100, maxHp: 100, morale: 100, attack: 17, defense: 4, speed: 3.96, range: 1.1, order: 'follow', cooldown: 0,

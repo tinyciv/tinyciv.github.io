@@ -134,12 +134,12 @@ describe('purchased faction retinue capacity', () => {
     faction.population = 20; faction.purchasedRetinueSlots = 2;
     settlement.unhousedResidents = 20; settlement.governorPermissions = { farms: true, housing: false };
     settlement.governorNextPlanAt = 30;
-    // This tick pays 14 tax minus 10 upkeep, leaving one 12.5-gold farm and
+    // This tick pays 14 tax minus 10 upkeep, leaving one 15-gold farm and
     // the next 10-gold capacity bill, or one gold less than that allowance.
-    faction.gold = 18.5 - shortfall;
+    faction.gold = 21 - shortfall;
     economyTick(state);
     expect(state.buildings.filter(building => building.kind === 'camp' && building.construction)).toHaveLength(shortfall ? 0 : 1);
-    expect(faction.gold).toBe(shortfall ? 21.5 : 10);
+    expect(faction.gold).toBe(shortfall ? 24 : 10);
   });
 
   it('adds capacity fees to ordinary soldier wages and attributes them once to the oldest completed city', () => {

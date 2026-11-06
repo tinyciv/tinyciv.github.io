@@ -41,16 +41,16 @@ function expectClearPalaces(state: GameState): void {
 }
 
 describe('gold construction and legacy structure migration', () => {
-  it('keeps three-gold palisades available before the stronger thirty-gold stone walls', () => {
+  it('keeps five-gold palisades available before the stronger thirty-gold stone walls', () => {
     const state = fixture(), faction = state.factions[0];
     faction.research = undefined; faction.gold = 2;
     expect(buildAt(state, 'palisade', 12, 10).ok).toBe(false);
     expect(faction.gold).toBe(2);
-    faction.gold = 3;
+    faction.gold = 5;
     expect(buildAt(state, 'palisade', 12, 10).ok).toBe(true);
     const palisade = state.buildings.at(-1)!;
     expect(palisade).toMatchObject({ kind: 'palisade', hp: 56.25, maxHp: 56.25,
-      construction: { paidGold: 3, duration: 4, waitingForBuilder: true } });
+      construction: { paidGold: 5, duration: 4, waitingForBuilder: true } });
     expect(faction.gold).toBe(0);
     faction.gold = 30;
     expect(validateBuildAt(state, 'wall', 13, 10).message).toContain('Masonry');
@@ -60,7 +60,7 @@ describe('gold construction and legacy structure migration', () => {
     expect(BUILD_OPTIONS.find(option => option.kind === 'palisade')?.label).toBe('Palisade');
   });
 
-  it.each([['camp', 12.5, 13, 8], ['house', 62.5, 11, 8]] as const)('charges exactly %s gold price at its affordability boundary', (kind, cost, x, y) => {
+  it.each([['camp', 15, 13, 8], ['house', 65, 11, 8]] as const)('charges exactly %s gold price at its affordability boundary', (kind, cost, x, y) => {
     const state = fixture(), faction = state.factions[0];
     expect(BUILD_COSTS[kind]).toEqual({ gold: cost, production: 0, food: 0 });
     faction.gold = cost - 1; faction.production = 100000;
