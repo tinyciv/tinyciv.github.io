@@ -5,4 +5,5 @@ import { afterEach } from 'vitest';
 // Let the worker receive reporter replies between tests, avoiding Vitest's
 // 60-second RPC timeout without suppressing errors or reducing coverage.
 // Capture the native timer before a test can install fake timers.
-afterEach(() => new Promise(resolve => setImmediate(resolve)));
+const queueImmediate = setImmediate;
+afterEach(() => new Promise(resolve => queueImmediate(resolve)));

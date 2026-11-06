@@ -112,6 +112,12 @@ describe('CI baseline gate', () => {
     const f = fixture(); f.report.testResults[0].assertionResults[1].fullName = row.fullName;
     expect(failures(assess(f))).toContain('Duplicate test identity');
   });
+  it('allows passing parameterized cases to share a display name without an exemption', () => {
+    const f = fixture();
+    f.report.testResults[0].assertionResults.push(test('terrain places trees'));
+    f.report.numTotalTests++; f.report.numPassedTests++;
+    expect(assess(f).ok).toBe(true);
+  });
   it('rejects test modules outside the expected test tree', () => {
     const f = fixture(); f.report.testResults[0].name = '/project/scratch/tests/terrain.test.ts';
     expect(failures(assess(f))).toContain('Unexpected test module outside tests/');
