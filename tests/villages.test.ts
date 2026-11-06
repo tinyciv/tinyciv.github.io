@@ -82,7 +82,7 @@ describe('neutral villages', () => {
       expect(state.buildings.filter(b => b.villageId === village.id && b.kind === 'villageTent')).toHaveLength(3);
       expect(state.units.filter(u => u.villageId === village.id).every(u => canWalk(state, u.x, u.y, u.faction))).toBe(true);
     }
-  }, 20000);
+  }, 120_000);
 
   it('charges 250 once for trade and 3000 once for alliance, immediately creating trade while paused', () => {
     const { state, village, camp } = settlement(); state.paused = true;

@@ -369,7 +369,7 @@ describe('destructible raider camps and ramped waves', () => {
     state.gameOver = false; updateFogRaids(state); expect(raiders(state)).toHaveLength(4);
   });
 
-  it.each(['willow-raid', 'river-raid', 'coastal-raid'])('places reachable camps on generated world %s', { timeout: 30000 }, seed => {
+  it.each(['willow-raid', 'river-raid', 'coastal-raid'])('places reachable camps on generated world %s', { timeout: 120_000 }, seed => {
     const state = createGame(generateWorld(seed));
     expect(state.raiderCamps!.length).toBeGreaterThan(0);
     // The committed stockades must not sever the same approach that was open

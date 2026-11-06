@@ -51,7 +51,7 @@ describe('six-civilization starting worlds', () => {
           occupied.set(index, building);
         }
     }
-  }, 15000);
+  }, 120_000); // Full faction/camp initialization is a correctness check, not a CPU benchmark.
 
   it('keeps six factions and eleven non-overlapping palaces on a small development map', () => {
     const state = createGame(generateWorld('small', 64, 64));

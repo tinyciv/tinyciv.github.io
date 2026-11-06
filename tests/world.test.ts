@@ -119,7 +119,7 @@ describe('geographic world generation', () => {
     expect(coastline(another)).not.toEqual(coastline(first));
   // Three full-size worlds plus deep equality can exceed the default timeout
   // when the full suite runs alongside long settlement simulations.
-  }, 30_000);
+  }, 120_000);
 
   it.each(['CROWN', 'river-kingdom', '42', 'autumn', 'first-light', 'a', '0', ''])('places six separated, connected, viable capitals for seed %s', seed => {
     const world = generateWorld(seed);

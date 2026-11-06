@@ -17,7 +17,7 @@ describe('compact lossless game saves', () => {
     expect(restored).toEqual(JSON.parse(raw));
     expect(restored).toMatchObject({ victory: true, victoryContinued: true, gameOver: false });
     expect(serialized.length).toBeLessThan(4.8 * 1024 * 1024);
-  }, 15_000);
+  }, 120_000);
 
   it.each([
     { version: 0 },

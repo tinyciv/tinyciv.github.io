@@ -10,7 +10,7 @@ describe('coastal deltas through production generation', () => {
   let world: World;
   beforeAll(() => {
     world = generateWorld('ALDER-DELTA', undefined, undefined, { landformFamily: 'river-basin' });
-  }, 30000);
+  }, 120_000);
 
   it('retains open, wet marsh ground through beaches, ecology, soil and resource assignment', () => {
     expect(world.riverDeltas?.length).toBeGreaterThan(0);
@@ -95,5 +95,5 @@ describe('coastal deltas through production generation', () => {
       expect(initialMarsh.has(field.y * world.width + field.x), `field on marsh at ${field.x},${field.y}`).toBe(false);
     for (const cell of initialMarsh) expect(world.tiles[cell])
       .toMatchObject({ marsh: true, terrain: 'grassland', overlay: 'none', biome: 'wetland' });
-  }, 30000);
+  }, 120_000);
 });

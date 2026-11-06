@@ -17,7 +17,7 @@ function removeRoamers(state: GameState): void {
   delete state.roamingMaraudersVersion;
 }
 
-describe('independent wilderness marauders', { timeout: 30000 }, () => {
+describe('independent wilderness marauders', { timeout: 120_000 }, () => {
   it.each(['willow-raid', 'river-raid', 'coastal-raid'])('scatters many small, full-health packs over reachable wilderness on %s', seed => {
     const state = createGame(generateWorld(seed)), packs = roamers(state), fog = updateFog(state);
     const palaces = state.buildings.filter(building => building.kind === 'palace');

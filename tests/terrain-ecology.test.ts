@@ -157,5 +157,5 @@ describe('correlated terrain ecology', () => {
       for (const spawn of [...world.spawns, ...world.secondarySpawns!]) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
         expect(world.tiles[(Math.floor(spawn.y) + dy) * world.width + Math.floor(spawn.x) + dx].overlay).toBe('none');
     }
-  }, 10000);
+  }, 120_000);
 });

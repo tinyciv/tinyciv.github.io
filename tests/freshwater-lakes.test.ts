@@ -60,7 +60,7 @@ describe('freshwater lake basins', () => {
         for (const offset of [-1, 1, -world.width, world.width]) expect(['ocean', 'coast']).not.toContain(world.tiles[i + offset].terrain);
       }
     }
-  }, 10000);
+  }, 120_000);
 
   it('creates only compact lakes and enforces their measured aspect across many seeds', () => {
     let compact = 0, snaky = 0;

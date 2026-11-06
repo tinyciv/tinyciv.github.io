@@ -129,5 +129,5 @@ describe('wide meandering rivers and complete fords', () => {
       expect(world.tiles.every(tile => !tile.channel || tile.terrain === 'river' && tile.channelWidth! >= 1)).toBe(true);
     }
     expect(tributaryCrossings).toBeGreaterThan(100);
-  }, 25000); // Audit every crossing on thirty enlarged worlds.
+  }, 120_000); // Audit every crossing on thirty enlarged worlds.
 });

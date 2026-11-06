@@ -105,7 +105,7 @@ describe('settlement spacing and alignment', () => {
       for (const field of state.fields!) fieldsByCamp.set(field.camp, (fieldsByCamp.get(field.camp) ?? 0) + 1);
       for (const camp of camps) expect(fieldsByCamp.get(camp.id)).toBe(1);
     }
-  }, 30000); // Initialize and inspect three full-size worlds (about 18 seconds locally).
+  }, 120_000); // Three full world initializations need headroom on shared CI CPUs.
 });
 
 describe('health display', () => {

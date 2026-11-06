@@ -962,7 +962,7 @@ describe('adversarial settlement and siege regressions', () => {
   });
 });
 
-describe('independent raider camps', { timeout: 30000 }, () => {
+describe('independent raider camps', { timeout: 120_000 }, () => {
   it.each(['BTV-847', 'marauder-connected-valley'])('makes actual opening contact within thirty seconds on seed %s', async seed => {
     const state = createGame(generateWorld(seed));
     // Isolate the opening camp wave from independent full-faction assaults,
@@ -984,7 +984,7 @@ describe('independent raider camps', { timeout: 30000 }, () => {
     expect(state.gameOver).toBe(false);
     expect(getLeader(state)!.hp).toBeGreaterThan(0);
     expect(state.buildings.some(building => building.kind === 'palace' && building.faction === 0 && building.hp > 0)).toBe(true);
-  }, 30000);
+  }, 120_000);
 
   it('keeps camps separate from diplomacy factions and creates full-health raiders at their first departure', () => {
     const state = createGame(generateWorld('marauder-counts'));

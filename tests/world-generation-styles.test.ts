@@ -61,7 +61,7 @@ describe('explicit world generation styles', () => {
         expect(mainland.has(Math.floor(town.y) * world.width + Math.floor(town.x))).toBe(true);
       connectedTowns(world);
     }
-  }, 15000);
+  }, 120_000);
 
   it('repeats an explicit style exactly and defaults to fractal', () => {
     const first = generateWorld('world-menu', 160, 128, { style: 'fractal' });

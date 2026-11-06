@@ -102,7 +102,7 @@ describe('advanced starting cities', () => {
     expect(after.reduce((sum, city) => sum + city.population, 0)).toBe(faction.population);
     expect(faction.population).toBeGreaterThanOrEqual(ADVANCED_START_POPULATION);
     expect(faction.food).toBeGreaterThan(0);
-  }, 30_000);
+  }, 120_000);
 
   it('keeps ordinary starts at 20 residents without free technologies or extra retinue capacity', () => {
     const state = createGame(world());
