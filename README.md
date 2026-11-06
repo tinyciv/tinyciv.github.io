@@ -6,7 +6,10 @@ A pixel-art civilization game with settlement building, research, trade, explora
 and real-time battles. Play solo or create a two-player multiplayer match from the main menu.
 
 Use WASD to move the Leader, B to build, F for fortifications, and Escape for the menu.
-Controls and settings are available in the game. Boats use Q/E steering and retain momentum.
+Click once to start a road, wall, bridge, or ditch, then again to finish it.
+On mobile, play in landscape: move with the joystick, tap to command or open a
+building, and use two fingers to pan or zoom. Boats use Q/E steering or the touch
+turn buttons and retain momentum. Controls and settings are available in the game.
 
 This repository contains the deployed browser build. Multiplayer uses a separate
 server at https://d120onxzjgx6ss.cloudfront.net. GitHub Pages hosts the static game.
