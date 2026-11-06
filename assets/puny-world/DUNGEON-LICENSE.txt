@@ -1,0 +1,10 @@
+Puny Dungeon
+Creator: Shade / Merchant Shade
+License: CC0 1.0 Universal
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://merchant-shade.itch.io/16x16-puny-dungeon
+https://opengameart.org/content/16x16-puny-dungeon-tileset
+
+Complete official OpenGameArt ZIP, including Tiled maps, tileset metadata and rendered example maps. Added an exact copy of the supplied TSX at its parent path to resolve broken references in the upstream sample maps; no original file was changed.
+
+Collected 2026-10-26. Original artwork is unchanged. Native 16x16 terrain; actor frames retain their original 32x32 canvases.

@@ -1,0 +1,26 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "asset_pack": "MiniWorld Sprites",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "original_path": "MiniWorldSprites/Buildings/Wood/Market.png",
+  "local_source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/Market.png",
+  "source_rect": [
+    16,
+    32,
+    16,
+    16
+  ],
+  "description": "Unused timber shop with lavender-blue jars, selected as the Healer\u2019s Shack. This is a descriptive game name; the original atlas labels the sheet Market, not individual shops.",
+  "changes": "Exact native cell extraction; no recoloring, retouching, or resampling.",
+  "footprint": [
+    1,
+    1
+  ],
+  "native_ground_anchor": [
+    8,
+    16
+  ],
+  "sha256": "bcf8f4e71d1a094927d44c9deee89e5e62a136cdfe97396ccda1a8511b6c4f79",
+  "review": "scratch/2026-11-01-healer-shack/native-candidates.png"
+}

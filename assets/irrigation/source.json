@@ -1,0 +1,36 @@
+{
+  "creator": "Shade",
+  "selectedVariant": "1B slim ditch",
+  "runtimeRefinement": {
+    "renderer": "src/game/irrigation-art.ts",
+    "nativeChannelWidth": 3,
+    "nativeTerrainBuffer": 1,
+    "edits": "Runtime nearest-pixel compression of the original ditch sheet and matching inlet taper. Crop clipping reveals the actual terrain buffer; trees render above the ditch. Original PNG files are unchanged.",
+    "comparison": "output/irrigation-refinement.html"
+  },
+  "ditch": {
+    "source": "Puny World Medieval / punyworld-atlas.png",
+    "nativeTileSize": 16,
+    "width": 4,
+    "sheetSize": [256, 64],
+    "connections": {"north": 1, "east": 2, "south": 4, "west": 8},
+    "frameRows": 4,
+    "fps": 3,
+    "verticalSource": [0, 448, 16, 16],
+    "horizontalSource": [32, 480, 16, 16],
+    "sourceFrameOffsetY": 64
+  },
+  "inlet": {
+    "source": "Puny World Medieval river banks, tapered to the selected ditch width",
+    "sheetSize": [64, 64],
+    "frameRows": 4,
+    "directionColumns": ["water west", "water north", "water east", "water south"],
+    "fps": 3
+  },
+  "bridge": {
+    "source": "MiniWorldSprites/Miscellaneous/Bridge.png",
+    "sourceRect": [42, 11, 28, 36],
+    "sheetSize": [28, 36],
+    "edits": "Exact original sprite crop"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "sourcePage": "https://merchant-shade.itch.io/puny-world-medieval",
+  "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+  "sourceRect": [
+    2368,
+    16,
+    32,
+    16
+  ],
+  "frameSize": [
+    16,
+    16
+  ],
+  "frameCount": 2,
+  "changes": "Exact native atlas extraction. Original pixels and alpha; no resampling or redrawing.",
+  "license": "Purchased Puny World Medieval asset pack; see LICENSE.txt.",
+  "sha256": "0dc8ef60abe7e66df04901be149b679c1ffbcd67e8f0b7f6e9b44335efec5d02",
+  "tent": {
+    "source": "public/assets/puny-world/overworld.png",
+    "sourceRect": [
+      64,
+      416,
+      16,
+      16
+    ],
+    "changes": "Runtime white faction palette; original pixel shapes."
+  }
+}

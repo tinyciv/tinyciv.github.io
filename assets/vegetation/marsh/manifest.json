@@ -1,0 +1,53 @@
+{
+  "installedOn": "2026-11-01",
+  "origin": "Imagegen variants created for this project from the user-provided plant reference.",
+  "review": "output/delta-world-review.html",
+  "approval": "User requested Add it to the game after reviewing the delta worlds.",
+  "paletteSource": "public/assets/vegetation/medieval-nature.png",
+  "changes": "Byte-identical copies of the approved fuller sprites; no image edits.",
+  "display": {
+    "widthTiles": 2,
+    "heightTiles": 2.45,
+    "anchorX": 0.5,
+    "anchorY": 0.9375,
+    "filter": "nearest"
+  },
+  "assets": [
+    {
+      "id": "2A",
+      "name": "Leafy tuft",
+      "file": "2A.png",
+      "source": "scratch/2026-10-31-marsh-plants-v2/native/2A-32.png",
+      "width": 32,
+      "height": 48,
+      "sha256": "787e3b18c687f4847381d76f5ee782315e2fb1af7512f8f21ab32ff7119b643a"
+    },
+    {
+      "id": "2B",
+      "name": "Broadleaf clump",
+      "file": "2B.png",
+      "source": "scratch/2026-10-31-marsh-plants-v2/native/2B-32.png",
+      "width": 32,
+      "height": 48,
+      "sha256": "2f4c3287e2c292b0a7351a8f2c8a51b2d1e025476ecaff933acb3bc3ef1c85ac"
+    },
+    {
+      "id": "2C",
+      "name": "Sedge mound",
+      "file": "2C.png",
+      "source": "scratch/2026-10-31-marsh-plants-v2/native/2C-32.png",
+      "width": 32,
+      "height": 48,
+      "sha256": "013346f5353647f470f685ceb035e60f6645dcef9cd65b63b102b2b3cc9a23b5"
+    },
+    {
+      "id": "2D",
+      "name": "Rush clump",
+      "file": "2D.png",
+      "source": "scratch/2026-10-31-marsh-plants-v2/native/2D-32.png",
+      "width": 32,
+      "height": 48,
+      "sha256": "4c84fc7fec3f13ae8aebfc47743dc52fe2a815412f35f57058221301e6041016"
+    }
+  ]
+}

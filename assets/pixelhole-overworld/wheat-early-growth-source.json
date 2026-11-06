@@ -1,0 +1,34 @@
+{
+  "source": "public/assets/miniworld/Wheatfield-DryStraw.png",
+  "source_sha256": "bc2df8e171034f9d8bb554312bb532fd3cf321cc52f9d471c3aa41ca54cbd72e",
+  "native_size": [
+    48,
+    16
+  ],
+  "native_pixel_scale": 2,
+  "stages": {
+    "bare": [
+      4,
+      5,
+      8,
+      8
+    ],
+    "young": [
+      20,
+      5,
+      8,
+      8
+    ],
+    "growing": [
+      36,
+      4,
+      8,
+      8
+    ]
+  },
+  "composition": "Each 8x8 interior patch repeats 2x2 at unchanged native pixel size. No outline, transparent margin, stalk cap, or bottom edge is included. Original palette is unchanged.",
+  "final_stage": "Wheatfield-Joins.png, approved PixelHole golden wheat with outer perimeter only",
+  "license": "Early stages: Shade MiniWorld CC0; see public/assets/miniworld/LICENSE.txt. Final stage: purchased PixelHole Overworld Tileset, not CC0.",
+  "sha256": "7b7ea8d55ba1c7e7e4fc4279b6894df659936b44ec3b0d6994ac0ef8824b9be2",
+  "generator": "scratch/2026-11-02-wheat-lifecycle/build-early-growth.py"
+}

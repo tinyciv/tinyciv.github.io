@@ -1,0 +1,140 @@
+{
+  "generator": "built-in imagegen",
+  "mode": "generate",
+  "style_reference": "scratch/2026-11-01-research-hud-concepts/1A-forged-citadel.png",
+  "generation_manifest": "scratch/2026-11-01-research-icons/manifest.json",
+  "encoding": "cwebp -lossless -exact -m 6",
+  "pixels_modified": false,
+  "icons": [
+    {
+      "id": "wall",
+      "label": "Masonry",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 451046,
+      "webp_sha256": "7d599c9dc5217fa874234bd974caca6f92fd7bc2d6394e1452080c07f91abfe4",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/wall.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: Three large squared gray stone blocks in a compact stepped stack: two blocks along the bottom, one centered on top. Each block has one broad pale face and a darker side, with a few broad corner cuts. No tiny masonry texture. Simple wide stable silhouette."
+    },
+    {
+      "id": "woodenTower",
+      "label": "Fortification",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 395056,
+      "webp_sha256": "a374e545a1988fda333bc30231216d468cbfa6e5ad9880adfca9a35a5c0e8403",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/woodenTower.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: A compact timber watchtower, front three-quarter view, with one small ochre peaked roof over a boxy lookout, two strong brown vertical support posts and one diagonal brace. Tall silhouette, open dark negative space between the posts. Roof no more than one third of overall height. No flag or scenery."
+    },
+    {
+      "id": "reinforcedDefenses",
+      "label": "Reinforced Defenses",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 609728,
+      "webp_sha256": "5963253d8a3b1105e26b50250683916dbc6bf10538a3429184ae777b015e805c",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/reinforcedDefenses.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: A compact pale gray stone battlement with three square crenellations and a bold diagonal bronze timber reinforcement brace across the face, joined to one thick vertical wooden brace. A clearly stronger fortified wall silhouette; broad stone surfaces, very few divisions."
+    },
+    {
+      "id": "monument",
+      "label": "Statehood",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 261276,
+      "webp_sha256": "f8d0c54f96dc03e32ea4fa9d51facf1434a01a996d304625f34f693205757df1",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/monument.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: One upright pale gray obelisk memorial with a pointed stepped top, a single broad dark inset, and a sturdy two-step stone pedestal. One tiny moss-green patch at the base, no scenery. Tall clean monumental silhouette with warm ivory left edge."
+    },
+    {
+      "id": "coinage",
+      "label": "Coinage",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 511550,
+      "webp_sha256": "82a82fa399b4557f6cc714bc44ce487e9ddf234897eff8f0422b176e56a14069",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/coinage.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: Three small stacks of large rich-gold coins in a triangular group: tall stack in rear center, shorter stack left and right in front. Broad square-stepped round coin faces, ochre side bands and one bright gold highlight. No engraved letters or numbers."
+    },
+    {
+      "id": "urbanPlanning",
+      "label": "Urban Planning",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 549460,
+      "webp_sha256": "8977303171cbc5227b9dd9953d406c1577a8a4bef302ba738650afb6375d951d",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/urbanPlanning.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: Two compact medieval houses standing side by side, one with a dark cyan-blue roof and one with an earthy red roof, pale cream wall faces, a brown doorway each, all on one short moss-green foundation strip. Very simplified blocky architecture with one window maximum per house. Broad paired-house silhouette."
+    },
+    {
+      "id": "scoutLodge",
+      "label": "Exploration",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 420698,
+      "webp_sha256": "0d31f508f87d822320f533ffde1f6c23676d296c3c09d23d5f4c20ec3c0f06c9",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/scoutLodge.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: A single tiny hooded medieval scout standing front three-quarter view: olive-green hood and cloak, small shadowed face, warm brown boots, holding a simple folded cyan map at chest height. No bow or weapon. Large hood/map shapes, short simple limbs, no facial detail, immediately legible at32px."
+    },
+    {
+      "id": "blacksmith",
+      "label": "Bronze Working",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 369312,
+      "webp_sha256": "dc9f5a13e35ce1ba0b7e804954ef615e89135e6d58de8c9d5707f5efeea26164",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/blacksmith.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: One broad orange-bronze anvil with a flat horn pointing left, solid pedestal below, and a small chunky smith hammer diagonally poised above it. Anvil is the primary large mass; hammer head pale warm metal and handle brown. Clear gap separates hammer and anvil."
+    },
+    {
+      "id": "metalTools",
+      "label": "Metal Tools",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 440320,
+      "webp_sha256": "7c8060144e42e71f11f265cc13a44a70ad11869c56720f9d6b95d3c061fe8c29",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/metalTools.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: Two crossed practical hand tools in a clear X: a short steel pickaxe and a small broad bronze hatchet, each with a rich brown wooden handle. The heads are distinct large simple shapes at the upper corners; handles cross once. No additional tools."
+    },
+    {
+      "id": "archeryRange",
+      "label": "Archery",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 278958,
+      "webp_sha256": "5a1e1d5e7089e8468b20f8ac35fb0c327ee781522f4cd5fac6580423921e1eae",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/archeryRange.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: One upright curved ochre wooden bow with a pale taut bowstring and one horizontal steel-tipped arrow nocked across its center, pointing right. Clean crescent-and-crossbar silhouette, simple thick pixel steps, warm wood and pale steel arrowhead, minimal feathers."
+    },
+    {
+      "id": "fletching",
+      "label": "Fletching",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 344214,
+      "webp_sha256": "a809615dd8c696caa59f634efe784b23a99eac540754a20dbd2d008ead33cacd",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/fletching.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: Three upright arrows grouped in a compact fan, dark brown shafts, large pale gray steel triangular arrowheads at the top and simple small warm ochre fletching near the bottom. Center arrow slightly taller, clear negative gaps between the three shafts."
+    },
+    {
+      "id": "irrigation",
+      "label": "Irrigation",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 697880,
+      "webp_sha256": "a728554bdff0b520aa9c393cddf0ae5bb27c0282508f36da8445b687409370aa",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/irrigation.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: A short bright cyan-blue irrigation channel running vertically through the middle of two small groups of ripe golden wheat on dark green banks. Three broad gold stalks per side maximum; water is one clear blue central strip with one pale blue highlight. Small cohesive tile-free cutout cluster, no square ground slab."
+    },
+    {
+      "id": "grainStorage",
+      "label": "Grain Storage",
+      "width": 1254,
+      "height": 1254,
+      "webp_bytes": 649694,
+      "webp_sha256": "1fb6ac1cf47cb2c89486bda494eb1820ab63a5df25b4f2ce6a673ab7ac34d9a1",
+      "workspaceOriginal": "scratch/2026-11-01-research-icons/originals/grainStorage.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: one reusable medieval fantasy strategy-game research icon for the approved Forged Citadel HUD, shown at 32\u201348 CSS pixels.\nCreate exactly ONE isolated pixel-art object cluster on a genuine transparent alpha background. Square canvas. The subject should fill about 78% of the canvas, centered, with balanced clear margin and no clipping. Match a classic fantasy RTS / World of Warcraft-inspired antique brass and charcoal HUD: chunky readable pixel silhouette, deliberate square pixel steps, connected solid color clusters, top-left warm highlight and cool dark outline. Design as if drawn on a 32-by-32 logical pixel grid then enlarged with nearest-neighbor: large simple shapes, 3\u20134 shades per material, sharply defined edges, no smooth anti-aliasing, no painterly noise, no fine scratches, no tiny scattered detail. Warm ochre gold, rich brown wood, pale cool gray stone/steel, cyan water, restrained leaf green.\nNo text, numbers, letters, labels, border, tile frame, backdrop, ground shadow, glow, watermark, or surrounding UI. This is a cutout glyph, not a screenshot or a sheet. Its silhouette must remain distinct at 32px.\nSubject: A large warm tan grain sack with a rolled open mouth and broad simple bulging silhouette beside one smaller terracotta storage jar on the right. A few broad golden grain shapes visible at the sack opening, no scattered grain. Strong bag-and-jar pair, no platform or scenery."
+    }
+  ]
+}

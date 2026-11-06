@@ -1,0 +1,16 @@
+{
+  "creator": "Shade",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "original_path": "MiniWorldSprites/Animals/Chicken.png",
+  "sha256": "473d946ba3bede660b2b0ec1d6263f9aae6b91bb114c3625a84b8d9cd1097483",
+  "dimensions": [64, 64],
+  "frame_size": [16, 16],
+  "changes": "Installed PNG is byte-identical to Shade's source. The marsh bird uses a cached runtime palette variant; only the 56 opaque comb/wattle pixels with the two exact red colors below change. Every other RGB value, alpha, shape, and animation frame is preserved.",
+  "runtime_palette": [
+    { "from": [188, 78, 78], "to": [137, 154, 100], "pixels": 32 },
+    { "from": [164, 52, 52], "to": [89, 107, 67], "pixels": 24 }
+  ],
+  "approved_on": "2026-11-01",
+  "approval": "User requested changing the chicken's red pixels and adding the new bird to marsh flocks."
+}

@@ -1,0 +1,8 @@
+Library, Library-blue, Library-red: approved generated primitive library option 1C.
+Generated using built-in imagegen with Shade / Merchant Shade Puny World houses
+and the purchased Puny World Medieval library as style and layout references.
+These are generated adaptations, not lossless extractions or unmodified CC0 sprites.
+Purchased source pack licensed for use in this game; retain it privately.
+Source: https://merchant-shade.itch.io/puny-world-medieval
+Review, prompts and export provenance: scratch/2026-10-29-primitive-library/.
+Full purchased archive: scratch/2026-10-28-puny-medieval/.

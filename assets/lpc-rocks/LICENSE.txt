@@ -1,0 +1,11 @@
+LPC Rocks by bluecarrot16 and the contributors in CREDITS-rocks.txt.
+
+Used under Creative Commons Attribution-ShareAlike 4.0 International.
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Original collection: https://opengameart.org/content/lpc-rocks
+Original image: https://opengameart.org/sites/default/files/rocks_12.png
+Retrieved in the BTV terrain comparison on October 24, 2026.
+The bundled PNG is unchanged. BTV selects transparent boulder and rock-cluster
+rectangles at runtime and scales them uniformly. The artwork retains its
+original license; see the complete contributor credits alongside this file.

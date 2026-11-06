@@ -1,0 +1,8 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "source": "MiniWorldSprites/Buildings/Enemy/SpearWall.png",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "changes": "Byte-identical original 48x32 sprite sheet. Native cells composed at 2x pixel scale for connections; gate openings clip the wall over roads.",
+  "sha256": "b8295660315158ccce5e3feebb6fc80128b8b9f745eef8bf8a5ef740722a96a1"
+}

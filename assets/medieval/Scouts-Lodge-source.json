@@ -1,0 +1,15 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "assetPack": "Puny World Medieval",
+  "sourcePage": "https://merchant-shade.itch.io/puny-world-medieval",
+  "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+  "description": "Complete thatched cottage, selected as the Scouts’ Lodge. Descriptive building name; no official building name is supplied in the atlas.",
+  "footprint": [1, 1],
+  "files": [
+    { "file": "Scouts-Lodge.png", "rect": [2640, 0, 16, 16] },
+    { "file": "Scouts-Lodge-blue.png", "rect": [2640, 704, 16, 16] },
+    { "file": "Scouts-Lodge-red.png", "rect": [2640, 1408, 16, 16] }
+  ],
+  "changes": "Exact first-frame crops of existing native sprites. Runtime faction tint affects only the 17 trim pixels identified by differences between native faction variants; all thatch, wood, chimney and alpha pixels remain unchanged.",
+  "review": "scratch/2026-10-30-scouts-lodge/index.html"
+}

@@ -1,0 +1,28 @@
+{
+  "source": "User-provided Fort image attached on 2026-11-04",
+  "file": "fort.png",
+  "sha256": "16a65f11f107af553cb22ad4ca6fe71762ed4a7293350b1528f6e911187c088e",
+  "imageSize": [
+    1254,
+    1254
+  ],
+  "sourceRectangle": [
+    144,
+    156,
+    968,
+    974
+  ],
+  "groundAnchor": [
+    628,
+    1130
+  ],
+  "gameFootprint": [
+    2,
+    2
+  ],
+  "renderGroundAnchor": [
+    32,
+    64
+  ],
+  "processing": "Original PNG bytes unchanged. Renderer crops transparent margins, preserves aspect ratio and colors, and uses nearest-neighbor sampling."
+}

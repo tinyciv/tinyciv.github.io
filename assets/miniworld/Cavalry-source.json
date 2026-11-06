@@ -1,0 +1,97 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "asset_pack": "MiniWorld Sprites",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "files": [
+    {
+      "file": "Horseman-Cyan.png",
+      "original_path": "MiniWorldSprites/Characters/Soldiers/Mounted/CyanKnight.png",
+      "sha256": "89dd17d0cd49e1c0d12976ac519e9bcae87e1abcbebff629b750e0baf8b36531",
+      "dimensions": [
+        128,
+        384
+      ],
+      "modified": false
+    },
+    {
+      "file": "Stable-Cyan.png",
+      "original_path": "MiniWorldSprites/Buildings/Cyan/CyanResources.png",
+      "source_rect": [
+        32,
+        32,
+        16,
+        16
+      ],
+      "sha256": "89899e132e5a64550ef02ed0bc6a8dfc8886b4d2ab8387d7c362381000ec91cc",
+      "dimensions": [
+        16,
+        16
+      ],
+      "modified": "Exact native crop only"
+    },
+    {
+      "file": "Horseman-Red.png",
+      "original_path": "MiniWorldSprites/Characters/Soldiers/Mounted/RedKnight.png",
+      "sha256": "7721f19992532912d9372b2830fa3e62118c341dc423079cd10ac7f1ce4e672f",
+      "dimensions": [
+        128,
+        384
+      ],
+      "modified": false
+    },
+    {
+      "file": "Stable-Red.png",
+      "original_path": "MiniWorldSprites/Buildings/Red/RedResources.png",
+      "source_rect": [
+        32,
+        32,
+        16,
+        16
+      ],
+      "sha256": "54917eaaf480355048977b8ca485a30c160b202206118f7595d6642c494ff36a",
+      "dimensions": [
+        16,
+        16
+      ],
+      "modified": "Exact native crop only"
+    }
+  ],
+  "horseman": {
+    "cell_size": [
+      32,
+      32
+    ],
+    "rows": [
+      "south idle",
+      "south walk",
+      "south attack",
+      "east idle",
+      "east walk",
+      "east attack",
+      "west idle",
+      "west walk",
+      "west attack",
+      "north idle",
+      "north walk",
+      "north attack"
+    ],
+    "frames_per_row": 4,
+    "ground_anchor": [
+      16,
+      25
+    ]
+  },
+  "stable": {
+    "description": "Native open-front timber barn selected as the stable. This is a descriptive game role, not an official source filename.",
+    "footprint": [
+      1,
+      1
+    ],
+    "ground_anchor": [
+      8,
+      16
+    ]
+  },
+  "changes": "Complete mounted knight source sheets and exact building-cell crops. Runtime faction tint changes only pixels that differ between native Cyan and Red variants. No generated or repainted art."
+}

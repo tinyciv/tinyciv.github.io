@@ -1,0 +1,108 @@
+{
+  "creator": "PixelHole",
+  "pack": "PixelHole's Overworld Tileset \u2014 premium",
+  "sourceURL": "https://pixelhole.itch.io/pixelholes-overworld-tileset",
+  "sourceSheet": "scratch/2026-11-02-pixelhole-overworld/source/MasterTileset1.0.png",
+  "sourceSHA256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "license": "Creator permits commercial and personal use; no reupload or rebranding.",
+  "nativePixelScale": {
+    "wheat": 2,
+    "pickupCrate": 1
+  },
+  "files": {
+    "Wheatfield-Stages.png": {
+      "size": [
+        64,
+        16
+      ],
+      "stages": [
+        {
+          "destination": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "source": "public/assets/miniworld/Wheatfield-DryStraw.png",
+          "rect": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        {
+          "destination": [
+            16,
+            0,
+            16,
+            16
+          ],
+          "source": "public/assets/miniworld/Wheatfield-DryStraw.png",
+          "rect": [
+            16,
+            0,
+            16,
+            16
+          ]
+        },
+        {
+          "destination": [
+            32,
+            0,
+            16,
+            16
+          ],
+          "source": "scratch/2026-11-02-pixelhole-overworld/source/MasterTileset1.0.png",
+          "rect": [
+            96,
+            176,
+            16,
+            16
+          ]
+        },
+        {
+          "destination": [
+            48,
+            0,
+            16,
+            16
+          ],
+          "source": "scratch/2026-11-02-pixelhole-overworld/source/MasterTileset1.0.png",
+          "rect": [
+            96,
+            176,
+            16,
+            16
+          ]
+        }
+      ],
+      "notes": "Existing bare-soil and young-crop stages remain unchanged. Grown and ripe grain use the purchased golden field without repainting, resampling, or palette changes; the pickup crate distinguishes a ready harvest. Early stages are Shade MiniWorld CC0 artwork with the previously approved dry-straw palette.",
+      "sha256": "5cc466f6a167192b100c60035223ff12f0f27c8206b51e04a9a5feb451ca77b4"
+    },
+    "Grain-Crate.png": {
+      "size": [
+        12,
+        10
+      ],
+      "sourceRect": [
+        114,
+        100,
+        12,
+        10
+      ],
+      "sourceCell": [
+        112,
+        96,
+        16,
+        16
+      ],
+      "groundAnchor": [
+        6,
+        10
+      ],
+      "notes": "Transparent padding trimmed from the original wooden crate. All source pixels and alpha retained; marker stays at the former grain sack scale.",
+      "sha256": "1343d449745eb8a54cd30226b36ac65fc4cbd8b3df77e1af6cb893931c96dc4e"
+    }
+  }
+}

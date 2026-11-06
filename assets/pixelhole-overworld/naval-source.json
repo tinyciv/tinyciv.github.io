@@ -1,0 +1,52 @@
+{
+  "pack": "PixelHole Overworld premium",
+  "sourceURL": "https://pixelhole.itch.io/pixelholes-overworld-tileset",
+  "sourceSHA256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "nativeWorldScale": 2,
+  "license": "Purchased pack, not CC0. Commercial/personal use permitted; no asset reupload/rebranding.",
+  "files": {
+    "Dock-House.png": {
+      "sourceRect": [
+        192,
+        16,
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "removedFixedWaterFoamPixels": 0,
+      "sha256": "018464141930a95c65f5a77e4b0a97179e1a7efcebf5ef4064087da2862a1650"
+    },
+    "Dock-Jetty.png": {
+      "sourceRect": [
+        208,
+        72,
+        16,
+        20
+      ],
+      "size": [
+        16,
+        20
+      ],
+      "removedFixedWaterFoamPixels": 0,
+      "sha256": "94bb494357c13572bb1e6a771c3fd21a0440351f03fb8124b20b8b52b91ba3e8"
+    },
+    "Sailboat.png": {
+      "sourceRect": [
+        96,
+        96,
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "removedFixedWaterFoamPixels": 30,
+      "sha256": "22ba82d0197a54b861c8fcdf94ec07c26afc8de586866839a28f6f1c26667149"
+    }
+  },
+  "dockComposition": "One upright house on one rotated jetty; no additional bridge or deck."
+}

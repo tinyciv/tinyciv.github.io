@@ -1,0 +1,13 @@
+{
+  "creator": "Shade",
+  "pack": "MiniWorldSprites",
+  "source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/Barracks.png",
+  "crop": [
+    0,
+    48,
+    32,
+    16
+  ],
+  "changes": "Exact original completed archery range crop, two horizontal tiles; no painted pixels.",
+  "license": "CC0"
+}

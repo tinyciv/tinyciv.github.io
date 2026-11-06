@@ -1,0 +1,32 @@
+{
+  "creator": "Shade",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "original_path": "MiniWorldSprites/Buildings/Wood/Barracks.png",
+  "source_rect": [
+    32,
+    16,
+    16,
+    16
+  ],
+  "source_label": "Garrison / Bunker",
+  "changes": "Exact native cell extraction; no resampling. Runtime faction colors replace only the three roof shades verified against the Cyan and Red Barracks sheets.",
+  "team_palette": [
+    [
+      226,
+      173,
+      110
+    ],
+    [
+      188,
+      139,
+      77
+    ],
+    [
+      147,
+      103,
+      77
+    ]
+  ],
+  "sha256": "61c552c08b7a76f21046fc06edceb97a012831e8f40bff7106423672b0733b37"
+}

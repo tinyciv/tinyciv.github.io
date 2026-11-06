@@ -1,0 +1,40 @@
+{
+  "variant": "1B \u2014 Russet slouch cap",
+  "approved": "2026-10-28",
+  "horse": {
+    "creator": "Shade",
+    "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+    "license": "CC0-1.0",
+    "original_path": "MiniWorldSprites/Animals/Horse(32x32).png",
+    "reference_rider": "MiniWorldSprites/Characters/Soldiers/Mounted/CyanKnight.png",
+    "preservation": "Original visible horse pixels, direction silhouettes and gait retained in every idle/walk frame."
+  },
+  "rider": {
+    "method": "Built-in image_gen",
+    "description": "Unarmed merchant with russet cloth slouch cap and blue-green tunic.",
+    "prompts": "scratch/2026-10-28-mounted-merchants/prompts.json"
+  },
+  "approved_export": "scratch/2026-10-28-mounted-merchants/native/merchant-1b.png",
+  "dimensions": [
+    128,
+    256
+  ],
+  "cell_size": [
+    32,
+    32
+  ],
+  "rows": [
+    "south idle",
+    "south walk",
+    "east idle",
+    "east walk",
+    "west idle",
+    "west walk",
+    "north idle",
+    "north walk"
+  ],
+  "frames_per_row": 4,
+  "idle_frame_ms": 300,
+  "walk_fps": 7,
+  "sha256": "64a6a379696f78a5c71f48275013eb688924a0155b5c9e5b7b3ac894b7ad1a8d"
+}

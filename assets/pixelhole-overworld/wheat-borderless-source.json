@@ -1,0 +1,42 @@
+{
+  "source_url": "https://pixelhole.itch.io/pixelholes-overworld-tileset",
+  "source_atlas_sha256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "native_size": [
+    64,
+    16
+  ],
+  "native_pixel_scale": 2,
+  "stages": {
+    "bare": {
+      "source": "public/assets/miniworld/Wheatfield-DryStraw.png",
+      "repeated_patch": [
+        4,
+        4,
+        8,
+        8
+      ]
+    },
+    "young": {
+      "source": "public/assets/miniworld/Wheatfield-DryStraw.png",
+      "repeated_patch": [
+        20,
+        4,
+        8,
+        8
+      ]
+    },
+    "grown_and_ripe": {
+      "source": "MasterTileset1.0.png",
+      "rect": [
+        120,
+        184,
+        16,
+        16
+      ]
+    }
+  },
+  "notes": "Exact interior pixels only. All stages fill the tile with no outline, margin, or repeated south-edge tan strip. No rescaling or added detail.",
+  "license": "Early stages: Shade MiniWorld CC0. Golden stages: purchased PixelHole Overworld Tileset, not CC0.",
+  "sha256": "b2e08146f70125d7c2d10eab8da660c549779d2483b38ac70a6b74960f9d9481",
+  "generator": "scratch/2026-11-02-sailing-wheat/build-borderless-wheat.py"
+}

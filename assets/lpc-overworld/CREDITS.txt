@@ -1,0 +1,21 @@
+[LPC] Overworld — mountain and hill overlays
+
+Author: Benjamin K. Smith (BenCreating).
+Commissioned by castelonia for Herodom.
+Grass/Water based on tiles by Lanea Zimmerman (Sharm).
+Sand/Snow based on tiles by Daniel Eddeland, William.ThompsonJ, Nushio, and Adrix89.
+
+Original page: https://opengameart.org/content/lpc-overworld-0
+Original archive: https://opengameart.org/sites/default/files/LPC%20Overworld_0.zip
+Artist: https://opengameart.org/users/bencreating
+License chosen for these files: Creative Commons Attribution-ShareAlike 3.0 Unported.
+https://creativecommons.org/licenses/by-sa/3.0/
+
+These are unmodified original PNG sheets, renamed for local URLs:
+  Mountains.png -> mountains.png
+  Grass/Hills.png -> hills-grass.png
+  Desert/Hills Desert.png -> hills-desert.png
+
+BTV crops individual sprites and displays them with nearest-neighbor scaling.
+Only the two broad, rounded mountain variants (columns 0 and 2) are used;
+mountains are displayed wider and lower than the original sprite proportions.

@@ -1,0 +1,14 @@
+{
+  "creator": "Shade",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "original_path": "MiniWorldSprites/Buildings/Wood/Workshops.png",
+  "source_rect": [
+    0,
+    0,
+    16,
+    16
+  ],
+  "changes": "Exact native cell extraction; no recoloring or resampling.",
+  "sha256": "19d753017101efb68a329d5ec87ba1c4d4c8e9db129c7804d5c565ba7be4700f"
+}

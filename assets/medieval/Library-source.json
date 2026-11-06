@@ -1,0 +1,48 @@
+{
+  "selected": "1C — Thatch court",
+  "creator": "Project artwork generated with built-in imagegen",
+  "references": {
+    "creator": "Shade / Merchant Shade",
+    "layout": "Puny World Medieval crystal-free courtyard (2640,224,32,32)",
+    "style": "Puny World 16px houses",
+    "source_page": "https://merchant-shade.itch.io/puny-world-medieval"
+  },
+  "license": "Generated adaptation using the project owner’s purchased reference assets; not an unmodified CC0 atlas crop.",
+  "review_gallery": "scratch/2026-10-29-primitive-library/gallery.html",
+  "prompts": "scratch/2026-10-29-primitive-library/prompts.json",
+  "provenance": "scratch/2026-10-29-primitive-library/asset-provenance.json",
+  "changes": "Approved 32×32 primitive thatch court, exact copies of reviewed neutral/blue/red exports. Faction roofs use the original Puny house color ramp; runtime adds a one-pixel ripple confined to the 4×3 basin water surface.",
+  "footprint": [
+    2,
+    2
+  ],
+  "water_rect": [
+    22,
+    22,
+    4,
+    3
+  ],
+  "assets": [
+    {
+      "file": "Library.png",
+      "approved_source": "scratch/2026-10-29-primitive-library/assets/1C-neutral.png",
+      "width": 32,
+      "height": 32,
+      "sha256": "c179c5b340c5d679959129abf748f6c87df2468dc737ff1cc8c6b51d38d1aee3"
+    },
+    {
+      "file": "Library-blue.png",
+      "approved_source": "scratch/2026-10-29-primitive-library/assets/1C.png",
+      "width": 32,
+      "height": 32,
+      "sha256": "f3af968104b7f8574039e2216eda6995da1316f07404b570d16f06bb20d107c0"
+    },
+    {
+      "file": "Library-red.png",
+      "approved_source": "scratch/2026-10-29-primitive-library/assets/1C-red.png",
+      "width": 32,
+      "height": 32,
+      "sha256": "7c217bbbf8c56364a6559c570cd807d4830f967d97db74473bff8e665ce6b8e8"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "tool": "built-in image_gen__imagegen",
+  "reference": "public/assets/ui/resources-reference.png",
+  "transparent_background": true,
+  "assets": [
+    {
+      "name": "food",
+      "prompt": "Use case: background-extraction / precise-object-edit. The reference is the game's existing dark slate-and-brass resource bar. Deliver one isolated resource symbol ONLY as a transparent PNG. Preserve the selected symbol's silhouette, warm gold/brown palette, painted Warcraft-style highlights, and compact readable proportions. Remove ALL slate/black rectangular backdrop, frame, border, text, numbers, baseline, pedestal, and detached cast shadow. Real transparent alpha, never a checkerboard drawn in the pixels. Center the symbol in a square canvas; symbol should occupy about 85% of the canvas height and be readable at 28\u201332px. No scene, no UI panel, no lettering. Crisp edges and broad coherent details; avoid extra ornamentation. Extract/recreate ONLY the tied bundle of golden wheat at the far left of the reference. Keep its stems, bound bundle and wheat ears. Nothing else.",
+      "generated_file": "exec-535c502e-9a61-45c2-a816-ab77be7244e1.png",
+      "file": "food.png"
+    },
+    {
+      "name": "gold",
+      "prompt": "Use case: background-extraction / precise-object-edit. The reference is the game's existing dark slate-and-brass resource bar. Deliver one isolated resource symbol ONLY as a transparent PNG. Preserve the selected symbol's silhouette, warm gold/brown palette, painted Warcraft-style highlights, and compact readable proportions. Remove ALL slate/black rectangular backdrop, frame, border, text, numbers, baseline, pedestal, and detached cast shadow. Real transparent alpha, never a checkerboard drawn in the pixels. Center the symbol in a square canvas; symbol should occupy about 85% of the canvas height and be readable at 28\u201332px. No scene, no UI panel, no lettering. Crisp edges and broad coherent details; avoid extra ornamentation. Extract/recreate ONLY the stack of three gold ingots in the reference (the symbol before the number 4). Preserve that simple three-bar arrangement, metallic ochre facets and bright gold faces. Nothing else.",
+      "generated_file": "exec-cf8a727d-5f80-4a44-9315-f7ad2d4e731a.png",
+      "file": "gold.png"
+    },
+    {
+      "name": "population",
+      "prompt": "Use case: background-extraction / precise-object-edit. The reference is the game's existing dark slate-and-brass resource bar. Deliver one isolated resource symbol ONLY as a transparent PNG. Preserve the selected symbol's silhouette, warm gold/brown palette, painted Warcraft-style highlights, and compact readable proportions. Remove ALL slate/black rectangular backdrop, frame, border, text, numbers, baseline, pedestal, and detached cast shadow. Real transparent alpha, never a checkerboard drawn in the pixels. Center the symbol in a square canvas; symbol should occupy about 85% of the canvas height and be readable at 28\u201332px. No scene, no UI panel, no lettering. Crisp edges and broad coherent details; avoid extra ornamentation. Extract/recreate ONLY the group of three small bronze/gold people busts in the reference (before 23 / 23). Keep one larger central figure and two smaller figures behind, simple heads and shoulders. Nothing else.",
+      "generated_file": "exec-fab90ef2-53e5-4988-9aa4-82def916ff24.png",
+      "file": "population.png"
+    },
+    {
+      "name": "culture",
+      "prompt": "Use case: style-transfer. Asset type: one standalone game HUD resource icon. The reference is the game's dark slate-and-brass resource bar; match the warm gold, bronze, detailed but compact painted Warcraft-style resource symbols. Create a small OPEN BOOK with cream parchment pages, warm dark brown binding and restrained gold edges, a clear central spine and two readable page masses. It represents culture/knowledge and replaces the old stone monument symbol. No text, no runes, no page lettering, no icons on the pages. Centered, square canvas, book occupies about 85% width. Designed to read clearly at 28\u201332px, strong simple silhouette. Genuinely transparent background with transparent alpha. No dark square, slate tile, frame, border, pedestal, detached shadow, UI, numbers or scenery.",
+      "generated_file": "exec-f9e99e39-f6cd-4eb3-9d49-91bb9d055807.png",
+      "file": "culture.png"
+    }
+  ]
+}

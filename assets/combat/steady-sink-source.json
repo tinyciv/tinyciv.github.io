@@ -1,0 +1,33 @@
+{
+  "source": "scratch/2026-11-01-skeleton-decay/assets/2A.png",
+  "approvedVariant": "2A — Steady sink",
+  "sheetSize": [
+    288,
+    48
+  ],
+  "frameSize": [
+    48,
+    48
+  ],
+  "frameCount": 6,
+  "groundAnchor": [
+    24,
+    34
+  ],
+  "nativeScale": 1,
+  "frameDurationsMs": [
+    200,
+    400,
+    600,
+    800,
+    950,
+    1050
+  ],
+  "startAfterFallMs": 565,
+  "totalDeathLifetimeMs": 4565,
+  "endpoint": "empty",
+  "sourceExactPNG": true,
+  "sha256": "8bf8c0ea1b6b9ecab880293b2fc1b64002dc670096e672055dbfca9157970ad2",
+  "sourceProvenance": "scratch/2026-11-01-skeleton-decay/export-provenance.json",
+  "generator": "Built-in ImageGen; approved registered nearest-neighbor export copied byte-for-byte. Six full-opacity decay poses immediately follow the fall, then no sprite is drawn."
+}

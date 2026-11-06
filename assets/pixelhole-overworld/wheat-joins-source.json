@@ -1,0 +1,38 @@
+{
+  "source_url": "https://pixelhole.itch.io/pixelholes-overworld-tileset",
+  "source_atlas_sha256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "source_rects": {
+    "isolated": [
+      96,
+      176,
+      16,
+      16
+    ],
+    "connected": [
+      112,
+      176,
+      32,
+      32
+    ]
+  },
+  "output_sha256": "aa8798e3741b80a67ec05a37a9ec86487eab863c77ab131b9542509c58958418",
+  "size": [
+    256,
+    256
+  ],
+  "tile_size": 16,
+  "mask_bits": [
+    "north",
+    "east",
+    "south",
+    "west",
+    "northeast",
+    "southeast",
+    "southwest",
+    "northwest"
+  ],
+  "layout": "column=mask&15; row=mask>>4",
+  "composition": "8x8 original edge/interior patches; no rescaling or recoloring. Missing diagonals retain a transparent concave corner with the source outline color. Isolated tile remains exact.",
+  "license": "Purchased PixelHole Overworld Tileset; not CC0. See farm-grain-source.json.",
+  "generator": "scratch/2026-11-02-joined-wheat-simple-dock/build-wheat-joins.py"
+}

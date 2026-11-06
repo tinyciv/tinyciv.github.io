@@ -1,0 +1,32 @@
+{
+  "source": "scratch/2026-11-01-framed-deaths/assets/1A.png",
+  "approvedVariant": "1A — Forward buckle",
+  "sheetSize": [
+    240,
+    40
+  ],
+  "frameSize": [
+    40,
+    40
+  ],
+  "frameCount": 6,
+  "groundAnchor": [
+    20,
+    30
+  ],
+  "nativeScale": 1,
+  "frameDurationsMs": [
+    80,
+    95,
+    105,
+    95,
+    90,
+    100
+  ],
+  "finalFrame": 5,
+  "sourceExactPNG": true,
+  "sha256": "9e8d32850c092fce1b6c35115d09bed009d5ff38dd34b152cc69df770c889905",
+  "sourceProvenance": "scratch/2026-11-01-framed-deaths/export-provenance.json",
+  "generator": "Built-in ImageGen; approved nearest-neighbor export copied byte-for-byte. After the final 100ms fall pose, continue immediately into the approved steady-sink decay.",
+  "continuesInto": "steady-sink.png"
+}

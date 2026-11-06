@@ -1,0 +1,18 @@
+{
+  "pack": "Cozy Farm Lite",
+  "author": "Bramble & Byte",
+  "creator_url": "https://aquumgifts.itch.io",
+  "license": "CC BY 4.0",
+  "attribution": "Cozy Farm Lite by Bramble & Byte \u2014 https://aquumgifts.itch.io",
+  "source_directory": "scratch/2026-10-26-grain-field-search/packs/cozy-farm-lite/cozy-farm-lite/fences/1x",
+  "native_size": [
+    16,
+    16
+  ],
+  "adaptation": "Original source PNGs retained unmodified. Renderer selects source rows/columns to shorten posts from 6x13 to 4x8, horizontal rails from 16x8 to 16x5, and vertical rails from 4x16 to 3x16. Uniform native 2x2 pixel blocks, original colors, unchanged bottom footing and full-cell fence spans.",
+  "sha256": {
+    "fence-h.png": "03fce99736978715d213b4096290d41b23ed145631aa0c9403d5c29fef115466",
+    "fence-v.png": "462040b660adaea0e880b670c1f59c5bf89b759a0cbf599b18cf111f3106e9c7",
+    "fence-post.png": "bff89908dcc0104904b14928be6b8d2ed4ed349e71901ad7dbf12bba5525de5c"
+  }
+}

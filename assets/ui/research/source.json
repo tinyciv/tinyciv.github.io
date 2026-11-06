@@ -1,0 +1,79 @@
+{
+  "source": "scratch/2026-10-30-tech-tree-expanded/expanded-tree.png",
+  "mode": "Approved built-in imagegen mockup; glyph extraction and nearest-neighbor normalization only.",
+  "nativeSize": 32,
+  "glyphs": {
+    "wall": [
+      230,
+      195,
+      68,
+      61
+    ],
+    "woodenTower": [
+      620,
+      183,
+      56,
+      85
+    ],
+    "reinforcedDefenses": [
+      993,
+      185,
+      81,
+      78
+    ],
+    "monument": [
+      236,
+      328,
+      53,
+      78
+    ],
+    "coinage": [
+      607,
+      339,
+      74,
+      61
+    ],
+    "urbanPlanning": [
+      991,
+      331,
+      87,
+      73
+    ],
+    "blacksmith": [
+      226,
+      480,
+      77,
+      72
+    ],
+    "metalTools": [
+      608,
+      479,
+      76,
+      78
+    ],
+    "archeryRange": [
+      236,
+      634,
+      63,
+      73
+    ],
+    "fletching": [
+      618,
+      636,
+      61,
+      73
+    ],
+    "irrigation": [
+      219,
+      787,
+      86,
+      76
+    ],
+    "grainStorage": [
+      612,
+      785,
+      71,
+      80
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "created_on": "2026-10-29",
+  "assets": [
+    {
+      "file": "miniworld-Trees.png",
+      "source": "MiniWorldSprites/Nature/Trees.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "5b2839ec295c72575c5fd1df373b75ba4d3464478edab8e1489ec683dcecf634"
+    },
+    {
+      "file": "miniworld-PineTrees.png",
+      "source": "MiniWorldSprites/Nature/PineTrees.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "5ab0bde8cb1904ba8c54cb93415c0257cf3f13ce6b470834dee840789dfe60bd"
+    },
+    {
+      "file": "miniworld-DeadTrees.png",
+      "source": "MiniWorldSprites/Nature/DeadTrees.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "46430bd9e45312f608d4aacb3d3b15a4177c1ce274e1399f07dc6e80cded46ab"
+    },
+    {
+      "file": "miniworld-CoconutTrees.png",
+      "source": "MiniWorldSprites/Nature/CoconutTrees.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "e492058cb33952b4be5ee0d5e9d5a5c1467ecb3fda94589fe7bb134de3212a59"
+    },
+    {
+      "file": "miniworld-Cactus.png",
+      "source": "MiniWorldSprites/Nature/Cactus.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "ce5b047a47227a068e78e60bba5f65bc978c8dea7c6eaf1f369e55b757f8bc41"
+    },
+    {
+      "file": "miniworld-Tumbleweed.png",
+      "source": "MiniWorldSprites/Nature/Tumbleweed.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "changes": "Byte-identical original sprite sheet.",
+      "sha256": "e4ce79343bb6bdec854c85e709dc592154c57986a42944be424a9566fb26dd0f"
+    },
+    {
+      "file": "medieval-nature.png",
+      "source": "PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "creator": "Shade / Merchant Shade",
+      "source_page": "https://merchant-shade.itch.io/puny-world-medieval",
+      "license": "Purchased project-use license; not CC0; retain original pack privately.",
+      "source_rect": [
+        256,
+        0,
+        128,
+        208
+      ],
+      "changes": "Lossless crop of original vegetation pixels and alpha; no recoloring or repainting.",
+      "sha256": "260f962b95a637caa5f78c907180d067efadde27482ea8133915f593b5a5e050"
+    }
+  ]
+}

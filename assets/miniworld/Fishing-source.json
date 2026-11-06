@@ -1,0 +1,31 @@
+{
+  "pack": "MiniWorld by Shade",
+  "license": "CC0-1.0",
+  "files": [
+    {
+      "file": "Fish-Sheet.png",
+      "source": "MiniWorldSprites/Animals/MarineAnimals.png",
+      "dimensions": [
+        80,
+        64
+      ],
+      "sha256": "f38cdae34a485707a6b77adf516109dd08e4a85a62ec7c3fbcd9556e89b7e78c"
+    },
+    {
+      "file": "Fishing-Boat.png",
+      "source": "MiniWorldSprites/Miscellaneous/Boat.png",
+      "dimensions": [
+        32,
+        16
+      ],
+      "sha256": "2d9eba6007dcba16dd922e0c18a366adbc21a86365e514d602193479f5f3c9dd"
+    }
+  ],
+  "fishCells": "16x16: blue fish column3 and gray fish column2, rows1/2 for left/right",
+  "boatCells": "16x16: vertical canoe column0, horizontal canoe column1",
+  "anchor": [
+    8,
+    8
+  ],
+  "changes": "None; complete original source sheets copied byte-for-byte"
+}

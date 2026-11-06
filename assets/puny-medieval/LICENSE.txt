@@ -1,0 +1,13 @@
+Puny World Medieval — Shade / merchant-shade
+
+Source: https://merchant-shade.itch.io/puny-world-medieval
+Acquired through the project owner's existing itch.io purchase.
+
+The palisade image is a small lossless crop from the purchased
+PUNY-WORLD-PAID_v1/punyworld-atlas.png, used as part of this game.
+It is not covered by the CC0 license of the free Puny World pack.
+Use and modification in projects are covered by the purchased pack's
+license; resale or redistribution as an asset pack is not permitted.
+The creator's license on the source page governs use.
+
+See palisades-source.json for the source rectangle and checksums.

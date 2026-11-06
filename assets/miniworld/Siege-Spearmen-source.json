@@ -1,0 +1,161 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "asset_pack": "MiniWorld Sprites",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "changes": "Unmodified complete source sheets. Runtime team cloth tint uses only pixels distinguished by native Cyan/Red sheets. All spear, armor, shield, silhouette, and animation source pixels remain unchanged.",
+  "files": [
+    {
+      "file": "Ballista.png",
+      "original_path": "MiniWorldSprites/Characters/Soldiers/Ranged/Ballista.png",
+      "sha256": "05f0321b0f252d02cc38181ba2dcf860fcf571f0eb07b7d0baef621d9e0cb831"
+    },
+    {
+      "file": "BallistaBolt.png",
+      "original_path": "MiniWorldSprites/Objects/BallistaBolt.png",
+      "sha256": "364b1d53a9ab5afc5a5150746dbef4c26f7e3da6ddc832ccc5a1e07c764e6f53"
+    },
+    {
+      "file": "Spearman-Cyan.png",
+      "original_path": "MiniWorldSprites/Characters/Soldiers/Melee/CyanMelee/SpearmanCyan.png",
+      "sha256": "f4821568cee6f99f49a7081d5b0fe503b8a11a0a83282903c97a8ca3e9344cd0"
+    },
+    {
+      "file": "Spearman-Red.png",
+      "original_path": "MiniWorldSprites/Characters/Soldiers/Melee/RedMelee/SpearmanRed.png",
+      "sha256": "c7ef7910f40760369bb95456c9722b7ba3510d3802e832d3a3eafd28d882eaa8"
+    }
+  ],
+  "ballista": {
+    "frame_size": [
+      16,
+      16
+    ],
+    "rows": [
+      "north",
+      "south",
+      "east",
+      "west"
+    ],
+    "columns": 7,
+    "ground_anchor": [
+      8,
+      16
+    ]
+  },
+  "spearman": {
+    "walk_rows": [
+      "south",
+      "north",
+      "west",
+      "east"
+    ],
+    "walk_frame_size": [
+      16,
+      16
+    ],
+    "south_thrust": [
+      [
+        0,
+        64,
+        16,
+        32
+      ],
+      [
+        0,
+        96,
+        16,
+        32
+      ],
+      [
+        0,
+        128,
+        16,
+        32
+      ]
+    ],
+    "north_thrust": [
+      [
+        16,
+        64,
+        16,
+        32
+      ],
+      [
+        16,
+        96,
+        16,
+        32
+      ],
+      [
+        16,
+        128,
+        16,
+        32
+      ]
+    ],
+    "west_thrust": [
+      [
+        32,
+        64,
+        32,
+        16
+      ],
+      [
+        32,
+        80,
+        32,
+        16
+      ],
+      [
+        32,
+        96,
+        32,
+        16
+      ]
+    ],
+    "east_thrust": [
+      [
+        32,
+        112,
+        32,
+        16
+      ],
+      [
+        32,
+        128,
+        32,
+        16
+      ],
+      [
+        32,
+        144,
+        32,
+        16
+      ]
+    ],
+    "ground_anchors": {
+      "idle_walk": [
+        8,
+        15
+      ],
+      "south_thrust": [
+        8,
+        15
+      ],
+      "north_thrust": [
+        8,
+        31
+      ],
+      "west_thrust": [
+        24,
+        15
+      ],
+      "east_thrust": [
+        8,
+        15
+      ]
+    }
+  },
+  "review": "scratch/2026-11-02-siege-spears/"
+}

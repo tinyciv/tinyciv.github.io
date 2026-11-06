@@ -1,0 +1,10 @@
+Miniworld vegetation sheets: Shade / Merchant Shade, CC0 1.0.
+Source: https://merchant-shade.itch.io/16x16-mini-world-sprites
+
+medieval-nature.png: Shade / Merchant Shade, Puny World Medieval.
+Lossless vegetation crop from the user's purchased source pack.
+Licensed for use in this game; not CC0 and not a standalone asset pack for redistribution.
+Source: https://merchant-shade.itch.io/puny-world-medieval
+Full archive/provenance retained privately in scratch/2026-10-28-puny-medieval/.
+
+Original Puny World cells remain in their existing CC0 atlas; see public/assets/puny-world/LICENSE.txt.

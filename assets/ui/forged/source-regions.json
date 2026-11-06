@@ -1,0 +1,61 @@
+{
+  "image": "approved-reference.png",
+  "width": 1584,
+  "height": 993,
+  "regions": {
+    "hammer": {
+      "x": 1371,
+      "y": 790,
+      "width": 64,
+      "height": 46
+    },
+    "wall": {
+      "x": 1483,
+      "y": 790,
+      "width": 64,
+      "height": 46
+    },
+    "machete": {
+      "x": 1371,
+      "y": 882,
+      "width": 64,
+      "height": 46
+    },
+    "forbid": {
+      "x": 1483,
+      "y": 882,
+      "width": 64,
+      "height": 46
+    },
+    "empty-slot": {
+      "x": 301,
+      "y": 889,
+      "width": 84,
+      "height": 65
+    },
+    "food": {
+      "x": 45,
+      "y": 6,
+      "width": 32,
+      "height": 36
+    },
+    "gold": {
+      "x": 177,
+      "y": 6,
+      "width": 40,
+      "height": 36
+    },
+    "population": {
+      "x": 326,
+      "y": 6,
+      "width": 40,
+      "height": 36
+    },
+    "culture": {
+      "x": 490,
+      "y": 6,
+      "width": 40,
+      "height": 36
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "source": "PixelHole Overworld Tileset",
+  "url": "https://pixelhole.itch.io/pixelholes-overworld-tileset",
+  "source_file": "scratch/2026-11-02-pixelhole-overworld/source/MasterTileset1.0.png",
+  "source_sha256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "sprites": {
+    "Farm-Fence.png": {
+      "rect": [
+        176,
+        208,
+        16,
+        16
+      ],
+      "horizontal_rect": [
+        0,
+        0,
+        16,
+        5
+      ]
+    },
+    "Farm-Fence-Vertical.png": {
+      "repeat_source_rect": [
+        176,
+        213,
+        3,
+        3
+      ],
+      "size": [
+        3,
+        16
+      ]
+    }
+  },
+  "adaptation": "Original source pixels and palette, cropped and repeated without recoloring. Rails follow field perimeter grid lines; horizontal ground anchor at native y=4. Decorative only. Horizontal terminal posts sit on the shared grid vertex (x=16); native middle rail pixels fill the former end-post position to avoid thick doubled posts. Render width19, span16."
+}

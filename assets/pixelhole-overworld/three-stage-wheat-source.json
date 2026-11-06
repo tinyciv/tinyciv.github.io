@@ -1,0 +1,103 @@
+{
+  "native_tile_size": 16,
+  "native_pixel_scale": 2,
+  "atlas_size": [
+    256,
+    256
+  ],
+  "mask_bits": [
+    "north",
+    "east",
+    "south",
+    "west",
+    "northeast",
+    "southeast",
+    "southwest",
+    "northwest"
+  ],
+  "layout": "column=mask&15; row=mask>>4",
+  "source": "scratch/2026-11-02-pixelhole-overworld/source/MasterTileset1.0.png",
+  "source_sha256": "783e0e00af061587c444b94e4c696f3ec49d84f597717db815fe6fcbd828cdc0",
+  "stages": {
+    "seedling": {
+      "file": "Seedling-Wheat-Joins.png",
+      "palette": [
+        [
+          24,
+          20,
+          37,
+          255
+        ],
+        [
+          181,
+          200,
+          99,
+          255
+        ],
+        [
+          140,
+          168,
+          68,
+          255
+        ],
+        [
+          113,
+          137,
+          54,
+          255
+        ]
+      ],
+      "geometry": "Same native crop generator as stage 2. Tops begin at y5 instead of y3; lower outline remains at y14, with a one-row shaded front. Shared tile edges fill completely. No resampling.",
+      "generator": "scratch/2026-11-02-seedling-wheat/build-seedlings.py"
+    },
+    "green": {
+      "file": "Green-Wheat-Joins.png",
+      "palette": [
+        [
+          24,
+          20,
+          37,
+          255
+        ],
+        [
+          168,
+          190,
+          83,
+          255
+        ],
+        [
+          125,
+          155,
+          55,
+          255
+        ],
+        [
+          96,
+          120,
+          43,
+          255
+        ]
+      ],
+      "geometry": "Original native crop patches. Top edge starts at y3 instead of y1; lower dark outline stays at y14; front band is 1 row instead of 3. No scaling of pixels."
+    },
+    "golden": {
+      "file": "Wheatfield-Joins.png",
+      "sha256": "aa8798e3741b80a67ec05a37a9ec86487eab863c77ab131b9542509c58958418",
+      "changes": "None"
+    }
+  },
+  "imagegen_study": "scratch/2026-11-02-three-stage-wheat/imagegen-study.png",
+  "generator": "scratch/2026-11-02-seedling-wheat/build-seedlings.py",
+  "output_sha256": {
+    "Green-Wheat-Joins.png": "0bfa784a2b859540a56150fb5e0350df0c6d0369a9e70112ba38090bf9ad12ad",
+    "Seedling-Wheat-Joins.png": "77fb46cc01fd785bf20b5b64305617874ef722d604954c1c95f3ae9401090570"
+  },
+  "license": "Derivative of purchased PixelHole Overworld Tileset; not CC0. See farm-grain-source.json.",
+  "stage_order": [
+    "seedling",
+    "green",
+    "golden"
+  ],
+  "seedling_generator": "scratch/2026-11-02-seedling-wheat/build-seedlings.py",
+  "green_generator": "scratch/2026-11-02-three-stage-wheat/build-stages.py"
+}

@@ -1,0 +1,29 @@
+{
+  "creator": "Shade",
+  "source_page": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+  "license": "CC0-1.0",
+  "downloaded_on": "2026-10-26",
+  "original_path": "MiniWorldSprites/Nature/Wheatfield.png",
+  "sha256": "e7868d240da663e9a61a8424a84fe61495ada17a8df2a56c0a91e5b07f24640f",
+  "dimensions": [
+    64,
+    16
+  ],
+  "cell_size": [
+    16,
+    16
+  ],
+  "modified": false,
+  "variants": [
+    {
+      "file": "Wheatfield-DryStraw.png",
+      "derived_from": "Wheatfield.png",
+      "modified": true,
+      "palette": "1C — Dry straw",
+      "selected_on": "2026-10-27",
+      "sha256": "bc2df8e171034f9d8bb554312bb532fd3cf321cc52f9d471c3aa41ca54cbd72e",
+      "changes": "Growing, ripening and ripe crop colors remapped to existing Puny World shades. Original alpha, pixel shapes, dimensions and harvested stage preserved.",
+      "mapping": "scratch/2026-10-27-grain-palettes/palette-manifest.json"
+    }
+  ]
+}

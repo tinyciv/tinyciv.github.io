@@ -1,0 +1,16 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "pack": "Puny World Medieval, purchased edition",
+  "source": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+  "source_sha256": "cc4a4e95a8003250c0a44c9bc8e303280cba7a4357f1e119801c3f63eb280706",
+  "crop": [
+    2160,
+    416,
+    16,
+    16
+  ],
+  "native_direction": "down",
+  "changes": "Exact original crop; no painted, recolored, or resized pixels. Runtime rotation follows projectile direction.",
+  "license": "Purchased project license; not CC0",
+  "sha256": "5a8154144b912149f9c276fc406a1231db25c9948ccf5b1bcbc2d7f5f9d5eb1a"
+}
