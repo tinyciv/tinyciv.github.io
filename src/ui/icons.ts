@@ -11,7 +11,8 @@ import { palaceArtHeight } from '../game/palace-sprite';
 import { birdIconUrl, boarIconUrl } from '../game/wildlife-art';
 import { merchantIconUrl } from '../game/merchant-art';
 import { irrigationIconUrl } from '../game/irrigation-art';
-import { dockIconUrl, rowboatIconUrl } from '../game/naval-art';
+import { dockIconUrl } from '../game/naval-art';
+import { galleyIconUrl } from '../game/galley-art';
 import { buildingKindForSelection, type BuildingKind, type HouseStyle } from '../game/types';
 
 /** HUD pictures use the same source art as the world. */
@@ -26,9 +27,9 @@ const labels: Record<string, string> = {
   heart: 'HP', sword: 'ATK', shield: 'DEF', close: '×', plus: '+',
 };
 const controlSymbols = new Set(['pause', 'play', 'compass', 'check', 'minus']);
-const characters: Record<string, 'leader' | 'archer' | 'scout' | 'warrior' | 'worker' | 'marauder'> = {
+const characters: Record<string, 'leader' | 'archer' | 'scout' | 'warrior' | 'worker' | 'militia' | 'marauder'> = {
   supplyCart: 'worker', crown: 'leader', people: 'worker', population: 'worker',
-  archer: 'archer', scout: 'scout', warrior: 'warrior', militia: 'warrior', worker: 'worker', marauder: 'marauder',
+  archer: 'archer', scout: 'scout', warrior: 'warrior', militia: 'militia', worker: 'worker', marauder: 'marauder',
 };
 const buildingIcons = new Map<string, string>();
 let farmlandIcon: string | undefined;
@@ -61,7 +62,7 @@ export function icon(name: string, color = '#f34f59', houseStyle?: HouseStyle | 
   if (name === 'infantryFormation') return '<svg aria-hidden="true" class="icon infantry-formation-icon" viewBox="0 0 32 32"><path fill="currentColor" d="M5 5h5v5H5zm9 0h5v5h-5zm9 0h5v5h-5zM5 14h5v5H5zm18 0h5v5h-5zM5 23h5v5H5zm9 0h5v5h-5zm9 0h5v5h-5z"/><path fill="#fff4bc" d="m16.5 12 4.5 4.5-4.5 4.5-4.5-4.5z"/></svg>';
   if (name === 'horseman') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${horsemanIconUrl(color)}">`;
   if (name === 'stable') return `<img aria-hidden="true" alt="" class="icon" src="${stableIconUrl(color)}">`;
-  if (name === 'sailboat') return `<img aria-hidden="true" alt="" class="icon" src="${rowboatIconUrl()}">`;
+  if (name === 'sailboat') return `<img aria-hidden="true" alt="" class="icon" src="${galleyIconUrl()}">`;
   if (name === 'dock') return `<img aria-hidden="true" alt="" class="icon" src="${dockIconUrl()}">`;
   if (name === 'spearman') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${spearmanIconUrl(color)}">`;
   if (name === 'ballista') return `<img aria-hidden="true" alt="" class="icon" src="${ballistaIconUrl()}">`;

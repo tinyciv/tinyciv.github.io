@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import { chromium } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+const out='scratch/2026-11-06-combat-ui';await mkdir(out,{recursive:true});
+const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+const page=await browser.newPage({viewport:{width:1280,height:800}}), errors=[],checks=[];
+page.on('pageerror',e=>errors.push(String(e)));
+const check=(name,value)=>{assert.ok(value,name);checks.push(name);console.log(`PASS ${name}`);};
+try{
+ await page.goto(process.env.GAME_URL||'http://127.0.0.1:5189');
+ await page.waitForFunction(()=>window.__game&&document.documentElement.dataset.assets==='ready',null,{timeout:90000});
+ await page.locator('[data-view="options"]').click();
+ check('Enemy strength starts at 100%',await page.locator('[name="enemy-strength"]').inputValue()==='100');
+ await page.locator('[name="enemy-strength"]').fill('175');await page.locator('[name="enemy-strength"]').dispatchEvent('change');
+ check('Slider applies strength and updates label',await page.evaluate(()=>window.__game.state.enemyStrength===1.75&&document.querySelector('[data-enemy-value]').value==='175%'));
+ check('Preference is stored',await page.evaluate(()=>localStorage.getItem('tinyciv-enemy-strength')==='1.75'));
+ await page.screenshot({path:`${out}/enemy-strength.png`});
+ await page.evaluate(async()=>{
+  const {createGame,getLeader}=await import('/src/game/simulation.ts'),{entityStore}=await import('/src/game/entity-store.ts');
+  const {recordUnitDamage}=await import('/src/game/combat-feedback.ts'),{regenerateUnits}=await import('/src/game/unit-health.ts');
+  const s=createGame({width:40,height:32,seed:'feedback-browser',source:'fixture',spawns:[{x:18.5,y:14.5}],tiles:Array.from({length:1280},()=>({terrain:'grassland',overlay:'none',elevation:.3,moisture:.5,food:3,production:1,gold:0,variation:.5}))});
+  s.time=100;s.paused=true;s.factions[0].gold=2000;s.factions[0].research={levels:{massLevy:1},progress:{}};
+  const l=getLeader(s);Object.assign(l,{x:20.5,y:14.5,hp:50,lastDamagedAt:0});
+  const warrior={...structuredClone(l),id:500,kind:'warrior',x:22.5,y:14.5,hp:73,maxHp:100};
+  entityStore(s).units.replace([l,warrior,...Array.from({length:3},(_,i)=>({...structuredClone(l),id:510+i,kind:'worker',x:19.5+i,y:16.5,hp:50,maxHp:50,home:1,order:'work',attack:0}))]);
+  entityStore(s).buildings.add({id:900,kind:'healerShack',faction:0,x:20,y:13,hp:250,maxHp:250,capacity:0});
+  regenerateUnits(s,.1);recordUnitDamage(s,warrior,90);
+  window.__game.replaceState(s);window.__game.renderer.camera={x:21,y:14.5};window.__game.renderer.follow=false;window.__game.renderer.zoom=2;
+ });
+ await page.waitForTimeout(350);
+ check('Actual damage number and healer pulse are present',await page.evaluate(()=>{const s=window.__game.state;return s.particles.some(p=>p.kind==='damage'&&p.text==='-16')&&s.units.some(u=>u.healerHealingAt===s.time);}));
+ await page.screenshot({path:`${out}/healing-and-damage.png`});
+ await page.locator('[data-hotbar-action="levy"]').click();await page.waitForTimeout(350);
+ check('Levy action switches to disabled dismissal during cooldown',await page.locator('[data-hotbar-action="levy"]').isDisabled()&&(await page.locator('[data-hotbar-action="levy"] .hotbar-label').textContent())==='Dismiss levy');
+ check('Cooldown reason is visible in tooltip',(await page.locator('[data-hotbar-action="levy"]').getAttribute('title')).includes('30s'));
+ await page.evaluate(()=>{window.__game.state.time+=30;});await page.waitForTimeout(350);
+ check('Dismissal is enabled after 30 game seconds',!(await page.locator('[data-hotbar-action="levy"]').isDisabled()));
+ await page.locator('[data-hotbar-action="levy"]').click();await page.waitForTimeout(350);
+ check('Dismissal starts the next 30-second cooldown',await page.locator('[data-hotbar-action="levy"]').isDisabled()&&(await page.locator('[data-hotbar-action="levy"] .hotbar-label').textContent())==='Mass levy');
+ check('No browser runtime errors',errors.length===0);
+}finally{await browser.close();await writeFile(`${out}/report.json`,JSON.stringify({checks,errors},null,2));}

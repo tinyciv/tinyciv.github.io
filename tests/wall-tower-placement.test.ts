@@ -144,9 +144,10 @@ describe('walls and defensive towers sharing a tile', () => {
     advanceUntilComplete(state, [tower]); expect(state.buildings).not.toContain(road);
   });
 
-  it('uses an existing wall footprint beside a house without adding another lane obstruction', () => {
+  it('permits standalone and wall-mounted towers beside a house while retaining their price and footprint checks', () => {
     const state = fixture(); add(state, 'house', { x: target.x - 1 });
-    expect(validateBuildAt(state, 'woodenTower', target.x, target.y).ok).toBe(false);
+    expect(validateBuildAt(state, 'woodenTower', target.x, target.y).ok).toBe(true);
+    expect(validateBuildAt(state, 'woodenTower', target.x - 1, target.y)).toEqual({ ok: false, message: 'Tile occupied.' });
     add(state, 'wall'); expect(validateBuildAt(state, 'woodenTower', target.x, target.y).ok).toBe(true);
     state.factions[0].gold = 39;
     expect(validateBuildAt(state, 'woodenTower', target.x, target.y).message).toBe('Need 40 gold.');

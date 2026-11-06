@@ -13,7 +13,9 @@ import { factionAIProfile } from './faction-ai-profile';
 import { infantryFormationSoldierCount, toggleInfantryFormation } from './infantry-drill';
 import { isInfantryDrillUnlocked, researchLevel } from './research';
 import { prepareFactionArmy } from './faction-military';
-import { dismissLevy, levyPopulation, levyStatus, LEVY_DRAFT_COST, LEVY_UPKEEP } from './mass-levy';
+import { dismissLevy, levyPopulation, levyStatus, LEVY_ATTACK, LEVY_DEFENSE, LEVY_MORALE, LEVY_DRAFT_COST, LEVY_UPKEEP } from './mass-levy';
+import { factionCommittedBudget } from './faction-budget';
+import { cityResidents } from './cities';
 
 export type FactionMissionMode = 'patrol' | 'hunt' | 'attack' | 'defend' | 'recover' | 'regroup';
 export interface FactionMission {
@@ -42,7 +44,7 @@ interface StrategyMemory {
   patrolGoal?: Point;
   patrolUntil?: number;
   regroupSince?: number;
-  campaign?: { palaceId: number; goal: Point; until: number };
+  campaign?: { palaceId: number; goal: Point; until: number; levied?: boolean };
   formationPosition?: { point: Point; at: number };
   formationRetryAt?: number;
   levyLastThreatAt?: number;
@@ -136,7 +138,7 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
   const coordinated = policy === 'coordinated';
   const army = entityStore(state).units.query('soldier').filter(unit => unit.faction === leader.faction && isSoldier(unit) && unit.kind !== 'skirmisher'
     && unit.guardPost === undefined && available(unit));
-  const ready = army.filter(unit => healthy(unit) && (!unit.joiningRetinue || distance(unit, leader) <= 5));
+  const ready = army.filter(unit => healthy(unit) && (!unit.joiningRetinue || unit.levy || distance(unit, leader) <= 5));
   // Keep a real garrison, including wounded troops. Stable assignments avoid
   // rotating the entire escort whenever two soldiers pass one another.
   const homeTowers = state.buildings.filter(building => building.faction === leader.faction && buildingReady(building)
@@ -176,6 +178,7 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
   const faction = state.factions.find(candidate => candidate.id === leader.faction)!;
   const abandonCampaign = (): void => {
     if (!memory.campaign) return;
+    if (memory.campaign.levied) memory.levyLastThreatAt = state.time;
     memory.campaign = undefined;
     faction.nextRaid = Math.max(faction.nextRaid, state.time + 40);
   };
@@ -210,7 +213,7 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
     return make('defend', target ?? refuge(state, palace, leader, enemies), target?.id);
   }
 
-  if (coordinated && memory.levyLastThreatAt !== undefined && state.time - memory.levyLastThreatAt >= 15 && !closeEnemies.length) {
+  if (coordinated && !memory.campaign && memory.levyLastThreatAt !== undefined && state.time - memory.levyLastThreatAt >= 15 && !closeEnemies.length) {
     withPlayerFaction(state, faction.id, () => dismissLevy(state, faction.id)); memory.levyLastThreatAt = undefined;
   }
 
@@ -318,6 +321,12 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
     // obstacles, so isolated islands never attract an impossible land campaign.
     const planning = { ...state, buildings: state.buildings.filter(building =>
       !isWallKind(building.kind) || !queries.hostile(leader.faction, building.faction)) };
+    const populations = new Map(cityResidents(state).map(city => [city.palace.id, city.population]));
+    const levy = coordinated ? levyStatus(state, faction.id) : undefined;
+    const worker = state.units.find(unit => unit.faction === faction.id && unit.kind === 'worker' && unit.hp > 0);
+    const levyPower = worker ? strength(state, { ...worker, kind: 'levyInfantry', attack: LEVY_ATTACK, defense: LEVY_DEFENSE,
+      morale: LEVY_MORALE, range: 1.4, weaponLevel: faction.weaponLevel, armorLevel: faction.armorLevel }) : 0;
+    const reserve = 100 + factionCommittedBudget(state, faction).upkeep * 2;
     const ranked = targets.length ? withNavigationFrame(planning, () => {
       const travel = travelTimeMap(planning, leader, leader.faction, leader.speed, Infinity);
       return targets.map(target => {
@@ -330,14 +339,30 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
         const batteries = state.buildings.filter(building => buildingReady(building)
           && ['tower', 'woodenTower', 'fort'].includes(building.kind) && queries.hostile(leader.faction, building.faction)
           && distance(building, target) <= 10 && observers.some(observer => queries.visible(observer, building))).length;
-        const danger = defending + batteries * 1600;
-        return { target, seconds, danger };
-      }).filter(candidate => Number.isFinite(candidate.seconds) && (!coordinated || candidate.danger <= power * .8))
+        // Population is a strategic estimate of a city's ability to mobilize,
+        // never a lookup of hidden soldiers' positions or current health.
+        const population = populations.get(target.id) ?? 0;
+        const danger = Math.max(defending, population * 35) + batteries * 1600;
+        const wagePeriods = Math.ceil((seconds * 2 + 90) / 30);
+        const affordable = Math.max(0, Math.floor((faction.gold - reserve) / (LEVY_DRAFT_COST + wagePeriods * LEVY_UPKEEP)));
+        const available = levy?.canLevy && !levy.active ? Math.min(levy.available, affordable) : 0;
+        const required = levyPower > 0 ? Math.max(0, Math.ceil((danger / .8 - power) / levyPower)) : 0;
+        // A population advantage can support a small expeditionary levy even
+        // before defenses have all been observed. Avoid drafting the whole town.
+        const desired = population < faction.population * .8 ? Math.max(required, Math.min(6, Math.floor((faction.population - population) / 10))) : required;
+        const draft = Math.min(available, desired);
+        return { target, seconds, danger, draft, projected: power + draft * levyPower };
+      }).filter(candidate => Number.isFinite(candidate.seconds) && (!coordinated || candidate.danger <= candidate.projected * .8))
         .sort((a, b) => a.seconds + (coordinated ? a.danger / Math.max(1, power) * 40 : 0)
           - b.seconds - (coordinated ? b.danger / Math.max(1, power) * 40 : 0));
     }) : [];
-    for (const { target, seconds } of ranked) {
-      memory.campaign = { palaceId: target.id, goal: center(target), until: state.time + 90 + seconds * 3 };
+    for (const { target, seconds, draft } of ranked) {
+      const levied = draft > 0 && withPlayerFaction(state, faction.id, () => levyPopulation(state, draft)).ok;
+      if (draft && !levied) continue;
+      if (levied) for (const unit of state.units) if (unit.faction === faction.id && unit.levy && unit.hp > 0 && !escortIds.includes(unit.id)) {
+        escorts.push(unit); escortIds.push(unit.id);
+      }
+      memory.campaign = { palaceId: target.id, goal: center(target), until: state.time + 90 + seconds * 3, levied };
       const mission = campaignMission();
       if (mission) return mission;
     }

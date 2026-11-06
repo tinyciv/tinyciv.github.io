@@ -6,12 +6,14 @@ export const unitCollisionRadius = (unit: Unit): number => unit.kind === 'worker
 
 /** Non-military units pass through each other. Human civilians can also cross
  * the battle line; military pairs and military/wildlife pairs still collide. */
-type CollisionUnit = Pick<Unit, 'kind'> & Partial<Pick<Unit, 'faction' | 'infantryDrillLeader' | 'engineer'>>;
+type CollisionUnit = Pick<Unit, 'kind'> & Partial<Pick<Unit, 'faction' | 'infantryDrillLeader' | 'engineer' | 'levyAssembling'>>;
 export function unitsCollide(a: CollisionUnit, b: CollisionUnit): boolean {
+  if (a.faction === b.faction && (a.levyAssembling || b.levyAssembling)) return false;
   if (a.engineer || b.engineer) {
     if (a.faction === b.faction && (a.kind === 'leader' || b.kind === 'leader')) return false;
     return military(a) || military(b) || !!a.engineer && !!b.engineer;
   }
+  if (a.kind === 'levyInfantry' || b.kind === 'levyInfantry') return !civilianFootprint(a) && !civilianFootprint(b);
   if (a.infantryDrillLeader !== undefined && a.infantryDrillLeader === b.infantryDrillLeader && a.faction === b.faction) return false;
   return (military(a) || military(b)) && !civilianFootprint(a) && !civilianFootprint(b);
 }

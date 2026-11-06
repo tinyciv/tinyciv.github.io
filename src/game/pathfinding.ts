@@ -1,6 +1,6 @@
 import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, recordStructureChange, structureChangeRevision } from './simulation-reads';
-import { worldStructureRevision } from './world-revisions';
+import { worldRevisions, worldStructureRevision } from './world-revisions';
 import { wasmPath } from './navigation-wasm';
 import { type GameState, type Point, type Tile, type World, WATER, tileAt, buildingReady, buildingPresent, buildingWidth, buildingHeight, isFarmKind, isWallKind } from './types';
 import { ridgeEdgeAllowed, ridgeGroundWalkable } from './ridges';
@@ -278,7 +278,7 @@ interface NavigationGrid {
   version: number; regionColumns: number; accessRegions: Uint32Array; costRegions: Uint32Array;
 }
 interface TerrainNavigation {
-  tiles: World['tiles']; width: number; height: number; revision: number | undefined; version: number; geometryVersion: number;
+  tiles: World['tiles']; width: number; height: number; revision: number | undefined; appearanceRevision: number | undefined; version: number; geometryVersion: number;
   snapshots: { terrain: Tile['terrain']; overlay: Tile['overlay']; biome: Tile['biome']; ridge: Tile['ridge']; ridgeTier: Tile['ridgeTier']; stair: Tile['stair']; waterfall: Tile['waterfall']; villageTrail: Tile['villageTrail'] }[];
   open: Uint8Array; bridgeGround: Uint8Array; cost: Float64Array; edges: Uint8Array;
 }
@@ -292,6 +292,13 @@ function terrainNavigation(world: World): TerrainNavigation {
   let cached = terrainNavigationCaches.get(world);
   const compatible = cached?.tiles === world.tiles && cached.width === world.width && cached.height === world.height;
   if (compatible && world.revision !== undefined && cached!.revision === world.revision) return cached!;
+  const appearanceRevision = world.revision === undefined ? undefined : worldRevisions(world).appearance;
+  // Ordering a building changes structure membership, not the terrain below
+  // every cell. Unknown raw revisions still advance the semantic version.
+  if (compatible && appearanceRevision !== undefined && cached!.appearanceRevision === appearanceRevision) {
+    cached!.revision = world.revision;
+    return cached!;
+  }
   let changed = !compatible, geometryChanged = !compatible;
   if (compatible) for (let i = 0; i < world.tiles.length; i++) {
     const tile = world.tiles[i], old = cached!.snapshots[i];
@@ -301,13 +308,13 @@ function terrainNavigation(world: World): TerrainNavigation {
     // Forest and swamp changes affect speed, but cannot alter ridge geometry.
     if (tile.ridge !== old.ridge || tile.ridgeTier !== old.ridgeTier || tile.stair !== old.stair || tile.waterfall !== old.waterfall) geometryChanged = true;
   }
-  if (!changed) { cached!.revision = world.revision; return cached!; }
+  if (!changed) { cached!.revision = world.revision; cached!.appearanceRevision = appearanceRevision; return cached!; }
   const count = world.width * world.height;
   if (!compatible) cached = { tiles: world.tiles, width: world.width, height: world.height,
-    revision: world.revision, version: 0, geometryVersion: 0, snapshots: [], open: new Uint8Array(count), bridgeGround: new Uint8Array(count),
+    revision: world.revision, appearanceRevision, version: 0, geometryVersion: 0, snapshots: [], open: new Uint8Array(count), bridgeGround: new Uint8Array(count),
     cost: new Float64Array(count), edges: new Uint8Array(count) };
   cached = cached!;
-  cached.revision = world.revision; cached.version++;
+  cached.revision = world.revision; cached.appearanceRevision = appearanceRevision; cached.version++;
   for (let i = 0; i < count; i++) {
     const tile = world.tiles[i], x = i % world.width, y = Math.floor(i / world.width);
     cached.snapshots[i] = { terrain: tile.terrain, overlay: tile.overlay, biome: tile.biome, ridge: tile.ridge, ridgeTier: tile.ridgeTier, stair: tile.stair, waterfall: tile.waterfall, villageTrail: tile.villageTrail };

@@ -1,9 +1,7 @@
-import { playerFaction } from './player-context';
-import { buildingWidth, buildingHeight, isFarmKind, isWallKind, type Building, type BuildingKind, type GameState, type Point } from './types';
+import { buildingWidth, buildingHeight, type Building, type BuildingKind, type GameState } from './types';
 import { constructionEdges } from './builders';
 import { staticReachabilityMask } from './pathfinding';
 import { CAMP_CENTER_SPACING, isCamp } from './camp-spacing';
-import { canShareHouseWellTile } from './house-wells';
 
 /** Reachability starts outside the palace's blocked footprint. Reuse static
  * components rather than calculating travel costs for every candidate cell. */
@@ -18,24 +16,9 @@ export function campSpacingAllowed(state: GameState, x: number, y: number): bool
 }
 
 /** Palaces have no special setback. Callers still check occupied footprints,
- * farm enclosures, residential lanes and reachability normally. */
+ * farm enclosures and reachability normally. */
 export function palaceSpacingAllowed(_state: GameState, _kind: BuildingKind, _x: number, _y: number): boolean {
   return true;
-}
-
-/** Solid buildings preserve residential lanes; defensive walls may directly border a block. */
-export function residentialClearanceAllowed(state: GameState, kind: BuildingKind, x: number, y: number, faction = playerFaction(state)): boolean {
-  if (kind === 'road' || kind === 'bridge' || kind === 'irrigation' || kind === 'house' || isFarmKind(kind) || isWallKind(kind)) return true;
-  // A well sharing a home's reserved cell adds no obstacle to the block's
-  // surrounding walking lane, even when that home touches other homes.
-  if (kind === 'well' && state.buildings.some(house => house.hp > 0 && canShareHouseWellTile({ kind, x, y, faction }, house))) return true;
-  const left = x, top = y, width = buildingWidth({ kind }), height = buildingHeight({ kind });
-  return state.buildings.every(house => {
-    if (house.kind !== 'house' || house.hp <= 0) return true;
-    const gapX = Math.max(house.x - (left + width), left - (house.x + 1), 0);
-    const gapY = Math.max(house.y - (top + height), top - (house.y + 1), 0);
-    return Math.max(gapX, gapY) >= 1;
-  });
 }
 
 /** A small preference for settlement rows; never a substitute for site validation.

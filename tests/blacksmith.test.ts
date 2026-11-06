@@ -59,13 +59,12 @@ describe('blacksmith construction', () => {
     expect(buildingActivityAvailable(state, smithy)).toBe(true);
   });
 
-  it('uses normal border, occupancy, house-clearance, and refund rules', () => {
+  it('keeps borders, occupancy, and refunds while permitting manual placement beside houses', () => {
     const state = fixture(); entityStore(state).buildings.replace(state.buildings.slice(0, -1));
     expect(validateBuildAt(state, 'blacksmith', 20, 10).message).toContain('borders');
     entityStore(state).buildings.add(building(3, 'house', 11, 10));
     expect(validateBuildAt(state, 'blacksmith', 11, 10).message).toContain('occupied');
-    expect(validateBuildAt(state, 'blacksmith', 12, 10).message).toContain('walking lane');
-    entityStore(state).buildings.replace(state.buildings.slice(0, -1));
+    expect(validateBuildAt(state, 'blacksmith', 12, 10).ok).toBe(true);
     expect(buildAt(state, 'blacksmith', 12, 10).ok).toBe(true);
     const smithy = state.buildings.find(candidate => candidate.kind === 'blacksmith')!;
     expect(cancelConstruction(state, smithy.id)).toMatchObject({ ok: true, refund: 200 });

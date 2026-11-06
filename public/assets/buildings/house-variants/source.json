@@ -1,0 +1,37 @@
+{
+  "approvedReview": "scratch/2026-11-06-pixellab-animations-housing/gallery.html",
+  "size": [
+    16,
+    16
+  ],
+  "groundAnchor": [
+    8,
+    16
+  ],
+  "variants": [
+    {
+      "tier": 2,
+      "variant": "a",
+      "file": "flat-roof-a.png",
+      "sha256": "cdf9b76d004ee85930b1bc7920ac6707ea733886440186e9a7c1ac04df6668d3"
+    },
+    {
+      "tier": 2,
+      "variant": "b",
+      "file": "flat-roof-b.png",
+      "sha256": "acf017e8333e82cc2cf3252ecfbe3325cf7e6ccc81be9e08e4f1026c126d19f1"
+    },
+    {
+      "tier": 3,
+      "variant": "a",
+      "file": "gabled-roof-a.png",
+      "sha256": "6208d0cc51605df5880354dc28dcd3e024ded681595457bf13a96920d8b30957"
+    },
+    {
+      "tier": 3,
+      "variant": "b",
+      "file": "gabled-roof-b.png",
+      "sha256": "dcc9649cc95de96f64ccc88a5b619b8a91a3620608c9c78aaffa65df09b13492"
+    }
+  ]
+}

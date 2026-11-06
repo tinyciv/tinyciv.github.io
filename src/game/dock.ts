@@ -1,6 +1,7 @@
 import { canTraverseEdge, canWalk, traversable } from './pathfinding';
 import { ridgeFootprintAllowed, ridgeLevel } from './ridges';
 import { navigableWaterCell } from './water-navigation';
+import { galleyOverlapsTile } from './galley-footprint';
 import { buildingWidth, buildingHeight, isFarmKind, tileAt, WATER, type Building, type GameState, type Point } from './types';
 
 /** Cardinal direction from the dry house cell toward its jetty. */
@@ -100,7 +101,9 @@ export function dockPlacement(state: GameState, x: number, y: number, faction = 
       || dockBerthOccupiedByFootprint(state, Math.floor(berth.x), Math.floor(berth.y))) continue;
     if (state.buildings.some(building => building.hp > 0 && berth.x >= building.x && berth.y >= building.y
       && berth.x < building.x + buildingWidth(building) && berth.y < building.y + buildingHeight(building))) continue;
-    if (state.units.some(unit => unit.hp > 0 && !unit.inside && Math.floor(unit.x) === Math.floor(berth.x) && Math.floor(unit.y) === Math.floor(berth.y))) continue;
+    if (state.units.some(unit => unit.hp > 0 && !unit.inside && (unit.kind === 'sailboat'
+      ? galleyOverlapsTile(unit, Math.floor(berth.x), Math.floor(berth.y))
+      : Math.floor(unit.x) === Math.floor(berth.x) && Math.floor(unit.y) === Math.floor(berth.y)))) continue;
     if (!dockMoorings(state, { x, y, dockFacing: facing, faction }).length) continue;
     return { facing, berth };
   }

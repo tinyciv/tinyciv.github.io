@@ -4,6 +4,7 @@ import { seededRandom } from '../world/generator';
 import { MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, raiderCampActive, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { initializeRaiderSkirmishes, RAIDER_CAMP_RESERVES } from './raider-activity';
 import { ensureMarauderLeaders } from './marauder-leaders';
+import { marauderBaseStats } from './raider-pressure';
 import { buildingReady, type GameState, type Unit } from './types';
 
 export const ROAMING_MARAUDERS_VERSION = 1;
@@ -50,8 +51,9 @@ export function initializeRoamingMarauders(state: GameState): void {
       nextWanderAt: Number.MAX_SAFE_INTEGER, spawnedAt: state.time, raiderCamp: camp.id, returning: true, raid: false, motivation: 'assault' });
     for (let member = 0; member < size; member++) {
       const tent = tents[(band + member) % tents.length]!;
+      const stats = marauderBaseStats(65, 10, 2);
       const unit: Unit = { id: ++nextId, x: tent.x + .5, y: tent.y + .5, kind: 'warrior', faction: RAIDER_FACTION,
-        marauderPack: id, name, hp: 65, maxHp: 65, attack: 10, defense: 2, morale: 100, speed: 2.35, range: 1.1,
+        marauderPack: id, name, ...stats, maxHp: stats.hp, morale: 100, speed: 2.35, range: 1.1,
         inside: true, raiderGarrison: tent.id, order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
         moving: false, facing: rng() * Math.PI * 2, attackTime: 0, bornAt: state.time };
       units.add(unit); entityStore(state).setUnitSleeping(unit, true);

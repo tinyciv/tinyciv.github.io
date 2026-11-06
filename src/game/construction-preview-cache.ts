@@ -23,7 +23,7 @@ export function constructionPreviewContext(state: GameState): PreviewContext {
     state.world.revision, revisions.geometry, forbiddenRevision(state), territory(state).revision,
     engineerBuildMultiplier(state, 'road', faction),
     state.units.filter(unit => unit.hp > 0 && (unit.kind === 'leader' && unit.faction === faction || unit.kind === 'sailboat'))
-      .map(unit => [unit.id, unit.kind, unit.faction, unit.x, unit.y, unit.embarkedOn]),
+      .map(unit => [unit.id, unit.kind, unit.faction, unit.x, unit.y, unit.embarkedOn, unit.kind === 'sailboat' ? unit.facing : undefined]),
     state.factions.map(owner => [owner.id, owner.relation, owner.defeated, owner.gold, owner.food, owner.production,
       owner.population, owner.research?.levels]),
     state.buildings.map(building => [building.id, building.kind, building.faction, building.x, building.y,

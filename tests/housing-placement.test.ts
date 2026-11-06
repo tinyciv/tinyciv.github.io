@@ -2,7 +2,7 @@ import { entityStore } from '../src/game/entity-store';
 import { unlockBuildingResearch } from './helpers/research';
 import { describe, expect, it } from 'vitest';
 import { canPlaceHouseAt, nearestHouseSite, planHouseSite } from '../src/game/housing';
-import { palaceReachability, palaceSpacingAllowed, residentialClearanceAllowed } from '../src/game/placement';
+import { palaceReachability, palaceSpacingAllowed } from '../src/game/placement';
 import { buildingSize, type Building, type GameState, type Point, type Unit } from '../src/game/types';
 import { canReachConstruction } from '../src/game/builders';
 import { synchronizeFarms } from '../src/game/farms';
@@ -195,29 +195,26 @@ describe('automatic house placement', () => {
   });
 });
 
-describe('later construction preserves residential lanes', () => {
-  it.each(['tower', 'well', 'monument', 'palace'] as const)('leaves a complete cell around houses when adding %s', kind => {
+describe('construction beside housing', () => {
+  it.each(['woodenTower', 'well', 'monument', 'palace', 'library', 'blacksmith'] as const)('allows %s directly beside pending and completed houses', kind => {
     const state = fixture(), house = building(2, 'house', 12, 10);
-    house.construction = { startedAt: 0, duration: 20, waitingForBuilder: true };
-    entityStore(state).buildings.add(house);
-    const offset = 1;
-    expect(residentialClearanceAllowed(state, kind, 12 + offset, 10)).toBe(false);
-    expect(residentialClearanceAllowed(state, kind, 12 + offset, 10 + offset)).toBe(false);
-    expect(residentialClearanceAllowed(state, kind, 13 + offset, 10)).toBe(true);
-    expect(residentialClearanceAllowed(state, kind, 13 + offset, 11 + offset)).toBe(true);
-    // Palaces cover 2×2 tiles: their far edge also needs clearance.
-    if (kind === 'palace') {
-      expect(residentialClearanceAllowed(state, kind, 10, 9)).toBe(false);
-      expect(residentialClearanceAllowed(state, kind, 9, 9)).toBe(true);
+    entityStore(state).buildings.add(house); populate(state);
+    state.factions[0].population = 30;
+    state.factions[0].gold = 5000;
+    for (const pending of [true, false]) {
+      house.construction = pending ? { startedAt: 0, duration: 20, waitingForBuilder: true } : undefined;
+      expect(validateBuildAt(state, kind, 13, 10), `${kind}, pending=${pending}`).toEqual({ ok: true, message: '' });
+      expect(validateBuildAt(state, kind, 13, 11).ok).toBe(true);
+      if (kind !== 'well') expect(validateBuildAt(state, kind, 12, 10)).toEqual({ ok: false, message: 'Tile occupied.' });
     }
   });
 
-  it.each([false, true])('allows walls beside a house while retaining the tower setback and route access (pending=%s)', pending => {
+  it.each([false, true])('allows walls and towers beside a house while retaining route access (pending=%s)', pending => {
     const state = fixture(), house = building(2, 'house', 12, 10);
     if (pending) house.construction = { startedAt: 0, duration: 20, waitingForBuilder: true };
     entityStore(state).buildings.add(house); populate(state);
     expect(validateBuildAt(state, 'wall', 13, 10).ok).toBe(true);
-    expect(validateBuildAt(state, 'woodenTower', 13, 10)).toEqual({ ok: false, message: 'Leave a walking lane around houses.' });
+    expect(validateBuildAt(state, 'woodenTower', 13, 10).ok).toBe(true);
     expect(validateBuildAt(state, 'woodenTower', 14, 10).ok).toBe(true);
     entityStore(state).buildings.add(building(3, 'road', 14, 10));
     expect(validateBuildAt(state, 'road', 13, 10).ok).toBe(true);

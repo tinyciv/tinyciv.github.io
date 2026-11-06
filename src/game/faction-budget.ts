@@ -5,6 +5,7 @@ import { SETTLEMENT_MAINTENANCE, WATCHTOWER_MAINTENANCE, TAX_INCOME_MULTIPLIER }
 import { housingGoldBonus } from './wells';
 import { retinueSlotUpkeep } from './retinue-purchases';
 import { isRetinueMember, type Faction, type GameState } from './types';
+import { enemyFactionStrength } from './enemy-strength';
 
 /** Count committed upkeep, including unfinished defenses. Trade and combat loot
  * are useful windfalls, but cannot guarantee the next garrison's wages. */
@@ -21,7 +22,8 @@ export function factionCommittedBudget(state: GameState, faction: Faction): { up
   upkeep += Math.max(0, cities - 1) * SETTLEMENT_MAINTENANCE;
   for (const unit of state.units) if (unit.faction === faction.id && unit.hp > 0 && isRetinueMember(unit))
     soldiers += .5 + (unit.kind === 'archer' ? ARCHER_EXTRA_UPKEEP : 0);
-  return { upkeep, surplus: (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER - soldiers - upkeep };
+  return { upkeep, surplus: (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER
+    * enemyFactionStrength(state, faction.id) - soldiers - upkeep };
 }
 
 /** Leave a small positive recurring balance for repairs and further growth. */

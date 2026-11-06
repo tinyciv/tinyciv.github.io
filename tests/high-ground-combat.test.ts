@@ -126,9 +126,9 @@ describe('downhill firing range', () => {
     expect(archer.infantryDrillLeader).toBe(leader.id);
   });
 
-  it('lets an elevated defensive archer fire from the outer edge of its anchor leash', () => {
+  it('lets an elevated defensive archer retaliate from the outer edge of its five-tile anchor leash', () => {
     const state = fixture(), archer = soldier(10, 'archer', 12.5, 12.5), victim = soldier(20, 'warrior', 17.4, 12.5, -2);
-    Object.assign(archer, { order: 'follow', retinueStance: 'defensive', defensiveAnchor: { x: 9.5, y: 12.5 } });
+    Object.assign(archer, { order: 'follow', retinueStance: 'defensive', defensiveAnchor: { x: 7.5, y: 12.5 }, defensiveThreat: { target: victim.id, until: 4 } });
     victim.attack = 0; entityStore(state).units.add(archer, victim); plateau(state, 12, 12);
     updateGame(state, .05, idle);
     expect(state.projectiles?.find(shot => shot.attacker === archer.id)?.target).toBe(victim.id);

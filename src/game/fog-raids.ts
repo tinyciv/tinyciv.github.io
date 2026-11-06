@@ -8,7 +8,8 @@ import { ensureMarauderLeaders } from './marauder-leaders';
 import { distance, type Building, type GameState, type RaiderCamp, type Unit } from './types';
 import { selectRaidTarget } from './raid-targeting';
 import { campSpawnTiles, initializeRaiderCamps, updateRaiderCamps, MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, RAIDER_FIRST_WAVE, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
-import { raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment } from './raider-pressure';
+import { marauderBaseStats, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment } from './raider-pressure';
+import { updateRaiderCampPressure } from './raider-camp-pressure';
 
 const PRESSURE_VERSION = 2;
 const RETRY_SECONDS = 15;
@@ -26,8 +27,8 @@ export function fogRaidProfile(retinue: number, elapsedSeconds = 0): { total: nu
     const ramp = Math.max(0, Math.min(1, (elapsed - RAIDER_FIRST_WAVE) / 240));
     const continuingGrowth = Math.floor(Math.max(0, elapsed - 300) / 60);
     const total = Math.min(MAX_RAIDER_WAVE_SIZE, 2 * (2 + Math.round(16 * ramp) + Math.floor(strength / 6 * ramp) + continuingGrowth));
-    return { total, parties: Math.ceil(total / PARTY_SIZE), hp: Math.round(40 + 40 * ramp + Math.min(20, strength) * ramp),
-        attack: 6 + Math.round(8 * ramp) + Math.floor(strength / 8 * ramp), defense: Math.floor(2 * ramp) };
+    return { total, parties: Math.ceil(total / PARTY_SIZE), ...marauderBaseStats(Math.round(40 + 40 * ramp + Math.min(20, strength) * ramp),
+        6 + Math.round(8 * ramp) + Math.floor(strength / 8 * ramp), Math.floor(2 * ramp)) };
 }
 
 /** The opening is melee; the mix reaches 20% archers at twelve minutes. */
@@ -234,7 +235,7 @@ export function updateFogRaids(state: GameState): void {
     state.fogRaids ??= { nextAt: nextCampRaid(state), waves: 0, pressureVersion: PRESSURE_VERSION };
     const clock = state.fogRaids;
     if (!banditIntensity(state)) return;
-    if (campsChanged) clock.nextAt = nextCampRaid(state);
+    if (updateRaiderCampPressure(state) || campsChanged) clock.nextAt = nextCampRaid(state);
     const reinforcementDue = state.marauderPacks?.some(pack => pack.siegeNextReinforceAt !== undefined && pack.siegeNextReinforceAt <= state.time);
     if (state.time < clock.nextAt && !reinforcementDue) return;
     const living = state.units.filter(unit => unit.hp > 0);

@@ -1,6 +1,7 @@
 import type { Building, HouseStyle } from './types';
 import { drawPuny, loadPunyWorld, punyWorldImage } from './puny-world';
 import { drawPunyBuildingTile, drawPunyBuildingRegion, nativeHouseTier, NATIVE_BUILDINGS } from './puny-building-art';
+import { drawHouseVariant } from './house-variant-art';
 
 /** Compatibility entry points for callers of the former generated art set. */
 export const HOUSE_STYLES: readonly HouseStyle[] = ['shack', 'hovel', 'cottage', 'villa'];
@@ -11,6 +12,7 @@ export function houseStyleFor(building: Pick<Building, 'id' | 'houseStyle' | 'ho
 }
 
 export function drawWoodenHouse(c: CanvasRenderingContext2D, building: Pick<Building, 'id' | 'houseStyle' | 'houseLevel'>, x = 0, y = 0, size = 32, color = '#3988ff'): void {
+  if (drawHouseVariant(c, building, x, y, size, color)) return;
   const source = NATIVE_BUILDINGS.houses[nativeHouseTier(building)];
   drawPunyBuildingTile(c, source.column, source.row, x, y, size, size, color);
 }

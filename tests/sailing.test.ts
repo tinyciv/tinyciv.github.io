@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { boardBoat, boardedBoat, canSail, commandSailingMove, disembarkLeader, orderBoardBoat, resolveSailingPassengers, sailingPath, updateSailboatLaunches, updateSailingLeader } from '../src/game/sailing';
+import { boardBoat, boardedBoat, canSail, commandSailingMove, disembarkLeader, orderBoardBoat, resolveSailingPassengers, sailingNavigation, sailingPath, updateSailboatLaunches, updateSailingLeader } from '../src/game/sailing';
 import { commandMove, updateGame } from '../src/game/simulation';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { entityStore } from '../src/game/entity-store';
+import { galleyFootprintCells } from '../src/game/galley-footprint';
 import { withPlayerFaction } from '../src/game/player-context';
 import type { Building, GameState, InputState, Unit } from '../src/game/types';
 
@@ -82,8 +83,8 @@ describe('sailboats and Leader transport',()=>{
   const {state,captain,boat}=launched();boardBoat(state,boat,captain);boat.facing=-Math.PI/2;
   sailFor(state,captain,1,{...idle,up:true});expect(boat.y).toBeGreaterThanOrEqual(4.2);expect(captain.inside).toBe(true);
   expect(commandSailingMove(state,captain,{x:12.5,y:10.5}).ok).toBe(true);
-  expect(captain.inside).toBe(true);expect(captain.y).toBeLessThan(5);
-  sailFor(state,captain,8);expect(captain.inside).toBe(false);expect(captain.embarkedOn).toBeUndefined();expect(captain.x).toBe(12.5);expect(captain.y).toBe(10.5);
+  expect(captain.inside).toBe(true);expect(captain.y).toBeLessThanOrEqual(5);
+  sailFor(state,captain,12);expect(captain.inside).toBe(false);expect(captain.embarkedOn).toBeUndefined();expect(captain.x).toBe(12.5);expect(captain.y).toBe(10.5);
   expect(boat.sailboat?.passenger).toBeUndefined();expect(boat.y).toBeLessThan(10);expect(state.selected).toBe(captain.id);
   expect(boardBoat(state,boat,captain).ok).toBe(true);
  });
@@ -116,7 +117,7 @@ describe('sailboats and Leader transport',()=>{
   state.multiplayer={humanFactionIds:[0,1],inputs:{},controls:{},winner:null};
   expect(applyGameCommand(state,1,{type:'move',x:boat.x,y:boat.y}).ok).toBe(false);expect(rival.embarkedOn).toBeUndefined();
   expect(withPlayerFaction(state,0,()=>commandMove(state,10.5,7.5))).toBe(true);
-  sailFor(state,captain,4);expect(captain.x).toBeCloseTo(10.5,1);expect(rival.x).toBe(6.5);
+  sailFor(state,captain,8);expect(captain.x).toBeCloseTo(10.5,1);expect(rival.x).toBe(6.5);
  });
  it('the full simulation keeps the Leader aboard and escorts ashore while directional input moves the boat',()=>{
   const {state,captain,boat}=launched();
@@ -174,7 +175,7 @@ describe('directional boat steering and momentum',()=>{
    for(let y=0;y<60;y++)if(barrier==='land')state.world.tiles[y*80+23].terrain='grassland';
    else entityStore(state).buildings.add({id:300+y,kind:'bridge',faction:0,x:23,y,hp:100,maxHp:100,capacity:0});
    boat.sailboat!.velocity={x:4.5,y:0};state.time+=2;updateSailingLeader(state,captain,2,idle);
-   expect(boat.x).toBeGreaterThan(22);expect(boat.x).toBeLessThanOrEqual(22.8);expect(canSail(state,boat,boat)).toBe(true);
+   expect(boat.x).toBeGreaterThan(21.8);expect(boat.x).toBeLessThanOrEqual(22);expect(canSail(state,boat,boat)).toBe(true);
    expect(captain.x).toBe(boat.x);expect(boat.sailboat!.velocity!.x).toBe(0);
   }
  });
@@ -196,5 +197,78 @@ describe('directional boat steering and momentum',()=>{
   expect(loadedBoat.sailboat!.velocity).toEqual(boat.sailboat!.velocity);
   const stance=loaded.retinueStance;sailFor(loaded,loadedCaptain,.4,{...idle,turnLeft:true});
   expect(loadedBoat.facing).toBeCloseTo(boat.facing-.46);expect(loaded.retinueStance).toBe(stance);
+ });
+});
+
+
+describe('two-cell galley clearance',()=>{
+ it('launches with two water cells and leaves its bow clear of the jetty',()=>{
+  const {state,boat}=launched();
+  expect(galleyFootprintCells(boat)).toEqual([{x:4,y:4},{x:4,y:5}]);
+  expect(canSail(state,boat,boat)).toBe(true);
+  state.world.tiles[5*state.world.width+4].terrain='grassland';
+  expect(canSail(state,boat,boat)).toBe(false);
+ });
+ it('waits for a full berth rather than placing half its hull on land',()=>{
+  const state=fixture();
+  for(let y=4;y<10;y++)for(let x=0;x<18;x++)state.world.tiles[y*18+x].terrain='grassland';
+  state.world.tiles[4*18+5].terrain='coast';
+  state.world.tiles[4*18+4].terrain='coast';
+  updateSailboatLaunches(state);
+  expect(state.units.some(u=>u.kind==='sailboat')).toBe(false);
+  expect(state.buildings[0].dockBoatLaunched).not.toBe(true);
+  state.world.tiles[5*18+4].terrain='coast';updateSailboatLaunches(state);
+  expect(state.units.filter(u=>u.kind==='sailboat')).toHaveLength(1);
+ });
+ it('prevents a stationary turn from swinging the stern into a bank',()=>{
+  const {state,boat,captain}=launched();boardBoat(state,boat,captain);
+  boat.x=captain.x=10;boat.y=captain.y=4.5;boat.facing=0;
+  expect(canSail(state,boat,boat)).toBe(true);
+  sailFor(state,captain,1,{...idle,turnLeft:true});
+  expect(boat.facing).toBeCloseTo(0);expect(boat.moving).toBe(false);expect(canSail(state,boat,boat)).toBe(true);
+  sailFor(state,captain,.5,{...idle,right:true});
+  sailFor(state,captain,1,{...idle,turnLeft:true});
+  expect(boat.facing).toBeLessThan(-.1);expect(boat.moving).toBe(true);expect(canSail(state,boat,boat)).toBe(true);
+ });
+ it('boards from the shore next to the bow, not only near the boat center',()=>{
+  const {state,boat,captain}=launched();
+  boat.x=10.5;boat.y=5;boat.facing=-Math.PI/2;captain.x=10.5;captain.y=3.5;
+  expect(boardBoat(state,boat,captain).ok).toBe(true);
+  expect(disembarkLeader(state,{x:10.5,y:3.5},captain).ok).toBe(true);
+ });
+ it('finds a safe lattice connection after manual movement leaves the hull near a bank',()=>{
+  const {state,boat,captain}=launched();boardBoat(state,boat,captain);
+  boat.x=captain.x=10.2;boat.y=captain.y=4.7;boat.facing=.39;
+  expect(canSail(state,boat,boat)).toBe(true);
+  expect(commandSailingMove(state,captain,{x:10.5,y:7.5}).ok).toBe(true);
+  for(let frame=0;frame<200;frame++){state.time+=.05;updateSailingLeader(state,captain,.05,idle);expect(canSail(state,boat,boat)).toBe(true);}
+  expect(boat.x).toBeCloseTo(10.5,2);expect(boat.y).toBeCloseTo(7.5,2);
+ });
+ it.each([false,true])('finds long routes on a large sea, including an island detour (%s)',island=>{
+  const {state,boat}=launched(),size=96;
+  const water={...state.world.tiles[4*18]};
+  state.world={...state.world,width:size,height:size,revision:1,tiles:Array.from({length:size*size},(_,i)=>{
+   const x=i%size,y=Math.floor(i/size);
+   return {...water,terrain:island&&x>=size*.35&&x<size*.65&&y>=size*.2&&y<size*.8?'grassland' as const:'coast' as const};
+  })};
+  boat.x=10;boat.y=size*.3+.5;boat.facing=0;const goal={x:size-15.5,y:size*.75+.5};
+  const path=sailingPath(state,boat,goal);
+  expect(path.length).toBeGreaterThan(0);expect(path.at(-1)).toMatchObject(goal);
+  const nav=sailingNavigation(state,boat);let previous={x:boat.x,y:boat.y,facing:boat.facing};
+  for(const point of path){
+   const next=point as typeof previous;
+   expect(nav.segment(previous,next,previous.facing)).toBe(true);
+   expect(nav.turn(next,previous.facing,next.facing)).toBe(true);
+   expect(nav.position(next,next.facing)).toBe(true);previous=next;
+  }
+ });
+ it('reserves another galley’s stern and preserves smaller river-merchant clearance',()=>{
+  const {state,boat}=launched();
+  const other={...boat,id:999,x:10,y:7.5,facing:0};entityStore(state).units.add(other);
+  expect(canSail(state,{x:8.5,y:7.5,facing:0},boat)).toBe(false);
+  expect(galleyFootprintCells(other)).toEqual([{x:9,y:7},{x:10,y:7}]);
+  const merchant={...boat,id:1000,kind:'merchant' as const,x:14.5,y:4.5};
+  expect(canSail(state,merchant,merchant)).toBe(true);
+  expect(canSail(state,{...merchant,facing:Math.PI/2},boat)).toBe(false);
  });
 });

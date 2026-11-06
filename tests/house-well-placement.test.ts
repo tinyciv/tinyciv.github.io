@@ -127,8 +127,8 @@ describe('houses and wells sharing a tile', () => {
     const state = fixture();
     for (let y = 0; y < 2; y++) for (let x = 0; x < 4; x++) add(state, 'house', { x: target.x + x, y: target.y + y });
     expect(validateBuildAt(state, 'well', target.x + 1, target.y).ok).toBe(true);
-    // A standalone well in the block's walking lane remains prohibited.
-    expect(validateBuildAt(state, 'well', target.x + 1, target.y - 1).message).toBe('Leave a walking lane around houses.');
+    // Standalone wells may also sit directly alongside the housing block.
+    expect(validateBuildAt(state, 'well', target.x + 1, target.y - 1).ok).toBe(true);
   });
 
   it('includes a well tile in automatic housing growth without moving or removing the well', () => {

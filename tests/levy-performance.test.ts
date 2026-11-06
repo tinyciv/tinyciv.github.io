@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { constructionEdges } from '../src/game/builders';
 import { entityStore } from '../src/game/entity-store';
 import { setForbiddenRectangle } from '../src/game/forbidden-zones';
-import { dismissLevy, levyDisplayStatus, levyPopulation, levyStatus } from '../src/game/mass-levy';
+import { dismissLevy, LEVY_ACTION_COOLDOWN, levyDisplayStatus, levyPopulation, levyStatus } from '../src/game/mass-levy';
 import * as navigation from '../src/game/pathfinding';
 import type { GameState, Unit } from '../src/game/types';
 
@@ -155,14 +155,19 @@ describe('mass levy status query cost', () => {
     expect(state.time).toBe(10);
   });
 
-  it('refreshes the remaining workforce after levy and dismissal at the same game time', () => {
+  it('refreshes cached workforce immediately after drafting and a cooled-down dismissal', () => {
     const state = fixture(); state.factions[0].population = 30;
     expect(levyDisplayStatus(state).available).toBe(9);
     expect(levyPopulation(state, 2)).toMatchObject({ ok: true, count: 2 });
     expect(levyDisplayStatus(state)).toMatchObject({ active: 2, available: 7, upkeep: 10 });
+    expect(state.time).toBe(10);
+    state.time += LEVY_ACTION_COOLDOWN;
+    // Prime the display cache at the dismissal timestamp so expiry cannot hide
+    // missing invalidation when the drafted workers return.
+    expect(levyDisplayStatus(state)).toMatchObject({ active: 2, available: 7, upkeep: 10 });
     expect(dismissLevy(state).ok).toBe(true);
     expect(levyDisplayStatus(state)).toMatchObject({ active: 0, available: 9, upkeep: 0 });
-    expect(state.time).toBe(10);
+    expect(state.time).toBe(10 + LEVY_ACTION_COOLDOWN);
   });
 
   it('keeps display workforce snapshots separate for each state and faction', () => {

@@ -1,5 +1,6 @@
 import { cityOwnership } from './city-ownership';
 import { dockBerth, dockMoorings } from './dock';
+import { galleyOverlapsTile } from './galley-footprint';
 import { ECONOMY_INTERVAL } from './economy-constants';
 import { entityStore } from './entity-store';
 import { canTraverseEdge } from './pathfinding';
@@ -19,7 +20,11 @@ export const FISHING_ZONE_CAPACITY = 8;
 export const FISHING_ZONE_SPACING = 12;
 export const FISHING_MAX_ZONES = 64;
 export const FISHING_BOAT_SPEED = 3.3;
+export const FISHING_BOAT_TURN_SPEED = 1.15;
+const FISHING_ACCELERATION = 2.6, FISHING_BRAKING = 4.5;
 export const FISHING_BOAT_CAPACITY = FISH_FOOD * 4;
+/** Nets reach adjacent fish without steering the hull onto a moving point. */
+export const FISHING_CATCH_RADIUS = .4;
 export const FISHING_BOAT_RANGE = 32;
 export const FISHING_BOAT_REPLACE_SECONDS = 30;
 export const FISHING_INCOME_WINDOW = 90;
@@ -36,6 +41,7 @@ export interface FishingBoat extends Point {
   id: number; dock: number; city: number; faction: number; hp: number; home: Point;
   phase: 'idle' | 'outbound' | 'returning'; cargo: number; facing: number; moving: boolean;
   target?: number; path: Point[]; nextPlanAt: number; firstCatchAt?: number;
+  forwardSpeed?: number;
 }
 export interface FishingState {
   seed: string; startedAt: number; sequence: number; zones: FishingZone[]; fish: FishingFish[]; boats: FishingBoat[];
@@ -258,7 +264,8 @@ function maintainBoats(state: GameState, nav: WaterNavigation): void {
       || !state.factions.some(faction => faction.id === dock.faction && !faction.defeated)) continue;
     const city = ownership.building(dock); if (!city) continue;
     const moorings = dockMoorings(state, dock).filter(point => nav.open[cellAt(state.world, point)]);
-    const home = moorings.find(point => !state.units.some(unit => unit.kind === 'sailboat' && unit.hp > 0 && distance(unit, point) < .6)) ?? moorings.at(-1);
+    const home = moorings.find(point => !state.units.some(unit => unit.kind === 'sailboat' && unit.hp > 0
+      && galleyOverlapsTile(unit, Math.floor(point.x), Math.floor(point.y))));
     if (!home) continue;
     fishing.boats.push({ id: ++fishing.sequence, dock: dock.id, city: city.id, faction: dock.faction, hp: 80,
       ...home, home: { ...home }, phase: 'idle', cargo: 0, path: [], nextPlanAt: state.time, facing: 0, moving: false });
@@ -313,21 +320,69 @@ function collectFish(state: GameState, nav: WaterNavigation, boat: FishingBoat, 
     if (choice !== true) boat.phase = choice === false ? 'returning' : 'idle';
   }
 }
-function sail(state: GameState, nav: WaterNavigation, boat: FishingBoat, dt: number): void {
-  let remaining = FISHING_BOAT_SPEED * Math.max(0, dt); boat.moving = false;
-  while (boat.path.length && remaining > 1e-7) {
-    const goal = boat.path[0], length = distance(boat, goal);
-    if (length < .001) { boat.path.shift(); continue; }
-    const source = cellAt(state.world, boat), target = cellAt(state.world, goal);
-    const side = DIRECTIONS.findIndex(([dx, dy]) => target === source + dy * state.world.width + dx);
-    if (!nav.open[source] || !nav.open[target] || source !== target && (side < 0 || !(nav.edges[source] & (1 << side)))) {
-      boat.path = []; boat.nextPlanAt = state.time + .5; return;
+function clearWaterSegment(state: GameState, nav: WaterNavigation, from: Point, to: Point): boolean {
+  const steps = Math.max(1, Math.ceil(distance(from, to) / .12));
+  let previous = cellAt(state.world, from);
+  if (!nav.open[previous]) return false;
+  for (let index = 1; index <= steps; index++) {
+    const point = { x: from.x + (to.x - from.x) * index / steps, y: from.y + (to.y - from.y) * index / steps };
+    const cell = cellAt(state.world, point);
+    if (!nav.open[cell]) return false;
+    if (cell !== previous) {
+      const side = DIRECTIONS.findIndex(([dx, dy]) => cell === previous + dy * state.world.width + dx);
+      if (side >= 0) { if (!(nav.edges[previous] & (1 << side))) return false; }
+      else {
+        // Crossing an exact grid corner needs both neighboring water cells;
+        // never cut across the land corner of a narrow channel.
+        const dx = cell % state.world.width - previous % state.world.width;
+        const dy = Math.floor(cell / state.world.width) - Math.floor(previous / state.world.width);
+        if (Math.abs(dx) !== 1 || Math.abs(dy) !== 1) return false;
+        const horizontal = dx > 0 ? 1 : 3, vertical = dy > 0 ? 2 : 0;
+        if (!(nav.edges[previous] & (1 << horizontal)) || !(nav.edges[previous] & (1 << vertical))
+          || !(nav.edges[previous + dx] & (1 << vertical)) || !(nav.edges[previous + dy * state.world.width] & (1 << horizontal))) return false;
+      }
     }
-    const step = Math.min(length, remaining);
-    boat.facing = Math.atan2(goal.y - boat.y, goal.x - boat.x);
-    boat.x += (goal.x - boat.x) * step / length; boat.y += (goal.y - boat.y) * step / length;
-    boat.moving = true; remaining -= step;
-    if (step >= length - 1e-7) { boat.x = goal.x; boat.y = goal.y; boat.path.shift(); }
+    previous = cell;
+  }
+  return true;
+}
+
+/** A hull turns before advancing: route waypoints are not velocity vectors.
+ * Short swept steps retain narrow-channel navigation without sideways slides. */
+export function sailFishingBoat(state: GameState, nav: WaterNavigation, boat: FishingBoat, dt: number): void {
+  boat.moving = false;
+  for (let remaining = Math.max(0, dt); remaining > 1e-7;) {
+    const stepTime = Math.min(.05, remaining); remaining -= stepTime;
+    while (boat.path.length && distance(boat, boat.path[0]) < .035) boat.path.shift();
+    // Follow the furthest visible point of the water route. Re-centering in
+    // each cell makes a turning hull reverse repeatedly after catching a fish.
+    for (let index = Math.min(boat.path.length - 1, 8); index > 0; index--) {
+      const next = boat.path[index];
+      if (distance(boat, next) <= 6 && clearWaterSegment(state, nav, boat, next)) { boat.path.splice(0, index); break; }
+    }
+    const goal = boat.path[0];
+    if (!goal) { boat.forwardSpeed = 0; break; }
+    // Momentum can carry the hull to the outside of a corner even though the
+    // original cell-center route was clear. Replan from its actual cell instead
+    // of forever steering through the dock or bank that now blocks the segment.
+    if (!clearWaterSegment(state, nav, boat, goal)) {
+      boat.path = []; boat.forwardSpeed = 0; boat.nextPlanAt = state.time; break;
+    }
+    const gap = distance(boat, goal), heading = Math.atan2(goal.y - boat.y, goal.x - boat.x);
+    const delta = Math.atan2(Math.sin(heading - boat.facing), Math.cos(heading - boat.facing));
+    boat.facing += Math.max(-FISHING_BOAT_TURN_SPEED * stepTime, Math.min(FISHING_BOAT_TURN_SPEED * stepTime, delta));
+    boat.facing = Math.atan2(Math.sin(boat.facing), Math.cos(boat.facing));
+    const error = Math.atan2(Math.sin(heading - boat.facing), Math.cos(heading - boat.facing));
+    const desired = Math.min(FISHING_BOAT_SPEED, Math.sqrt(2 * FISHING_BRAKING * Math.max(0, gap - .015)))
+      * Math.pow(Math.max(0, Math.cos(error)), 8);
+    const oldSpeed = boat.forwardSpeed ?? 0, acceleration = desired < oldSpeed ? FISHING_BRAKING : FISHING_ACCELERATION;
+    boat.forwardSpeed = oldSpeed + Math.max(-acceleration * stepTime, Math.min(acceleration * stepTime, desired - oldSpeed));
+    const step = Math.min(gap, boat.forwardSpeed * stepTime);
+    const next = { x: boat.x + Math.cos(boat.facing) * step, y: boat.y + Math.sin(boat.facing) * step };
+    if (Math.abs(error) < .03 && gap <= step + .035) { next.x = goal.x; next.y = goal.y; }
+    if (!clearWaterSegment(state, nav, boat, next)) { boat.forwardSpeed = 0; continue; }
+    boat.moving ||= distance(boat, next) > .0001; boat.x = next.x; boat.y = next.y;
+    if (distance(boat, goal) < .035) { boat.path.shift(); boat.forwardSpeed = 0; }
   }
 }
 
@@ -364,7 +419,7 @@ export function updateFishing(state: GameState, dt: number): number {
     if (boat.phase === 'outbound') {
       const fish = fishingFish(state, boat.target);
       if (!fish || fish.claimedBy !== boat.id) { releaseTarget(state, boat); boat.phase = boat.cargo ? 'returning' : 'idle'; }
-      else if (distance(boat, fish) < .04) {
+      else if (distance(boat, fish) <= FISHING_CATCH_RADIUS && clearWaterSegment(state, nav, boat, fish)) {
         collectFish(state, nav, boat, fish);
       } else if (boat.path.length) {
         const last = boat.path.at(-1)!;
@@ -387,6 +442,7 @@ export function updateFishing(state: GameState, dt: number): number {
         if (dock && palace && faction && dock.faction === boat.faction && palace.faction === boat.faction && buildingReady(dock) && buildingReady(palace)) {
           if (boat.cargo > 0) {
             grantIncome(faction, { food: boat.cargo }, state); palace.foodDelivered = (palace.foodDelivered ?? 0) + boat.cargo;
+            state.particles.push({ x: dock.x + .5, y: dock.y + .5, text: `+${Math.round(boat.cargo)} food`, color: '#b9df85', life: 1.6, kind: 'food' });
             fishing.receipts.push({ city: palace.id, faction: faction.id, at: state.time, food: boat.cargo }); delivered += boat.cargo;
           }
           boat.cargo = 0; boat.firstCatchAt = undefined; boat.phase = 'idle'; boat.path = []; boat.nextPlanAt = state.time + .5;
@@ -398,12 +454,12 @@ export function updateFishing(state: GameState, dt: number): number {
       if (choice === false && distance(boat, boat.home) >= .04) boat.phase = 'returning';
       if (choice !== undefined) boat.nextPlanAt = state.time + 1;
     }
-    sail(state, nav, boat, dt);
-    // A fish may swim farther than the catch radius between long simulation
-    // steps. Confirm contact after sailing, instead of chasing its old position.
+    sailFishingBoat(state, nav, boat, dt);
+    // Confirm net contact after sailing as well as before it. Fish can move
+    // substantially between long simulation steps.
     if (boat.phase === 'outbound') {
       const fish = fishingFish(state, boat.target);
-      if (fish?.claimedBy === boat.id && distance(boat, fish) < .04) collectFish(state, nav, boat, fish);
+      if (fish?.claimedBy === boat.id && distance(boat, fish) <= FISHING_CATCH_RADIUS && clearWaterSegment(state, nav, boat, fish)) collectFish(state, nav, boat, fish);
     }
   }
   return delivered;

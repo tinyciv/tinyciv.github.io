@@ -51,7 +51,7 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   if (unit.kind === 'boar') name = 'Wild boar';
   if (unit.kind === 'marshBird') name = 'Marsh bird';
   if (unit.builder) name = 'Builder';
-  if (unit.kind === 'sailboat') { name = unit.sailboat?.passenger !== undefined ? 'Rowboat · Leader aboard' : 'Rowboat'; picture = 'sailboat'; }
+  if (unit.kind === 'sailboat') { name = unit.sailboat?.passenger !== undefined ? 'Galley · Leader aboard' : 'Galley'; picture = 'sailboat'; }
   const details = [name, `Speed ${unit.speed.toFixed(2)}`, `Range ${unit.range}`, `Morale ${Math.ceil(unit.morale)}`];
   if (unit.kind === 'levyInfantry') details.push('Half warrior attack and defense', '80 maximum morale', '5 gold every 30s', 'Dismisses when gold runs out');
   if (unit.kind === 'skirmisher') details.push('Fort patrol', 'Throws javelins and evades approaching enemies');
@@ -128,7 +128,7 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
       if ((building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) && owner?.weaponLevel) details.push(`Weapons ${equipmentMultiplier(owner.weaponLevel)}×`);
     }
     if (building.kind === 'well') details.push(`Level 2 housing within ${WELL_RADIUS} tiles`);
-    if (building.kind === 'dock') details.push('Launches one rowboat for the Leader', 'Right-click the boat to board');
+    if (building.kind === 'dock') details.push('Launches one galley for the Leader', 'Right-click the boat to board');
     if (building.kind === 'ballista') details.push('Range 18 tiles · One shot every 4 seconds', 'Prioritizes towers, guard posts and walls');
     if (building.kind === 'healerShack') details.push(`${HEALER_SHACK_MULTIPLIER}× friendly healing within ${HEALER_SHACK_RADIUS} tiles`, 'Own borders · Normal recovery delay · Does not stack');
     if (building.kind === 'irrigation') details.push(`Doubles farmland yield within ${IRRIGATION_RADIUS} tiles`, 'Immune to enemy attacks');
@@ -162,7 +162,7 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
     attack: ready && (building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) ? attackDamage(woodenTowerAttack(building, owner), 0) : 0,
     defense: buildingArmor(building, owner), title: details.join(' · '),
     hint: ready && building.kind === 'dock' && building.faction === playerFaction(state)
-      ? building.dockBoatLaunched ? 'Right-click your rowboat to board.' : 'Waiting for a clear water berth to launch.' : undefined,
+      ? building.dockBoatLaunched ? 'Right-click your galley to board.' : 'Waiting for a clear water berth to launch.' : undefined,
   };
 }
 

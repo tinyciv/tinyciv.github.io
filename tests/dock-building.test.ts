@@ -6,7 +6,8 @@ import { CONSTRUCTION_SECONDS } from '../src/game/structures';
 import { entityStore } from '../src/game/entity-store';
 import { type Building, type GameState } from '../src/game/types';
 import { recordNativeFrame } from './helpers/native-renderer';
-import { buildingAtPoint } from '../src/game/hit-testing';
+import { buildingAtPoint, unitAtPoint } from '../src/game/hit-testing';
+import { constructionPreviewContext } from '../src/game/construction-preview-cache';
 
 const building = (id: number, kind: Building['kind'], x: number, y: number): Building => ({ id, kind, x, y, faction: 0, hp: 250, maxHp: 250, capacity: 0 });
 function fixture(): GameState {
@@ -94,6 +95,42 @@ describe('coastal dock placement', () => {
     otherDock.hp = 0;
     state.units[0].x = 8.5; state.units[0].y = 7.5;
     expect(dockPlacement(state, 8, 6)).toBeUndefined();
+  });
+
+  it('reserves a galley bow across its full footprint rather than only its center tile', () => {
+    const state = fixture(); coast(state); water(state, 6, 7);
+    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 7.1, y: 7.5, facing: 0 };
+    entityStore(state).units.add(boat);
+    expect(dockPlacement(state, 8, 6)).toBeUndefined();
+    boat.facing = Math.PI / 2;
+    expect(dockPlacement(state, 8, 6)?.facing).toBe(2);
+  });
+
+  it('selects either end of an oriented galley without enlarging merchant boats', () => {
+    const state = fixture(), boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 8.5, y: 7.5, facing: 0 };
+    entityStore(state).units.add(boat);
+    expect(unitAtPoint(state, { x: 9.4, y: 7.5 })?.id).toBe(boat.id);
+    expect(unitAtPoint(state, { x: 7.6, y: 7.5 })?.id).toBe(boat.id);
+    expect(unitAtPoint(state, { x: 8.5, y: 8.3 })).toBeUndefined();
+    boat.facing = Math.PI / 2;
+    expect(unitAtPoint(state, { x: 9.4, y: 7.5 })).toBeUndefined();
+    expect(unitAtPoint(state, { x: 8.5, y: 8.4 })?.id).toBe(boat.id);
+    const merchant = { ...boat, id: 102, kind: 'merchant' as const, aboardRiverTrade: true };
+    entityStore(state).units.retain(unit => unit.id !== boat.id); entityStore(state).units.add(merchant);
+    expect(unitAtPoint(state, { x: 8.5, y: 8.4 })).toBeUndefined();
+  });
+
+  it('blocks bridge construction under a galley end and refreshes the preview when it turns', () => {
+    const state = fixture();
+    for (let x = 7; x <= 11; x++) water(state, x, 7);
+    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 9.1, y: 7.5, facing: 0 };
+    entityStore(state).units.add(boat);
+    expect(validateBuildAt(state, 'bridge', 10, 7)).toMatchObject({ ok: false, message: 'Move the galley before building a bridge here.' });
+    const preview = constructionPreviewContext(state);
+    expect(constructionPreviewContext(state)).toBe(preview);
+    boat.facing = Math.PI / 2;
+    expect(constructionPreviewContext(state)).not.toBe(preview);
+    expect(validateBuildAt(state, 'bridge', 10, 7).message).not.toBe('Move the galley before building a bridge here.');
   });
 
   it('needs open water beside the jetty and an accessible boarding bank', () => {

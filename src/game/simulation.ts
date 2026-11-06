@@ -1,3 +1,4 @@
+import { DEFENSIVE_RADIUS, recordUnitDamage } from './combat-feedback';
 import { recordLeaderDeath, leaderRespawnRemainingSeconds } from './leader-respawn';
 import { engineerBuildMultiplier, fleeingAbilityMultiplier, recordEngineerDeath, synchronizeEngineers, updateEngineer, updateLeaderBrace } from './leader-abilities';
 export { leaderRespawnRemainingSeconds } from './leader-respawn';
@@ -30,6 +31,8 @@ import { isSoldier, isRetinueMember, buildingKindForSelection } from './types';
 import { updateScout } from './scouts';
 import { IRRIGATION_GOLD, irrigationConnects } from './irrigation';
 import { entityStore, resetEntities } from './entity-store';
+import { setEnemyStrength, updateEnemyStrength } from './enemy-strength';
+import { marauderFortificationMultiplier, updateMarauderFormations } from './marauder-formations';
 import { prepareCourierUpdates, settleCourier, wakeCourier } from './courier-sleep';
 import { movementProfile } from './movement-profile';
 import { invalidateSettlementDecisions, runSettlementDecision } from './settlement-decisions';
@@ -60,7 +63,7 @@ import { updateWoodenTowers } from './tower-combat';
 import { beginBattleRout, routLeaderRetinue, canRallyFromRout, casualtyPressure, CASUALTY_MORALE_DRAIN, CASUALTY_SHOCK_SECONDS, recordBattleDeath, routContagionDrain } from './battle-morale';
 import { senseMorale } from './morale-perception';
 import { firingTowerThreats } from './tower-threats';
-import { campSpacingAllowed, palaceSpacingAllowed, residentialClearanceAllowed } from './placement';
+import { campSpacingAllowed, palaceSpacingAllowed } from './placement';
 import { planHouseAt, planHouseSite, type HouseSitePlan } from './housing';
 import { buildingDisplacesFarms, farmAt, planBuildingFarmRelocations, planRoadFarmRelocation, planWallFarmRelocation, relocateBuildingFarms, relocateFarm } from './farm-relocation';
 import { FARM_BUILD_GOLD } from './farm-config';
@@ -71,11 +74,12 @@ import { ridgeFootprintAllowed } from './ridges';
 import { unitObstructs, unitsCollide } from './collisions';
 import { beginUnitFrame, cellOccupant, endUnitFrame, forEachNearbyUnit, indexedBuilding, indexedLeader, indexedUnit, lastCollidingUnitInCell, nearbyUnits, nearbyBuildings, refreshIndexedUnit, unitOccupancy } from './spatial';
 import { retinueFormation } from './formation';
-import { advanceInfantryFormations, enforceInfantryFormationStrength, infantryFormationLeader, infantryAttackMultiplier, infantryDefenseMultiplier } from './infantry-drill';
+import { advanceInfantryFormations, enforceInfantryFormationStrength, infantryFormationGoal, infantryFormationLeader, infantryAttackMultiplier, infantryDefenseMultiplier } from './infantry-drill';
 import { decisionDue, invalidateDecisions, type DecisionClock } from './decision-schedule';
 import { CHECK_INTERVAL, runRecurringWork } from './work-cadence';
 import { beginMarauderFrame, isScheduledMarauder, marauderUpdateElapsed } from './marauder-schedule';
 import { buildingAtPoint, unitAtPoint } from './hit-testing';
+import { galleyOverlapsTile } from './galley-footprint';
 import { planStartingCityFarms, planStartingSettlement } from './settlement-layout';
 import { ADVANCED_START_POPULATION, prepareAdvancedCity } from './advanced-start';
 import { initializeVillages, updateVillages, updateVillageUnit, villageHostility, performVillageAction, villageCamp, refreshVillageBonuses } from './villages';
@@ -326,7 +330,7 @@ function syncRetinue(state: GameState, faction: Faction, startingEscort = false)
   faction.nextRetinueAt = state.time + RETINUE_RECRUIT_INTERVAL;
 }
 
-export function createGame(world: World, duel?: { names?: string[]; colors?: string[] }, options: { advancedStart?: boolean; banditIntensity?: number } = {}): GameState {
+export function createGame(world: World, duel?: { names?: string[]; colors?: string[] }, options: { advancedStart?: boolean; banditIntensity?: number; enemyStrength?: number } = {}): GameState {
   world.revision ??= 0;
   const state: GameState = {
     world, units: [], buildings: [], factions: [], time: 0, tick: 0, paused: false, speed: 1,
@@ -408,6 +412,7 @@ export function createGame(world: World, duel?: { names?: string[]; colors?: str
   initializeWildlife(state);
   if (state.multiplayer) for (const id of state.multiplayer.humanFactionIds) publishFog(state, id);
   else publishFog(state);
+  setEnemyStrength(state, options.enemyStrength ?? 1);
   return state;
 }
 
@@ -655,7 +660,7 @@ function approachPoint(state: GameState, unit: Unit, target: Unit | Building): P
   const guardLimits = garrisonMovementLimits(state, unit) ?? militiaMovementLimits(state, unit);
   const garrisonReachable = unit.garrison && guardLimits
     ? createReachabilityQuery(state, unit, unit.faction, guardLimits, respectsForbidden(state, unit)) : undefined;
-  const claimed = claimAttackSpot(state, unit, target, point => (!anchor || distance(point, anchor) <= 3)
+  const claimed = claimAttackSpot(state, unit, target, point => (!anchor || distance(point, anchor) <= DEFENSIVE_RADIUS)
     && (!respectsForbidden(state, unit) || hasStaticPath(state, unit, point, unit.faction, true))
     && (unit.kind !== 'militia' || militiaCityContains(state, unit, point))
     && inSight(point) && unitAttackContact(state, unit, target, point)
@@ -768,15 +773,15 @@ const defensiveMasks = new WeakMap<Unit, { x: number; y: number; width: number; 
 function defensiveLimits(state: GameState, unit: Unit, anchor: Point | undefined): ReadonlySet<number> {
   const guardLimits = garrisonMovementLimits(state, unit) ?? militiaMovementLimits(state, unit);
   if (guardLimits) return guardLimits;
-  if (!anchor || distance(unit, anchor) > 3) return noDefensiveLimits;
+  if (!anchor || distance(unit, anchor) > DEFENSIVE_RADIUS) return noDefensiveLimits;
   const { width, height } = state.world, cell = unitCell(state, unit), previous = defensiveMasks.get(unit);
   if (previous && previous.x === anchor.x && previous.y === anchor.y && previous.width === width
     && previous.height === height && previous.cell === cell) return previous.cells;
   const cells = previous?.cells ?? new Set<number>(); cells.clear();
-  for (let y = Math.floor(anchor.y) - 4; y <= Math.floor(anchor.y) + 4; y++) for (let x = Math.floor(anchor.x) - 4; x <= Math.floor(anchor.x) + 4; x++) {
+  for (let y = Math.floor(anchor.y) - 6; y <= Math.floor(anchor.y) + 6; y++) for (let x = Math.floor(anchor.x) - 6; x <= Math.floor(anchor.x) + 6; x++) {
     if (x < 0 || y < 0 || x >= width || y >= height) continue;
     const index = y * width + x;
-    if (Math.hypot(anchor.x - (x + .5), anchor.y - (y + .5)) > 3 && index !== cell) cells.add(index);
+    if (Math.hypot(anchor.x - (x + .5), anchor.y - (y + .5)) > DEFENSIVE_RADIUS && index !== cell) cells.add(index);
   }
   defensiveMasks.set(unit, { x: anchor.x, y: anchor.y, width, height, cell, cells });
   return cells;
@@ -1062,7 +1067,7 @@ function advanceUnit(state: GameState, unit: Unit, goal: Point, dt: number, dire
   // The Leader may stop on a friendly soldier. Let any existing overlap walk
   // out of its current cell; entering another occupied cell still blocks.
   const currentCell = cell(unit);
-  const clear = (x: number, y: number): boolean => (!anchor || distance(anchor, unit) > 3 + 1e-7 || distance(anchor, { x, y }) <= 3 + 1e-7)
+  const clear = (x: number, y: number): boolean => (!anchor || distance(anchor, unit) > DEFENSIVE_RADIUS + 1e-7 || distance(anchor, { x, y }) <= DEFENSIVE_RADIUS + 1e-7)
     && (cell({ x, y }) === currentCell || !unitPositionBlocked(state, unit, { x, y })) && unitCanMove(state, unit, { x, y });
   const oldX = unit.x, oldY = unit.y;
   if (clear(unit.x + dx, unit.y + dy)) { unit.x += dx; unit.y += dy; }
@@ -1215,7 +1220,7 @@ function attackTarget(state: GameState, attacker: Unit, target: Unit | Building)
   // Snapshot the outgoing formation bonus now. A projectile keeps its launch
   // strength if its soldier turns, leaves formation, or dies before impact.
   const amount = unitDamage(attacker, isBuilding(target) ? buildingArmor(target, factionOf(state, target.faction)) : unitDefense(target), factionOf(state, attacker.faction))
-    * infantryAttackMultiplier(state, attacker, targetPoint);
+    * infantryAttackMultiplier(state, attacker, targetPoint) * marauderFortificationMultiplier(state, attacker, target);
   attacker.cooldown = attacker.kind === 'leader' ? 0.75 : 0.95;
   attacker.attackTime = 0.28;
   attacker.lastCombat = state.time;
@@ -1232,7 +1237,7 @@ function attackTarget(state: GameState, attacker: Unit, target: Unit | Building)
       hit: (victim, multiplier) => applyMeleeHit(state, attacker, victim,
         unitDamage(attacker, isBuilding(victim) ? buildingArmor(victim, factionOf(state, victim.faction)) : unitDefense(victim),
           factionOf(state, attacker.faction)) * multiplier
-          * infantryAttackMultiplier(state, attacker, isBuilding(victim) ? center(victim) : victim)),
+          * infantryAttackMultiplier(state, attacker, isBuilding(victim) ? center(victim) : victim) * marauderFortificationMultiplier(state, attacker, victim)),
     })) return;
     const pierced = !isBuilding(target) ? spearPiercingTargets(state, attacker, target, (a, b) => atWar(state, a, b),
       unit => targetInSight(state, attacker, unit) && hasAttackContact(state, attacker, attacker.faction, unit)) : [];
@@ -1256,7 +1261,7 @@ function applyMeleeHit(state: GameState, attacker: Unit, target: Unit | Building
       if (target.hp < previousHp) defendRaiderCamp(state, target, attacker);
     }
     else {
-      if (target.hp < previousHp) target.damageFlashAt = state.time;
+      if (target.hp < previousHp) { target.damageFlashAt = state.time; recordUnitDamage(state, target, previousHp, attacker.id); }
       target.lastDamagedAt = state.time; wakeCourier(state, target); panicCivilian(state, target, attacker); beginObservationPostRetreat(target);
       entityStore(state).units.updateRoles(target, false);
     }
@@ -1314,7 +1319,7 @@ function updateProjectiles(state: GameState, dt: number): void {
           entityStore(state).units.get(projectile.attacker) ?? sourceBuilding ?? { ...projectile.start, faction: projectile.faction });
       }
       else {
-        if (target.hp < previousHp) target.damageFlashAt = state.time;
+        if (target.hp < previousHp) { target.damageFlashAt = state.time; recordUnitDamage(state, target, previousHp, projectile.attacker); }
         target.lastCombat = state.time;
         if (projectile.damage > 0) { target.lastDamagedAt = state.time; wakeCourier(state, target); panicCivilian(state, target, projectile.start); beginObservationPostRetreat(target); }
         entityStore(state).units.updateRoles(target, false);
@@ -1331,6 +1336,7 @@ function updateProjectiles(state: GameState, dt: number): void {
   });
 }
 function fight(state: GameState, unit: Unit, target: Unit | Building, dt: number): void {
+  unit.levyAssembling = undefined;
   if (isBuilding(target)) {
     const defenses = palaceDefenses(state, target);
     if (defenses.length) {
@@ -1879,8 +1885,11 @@ function updateWarrior(state: GameState, unit: Unit, dt: number, playerTraveling
   }
   const anchor = defensiveAnchor(unit);
   if (anchor) {
-    const enemy = nearestEnemy(state, unit, EnemyQuery.Defensive, 3 + maximumUnitRange(unit), true, target =>
-      (isBuilding(target) ? edgeDistance(anchor, target) : distance(anchor, target)) <= 3 + unitAttackRange(state.world, unit, target));
+    const enemy = nearestEnemy(state, unit, EnemyQuery.Defensive, DEFENSIVE_RADIUS * 2 + maximumUnitRange(unit), true, target =>
+      !isBuilding(target) && (distance(anchor, target) <= DEFENSIVE_RADIUS
+        || unit.defensiveThreat?.target === target.id && unit.defensiveThreat.until > state.time
+          && distance(anchor, target) <= DEFENSIVE_RADIUS + unitAttackRange(state.world, unit, target)));
+    // A vanished or escaping enemy must never leave a stale pursuit route.
     if (enemy) { fight(state, unit, enemy, dt); return; }
     unit.target = undefined;
     if (distance(unit, anchor) > .12) moveUnit(state, unit, anchor, dt);
@@ -1919,7 +1928,8 @@ function updateWarrior(state: GameState, unit: Unit, dt: number, playerTraveling
 }
 function moveInFormation(state: GameState, unit: Unit, leader: Unit, dt: number): Point | undefined {
   const formation = retinueFormation(state, leader), goal = formation.goals.get(unit.id);
-  if (!goal) return;
+  if (!goal) { unit.levyAssembling = undefined; return; }
+  if (unit.kind === 'levyInfantry') unit.levyAssembling = distance(unit, goal) > .12 && distance(unit, goal) <= 2;
   // Continuously follow a nearby visible slot instead of waiting on an A*
   // refresh for each tile the leader crosses. Bent/blocked routes still use
   // normal pathfinding and all movement still respects occupied cells.
@@ -1937,6 +1947,7 @@ function moveInFormation(state: GameState, unit: Unit, leader: Unit, dt: number)
     if (direct) { unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0; }
   }
   if (gap > .12) moveUnit(state, unit, movementGoal, dt * pace, direct);
+  if (unit.kind === 'levyInfantry') unit.levyAssembling = distance(unit, goal) > .12 && distance(unit, goal) <= 2;
   if (distance(unit, goal) < 1.5) unit.facing = formation.heading;
   return goal;
 }
@@ -2170,7 +2181,7 @@ function separateUnits(state: GameState, oldPositions: Map<number, Point>, activ
       const correction = Math.min(0.08, (spacing - d) * .55);
       const x = unit.x + Math.cos(angle) * correction, y = unit.y + Math.sin(angle) * correction;
       const anchor = defensiveAnchor(unit);
-      if (anchor && distance(anchor, { x, y }) > Math.max(3, distance(anchor, unit))) continue;
+      if (anchor && distance(anchor, { x, y }) > Math.max(DEFENSIVE_RADIUS, distance(anchor, unit))) continue;
       const next = unit.path?.[0];
       // Diagonal corner passages require exact alignment. A cosmetic spacing
       // nudge must not move a traveler off its currently traversable segment.
@@ -2351,6 +2362,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
   });
   runRecurringWork(state, 'courier-wakeups', dt, () => prepareCourierUpdates(state));
   const activeUnits = entityStore(state).units.query('active');
+  updateEnemyStrength(state);
   const profile = movementProfile(state), spatialStarted = profile ? performance.now() : 0;
   beginUnitFrame(state);
   if (profile) profile.spatialMs += performance.now() - spatialStarted;
@@ -2361,11 +2373,16 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
   // Imported/direct retreat orders and new recruits obey the same rout as a
   // freshly broken Leader, before any formation or unit can move this step.
   for (const leader of entityStore(state).units.query('leader')) routLeaderRetinue(state, leader);
+  updateMarauderFormations(state, (observer, target) => targetInSight(state, observer, target));
+  for (const unit of entityStore(state).units.query('soldier')) if (unit.kind === 'levyInfantry') unit.levyAssembling = undefined;
   advanceInfantryFormations(state, dt,
     faction => state.multiplayer ? playerInput(state, faction) : faction === 0 ? input : NO_INPUT,
     (unit, goal, speed, elapsed) => {
       clearFriendlyYield(state, unit);
+      const slot = infantryFormationGoal(state, unit) ?? goal;
+      if (unit.kind === 'levyInfantry') unit.levyAssembling = distance(unit, slot) > .12 && distance(unit, slot) <= 2;
       moveUnit(state, unit, goal, elapsed * speed / Math.max(.01, unit.speed), true, false, true);
+      if (unit.kind === 'levyInfantry') unit.levyAssembling = distance(unit, slot) > .12 && distance(unit, slot) <= 2;
       refreshIndexedUnit(state, unit);
     });
   const playerLeader = getLeader(state);
@@ -2381,7 +2398,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
       hostile: (a, b) => atWar(state, a, b),
       clearShot: (tower, from, target) => targetInSight(state, tower, target) && hasAttackContact(state, from, tower.faction, target, true, tower),
       shoot: (tower, from, target, attack) => {
-        launchJavelin(state, tower, from, target, attackDamage(attack, unitDefense(target)), 1.2);
+        launchJavelin(state, tower, from, target, attackDamage(attack, unitDefense(target)) * (tower.enemyStrengthMultiplier ?? 1), 1.2);
         if (isKeep(tower) || tower.kind === 'fort') Object.assign(state.projectiles![state.projectiles!.length - 1], { kind: 'arrow', towerArrow: true });
       },
     });
@@ -2390,7 +2407,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
       clearShot: (ballista, from, target) => !isBuilding(target) || !palaceDefenses(state, target).length
         ? targetInSight(state, ballista, target) && arrowLineClear(state, from, isBuilding(target) ? center(target) : target, target.id) : false,
       shoot: (ballista, from, target, attack) => {
-        launchJavelin(state, ballista, from, target, attackDamage(attack, isBuilding(target) ? buildingArmor(target, factionOf(state, target.faction)) : unitDefense(target)), .5);
+        launchJavelin(state, ballista, from, target, attackDamage(attack, isBuilding(target) ? buildingArmor(target, factionOf(state, target.faction)) : unitDefense(target)) * (ballista.enemyStrengthMultiplier ?? 1), .5);
         state.projectiles![state.projectiles!.length - 1].kind = 'ballistaBolt';
       },
     });
@@ -2402,7 +2419,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
         unit.cooldown = Math.max(0, unit.cooldown - dt);
         unit.attackTime = Math.max(0, unit.attackTime - dt);
         if (!unitDt) {
-          unit.moving = false;
+          if (!unit.infantryDrillLeader) unit.moving = false;
           // Keep firing at an already acquired, still-valid target on the
           // ordinary combat clock. This never selects a target or plans a path.
           if (unit.cooldown <= 0 && unit.attack > 0 && unit.order !== 'flee' && !unit.marauderRetreating) {
@@ -2805,8 +2822,8 @@ function validateBuildCellAt(state: GameState, kind: BuildingKind | 'clearTrees'
     return { ok: false, message: isHumanFaction(state, factionId) ? 'Build within 10 tiles of your leader.' : 'Build near your settlement.' };
   if (kind === 'bridge') {
     if (state.units.some(unit => unit.kind === 'sailboat' && unit.hp > 0
-      && Math.abs(unit.x - point.x - .5) < .7 && Math.abs(unit.y - point.y - .5) < .7))
-      return { ok: false, message: 'Move the sailboat before building a bridge here.' };
+      && galleyOverlapsTile(unit, point.x, point.y)))
+      return { ok: false, message: 'Move the galley before building a bridge here.' };
     const crossing = validateBridgeTile(state, point.x, point.y, factionId);
     if (!crossing.ok) return crossing;
   }
@@ -2861,7 +2878,6 @@ function validateBuildCellAt(state: GameState, kind: BuildingKind | 'clearTrees'
     fields: state.fields?.filter(field => !movingFarmIds.has(field.camp)) } : state;
   if (kind !== 'irrigation' && !homePlan?.farmMove && !wallFarmMove && (clearedSite.fields?.some(field => field.x === point.x && field.y === point.y) || isPendingCampField(clearedSite, point.x, point.y)))
     return { ok: false, message: 'Keep this field open.' };
-  if (!rebuilding && !sharedDefense && !residentialClearanceAllowed(state, kind, point.x, point.y, factionId)) return { ok: false, message: 'Leave a walking lane around houses.' };
   if (kind === 'road' && !gateRoad && !hasNeighboringRoad(state, point.x, point.y, { includeConstruction: true })) return { ok: false, message: 'Extend an existing road or bridge, or start from a ford.' };
   if (kind === 'irrigation' && !irrigationConnects(state, point.x, point.y))
     return { ok: false, message: 'Start irrigation beside freshwater or extend an existing ditch.' };

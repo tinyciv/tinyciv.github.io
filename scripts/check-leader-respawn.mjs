@@ -1,21 +1,26 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-const output='scratch/2026-11-05-leader-respawn';mkdirSync(output,{recursive:true});
+const output=process.env.CHECK_OUT||'scratch/2026-11-06-leader-respawn';mkdirSync(output,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 const page=await browser.newPage({viewport:{width:1280,height:800}});await page.routeWebSocket(/.*/,()=>{});
 const report={checks:[],errors:[]};page.on('pageerror',e=>report.errors.push(String(e)));
 const check=(name,pass,detail)=>{report.checks.push({name,pass:!!pass,...(!pass?{detail}:{})});console.log(`${pass?'PASS':'FAIL'} ${name}`);};
 try{
- await page.goto('http://127.0.0.1:5177');await page.waitForFunction(()=>window.__game&&document.documentElement.dataset.assets==='ready',{timeout:90000});
+ await page.goto(process.env.GAME_URL||'http://127.0.0.1:5189');await page.waitForFunction(()=>window.__game&&document.documentElement.dataset.assets==='ready',{timeout:90000});
  const ready=await page.evaluate(async()=>{
   const {createGame,getLeader}=await import('/src/game/simulation.ts'),{recordLeaderDeath}=await import('/src/game/leader-respawn.ts');
   const s=createGame({width:40,height:32,seed:'respawn-browser',source:'fixture',spawns:[{x:18.5,y:14.5}],tiles:Array.from({length:1280},()=>({terrain:'grassland',overlay:'none',elevation:.3,moisture:.5,food:3,production:1,gold:0,variation:.5}))});
   s.paused=true;s.speed=4;s.factions[0].gold=1000;const l=getLeader(s);l.leaderProgression.level=3;l.leaderProgression.skillPoints=2;
-  window.__game.replaceState(s);window.__game.renderer.center(s);l.hp=0;recordLeaderDeath(s,l);return s.factions[0].leaderRespawn.readyAtWallTime;
+  l.x=32.5;l.y=23.5;window.__game.replaceState(s);window.__game.renderer.center(s);
+  const renderer=window.__game.renderer,draw=renderer.draw.bind(renderer);window.__respawnFrames=[];let wasWaiting=false,started=false;
+  renderer.draw=(...args)=>{const waiting=!!s.factions[0].leaderRespawn;if(wasWaiting&&!waiting)started=true;wasWaiting=waiting;
+    if(started&&window.__respawnFrames.length<120)window.__respawnFrames.push({at:performance.now(),camera:{...renderer.camera}});return draw(...args);};
+  l.hp=0;recordLeaderDeath(s,l);return s.factions[0].leaderRespawn.readyAtWallTime;
  });
  await page.locator('#leader-respawn').waitFor({state:'visible'});
  const style=await page.locator('#leader-respawn').evaluate(e=>({filter:getComputedStyle(e).backdropFilter,text:e.textContent,animation:getComputedStyle(e.querySelector('.respawn-dots')).animationName}));
  check('Waiting overlay has grayscale, blur and animated dots',style.filter.includes('grayscale')&&style.filter.includes('blur')&&style.animation==='respawn-dots',style);
+ check('Hourglass is removed',await page.locator('.respawn-hourglass').count()===0);
  check('Death immediately deducts 200 gold',await page.evaluate(()=>window.__game.state.factions[0].gold===800));
  await page.screenshot({path:`${output}/waiting.png`});
  await page.waitForTimeout(Math.max(0,ready-Date.now()-1000));
@@ -25,6 +30,14 @@ try{
  check('Automatic respawn occurs after real deadline',after.time>=ready&&after.time-ready<2000,after.time-ready);
  check('Leader returns one level lower and game remains paused',after.l?.leaderProgression.level===2&&after.paused);
  check('Waiting overlay closes after respawn',await page.locator('#leader-respawn').isHidden());
+ const during=await page.evaluate(()=>({camera:{...window.__game.renderer.camera},leader:window.__game.state.units.find(u=>u.kind==='leader'&&u.hp>0)}));
+ const first=await page.evaluate(()=>window.__respawnFrames[0]);
+ check('Respawn starts at death location instead of snapping to settlement',Math.hypot(first.camera.x-32.5,first.camera.y-23.5)<.01,first);
+ await page.waitForTimeout(700);
+ const middle=await page.evaluate(()=>({...window.__game.renderer.camera}));
+ check('Camera moves toward respawn during the pan',Math.hypot(middle.x-during.leader.x,middle.y-during.leader.y)<Math.hypot(during.camera.x-during.leader.x,during.camera.y-during.leader.y),middle);
+ await page.waitForTimeout(950);
+ check('Camera arrives after the 1.5 second pan',await page.evaluate(()=>{const l=window.__game.state.units.find(u=>u.kind==='leader'&&u.hp>0),c=window.__game.renderer.camera;return Math.hypot(l.x-c.x,l.y-c.y)<.1;}));
  await page.screenshot({path:`${output}/returned.png`});
  check('No browser runtime errors',report.errors.length===0,report.errors);
 }finally{await browser.close();writeFileSync(`${output}/report.json`,JSON.stringify(report,null,2));}

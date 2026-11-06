@@ -44,7 +44,10 @@ export class PixiScene {
     sprite(art: BakedArt, x: number, y: number, scale = 1, alpha = 1): Sprite {
         const sprite = this.image(art.texture, x + art.x * scale, y + art.y * scale, art.width * scale, art.height * scale, alpha);
         if (art.rotation !== undefined && art.rotationPivot) {
-            sprite.pivot.set(art.rotationPivot.x - art.x, art.rotationPivot.y - art.y);
+            // Pivot is expressed in logical world-art pixels; sheet frames may be
+            // drawn at2× native scale, so convert it to texture-local pixels.
+            sprite.pivot.set((art.rotationPivot.x - art.x) * art.texture.width / art.width,
+                (art.rotationPivot.y - art.y) * art.texture.height / art.height);
             sprite.position.set(x + art.rotationPivot.x * scale, y + art.rotationPivot.y * scale);
             sprite.rotation = art.rotation;
         }

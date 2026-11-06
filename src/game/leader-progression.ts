@@ -55,8 +55,9 @@ export function awardLeaderXp(state: GameState, amount: number, factionId = play
     progress.level++; progress.skillPoints++; levels++;
   }
   if (levels) {
-    leader.maxHp = unitMaxHp(leader) + LEADER_LEVEL_HP_BONUS * levels;
-    leader.hp = Math.min(leader.maxHp, leader.hp + LEADER_LEVEL_HP_BONUS * levels);
+    const health = LEADER_LEVEL_HP_BONUS * levels * (leader.enemyStrengthMultiplier ?? 1);
+    leader.maxHp = unitMaxHp(leader) + health;
+    leader.hp = Math.min(leader.maxHp, leader.hp + health);
     leader.attack += LEADER_LEVEL_ATTACK_BONUS * levels;
   }
   return levels;
@@ -120,8 +121,9 @@ export function awardLeaderLevel(state: GameState, factionId: number): boolean {
   if (!leader) return false;
   const progress = leader.leaderProgression ??= initialLeaderProgression();
   progress.level++; progress.skillPoints++;
-  leader.maxHp = unitMaxHp(leader) + LEADER_LEVEL_HP_BONUS;
-  leader.hp = Math.min(leader.maxHp, leader.hp + LEADER_LEVEL_HP_BONUS);
+  const health = LEADER_LEVEL_HP_BONUS * (leader.enemyStrengthMultiplier ?? 1);
+  leader.maxHp = unitMaxHp(leader) + health;
+  leader.hp = Math.min(leader.maxHp, leader.hp + health);
   leader.attack += LEADER_LEVEL_ATTACK_BONUS;
   return true;
 }

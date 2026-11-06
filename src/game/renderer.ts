@@ -1,3 +1,4 @@
+import { damageNumberPose } from './combat-feedback';
 import { drawBraceShield } from './leader-ability-art';
 import { observationPostVisibleTo } from './observation-visibility';
 import { drawObservationCampfire, observationFireFrame, drawObservationSmoke } from './observation-post-art';
@@ -727,8 +728,14 @@ export class Renderer {
             if ((u.brace?.defense ?? 0) > 0) scene.sprite(art.paint(`brace:${s}`, { x: -s * .3, y: -s * .3, width: s * .6, height: s * .6 }, c => drawBraceShield(c, s)), x + s * .5, y - s * (.18 + Math.sin(time * 2) * .025));
             if ((u.kills ?? 0) >= 10) scene.sprite(art.paint(`veterancy:${veterancy(u)}:${s}`, { x: 0, y: -s * .5, width: s, height: s }, c => drawVeterancy(c, u, 0, 0, s)), x, y);
             if (u.hp < unitMaxHp(u)) {
-                const top = u.kind === 'worker' ? .04 : u.kind === 'leader' || u.kind === 'levyInfantry' || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'militia' ? -.035 : -.13;
-                this.healthBar(scene, x + s * .5, y + s * top, u.hp / unitMaxHp(u), s * .72);
+                const top = u.kind === 'sailboat' ? -.85 : u.kind === 'worker' ? .04 : u.kind === 'leader' || u.kind === 'levyInfantry' || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'militia' ? -.035 : -.13;
+                this.healthBar(scene, x + s * .5, y + s * top, u.hp / unitMaxHp(u), s * (u.kind === 'sailboat' ? 1.2 : .72));
+            }
+            if (u.hp > 0 && (u.lastDamagedAt ?? -Infinity) < (u.healerHealingAt ?? -Infinity) && state.time - (u.healerHealingAt ?? -Infinity) < .2) {
+                const pixel = Math.max(1, Math.round(s / 24)), cx = Math.round(x + s * .5), cy = Math.round(y - s * .35);
+                const pulse = .6 + .35 * Math.sin(time * 5 + u.id);
+                scene.graphics().rect(cx - pixel, cy - 3 * pixel, 2 * pixel, 6 * pixel)
+                    .rect(cx - 3 * pixel, cy - pixel, 6 * pixel, 2 * pixel).fill({ color: '#83ef91', alpha: pulse });
             }
             if (u.morale < 35 || u.order === 'flee') warning(x + s * .5 + Math.sin(time * 30) * 2, y - s * .3, '#fffbe9', '#5f5544');
             // Hold stays on the opposite side from the compact rank emblem.
@@ -917,14 +924,17 @@ export class Renderer {
             warning(ox + center.x * s, oy + (camp.y - .2) * s - Math.abs(Math.sin(time * 6)) * s * .35, '#ff3b30', '#1a1010', Math.max(18, s * 1.1), Math.max(3, s * .12), true);
         }
         for (const particle of state.particles) {
-            const hunt = particle.kind === 'hunt' && /^\+\d+ food$/.test(particle.text);
-            if (particle.life <= 0 || !hunt && !/^(?:\+\d+(?:\.\d+)? gold|[-−]\d+(?:\.\d+)? food)$/.test(particle.text) || !pointInSight(fog, particle.x, particle.y)) continue;
+            const damage = particle.kind === 'damage', hunt = (particle.kind === 'hunt' || particle.kind === 'food') && /^\+\d+ food$/.test(particle.text);
+            if (particle.life <= 0 || !damage && !hunt && !/^(?:\+\d+(?:\.\d+)? gold|[-−]\d+(?:\.\d+)? food)$/.test(particle.text) || !pointInSight(fog, particle.x, particle.y)) continue;
             const label = particle.text.replace(/ (?:gold|food)$/, '').replace('−', '-'), font = Math.round(Math.max(11, Math.min(16, s * .32)));
             const labelArt = art.paint(`reward:${label}:${particle.color}:${font}`, { x: -60, y: -24, width: 120, height: 28 }, c => {
                 c.font = gameFont(font, 700); c.textAlign = 'center'; c.textBaseline = 'bottom'; c.strokeStyle = '#1d211a'; c.lineWidth = 3; c.lineJoin = 'round';
                 c.strokeText(label, 0, 0); c.fillStyle = particle.color; c.fillText(label, 0, 0);
             });
-            scene.sprite(labelArt, ox + particle.x * s, oy + (particle.y - .8 - Math.max(0, 1.6 - particle.life) * .3) * s, 1, Math.min(1, particle.life / .5));
+            const pose = damage ? damageNumberPose(particle.life, particle.direction) : undefined;
+            scene.sprite(labelArt, Math.round(ox + (particle.x + (pose?.offset ?? 0)) * s),
+                Math.round(oy + (particle.y - .8 - (pose?.rise ?? Math.max(0, 1.6 - particle.life) * .3)) * s), 1,
+                pose?.alpha ?? Math.min(1, particle.life / .5));
         }
         // Player orders sit above fog; they disclose no terrain or rival plans.
         for (const order of state.treeClearings ?? []) if (order.faction === playerFaction(state) && visible(order)) {

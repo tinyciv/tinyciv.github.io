@@ -4,13 +4,15 @@ import { HOUSE_WELL_BOUNDS, HOUSE_WELL_OFFSET, sharedHouseForWell } from './hous
 import { sharedWallForTower, sharedTowerForWall } from './wall-towers';
 import { irrigationChannelDistance, irrigationConnections } from './irrigation-art';
 import { dockArtBounds, dockConstructionBounds } from './naval-art';
+import { galleyContainsPoint } from './galley-footprint';
 
-/** Match the upright figure above its footing, rather than a ground circle.
- * This affects pointing only; movement still occupies one full grid cell. */
+/** Match upright figures above their footing and the full oriented galley hull.
+ * This affects pointing only; physical boat clearance uses the same hull geometry. */
 export function unitAtPoint(state: GameState, point: Point): Unit | undefined {
   return state.units.filter(unit => {
     if (unit.hp <= 0 || unit.inside || !entityVisible(state, unit)) return false;
-    const boat = unit.kind === 'sailboat' || unit.aboardRiverTrade;
+    if (unit.kind === 'sailboat') return galleyContainsPoint(unit, point, .06);
+    const boat = unit.aboardRiverTrade;
     const dx = (point.x - unit.x) / (boat ? .5 : .46);
     const dy = (point.y - (unit.y - (boat ? 0 : .35))) / .6;
     return dx * dx + dy * dy <= 1;

@@ -572,7 +572,7 @@ describe('movement, construction and roads', () => {
 });
 
 describe('combat, morale and exploration', () => {
-  it('inflicts damage without creating floating hit numbers', () => {
+  it('shows rounded floating hit numbers for actual damage', () => {
     const state = game(), leader = getLeader(state)!;
     const victim = state.units.find(unit => unit.faction === 1 && unit.kind === 'warrior')!;
     state.factions[1].relation = 'war';
@@ -583,7 +583,10 @@ describe('combat, morale and exploration', () => {
     updateGame(state, 0.3, idle);
     expect(victim.hp).toBeLessThan(100);
     expect(leader.attackTime).toBeGreaterThan(0);
-    expect(state.particles.some(particle => /^[-−]\d+$/.test(particle.text))).toBe(false);
+    const hits = state.particles.filter(particle => particle.kind === 'damage');
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.every(particle => /^-\d+$/.test(particle.text))).toBe(true);
+    expect(hits.some(particle => particle.text === `-${Math.max(1, Math.round(100 - victim.hp))}`)).toBe(true);
   });
 
   it('awards loot for an exposed civilian and removes one resident from the victim’s city', () => {
@@ -599,11 +602,15 @@ describe('combat, morale and exploration', () => {
     expect(victim.hp).toBe(0);
     expect(state.factions[0].gold).toBe(gold + 8);
     expect(state.factions[1].population).toBe(population - 1);
-    expect(state.particles).toHaveLength(1);
-    expect(state.particles[0]).toMatchObject({ x: victim.x, y: victim.y, text: '+8 gold' });
-    const deathPosition = { x: state.particles[0].x, y: state.particles[0].y };
+    const loot = state.particles.filter(particle => particle.text === '+8 gold');
+    expect(loot).toHaveLength(1);
+    expect(loot[0]).toMatchObject({ x: victim.x, y: victim.y });
+    expect(state.particles.filter(particle => particle.kind === 'damage')).toEqual([
+      expect.objectContaining({ text: '-1' }),
+    ]);
+    const deathPosition = { x: loot[0].x, y: loot[0].y };
     advance(state, .5);
-    expect(state.particles[0]).toMatchObject(deathPosition);
+    expect(state.particles.find(particle => particle.text === '+8 gold')).toMatchObject(deathPosition);
     advance(state, 1.2);
     expect(state.particles).toHaveLength(0);
     expect(state.factions[0].gold).toBe(gold + 8);

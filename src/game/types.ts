@@ -124,6 +124,8 @@ export interface Building extends Point {
     hp: number;
     maxHp: number;
     capacity: number;
+    /** Applied computer difficulty; separate from fortification/research health. */
+    enemyStrengthMultiplier?: number;
     villageId?: number;
     /** Unmodified defensive health before layout and faction research bonuses. */
     defenseBaseMaxHp?: number;
@@ -247,6 +249,8 @@ export interface Unit extends Point {
     faction: number;
     villageId?: number;
     raiderEquipmentMultiplier?: number;
+    /** Applied difficulty factor; role conversion preserves the scaled health. */
+    enemyStrengthMultiplier?: number;
     villageNextWanderAt?: number;
     villageNextThinkAt?: number;
     villageThreatId?: number;
@@ -263,6 +267,10 @@ export interface Unit extends Point {
     range: number;
     order: UnitOrder;
     retinueStance?: RetinueStance;
+    /** Temporary collision-free arrival at a levy slot. */
+    levyAssembling?: boolean;
+    defensiveThreat?: { target: number; until: number };
+    healerHealingAt?: number;
     /** Palace recruits travel to their Leader before adopting the retinue stance. */
     joiningRetinue?: boolean;
     /** Persistent three-soldier squad; shared experience is mirrored in kills. */
@@ -456,6 +464,9 @@ export interface RaiderCamp extends Point {
     replacementAt?: number;
     /** One defender sortie per attacked structure per thirty-second episode. */
     defenderReadyAt?: Record<number, number>;
+    /** Damage and nearby civilization units refresh a short recruitment surge. */
+    pressureUntil?: number;
+    pressureUpdatedAt?: number;
 }
 export type VillageIdentity = 'growers' | 'merchants' | 'builders' | 'scholars';
 export type VillageRelation = 'neutral' | 'trade' | 'allied' | 'war';
@@ -547,6 +558,7 @@ export interface GoldLedgerEntry {
     outlays: Partial<Record<GoldOutlayCategory, number>>;
 }
 export interface Faction {
+    levyReadyAt?: number;
     leaderRespawn?: LeaderRespawnState;
     engineerRespawnAt?: number;
     /** Combat-destroyed walls and towers are reordered using normal resources. */
@@ -605,7 +617,9 @@ export interface Particle extends Point {
     text: string;
     color: string;
     life: number;
-    kind?: 'hunt';
+    kind?: 'hunt' | 'food' | 'damage';
+    duration?: number;
+    direction?: number;
 }
 /** Short-lived impact flecks, independent of floating gold rewards. */
 export interface BloodEffect extends Point {
@@ -697,6 +711,8 @@ export interface GameState {
     observationSmoke?: { x: number; y: number; faction: number; startedAt: number }[];
     /** Bandit spawn-rate and living-population multiplier; 1 is the default. */
     banditIntensity?: number;
+    /** Computer unit/building HP, damage and earned gold multiplier. */
+    enemyStrength?: number;
     defenseRebuilds?: import('./defense-rebuilding').DefenseRebuild[];
     /** Frozen spawn-clock origin and prior multiplier while intensity is zero. */
     banditSpawnPause?: { at: number; intensity: number };

@@ -23,9 +23,9 @@ export function fortificationArmorMultiplier(building: DefensiveSite): number {
  * research, or support preserves wounds and never compounds an earlier bonus. */
 export function applyDefensiveStats(building: Building, faction: Pick<Faction, 'research'> | undefined): void {
   if (!defensive(building)) return;
-  const base = building.defenseBaseMaxHp ??= building.maxHp;
+  const base = building.defenseBaseMaxHp ??= building.maxHp / (building.enemyStrengthMultiplier ?? 1);
   const layout = building.fortificationHealthMultiplier ?? (building.kind === 'wall' || building.kind === 'fort' ? STONE_WALL_HEALTH_MULTIPLIER : 1);
-  const maximum = base * layout * defenseHealthMultiplier(faction);
+  const maximum = base * layout * defenseHealthMultiplier(faction) * (building.enemyStrengthMultiplier ?? 1);
   if (maximum === building.maxHp) return;
   const fraction = building.maxHp > 0 ? Math.max(0, Math.min(1, building.hp / building.maxHp)) : 0;
   building.maxHp = maximum;

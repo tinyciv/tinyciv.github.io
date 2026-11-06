@@ -124,7 +124,7 @@ describe('Leader construction', () => {
     for (const [x, y] of [[18, 7], [20, 7], [19, 6], [19, 8]]) extra(state, 'wall', x, y);
     expect(validateBuildAt(state, 'house', 19, 7).ok).toBe(true);
     expect(validateBuildAt(state, 'wall', 12, 7).ok).toBe(true);
-    expect(validateBuildAt(state, 'woodenTower', 12, 7).ok).toBe(false);
+    expect(validateBuildAt(state, 'woodenTower', 12, 7).ok).toBe(true);
     expect(state.buildings.filter(b => b.kind === 'house').every(b => b.capacity === 2 && b.construction?.waitingForBuilder
       && b.construction.paidGold === 65 && b.construction.duration === 40 / 3)).toBe(true);
   });

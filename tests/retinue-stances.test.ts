@@ -34,14 +34,33 @@ const enemyAt = (state: GameState, x: number, y: number) => {
 };
 
 describe('retinue stances and explicit attack orders', () => {
-  it('defends within three tiles of the original position and returns after combat', () => {
+  it('defends within five tiles of the original position and returns after combat', () => {
     const state = fixture(), warrior = state.units[1]; entityStore(state).units.replace([state.units[0], warrior]);
-    const start = { x: warrior.x, y: warrior.y }, enemy = enemyAt(state, 21.8, 18.5);
+    const start = { x: warrior.x, y: warrior.y }, enemy = enemyAt(state, 23.3, 18.5);
     setRetinueStance(state, 'defensive');
-    for (let i = 0; i < 80; i++) { updateGame(state, .05, idle); expect(distance(warrior, start)).toBeLessThanOrEqual(3.00001); }
-    expect(enemy.hp).toBeLessThan(1000); expect(warrior.x).toBeGreaterThan(start.x + 1);
+    for (let i = 0; i < 80; i++) { updateGame(state, .05, idle); expect(distance(warrior, start)).toBeLessThanOrEqual(5.00001); }
+    expect(enemy.hp).toBeLessThan(1000); expect(warrior.x).toBeGreaterThan(start.x + 3);
     enemy.x = 28.5; updateFog(state); advance(state, 2);
     expect(distance(warrior, start)).toBeLessThan(.2);
+  });
+
+  it('ignores enemies beyond the five-tile post, then retaliates against an attacker without leaving its leash', () => {
+    const state = fixture(), [leader, warrior] = state.units;
+    entityStore(state).units.replace([leader, warrior]); leader.attack = 0; leader.cooldown = 1e9;
+    state.factions[0].nextRetinueAt = 1e9;
+    const anchor = { x: warrior.x, y: warrior.y }, enemy = enemyAt(state, anchor.x + 6, anchor.y);
+    setRetinueStance(state, 'defensive'); advance(state, 1);
+    expect(distance(warrior, anchor)).toBeLessThan(.01); expect(enemy.hp).toBe(1000);
+    state.projectiles = [{ x: enemy.x, y: enemy.y, start: { x: enemy.x, y: enemy.y }, end: { x: leader.x, y: leader.y },
+      attacker: enemy.id, target: leader.id, faction: enemy.faction, damage: 1, duration: .01, elapsed: 0, kind: 'arrow' }];
+    let retaliated = false;
+    for (let i = 0; i < 70; i++) {
+      updateGame(state, .05, idle); expect(distance(warrior, anchor)).toBeLessThanOrEqual(5.00001);
+      retaliated ||= warrior.target === enemy.id;
+    }
+    expect(retaliated).toBe(true); expect(enemy.hp).toBeLessThan(1000);
+    enemy.x = anchor.x + 10; updateFog(state); advance(state, 3);
+    expect(distance(warrior, anchor)).toBeLessThan(.2);
   });
 
   it('holds against enemies and stays at its post while the Leader passes', () => {

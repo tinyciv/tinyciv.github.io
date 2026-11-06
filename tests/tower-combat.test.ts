@@ -156,7 +156,8 @@ describe('wooden guard tower combat', () => {
     expect(victim.hp).toBe(0);
     expect(state.factions[0].gold).toBe(506);
     expect(state.bloodEffects).toHaveLength(1);
-    expect(state.particles).toHaveLength(1);
+    expect(state.particles.filter(particle => particle.kind !== 'damage')).toHaveLength(1);
+    expect(state.particles.some(particle => particle.kind === 'damage')).toBe(true);
     updateGame(state, 1 / 3, idle); // Death removal uses the capped maintenance scan.
     expect(state.units).not.toContain(victim);
   });

@@ -26,8 +26,9 @@ import { drawGuardPost } from './guard-post-art';
 import { drawWildlife } from './wildlife-art';
 import { drawMerchant } from './merchant-art';
 import { HOUSE_WELL_OFFSET } from './house-wells';
-import { drawDock, drawSailboat, drawLeaderRowboat } from './naval-art';
+import { drawDock, drawSailboat } from './naval-art';
 import { dockFootprint } from './dock';
+import { drawLeaderGalley } from './galley-art';
 export { buildingArtTop } from './types';
 
 /** Original Puny scenery and buildings, with shared faction-color masks. */
@@ -51,7 +52,7 @@ export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number,
     drawAuxiliary(c, unit, time, color);
     c.restore(); return;
   }
-  if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderRowboat(c, unit, passenger, x, y, size, color); return; }
+  if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderGalley(c, unit, passenger, x, y, size, time, color); return; }
   if (unit.aboardRiverTrade) { if (!unit.inside) drawSailboat(c, unit, x, y, size); return; }
   if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
   setup(c, x, y, size);

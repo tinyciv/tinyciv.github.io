@@ -7,7 +7,8 @@ import { pointInSight, updateFog } from './fog';
 import { fogRaidProfile } from './fog-raids';
 import { campSpawnTiles, MAX_LIVE_RAIDERS, RAIDER_COLOR, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { ensureMarauderLeaders } from './marauder-leaders';
-import { raiderEquipmentMultiplier } from './raider-pressure';
+import { marauderBaseStats, raiderEquipmentMultiplier } from './raider-pressure';
+import { refreshRaiderCampPressure } from './raider-camp-pressure';
 import { setSoldierRole } from './archery';
 import { selectRaidTarget } from './raid-targeting';
 import { buildingReady, buildingWidth, buildingHeight, distance, isSoldier, isWallKind, type Building, type GameState, type MarauderPack, type Point, type RaiderCamp, type Unit } from './types';
@@ -77,11 +78,12 @@ function assignParty(state: GameState, target: Building, units: Unit[], origin: 
 }
 function recruit(state: GameState, points: readonly Point[], defendingSoldiers: number, defense = false): Unit[] {
   const profile = fogRaidProfile(defendingSoldiers, state.time);
+  const defenderMinimum = marauderBaseStats(55, 8, 0);
   let id = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
   return points.map((point, index) => {
     const unit: Unit = { id: ++id, kind: 'warrior', faction: -2, ...point,
-      hp: defense ? Math.max(55, profile.hp) : profile.hp, maxHp: defense ? Math.max(55, profile.hp) : profile.hp,
-      attack: defense ? Math.max(8, profile.attack) : profile.attack, defense: profile.defense,
+      hp: defense ? Math.max(defenderMinimum.hp, profile.hp) : profile.hp, maxHp: defense ? Math.max(defenderMinimum.hp, profile.hp) : profile.hp,
+      attack: defense ? Math.max(defenderMinimum.attack, profile.attack) : profile.attack, defense: profile.defense,
       morale: 100, speed: 2.35, range: 1.1, order: 'raid', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
       moving: false, facing: 0, attackTime: 0, bornAt: state.time, raiderEquipmentMultiplier: raiderEquipmentMultiplier(state.time) };
     // Retain two-thirds of the former archer assignments across small parties.
@@ -177,7 +179,9 @@ export function initializeRaiderSkirmishes(state: GameState): void {
 export function defendRaiderCamp(state: GameState, building: Building, attacker: Pick<Unit, 'faction'> & Point): number {
   if (!banditIntensity(state) || building.faction !== -2 || building.raiderCamp === undefined || attacker.faction < 0) return 0;
   const camp = state.raiderCamps?.find(camp => camp.id === building.raiderCamp);
-  if (!camp || !raiderCampActive(state, camp) || (camp.defenderReadyAt?.[building.id] ?? -Infinity) > state.time) return 0;
+  if (!camp || !raiderCampActive(state, camp)) return 0;
+  refreshRaiderCampPressure(state, camp);
+  if ((camp.defenderReadyAt?.[building.id] ?? -Infinity) > state.time) return 0;
   (camp.defenderReadyAt ??= {})[building.id] = banditSpawnDeadline(state, RAIDER_DEFENDER_COOLDOWN);
   const count = 2 + Math.floor(random(state) * 4);
   const target: Building = { id: -1, kind: 'house', faction: attacker.faction, x: attacker.x, y: attacker.y, hp: 1, maxHp: 1, capacity: 0 };

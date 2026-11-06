@@ -100,9 +100,9 @@ describe('work avoided by retained navigation inputs', () => {
       const reads = hp.mock.calls.length;
       for (let i = 0; i < 20; i++) expect(sailingNavigation(state, boat).cell(14, 12)).toBe(false);
       expect(hp).toHaveBeenCalledTimes(reads);
-      state.units.find(unit => unit.id === 600)!.x = 17.5;
+      state.units.find(unit => unit.id === 600)!.x = 18;
       expect(sailingNavigation(state, boat).cell(16, 12)).toBe(true);
-      expect(sailingNavigation(state, boat).cell(17, 12)).toBe(false);
+      expect(sailingNavigation(state, boat).cell(17, 12)).toBe(false); // The stern occupies the second hull cell.
       Object.defineProperty(building, 'hp', { value: 0, writable: true, configurable: true });
       invalidateNavigation(state);
       expect(sailingNavigation(state, boat).cell(14, 12)).toBe(true);

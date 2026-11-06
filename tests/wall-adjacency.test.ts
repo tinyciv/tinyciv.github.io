@@ -80,11 +80,13 @@ describe('buildings adjoining walls', () => {
     }
   });
 
-  it.each(['well', 'monument', 'woodenTower'] as const)('allows houses to fill parcels beside an existing %s without changing its later-construction rules', kind => {
+  it.each(['well', 'monument', 'woodenTower'] as const)('allows house adjacency in either construction order while rejecting duplicate %s footprints', kind => {
     const state = fixture(); entityStore(state).buildings.add(structure(3, kind, 13, 10));
     expect(validateBuildAt(state, 'house', 12, 10).ok).toBe(true);
     entityStore(state).buildings.replace([state.buildings[0], structure(4, 'house', 12, 10)]);
-    expect(validateBuildAt(state, kind, 13, 10).ok).toBe(false);
+    expect(buildAt(state, kind, 13, 10).ok).toBe(true);
+    expect(validateBuildAt(state, kind, 13, 10)).toEqual({ ok: false, message: 'Tile occupied.' });
+    if (kind !== 'well') expect(validateBuildAt(state, kind, 12, 10)).toEqual({ ok: false, message: 'Tile occupied.' });
   });
 
   it('finishes an adjoining house through a reachable face without removing wall collision', () => {

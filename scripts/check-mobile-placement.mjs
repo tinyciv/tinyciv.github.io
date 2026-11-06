@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-const output = 'scratch/2026-11-05-mobile-placement'; mkdirSync(output, {recursive:true});
+const output = process.env.CHECK_OUT || 'scratch/2026-11-06-mobile-placement'; mkdirSync(output, {recursive:true});
 const browser = await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 const report = {checks:[],errors:[]};
 const check=(name,pass,detail)=>{ report.checks.push({name,pass:!!pass,...(!pass?{detail}:{})}); console.log(`${pass?'PASS':'FAIL'} ${name}${pass?'':` ${JSON.stringify(detail)}`}`); };
@@ -8,7 +8,7 @@ async function open(mobile) {
  const context=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:mobile,hasTouch:mobile});
  const page=await context.newPage(); await page.routeWebSocket(/.*/,()=>{});
  page.on('pageerror', e=>report.errors.push(e.stack||String(e)));
- await page.goto('http://127.0.0.1:5177'); await page.waitForFunction(()=>document.documentElement.dataset.assets==='ready' && window.__game,{timeout:90000});
+ await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5189'); await page.waitForFunction(()=>document.documentElement.dataset.assets==='ready' && window.__game,{timeout:90000});
  await page.evaluate(async()=>{
    const {createGame,getLeader}=await import('/src/game/simulation.ts');
    const {entityStore}=await import('/src/game/entity-store.ts');
@@ -29,13 +29,13 @@ try {
  const point=async(x,y)=>page.evaluate(({x,y})=>window.__game.renderer.screenPoint({x,y}),{x,y});
  await page.keyboard.press('b');await page.keyboard.press('r');
  let a=await point(18.5,11.5),b=await point(24.5,11.5);
- await page.mouse.click(a.x,a.y);await page.waitForTimeout(100);
- check('First click anchors without constructing',await page.evaluate(()=>window.__game.state.buildings.filter(b=>b.kind==='road').length===1));
+ await page.mouse.move(a.x,a.y);await page.mouse.down();await page.waitForTimeout(100);
+ check('Desktop press anchors without constructing',await page.evaluate(()=>window.__game.state.buildings.filter(b=>b.kind==='road').length===1));
  await page.mouse.move(b.x,b.y);await page.waitForTimeout(150);
  const preview=await page.evaluate(()=>window.__game.renderer.buildPreview);
  check('Adaptive preview goes around occupied monument',preview.length>7&&!preview.some(p=>p.x===21&&p.y===11),preview);
- await page.mouse.click(b.x,b.y);await page.waitForTimeout(150);
- check('Second click constructs the continuous detour',await page.evaluate(()=>window.__game.state.buildings.filter(b=>b.kind==='road').length>6));
+ await page.mouse.up();await page.waitForTimeout(150);
+ check('Desktop drag release constructs the continuous detour',await page.evaluate(()=>window.__game.state.buildings.filter(b=>b.kind==='road').length>6));
  await page.screenshot({path:`${output}/desktop-route.png`});await context.close();
  const mobile=await open(true),p=mobile.page;
  await p.evaluate(()=>{window.__game.state.paused=false;});await p.waitForTimeout(100);

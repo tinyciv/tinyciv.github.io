@@ -202,8 +202,9 @@ describe('camp activity and small raids', () => {
       expect(Math.floor(unit.x) === building.x && Math.floor(unit.y) === building.y).toBe(false);
     }
     expect(defendRaiderCamp(state, building, attacker)).toBe(0);
-    state.time = 29.99; expect(defendRaiderCamp(state, building, attacker)).toBe(0);
-    state.time = 30; expect(defendRaiderCamp(state, building, attacker)).toBeGreaterThanOrEqual(2);
+    // The first attack grants ten seconds at double recruitment speed.
+    state.time = 19.99; expect(defendRaiderCamp(state, building, attacker)).toBe(0);
+    state.time = 20; expect(defendRaiderCamp(state, building, attacker)).toBeGreaterThanOrEqual(2);
     expect(defendRaiderCamp(state, state.buildings[2], attacker)).toBeGreaterThanOrEqual(2);
   });
 

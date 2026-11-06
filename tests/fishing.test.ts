@@ -3,7 +3,7 @@ import { ECONOMY_INTERVAL } from '../src/game/economy-constants';
 import { entityStore } from '../src/game/entity-store';
 import {
   FISH_FOOD, FISH_RESPAWN_MEAN_SECONDS, FISHING_BOAT_CAPACITY, FISHING_BOAT_REPLACE_SECONDS,
-  FISHING_BOAT_SPEED, FISHING_MAX_ZONES, FISHING_ZONE_CAPACITY, FISHING_ZONE_POPULATION,
+  FISHING_BOAT_SPEED, FISHING_BOAT_TURN_SPEED, FISHING_MAX_ZONES, FISHING_ZONE_CAPACITY, FISHING_ZONE_POPULATION,
   fishingCityFoodPerEconomyCycle, fishingNavigationStats, initializeFishing, updateFishing,
   type FishingFish,
 } from '../src/game/fishing';
@@ -54,6 +54,8 @@ describe('finite natural fishing supply', () => {
     state.time = 1;
     withSimulationReads(state, () => updateFishing(state, 0));
     expect(boat.phase).toBe('outbound');
+    // Test an already aligned voyage; launch turning deliberately takes time.
+    boat.facing = Math.atan2(boat.path[0].y - boat.y, boat.path[0].x - boat.x); boat.forwardSpeed = FISHING_BOAT_SPEED;
     const boats = state.fishing!.boats, searchCount = fishingNavigationStats(state).fishSearches;
     const start = { x: boat.x, y: boat.y };
     for (let i = 1; i <= 18; i++) {
@@ -179,6 +181,20 @@ describe('finite natural fishing supply', () => {
 });
 
 describe('automatic dock fishing boats', () => {
+  it('waits for a berth when galley ends occupy all moorings, then launches after one clears', () => {
+    const state = fixture();
+    const vessel = { kind: 'sailboat' as const, faction: 0, y: 4.5, hp: 100, maxHp: 100, morale: 100,
+      attack: 0, defense: 0, speed: 3, range: 0, order: 'hold' as const, cooldown: 0,
+      lastCombat: -60, moving: false, facing: 0, attackTime: 0 };
+    const left = { ...vessel, id: 100, x: 3.75 }, right = { ...vessel, id: 101, x: 7.25 };
+    entityStore(state).units.add(left, right);
+    updateFishing(state, 0);
+    expect(state.fishing!.boats).toHaveLength(0);
+    left.x = 2.5; state.time += 1; updateFishing(state, 0);
+    expect(state.fishing!.boats).toHaveLength(1);
+    expect(state.fishing!.boats[0].home).toEqual({ x: 4.5, y: 4.5 });
+  });
+
   it('still physically catches a moving fish with long simulation steps and delivers its unchanged yield', () => {
     const { state } = controlled(); addFish(state, 10.5, 6.5);
     advance(state, 30, 1);
@@ -246,6 +262,48 @@ describe('automatic dock fishing boats', () => {
 });
 
 describe('water route correctness and caching', () => {
+  it('recovers from momentum drifting outside a dock corner instead of steering into it forever', () => {
+    const { state, boat } = controlled();
+    Object.assign(boat, { x: 6.0060018274, y: 4.9572622443, facing: 2.7956978805, forwardSpeed: 0,
+      cargo: 10, phase: 'returning', path: [{ x: 4.5, y: 5.5 }, { x: 4.5, y: 4.5 }] });
+    for (let step = 0; step < 300; step++) {
+      const before = { x: boat.x, y: boat.y }; advance(state, .05, .05);
+      expect(distance(before, boat)).toBeLessThanOrEqual(FISHING_BOAT_SPEED * .05 + .00001);
+      expect(Math.floor(boat.x) === 5 && Math.floor(boat.y) === 4).toBe(false);
+    }
+    expect(state.factions[0].food).toBe(10); expect(boat.cargo).toBe(0);
+    expect(distance(boat, boat.home)).toBeLessThan(.04);
+  });
+
+  it.each([false, true])('turns gradually and advances along its bow through a full fishing trip (narrow elbow: %s)', narrow => {
+    const world = fixture();
+    if (narrow) {
+      world.world.tiles.forEach(tile => tile.terrain = 'grassland');
+      for (let y = 4; y <= 10; y++) world.world.tiles[y * 24 + 4].terrain = 'river';
+      for (let x = 4; x <= 14; x++) world.world.tiles[10 * 24 + x].terrain = 'river';
+      world.world.tiles[4 * 24 + 5].terrain = 'river'; // The dock's water footing.
+      markWorldChanged(world.world, 'geometry');
+    }
+    const { state, boat } = controlled(world); addFish(state, 14.5, 10.5);
+    boat.facing = -Math.PI / 2; const start = { x: boat.x, y: boat.y }; let turningSamples = 0, movingSamples = 0;
+    for (let step = 0; step < 3000 && state.factions[0].food === 0; step++) {
+      const previous = { x: boat.x, y: boat.y, facing: boat.facing }; advance(state, .02, .02);
+      const turn = Math.atan2(Math.sin(boat.facing - previous.facing), Math.cos(boat.facing - previous.facing));
+      expect(Math.abs(turn)).toBeLessThanOrEqual(FISHING_BOAT_TURN_SPEED * .02 + 1e-6);
+      if (Math.abs(turn) > .001) turningSamples++;
+      const dx = boat.x - previous.x, dy = boat.y - previous.y, moved = Math.hypot(dx, dy);
+      if (moved > .0001) {
+        movingSamples++;
+        expect(dx * Math.cos(boat.facing) + dy * Math.sin(boat.facing)).toBeGreaterThanOrEqual(-1e-7);
+        expect(Math.abs(dx * Math.sin(boat.facing) - dy * Math.cos(boat.facing)) / moved).toBeLessThan(.04);
+      }
+      expect(WATER.has(state.world.tiles[Math.floor(boat.y) * 24 + Math.floor(boat.x)].terrain)).toBe(true);
+      if (step === 24) expect(distance(boat, start)).toBeLessThan(.01); // Rotate away from the bank first.
+    }
+    expect(turningSamples).toBeGreaterThan(50); expect(movingSamples).toBeGreaterThan(50);
+    expect(state.factions[0].food).toBe(FISH_FOOD); expect(distance(boat, boat.home)).toBeLessThan(.04);
+  });
+
   it('replans a newly blocked route in transit without crossing the new bridge', () => {
     const { state, boat } = controlled(); addFish(state, 15.5, 5.5); advance(state, .8);
     const barrier: Building[] = [];

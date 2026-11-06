@@ -56,8 +56,10 @@ const leaderFor = (state: GameState, faction: number): Unit | undefined =>
   entityStore(state).units.query('leader').find(unit => unit.faction === faction && unit.hp > 0);
 function available(leader: Unit): boolean { return leader.hp > 0 && !leader.inside && leader.embarkedOn === undefined && leader.boardingBoat === undefined && leader.order !== 'flee'; }
 const eligible = (unit: Unit, leader: Unit): boolean => unit.faction === leader.faction && isSoldier(unit) && unit.hp > 0
+  && unit !== leader
   && !unit.inside && !unit.training && !unit.routed && unit.order !== 'flee' && unit.embarkedOn === undefined && unit.boardingBoat === undefined
-  && !unit.garrison && unit.fort === undefined && unit.guardPost === undefined && unit.villageId === undefined && unit.marauderPack === undefined
+  && !unit.garrison && unit.fort === undefined && unit.guardPost === undefined && unit.villageId === undefined
+  && (leader.marauderLeader ? unit.marauderPack === leader.marauderPack && !unit.marauderLeader : unit.marauderPack === undefined)
   && (!unit.joiningRetinue || distance(unit, leader) <= 10);
 
 export function infantryFormationSoldierCount(state: GameState, faction = playerFaction(state)): number {
@@ -70,7 +72,7 @@ export function infantryFormationSoldierCount(state: GameState, faction = player
 export function enforceInfantryFormationStrength(state: GameState, faction?: number): boolean {
   let collapsed = false;
   for (const leader of state.units) {
-    if (leader.kind !== 'leader' || !leader.infantryFormation?.active || !available(leader)
+    if (leader.kind !== 'leader' && !leader.marauderLeader || !leader.infantryFormation?.active || !available(leader)
       || faction !== undefined && leader.faction !== faction) continue;
     const members = state.units.filter(unit => eligible(unit, leader));
     if (members.length >= INFANTRY_FORMATION_MIN_REMAINING) continue;
@@ -358,10 +360,11 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
     enforceInfantryFormationStrength(state);
     for (const unit of state.units) unit.infantryDrillLeader = undefined;
   }
-  for (const leader of entityStore(state).units.query('leader')) {
-    if (leader.kind !== 'leader' || !leader.infantryFormation?.active) continue;
+  const commanders = [...entityStore(state).units.query('leader'), ...state.units.filter(unit => unit.marauderLeader && unit.infantryFormation?.active)];
+  for (const leader of commanders) {
+    if (!leader.infantryFormation?.active) continue;
     const form = leader.infantryFormation, previousHeading = form.heading;
-    if (!infantryFormationActive(state, leader.faction)) { form.active = false; continue; }
+    if (leader.marauderLeader ? !available(leader) : !infantryFormationActive(state, leader.faction)) { form.active = false; continue; }
     const rt = runtime(state, leader), think = !simulationReadsActive(state) || decisionDue(rt.planning, state.time, leader.id);
     if (think) {
       rt.members = (simulationReadsActive(state) ? entityStore(state).units.query('soldier') : state.units).filter(unit => eligible(unit, leader));

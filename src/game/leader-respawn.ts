@@ -22,6 +22,8 @@ export function recordLeaderDeath(state: GameState, leader: Unit, now = Date.now
   const citySurvives = state.buildings.some(building => building.kind === 'palace' && building.faction === leader.faction && buildingReady(building));
   faction.defeated = !citySurvives;
   if (citySurvives) faction.leaderRespawn = { readyAtWallTime: now + LEADER_RESPAWN_MILLISECONDS, progression: progress,
-    maxHp: Math.max(1, unitMaxHp(leader) - (lostLevel ? LEADER_LEVEL_HP_BONUS : 0)),
+    // Respawn creates a fresh entity; store its unscaled maximum so the live
+    // difficulty setting is applied once, even if it changes during the wait.
+    maxHp: Math.max(1, unitMaxHp(leader) / (leader.enemyStrengthMultiplier ?? 1) - (lostLevel ? LEADER_LEVEL_HP_BONUS : 0)),
     attack: leader.attack - (lostLevel ? LEADER_LEVEL_ATTACK_BONUS : 0), defense: leader.defense, position: { x: leader.x, y: leader.y } };
 }

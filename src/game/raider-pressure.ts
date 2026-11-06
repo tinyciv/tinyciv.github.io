@@ -8,6 +8,12 @@ export const RAIDER_MIN_WAVE_INTERVAL = 14;
  * remain independent. Applied after armor so minimum hits also fall by 15%. */
 export const RAIDER_ATTACK_MULTIPLIER = .85;
 
+/** Halve the shortfall relative to an untrained faction warrior. The existing
+ * raider damage factor is included so the attack gap is halved after it too. */
+export function marauderBaseStats(hp: number, attack: number, defense: number): { hp: number; attack: number; defense: number } {
+  return { hp: (hp + 100) / 2, attack: (attack + 17 / RAIDER_ATTACK_MULTIPLIER) / 2, defense: (defense + 4) / 2 };
+}
+
 function pressureProgress(elapsedSeconds: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0) / RAIDER_EQUIPMENT_RAMP_SECONDS);
 }

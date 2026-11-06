@@ -46,13 +46,20 @@ function criticalStructureQuery(buildings: StructureSnapshot[], width: number): 
  * immediately. The exact navigation/collision caches are never throttled. */
 function criticalStructures(before: StructureSnapshot[], after: StructureSnapshot[], width: number): boolean {
   const critical = criticalStructureQuery([...before, ...after], width);
+  // Ordered roads immediately open friendly wall gates; paving bonuses still
+  // wait for completion. Other solid footprints only block after work starts.
+  const affectsTravel = (building: StructureSnapshot): boolean => building.kind === 'road'
+    ? building.alive : building.present || building.ready;
   const old = new Map(before.map(building => [building.id, building]));
   for (const building of after) {
     const previous = old.get(building.id); old.delete(building.id);
     if (previous && unchanged(previous, building.entity)) continue;
-    if (critical(building) || previous && critical(previous)) return true;
+    // An unstarted footprint is reserved for placement, but still pathable.
+    // Keep the existing distance maps until work begins and it becomes solid.
+    if (critical(building) && affectsTravel(building)
+      || previous && critical(previous) && affectsTravel(previous)) return true;
   }
-  return [...old.values()].some(critical);
+  return [...old.values()].some(building => critical(building) && affectsTravel(building));
 }
 
 function publish(cache: TravelCache): void {
@@ -136,8 +143,11 @@ export function farmWalkingDistance(distances: Float32Array, width: number, x: n
 /** Farms belong to the city their courier can reach most easily. Isolated
  * farms keep a nearest-city assignment so the worker can wait for access. */
 export function farmCityQuery(state: GameState, faction: number): (farm: Pick<Building, 'x' | 'y'>) => Building | undefined {
-  const palaces = state.buildings.filter(palace => palace.kind === 'palace' && palace.faction === faction && buildingReady(palace))
-    .map(palace => ({ palace, distances: palaceWalkingDistances(state, palace) }));
+  const cities = state.buildings.filter(palace => palace.kind === 'palace' && palace.faction === faction && buildingReady(palace));
+  // With one city every field has the same owner, including unreachable fields
+  // waiting for access. No world-wide route search can change that choice.
+  if (cities.length <= 1) return () => cities[0];
+  const palaces = cities.map(palace => ({ palace, distances: palaceWalkingDistances(state, palace) }));
   return farm => {
     let best: Building | undefined, bestWalking = Infinity, bestDirect = Infinity;
     for (const { palace, distances } of palaces) {

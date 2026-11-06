@@ -1,0 +1,178 @@
+{
+  "method": "Synchronous house preview/order CPU after one HUD city-summary and worker pass; alternating frozen/current engines. Includes actual farm relocation, derived yields and worker reconciliation. No rendering or live FPS. Fresh state per purchase.",
+  "cpu": "Apple M3 Pro",
+  "rounds": 6,
+  "fixture": {
+    "snapshot": "scratch/2026-11-04-levy-optimization/btv-levy-live-state.json",
+    "size": [
+      194,
+      153
+    ],
+    "population": 247,
+    "buildings": 2389,
+    "units": 393,
+    "fields": 483,
+    "targets": {
+      "empty": {
+        "x": 79,
+        "y": 41
+      },
+      "farm": {
+        "x": 77,
+        "y": 40
+      }
+    }
+  },
+  "bundles": {
+    "beforeSha256": "b79551dea9521ecfb967990a5d4a9bff012a8c7d34d8a3428f8319808dc6c40a",
+    "afterSha256": "4d08876271f89a87224cc8a12d2d8d5db4de8b25c9cc81475cfd8e4e0eda4654"
+  },
+  "timings": {
+    "before": {
+      "empty": {
+        "firstPreviewMs": {
+          "samples": 6,
+          "median": 2.9642090000006647,
+          "p95": 4.589041000000009,
+          "mean": 3.016263666666769
+        },
+        "repeatPreviewMs": {
+          "samples": 120,
+          "median": 1.423667000000023,
+          "p95": 6.4126669999998285,
+          "mean": 2.129336149999962
+        },
+        "commitMs": {
+          "samples": 6,
+          "median": 15.157000000000153,
+          "p95": 46.02212499999996,
+          "mean": 20.56106249999999
+        }
+      },
+      "farm": {
+        "firstPreviewMs": {
+          "samples": 6,
+          "median": 8.261749999999665,
+          "p95": 10.561958000000004,
+          "mean": 7.976694499999932
+        },
+        "repeatPreviewMs": {
+          "samples": 120,
+          "median": 1.3961669999999913,
+          "p95": 4.164084000000003,
+          "mean": 1.726421916666653
+        },
+        "commitMs": {
+          "samples": 6,
+          "median": 26.76712499999985,
+          "p95": 42.29966699999977,
+          "mean": 30.188944499999725
+        }
+      }
+    },
+    "after": {
+      "empty": {
+        "firstPreviewMs": {
+          "samples": 6,
+          "median": 3.1915420000000267,
+          "p95": 3.258624999999938,
+          "mean": 2.6816111666666225
+        },
+        "repeatPreviewMs": {
+          "samples": 120,
+          "median": 1.3744159999999965,
+          "p95": 2.8472090000000208,
+          "mean": 1.6632635583333373
+        },
+        "commitMs": {
+          "samples": 6,
+          "median": 8.746749999999338,
+          "p95": 9.687625000000025,
+          "mean": 7.885249833333186
+        }
+      },
+      "farm": {
+        "firstPreviewMs": {
+          "samples": 6,
+          "median": 10.218083999999862,
+          "p95": 13.084959000000026,
+          "mean": 10.670715500000219
+        },
+        "repeatPreviewMs": {
+          "samples": 120,
+          "median": 1.3041250000001128,
+          "p95": 2.295541999999841,
+          "mean": 1.450663541666669
+        },
+        "commitMs": {
+          "samples": 6,
+          "median": 17.489332999999533,
+          "p95": 22.51320799999985,
+          "mean": 17.544485999999967
+        }
+      }
+    }
+  },
+  "parity": [
+    {
+      "round": 0,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 0,
+      "kind": "farm",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "farm",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "farm",
+      "equal": true
+    },
+    {
+      "round": 3,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 3,
+      "kind": "farm",
+      "equal": true
+    },
+    {
+      "round": 4,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 4,
+      "kind": "farm",
+      "equal": true
+    },
+    {
+      "round": 5,
+      "kind": "empty",
+      "equal": true
+    },
+    {
+      "round": 5,
+      "kind": "farm",
+      "equal": true
+    }
+  ]
+}

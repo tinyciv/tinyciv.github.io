@@ -42,8 +42,8 @@ export function upgradeSettlement(state: GameState, building: Building): { ok: b
   if (!status.available) return { ok: false, message: status.reason };
   const healthFraction = Math.max(0, Math.min(1, building.hp / building.maxHp));
   building.palaceLevel = 2;
-  building.maxHp = KEEP_MAX_HP;
-  building.hp = KEEP_MAX_HP * healthFraction;
+  building.maxHp = KEEP_MAX_HP * (building.enemyStrengthMultiplier ?? 1);
+  building.hp = building.maxHp * healthFraction;
   building.capacity = KEEP_HOUSING;
   // Visible building memories also render while paused. Refresh them without
   // rebuilding terrain or changing sight/collision geometry.

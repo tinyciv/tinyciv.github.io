@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { invalidateDecisions } from '../src/game/decision-schedule';
 import { entityStore, resetEntities } from '../src/game/entity-store';
-import { FARM_TRAVEL_EDIT_BATCH, FARM_TRAVEL_MAX_DELAY, farmTravelRevision, palaceWalkingDistances } from '../src/game/farm-travel';
+import { FARM_TRAVEL_EDIT_BATCH, FARM_TRAVEL_MAX_DELAY, farmCityQuery, farmTravelRevision, palaceWalkingDistances } from '../src/game/farm-travel';
 import { canWalk } from '../src/game/pathfinding';
 import { updateGame } from '../src/game/simulation';
 import type { Building, GameState } from '../src/game/types';
@@ -34,6 +34,31 @@ function add(state: GameState, kind: Building['kind'], x: number, y = 6): Buildi
 }
 
 describe('coalesced farming travel maps', () => {
+  it('assigns a lone city without exploring terrain, including unreachable fields', () => {
+    const state = fixture(), palace = state.buildings[0];
+    // A single eligible city wins both the reachable and fallback cases. No
+    // terrain read is necessary just to decide the field's home settlement.
+    Object.defineProperty(state.world, 'tiles', { get: () => { throw new Error('Unexpected world traversal'); } });
+    const city = farmCityQuery(state, 0);
+    expect(city({ x: 5, y: 6 })).toBe(palace);
+    expect(city({ x: 35, y: 19 })).toBe(palace);
+    expect(farmCityQuery(state, 1)({ x: 5, y: 6 })).toBeUndefined();
+  });
+
+  it('keeps distances while a house is only ordered, then refreshes as soon as it blocks the tile', () => {
+    const state = fixture(), palace = state.buildings[0], before = palaceWalkingDistances(state, palace);
+    const house = add(state, 'house', 12);
+    house.construction = { startedAt: state.time, duration: 20, waitingForBuilder: true };
+    expect(palaceWalkingDistances(state, palace)).toBe(before);
+    expect(canWalk(state, 12, 6, 0)).toBe(true);
+    // Same-tick construction start is visible even without a revision hook.
+    house.construction.waitingForBuilder = false;
+    const blocked = palaceWalkingDistances(state, palace);
+    expect(blocked).not.toBe(before);
+    expect(blocked[6 * 40 + 12]).toBe(Infinity);
+    expect(canWalk(state, 12, 6, 0)).toBe(false);
+  });
+
   it('keeps a planning map for nineteen ordinary edits, then publishes the twentieth', () => {
     const state = fixture(), palace = state.buildings[0], before = palaceWalkingDistances(state, palace);
     const token = farmTravelRevision(state), destination = 6 * 40 + 35;
@@ -111,6 +136,17 @@ describe('coalesced farming travel maps', () => {
     add(state, 'road', 12);
     expect(canWalk(state, 12, 6, 0)).toBe(true);
     expect(palaceWalkingDistances(state, palace)).not.toBe(walled);
+  });
+
+  it('opens an ordered wall gate immediately, before its road is paved', () => {
+    const state = fixture(), palace = state.buildings[0];
+    add(state, 'wall', 12);
+    const blocked = palaceWalkingDistances(state, palace);
+    const gate = add(state, 'road', 12);
+    gate.construction = { startedAt: state.time, duration: 20, waitingForBuilder: true };
+    const opened = palaceWalkingDistances(state, palace);
+    expect(opened).not.toBe(blocked);
+    expect(opened[6 * 40 + 12]).toBeLessThan(Infinity);
   });
 
   it('refreshes palace ownership, diplomacy and unexplained terrain revisions immediately', () => {

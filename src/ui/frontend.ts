@@ -4,7 +4,7 @@ import { DEFAULT_BANDIT_INTENSITY, MIN_BANDIT_INTENSITY, MAX_BANDIT_INTENSITY } 
 import './frontend.css';
 
 export type FrontendView = 'main' | 'single' | 'servers' | 'lobby' | 'options' | 'controls' | 'loading' | 'error';
-export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: number; follow: boolean; fullscreen: boolean; banditIntensity: number; autoRebuildDefenses: boolean; }
+export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: number; follow: boolean; fullscreen: boolean; banditIntensity: number; enemyStrength: number; autoRebuildDefenses: boolean; }
 export type FrontendAction =
   | { type: 'resume' | 'continue' | 'save' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
   | { type: 'new'; options: MatchOptions }
@@ -37,7 +37,7 @@ export class Frontend {
   private progress: number | undefined;
   private cancellableLoading = false;
   private canReturnFromError = true;
-  private settings: FrontendSettings = { zoom: 1, minZoom: .55, maxZoom: 3, follow: true, fullscreen: false, banditIntensity: DEFAULT_BANDIT_INTENSITY, autoRebuildDefenses: true };
+  private settings: FrontendSettings = { zoom: 1, minZoom: .55, maxZoom: 3, follow: true, fullscreen: false, banditIntensity: DEFAULT_BANDIT_INTENSITY, enemyStrength: 1, autoRebuildDefenses: true };
   private lobbySignature = '';
   constructor(readonly element: HTMLElement, private readonly action: (action: FrontendAction) => void) {
     element.className = 'frontend'; element.setAttribute('role', 'dialog'); element.setAttribute('aria-modal', 'true');
@@ -47,6 +47,7 @@ export class Frontend {
     element.addEventListener('change', event => this.change(event));
     element.addEventListener('input', event => {
       const input = event.target as HTMLInputElement;
+      if (input.name === 'enemy-strength') this.updateEnemyLabel(Number(input.value) / 100);
       if (input.name === 'bandit-intensity') this.updateBanditLabel(Number(input.value) / 100);
     });
     element.addEventListener('keydown', event => {
@@ -131,6 +132,10 @@ export class Frontend {
     if (input.name === 'zoom') this.action({ type: 'settings', settings: { zoom: Number(input.value) } });
     if (input.name === 'auto-rebuild-defenses') this.action({ type: 'settings', settings: { autoRebuildDefenses: input.checked } });
     if (input.name === 'follow') this.action({ type: 'settings', settings: { follow: input.checked } });
+    if (input.name === 'enemy-strength' && !this.online && !this.room) {
+      this.action({ type: 'settings', settings: { enemyStrength: Number(input.value) / 100 } });
+      this.updateEnemyLabel(this.settings.enemyStrength);
+    }
     if (input.name === 'bandit-intensity' && !this.online && !this.room) {
       this.action({ type: 'settings', settings: { banditIntensity: Number(input.value) / 100 } });
       this.updateBanditLabel(this.settings.banditIntensity);
@@ -146,6 +151,12 @@ export class Frontend {
       landform.disabled = style === 'mediterranean';
       if (landform.disabled) landform.value = 'mixed';
     }
+  }
+  private updateEnemyLabel(value: number): void {
+    const text = `${Math.round(value * 100)}%`;
+    const output = this.element.querySelector<HTMLOutputElement>('[data-enemy-value]');
+    if (output) output.value = text;
+    this.element.querySelector<HTMLInputElement>('[name="enemy-strength"]')?.setAttribute('aria-valuetext', text);
   }
   private updateBanditLabel(value: number): void {
     const text = value === 0 ? '0% · Off' : `${Math.round(value * 100)}%${value === 1 ? ' · Normal' : ''}`;
@@ -172,7 +183,7 @@ export class Frontend {
       const room = this.room, self = room?.players.find(player => player.id === this.selfId), host = room?.hostId === this.selfId;
       body = room ? `<nav class="lobby-tabs" aria-label="Lobby tabs"><button class="is-active" type="button">Team</button><button data-view="options">Options</button><button data-view="controls">Controls</button></nav><h2>${escape(room.name)}</h2><p class="frontend-hint">${escape(room.location)} · ${escape(room.options.seed)} · ${WORLD_STYLE_NAMES[room.options.style]}</p><div class="lobby-players">${[0, 1].map(faction => { const player = room.players.find(player => player.faction === faction); return `<div class="lobby-player"><span class="faction-swatch" style="--faction:${player?.color || '#64716c'}"></span><div><strong>${player ? escape(player.name) : 'Waiting for opponent'}</strong><span>${player ? `${player.id === room.hostId ? 'Host' : 'Guest'} · ${player.ready ? 'Ready' : 'Not ready'}${player.connected ? '' : ' · Reconnecting'}` : ''}</span></div></div>`; }).join('')}</div><form data-form="profile" class="frontend-form lobby-profile">${this.profileFields()}<button type="submit">Apply</button></form><div class="lobby-bottom"><label class="frontend-check"><input name="ready" type="checkbox" ${self?.ready ? 'checked' : ''}>Ready</label>${host ? `<button class="primary" data-frontend-action="start" ${room.players.length !== 2 || room.players.some(player => !player.ready || !player.connected) ? 'disabled' : ''}>Start match</button>` : '<span>Waiting for host.</span>'}</div>` : '<p>Returning to games...</p>';
     }
-    if (this.view === 'options') body = `<div class="frontend-form"><div class="frontend-bandits"><label for="bandit-intensity"><span class="frontend-slider-heading">Bandit intensity<output data-bandit-value for="bandit-intensity"></output></span></label><input id="bandit-intensity" name="bandit-intensity" type="range" min="${MIN_BANDIT_INTENSITY * 100}" max="${MAX_BANDIT_INTENSITY * 100}" step="25" value="${this.settings.banditIntensity * 100}" aria-describedby="bandit-intensity-hint" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>Off</span><span>3×</span></div><p class="frontend-hint" id="bandit-intensity-hint">${this.online || this.room ? 'Fixed for this multiplayer match.' : 'Scales raid frequency and raider limits. Existing raiders remain.'}</p></div><label class="frontend-check"><input name="auto-rebuild-defenses" type="checkbox" ${this.settings.autoRebuildDefenses ? 'checked' : ''}>Automatically rebuild defenses</label><p class="frontend-hint">Rebuild destroyed walls and towers using gold and builders. Existing construction orders continue when disabled.</p><label>Camera zoom<input name="zoom" type="range" min="${this.settings.minZoom}" max="${this.settings.maxZoom}" step=".05" value="${this.settings.zoom}"></label><label class="frontend-check"><input name="follow" type="checkbox" ${this.settings.follow ? 'checked' : ''}>Follow the Leader</label><button data-frontend-action="fullscreen">${document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'}</button></div>`;
+    if (this.view === 'options') body = `<div class="frontend-form"><div class="frontend-bandits"><label for="bandit-intensity"><span class="frontend-slider-heading">Bandit intensity<output data-bandit-value for="bandit-intensity"></output></span></label><input id="bandit-intensity" name="bandit-intensity" type="range" min="${MIN_BANDIT_INTENSITY * 100}" max="${MAX_BANDIT_INTENSITY * 100}" step="25" value="${this.settings.banditIntensity * 100}" aria-describedby="bandit-intensity-hint" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>Off</span><span>3×</span></div><p class="frontend-hint" id="bandit-intensity-hint">${this.online || this.room ? 'Fixed for this multiplayer match.' : 'Scales raid frequency and raider limits. Existing raiders remain.'}</p></div><div class="frontend-bandits"><label for="enemy-strength"><span class="frontend-slider-heading">Enemy strength<output data-enemy-value for="enemy-strength"></output></span></label><input id="enemy-strength" name="enemy-strength" type="range" min="25" max="300" step="25" value="${this.settings.enemyStrength * 100}" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>25%</span><span>300%</span></div><p class="frontend-hint">Enemy health, damage and gold income.</p></div><label class="frontend-check"><input name="auto-rebuild-defenses" type="checkbox" ${this.settings.autoRebuildDefenses ? 'checked' : ''}>Automatically rebuild defenses</label><p class="frontend-hint">Rebuild destroyed walls and towers using gold and builders. Existing construction orders continue when disabled.</p><label>Camera zoom<input name="zoom" type="range" min="${this.settings.minZoom}" max="${this.settings.maxZoom}" step=".05" value="${this.settings.zoom}"></label><label class="frontend-check"><input name="follow" type="checkbox" ${this.settings.follow ? 'checked' : ''}>Follow the Leader</label><button data-frontend-action="fullscreen">${document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'}</button></div>`;
     if (this.view === 'controls') body = `<dl class="frontend-controls"><dt>WASD / arrows</dt><dd>Move the Leader; in Formation 3, W/S advance/reverse and A/D strafe; in a boat, W/S control throttle</dd><dt>Right click</dt><dd>Move, attack, or diplomacy</dd><dt>Left click</dt><dd>Select units and buildings</dd><dt>1 / E</dt><dd>Recall; hold E to steer right in a boat or rotate Formation 3</dd><dt>2 / Q</dt><dd>Change stance; hold Q to steer left in a boat or rotate Formation 3</dd><dt>3</dt><dd>Toggle close ranks after Infantry Drill; hold Q/E to rotate continuously; release to stop</dd><dt>4 / 5</dt><dd>Raise/dismiss levy; garrison/recall city defenders</dd><dt>Boats</dt><dd>Hold Q/E to steer; allow room to coast and brake</dd><dt>Shift</dt><dd>Separate mob / travel movement setting</dd><dt>B / F</dt><dd>Buildings / fortifications</dd><dt>C</dt><dd>Clear trees and structures</dd><dt>Mouse wheel</dt><dd>Camera zoom</dd><dt>Home</dt><dd>Center on the Leader</dd><dt>Space / + / -</dt><dd>Pause / speed in single player</dd><dt>Escape</dt><dd>Close panels or open the menu</dd></dl>`;
     if (this.view === 'loading') body = `<div class="frontend-loading"><progress aria-label="Loading progress" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
     if (this.view === 'error') body = `<div class="frontend-error-actions"><button class="primary" data-frontend-action="retry">Retry</button>${this.canReturnFromError ? '<button data-frontend-action="main">Main menu</button>' : ''}</div>`;
@@ -180,7 +191,7 @@ export class Frontend {
     const roomName = this.element.querySelector<HTMLInputElement>('[name="room-name"]'); if (roomName) roomName.value = this.roomName;
     const worldForm = this.element.querySelector<HTMLSelectElement>('[name="style"]')?.form;
     if (worldForm) this.updateWorldOptions(worldForm);
-    if (this.view === 'options') this.updateBanditLabel(this.settings.banditIntensity);
+    if (this.view === 'options') { this.updateBanditLabel(this.settings.banditIntensity); this.updateEnemyLabel(this.settings.enemyStrength); }
     if (focusedName) this.element.querySelector<HTMLElement>(`[name="${CSS.escape(focusedName)}"]`)?.focus({ preventScroll: true });
   }
 }

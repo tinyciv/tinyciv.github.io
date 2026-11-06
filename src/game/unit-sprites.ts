@@ -11,6 +11,8 @@ export const PUNY_CHARACTERS = {
   scout: { file: 'Scout.png', walk: [1, 2, 3], attack: [0] },
   warrior: { file: 'Human-Soldier-Cyan.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
   worker: { file: 'Human-Worker-Cyan.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
+  militia: { file: 'Militia.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
+  skirmisher: { file: 'Skirmisher.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
   marauder: { file: 'Orc-Grunt.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
 } as const;
 type Character = keyof typeof PUNY_CHARACTERS;
@@ -27,7 +29,7 @@ export function loadPunyCharacters(): Promise<void> {
     const base = (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
     image.src = `${base}assets/puny-world/characters/${definition.file}`;
     await image.decode();
-    if (image.naturalWidth !== (role === 'scout' ? 128 : 768) || image.naturalHeight !== 256) throw new Error(`Invalid Puny character sheet: ${definition.file}`);
+    if (image.naturalWidth !== (role === 'scout' ? 128 : role === 'militia' || role === 'skirmisher' ? 288 : 768) || image.naturalHeight !== 256) throw new Error(`Invalid Puny character sheet: ${definition.file}`);
     sheets.set(role as Character, image);
   })).then(() => undefined);
 }
@@ -56,9 +58,18 @@ export function factionSheet(role: Character, color: string, armorLevel = 0): HT
   const c = canvas.getContext('2d')!;
   c.drawImage(source, 0, 0);
   const image = c.getImageData(0, 0, canvas.width, canvas.height), pixels = image.data;
+  recolorCharacterCloth(pixels, color);
+  // The approved civilians already have their native cloth. Adding a rectangular
+  // tabard here would paint over the small shield and weapon in several views.
+  if (role !== 'militia' && role !== 'skirmisher') applyChestCloth(pixels, canvas.width, canvas.height, color);
+  c.putImageData(image, 0, 0);
+  palettes.set(key, canvas);
+  return canvas;
+}
+
+/** Replace only the pack's exact turquoise cloth; equipment and skin are unchanged. */
+export function recolorCharacterCloth(pixels: Uint8ClampedArray, color: string): void {
   const faction = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
-  // Only the source's exact turquoise cloth shades are replaced. Skin, metal,
-  // weapon effects and outlines remain the pack's original pixels.
   const shades = new Map([[46 * 256 + 39, .30], [75 * 256 + 63, .48], [79 * 256 + 67, .52], [121 * 256 + 102, .78], [180 * 256 + 157, 1]]);
   for (let index = 0; index < pixels.length; index += 4) {
     if (pixels[index] !== 0 || pixels[index + 3] === 0) continue;
@@ -66,10 +77,6 @@ export function factionSheet(role: Character, color: string, armorLevel = 0): HT
     if (shade === undefined) continue;
     for (let channel = 0; channel < 3; channel++) pixels[index + channel] = Math.round(faction[channel] * shade);
   }
-  applyChestCloth(pixels, canvas.width, canvas.height, color);
-  c.putImageData(image, 0, 0);
-  palettes.set(key, canvas);
-  return canvas;
 }
 
 /** Add a shaded tabard to the torso in each native animation cell. Opaque
@@ -116,9 +123,9 @@ export function characterIconUrl(role: Character, color: string, armorLevel = 0)
 
 /** Eight original perspectives, with faction cloth following each animation. */
 export function personFrame(unit: Unit, time: number): { role: Character; row: number; frame: number } {
-  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'worker')
+  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'levyInfantry' && unit.kind !== 'skirmisher' && unit.kind !== 'worker')
     return { role: 'worker', row: 0, frame: 0 };
-  const role: Character = unit.marauderLeader ? 'leader' : unit.kind === 'archer' ? 'archer' : unit.marauderPack !== undefined ? 'marauder' : unit.kind === 'militia' ? 'warrior' : unit.kind;
+  const role: Character = unit.marauderLeader ? 'leader' : unit.kind === 'archer' ? 'archer' : unit.marauderPack !== undefined ? 'marauder' : unit.kind === 'levyInfantry' ? 'militia' : unit.kind;
   const definition = PUNY_CHARACTERS[role];
   // Rows are S, SE, E, NE, N, NW, W, SW.
   const row = (10 - facingOctant(unit.facing)) % 8;
@@ -132,7 +139,7 @@ export function personFrame(unit: Unit, time: number): { role: Character; row: n
 export function drawPerson(c: CanvasRenderingContext2D, unit: Unit, time: number, color: string): void {
   if (unit.kind === 'horseman') { drawHorseman(c, unit, time, color); return; }
   if (unit.kind === 'spearman') { drawSpearman(c, unit, time, color); return; }
-  if (unit.inside || (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'worker')) return;
+  if (unit.inside || (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'levyInfantry' && unit.kind !== 'skirmisher' && unit.kind !== 'worker')) return;
   const { role, row, frame } = personFrame(unit, time), sheet = factionSheet(role, color, unit.armorLevel);
   if (!sheet) return;
   c.save();

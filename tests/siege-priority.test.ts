@@ -122,14 +122,15 @@ describe('city assault priorities', () => {
     expect(house.hp).toBe(house.maxHp); expect(attacker.target).toBe(selected.id);
   });
 
-  it.each(['hold', 'defensive'] as const)('keeps a %s warrior at its post when attacking a house beside a breach', stance => {
+  it.each(['hold', 'defensive'] as const)('keeps a %s warrior at its post beside a quiet enemy house', stance => {
     const { state, attacker, house } = fixture(), walls = ring(state, house.faction);
     house.x = 12; house.y = 8;
     walls.find(wall => wall.x === 11 && wall.y === 8)!.hp = 0;
     Object.assign(attacker, { x: 11.5, y: 8.5, order: stance === 'hold' ? 'hold' : 'follow', retinueStance: stance });
     if (stance === 'defensive') attacker.defensiveAnchor = { x: attacker.x, y: attacker.y };
     updateGame(state, .1, idle);
-    expect(house.hp).toBeLessThan(house.maxHp);
+    if (stance === 'hold') expect(house.hp).toBeLessThan(house.maxHp);
+    else expect(house.hp).toBe(house.maxHp); // Defensive stance retaliates; the house has not attacked anyone.
     expect(attacker.x).toBeCloseTo(11.5); expect(attacker.y).toBeCloseTo(8.5);
   });
 

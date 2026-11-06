@@ -27,12 +27,12 @@ const rawUnitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Pa
 /** Apply the reduction after armor, including the minimum hit, so every hit
  * does exactly 30% less damage rather than making armor disproportionately strong. */
 export const attackDamage = (attack: number, defense: number): number => Math.max(4, attack - defense) * DAMAGE_MULTIPLIER;
-export const unitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier'>>, faction?: Pick<Faction, 'research'>): number =>
+export const unitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, faction?: Pick<Faction, 'research'>): number =>
   rawUnitAttack(unit) * DAMAGE_MULTIPLIER * unitDamageDealtMultiplier(unit) * (unit.kind === 'archer' ? archerDamageMultiplier(faction) : 1)
-    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1);
-export const unitDamage = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier'>>, defense: number, faction?: Pick<Faction, 'research'>): number =>
+    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
+export const unitDamage = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, defense: number, faction?: Pick<Faction, 'research'>): number =>
   unit.kind === 'scout' ? 0 : attackDamage(rawUnitAttack(unit), defense) * unitDamageDealtMultiplier(unit) * (unit.kind === 'archer' ? archerDamageMultiplier(faction) : 1)
-    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1);
+    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
 export const unitDefense = (unit: Pick<Unit, 'defense' | 'kills' | 'armorLevel'> & Partial<Pick<Unit, 'kind' | 'raiderEquipmentMultiplier' | 'brace'>>): number =>
   (unit.defense + DEFENSE_BONUSES[veterancy(unit)]) * equipmentMultiplier(unit.armorLevel) * (unit.raiderEquipmentMultiplier ?? 1) + (unit.brace?.defense ?? 0);
 export function recordKill(unit: Unit): void { unit.kills = Math.max(0, unit.kills ?? 0) + 1; }

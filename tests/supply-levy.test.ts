@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { unitsCollide } from '../src/game/collisions';
 import { entityStore } from '../src/game/entity-store';
 import { updateSupplyCart, updateSupplyDepots, SUPPLY_CART_INTERVAL } from '../src/game/supply-train';
-import { dismissLevy, levyPopulation, levyStatus, recordLevyCasualty, updateMassLevy } from '../src/game/mass-levy';
+import { dismissLevy, levyCooldownRemaining, LEVY_ACTION_COOLDOWN, levyPopulation, levyStatus, recordLevyCasualty, updateMassLevy } from '../src/game/mass-levy';
 import { civilianWorkforcePopulations } from '../src/game/civilian-population';
 import { applyFactionEquipment } from '../src/game/blacksmith';
-import { advanceInfantryFormations, toggleInfantryFormation } from '../src/game/infantry-drill';
+import { advanceInfantryFormations, infantryFormationGoal, toggleInfantryFormation } from '../src/game/infantry-drill';
 import { retinueFormation } from '../src/game/formation';
 import { isBuildingUnlocked } from '../src/game/research';
 import { unitAttack, unitDefense } from '../src/game/veterancy';
-import { updateGame } from '../src/game/simulation';
+import { moveUnit, updateGame } from '../src/game/simulation';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { ensureBuilders } from '../src/game/builders';
 import { ensureCollectors } from '../src/game/farms';
-import { type GameState, type Unit } from '../src/game/types';
+import { distance, type GameState, type Unit } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
 function unit(id: number, kind: Unit['kind'] = 'worker', faction = 0): Unit {
@@ -110,6 +110,76 @@ describe('supply train', () => {
 });
 
 describe('mass levy', () => {
+  it('shares a thirty-second game-time cooldown between raising and dismissing, without spending on rejected actions', () => {
+    const state = fixture(); state.time = 10;
+    expect(levyPopulation(state, 1).ok).toBe(true);
+    const gold = state.factions[0].gold, roster = [...levies(state)];
+    state.time = 39.99;
+    expect(levyCooldownRemaining(state)).toBeCloseTo(.01);
+    expect(levyPopulation(state, 1).ok).toBe(false); expect(dismissLevy(state).ok).toBe(false);
+    expect(levies(state)).toEqual(roster); expect(state.factions[0].gold).toBe(gold);
+    state.time = 40;
+    expect(dismissLevy(state).ok).toBe(true); expect(levyCooldownRemaining(state)).toBe(30);
+    expect(levies(state)).toHaveLength(0); expect(levyPopulation(state).ok).toBe(false);
+    state.time = 69.99; expect(levyPopulation(state).ok).toBe(false);
+    state.time = 70; expect(levyPopulation(state, 1).ok).toBe(true);
+    expect(state.factions[0].gold).toBe(gold - 15);
+  });
+  it('allows only assembling levies to pass friendly military, retaining enemy and settled collisions', () => {
+    const levy = { kind: 'levyInfantry' as const, faction: 0, levyAssembling: true };
+    for (const kind of ['warrior', 'archer', 'levyInfantry', 'leader'] as const) {
+      const friend = { kind, faction: 0 }, enemy = { kind, faction: 1 };
+      expect(unitsCollide(levy, friend)).toBe(false); expect(unitsCollide(friend, levy)).toBe(false);
+      expect(unitsCollide(levy, enemy)).toBe(true); expect(unitsCollide(enemy, levy)).toBe(true);
+      expect(unitsCollide({ ...levy, levyAssembling: false }, friend)).toBe(true);
+    }
+  });
+
+  it.each([{ assembling: true, faction: 0, passes: true }, { assembling: false, faction: 0, passes: false },
+    { assembling: true, faction: 1, passes: false }])('final assembly crossing obeys friendly-only collision relaxation: %j', ({ assembling, faction, passes }) => {
+    const state = fixture(); levyPopulation(state, 1); const levy = levies(state)[0];
+    Object.assign(levy, { x: 18.5, y: 20.5, levyAssembling: assembling, joiningRetinue: false });
+    const blocker = { ...unit(400, 'warrior', faction), x: 19.5, y: 20.5, order: 'hold' as const, retinueStance: 'hold' as const };
+    entityStore(state).units.replace([levy, blocker]);
+    for (let y = 0; y < state.world.height; y++) for (let x = 0; x < state.world.width; x++)
+      if (y !== 20) state.world.tiles[y * state.world.width + x].terrain = 'ocean';
+    state.world.revision = 1;
+    for (let i = 0; i < 40; i++) { state.time += .1; moveUnit(state, levy, { x: 20.5, y: 20.5 }, .1); }
+    expect(levy.x > 20).toBe(passes); expect(blocker.x).toBe(19.5);
+  });
+  it('assembles three levy wings through eight regulars at 60 FPS, then rests and marches without milling', () => {
+    const state = fixture(), leader = state.units[0]; Object.assign(leader, { x: 20.5, y: 20.5, speed: 3.6 });
+    levyPopulation(state); const drafted = levies(state);
+    entityStore(state).units.replace([leader, ...drafted]);
+    for (const member of drafted) { member.x = 20.5; member.y = 20.5; member.joiningRetinue = false; }
+    for (let id = 200; id < 208; id++) entityStore(state).units.add({ ...unit(id, 'warrior'), x: 20.5, y: 20.5, speed: 3.96, attack: 17, defense: 4 });
+    expect(toggleInfantryFormation(state).ok).toBe(true);
+    advanceInfantryFormations(state, 0, () => idle, () => {});
+    const soldiers = state.units.filter(member => member !== leader);
+    for (const member of soldiers) {
+      const goal = infantryFormationGoal(state, member)!;
+      if (member.kind === 'levyInfantry') {
+        const gap = distance(goal, leader); member.x = goal.x + (leader.x - goal.x) / gap * 1.5; member.y = goal.y + (leader.y - goal.y) / gap * 1.5;
+      } else Object.assign(member, goal);
+    }
+    let passedThroughFriend = false;
+    for (let frame = 0; frame < 300; frame++) {
+      updateGame(state, 1 / 60, idle);
+      passedThroughFriend ||= drafted.some(levy => levy.levyAssembling && soldiers.some(other => other !== levy && distance(levy, other) < .7));
+    }
+    const errors = () => drafted.map(member => distance(member, infantryFormationGoal(state, member)!));
+    expect(passedThroughFriend).toBe(true); expect(Math.max(...errors())).toBeLessThan(.13);
+    expect(drafted.every(member => !member.levyAssembling)).toBe(true);
+    const rest = drafted.map(member => ({ x: member.x, y: member.y }));
+    for (let frame = 0; frame < 120; frame++) updateGame(state, 1 / 60, idle);
+    expect(Math.max(...drafted.map((member, index) => distance(member, rest[index])))).toBeLessThan(.01);
+    const start = leader.x;
+    for (let frame = 0; frame < 180; frame++) updateGame(state, 1 / 60, { ...idle, up: true });
+    expect(leader.x - start).toBeGreaterThan(4);
+    for (let frame = 0; frame < 180; frame++) updateGame(state, 1 / 60, idle);
+    expect(Math.max(...errors())).toBeLessThan(.2);
+    expect(drafted.every(member => !member.levyAssembling)).toBe(true);
+  });
   it('requires research, caps recruitment at one third and reserves the actual civilian workforce', () => {
     const state = fixture(); delete state.factions[0].research!.levels.massLevy;
     expect(levyPopulation(state).ok).toBe(false);
@@ -145,6 +215,7 @@ describe('mass levy', () => {
     const state = fixture(); levyPopulation(state); const [dead, hurt] = levies(state); dead.hp = 0; hurt.hp = 17;
     expect(recordLevyCasualty(state, dead)).toBe(true); expect(recordLevyCasualty(state, dead)).toBe(false);
     expect(state.factions[0].population).toBe(8);
+    state.time += LEVY_ACTION_COOLDOWN;
     expect(dismissLevy(state).ok).toBe(true); expect(hurt).toMatchObject({ hp: 17, kind: 'worker', collector: true });
     expect(state.factions[0].population).toBe(8);
   });
@@ -200,12 +271,14 @@ describe('mass levy', () => {
     updateGame(state, .4, idle);
     expect(levy).toMatchObject({ kind: 'worker', attack: 0, order: 'flee', routed: true });
   });
-  it('charges15 per draft, caps affordability and charges again when re-raising', () => {
+  it('charges 15 per draft, caps affordability and charges again when re-raising', () => {
     const state = fixture(); state.factions[0].gold = 45;
     expect(levyStatus(state)).toMatchObject({ available: 2, draftCost: 30 });
     expect(levyPopulation(state, 3)).toMatchObject({ ok: true, count: 2 });
     expect(state.factions[0].gold).toBe(15);
-    dismissLevy(state); expect(state.factions[0].gold).toBe(15);
+    state.time += LEVY_ACTION_COOLDOWN;
+    expect(dismissLevy(state).ok).toBe(true); expect(state.factions[0].gold).toBe(15);
+    state.time += LEVY_ACTION_COOLDOWN;
     expect(levyPopulation(state).ok).toBe(false);
     state.factions[0].gold = 15.1; expect(levyPopulation(state)).toMatchObject({ ok: true, count: 1 });
     expect(state.factions[0].gold).toBeCloseTo(.1);
@@ -230,7 +303,19 @@ describe('authoritative mass levy commands', () => {
     expect(state.units.filter(unit => unit.faction === other)).toEqual(enemyBefore);
     expect(applyGameCommand(state, other, { type: 'dismiss-levy', faction: actor }).ok).toBe(false);
     expect(levies(state)).toHaveLength(3);
+    state.time += LEVY_ACTION_COOLDOWN;
     expect(applyGameCommand(state, actor, { type: 'dismiss-levy', faction: other }).ok).toBe(true);
+    expect(levies(state)).toHaveLength(0);
+  });
+  it('keeps multiplayer action cooldowns faction-specific and ignores forged cooldown overrides', () => {
+    const state = duel();
+    expect(applyGameCommand(state, 0, { type: 'levy' }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'dismiss-levy', levyReadyAt: 0, cooldown: 0 }).ok).toBe(false);
+    expect(applyGameCommand(state, 1, { type: 'levy' }).ok).toBe(true);
+    expect(levies(state)).toHaveLength(6);
+    state.time = LEVY_ACTION_COOLDOWN;
+    expect(applyGameCommand(state, 0, { type: 'dismiss-levy' }).ok).toBe(true);
+    expect(applyGameCommand(state, 1, { type: 'dismiss-levy' }).ok).toBe(true);
     expect(levies(state)).toHaveLength(0);
   });
   it('rejects missing research, unavailable actors and ended games despite forged unlock fields', () => {

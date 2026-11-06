@@ -69,6 +69,7 @@ export function regenerateUnits(state: GameState, dt: number): void {
         multiplier = bonus.value;
       } else multiplier = healingMultiplier(unit);
       unit.hp = Math.min(unitMaxHp(unit), unit.hp + healingTime * UNIT_REGEN_PER_SECOND * multiplier);
+      if (multiplier > 1) unit.healerHealingAt = state.time;
       if (unit.hp >= unitMaxHp(unit)) units.updateRoles(unit, false);
     }
   }

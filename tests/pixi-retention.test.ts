@@ -32,12 +32,22 @@ describe('retained Pixi scene membership', () => {
         const base = { texture: Texture.EMPTY, x: 0, y: 0, width: 32, height: 32 };
         const hull = { ...base, rotation: .37, rotationPivot: { x: 16, y: 18 }, overlays: [{ ...base, y: -8, height: 40 }] };
         scene.beginFrame(); const sprite = scene.sprite(hull, 100, 200, 2);
-        expect(sprite.rotation).toBe(.37); expect([sprite.pivot.x, sprite.pivot.y]).toEqual([16,18]);
+        expect(sprite.rotation).toBe(.37); expect([sprite.pivot.x, sprite.pivot.y]).toEqual([Texture.EMPTY.width / 2, Texture.EMPTY.height * 18 / 32]);
         expect([sprite.x, sprite.y]).toEqual([132,236]); expect(stage.children[1].rotation).toBe(0);
         scene.finishFrame(); scene.beginFrame(); const rotated = scene.sprite({ ...hull, rotation: .38 }, 100, 200, 2);
         expect(rotated).toBe(sprite); expect(rotated.rotation).toBe(.38); expect(stage.children[1].rotation).toBe(0);
         scene.finishFrame(); scene.beginFrame(); const ordinary = scene.sprite(base, 100, 200, 2);
         expect(ordinary).toBe(sprite); expect(ordinary.rotation).toBe(0); expect([ordinary.pivot.x, ordinary.pivot.y]).toEqual([0,0]);
+    });
+
+    it('converts a doubled native galley pivot to texture coordinates', () => {
+        const { scene } = fixture();
+        const art = { texture: Texture.EMPTY, x: -16, y: -16, width: 64, height: 64,
+            rotation: Math.PI / 4, rotationPivot: {x:16,y:16} };
+        scene.beginFrame(); const sprite = scene.sprite(art, 100, 200, 2);
+        expect([sprite.pivot.x, sprite.pivot.y]).toEqual([Texture.EMPTY.width / 2, Texture.EMPTY.height / 2]);
+        expect([sprite.x, sprite.y]).toEqual([132,232]);
+        expect(sprite.width).toBe(128); expect(sprite.height).toBe(128);
     });
 
     it('preserves painter order when graphics move and removes unused tails', () => {

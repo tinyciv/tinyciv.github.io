@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fishArtFrame, fishArtKey, fishSurfaceFrame, fishingBoatArtKey } from '../src/game/fishing-art';
-import { rowboatArtFrame } from '../src/game/naval-art';
+import { galleyPose } from '../src/game/galley-art';
 import { unitKey, NativeArt, type BakedArt } from '../src/game/native-art';
 import type { Unit } from '../src/game/types';
 import { punyAtlas } from './puny-atlas';
@@ -28,7 +28,7 @@ describe('native Miniworld fishing artwork', () => {
     const fish = new Set<string>(), boats = new Set<string>();
     for (let i = 0; i < 1000; i++) {
       const subject = { id: i, facing: i / 31 }; fish.add(fishArtKey(subject, i)); boats.add(fishingBoatArtKey(subject, i));
-      expect(fishArtFrame(subject).slice(2)).toEqual([16, 16]); expect(rowboatArtFrame(subject).slice(2)).toEqual([16, 16]);
+      expect(fishArtFrame(subject).slice(2)).toEqual([16, 16]); expect(galleyPose(subject).rect.slice(2)).toEqual([32, 32]);
     }
     expect(fish.size).toBeGreaterThan(8); expect(fish.size).toBeLessThanOrEqual(8 * 17); expect(boats.size).toBe(2);
   });
@@ -37,11 +37,11 @@ describe('native Miniworld fishing artwork', () => {
     expect([0, Math.PI / 2, Math.PI, -Math.PI / 2].map(facing => fishArtFrame({ id: 1, facing })[1])).toEqual([32, 48, 16, 0]);
   });
 
-  it('keeps fishing sailboats distinct from the Leader rowboat and redraws a boarding passenger', () => {
+  it('keeps fishing sailboats distinct from the Leader galley and redraws a boarding passenger', () => {
     const boat = { kind: 'sailboat', facing: 0, sailboat: { dock: 1 } } as Unit;
     const leader = { id: 2, kind: 'leader', facing: 0, armorLevel: 0, inside: true, moving: false, attackTime: 0 } as Unit;
     const empty = unitKey(boat, 0, '#c94c4c'), occupied = unitKey(boat, 0, '#c94c4c', leader);
-    expect(empty.startsWith('rowboat:16:')).toBe(true);
+    expect(empty.startsWith('galley:1:0:')).toBe(true);
     expect(occupied).not.toBe(empty);
     expect(unitKey(boat, 100, '#c94c4c', leader)).toBe(occupied);
     expect(unitKey({ ...boat, facing: Math.PI / 2 }, 0, '#c94c4c', leader)).not.toBe(occupied);
@@ -58,10 +58,11 @@ describe('native Miniworld fishing artwork', () => {
     for (let index = 0; index < 1000; index++) {
       const facing = index / 31, boat = { kind: 'sailboat', facing, inside: false } as Unit;
       const picture = art.unit(boat, index, '#c94c4c', { passenger });
-      expect(picture.rotation).toBe(facing); expect(picture.rotationPivot).toEqual({ x: 16, y: 18 });
-      expect(picture.overlays).toHaveLength(1); expect(picture.overlays![0].rotation).toBeUndefined();
+      expect(picture.rotation).toBeCloseTo(galleyPose(boat).rotation); expect(picture.rotationPivot).toEqual({ x: 16, y: 16 });
+      expect(picture).toMatchObject({x:-16,y:-16,width:64,height:64});
+      expect(picture.overlays).toHaveLength(2); expect(picture.overlays!.every(overlay => overlay.rotation === undefined)).toBe(true);
     }
-    expect(keys.size).toBe(9); expect(keys.has('rowboat:hull')).toBe(true);
+    expect(keys.size).toBeLessThanOrEqual(24); expect(keys.has('galley:hull:1:0')).toBe(true);
   });
 
   it('keeps fish entirely underwater about 90% of the time and staggers brief surface events', () => {

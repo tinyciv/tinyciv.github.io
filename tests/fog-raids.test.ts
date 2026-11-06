@@ -33,8 +33,8 @@ const raiders = (state: GameState): Unit[] => state.units.filter(unit => state.m
 describe('destructible raider camps and ramped waves', () => {
   it('doubles opening pressure, keeps increasing after five minutes, and saturates at two parties', () => {
     expect([0, 60, 120, 180, 240, 300].map(time => fogRaidProfile(2, time).total)).toEqual([4, 4, 12, 20, 28, 36]);
-    expect(fogRaidProfile(2, 60)).toEqual({ total: 4, parties: 1, hp: 40, attack: 6, defense: 0 });
-    expect(fogRaidProfile(2, 300)).toEqual({ total: 36, parties: 2, hp: 82, attack: 14, defense: 2 });
+    expect(fogRaidProfile(2, 60)).toEqual({ total: 4, parties: 1, hp: 70, attack: 13, defense: 2 });
+    expect(fogRaidProfile(2, 300)).toEqual({ total: 36, parties: 2, hp: 91, attack: 17, defense: 3 });
     expect([360, 600, 900, 1800, 3600].map(time => fogRaidProfile(2, time).total)).toEqual([38, 46, 56, 60, 60]);
     expect(fogRaidProfile(10000, 86400)).toEqual(fogRaidProfile(60, 3600));
     expect(fogRaidProfile(2, 900).hp).toBe(fogRaidProfile(2, 300).hp);

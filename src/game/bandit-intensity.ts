@@ -32,6 +32,7 @@ export function setBanditIntensity(state: GameState, value: unknown): void {
   state.banditIntensity = next;
   if (!next) {
     state.banditSpawnPause ??= { at: state.time, intensity: previous || DEFAULT_BANDIT_INTENSITY };
+    for (const camp of state.raiderCamps ?? []) camp.pressureUpdatedAt = state.time;
     return;
   }
   if (next === previous && !state.banditSpawnPause) return;
@@ -40,6 +41,7 @@ export function setBanditIntensity(state: GameState, value: unknown): void {
   const retime = (deadline: number): number => Number.isFinite(deadline)
     ? state.time + Math.max(0, deadline - origin) * ratio : deadline;
   for (const camp of state.raiderCamps ?? []) {
+    camp.pressureUpdatedAt = state.time;
     camp.nextRaidAt = retime(camp.nextRaidAt);
     if (camp.replacementAt !== undefined) camp.replacementAt = retime(camp.replacementAt);
     for (const key of Object.keys(camp.defenderReadyAt ?? {})) camp.defenderReadyAt![Number(key)] = retime(camp.defenderReadyAt![Number(key)]);

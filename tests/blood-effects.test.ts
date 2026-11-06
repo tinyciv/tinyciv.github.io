@@ -35,7 +35,8 @@ describe('blood impact events', () => {
         expect(state.units).not.toContain(victim);
         expect(state.bloodEffects).toHaveLength(1);
         expect(state.bloodEffects![0]).toMatchObject({ x: 21.5, y: 12.5, elapsed: 0 });
-        expect(state.particles.map(particle => particle.text)).toEqual(['+6 gold']);
+        expect(state.particles.filter(particle => particle.kind !== 'damage').map(particle => particle.text)).toEqual(['+6 gold']);
+        expect(state.particles.filter(particle => particle.kind === 'damage')).toMatchObject([{ text: '-1' }]);
         updateGame(state, .3, idle);
         expect(state.bloodEffects).toHaveLength(0);
     });
@@ -52,7 +53,7 @@ describe('blood impact events', () => {
         updateGame(state, .2, idle);
         expect(victim.hp).toBe(85.3);
         expect(state.bloodEffects).toHaveLength(1);
-        expect(state.particles).toHaveLength(0);
+        expect(state.particles).toMatchObject([{ kind: 'damage', text: '-15' }]);
     });
 
     it('produces no blood for a blocked javelin or a building strike', () => {

@@ -19,6 +19,10 @@ export const LEVY_MORALE = 80;
 export const LEVY_DRAFT_COST = 15;
 export const LEVY_UPKEEP = 5;
 export const LEVY_UPKEEP_INTERVAL = 30;
+export const LEVY_ACTION_COOLDOWN = 30;
+export function levyCooldownRemaining(state: GameState, factionId = playerFaction(state)): number {
+  return Math.max(0, (state.factions.find(f => f.id === factionId)?.levyReadyAt ?? 0) - state.time);
+}
 export interface LevyState {
   original: Pick<Unit, 'kind' | 'attack' | 'defense' | 'speed' | 'range' | 'maxHp' | 'home' | 'builder' | 'collector' | 'collectorCamp' | 'work' | 'armorLevel' | 'weaponLevel'>;
   city?: number;
@@ -69,7 +73,7 @@ function displayWorkforceCount(state: GameState, faction: number): number {
   return count;
 }
 function status(state: GameState, factionId: number, countWorkforce: () => number): {
-  active: number; maximum: number; available: number; draftCost: number; upkeep: number; canLevy: boolean; reason: string;
+  active: number; maximum: number; available: number; draftCost: number; upkeep: number; canLevy: boolean; reason: string; cooldown: number;
 } {
   const faction = state.factions.find(candidate => candidate.id === factionId), active = activeLevies(state, factionId).length;
   const maximum = Math.floor(Math.max(0, faction?.population ?? 0) / 3);
@@ -80,13 +84,15 @@ function status(state: GameState, factionId: number, countWorkforce: () => numbe
   const affordable = Math.max(0, Math.ceil((Math.max(0, faction?.gold ?? 0) - 1e-7) / LEVY_DRAFT_COST) - 1);
   const available = Math.min(workforce, affordable);
   const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === factionId && unit.hp > 0);
+  const cooldown = levyCooldownRemaining(state, factionId);
   let reason = '';
   if (state.gameOver || !faction || faction.defeated) reason = 'Your realm can no longer raise a levy.';
+  else if (cooldown > 0) reason = `Levy available in ${Math.ceil(cooldown)}s.`;
   else if (!researched) reason = 'Research Mass levy first.';
   else if (!leader || leader.inside || leader.embarkedOn !== undefined || leader.order === 'flee') reason = 'Your Leader must be alive, on land, and rallied.';
   else if (!workforce) reason = active >= maximum ? 'One third of the population is already levied.' : 'No available peasants to levy.';
   else if (!affordable) reason = `Need more than ${LEVY_DRAFT_COST} gold to draft a peasant and retain a positive treasury.`;
-  return { active, maximum, available, draftCost: available * LEVY_DRAFT_COST, upkeep: active * LEVY_UPKEEP, canLevy: !reason, reason };
+  return { active, maximum, available, draftCost: available * LEVY_DRAFT_COST, upkeep: active * LEVY_UPKEEP, canLevy: !reason, reason, cooldown };
 }
 /** Exact command validation always reads the current workers and exit tiles. */
 export function levyStatus(state: GameState, factionId = playerFaction(state)) {
@@ -99,13 +105,13 @@ export function levyDisplayStatus(state: GameState, factionId = playerFaction(st
 }
 function clearOrders(unit: Unit): void {
   unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined;
-  unit.forcedAttack = undefined; unit.attackReturn = undefined; unit.infantryDrillLeader = undefined;
+  unit.forcedAttack = undefined; unit.attackReturn = undefined; unit.infantryDrillLeader = undefined; unit.levyAssembling = undefined;
   unit.repathAt = 0; unit.moving = false; unit.cooldown = 0; unit.attackTime = 0;
 }
 /** Converts the actual workers. Their original civilian jobs and homes survive
  * service, while job budgets reserve these residents until they return. */
-export function levyPopulation(state: GameState, requested?: number): { ok: boolean; message: string; count?: number } {
-  const factionId = playerFaction(state), status = levyStatus(state, factionId);
+export function levyPopulation(state: GameState, requested?: number, factionId = playerFaction(state)): { ok: boolean; message: string; count?: number } {
+  const status = levyStatus(state, factionId);
   if (!status.canLevy) return { ok: false, message: status.reason };
   if (requested !== undefined && (!Number.isInteger(requested) || requested <= 0)) return { ok: false, message: 'Choose a positive whole number of peasants.' };
   const count = Math.min(requested ?? status.available, status.available), faction = state.factions.find(candidate => candidate.id === factionId)!;
@@ -137,6 +143,7 @@ export function levyPopulation(state: GameState, requested?: number): { ok: bool
     unit.routed = false; unit.routOrder = undefined; unit.joiningRetinue = true;
     unit.retinueStance = 'aggressive'; equipUnitFromFaction(unit, faction);
   }
+  faction.levyReadyAt = state.time + LEVY_ACTION_COOLDOWN;
   invalidateSettlementDecisions(state);
   return { ok: true, count: recruits.length, message: `${recruits.length} peasants levied for ${recruits.length * LEVY_DRAFT_COST} gold. Upkeep is ${LEVY_UPKEEP} gold each every ${LEVY_UPKEEP_INTERVAL} seconds.` };
 }
@@ -156,9 +163,11 @@ function restore(state: GameState, unit: Unit, routed: boolean): void {
   invalidateSettlementDecisions(state);
 }
 export function dismissLevy(state: GameState, factionId = playerFaction(state)): { ok: boolean; message: string } {
-  if (factionId !== playerFaction(state)) return { ok: false, message: 'Choose your own levy.' };
+  const cooldown = levyCooldownRemaining(state, factionId);
+  if (cooldown > 0) return { ok: false, message: `Levy available in ${Math.ceil(cooldown)}s.` };
   const units = activeLevies(state, factionId);
   for (const unit of units) restore(state, unit, false);
+  if (units.length) state.factions.find(f => f.id === factionId)!.levyReadyAt = state.time + LEVY_ACTION_COOLDOWN;
   return { ok: !!units.length, message: units.length ? 'Levy dismissed. Peasants are returning to their original jobs.' : 'No active levy.' };
 }
 /** Called before formations and after expenditure. Bankrupt levies immediately

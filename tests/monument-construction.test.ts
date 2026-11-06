@@ -53,14 +53,23 @@ describe('monument construction', () => {
     expect(cancelConstruction(state, monument.id).ok).toBe(false);
   });
 
-  it.each(['water', 'occupied', 'house lane'] as const)('rejects an invalid monument placement without charging: %s', reason => {
+  it.each(['water', 'occupied'] as const)('rejects an invalid monument placement without charging: %s', reason => {
     const state = fixture();
     if (reason === 'water') state.world.tiles[10 * 32 + 12].terrain = 'river';
     else entityStore(state).buildings.add({ id: 20, kind: 'house', faction: 0,
-      x: reason === 'house lane' ? 11 : 12, y: 10, hp: 100, maxHp: 100, capacity: 0 });
+      x: 12, y: 10, hp: 100, maxHp: 100, capacity: 0 });
     expect(validateBuildAt(state, 'monument', 12, 10).ok).toBe(false);
     expect(buildAt(state, 'monument', 12, 10).ok).toBe(false); expect(state.factions[0].gold).toBe(500);
     expect(state.buildings.some(building => building.kind === 'monument')).toBe(false);
+  });
+
+  it('allows manual monument construction immediately beside a house without a clearance lane', () => {
+    const state = fixture(), house: Building = { id: 20, kind: 'house', faction: 0, x: 11, y: 10, hp: 100, maxHp: 100, capacity: 0 };
+    entityStore(state).buildings.add(house);
+    expect(validateBuildAt(state, 'monument', 12, 10).ok).toBe(true);
+    expect(order(state)).toMatchObject({ x: 12, y: 10 });
+    expect(state.factions[0].gold).toBe(300);
+    expect(state.buildings).toContain(house);
   });
 
   it('relocates a queued farm at no extra cost when a monument replaces its reserved cell', () => {

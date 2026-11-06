@@ -5,8 +5,32 @@ import { moveUnit } from '../src/game/simulation';
 import type { Unit } from '../src/game/types';
 import * as pathfinding from '../src/game/pathfinding';
 import { beginUnitFrame, endUnitFrame, nearbyUnits, refreshIndexedUnit } from '../src/game/spatial';
+import { markWorldChanged } from '../src/game/world-revisions';
 
 afterEach(() => vi.restoreAllMocks());
+it('reuses terrain across structure-only edits, but sees raw and classified terrain changes', () => {
+  const state = scenario('Open melee');
+  entityStore(state).buildings.replace([]); state.world.revision = 1;
+  const start = { x: 5.5, y: 6.5 }, goal = { x: 8.5, y: 6.5 };
+  expect(pathfinding.findPath(state, start, goal, 0).length).toBeGreaterThan(0);
+  const farTile = state.world.tiles[state.world.tiles.length - 1];
+  const terrain = farTile.terrain;
+  let reads = 0;
+  Object.defineProperty(farTile, 'terrain', { configurable: true, get: () => { reads++; return terrain; } });
+  // Nonblocking house orders change structure bookkeeping. They must not
+  // scan a distant terrain tile simply to validate an unchanged nearby path.
+  entityStore(state).buildings.add({ id: 900, kind: 'house', faction: 0, x: 10, y: 10, hp: 160, maxHp: 160, capacity: 2,
+    construction: { startedAt: 0, duration: 20, waitingForBuilder: true } });
+  markWorldChanged(state.world);
+  expect(pathfinding.findPath(state, start, goal, 0).length).toBeGreaterThan(0);
+  expect(reads).toBe(0);
+  const target = state.world.tiles[6 * state.world.width + 8];
+  target.terrain = 'lake'; state.world.revision!++;
+  expect(pathfinding.findPath(state, start, goal, 0)).toEqual([]);
+  expect(reads).toBeGreaterThan(0);
+  target.terrain = 'grassland'; markWorldChanged(state.world, 'geometry');
+  expect(pathfinding.findPath(state, start, goal, 0).length).toBeGreaterThan(0);
+});
 it('keeps a valid moving route across an unrelated economic revision, but replans a blocked route', () => {
   const state = scenario('Open melee');
   entityStore(state).buildings.replace([]); state.world.revision = 1;

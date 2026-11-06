@@ -2,7 +2,7 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { createGame, getLeader, validateBuildAt } from '../src/game/simulation';
 import { synchronizeFarms, isPendingCampField } from '../src/game/farms';
-import { campSpacingAllowed, residentialClearanceAllowed } from '../src/game/placement';
+import { campSpacingAllowed } from '../src/game/placement';
 import { canWalk } from '../src/game/pathfinding';
 import type { Building, World } from '../src/game/types';
 
@@ -45,7 +45,6 @@ describe('compact farm spacing', () => {
   it('lets farms fill a house walking lane and houses use the lane provided by an adjacent farm', () => {
     const state = fixture();
     entityStore(state).buildings.add({id:499,kind:'house',faction:0,x:11,y:10,hp:160,maxHp:160,capacity:4});
-    expect(residentialClearanceAllowed(state,'camp',12,10)).toBe(true);
     expect(validateBuildAt(state,'camp',12,10).ok).toBe(true);
     entityStore(state).buildings.add(farm(500,12,10)); synchronizeFarms(state);
     expect(validateBuildAt(state,'house',14,10).ok).toBe(true);

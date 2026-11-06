@@ -38,6 +38,8 @@ describe('healer shack regeneration', () => {
     updateGame(ordinary, 1, idle); updateGame(boosted, 1, idle);
     expect(ordinary.units[0].hp).toBeCloseTo(42.4);
     expect(boosted.units[0].hp).toBeCloseTo(47.2);
+    expect(boosted.units[0].healerHealingAt).toBe(boosted.time);
+    expect(ordinary.units[0].healerHealingAt).toBeUndefined();
     boosted.units[0].hp = 40; boosted.units[0].lastDamagedAt = 10; boosted.time = 24.95;
     updateGame(boosted, .1, idle);
     expect(boosted.units[0].hp).toBeCloseTo(40.36);

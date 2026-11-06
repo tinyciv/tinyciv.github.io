@@ -1,13 +1,13 @@
 import { loadPunyWorld } from './puny-world';
 import { drawPunyBuildingRegion, NATIVE_BUILDINGS } from './puny-building-art';
-import { drawWoodenSettlement, loadWoodenSettlementArt } from './wooden-settlement-art';
+import { drawWoodenSettlement, loadWoodenSettlementArt, WOODEN_SETTLEMENT_SIZE } from './wooden-settlement-art';
 
 /** Both settlement stages must be loaded before their art or icons are cached. */
 export function loadPalaceSprite(): Promise<void> {
   return Promise.all([loadPunyWorld(), loadWoodenSettlementArt()]).then(() => undefined);
 }
 
-export const palaceArtHeight = (level: 1 | 2 = 1, size = 64): number => level === 2 ? size : size * 34 / 32;
+export const palaceArtHeight = (level: 1 | 2 = 1, size = 64): number => level === 2 ? size : size * WOODEN_SETTLEMENT_SIZE[1] / WOODEN_SETTLEMENT_SIZE[0];
 
 /** The wooden settlement and stone Keep share the same 2×2 foundation. */
 export function drawPalace(c: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, level: 1 | 2 = 1): void {

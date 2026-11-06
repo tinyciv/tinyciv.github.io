@@ -49,7 +49,7 @@ describe('Bandit intensity', () => {
     expect(state.fogRaids!.waves).toBe(1);
     expect(raiders(state)).toHaveLength(4);
     expect(state.raiderCamps![0].nextRaidAt).toBeCloseTo(60 + raiderWaveInterval(60) / intensity);
-    expect(raiders(state).filter(unit => !unit.marauderLeader).every(unit => unit.maxHp === 40 && unit.attack === 6)).toBe(true);
+    expect(raiders(state).filter(unit => !unit.marauderLeader).every(unit => unit.maxHp === 70 && unit.attack === 13)).toBe(true);
   });
 
   it.each([.5, 1, 2])('enforces the scaled global cap for wave recruits at %s×', intensity => {

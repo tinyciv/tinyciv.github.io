@@ -1,8 +1,4 @@
 .leader-respawn { position: absolute; z-index: 7; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; pointer-events: auto; backdrop-filter: grayscale(1) blur(2px); background: #222b303d; color: #fff3d8; text-shadow: 1px 2px 3px #000; font: 26px/1.2 var(--game-font); }
 .leader-respawn[hidden] { display: none; }
-.respawn-hourglass { width: 42px; height: 58px; animation: respawn-hourglass 2s ease-in-out infinite; }
-.respawn-hourglass svg { width: 100%; height: 100%; }
 .respawn-dots { display: inline-block; width: 1.2em; overflow: hidden; vertical-align: bottom; animation: respawn-dots 1.3s steps(4,end) infinite; }
-@keyframes respawn-hourglass { 0%,65% { transform: rotate(0); } 90%,100% { transform: rotate(180deg); } }
 @keyframes respawn-dots { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 -33% 0 0); } }
-@media (prefers-reduced-motion: reduce) { .respawn-hourglass { animation: none; } }
