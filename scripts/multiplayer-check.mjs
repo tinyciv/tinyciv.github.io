@@ -8,18 +8,25 @@ const checks = [];
 const check = message => { checks.push(message); console.log(`PASS ${message}`); };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 class Peer {
-  messages = []; state; token = ''; seq = 0; room = null; socket;
+  messages = []; state; token = ''; seq = 0; room = null; socket; frameSequence = -1; awaitingSnapshot = false;
   async open() {
     this.socket = new WebSocket(wsUrl, { handshakeTimeout: 15000, ...(process.env.MULTIPLAYER_ORIGIN ? { origin: process.env.MULTIPLAYER_ORIGIN } : {}) });
     this.socket.on('message', data => {
-      const message = JSON.parse(data); this.messages.push(message);
+      const message = JSON.parse(data);
+      // Frames are consumed immediately; retaining every world snapshot makes
+      // the smoke client itself exhaust memory on the larger maps.
+      if (message.type === 'snapshot') this.messages = this.messages.filter(item => item.type !== 'snapshot');
+      if (message.type !== 'frame') this.messages.push(message);
       if (message.type === 'welcome') { this.token = message.token; this.seq = message.commandSequence; }
       if (message.type === 'room') this.room = message.room;
-      if (message.type === 'snapshot') { this.state = message.state; this.replica = new ClientStateReplica(this.state); }
+      if (message.type === 'snapshot') { this.state = message.state; this.replica = new ClientStateReplica(this.state); this.frameSequence = message.sequence; this.awaitingSnapshot = false; }
       if (message.type === 'frame' && this.state) {
+        if (message.sequence <= this.frameSequence || this.awaitingSnapshot) return;
+        if (message.sequence !== this.frameSequence + 1) { this.awaitingSnapshot = true; this.send({ type: 'sync' }); return; }
         for (const [index, tile] of message.tiles || []) this.state.world.tiles[index] = tile;
         if (message.worldRevision !== undefined) this.state.world.revision = message.worldRevision;
         this.replica.apply(message.delta);
+        this.frameSequence = message.sequence;
       }
     });
     await new Promise((resolve, reject) => { this.socket.once('open', resolve); this.socket.once('error', reject); });

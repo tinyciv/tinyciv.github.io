@@ -142,13 +142,14 @@ describe('compact farmland and food deliveries', () => {
 
   it('staffs a captured camp with its new faction and collects no foreign bags', () => {
     const state = realm(), camp = state.buildings.find(building => building.kind === 'camp')!;
-    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' });
-    entityStore(state).buildings.add({ id: 9001, kind: 'palace', faction: 1, x: 32, y: 20, hp: 1000, maxHp: 1000, capacity: 0 });
+    const newFaction = Math.max(...state.factions.map(faction => faction.id)) + 1;
+    state.factions.push({ ...state.factions[0], id: newFaction, relation: 'peace' });
+    entityStore(state).buildings.add({ id: 9001, kind: 'palace', faction: newFaction, x: 32, y: 20, hp: 1000, maxHp: 1000, capacity: 0 });
     const oldCourier = state.units.find(unit => unit.collectorCamp === camp.id)!;
-    camp.faction = 1;
+    camp.faction = newFaction;
     synchronizeFarms(state); ensureCollectors(state);
     const assigned = state.units.filter(unit => unit.collectorCamp === camp.id);
-    expect(assigned).toHaveLength(1); expect(assigned[0].faction).toBe(1); expect(assigned[0].home).toBe(9001);
+    expect(assigned).toHaveLength(1); expect(assigned[0].faction).toBe(newFaction); expect(assigned[0].home).toBe(9001);
     if (state.units.includes(oldCourier)) {
       expect(oldCourier.faction).toBe(0);
       expect(state.buildings.find(building => building.id === oldCourier.collectorCamp)?.faction).toBe(0);

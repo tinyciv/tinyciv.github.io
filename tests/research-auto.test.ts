@@ -24,8 +24,8 @@ describe('automatic income research', () => {
     expect(researchStatus(state,0).completed).toBe(false); updateResearch(state,1000);
     expect(researchStatus(state,0)).toMatchObject({completed:true,active:false});
     expect(faction.gold).toBeCloseTo(2000+(total+10)/.25-total);
-    expect(state.events.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual(['Fortification', 'Exploration', 'Irrigation', 'Masonry', 'Sailing', 'Grain Storage', 'Statehood', 'Traditional Medicine', 'Engineering', 'Archery', 'Coinage', 'Supply train', 'Bronze Working', 'Metal Tools', 'Fletching', 'Military Tactics', 'Infantry Drill', 'Reinforced Defenses', 'Mass levy', 'Urban Planning', 'Siege Engines', 'Horseback Riding']);
-    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toHaveLength(22);
+    expect(state.events.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual(['Fortification', 'Exploration', 'Irrigation', 'Masonry', 'Sailing', 'Grain Storage', 'Statehood', 'Traditional Medicine', 'Engineering', 'Archery', 'Horseback Riding', 'Coinage', 'Supply train', 'Bronze Working', 'Metal Tools', 'Fletching', 'Military Tactics', 'Infantry Drill', 'Reinforced Defenses', 'Mass levy', 'Urban Planning', 'Siege Engines', 'Compound Bow', 'Metal Casting', 'Stirrups']);
+    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toHaveLength(25);
   });
   it('automatically resolves distant prerequisites while preserving ordered priorities and partial progress', () => {
     const state=fixture(), library=state.buildings[1], faction=state.factions[0];

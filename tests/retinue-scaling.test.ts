@@ -15,7 +15,7 @@ describe('population-based retinue capacity', () => {
     const faction = { id: 0, population: 500, archerFraction: .5 } as Faction;
     const state = { factions: [faction], units: [] } as unknown as GameState;
     expect(retinueComposition(state, 0)).toEqual({
-      total: 17, archers: 9, spearmen: 0, horsemen: 0, warriors: 8, currentHorsemen: 0, currentArchers: 0, currentSpearmen: 0, training: 0,
+      horseArchers: 0, knights: 0, swordsmen: 0, currentHorseArchers: 0, currentKnights: 0, currentSwordsmen: 0, total: 17, archers: 9, spearmen: 0, horsemen: 0, warriors: 8, currentHorsemen: 0, currentArchers: 0, currentSpearmen: 0, training: 0,
     });
   });
 });

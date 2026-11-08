@@ -26,6 +26,20 @@ function fixture(): GameState {
 }
 
 describe('multiplayer field deltas', () => {
+  it('keeps independently encoded fog records separate across repeated memory edits', () => {
+    const live = createDuelGame(fixture().world);
+    const view = multiplayerView(live, 0), encoder = new StateDeltaEncoder(view);
+    const replica = new ClientStateReplica(wire(view));
+    for (let tick = 0; tick < 4; tick++) {
+      view.time += .15;
+      view.fog!.buildings = tick % 2 ? [] : [{ ...view.buildings[0], x: tick }];
+      view.multiplayer!.controls[0].fog = view.fog;
+      replica.apply(wire(encoder.encode(view)));
+      expect(wire(replica.state.fog)).toEqual(wire(view.fog));
+      expect(replica.state.multiplayer!.controls[0].fog).not.toBe(replica.state.fog);
+      expect(replica.state.multiplayer!.controls[0].fog!.buildings).not.toBe(replica.state.fog!.buildings);
+    }
+  });
   it('round trips in-place nested mutations, absent properties, sparse arrays and entity deletion while retaining identities', () => {
     const live = fixture(), encoder = new StateDeltaEncoder(live), replica = new ClientStateReplica(wire(live));
     const state = replica.state, store = entityStore(state), unit = store.units.get(1)!, building = store.buildings.get(2)!;

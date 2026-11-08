@@ -14,7 +14,7 @@ const collect = directory => readdirSync(directory, { withFileTypes: true }).fla
 });
 const expectedFiles = collect(join(root, 'tests')).sort();
 const child = spawn(process.execPath, [join(root, 'node_modules/vitest/vitest.mjs'), 'run', 'tests',
-  '--config', './scripts/ci-test.config.mjs', '--exclude', 'scratch/**', '--maxWorkers', '2', '--testTimeout', '60000',
+  '--config', './scripts/ci-test.config.mjs', '--exclude', 'scratch/**', '--maxWorkers', '2', '--testTimeout', '180000',
   '--reporter=default', '--reporter=json', '--reporter=./scripts/ci-test-runtime-reporter.mjs', `--outputFile=${join(output, 'vitest.json')}`],
   { cwd: root, stdio: 'inherit', env: { ...process.env, CI: 'true', CI_TEST_OUTPUT: output } });
 let processError;

@@ -73,11 +73,16 @@ describe('uniform ledge surroundings', () => {
     for (let i = 0; i < world.tiles.length; i++) {
       const tile = world.tiles[i];
       if (!tile.ridge) continue;
-      expect(['grassland', 'desert']).toContain(tile.terrain);
+      if (WATER.has(tile.terrain)) {
+        expect(tile.terrain).toBe('river'); expect(tile.riverArt).toBe('banked'); continue;
+      }
+      // Ledge aprons also support the current plains and polar ground palettes.
+      expect(['grassland', 'desert', 'plains', 'tundra']).toContain(tile.terrain);
       const x = i % world.width, y = Math.floor(i / world.width);
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
         const neighbor = tileAt(world, x + dx, y + dy)!;
-        expect(neighbor.terrain).toBe(tile.terrain);
+        // River canyons intentionally cut the dry apron; water must retain its own palette.
+        if (!WATER.has(neighbor.terrain)) expect(neighbor.terrain).toBe(tile.terrain);
         expect(neighbor.beach).not.toBe(true);
       }
     }

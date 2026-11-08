@@ -33,10 +33,8 @@ export class ClientStateReplica {
       // Fog owns immutable observation snapshots. Renew its container when
       // authoritative memories change so its private cache imports them.
       if ('fields' in delta.state && delta.state.fields.fog && this.state.fog) this.state.fog = { ...this.state.fog };
-      if (this.state.multiplayer) {
-        const control = this.state.multiplayer.controls[this.state.playerFaction ?? 0];
-        if (control) control.fog = this.state.fog;
-      }
+      // Root and control fog are independently encoded wire values. Aliasing
+      // them here would apply the next sparse array patch twice to one object.
     }
     const store = entityStore(this.state);
     if (delta.units) this.entities(delta.units, store.units, () => this.state.units, units);

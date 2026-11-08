@@ -47,7 +47,7 @@ describe('varied native vegetation', () => {
     for (const family of Object.keys(TREE_FAMILIES) as (keyof typeof TREE_FAMILIES)[]) {
       const seen = new Set<string>();
       for (let i = 0; i < 100; i++) {
-        const source = vegetationVariant(tile({ terrain: 'grassland', overlay: 'forest', treeClass: family, variation: i / 0x1000000 }))!;
+        const source = vegetationVariant(tile({ terrain: family === 'snowy' ? 'tundra' : 'grassland', overlay: 'forest', treeClass: family, variation: i / 0x1000000 }))!;
         expect(TREE_FAMILIES[family]).toContainEqual(source);
         seen.add(JSON.stringify(source));
       }

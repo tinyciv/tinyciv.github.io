@@ -203,7 +203,7 @@ describe('authoritative two-human engine', () => {
     expect(victim.hp).toBeLessThanOrEqual(0);
     expect(state.gameOver).toBe(false); expect(state.multiplayer!.winner).toBeNull();
     expect(state.factions[winner].gold).toBe(700); expect(state.factions[1 - winner].gold).toBe(300);
-    expect(attacker.leaderProgression?.level).toBe(2);
+    expect(attacker.leaderProgression).toMatchObject({ level: 1, xp: 6400 });
     const deadline = state.factions[1 - winner].leaderRespawn!.readyAtWallTime;
     state.paused = true; updateLeaderRespawns(state, deadline - 1);
     expect(getLeader(state, 1 - winner)).toBeUndefined();

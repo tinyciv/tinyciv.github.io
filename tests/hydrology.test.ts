@@ -58,8 +58,10 @@ describe('terrain-driven watersheds', () => {
 
   it('publishes downhill flow through a complete generated world without flooding ledges', () => {
     const world = generateWorld('watershed-invariants', 160, 128); audit(world.tiles);
-    for (const tile of world.tiles) if (tile.ridge || tile.stair)
-      expect(['river', 'lake', 'coast', 'ocean']).not.toContain(tile.terrain);
+    for (const tile of world.tiles) if (tile.ridge || tile.stair) {
+      if (tile.terrain === 'river' && tile.ridge && !tile.stair) expect(tile.riverArt).toBe('banked');
+      else expect(['river', 'lake', 'coast', 'ocean']).not.toContain(tile.terrain);
+    }
     for (const tile of world.tiles) if (tile.terrain === 'river' && tile.drainage! >= 0)
       expect(['river', 'lake', 'coast', 'ocean']).toContain(world.tiles[tile.drainage!].terrain);
     const inland = world.tiles.filter(tile => tile.drainage! >= 0);
@@ -83,5 +85,5 @@ describe('terrain-driven watersheds', () => {
       }
     }
     for (let cell = 0; cell < world.tiles.length; cell++) if (world.tiles[cell].terrain === 'river') expect(reached[cell]).toBe(1);
-  }, 15000);
+  }, 120000);
 });

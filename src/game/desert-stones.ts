@@ -8,7 +8,8 @@ export function clearDesertStones(world: World, building: Building): void {
     for (let x = building.x; x < building.x + buildingWidth(building); x++) {
       if (x >= 0 && y >= 0 && x < world.width && y < world.height) {
         const cell = y * world.width + x;
-        if (world.tiles[cell].desertStone !== undefined) { delete world.tiles[cell].desertStone; changed.push(cell); }
+        const tile = world.tiles[cell];
+        if (tile?.desertStone !== undefined) { delete tile.desertStone; changed.push(cell); }
       }
     }
   if (changed.length) recordWorldTileChanges(world, changed);

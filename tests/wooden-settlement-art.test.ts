@@ -67,7 +67,7 @@ describe('selected wooden Settlement artwork', () => {
     expect(buildingKey(settlement, 0, '#3988ff')).toBe(buildingKey({ ...settlement, palaceLevel: 1 }, 0, '#3988ff'));
     expect(paint.mock.calls[0][0]).not.toBe(paint.mock.calls[1][0]);
     for (const building of [settlement, keep]) {
-      const state = { world: { width: 4 }, buildings: [building] } as unknown as GameState;
+      const state = { world: { width: 4, height: 4 }, buildings: [building] } as unknown as GameState;
       expect([...buildingBlockers(state, 0)]).toEqual([5, 6, 9, 10]);
     }
   });

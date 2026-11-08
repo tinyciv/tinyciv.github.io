@@ -30,7 +30,7 @@ describe('native village presentation', () => {
     const { state, camp } = fixture();
     expect(buildingActivityKind(camp)).toBe('village');
     expect(buildingActivityAvailable(state, camp)).toBe(true);
-    expect(buildingActivityAvailable(state, { ...camp, kind: 'guardPost' })).toBe(false);
+    expect(buildingActivityAvailable(state, { ...camp, kind: 'guardPost', villageId: undefined })).toBe(false);
     expect(buildingActivityAvailable(state, { ...camp, id: 11 })).toBe(false);
     state.units[0].y = 14.01;
     expect(buildingActivityAvailable(state, camp)).toBe(false);

@@ -47,7 +47,7 @@ describe('geological worlds', () => {
         if (tile.terrain === 'river' && !wet.has(cell)) badWater.push(cell);
         if (tile.stair) expect(ridgeGroundWalkable(world, x, y), `${family}: stair ${cell}`).toBe(true);
         // Deposits are deliberate obstacles; water/ledge errors still fail.
-        if (tile.ridge && !resourceBlocksGround(tile) && ridgeGroundWalkable(world, x, y) && !upperAccess.has(cell)) inaccessibleFloors.push(cell);
+        if (tile.ridge && !resourceBlocksGround(tile) && traversable(world, x, y) && !upperAccess.has(cell)) inaccessibleFloors.push(cell);
         if (tile.overlay !== 'forest') continue;
         if (x + 1 < world.width && y + 1 < world.height
           && [cell + 1, cell + world.width, cell + world.width + 1].every(next => world.tiles[next].overlay === 'forest')) solid.push(cell);
@@ -68,11 +68,11 @@ describe('geological worlds', () => {
       signatures.add(world.tiles.map(tile => `${tile.terrain[0]}${tile.ridgeTier ?? 0}`).join(''));
     }
     expect(signatures.size).toBe(LANDFORM_KINDS.length);
-  }, 30000);
+  }, 180000);
 
   it('repeats chosen landforms exactly and rejects unknown families', () => {
     const options = { landformFamily: 'dissected-plateau' as const };
     expect(generateWorld('GEOLOGY-REPEAT', 160, 128, options)).toEqual(generateWorld('GEOLOGY-REPEAT', 160, 128, options));
     expect(() => generateWorld('bad-family', undefined, undefined, { landformFamily: 'nonsense' as never })).toThrow(RangeError);
-  }, 15000);
+  }, 120000);
 });

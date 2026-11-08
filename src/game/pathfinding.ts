@@ -112,10 +112,9 @@ function contributes(building: StructureSnapshot): boolean {
     || building.present && !isRoute(building.kind) && !isFarmKind(building.kind) && building.kind !== 'irrigation' && building.kind !== 'ruin';
 }
 function footprint(grid: StructureGrid, building: StructureSnapshot, visit: (cell: number) => void): void {
-  for (let y = 0; y < building.height; y++) for (let x = 0; x < building.width; x++) {
-    const cell = (building.y + y) * grid.width + building.x + x;
-    if (cell >= 0 && cell < grid.flags.length) visit(cell);
-  }
+  if (!Number.isInteger(building.x) || !Number.isInteger(building.y)) return;
+  for (let y = Math.max(0, building.y); y < Math.min(grid.height, building.y + building.height); y++)
+    for (let x = Math.max(0, building.x); x < Math.min(grid.width, building.x + building.width); x++) visit(y * grid.width + x);
 }
 
 /** Retain packed structural layers and recalculate only changed footprints.

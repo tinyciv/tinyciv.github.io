@@ -73,10 +73,13 @@ export function generateRiverDeltas(world: World): RiverDelta[] {
     const next = tiles[cell].drainage ?? -1;
     if (next >= 0 && WATER.has(tiles[next].terrain)) protectedWater[next] = 1;
   }
-  for (const tile of tiles) {
-    const next = tile.drainage ?? -1;
-    if ((tile.terrain === 'river' || tile.terrain === 'lake') && next >= 0 && beforeSea[next] && seaExit[next] !== -2)
-      for (let at = next; at >= 0; at = seaExit[at]) protectedWater[at] = 1;
+  for (let cell = 0; cell < count; cell++) {
+    const tile = tiles[cell], next = tile.drainage ?? -1;
+    // Drainage receivers can be diagonal. Protect the cardinal water path
+    // starting at the mouth itself, including its coastal elbow, so sediment
+    // cannot sever a river while leaving its diagonal receiver untouched.
+    if ((tile.terrain === 'river' || tile.terrain === 'lake') && next >= 0 && beforeSea[next] && seaExit[cell] !== -2)
+      for (let at = cell; at >= 0; at = seaExit[at]) protectedWater[at] = 1;
   }
   const candidates = tiles.flatMap((tile, mouth) => tile.channel && tile.terrain === 'river'
     && (tile.drainage ?? -1) >= 0 && beforeSea[tile.drainage!] && seaExit[tile.drainage!] !== -2 && (tile.flow ?? 0) >= 90

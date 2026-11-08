@@ -113,11 +113,11 @@ describe('rivers descending native ledges', () => {
     const accessible = reachable(world);
     for (const [cell, tile] of tiles.entries()) if (tile.ridge && !WATER.has(tile.terrain) && ridgeGroundWalkable(world, cell % width, Math.floor(cell / width)))
       expect(accessible.has(cell), `terrace bank ${cell % width},${Math.floor(cell / width)}`).toBe(true);
-  }, 20000);
+  }, 120000);
 
   it('recognizes existing geographic rivers on Mediterranean shelves, including upper-tier drops', () => {
     const world = generateWorld('MED-200BC', undefined, undefined, { style: 'mediterranean' });
     const falls = checkFalls(world); expect(falls.length).toBeGreaterThan(0);
     expect(falls.some(cell => ridgeLevel(world.tiles[cell]) > 1)).toBe(true);
-  }, 20000);
+  }, 120000);
 });

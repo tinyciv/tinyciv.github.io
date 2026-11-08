@@ -106,10 +106,11 @@ describe('starting settlement layout', () => {
 
   it.each(['CROWN', 'river-kingdom', '42', 'autumn', 'first-light', 'BTV-847', 'settlement-loop-7', 'settlement-loop-8'])
     ('places reachable dry farms and intact towns for every faction on %s', seed => {
-      const state = stateFor(generateWorld(seed)), original = JSON.stringify(state.world.tiles);
+      const state = stateFor(generateWorld(seed)); let original = JSON.stringify(state.world.tiles);
       for (let faction = 0; faction < state.world.spawns.length; faction++) {
         const spawn = state.world.spawns[faction], layout = planStartingSettlement(state, spawn);
         assertLayout(state, layout);
+        expect(JSON.stringify(state.world.tiles)).toBe(original);
         expect(Math.hypot(layout.palace.x - spawn.x, layout.palace.y - spawn.y)).toBeLessThan(10);
         const palace = place(state, layout, faction), reachable = palaceReachability(state, palace);
         for (const farm of layout.farms) {
@@ -117,8 +118,8 @@ describe('starting settlement layout', () => {
           for (const [dx, dy] of CAMP_FIELD_OFFSETS)
             expect(reachable[(farm.y + dy) * state.world.width + farm.x + dx]).toBe(1);
         }
+        original = JSON.stringify(state.world.tiles);
       }
-      expect(JSON.stringify(state.world.tiles)).toBe(original);
     });
 
   it('prefers a productive field over an equally close desert enclosure', () => {

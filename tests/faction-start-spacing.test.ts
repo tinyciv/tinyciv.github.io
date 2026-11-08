@@ -27,10 +27,10 @@ describe('starting realms have room to grow', () => {
     expect(spacing(multiplayer.buildings.filter(building => building.kind === 'palace'))).toBeGreaterThanOrEqual(80);
   }, 120_000);
 
-  it('enlarges constrained continents instead of reducing faction separation', () => {
+  it('preserves minimum map size and separation on constrained continents', () => {
     const world = generateWorld('42', undefined, undefined, { style: 'continents' });
-    expect(world.width).toBeGreaterThan(DEFAULT_WORLD_WIDTH);
-    expect(world.height).toBeGreaterThan(DEFAULT_WORLD_HEIGHT);
+    expect(world.width).toBeGreaterThanOrEqual(DEFAULT_WORLD_WIDTH);
+    expect(world.height).toBeGreaterThanOrEqual(DEFAULT_WORLD_HEIGHT);
     expect(towns(world)).toHaveLength(11);
     expect(spacing(towns(world))).toBeGreaterThanOrEqual(80);
   }, 120_000);

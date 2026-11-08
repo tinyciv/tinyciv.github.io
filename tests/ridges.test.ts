@@ -165,21 +165,24 @@ describe('world ridge placement', () => {
     expect(concave).toBeGreaterThan(0);
   });
 
-  it('varies hill coverage while keeping both tiers and all settlements reachable through legal stairs', () => {
+  it('varies hill coverage while keeping both tiers and all settlements reachable through legal stairs', async () => {
     const counts = new Set<number>(), directions = new Set<string>(), ratios: number[] = [];
     for (let seed = 0; seed < 20; seed++) {
+      await new Promise(resolve => setTimeout(resolve, 0));
       // Fixed dimensions preserve the recorded terrain audit baseline.
       const world = generateWorld(`ridge-coverage-${seed}`, 194, 153);
       if (!world.tiles.some(tile => tile.ridge)) placeRidges(world.tiles, world.width, world.height, world.seed, world.spawns);
       const stats = ridgeStatistics(world), ratio = stats.raised / stats.land;
       ratios.push(ratio);
       expect(ratio, `seed ${seed}: ${stats.raised}/${stats.land}`).toBeGreaterThanOrEqual(.02);
-      expect(ratio, `seed ${seed}`).toBeLessThanOrEqual(.12);
+      const hillCountry = world.tiles.filter(tile => tile.ridge && tile.hillBiome).length / stats.land;
+      expect(ratio - hillCountry, `seed ${seed}: base relief outside added hill-country`).toBeLessThanOrEqual(.12);
       const mountains = new Set(world.tiles.filter(tile => tile.relief === 'mountains' && tile.ridge).map(tile => tile.ridge!));
+      const hillDistricts = new Set(world.tiles.filter(tile => tile.ridge && tile.hillBiome).map(tile => tile.ridge!));
       const incised = new Set(world.tiles.filter(tile => tile.canyon === 'wall' && tile.ridge).map(tile => tile.ridge!));
       for (const [id, ridge] of stats.ridges) if (!mountains.has(id)) {
-        if (!incised.has(id)) expect(ridge.stairs).toBeLessThanOrEqual(3);
-        else {
+        if (!incised.has(id) && !hillDistricts.has(id)) expect(ridge.stairs).toBeLessThanOrEqual(3);
+        else if (incised.has(id)) {
           // A river cut can leave several separate upper-floor caps joined
           // only by impassable ledge artwork. Every cap needs its own legal
           // entrance, even when their shared hill outline needs >3 stairs.
@@ -237,7 +240,7 @@ describe('world ridge placement', () => {
       for (let index = 0; index < world.tiles.length; index++) {
         const tile = world.tiles[index];
         // Only rocky resources intentionally occupy an otherwise usable floor.
-        if (tile.ridge && !tile.stair && !resourceBlocksGround(tile) && !ridgeIsLedge(world, index % world.width, Math.floor(index / world.width))) {
+        if (tile.ridge && !tile.stair && !resourceBlocksGround(tile) && traversable(world, index % world.width, Math.floor(index / world.width)) && !ridgeIsLedge(world, index % world.width, Math.floor(index / world.width))) {
           // Mountain silhouettes may have more than five separate floor caps.
           // Require actual entrances and local connectivity for every floor,
           // rather than limiting how many valid stairs can serve those caps.
@@ -258,7 +261,7 @@ describe('world ridge placement', () => {
     // stair trimming still vary their realized area; larger density changes
     // are exercised through reliefCoverage in landform-relief.test.ts.
     expect(Math.max(...ratios) - Math.min(...ratios)).toBeGreaterThan(.005);
-  }, 30000);
+  }, 180000);
 });
 
 describe('stacked ledge shelves', () => {

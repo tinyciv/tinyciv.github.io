@@ -132,7 +132,7 @@ describe('building artwork and construction stages', () => {
     expect(art.x).toBe(64); expect(art.y).toBe(96);
     expect(art.x + art.width / 2).toBeCloseTo(96);
     expect(art.y + art.height / 2).toBeCloseTo(128);
-    const state = { world: { width: 4 }, buildings: [building] } as unknown as GameState;
+    const state = { world: { width: 4, height: 4 }, buildings: [building] } as unknown as GameState;
     expect([...buildingBlockers(state, 0)]).toEqual([5]);
   });
 
@@ -140,7 +140,7 @@ describe('building artwork and construction stages', () => {
     const building = structure(kind), canvas = render(building);
     expect(canvas.images).toHaveLength(0);
     expect(canvas.fills).toHaveLength(0);
-    const state = { world: { width: 4 }, buildings: [building] } as unknown as GameState;
+    const state = { world: { width: 4, height: 4 }, buildings: [building] } as unknown as GameState;
     expect([...buildingBlockers(state, 0)]).toEqual([]);
   });
 
@@ -155,7 +155,7 @@ describe('building artwork and construction stages', () => {
     expect(top).toBeCloseTo(96 + buildingArtTop(building) * 64);
     expect(bottom).toBe(96 + 64);
     expect((bottom - top) / 64).toBe(1.75);
-    const state = { world: { width: 4 }, buildings: [building] } as unknown as GameState;
+    const state = { world: { width: 4, height: 4 }, buildings: [building] } as unknown as GameState;
     expect([...buildingBlockers(state, 0)]).toEqual([5]);
     building.construction = { startedAt: 0, duration: 25 };
     expect(buildingArtTop(building)).toBe(0);
@@ -204,7 +204,7 @@ describe('building artwork and construction stages', () => {
     expect(Math.min(...canvas.images.map(image => image.y))).toBe(96);
     expect(Math.max(...canvas.images.map(image => image.x + image.width))).toBe(192);
     expect(Math.max(...canvas.images.map(image => image.y + image.height))).toBe(224);
-    const state = { world: { width: 4 }, buildings: [palace] } as unknown as GameState;
+    const state = { world: { width: 4, height: 4 }, buildings: [palace] } as unknown as GameState;
     expect([...buildingBlockers(state, 0)]).toEqual([5, 6, 9, 10]);
   });
 
