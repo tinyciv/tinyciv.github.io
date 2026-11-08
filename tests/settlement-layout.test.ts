@@ -110,7 +110,7 @@ describe('starting settlement layout', () => {
       for (let faction = 0; faction < state.world.spawns.length; faction++) {
         const spawn = state.world.spawns[faction], layout = planStartingSettlement(state, spawn);
         assertLayout(state, layout);
-        expect(JSON.stringify(state.world.tiles)).toBe(original);
+        expect(JSON.stringify(state.world.tiles) === original, 'planning leaves terrain unchanged').toBe(true);
         expect(Math.hypot(layout.palace.x - spawn.x, layout.palace.y - spawn.y)).toBeLessThan(10);
         const palace = place(state, layout, faction), reachable = palaceReachability(state, palace);
         for (const farm of layout.farms) {

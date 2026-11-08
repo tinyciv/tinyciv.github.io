@@ -4,7 +4,7 @@ import { clearDesertStones } from '../src/game/desert-stones';
 import { entityStore } from '../src/game/entity-store';
 import { worldChangesSince } from '../src/game/world-revisions';
 import { scenario } from '../dev/navigation-lab/scenarios';
-import type { World, Building } from '../src/game/types';
+import type { World, Building, GameState } from '../src/game/types';
 
 const world = (): World => ({ width: 60, height: 40, seed: 'ochre', source: 'test', spawns: [],
   tiles: Array.from({ length: 2400 }, (_, i) => ({ terrain: i % 60 < 30 ? 'desert' : 'grassland', overlay: 'none',
@@ -49,4 +49,12 @@ it('replicates decoration removal even when the terrain revision stays unchanged
   clearDesertStones(a, { kind: 'road', x: 5, y: 5 } as Building);
   expect(a.revision).toBe(0);
   expect(worldChangesSince(a, cursor)).toMatchObject({ full: false, cells: [5 * a.width + 5] });
+});
+
+it('indexing a virtual building layout does not clear the shared terrain', () => {
+  const state = { world: world(), buildings: [], units: [], fields: [] } as unknown as GameState;
+  state.world.tiles[5 * state.world.width + 5].desertStone = 2;
+  const virtual = { ...state, buildings: [{ id: 1, kind: 'road', x: 5, y: 5, faction: 0, hp: 10, maxHp: 10, capacity: 0 } as Building] };
+  expect(entityStore(virtual).buildings.get(1)).toBeDefined();
+  expect(state.world.tiles[5 * state.world.width + 5].desertStone).toBe(2);
 });

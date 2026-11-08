@@ -35,11 +35,12 @@ class EntityCollection<T extends { id: number }, R extends string> {
   constructor(private values: T[], private assign: (values: T[]) => void, private roles: readonly R[], private mask: (value: T) => number,
     private revisionMask = -1, private onRegister?: (value: T) => void) {
     this.components = roles.map(() => ({}));
-    for (let i = 0; i < values.length; i++) this.register(values[i], i);
+    // Indexing an existing state is read-only, including virtual placement views.
+    for (let i = 0; i < values.length; i++) this.register(values[i], i, false);
   }
-  private register(value: T, arrayOrder = this.values.length): void {
+  private register(value: T, arrayOrder = this.values.length, notify = true): void {
     if (this.records.has(value.id)) throw new Error(`Duplicate entity ID: ${value.id}`);
-    this.onRegister?.(value);
+    if (notify) this.onRegister?.(value);
     const entry = { eid: addEntity(this.world), order: this.nextOrder++, value, mask: 0 };
     this.records.set(value.id, entry); this.entries[entry.eid] = entry;
     this.arrayOrders.set(value, arrayOrder);
