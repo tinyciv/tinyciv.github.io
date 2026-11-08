@@ -7,7 +7,7 @@ import { createGame } from '../src/game/simulation';
 import { generateWorld } from '../src/world/generator';
 import { distance, type GameState, type VillageIdentity } from '../src/game/types';
 import { initializeVillages, performVillageAction, refreshVillageBonuses, updateVillages, updateVillageUnit,
-  villageCamp, villageDiplomacyStatus, villageHostility, villageTradeActive } from '../src/game/villages';
+  villageCamp, villageDiplomacyStatus, villageHostility, villageTradeActive, villageRequiredResource, VILLAGE_REQUIRED_RESOURCES } from '../src/game/villages';
 
 function fixture(civilizations = 1): GameState {
   const corners = [[12, 12], [80, 12], [12, 62], [80, 62]];
@@ -41,6 +41,7 @@ describe('neutral villages', () => {
     expect(state.villages).toHaveLength(6);
     for (const village of state.villages!) {
       expect(village.relation).toBe('neutral');
+      expect(VILLAGE_REQUIRED_RESOURCES).toContain(village.requiredResource);
       const buildings = state.buildings.filter(b => b.villageId === village.id), units = state.units.filter(u => u.villageId === village.id);
       expect(buildings.filter(b => b.kind === 'villageTent')).toHaveLength(3);
       expect(buildings).toHaveLength(3);
@@ -62,6 +63,24 @@ describe('neutral villages', () => {
     const first = fixture(4), second = fixture(4); initializeVillages(first); initializeVillages(second);
     expect(first.villages).toEqual(second.villages);
     expect(first.units).toEqual(second.units);
+  });
+
+  it('keeps resource demand stable without consuming game RNG and varies it between villages and seeds', () => {
+    const state = fixture(4); initializeVillages(state);
+    const rng = state.rngState;
+    const choices = new Set(state.villages!.map(village => villageRequiredResource(state, village)));
+    expect(choices.size).toBeGreaterThan(1);
+    for (const village of state.villages!) {
+      expect(villageRequiredResource(state, village)).toBe(village.requiredResource);
+      expect(villageRequiredResource(state, { ...village, requiredResource: undefined })).toBe(village.requiredResource);
+    }
+    const village = { ...state.villages![0], requiredResource: undefined };
+    const acrossSeeds = new Set(Array.from({ length: 30 }, (_, index) => {
+      const sample = { ...state, world: { ...state.world, seed: `village-demand-${index}` } };
+      return villageRequiredResource(sample, village);
+    }));
+    expect(acrossSeeds).toEqual(new Set(VILLAGE_REQUIRED_RESOURCES));
+    expect(state.rngState).toBe(rng);
   });
 
   it('keeps village structures off existing units and away from initial raiding bands', () => {

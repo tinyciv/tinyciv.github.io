@@ -79,14 +79,14 @@ describe('desert yield in settlement planning', () => {
     expect(population).toBe(20);
     expect(count).toBeGreaterThan(8);
     state.buildings.find(b => b.kind === 'palace')!.governorPermissions = { farms: false, housing: false };
-    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + count * (.1 * 4 / 3) - population);
+    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + count * (.2 * 4 / 3) - population);
     const field = state.fields!.find(field => field.planted)!;
     tileAt(state.world, field.x, field.y)!.terrain = 'grassland';
     // Prevent births and house orders from changing the population or farm count.
     state.factions[0].food = 0;
     economy(state);
     expect(state.factions[0].population).toBe(population);
-    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + (.4 + (count - 1) * .1) * 4 / 3 - population);
+    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + (.4 + (count - 1) * .2) * 4 / 3 - population);
   });
 
   it('keeps a necessary fertile farm when replacement would leave only insufficient desert fields', () => {
@@ -107,7 +107,7 @@ describe('desert yield in settlement planning', () => {
     for (const unit of state.units) if (unit.collector) unit.repathAt = 1000;
     expect(planHouseSite(state, palace)?.replaceCampId).toBe(near.id);
     economy(state);
-    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + (.4 + .1) * 4 / 3 - 8);
+    expect(state.factions[0].yields.food).toBeCloseTo(PALACE_FOOD_PER_CYCLE + (.4 + .2) * 4 / 3 - 8);
     expect(near.kind).toBe('camp');
     expect(state.buildings.some(building => building.kind === 'house')).toBe(false);
   });

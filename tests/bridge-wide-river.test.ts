@@ -17,6 +17,7 @@ function fixture(width: number, population: number): GameState {
     buildings: [{ id: 1, kind: 'palace', faction: 0, x: 5, y: 12, hp: 650, maxHp: 650, capacity: 0 }],
     factions: [{ id: 0, name: 'Bridge realm', color: '#3988ff', affinity: 100, relation: 'self', food: 1000, gold: 1000,
       production: 0, population, culture: 0, yields: { food: 0, gold: 0, production: 0 },
+      research: { focus: 'engineering', levels: { engineering: 1 }, progress: {} },
       nextRaid: Infinity, nextRetinueAt: Infinity, defeated: false }],
     time: 0, tick: 0, paused: false, speed: 1, gameOver: false, victory: false, events: [], particles: [],
     projectiles: [], fields: [], treasures: [], marauderPacks: [], raiderCamps: [],

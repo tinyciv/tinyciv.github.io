@@ -45,13 +45,13 @@ function nextEconomyTick(state: GameState): void {
 
 describe('maintenance through the live economy', () => {
   it('bills each extra city and completed tower once, with one capital exemption and no population surcharge', () => {
-    const state = fixture([10, 10, 10]); state.factions[0].gold = 25;
+    const state = fixture([10, 10, 10]); state.factions[0].gold = 300;
     entityStore(state).buildings.add(building(10, 'woodenTower', 13), building(11, 'tower', 33),
       { ...building(12, 'woodenTower', 53), construction: { startedAt: 0, duration: 90, waitingForBuilder: true } },
       { ...building(13, 'tower', 54), hp: 0 });
     expect(factionBuildingMaintenance(state, state.factions[0])).toBe(85);
     nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(-39);
+    expect(state.factions[0].gold).toBe(236);
     expect(state.factions[0].incomeTotals?.gold).toBe(21);
     expect(goldFlowSummary(state, state.factions[0])).toMatchObject({
       inputs: [{ category: 'taxes', amount: 21 }],
@@ -64,19 +64,19 @@ describe('maintenance through the live economy', () => {
     expect(state.factions[0].yields.gold).toBe(-64);
     expect(citySummaries(state).map(city => city.gold)).toEqual([2, -35.5, -30.5]);
     nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(-103);
+    expect(state.factions[0].gold).toBe(172);
     expect(state.factions[0].incomeTotals?.gold).toBe(42);
     expect(goldFlowSummary(state, state.factions[0])).toMatchObject({ totalInputs: 42, totalOutlays: 170, net: -128 });
     expect(state.factions[0].population).toBe(30);
   });
 
-  it('keeps maintenance arrears through subsequent ticks and repays them with later tax income', () => {
+  it('stops maintenance at zero across repeated ticks and lets later income accumulate without arrears', () => {
     const state = fixture([10, 10]); state.factions[0].gold = 5;
-    for (let i = 0; i < 3; i++) nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(-65.5);
+    for (let i = 0; i < 3; i++) { nextEconomyTick(state); expect(state.factions[0].gold).toBe(0); }
+    expect(state.factions[0].gold).toBe(0);
     state.buildings.find(candidate => candidate.id === 2)!.hp = 0;
     nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(-51.5);
+    expect(state.factions[0].gold).toBe(14);
     expect(state.factions[0].yields.gold).toBe(14);
   });
 
@@ -100,8 +100,8 @@ describe('maintenance through the live economy', () => {
     expect(state.units.filter(unit => unit.kind === 'militia')).toHaveLength(16);
   });
 
-  it('does not forgive a negative treasury when a thief reaches the settlement', () => {
-    const state = fixture(); state.factions[0].gold = -75;
+  it('cannot steal from an empty treasury', () => {
+    const state = fixture(); state.factions[0].gold = 0;
     const thief: Unit = { ...person(200, 'warrior', 7.5, 10.5, -2), marauderPack: 50 };
     const pack: MarauderPack = { id: 50, name: 'Thieves', color: '#111', targetFaction: 0, targetBuilding: 1,
       raid: true, motivation: 'theft', phase: 'approach', home: { x: 1.5, y: 1.5 }, waypoint: { x: 9, y: 11 },
@@ -110,7 +110,7 @@ describe('maintenance through the live economy', () => {
     expect(updateRaiderMotivation(state, thief, .1, { move() {}, attack() {}, visible: () => true })).toBe(true);
     expect(pack.raidObjectiveDone).toBe(true);
     expect(thief.stolenGold).toBe(0);
-    expect(state.factions[0].gold).toBe(-75);
+    expect(state.factions[0].gold).toBe(0);
     expect(goldFlowSummary(state, state.factions[0]).totalOutlays).toBe(0);
   });
 
@@ -186,8 +186,8 @@ describe('domestic trade and expansion balance', () => {
     expect(population === 21 ? marginal < 0 : marginal > 0).toBe(true);
   });
 
-  it('credits the exact fractional planned payout against debt on arrival, independent of extra walking', () => {
-    const state = fixture([100, 30]); state.buildings[1].x = 51; state.factions[0].gold = -10;
+  it('credits the exact fractional planned payout to an empty treasury on arrival, independent of extra walking', () => {
+    const state = fixture([100, 30]); state.buildings[1].x = 51; state.factions[0].gold = 0;
     updateTradeRoutes(state);
     const route = state.tradeRoutes![0], merchant = state.units.find(unit => unit.id === route.merchantId)!;
     updateMerchant(state, merchant, .1, () => {});
@@ -199,6 +199,6 @@ describe('domestic trade and expansion balance', () => {
     route.distance = 500;
     updateMerchant(state, merchant, .1, () => {});
     expect(route.journeys).toBe(1);
-    expect(state.factions[0].gold).toBeCloseTo(-10 + quote.gold, 10);
+    expect(state.factions[0].gold).toBeCloseTo(quote.gold, 10);
   });
 });

@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { generateWorld } from '../src/world/generator';
 import * as waterfalls from '../src/world/waterfalls';
+import * as resources from '../src/world/resources';
 import { ridgeLevel } from '../src/game/ridges';
 import { WATER, type Tile, type World } from '../src/game/types';
 
@@ -17,7 +18,13 @@ const river = (tile: Tile) => [tile.terrain, tile.channel, tile.channelNext, til
 const appearance = (tile: Tile) => [tile.terrain, tile.overlay, tile.treeClass, tile.palm, tile.marsh, tile.riverArt, tile.waterfall];
 
 describe('Alpine waterfall headwaters', () => {
+  afterEach(() => vi.restoreAllMocks());
   it('adds complete downhill Alpine tributaries while retaining mapped rivers, mountain geometry and distant vegetation', () => {
+    // Compare the hydrology/ecology stages directly. Deposits are selected
+    // afterward with global spacing: losing one eligible Alpine site can move
+    // another deposit (and its cleared trees/plains) anywhere in the world.
+    // Keep every river, geometry and distant vegetation assertion below.
+    vi.spyOn(resources, 'assignRegionalResources').mockImplementation(() => {});
     const before = withoutAlpineTributaries();
     const world = generateWorld('MED-200BC', undefined, undefined, { style: 'mediterranean' });
     expect(world.spawns).toEqual(before.spawns); expect(world.secondarySpawns).toEqual(before.secondarySpawns);

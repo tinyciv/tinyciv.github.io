@@ -7,16 +7,19 @@ import { unitAttack, unitDefense } from './veterancy';
 
 export type { LeaderSkillId } from './types';
 export const LEADER_XP_PER_KILL = 20;
+/** Fixed bounty: commander kills no longer bypass the increasing XP curve. */
+export const LEADER_VICTORY_XP = 6400;
+export const LEADER_XP_PER_LEVEL = 19200;
 export const RETINUE_LEADER_XP_SHARE = .1;
 export const LEADER_LEVEL_HP_BONUS = 10;
 export const LEADER_LEVEL_ATTACK_BONUS = 1;
-export const LEADER_SKILL_MAX_RANK = 3;
+export const LEADER_SKILL_MAX_RANK = 10;
 export const LEADER_SKILL_IDS: readonly LeaderSkillId[] = ['power', 'guard', 'command', 'engineer', 'brace', 'discretion'];
 export const LEADER_SKILL_TECH: Partial<Record<LeaderSkillId, ResearchBranchId>> = { engineer: 'metalTools', brace: 'militaryTactics', discretion: 'scoutLodge' };
 export const leaderSkillMaxRank = (skill: LeaderSkillId): number => LEADER_SKILL_TECH[skill] ? 1 : LEADER_SKILL_MAX_RANK;
 export const leaderSkillUnlocked = (faction: Faction | undefined, skill: LeaderSkillId): boolean => !LEADER_SKILL_TECH[skill] || researchLevel(faction, LEADER_SKILL_TECH[skill]!) > 0;
 
-export const leaderXpRequired = (level: number): number => Math.max(1, Math.floor(level)) * 800;
+export const leaderXpRequired = (level: number): number => Math.max(1, Math.floor(level)) * LEADER_XP_PER_LEVEL;
 export const initialLeaderProgression = (): LeaderProgression => ({ level: 1, xp: 0, skillPoints: 0,
   skills: { power: 0, guard: 0, command: 0, engineer: 0, brace: 0, discretion: 0 } });
 
@@ -113,17 +116,4 @@ export function learnLeaderSkill(state: GameState, skill: LeaderSkillId, faction
   if (skill === 'power') leader.attack += 2;
   if (skill === 'guard') leader.defense += 1;
   return { ok: true, message: `${skillName[skill]} rank ${progress.skills[skill]} learned.` };
-}
-
-/** Leader victories grant a level directly without consuming stored XP. */
-export function awardLeaderLevel(state: GameState, factionId: number): boolean {
-  const leader = indexedLeader(state, factionId);
-  if (!leader) return false;
-  const progress = leader.leaderProgression ??= initialLeaderProgression();
-  progress.level++; progress.skillPoints++;
-  const health = LEADER_LEVEL_HP_BONUS * (leader.enemyStrengthMultiplier ?? 1);
-  leader.maxHp = unitMaxHp(leader) + health;
-  leader.hp = Math.min(leader.maxHp, leader.hp + health);
-  leader.attack += LEADER_LEVEL_ATTACK_BONUS;
-  return true;
 }

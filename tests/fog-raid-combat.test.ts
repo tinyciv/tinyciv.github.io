@@ -56,7 +56,7 @@ function advance(state: GameState, seconds: number): void {
 }
 
 describe('persistent fog raid combat', () => {
-  it('starts with four weak raiders after a minute and reaches buildings before the second minute ends', () => {
+  it('starts with two early raiders after a minute and reaches buildings before the second minute ends', () => {
     const state = scheduledCampFixture(), palace = state.buildings[0];
     advance(state, 59);
     expect(state.marauderPacks).toEqual([]);
@@ -71,7 +71,7 @@ describe('persistent fog raid combat', () => {
     expect(state.fogRaids!.waves).toBeGreaterThanOrEqual(1);
     const opening = state.marauderPacks!.find(pack => pack.raid)!;
     expect(opening.raiderCamp).toBeDefined();
-    expect(openingSize).toBe(4); // Surviving soldiers may later return and redeploy in a new party.
+    expect(openingSize).toBe(2); // The four-unit baseline reduced by 40%, rounded to whole units.
   }, 15000);
 
   it('spawns a due wave beyond sight and carries its assault through to building damage', () => {

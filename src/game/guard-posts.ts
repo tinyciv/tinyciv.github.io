@@ -72,7 +72,7 @@ function insideEnclosure(state: GameState, enclosure: GuardEnclosure | undefined
   return x >= 0 && y >= 0 && x < state.world.width && y < state.world.height
     && !!enclosure?.cells.has(y * state.world.width + x);
 }
-const human = (unit: Unit): boolean => ['leader', 'warrior', 'spearman', 'horseman', 'archer', 'militia', 'worker', 'merchant'].includes(unit.kind);
+const human = (unit: Unit): boolean => ['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'militia', 'worker', 'merchant'].includes(unit.kind);
 const civilian = (unit: Unit): boolean => unit.kind === 'worker' || unit.kind === 'merchant';
 const center = (building: Building): Point => ({ x: building.x + .5, y: building.y + .5 });
 export const guardPostLevel = (post: Building): 0 | 1 | 2 => Math.max(0, Math.min(2, Math.floor(post.guardPost?.level ?? 0))) as 0 | 1 | 2;

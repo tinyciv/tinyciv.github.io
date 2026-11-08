@@ -42,7 +42,7 @@ describe('Leader XP and skills', () => {
   it('reads fresh progression without mutating the Leader or leaking writable ranks', () => {
     const state = fixture(), leader = getLeader(state)!; delete leader.leaderProgression;
     const before = structuredClone(leader), view = leaderProgressionView(state)!;
-    expect(view).toMatchObject({ level: 1, xp: 0, xpRequired: 800, skillPoints: 0 });
+    expect(view).toMatchObject({ level: 1, xp: 0, xpRequired: 19200, skillPoints: 0 });
     expect(view.skills.every(skill => !skill.canLearn && skill.rank === 0)).toBe(true);
     expect(leader).toEqual(before);
     leader.leaderProgression = initialLeaderProgression();
@@ -52,15 +52,15 @@ describe('Leader XP and skills', () => {
 
   it('crosses increasing thresholds, carries XP and applies each bonus once while preserving wounds', () => {
     const state = fixture(), leader = getLeader(state)!; leader.hp = 35;
-    expect(awardLeaderXp(state, 640)).toBe(0);
+    expect(awardLeaderXp(state, 15360)).toBe(0);
     expect(leader).toMatchObject({ hp: 35, maxHp: 100, attack: 25 });
-    expect(awardLeaderXp(state, 160)).toBe(1);
+    expect(awardLeaderXp(state, 3840)).toBe(1);
     expect(leader).toMatchObject({ hp: 45, maxHp: 110, attack: 26 });
     expect(readLeaderProgression(leader)).toMatchObject({ level: 2, xp: 0, skillPoints: 1 });
-    expect(awardLeaderXp(state, 5440)).toBe(2);
-    expect(readLeaderProgression(leader)).toMatchObject({ level: 4, xp: 1440, skillPoints: 3 });
+    expect(awardLeaderXp(state, 130560)).toBe(2);
+    expect(readLeaderProgression(leader)).toMatchObject({ level: 4, xp: 34560, skillPoints: 3 });
     expect(leader).toMatchObject({ hp: 65, maxHp: 130, attack: 28 });
-    expect(leaderXpRequired(4)).toBe(3200);
+    expect(leaderXpRequired(4)).toBe(76800);
     for (let i = 0; i < 10; i++) leaderProgressionView(state);
     expect(leader).toMatchObject({ hp: 65, maxHp: 130, attack: 28 });
   });
@@ -75,7 +75,7 @@ describe('Leader XP and skills', () => {
     const state = fixture(), leader = getLeader(state)!;
     state.factions[0].weaponLevel = 3; state.factions[0].armorLevel = 2;
     leader.kills = 100; applyFactionEquipment(state, 0);
-    awardLeaderXp(state, 2400);
+    awardLeaderXp(state, 57600);
     const power = leaderProgressionView(state)!.skills.find(skill => skill.id === 'power')!;
     expect(learnLeaderSkill(state, 'power').ok).toBe(true);
     expect(unitAttack(leader)).toBeCloseTo(power.nextAttack);
@@ -91,22 +91,22 @@ describe('Leader XP and skills', () => {
     expect(leader).toEqual(before);
   });
 
-  it.each<LeaderSkillId>(['power', 'guard', 'command'])('caps %s at three ranks without consuming another point', skill => {
-    const state = fixture(); awardLeaderXp(state, 8000);
-    for (let rank = 1; rank <= 3; rank++) expect(learnLeaderSkill(state, skill).ok).toBe(true);
+  it.each<LeaderSkillId>(['power', 'guard', 'command'])('caps %s at ten ranks without consuming another point', skill => {
+    const state = fixture(); awardLeaderXp(state, 1267200);
+    for (let rank = 1; rank <= 10; rank++) expect(learnLeaderSkill(state, skill).ok).toBe(true);
     const before = structuredClone(getLeader(state));
     expect(learnLeaderSkill(state, skill).ok).toBe(false);
     expect(getLeader(state)).toEqual(before);
     const view = leaderProgressionView(state)!.skills.find(row => row.id === skill)!;
-    expect(view).toMatchObject({ rank: 3, maxRank: 3, canLearn: false });
+    expect(view).toMatchObject({ rank: 10, maxRank: 10, canLearn: false });
   });
 
   it('adds Command to retinue recruitment/composition capacity without purchased-slot upkeep', () => {
     const state = fixture(), leader = getLeader(state)!, faction = state.factions[0];
     faction.purchasedRetinueSlots = 2;
     const initial = retinueComposition(state, 0).total, upkeep = retinueSlotUpkeep(faction);
-    awardLeaderXp(state, 4800);
-    for (let rank = 1; rank <= 3; rank++) {
+    awardLeaderXp(state, 1056000);
+    for (let rank = 1; rank <= 10; rank++) {
       expect(learnLeaderSkill(state, 'command').ok).toBe(true);
       expect(desiredRetinueSize(faction, leader)).toBe(initial + rank);
       expect(retinueComposition(state, 0).total).toBe(initial + rank);
@@ -122,7 +122,7 @@ describe('Leader XP and skills', () => {
     entityStore(state).units.add(...Array.from({ length: 4 }, (_, index) => person(20 + index, 'warrior', 10.5 + index, 10.5)));
     faction.nextRetinueAt = 0; updateGame(state, .1, idle);
     expect(state.units.filter(unit => unit.kind === 'warrior')).toHaveLength(4);
-    awardLeaderXp(state, 800); learnLeaderSkill(state, 'command');
+    awardLeaderXp(state, 19200); learnLeaderSkill(state, 'command');
     faction.nextRetinueAt = state.time; updateGame(state, .4, idle);
     expect(state.units.filter(unit => unit.kind === 'warrior')).toHaveLength(5);
     expect(state.units.find(unit => unit.kind === 'warrior' && unit.home === 1)?.joiningRetinue).toBe(true);
@@ -130,20 +130,20 @@ describe('Leader XP and skills', () => {
   });
 
   it('persists XP, ranks and bonuses through an ordinary game save without applying them again', () => {
-    const state = fixture(); awardLeaderXp(state, 6240); learnLeaderSkill(state, 'power'); learnLeaderSkill(state, 'command');
+    const state = fixture(); awardLeaderXp(state, 149760); learnLeaderSkill(state, 'power'); learnLeaderSkill(state, 'command');
     const before = structuredClone(getLeader(state)!);
     const restored = parseGameSave(serializeGameSave(state));
     expect(getLeader(restored)).toEqual(before);
-    expect(leaderProgressionView(restored)).toMatchObject({ level: 4, xp: 1440, skillPoints: 1, maxHp: 130 });
+    expect(leaderProgressionView(restored)).toMatchObject({ level: 4, xp: 34560, skillPoints: 1, maxHp: 130 });
     expect(retinueComposition(restored, 0).total).toBe(retinueComposition(state, 0).total);
   });
 
   it('does not award or learn after defeat and a replacement Leader starts at level one', () => {
     const state = fixture(), dead = getLeader(state)!;
-    awardLeaderXp(state, 4800); learnLeaderSkill(state, 'power'); learnLeaderSkill(state, 'command');
+    awardLeaderXp(state, 115200); learnLeaderSkill(state, 'power'); learnLeaderSkill(state, 'command');
     dead.hp = 0; state.gameOver = true; state.factions[0].defeated = true;
     const before = structuredClone(dead);
-    expect(awardLeaderXp(state, 800)).toBe(0); expect(learnLeaderSkill(state, 'guard').ok).toBe(false);
+    expect(awardLeaderXp(state, 19200)).toBe(0); expect(learnLeaderSkill(state, 'guard').ok).toBe(false);
     expect(dead).toEqual(before); expect(leaderProgressionView(state)).toBeUndefined();
     const result = respawnLeader(state);
     expect(result.ok).toBe(true);
@@ -153,7 +153,7 @@ describe('Leader XP and skills', () => {
   it('rejects spending another faction\'s points outside its authenticated context', () => {
     const state = fixture(), second = { ...state.factions[0], id: 1, relation: 'war' } as Faction;
     state.factions.push(second); entityStore(state).units.add(person(30, 'leader', 25.5, 20.5, 1));
-    awardLeaderXp(state, 800, 1);
+    awardLeaderXp(state, 19200, 1);
     expect(learnLeaderSkill(state, 'power', 1).ok).toBe(false);
     expect(withPlayerFaction(state, 1, () => learnLeaderSkill(state, 'power', 1)).ok).toBe(true);
     expect(readLeaderProgression(getLeader(state)!)).toEqual(initialLeaderProgression());

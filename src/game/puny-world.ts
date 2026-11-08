@@ -1,3 +1,5 @@
+import { loadTundraArt } from './tundra-art';
+import { loadDesertStoneArt } from './desert-stone-art';
 import { loadCreekArt } from './creek-art';
 
 /** Shade's unmodified CC0 Puny World atlas. All coordinates are native pixels. */
@@ -24,7 +26,7 @@ function loadAtlas(file: string): Promise<{ image: HTMLImageElement; pixels: Pun
 }
 
 export function loadPunyWorld(): Promise<void> {
-    return loading ??= Promise.all([loadAtlas('overworld.png'), loadAtlas('desert-ledges.png'), loadCreekArt()]).then(([original, desert]) => {
+    return loading ??= Promise.all([loadAtlas('overworld.png'), loadAtlas('desert-ledges.png'), loadCreekArt(), loadDesertStoneArt(), loadTundraArt()]).then(([original, desert]) => {
         if (desert.pixels.width !== 128 || desert.pixels.height !== 48) throw new Error('Invalid desert ledge sheet.');
         atlas = original.image;
         pixels = original.pixels;

@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { Renderer } from '../../src/game/renderer';
 import { deathAnimationFrame } from '../../src/game/combat-effect-art';
+import { ResourceArtMemory, resourceObjectKey, type ResourceCellArt } from '../../src/game/resource-art';
 import * as fogModule from '../../src/game/fog';
 import type { GameState, Point } from '../../src/game/types';
 
@@ -63,13 +64,16 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
         unit: (_unit: unknown, _time: number, _color: string, effect?: { damageMask?: boolean }) => ({
             key: effect?.damageMask ? 'unit-damage' : 'unit' }),
         death: (age: number) => deathAnimationFrame(age) < 0 ? undefined : ({ key: `unit-death:${deathAnimationFrame(age)}` }),
-        vegetation: () => ({ key: 'vegetation' }), overlay: () => ({ key: 'overlay' }) };
+        vegetation: () => ({ key: 'vegetation' }), overlay: () => ({ key: 'overlay' }),
+        resource: (resource: ResourceCellArt) => ({ key: `resource:${resourceObjectKey(resource)}` }),
+        resourceOutline: (resource: ResourceCellArt, color: string) => ({ key: `resource-outline:${resourceObjectKey(resource)}:${color}` }),
+        resourceFence: (resource: ResourceCellArt, front: boolean) => ({ key: `resource-fence:${resource.fences}:${resource.gate}:${front}` }) };
     const renderer = Object.assign(Object.create(Renderer.prototype), {
         gpu: { art, beginFrame() {}, terrain() {}, sprite, graphics,
             retainedGraphics(_key: unknown, draw: (shape: Shape) => void) { const shape = graphics(); draw(shape); return shape; },
             drawFog() { drawOrder.push('fog'); }, finishFrame() {} },
         width, height, zoom: size / 32, camera: { x: (width / 2 - ox) / size, y: (height / 2 - oy) / size }, follow: false,
-        terrain: {}, fogCanvas: {}, buildPreview: options.buildPreview ?? [], hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},
+        terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), buildPreview: options.buildPreview ?? [], hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},
     }) as Renderer;
     const fog = options.fog && vi.spyOn(fogModule, 'presentationFog').mockReturnValue(options.fog);
     try { renderer.draw(state, 0); } finally { fog?.mockRestore(); }

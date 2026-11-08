@@ -1,6 +1,6 @@
 import { constructionEdges } from './builders';
-import { travelTimeMap, withNavigationFrame } from './pathfinding';
-import { buildingPresent, isFarmKind, isWallKind, type Building, type GameState, type Point } from './types';
+import { travelTimeMap, wallBreachingNavigation, withNavigationFrame } from './pathfinding';
+import { buildingPresent, isFarmKind, type Building, type GameState, type Point } from './types';
 import { villageHostility } from './villages';
 
 /** Shared by strategic objectives and specialist raiders' local sensing. */
@@ -20,7 +20,7 @@ export function selectRaidTarget(state: GameState, from: Point, ownPack?: number
   const candidates = state.buildings.filter(building => isRaidObjective(state, building));
   if (!candidates.length) return;
   // Walls can be breached; rivers and disconnected islands cannot.
-  const planning = { ...state, buildings: state.buildings.filter(building => !(building.faction >= 0 && isWallKind(building.kind))) };
+  const planning = wallBreachingNavigation(state, { kind: 'raider' });
   return withNavigationFrame(planning, () => {
   const travel = travelTimeMap(planning, from, -2, 2.35, Infinity);
   const pressure = new Map<number, number>(), objectives = new Map<number, number>();

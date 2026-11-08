@@ -26,7 +26,7 @@ const center = (target: Unit | Building): Point => building(target)
  * Sharp turns, waiting and teleports cannot manufacture a running charge. */
 export function recordCavalryMovement(state: GameState, unit: Unit, from: Point, dt: number): void {
   const rider = unit as CavalryUnit;
-  if (unit.kind !== 'horseman') { delete rider.cavalryCharge; return; }
+  if ((unit.kind !== 'horseman' && unit.kind !== 'knight')) { delete rider.cavalryCharge; return; }
   const momentum = rider.cavalryCharge ??= { distance: 0, dx: 0, dy: 0, lastMoveAt: -Infinity, readyAt: 0 };
   const dx = unit.x - from.x, dy = unit.y - from.y, length = Math.hypot(dx, dy);
   if (unit.hp <= 0 || unit.inside || unit.order === 'flee' || dt <= 0 || !Number.isFinite(length)
@@ -48,7 +48,7 @@ export function recordCavalryMovement(state: GameState, unit: Unit, from: Point,
  * melee hit, not an extra bypass around the authoritative damage pipeline. */
 export function tryCavalryCharge(state: GameState, attacker: Unit, primary: Unit | Building, combat: CavalryCombat): boolean {
   const momentum = (attacker as CavalryUnit).cavalryCharge;
-  if (attacker.kind !== 'horseman' || attacker.hp <= 0 || attacker.inside || attacker.order === 'flee' || !momentum
+  if ((attacker.kind !== 'horseman' && attacker.kind !== 'knight') || attacker.hp <= 0 || attacker.inside || attacker.order === 'flee' || !momentum
     || momentum.distance + 1e-7 < CAVALRY_CHARGE_DISTANCE || state.time < momentum.readyAt
     || state.time - momentum.lastMoveAt > CAVALRY_CHARGE_GRACE || primary.hp <= 0 || !combat.hostile(attacker.faction, primary.faction)) return false;
   const impact = center(primary), dx = impact.x - attacker.x, dy = impact.y - attacker.y, length = Math.hypot(dx, dy);

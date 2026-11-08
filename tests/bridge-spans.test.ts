@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { bridgeSpanAt, bridgeStroke, MAX_BRIDGE_SPAN, validateBridgeTile } from '../src/game/bridge-spans';
+import { bridgeSpanAt, bridgeSpanLimit, bridgeStroke, INITIAL_BRIDGE_SPAN, MAX_BRIDGE_SPAN, validateBridgeTile } from '../src/game/bridge-spans';
 import { buildStroke, constructionLine, planConstruction } from '../src/game/construction';
 import { canMove, canWalk, findPath, hasStaticPath, movementMultiplier, travelTimeMap } from '../src/game/pathfinding';
 import { createGame, getLeader, moveUnit, validateBuildAt } from '../src/game/simulation';
@@ -9,7 +9,7 @@ import { insideOwnBorders } from '../src/game/borders';
 import { ensureBuilders, updateBuilder } from '../src/game/builders';
 import { updateConstruction } from '../src/game/structures';
 
-function crossing(width = 8, terrains: Terrain[] = ['coast']) {
+function crossing(width = 8, terrains: Terrain[] = ['coast'], engineering = true) {
   const world: World = { width: 40, height: 30, seed: 'bridge-spans', source: 'fixture', spawns: [{ x: 8.5, y: 15.5 }],
     tiles: Array.from({ length: 40 * 30 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3,
       moisture: .5, food: 3, production: 1, gold: 0, variation: .5 })) };
@@ -17,6 +17,7 @@ function crossing(width = 8, terrains: Terrain[] = ['coast']) {
   entityStore(state).units.replace([leader]); Object.assign(leader, { x: 15.5, y: 15.5 });
   entityStore(state).buildings.replace(state.buildings.filter(building => building.kind === 'palace')); state.fields = [];
   state.factions[0].gold = 1000; state.factions[0].culture = 0;
+  state.factions[0].research = { focus: 'engineering', levels: engineering ? { engineering: 1 } : {}, progress: {} };
   for (const tile of world.tiles) delete tile.farm;
   for (let y = 0; y < world.height; y++) for (let x = 16; x < Math.min(world.width, 16 + width); x++)
     Object.assign(world.tiles[y * world.width + x], { terrain: terrains[(x - 16) % terrains.length], overlay: 'none' });
@@ -25,6 +26,48 @@ function crossing(width = 8, terrains: Terrain[] = ['coast']) {
 }
 
 describe('complete water crossings', () => {
+  it.each([1, 2])('allows a complete %i-tile crossing before Engineering', width => {
+    const state = crossing(width, ['river'], false);
+    expect(bridgeSpanLimit(state)).toBe(INITIAL_BRIDGE_SPAN);
+    expect(buildStroke(state, 'bridge', [{ x: 16, y: 15 }])).toMatchObject({ ok: true, placed: width });
+    expect(state.factions[0].gold).toBe(1000 - width * 10);
+  });
+
+  it('rejects longer previews and purchases until Engineering finishes, without allowing partial-span bypasses', () => {
+    const state = crossing(3, ['river'], false), point = { x: 17, y: 15 };
+    expect(bridgeSpanAt(state, point)).toBeUndefined();
+    expect(validateBuildAt(state, 'bridge', point.x, point.y)).toMatchObject({ ok: false });
+    expect(planConstruction(state, 'bridge', [point])).toMatchObject({ ok: false });
+    expect(buildStroke(state, 'bridge', [point])).toMatchObject({ ok: false, placed: 0 });
+    expect(state.factions[0].gold).toBe(1000);
+    expect(validateBridgeTile(state, point.x, point.y).message).toContain('Research Engineering');
+    entityStore(state).buildings.add({ id: 10000, kind: 'bridge', faction: 0, x: 16, y: 15, hp: 100, maxHp: 100, capacity: 0 });
+    expect(bridgeSpanAt(state, point)).toBeUndefined();
+    state.factions[0].research!.levels.engineering = 1;
+    expect(bridgeSpanLimit(state)).toBe(MAX_BRIDGE_SPAN);
+    expect(buildStroke(state, 'bridge', [point])).toMatchObject({ ok: true, placed: 2 });
+  });
+
+  it('uses the requesting faction’s Engineering research for all crossing calculations', () => {
+    const state = crossing(8);
+    state.factions = [state.factions[0], { ...structuredClone(state.factions[0]), id: 1, research: { focus: 'engineering', levels: {}, progress: {} } }];
+    expect(bridgeSpanAt(state, { x: 19, y: 15 }, 0)?.tiles).toHaveLength(8);
+    expect(bridgeSpanAt(state, { x: 19, y: 15 }, 1)).toBeUndefined();
+    expect(bridgeStroke(state, [{ x: 19, y: 15 }], 1).ok).toBe(false);
+    state.factions[1].research!.levels.engineering = 1;
+    expect(bridgeStroke(state, [{ x: 19, y: 15 }], 1).ok).toBe(true);
+  });
+
+  it('invalidates a rejected bridge preview immediately when Engineering completes', () => {
+    const state = crossing(8, ['coast'], false), stroke = [{ x: 19, y: 15 }];
+    const rejected = planConstruction(state, 'bridge', stroke);
+    expect(rejected.ok).toBe(false);
+    state.factions[0].research!.levels.engineering = 1;
+    const unlocked = planConstruction(state, 'bridge', stroke);
+    expect(unlocked).not.toBe(rejected);
+    expect(unlocked).toMatchObject({ ok: true, cost: 80 });
+    expect(unlocked.tiles).toHaveLength(8);
+  });
   it.each<Terrain>(['river', 'coast', 'ocean', 'lake'])('permits exactly eight %s tiles with dry banks', terrain => {
     const state = crossing(MAX_BRIDGE_SPAN, [terrain]);
     const span = bridgeSpanAt(state, { x: 19, y: 15 });

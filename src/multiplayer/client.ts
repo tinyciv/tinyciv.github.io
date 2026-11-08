@@ -1,6 +1,8 @@
 import type { GameState, InputState, Unit } from '../game/types';
 import { PROTOCOL_VERSION, type ClientMessage, type ServerMessage, type LobbyRoom, type MatchOptions, type GameCommand, type CommandResult } from './protocol';
 import { INPUT_KEYS, NO_INPUT, validatedInput } from './input';
+import { ClientStateReplica } from './client-state';
+import { recordWorldTileChanges, worldRevisions } from '../game/world-revisions';
 
 interface ClientEvents {
   onRooms(rooms: LobbyRoom[]): void;
@@ -30,6 +32,7 @@ export class MultiplayerClient {
   private socket?: WebSocket;
   private token = '';
   private state?: GameState;
+  private replica?: ClientStateReplica;
   private sequence = -1;
   private commandSequence = 0;
   private expectedClose = false;
@@ -41,7 +44,8 @@ export class MultiplayerClient {
   private lastInput: InputState = { ...NO_INPUT };
   private pingSent = 0;
   private previousFrameAt = 0;
-  private presentation: { unit: Unit; x: number; y: number; toX: number; toY: number; at: number; duration: number }[] = [];
+  private presentation = new Map<number, { unit: Unit; x: number; y: number; toX: number; toY: number; at: number; duration: number }>();
+  private authoritative = new Map<number, { x: number; y: number; inside: Unit['inside'] }>();
 
   constructor(private readonly events: ClientEvents, private readonly origin = multiplayerEndpoint()) {
     try { this.token = sessionStorage.getItem(TOKEN_KEY) ?? ''; } catch { /* Private browsing still supports a live session. */ }
@@ -106,9 +110,9 @@ export class MultiplayerClient {
         const changedMatch = message.room?.id !== this.room?.id
           || message.room?.phase === 'loading' && this.room?.phase !== 'loading'
           || message.room?.phase === 'waiting' && this.room?.phase !== 'waiting';
-        if (changedMatch) { this.state = undefined; this.sequence = -1; }
+        if (changedMatch) this.clearState();
         this.room = message.room; this.faction = message.faction;
-        if (!message.room) { this.state = undefined; this.sequence = -1; this.commandSequence = 0; }
+        if (!message.room) { this.clearState(); this.commandSequence = 0; }
         this.events.onRoom(message.room, message.faction); break;
       }
       case 'loading':
@@ -122,28 +126,43 @@ export class MultiplayerClient {
           Object.assign(this.state.world, message.state.world);
           message.state.world = this.state.world;
         }
-        this.state = message.state; this.sequence = message.sequence;
-        this.presentation = []; this.previousFrameAt = performance.now();
+        this.state = message.state; this.replica = new ClientStateReplica(this.state); this.sequence = message.sequence;
+        this.presentation.clear(); this.authoritative.clear(); this.previousFrameAt = performance.now();
+        for (const unit of this.state.units ?? []) this.authoritative.set(unit.id, { x: unit.x, y: unit.y, inside: unit.inside });
         this.events.onStatus(''); this.events.onState(this.state, initial); break;
       }
-      case 'frame':
+      case 'frame': {
         if (!this.state || message.sequence <= this.sequence) break;
         if (message.sequence !== this.sequence + 1) { this.send({ type: 'sync' }); break; }
+        worldRevisions(this.state.world);
         if (message.tiles) for (const [index, tile] of message.tiles) this.state.world.tiles[index] = tile;
         if (message.worldRevision !== undefined) this.state.world.revision = message.worldRevision;
-        const previousUnits = new Map(this.state.units?.map(unit => [unit.id, unit]));
-        this.state = { ...message.state, world: this.state.world };
+        if (message.tiles?.length) recordWorldTileChanges(this.state.world, message.tiles.map(([index]) => index));
         const now = performance.now(), duration = Math.max(60, Math.min(160, now - this.previousFrameAt));
-        this.previousFrameAt = now; this.presentation = [];
-        for (const unit of this.state.units ?? []) {
-          const previous = previousUnits.get(unit.id);
-          // Only the browser's display copy moves between authoritative samples.
-          // Teleports, respawns and entering buildings snap to their new location.
-          if (!previous || previous.inside !== unit.inside || Math.hypot(previous.x - unit.x, previous.y - unit.y) > 3) continue;
-          this.presentation.push({ unit, x: previous.x, y: previous.y, toX: unit.x, toY: unit.y, at: now, duration });
-          unit.x = previous.x; unit.y = previous.y;
-        }
+        this.previousFrameAt = now;
+        let displayX = 0, displayY = 0;
+        this.replica!.apply(message.delta, {
+          before: unit => {
+            displayX = unit.x; displayY = unit.y;
+            // A sparse patch may omit x/y. Apply it against the previous
+            // authoritative target, never an unfinished interpolation sample.
+            const previous = this.authoritative.get(unit.id)!;
+            unit.x = previous.x; unit.y = previous.y;
+          },
+          after: (unit, added) => {
+            const previous = this.authoritative.get(unit.id), x = unit.x, y = unit.y;
+            this.authoritative.set(unit.id, { x, y, inside: unit.inside });
+            if (added || !previous || previous.inside !== unit.inside || Math.hypot(displayX - x, displayY - y) > 3) {
+              this.presentation.delete(unit.id); return;
+            }
+            if (previous.x !== x || previous.y !== y) this.presentation.set(unit.id,
+              { unit, x: displayX, y: displayY, toX: x, toY: y, at: now, duration });
+            unit.x = displayX; unit.y = displayY;
+          },
+          removed: id => { this.authoritative.delete(id); this.presentation.delete(id); },
+        });
         this.sequence = message.sequence; this.events.onState(this.state, false); break;
+      }
       case 'status': this.events.onStatus(message.message); break;
       case 'result': this.events.onResult?.(message.result); break;
       case 'error':
@@ -180,10 +199,11 @@ export class MultiplayerClient {
     this.lastInput = next; if (this.room?.phase === 'playing') this.send({ type: 'input', input: this.lastInput });
   }
   updatePresentation(now: number): void {
-    for (const sample of this.presentation) {
+    for (const [id, sample] of this.presentation) {
       const amount = Math.max(0, Math.min(1, (now - sample.at) / sample.duration));
       sample.unit.x = sample.x + (sample.toX - sample.x) * amount;
       sample.unit.y = sample.y + (sample.toY - sample.y) * amount;
+      if (amount === 1) this.presentation.delete(id);
     }
   }
   /** Explicitly leave a disconnected match instead of resuming its reservation. */
@@ -191,12 +211,15 @@ export class MultiplayerClient {
     this.disconnect(); this.token = '';
     try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* In-memory identity is already cleared. */ }
   }
+  private clearState(): void {
+    this.state = undefined; this.replica = undefined; this.sequence = -1;
+    this.presentation.clear(); this.authoritative.clear();
+  }
   disconnect(): void {
     this.expectedClose = true; clearTimeout(this.reconnectTimer); clearInterval(this.heartbeat);
     this.cancelConnect?.();
     this.socket?.close(); this.socket = undefined; this.connected = false;
-    this.state = undefined; this.room = null; this.faction = null; this.lastInput = { ...NO_INPUT };
-    this.sequence = -1; this.commandSequence = 0;
-    this.presentation = [];
+    this.clearState(); this.room = null; this.faction = null; this.lastInput = { ...NO_INPUT };
+    this.commandSequence = 0;
   }
 }

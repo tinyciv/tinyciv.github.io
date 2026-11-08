@@ -1,0 +1,9 @@
+{
+  "creator": "Shade / Merchant Shade",
+  "pack": "Puny World Medieval (purchased)",
+  "sourcePath": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+  "sourceRect": [3056, 240, 32, 16],
+  "footprint": [2, 1],
+  "groundAnchor": [16, 16],
+  "changes": "None. Exact original horizontal sawmill/timber-yard sprite, used as the supply depot. No added crates or wagon."
+}

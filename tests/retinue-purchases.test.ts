@@ -116,13 +116,13 @@ describe('purchased faction retinue capacity', () => {
     state.time = faction.nextRetinueAt! - .1; updateGame(state, .1, idle); expect(retinue(state)).toHaveLength(6);
   });
 
-  it('bills vacant capacity every 30 game seconds, preserves debt and excludes fees from gross income', () => {
+  it('bills vacant capacity only from available gold and excludes fees from gross income', () => {
     const state = fixture(), faction = state.factions[0];
     faction.purchasedRetinueSlots = 2; faction.gold = 3;
     expect(RETINUE_SLOT_UPKEEP_INTERVAL).toBe(30);
     state.time = 29.8; updateGame(state, .1, idle); expect(faction.gold).toBe(3);
-    economyTick(state); expect(faction.gold).toBe(-7);
-    economyTick(state); expect(faction.gold).toBe(-17);
+    economyTick(state); expect(faction.gold).toBe(0);
+    economyTick(state); expect(faction.gold).toBe(0);
     expect(faction.yields.gold).toBe(-10); expect(faction.incomeTotals?.gold ?? 0).toBe(0);
     expect(retinue(state)).toHaveLength(0);
     expect(citySummaries(state)[0].gold).toBe(-10);

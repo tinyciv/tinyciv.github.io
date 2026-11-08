@@ -7,6 +7,20 @@ export const RAIDER_MIN_WAVE_INTERVAL = 14;
 /** One offensive reduction for every raider source; population and cadence
  * remain independent. Applied after armor so minimum hits also fall by 15%. */
 export const RAIDER_ATTACK_MULTIPLIER = .85;
+export const EARLY_RAID_SIZE_MULTIPLIER = .6;
+export const EARLY_RAID_SECONDS = 5 * 60;
+export const FULL_RAID_SIZE_SECONDS = 15 * 60;
+
+/** Smaller opening parties, then a gradual return to the existing late-game
+ * pressure. Cadence, equipment and population budgets are independent. */
+export function raiderPartySizeMultiplier(elapsedSeconds: number): number {
+  const elapsed = Math.max(0, Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0);
+  const ramp = Math.max(0, Math.min(1, (elapsed - EARLY_RAID_SECONDS) / (FULL_RAID_SIZE_SECONDS - EARLY_RAID_SECONDS)));
+  return EARLY_RAID_SIZE_MULTIPLIER + (1 - EARLY_RAID_SIZE_MULTIPLIER) * ramp;
+}
+export function raiderPartySize(count: number, elapsedSeconds: number): number {
+  return count > 0 ? Math.max(1, Math.round(count * raiderPartySizeMultiplier(elapsedSeconds))) : 0;
+}
 
 /** Halve the shortfall relative to an untrained faction warrior. The existing
  * raider damage factor is included so the attack gap is halved after it too. */

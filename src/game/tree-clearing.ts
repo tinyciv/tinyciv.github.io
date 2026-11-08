@@ -86,7 +86,7 @@ export function fellTree(state: GameState, point: Point): void {
     // Clearing foliage leaves the wetland soil and delta geography intact.
     delete tile.marsh;
     for (const resource of ['food', 'production', 'gold'] as const) tile[resource] = Math.max(0, tile[resource] - before[resource] + after[resource]);
-    markWorldChanged(state.world, 'sight');
+    markWorldChanged(state.world, 'sight', [Math.floor(point.y) * state.world.width + Math.floor(point.x)]);
     invalidateNavigation(state);
   }
   state.treeClearings = state.treeClearings?.filter(order => order.x !== point.x || order.y !== point.y);

@@ -1,0 +1,11 @@
+{
+  "source": "PixelLab edit-image-pixen",
+  "approved": "1C",
+  "reference": "../puny-world/overworld.png, [0,0,48,48]",
+  "nativeSize": [
+    48,
+    48
+  ],
+  "tileSize": 16,
+  "generationManifest": "scratch/2026-11-07-tundra-snow/manifest.json"
+}

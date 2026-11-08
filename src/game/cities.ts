@@ -1,3 +1,4 @@
+import { retinueUpkeep } from './archery';
 import { fieldHarvestYield, harvestFoodPerEconomyCycle } from './farms';
 import { guardPostUpkeep } from './guard-posts';
 import { buildingMaintenance, TAX_INCOME_MULTIPLIER } from './maintenance';
@@ -10,6 +11,9 @@ import { cityOwnership } from './city-ownership';
 import { entityStore } from './entity-store';
 import { retinueSlotUpkeep } from './retinue-purchases';
 import { fishingCityFoodPerEconomyCycle } from './fishing';
+import { saltFoodConsumptionMultiplier } from './resource-development';
+import { CityEconomyIndex, type CityEconomyCity, type CityEconomyGroup } from './city-economy-index';
+import { simulationReadsActive } from './simulation-reads';
 
 export interface CitySummary {
     palace: Building;
@@ -24,27 +28,74 @@ export interface CitySummary {
 export interface CityResidents extends Pick<CitySummary, 'palace' | 'name' | 'population' | 'housing'> {
     housingGold: number;
 }
-const summaryScopes = new WeakMap<GameState, { value?: CitySummary[]; residents?: CityResidents[] }>();
+interface FactionEconomy {
+    revision: number; residents: CityResidents[];
+}
+interface CityEconomyResult { revision: number; resident: CityResidents; value: CitySummary; }
+interface SummaryScope {
+    value?: CitySummary[]; residents?: CityResidents[]; live?: boolean;
+    index?: CityEconomyIndex; factions: Map<number, FactionEconomy>; cities: Map<number, CityEconomyResult>;
+}
+const summaryScopes = new WeakMap<GameState, SummaryScope>();
 
 /** The caller owns a synchronous read-only phase. A mutation phase suspends
  * the snapshot, so queries made while building/relocating see live state. */
 export function withCitySummarySnapshot<T>(state: GameState, operation: () => T): T {
     if (summaryScopes.has(state)) return operation();
-    summaryScopes.set(state, {});
+    summaryScopes.set(state, { factions: new Map(), cities: new Map() });
     try { return operation(); } finally { summaryScopes.delete(state); }
 }
 
 export function withLiveCitySummaries<T>(state: GameState, operation: () => T): T {
     const previous = summaryScopes.get(state);
-    summaryScopes.delete(state);
+    // A versioned simulation owns all terrain edits. Keep its transaction
+    // index, but reconcile live scalar inputs on every read during an order.
+    // Standalone editor/import callers keep the unrestricted fresh-read path.
+    const indexed = previous && simulationReadsActive(state) && state.world.revision !== undefined;
+    const wasLive = previous?.live;
+    if (indexed) previous.live = true;
+    else summaryScopes.delete(state);
     try { return operation(); } finally {
-        if (previous) { previous.value = undefined; previous.residents = undefined; summaryScopes.set(state, previous); }
+        if (previous) {
+            previous.live = wasLive; previous.value = undefined; previous.residents = undefined;
+            summaryScopes.set(state, previous);
+        }
     }
 }
 
 export function invalidateCitySummarySnapshot(state: GameState): void {
     const scope = summaryScopes.get(state);
-    if (scope) { scope.value = undefined; scope.residents = undefined; }
+    if (scope) {
+        scope.value = undefined; scope.residents = undefined;
+        scope.index = undefined; scope.factions.clear(); scope.cities.clear();
+    }
+}
+
+function reconcileEconomy(state: GameState, scope: SummaryScope): CityEconomyIndex {
+    const index = scope.index ??= new CityEconomyIndex();
+    index.reconcile(state);
+    for (const group of index.groups.values()) {
+        if (scope.factions.get(group.faction)?.revision === group.revision) continue;
+        scope.factions.set(group.faction, { revision: group.revision, residents: calculateCityResidents(state, group) });
+    }
+    return index;
+}
+
+function indexedScope(state: GameState): SummaryScope | undefined {
+    const scope = summaryScopes.get(state);
+    return scope && simulationReadsActive(state) && state.world.revision !== undefined ? scope : undefined;
+}
+
+/** Preserve the entity store's city order when several faction aggregates are
+ * joined. Each city's summations retain original building/field/unit order. */
+function orderedCities<T extends { palace: Building }>(state: GameState, groups: Iterable<readonly T[]>): T[] {
+    const byPalace = new Map<number, T>();
+    for (const group of groups) for (const city of group) byPalace.set(city.palace.id, city);
+    const result: T[] = [];
+    for (const palace of cityOwnership(state).palaces) {
+        const city = byPalace.get(palace.id); if (city) result.push(city);
+    }
+    return result;
 }
 
 /** Naming never consumes simulation RNG; the name belongs to the palace. */
@@ -62,12 +113,24 @@ export function nextCityName(state: GameState, faction: number): string {
  * resident pass is also reused when a full economic summary is requested. */
 export function cityResidents(state: GameState): CityResidents[] {
     const scope = summaryScopes.get(state);
-    if (scope?.residents) return scope.residents;
+    if (scope?.residents && !scope.live) return scope.residents;
+    const indexed = indexedScope(state);
+    if (indexed) {
+        reconcileEconomy(state, indexed);
+        return indexed.residents = orderedCities(state, Array.from(indexed.factions.values(), value => value.residents));
+    }
+    const cities = calculateCityResidents(state);
+    if (scope) scope.residents = cities;
+    return cities;
+}
+
+function calculateCityResidents(state: GameState, group?: CityEconomyGroup): CityResidents[] {
     const cities: CityResidents[] = [];
     const byFaction = new Map<number, CityResidents[]>();
     const byPalace = new Map<number, CityResidents>();
     const ownership = cityOwnership(state);
     for (const palace of ownership.palaces) {
+        if (group && palace.faction !== group.faction) continue;
         if (palace.kind !== 'palace' || palace.faction < 0 || !buildingReady(palace)) continue;
         const faction = state.factions.find(candidate => candidate.id === palace.faction);
         if (!faction || faction.defeated) continue;
@@ -78,7 +141,7 @@ export function cityResidents(state: GameState): CityResidents[] {
         factionCities.push(city); byFaction.set(palace.faction, factionCities);
     }
     const remaining = new Map(state.factions.map(faction => [faction.id, Math.max(0, faction.population)]));
-    for (const house of state.buildings) {
+    for (const house of group?.buildings ?? state.buildings) {
         if (house.kind !== 'house' || !buildingReady(house)) continue;
         const city = byPalace.get(ownership.building(house)?.id ?? -1);
         if (!city) continue;
@@ -99,8 +162,14 @@ export function cityResidents(state: GameState): CityResidents[] {
         factionCities.sort((a, b) => a.palace.id - b.palace.id);
         factionCities[0].population += remaining.get(faction) ?? 0;
     }
-    if (scope) scope.residents = cities;
     return cities;
+}
+
+/** All developed salt shares one faction-wide allowance of ten residents per
+ * tile. Every city applies the same multiplier, so the allowance is not reused. */
+export function factionFoodConsumption(state: GameState, faction: number): number {
+    const population = Math.max(0, state.factions.find(owner => owner.id === faction)?.population ?? 0);
+    return population * saltFoodConsumptionMultiplier(state, faction);
 }
 
 /** Assign every house, farm and soldier to exactly one friendly palace. The
@@ -108,10 +177,51 @@ export function cityResidents(state: GameState): CityResidents[] {
  * another faction does not repeat the combined realm total on every palace. */
 export function citySummaries(state: GameState): CitySummary[] {
     const scope = summaryScopes.get(state);
-    if (scope?.value) return scope.value;
-    const cities: CitySummary[] = cityResidents(state).map(({ housingGold, ...city }) => ({ ...city,
-        food: palaceFoodProduction(city.palace) + fishingCityFoodPerEconomyCycle(state, city.palace.id) - city.population,
-        gold: (city.population + housingGold) * TAX_INCOME_MULTIPLIER }));
+    if (scope?.value && !scope.live) return scope.value;
+    const indexed = indexedScope(state);
+    if (indexed) {
+        const index = reconcileEconomy(state, indexed);
+        for (const [id, city] of index.cities) {
+            const resident = indexed.factions.get(city.palace.faction)?.residents.find(value => value.palace === city.palace);
+            if (!resident) continue;
+            const cached = indexed.cities.get(id), old = cached?.resident;
+            if (!cached || cached.revision !== city.revision || old!.palace !== resident.palace
+                || old!.name !== resident.name || old!.population !== resident.population
+                || old!.housing !== resident.housing || old!.housingGold !== resident.housingGold)
+                indexed.cities.set(id, { revision: city.revision, resident, value: calculateIndexedCitySummary(state, resident, city) });
+        }
+        for (const id of indexed.cities.keys()) if (!index.cities.has(id)) indexed.cities.delete(id);
+        return indexed.value = orderedCities(state, [Array.from(indexed.cities.values(), value => value.value)]);
+    }
+    const cities = calculateCitySummaries(state, cityResidents(state));
+    if (scope) scope.value = cities;
+    return cities;
+}
+
+function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents, salt = saltFoodConsumptionMultiplier(state, city.palace.faction)): CitySummary {
+    return { ...city,
+        food: palaceFoodProduction(city.palace) + fishingCityFoodPerEconomyCycle(state, city.palace.id)
+            - city.population * salt,
+        gold: (city.population + housingGold) * TAX_INCOME_MULTIPLIER };
+}
+
+function calculateIndexedCitySummary(state: GameState, resident: CityResidents, inputs: CityEconomyCity): CitySummary {
+    const city = initialCitySummary(state, resident, inputs.saltConsumption);
+    if (inputs.capital) {
+        const faction = state.factions.find(faction => faction.id === city.palace.faction);
+        if (faction) city.gold -= retinueSlotUpkeep(faction);
+    }
+    for (const building of inputs.buildings)
+        city.gold -= building.kind === 'guardPost'
+            ? building.guardPost?.funded === true ? guardPostUpkeep(building) : 0
+            : buildingMaintenance(state, building);
+    for (const field of inputs.fields) city.food += harvestFoodPerEconomyCycle(fieldHarvestYield(state, field));
+    for (const cost of inputs.unitCosts) city.gold -= cost;
+    return city;
+}
+
+function calculateCitySummaries(state: GameState, residents: readonly CityResidents[]): CitySummary[] {
+    const cities: CitySummary[] = residents.map(city => initialCitySummary(state, city));
     const byPalace = new Map(cities.map(city => [city.palace.id, city]));
     // Purchased capacity is one faction-wide expense, including vacant slots.
     // Attribute it once to the capital rather than charging it in every city.
@@ -151,12 +261,11 @@ export function citySummaries(state: GameState): CitySummary[] {
             const city = assigned?.palace.faction === unit.faction ? assigned : byPalace.get(ownership.nearest(unit, unit.faction)?.id ?? -1);
             if (city) city.gold -= 3;
         }
-        if ((unit.kind !== 'warrior' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'archer') || unit.hp <= 0) continue;
+        if ((unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer') || unit.hp <= 0) continue;
         const home = unit.home === undefined ? undefined : buildings.get(unit.home);
         const city = byPalace.get(ownership.nearest(home?.faction === unit.faction && buildingReady(home)
             ? { x: home.x + buildingSize(home) / 2, y: home.y + buildingSize(home) / 2 } : unit, unit.faction)?.id ?? -1);
-        if (city) city.gold -= unit.kind === 'archer' ? 1 : .5;
+        if (city) city.gold -= retinueUpkeep(unit);
     }
-    if (scope) scope.value = cities;
     return cities;
 }

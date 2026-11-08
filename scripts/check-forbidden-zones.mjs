@@ -111,7 +111,7 @@ try {
   const serialized = await page.evaluate(async () => {
     const { serializeGameSave, parseGameSave } = await import('/src/game/game-save.ts');
     const state = window.__game.state, restored = parseGameSave(serializeGameSave(state));
-    window.__game.save();
+    await window.__game.save();
     return { equal: JSON.stringify(restored.forbiddenZones) === JSON.stringify(state.forbiddenZones), cells: [...state.forbiddenZones.cells] };
   });
   check('Forbidden zones round-trip through the game save', serialized.equal);

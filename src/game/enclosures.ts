@@ -1,5 +1,5 @@
 import { type FogView, pointInSight } from './fog';
-import { canTraverseEdge, friendlyGateAccess, traversable } from './pathfinding';
+import { friendlyGateAccess, terrainNavigationEdges, traversable } from './pathfinding';
 import { RAIDER_FACTION, raiderCampActive } from './raider-camps';
 import { buildingReady, buildingWidth, buildingHeight, isWallKind, type Building, type GameState, type World, WATER } from './types';
 import { entityStore, type EntityStore } from './entity-store';
@@ -115,16 +115,21 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
       || WATER.has(tile.terrain) && bridges.has(index));
   }
   const regions: PalaceEnclosure[] = [], byFaction = new Map<number, Uint8Array>(), highlighted = new Uint8Array(total);
+  // The world geometry mask is independent of faction walls and bridges. It
+  // already encodes bounds, diagonal ledges, stair orientation and resources.
+  const movementEdges = terrainNavigationEdges(world);
+  const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
   const neighbors = (index: number, visit: (next: number) => void): void => {
     const x = index % width, y = Math.floor(index / width);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
       if ((dx || dy) && x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height) visit((y + dy) * width + x + dx);
   };
   const movementNeighbors = (index: number, visit: (next: number) => void): void => {
-    const from = { x: index % width, y: Math.floor(index / width) };
-    neighbors(index, next => {
-      if (ground[next] && canTraverseEdge(world, from, { x: next % width, y: Math.floor(next / width) })) visit(next);
-    });
+    const edges = movementEdges[index];
+    for (let direction = 0; direction < 8; direction++) if (edges & (1 << direction)) {
+      const next = index + offsets[direction];
+      if (ground[next]) visit(next);
+    }
   };
   for (const faction of new Set(palaces.map(palace => palace.faction))) {
     const ownWalls = new Uint8Array(total), defenses = new Uint8Array(total);

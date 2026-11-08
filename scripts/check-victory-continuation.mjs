@@ -35,9 +35,11 @@ try {
         && document.querySelector('#dialog').hidden;
     }, before.seed));
   }
-  check('production world saves within the browser quota', await page.evaluate(() => {
-    const saved = localStorage.getItem('tinyciv-save-v3');
-    return !!saved && saved.length < 5 * 1024 * 1024 && JSON.parse(saved).state.victoryContinued === true;
+  check('production world persists in IndexedDB', await page.evaluate(async () => {
+    const { readStoredGame } = await import('/src/game/game-storage.ts');
+    await window.__game.save();
+    const saved = await readStoredGame();
+    return !!saved && JSON.parse(saved).state.victoryContinued === true;
   }));
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.__game && document.documentElement.dataset.assets === 'ready');

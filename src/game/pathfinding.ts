@@ -1,16 +1,17 @@
 import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, recordStructureChange, structureChangeRevision } from './simulation-reads';
-import { worldRevisions, worldStructureRevision } from './world-revisions';
+import { worldChangesSince, worldStructureRevision } from './world-revisions';
 import { wasmPath } from './navigation-wasm';
-import { type GameState, type Point, type Tile, type World, WATER, tileAt, buildingReady, buildingPresent, buildingWidth, buildingHeight, isFarmKind, isWallKind } from './types';
+import { type GameState, type Point, type Tile, type World, type Building, WATER, tileAt, buildingReady, buildingPresent, buildingWidth, buildingHeight, isFarmKind, isWallKind } from './types';
 import { ridgeEdgeAllowed, ridgeGroundWalkable } from './ridges';
 import { invalidateIrrigation, IRRIGATION_MOVEMENT_MULTIPLIER } from './irrigation';
 import { groundMovementMultiplier } from './geography';
 import { factionRespectsForbidden, forbiddenCells, forbiddenRevision, isForbidden } from './forbidden-zones';
+import { resourceBlocksGround } from './resource-terrain';
 
 export function traversable(world: World, x: number, y: number): boolean {
   const tile = tileAt(world, x, y);
-  return !!tile && !tile.waterfall && (!(tile.ridge || tile.stair) || ridgeGroundWalkable(world, x, y))
+  return !!tile && !tile.waterfall && !resourceBlocksGround(tile) && (!(tile.ridge || tile.stair) || ridgeGroundWalkable(world, x, y))
     && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier') || tile.terrain === 'river' && tile.overlay === 'ford');
 }
 
@@ -25,7 +26,7 @@ export function canTraverseEdge(world: World, from: Point, to: Point): boolean {
   if (Math.abs(dx) > 1 || Math.abs(dy) > 1 || x < 0 || y < 0 || nx < 0 || ny < 0
     || x >= world.width || nx >= world.width || y >= world.height || ny >= world.height) return false;
   const a = world.tiles[y * world.width + x], b = world.tiles[ny * world.width + nx];
-  if (!a || !b || a.waterfall || b.waterfall) return false;
+  if (!a || !b || a.waterfall || b.waterfall || resourceBlocksGround(a) || resourceBlocksGround(b)) return false;
   // Almost every edge is level ground. Diagonal checks must include both
   // flanking cells: otherwise this shortcut could jump the corner of a ledge.
   if (!a.ridge && !a.stair && !b.ridge && !b.stair) {
@@ -42,19 +43,37 @@ export function movementMultiplier(state: GameState, x: number, y: number, route
   if (!tile) return 0;
   const tx = Math.floor(x), ty = Math.floor(y);
   const topology = structures(state), index = ty * state.world.width + tx;
-  const paved = (routes ?? topology.routes).has(index);
+  const paved = routes ? routes.has(index) : !!(topology.flags[index] & ROUTE);
   // Bridges use normal speed across every water type, without a road bonus.
-  if (paved && WATER.has(tile.terrain)) return (bridges ?? topology.bridges).has(index) ? 1 : .45;
+  if (paved && WATER.has(tile.terrain)) return (bridges ? bridges.has(index) : !!(topology.flags[index] & BRIDGE)) ? 1 : .45;
   if (paved) return 1.5;
-  const irrigation = topology.ditches.has(index) ? IRRIGATION_MOVEMENT_MULTIPLIER : 1;
+  const irrigation = (topology.flags[index] & DITCH) ? IRRIGATION_MOVEMENT_MULTIPLIER : 1;
   return groundMovementMultiplier(tile) * irrigation;
 }
 
+const ROUTE = 1, BRIDGE = 2, DITCH = 4, SOLID = 8;
+interface CellChanges { revision: number; cells: readonly number[] }
+const MAX_CHANGE_HISTORY = 64;
+function changedCells(history: readonly CellChanges[], since: number, revision: number): Set<number> | undefined {
+  if (since === revision) return new Set();
+  if (!history.length || since < history[0].revision - 1) return;
+  const cells = new Set<number>();
+  for (const change of history) if (change.revision > since) for (const cell of change.cells) cells.add(cell);
+  return cells;
+}
+function publishCells(owner: { revision: number; history: CellChanges[] }, cells: readonly number[]): void {
+  owner.revision++;
+  owner.history.push({ revision: owner.revision, cells });
+  if (owner.history.length > MAX_CHANGE_HISTORY) owner.history.shift();
+}
 interface StructureSnapshot {
-  kind: string; faction: number; x: number; y: number; alive: boolean; ready: boolean; present: boolean;
+  entity: Building; id: number; kind: Building['kind']; faction: number; x: number; y: number;
+  width: number; height: number; alive: boolean; ready: boolean; present: boolean;
 }
 interface StructureGrid {
-  width: number; buildings: StructureSnapshot[]; diplomacy: string; blocked: Set<number>; gates: { index: number; faction: number }[]; byFaction: Map<number, Set<number>>; routes: Set<number>; bridges: Set<number>; ditches: Set<number>; revision: number;
+  width: number; height: number; buildings: StructureSnapshot[]; byId: Map<number, StructureSnapshot>; diplomacy: string;
+  flags: Uint8Array; occupants: Map<number, StructureSnapshot[]>; gates: Map<number, readonly number[]>;
+  blocked: Set<number>; byFaction: Map<number, Set<number>>; revision: number; history: CellChanges[];
 }
 const structureCaches = new WeakMap<GameState, StructureGrid>();
 const structureValidations = new WeakMap<GameState, { grid: StructureGrid; store: EntityStore; membership: number; changes: number; world: GameState['world']; revision: number; diplomacy: string }>();
@@ -78,14 +97,35 @@ export function invalidateNavigation(state: GameState): void {
   invalidateIrrigation(state);
 }
 
-/** Validate scalar topology without allocating road lists and obstacle sets for
- * every contact/collision probe. This also sees same-tick edits made by combat,
- * construction, save migration, and test fixtures. Returned sets stay private. */
+function structureSnapshot(building: Building): StructureSnapshot {
+  return { entity: building, id: building.id, kind: building.kind, faction: building.faction, x: building.x, y: building.y,
+    width: buildingWidth(building), height: buildingHeight(building), alive: building.hp > 0,
+    ready: buildingReady(building), present: buildingPresent(building) };
+}
+function structureMatches(old: StructureSnapshot | undefined, building: Building): boolean {
+  return !!old && old.entity === building && old.id === building.id && old.kind === building.kind && old.faction === building.faction
+    && old.x === building.x && old.y === building.y && old.alive === (building.hp > 0)
+    && old.ready === buildingReady(building) && old.present === buildingPresent(building);
+}
+function contributes(building: StructureSnapshot): boolean {
+  return building.kind === 'road' && building.alive || building.ready && (isRoute(building.kind) || building.kind === 'irrigation')
+    || building.present && !isRoute(building.kind) && !isFarmKind(building.kind) && building.kind !== 'irrigation' && building.kind !== 'ruin';
+}
+function footprint(grid: StructureGrid, building: StructureSnapshot, visit: (cell: number) => void): void {
+  for (let y = 0; y < building.height; y++) for (let x = 0; x < building.width; x++) {
+    const cell = (building.y + y) * grid.width + building.x + x;
+    if (cell >= 0 && cell < grid.flags.length) visit(cell);
+  }
+}
+
+/** Retain packed structural layers and recalculate only changed footprints.
+ * Contributor lists preserve overlapping roads/walls/buildings on removal.
+ * Public editor calls still reconcile exact building scalars. */
 function structures(state: GameState): StructureGrid {
   const frame = structureFrames.get(state);
   if (frame?.grid) return frame.grid;
   let cached = structureCaches.get(state);
-  const diplomacy = (state.factions ?? []).map(f => `${f.id}:${f.relation}`).join(';');
+  const diplomacy = `${Number(!!state.multiplayer)};` + (state.factions ?? []).map(f => `${f.id}:${f.relation}`).join(';');
   const trusted = simulationReadsActive(state), store = trusted ? entityStore(state) : undefined;
   const membership = store?.buildings.revision ?? -1;
   const changes = structureChangeRevision(state), revision = trusted ? worldStructureRevision(state.world) : -1;
@@ -97,55 +137,96 @@ function structures(state: GameState): StructureGrid {
     if (frame) frame.grid = cached;
     return cached;
   }
-  let valid = cached?.width === state.world.width && cached.buildings.length === state.buildings.length && cached.diplomacy === diplomacy;
-  if (valid && cached) for (let i = 0; i < state.buildings.length; i++) {
-    const building = state.buildings[i], old = cached.buildings[i];
-    if (building.kind !== old.kind || building.faction !== old.faction || building.x !== old.x || building.y !== old.y || (building.hp > 0) !== old.alive || buildingReady(building) !== old.ready || buildingPresent(building) !== old.present) { valid = false; break; }
-  }
-  if (valid) {
-    if (store) structureValidations.set(state, { grid: cached!, store, membership, changes, world: state.world, revision, diplomacy });
-    if (frame) frame.grid = cached; return cached!;
-  }
-  const gates: { index: number; faction: number }[] = [];
-  const roads = new Set<number>(), routes = new Set<number>(), bridges = new Set<number>(), ditches = new Set<number>(), blocked = new Set<number>();
-  const buildings = state.buildings.map(building => {
-    const snapshot = { kind: building.kind, faction: building.faction, x: building.x, y: building.y, alive: building.hp > 0, ready: buildingReady(building), present: buildingPresent(building) };
-    // Even an ordered road reserves a gateway; paving bonuses wait for completion.
-    if (snapshot.alive && building.kind === 'road') roads.add(building.y * state.world.width + building.x);
-    if (snapshot.ready && building.kind === 'irrigation') ditches.add(building.y * state.world.width + building.x);
-    if (snapshot.ready && isRoute(building.kind)) {
-      const index = building.y * state.world.width + building.x;
-      routes.add(index);
-      if (building.kind === 'bridge') bridges.add(index);
+  const compatible = cached?.width === state.world.width && cached.height === state.world.height;
+  if (!compatible) cached = { width: state.world.width, height: state.world.height, buildings: [], byId: new Map(), diplomacy,
+    flags: new Uint8Array(state.world.width * state.world.height), occupants: new Map(), gates: new Map(),
+    blocked: new Set(), byFaction: new Map(), revision: 0, history: [] };
+  const grid = cached!;
+  let valid = compatible && grid.buildings.length === state.buildings.length && grid.diplomacy === diplomacy;
+  if (valid) for (let i = 0; i < state.buildings.length; i++) if (!structureMatches(grid.buildings[i], state.buildings[i])) { valid = false; break; }
+  if (!valid) {
+    const dirty = new Set<number>(), next = new Map<number, StructureSnapshot>();
+    const buildings = state.buildings.map(building => {
+      const old = grid.byId.get(building.id), snapshot = structureMatches(old, building) ? old! : structureSnapshot(building);
+      next.set(building.id, snapshot); return snapshot;
+    });
+    for (const old of grid.byId.values()) if (next.get(old.id) !== old && contributes(old)) footprint(grid, old, cell => {
+      dirty.add(cell);
+      const occupants = grid.occupants.get(cell)!;
+      occupants.splice(occupants.indexOf(old), 1);
+      if (!occupants.length) grid.occupants.delete(cell);
+    });
+    for (const building of buildings) if (grid.byId.get(building.id) !== building && contributes(building)) footprint(grid, building, cell => {
+      dirty.add(cell);
+      const occupants = grid.occupants.get(cell);
+      if (occupants) occupants.push(building); else grid.occupants.set(cell, [building]);
+    });
+    // A road at a wall's origin makes its entire footprint a gate, including
+    // future multi-cell wall kinds. Revisit those contributions together.
+    for (const cell of [...dirty]) for (const building of grid.occupants.get(cell) ?? [])
+      if (isWallKind(building.kind)) footprint(grid, building, other => dirty.add(other));
+    if (grid.diplomacy !== diplomacy) for (const cell of grid.gates.keys()) dirty.add(cell);
+    const changed: number[] = [];
+    for (const cell of dirty) {
+      const occupants = grid.occupants.get(cell) ?? [];
+      let flags = 0; const gates: number[] = [];
+      for (const building of occupants) {
+        const origin = building.y * grid.width + building.x;
+        if (cell === origin && building.ready) {
+          if (isRoute(building.kind)) flags |= ROUTE;
+          if (building.kind === 'bridge') flags |= BRIDGE;
+          if (building.kind === 'irrigation') flags |= DITCH;
+        }
+        if (!building.present || isRoute(building.kind) || isFarmKind(building.kind) || building.kind === 'irrigation' || building.kind === 'ruin') continue;
+        const gate = isWallKind(building.kind) && grid.occupants.get(origin)?.some(other => other.kind === 'road' && other.alive);
+        if (gate) { if (cell === origin) gates.push(building.faction); }
+        else flags |= SOLID;
+      }
+      gates.sort((a, b) => a - b);
+      const oldGates = grid.gates.get(cell) ?? [];
+      if (flags !== grid.flags[cell] || gates.length !== oldGates.length || gates.some((faction, i) => faction !== oldGates[i])
+        || grid.diplomacy !== diplomacy && gates.length) changed.push(cell);
+      grid.flags[cell] = flags;
+      if (flags & SOLID) grid.blocked.add(cell); else grid.blocked.delete(cell);
+      if (gates.length) grid.gates.set(cell, gates); else grid.gates.delete(cell);
     }
-    return snapshot;
-  });
-  for (const building of state.buildings) {
-    if (!buildingPresent(building) || isRoute(building.kind) || isFarmKind(building.kind) || building.kind === 'irrigation' || building.kind === 'ruin') continue;
-    // Only active construction occupies ground. A road layer makes an owned gate.
-    const index = building.y * state.world.width + building.x;
-    if (isWallKind(building.kind) && roads.has(index)) { gates.push({ index, faction: building.faction }); continue; }
-    const width = buildingWidth(building), height = buildingHeight(building);
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) blocked.add((building.y + y) * state.world.width + building.x + x);
+    if (changed.length) { publishCells(grid, changed); grid.byFaction.clear(); }
+    grid.buildings = buildings; grid.byId = next; grid.diplomacy = diplomacy;
   }
-  const sameSet = (left: Set<number>, right: Set<number>): boolean => {
-    if (left.size !== right.size) return false;
-    for (const cell of left) if (!right.has(cell)) return false;
-    return true;
-  };
-  const navigationUnchanged = cached?.width === state.world.width && cached.diplomacy === diplomacy
-    && sameSet(blocked, cached.blocked) && sameSet(routes, cached.routes) && sameSet(bridges, cached.bridges)
-    && sameSet(ditches, cached.ditches) && gates.length === cached.gates.length
-    && gates.every((gate, index) => gate.index === cached!.gates[index].index && gate.faction === cached!.gates[index].faction);
-  // Farm readiness and cosmetic/nonblocking structure changes update the
-  // scalar snapshot without rebuilding every faction's navigation arrays.
-  cached = { width: state.world.width, buildings, diplomacy, blocked, gates,
-    byFaction: navigationUnchanged ? cached!.byFaction : new Map(), routes, bridges, ditches,
-    revision: (cached?.revision ?? 0) + Number(!navigationUnchanged) };
-  structureCaches.set(state, cached);
-  if (store) structureValidations.set(state, { grid: cached, store, membership, changes, world: state.world, revision, diplomacy });
-  if (frame) frame.grid = cached;
-  return cached;
+  structureCaches.set(state, grid);
+  if (store) structureValidations.set(state, { grid, store, membership, changes, world: state.world, revision, diplomacy });
+  if (frame) frame.grid = grid;
+  return grid;
+}
+
+export type WallBreachingPolicy = { kind: 'raider' } | { kind: 'faction'; faction: number; hostile: (owner: number) => boolean };
+interface PlanningView { state: GameState; buildings: readonly Building[]; source?: readonly StructureSnapshot[]; policy: string }
+const planningViews = new WeakMap<GameState, Map<string, PlanningView>>();
+/** Navigation-only view with stable identity and live source state. Strategic
+ * wall access is isolated from the authoritative civilian/military grid. */
+export function wallBreachingNavigation(state: GameState, policy: WallBreachingPolicy): GameState {
+  let views = planningViews.get(state);
+  if (!views) { views = new Map(); planningViews.set(state, views); }
+  const key = policy.kind === 'raider' ? 'raider' : `faction:${policy.faction}`;
+  const topology = structures(state);
+  const ignored = new Set<number>();
+  for (const building of topology.buildings) if (isWallKind(building.kind)
+    && (policy.kind === 'raider' ? building.faction >= 0 : policy.hostile(building.faction))) ignored.add(building.faction);
+  const signature = [...ignored].sort((a, b) => a - b).join(',');
+  let entry = views.get(key);
+  if (!entry) {
+    const view = Object.create(state) as GameState;
+    entry = { state: view, buildings: [], policy: signature };
+    Object.defineProperty(view, 'buildings', { get: () => entry!.buildings, enumerable: true });
+    Object.freeze(view);
+    views.set(key, entry);
+  }
+  if (entry.source !== topology.buildings || entry.policy !== signature) {
+    entry.buildings = state.buildings.filter(building => !isWallKind(building.kind) || !ignored.has(building.faction));
+    entry.source = topology.buildings; entry.policy = signature;
+    invalidateNavigation(entry.state);
+  }
+  return entry.state;
 }
 
 /** Gates admit their owner and members of the player's confederation, never
@@ -162,7 +243,7 @@ function factionBlockers(state: GameState, faction: number, topology = structure
     blocked = new Set(topology.blocked);
     // Abandoned gates are public crossings. Neutral solid wall sections remain
     // obstacles, and neutral walls do not count as a faction's enclosure.
-    for (const gate of topology.gates) if (gate.faction !== -1 && !friendlyGateAccess(state, faction, gate.faction)) blocked.add(gate.index);
+    for (const [cell, owners] of topology.gates) if (owners.some(owner => owner !== -1 && !friendlyGateAccess(state, faction, owner))) blocked.add(cell);
     topology.byFaction.set(faction, blocked);
   }
   return blocked;
@@ -190,12 +271,12 @@ export function buildingBlockerView(state: GameState, faction: number): CellBloc
 export function canWalk(state: GameState, x: number, y: number, faction: number, blockers?: CellBlockers, avoidForbidden = false): boolean {
   if (avoidForbidden && isForbidden(state, x, y, faction)) return false;
   const tile = tileAt(state.world, x, y);
-  if (!tile || tile.waterfall || (tile.ridge || tile.stair) && !ridgeGroundWalkable(state.world, x, y)) return false;
+  if (!tile || tile.waterfall || resourceBlocksGround(tile) || (tile.ridge || tile.stair) && !ridgeGroundWalkable(state.world, x, y)) return false;
   const tx = Math.floor(x), ty = Math.floor(y);
   const index = ty * state.world.width + tx;
   const ground = !WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
     || tile.terrain === 'river' && tile.overlay === 'ford';
-  return (ground || WATER.has(tile.terrain) && structures(state).bridges.has(index))
+  return (ground || WATER.has(tile.terrain) && !!(structures(state).flags[index] & BRIDGE))
     && !(blockers ?? factionBlockers(state, faction)).has(index);
 }
 
@@ -277,72 +358,96 @@ interface NavigationGrid {
   reachability?: ReachabilityWorkspace;
   version: number; regionColumns: number; accessRegions: Uint32Array; costRegions: Uint32Array;
 }
+type TerrainSnapshot = Pick<Tile, 'terrain' | 'overlay' | 'biome' | 'resource' | 'ridge' | 'ridgeTier' | 'stair' | 'waterfall' | 'villageTrail'>;
 interface TerrainNavigation {
-  tiles: World['tiles']; width: number; height: number; revision: number | undefined; appearanceRevision: number | undefined; version: number; geometryVersion: number;
-  snapshots: { terrain: Tile['terrain']; overlay: Tile['overlay']; biome: Tile['biome']; ridge: Tile['ridge']; ridgeTier: Tile['ridgeTier']; stair: Tile['stair']; waterfall: Tile['waterfall']; villageTrail: Tile['villageTrail'] }[];
+  tiles: World['tiles']; width: number; height: number; cursor: number; version: number; geometryVersion: number;
+  snapshots: TerrainSnapshot[]; history: CellChanges[];
   open: Uint8Array; bridgeGround: Uint8Array; cost: Float64Array; edges: Uint8Array;
 }
 const terrainNavigationCaches = new WeakMap<World, TerrainNavigation>();
+function terrainSnapshot(tile: Tile): TerrainSnapshot {
+  return { terrain: tile.terrain, overlay: tile.overlay, biome: tile.biome, resource: tile.resource, ridge: tile.ridge,
+    ridgeTier: tile.ridgeTier, stair: tile.stair, waterfall: tile.waterfall, villageTrail: tile.villageTrail };
+}
+function terrainMatches(tile: Tile, old: TerrainSnapshot): boolean {
+  return tile.terrain === old.terrain && tile.overlay === old.overlay && tile.biome === old.biome && tile.resource === old.resource
+    && tile.ridge === old.ridge && tile.ridgeTier === old.ridgeTier && tile.stair === old.stair
+    && tile.waterfall === old.waterfall && tile.villageTrail === old.villageTrail;
+}
+function addHalo(cells: Set<number>, cell: number, radius: number, width: number, height: number): void {
+  const x = cell % width, y = Math.floor(cell / width);
+  for (let ny = Math.max(0, y - radius); ny <= Math.min(height - 1, y + radius); ny++)
+    for (let nx = Math.max(0, x - radius); nx <= Math.min(width - 1, x + radius); nx++) cells.add(ny * width + nx);
+}
 
-/** Terrain geometry belongs to the world, not to an army. Construction and
- * road traffic also increment world.revision, so compare terrain scalars when
- * that happens instead of recalculating every ridge edge for every faction.
- * Revisionless fixture worlds retain live scalar validation on every query. */
+/** One world-owned terrain layer. Journaled edits touch only their cells and
+ * the ridge/stair dependency halo; unknown/editor edits keep exact validation. */
 function terrainNavigation(world: World): TerrainNavigation {
   let cached = terrainNavigationCaches.get(world);
   const compatible = cached?.tiles === world.tiles && cached.width === world.width && cached.height === world.height;
-  if (compatible && world.revision !== undefined && cached!.revision === world.revision) return cached!;
-  const appearanceRevision = world.revision === undefined ? undefined : worldRevisions(world).appearance;
-  // Ordering a building changes structure membership, not the terrain below
-  // every cell. Unknown raw revisions still advance the semantic version.
-  if (compatible && appearanceRevision !== undefined && cached!.appearanceRevision === appearanceRevision) {
-    cached!.revision = world.revision;
-    return cached!;
+  const changes = worldChangesSince(world, compatible ? cached!.cursor : undefined);
+  if (compatible && world.revision !== undefined && !changes.full && !changes.cells.length) {
+    cached!.cursor = changes.revision; return cached!;
   }
-  let changed = !compatible, geometryChanged = !compatible;
-  if (compatible) for (let i = 0; i < world.tiles.length; i++) {
-    const tile = world.tiles[i], old = cached!.snapshots[i];
-    if (tile.terrain === old.terrain && tile.overlay === old.overlay && tile.biome === old.biome && tile.ridge === old.ridge
-      && tile.ridgeTier === old.ridgeTier && tile.stair === old.stair && tile.waterfall === old.waterfall && tile.villageTrail === old.villageTrail) continue;
-    changed = true;
-    // Forest and swamp changes affect speed, but cannot alter ridge geometry.
-    if (tile.ridge !== old.ridge || tile.ridgeTier !== old.ridgeTier || tile.stair !== old.stair || tile.waterfall !== old.waterfall) geometryChanged = true;
-  }
-  if (!changed) { cached!.revision = world.revision; cached!.appearanceRevision = appearanceRevision; return cached!; }
   const count = world.width * world.height;
   if (!compatible) cached = { tiles: world.tiles, width: world.width, height: world.height,
-    revision: world.revision, appearanceRevision, version: 0, geometryVersion: 0, snapshots: [], open: new Uint8Array(count), bridgeGround: new Uint8Array(count),
-    cost: new Float64Array(count), edges: new Uint8Array(count) };
-  cached = cached!;
-  cached.revision = world.revision; cached.appearanceRevision = appearanceRevision; cached.version++;
-  for (let i = 0; i < count; i++) {
-    const tile = world.tiles[i], x = i % world.width, y = Math.floor(i / world.width);
-    cached.snapshots[i] = { terrain: tile.terrain, overlay: tile.overlay, biome: tile.biome, ridge: tile.ridge, ridgeTier: tile.ridgeTier, stair: tile.stair, waterfall: tile.waterfall, villageTrail: tile.villageTrail };
-    const ground = !tile.waterfall && (!(tile.ridge || tile.stair) || ridgeGroundWalkable(world, x, y));
-    cached.open[i] = Number(ground && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier')
-      || tile.terrain === 'river' && tile.overlay === 'ford'));
-    cached.bridgeGround[i] = Number(ground && WATER.has(tile.terrain));
-    cached.cost[i] = 1 / groundMovementMultiplier(tile);
-  }
-  if (geometryChanged) {
-    cached.geometryVersion++;
-    cached.edges.fill(0);
-    for (let i = 0; i < count; i++) {
-      const x = i % world.width, y = Math.floor(i / world.width);
-      for (let d = 0; d < directions.length; d++) {
-        const [dx, dy] = directions[d], nx = x + dx, ny = y + dy;
-        if (nx >= 0 && ny >= 0 && nx < world.width && ny < world.height
-          && canTraverseEdge(world, { x, y }, { x: nx, y: ny })) cached.edges[i] |= 1 << d;
-      }
+    cursor: changes.revision, version: 0, geometryVersion: 0, snapshots: [], history: [],
+    open: new Uint8Array(count), bridgeGround: new Uint8Array(count), cost: new Float64Array(count), edges: new Uint8Array(count) };
+  const terrain = cached!, values = new Set<number>(), edges = new Set<number>();
+  const inspect = (i: number): void => {
+    const tile = world.tiles[i], old = terrain.snapshots[i];
+    if (old && terrainMatches(tile, old)) return;
+    terrain.snapshots[i] = terrainSnapshot(tile); values.add(i);
+    if (!old || tile.ridge !== old.ridge || tile.ridgeTier !== old.ridgeTier || tile.stair !== old.stair
+      || tile.waterfall !== old.waterfall || resourceBlocksGround(tile) !== resourceBlocksGround(old)) {
+      // Stair validity reads its approaches and their ledge neighbors (two
+      // cells); an outgoing edge can read a neighboring stair (three cells).
+      addHalo(values, i, 2, world.width, world.height);
+      addHalo(edges, i, 3, world.width, world.height);
     }
+  };
+  if (!compatible) for (let i = 0; i < count; i++) { terrain.snapshots[i] = terrainSnapshot(world.tiles[i]); values.add(i); edges.add(i); }
+  else if (changes.full || world.revision === undefined) for (let i = 0; i < count; i++) inspect(i);
+  else for (const i of changes.cells) inspect(i);
+  const changed = new Set<number>();
+  for (const i of values) {
+    const tile = world.tiles[i], x = i % world.width, y = Math.floor(i / world.width);
+    const ground = !tile.waterfall && !resourceBlocksGround(tile) && (!(tile.ridge || tile.stair) || ridgeGroundWalkable(world, x, y));
+    const open = Number(ground && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier')
+      || tile.terrain === 'river' && tile.overlay === 'ford'));
+    const bridgeGround = Number(ground && WATER.has(tile.terrain)), cost = 1 / groundMovementMultiplier(tile);
+    if (open !== terrain.open[i] || bridgeGround !== terrain.bridgeGround[i] || cost !== terrain.cost[i]) changed.add(i);
+    terrain.open[i] = open; terrain.bridgeGround[i] = bridgeGround; terrain.cost[i] = cost;
   }
-  terrainNavigationCaches.set(world, cached);
-  return cached;
+  let geometryChanged = false;
+  for (const i of edges) {
+    const x = i % world.width, y = Math.floor(i / world.width); let mask = 0;
+    for (let d = 0; d < directions.length; d++) {
+      const [dx, dy] = directions[d], nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < world.width && ny < world.height
+        && canTraverseEdge(world, { x, y }, { x: nx, y: ny })) mask |= 1 << d;
+    }
+    if (mask !== terrain.edges[i]) { geometryChanged = true; changed.add(i); }
+    terrain.edges[i] = mask;
+  }
+  if (geometryChanged) terrain.geometryVersion++;
+  if (changed.size || !compatible) {
+    terrain.version++;
+    terrain.history.push({ revision: terrain.version, cells: [...changed] });
+    if (terrain.history.length > MAX_CHANGE_HISTORY) terrain.history.shift();
+  }
+  terrain.cursor = changes.revision;
+  terrainNavigationCaches.set(world, terrain);
+  return terrain;
 }
+
+/** Borrowed world-owned eight-direction edge mask; callers must not mutate it.
+ * Bit order: NW, N, NE, W, E, SW, S, SE. Includes ridge/resource geometry only. */
+export function terrainNavigationEdges(world: World): Uint8Array { return terrainNavigation(world).edges; }
 
 const NAVIGATION_REGION_SIZE = 16;
 
-interface NavigationCache { terrain: TerrainNavigation; terrainVersion: number; terrainGeometryVersion: number; buildings: number; forbidden: number; grid: NavigationGrid; }
+interface NavigationCache { topology: StructureGrid; terrain: TerrainNavigation; terrainVersion: number; terrainGeometryVersion: number; buildings: number; forbidden: number; grid: NavigationGrid; }
 const navigationCaches = new WeakMap<GameState, Map<string, NavigationCache>>();
 
 /** Terrain edits increment world.revision. Imported/fixture worlds without a
@@ -359,7 +464,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
   const cacheKey = `${faction}:${Number(avoidForbidden)}`, forbidden = avoidForbidden ? forbiddenRevision(state, faction) : 0;
   const cached = factionCaches.get(cacheKey);
   if (cached && cached.terrain === terrain && cached.terrainVersion === terrain.version && cached.buildings === buildings && cached.forbidden === forbidden) return cached.grid;
-  const count = world.width * world.height, blockers = factionBlockers(state, faction, topology), routes = topology.routes, bridges = topology.bridges;
+  const count = world.width * world.height;
   const regionColumns = Math.ceil(world.width / NAVIGATION_REGION_SIZE), regionCount = regionColumns * Math.ceil(world.height / NAVIGATION_REGION_SIZE);
   const compatible = cached?.terrain === terrain;
   const grid: NavigationGrid = compatible ? cached.grid : {
@@ -369,35 +474,50 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
     costs: new Float64Array(count), previous: new Int32Array(count), seen: new Uint32Array(count), closed: new Uint32Array(count), stamp: 0, frontier: new MinHeap(), version: 0,
     regionColumns, accessRegions: new Uint32Array(regionCount), costRegions: new Uint32Array(regionCount),
   };
-  let connectivityChanged = !compatible || cached.terrainGeometryVersion !== terrain.geometryVersion;
+  const structureCells = compatible && cached.topology === topology ? changedCells(topology.history, cached.buildings, buildings) : undefined;
+  const terrainCells = compatible ? changedCells(terrain.history, cached.terrainVersion, terrain.version) : undefined;
+  const full = !structureCells || !terrainCells || cached?.forbidden !== forbidden;
+  const dirty = structureCells ?? new Set<number>();
+  if (terrainCells) for (const cell of terrainCells) dirty.add(cell);
+  const forbiddenSet = avoidForbidden ? forbiddenCells(state, faction) : undefined;
+  const edgeCells = new Set<number>(terrainCells);
+  let connectivityChanged = !compatible;
   let navigationChanged = !compatible;
   const accessChanged = new Set<number>(), costChanged = new Set<number>();
   const region = (cell: number): number => Math.floor(cell % world.width / NAVIGATION_REGION_SIZE)
     + Math.floor(Math.floor(cell / world.width) / NAVIGATION_REGION_SIZE) * regionColumns;
-  for (let i = 0; i < count; i++) {
-    const open = Number(!blockers.has(i) && !(avoidForbidden && isForbidden(state, i % world.width, Math.floor(i / world.width), faction)) && (terrain.open[i] || bridges.has(i) && terrain.bridgeGround[i]));
-    if (grid.open[i] !== open) { connectivityChanged = true; accessChanged.add(region(i)); }
+  const refresh = (i: number): void => {
+    const flags = topology.flags[i];
+    const blocked = (flags & SOLID) || topology.gates.get(i)?.some(owner => owner !== -1 && !friendlyGateAccess(state, faction, owner));
+    const open = Number(!blocked && !forbiddenSet?.has(i) && (terrain.open[i] || (flags & BRIDGE) && terrain.bridgeGround[i]));
+    if (grid.open[i] !== open) {
+      connectivityChanged = true; accessChanged.add(region(i));
+      if (!full) addHalo(edgeCells, i, 1, world.width, world.height);
+    }
     grid.open[i] = open;
-    const cost = routes.has(i) ? WATER.has(world.tiles[i].terrain) ? bridges.has(i) ? 1 : 1 / .45 : 1 / 1.5
-      : terrain.cost[i] / (topology.ditches.has(i) ? IRRIGATION_MOVEMENT_MULTIPLIER : 1);
+    const cost = flags & ROUTE ? WATER.has(world.tiles[i].terrain) ? flags & BRIDGE ? 1 : 1 / .45 : 1 / 1.5
+      : terrain.cost[i] / (flags & DITCH ? IRRIGATION_MOVEMENT_MULTIPLIER : 1);
     if (grid.cost[i] !== cost) costChanged.add(region(i));
     grid.cost[i] = cost;
-  }
-  // Most construction revisions are roads, farm orders or cost-only terrain
-  // edits. Keep the existing edges, components and search workspaces whenever
-  // the actual open cells and ridge geometry are unchanged.
+  };
+  if (full) for (let i = 0; i < count; i++) refresh(i);
+  else for (const i of dirty) refresh(i);
+  const refreshEdges = (i: number): void => {
+    let edges = 0;
+    if (grid.open[i]) for (let d = 0; d < directions.length; d++) {
+      const next = i + grid.offsets[d];
+      if (terrain.edges[i] & (1 << d) && grid.open[next]) edges |= 1 << d;
+    }
+    if (grid.edges[i] !== edges) { accessChanged.add(region(i)); connectivityChanged = true; }
+    grid.edges[i] = edges;
+  };
+  if (full) for (let i = 0; i < count; i++) refreshEdges(i);
+  else for (const i of edgeCells) refreshEdges(i);
+  // Cost-only edits never touch connectivity. Access changes keep the exact
+  // global flood, while edge reconstruction itself is limited to dirty halos.
   if (connectivityChanged) {
     grid.component.fill(0);
     if (grid.reachability) grid.reachability.owner = undefined;
-    for (let i = 0; i < count; i++) {
-      let edges = 0;
-      if (grid.open[i]) for (let d = 0; d < directions.length; d++) {
-        const next = i + grid.offsets[d];
-        if (terrain.edges[i] & (1 << d) && grid.open[next]) edges |= 1 << d;
-      }
-      if (grid.edges[i] !== edges) accessChanged.add(region(i));
-      grid.edges[i] = edges;
-    }
     // Components reject impossible orders immediately instead of exhaustively
     // searching the entire reachable continent each time a unit reconsidered one.
     const queue = grid.componentQueue; let component = 0;
@@ -418,7 +538,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
   for (const index of costChanged) grid.costRegions[index]++;
   navigationChanged ||= accessChanged.size > 0 || costChanged.size > 0;
   if (navigationChanged) grid.version++;
-  factionCaches.set(cacheKey, { terrain, terrainVersion: terrain.version, terrainGeometryVersion: terrain.geometryVersion, buildings, forbidden, grid });
+  factionCaches.set(cacheKey, { topology, terrain, terrainVersion: terrain.version, terrainGeometryVersion: terrain.geometryVersion, buildings, forbidden, grid });
   return grid;
 }
 

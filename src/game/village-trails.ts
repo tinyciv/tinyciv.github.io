@@ -141,6 +141,7 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
     }
   };
   const newlyForded = new Set<number>();
+  const changed = new Set<number>();
   for (const pair of pairs) {
     if (root(pair.a) === root(pair.b) || anchors[pair.a] === undefined || anchors[pair.b] === undefined) continue;
     if (report.searchedPairs >= Math.max(12, villages.length * 6)) break;
@@ -148,6 +149,7 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
     const route = search(anchors[pair.a]!, anchors[pair.b]!); if (!route) continue;
     for (let i = 0; i < route.length; i++) {
       const cell = route[i], tile = tiles[cell];
+      changed.add(cell);
       if (!roads.has(cell)) tile.villageTrail = true;
       if (tile.terrain === 'river' && tile.overlay !== 'ford') {
         tile.overlay = 'ford'; tile.fordAxis = Math.abs(route[i - 1] - cell) === 1 ? 'horizontal' : 'vertical'; newlyForded.add(cell);
@@ -160,6 +162,6 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
   report.components = sizes.size;
   report.connectedVillages = [...sizes.values()].filter(size => size > 1).reduce((sum, size) => sum + size, 0);
   report.trailTiles = tiles.filter(tile => tile.villageTrail).length; report.fordTiles = newlyForded.size;
-  if (report.routes) { markWorldChanged(world, newlyForded.size ? 'geometry' : 'appearance'); invalidateNavigation(state); }
+  if (report.routes) { markWorldChanged(world, newlyForded.size ? 'geometry' : 'appearance', changed); invalidateNavigation(state); }
   return report;
 }

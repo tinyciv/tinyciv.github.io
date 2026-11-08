@@ -4,6 +4,7 @@ import { isRetinueMember } from './types';
 import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-activity';
 import { equipmentMultiplier, MAX_EQUIPMENT_LEVEL } from './equipment';
 import { buildingReady, type Building, type EquipmentLevel, type Faction, type GameState, type Unit } from './types';
+import { factionHasDevelopedResource } from './resource-development';
 
 export type BlacksmithUpgradeTrack = 'armor' | 'weapon';
 export const BLACKSMITH_UPGRADE_COSTS = [200, 400, 600, 800, 1000, 1200] as const;
@@ -22,7 +23,7 @@ export interface BlacksmithUpgradeStatus {
 /** Units store their issued tiers; defensive structures derive the current
  * owner's tiers when calculating combat stats. Workers remain unequipped. */
 export function equipUnitFromFaction(unit: Unit, faction: Pick<Faction, 'armorLevel' | 'weaponLevel'> | undefined): void {
-  if (unit.kind !== 'leader' && unit.kind !== 'levyInfantry' && unit.kind !== 'skirmisher' && !isRetinueMember(unit)) return;
+  if (unit.kind !== 'leader' && unit.kind !== 'levyInfantry' && unit.kind !== 'slinger' && unit.kind !== 'skirmisher' && !isRetinueMember(unit)) return;
   unit.armorLevel = faction?.armorLevel ?? 0;
   unit.weaponLevel = faction?.weaponLevel ?? 0;
 }
@@ -45,6 +46,7 @@ export function blacksmithUpgradeStatus(state: GameState, building: Building, tr
   else if (!buildingReady(building)) reason = 'Complete the blacksmith first.';
   else if (!buildingActivityAvailable(state, building)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the blacksmith.`;
   else if (nextLevel === null) reason = 'Fully upgraded.';
+  else if (!factionHasDevelopedResource(state, building.faction, 'iron')) reason = 'Develop an iron mine inside your city borders first.';
   else if (faction.gold < cost!) reason = `Need ${cost} gold.`;
   return { level, nextLevel, currentMultiplier: equipmentMultiplier(level), multiplier: equipmentMultiplier(nextLevel ?? level),
     cost, available: !reason, reason };
@@ -57,5 +59,5 @@ export function purchaseBlacksmithUpgrade(state: GameState, building: Building, 
   spendGold(state, faction, status.cost!, 'upgrades');
   faction[track === 'armor' ? 'armorLevel' : 'weaponLevel'] = status.nextLevel!;
   applyFactionEquipment(state, faction.id);
-  return { ok: true, message: `${track === 'armor' ? 'Armor' : 'Weapon'} upgraded: ${status.multiplier}× ${track === 'armor' ? 'defense' : 'attack'} for your Leader, retinue and ${track === 'armor' ? 'defensive buildings' : 'tower attacks'}.` };
+  return { ok: true, message: `${track === 'armor' ? 'Armor' : 'Weapon'} upgraded: ${Math.round(status.multiplier * 100)}% ${track === 'armor' ? 'defense' : 'attack'} for your Leader, retinue and ${track === 'armor' ? 'defensive buildings' : 'tower attacks'}.` };
 }

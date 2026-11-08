@@ -3,7 +3,7 @@ import { grantIncome } from './resource-income';
 import { buildingSize, buildingWidth, buildingHeight, tileAt, type GameState, type TreasureChest, type World, WATER } from './types';
 import { updateFog } from './fog';
 import { travelTimeMap } from './pathfinding';
-import { ridgeFootprintAllowed } from './ridges';
+import { ridgeFootprintAllowed, ridgeStairAccess } from './ridges';
 import { loadPunyWorld } from './puny-world';
 
 export const TREASURE_GOLD = 200;
@@ -86,7 +86,7 @@ export function initializeTreasureChests(state: GameState): void {
         if (!tile || WATER.has(tile.terrain) || fog.explored[cell] || occupied.has(cell) || !Number.isFinite(reachable[cell])) continue;
         // A chest needs readable open ground; forest treasure remains visible
         // in small clearings instead of being buried under opaque tree art.
-        if (tile.overlay !== 'none' || !ridgeFootprintAllowed(state.world, x, y)) continue;
+        if (tile.overlay !== 'none' || ridgeStairAccess(state.world, x, y) || !ridgeFootprintAllowed(state.world, x, y)) continue;
         if (settlements.some(source => (x + .5 - source.x) ** 2 + (y + .5 - source.y) ** 2 < source.radius ** 2)) continue;
         candidates.push(cell);
     }
@@ -131,7 +131,7 @@ function collectTreasure(state: GameState): void {
         chest.collected = true;
         const gold = chest.rewardGold ?? TREASURE_GOLD;
         grantIncome(player, { gold }, state, 'treasure');
-        state.particles.push({ x: chest.x + .5, y: chest.y + .5, text: `+${gold} gold`, color: '#f5d875', life: 1.6 });
+        state.particles.push({ x: chest.x + .5, y: chest.y + .5, text: `+${Math.round(gold)} gold`, color: '#ffe33d', life: 1.6, duration: 1.6 });
         if (chest.discovery) {
             state.events.unshift({ id: (state.events[0]?.id ?? 0) + 1, time: state.time, kind: 'good',
                 text: `Discovered ${chest.name ?? GEOGRAPHIC_DISCOVERIES[chest.discovery].title}: a wilderness cache worth ${gold} gold.` });

@@ -43,16 +43,16 @@ describe('saved rolling gold transaction ledger', () => {
     expect(faction.goldLedger).toHaveLength(3); // Display reads do not prune authoritative history.
     refundGold(state,faction,2);expect(faction.goldLedger).toHaveLength(1);expect(faction.goldLedger![0].time).toBe(71);
   });
-  it('preserves fractional accounting, negative balances and refunds without creating Science or gross income', () => {
+  it('caps expenses at available gold and preserves fractional refunds without creating Science or gross income', () => {
     const state=fixture(),faction=state.factions[0];faction.gold=1;
     grantIncome(faction,{gold:8.5},state,'trade'); updateResearch(state,30);
     expect(faction.gold).toBeCloseTo(7.375);expect(faction.research?.progress.woodenTower).toBe(2.125);
-    spendGold(state,faction,20,'settlements');expect(faction.gold).toBeCloseTo(-12.625);
-    refundGold(state,faction,3.125);expect(faction.gold).toBe(-9.5);
+    spendGold(state,faction,20,'settlements');expect(faction.gold).toBe(0);
+    refundGold(state,faction,3.125);expect(faction.gold).toBe(3.125);
     expect(faction.incomeTotals?.gold).toBe(8.5);expect(faction.research?.progress.woodenTower).toBe(2.125);
     const summary=goldFlowSummary(state,faction);
     expect(amount(summary.inputs,'trade')).toBe(8.5);expect(amount(summary.inputs,'refunds')).toBe(3.125);
-    expect(amount(summary.outlays,'science')).toBe(2.125);expect(amount(summary.outlays,'settlements')).toBe(20);
+    expect(amount(summary.outlays,'science')).toBe(2.125);expect(amount(summary.outlays,'settlements')).toBe(7.375);
     expect(summary.net).toBe(faction.gold-1);
   });
   it('records only actual Science diversion, returning surplus to gold when the tree finishes', () => {

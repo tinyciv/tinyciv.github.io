@@ -129,7 +129,7 @@ describe('compact farm placement', () => {
     for (const point of [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 3 }]) add(state, 'camp', point);
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(corner);
     // Square completion remains a preference: much richer soil can win.
-    const richer = { x: 14, y: 10 }; state.world.tiles[richer.y * 32 + richer.x].fertility = 1;
+    const richer = { x: 14, y: 10 }; state.world.tiles[richer.y * 32 + richer.x].fertility = 1.25;
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(richer);
   });
 
@@ -181,20 +181,20 @@ describe('compact farm placement', () => {
     const gap = points.find(point => preference(point.x, point.y) === 0
       && Math.hypot(point.x + .5 - palace.x - 1, point.y + .5 - palace.y - 1) > 2
       && farmWalkingDistance(walking, 32, point.x, point.y) <= 5)!;
-    expect(gap).toBeDefined(); state.world.tiles[gap.y * 32 + gap.x].fertility = 1;
+    expect(gap).toBeDefined(); state.world.tiles[gap.y * 32 + gap.x].fertility = 1.25;
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(gap);
   });
 
-  it.each([.51, .52, .53])('joins a field despite slightly richer isolated soil (%s fertility)', fertility => {
+  it.each([1.01, 1.02, 1.03])('joins a field despite slightly richer isolated soil (%s fertility)', fertility => {
     const state = fixture(), clustered = { x: 4, y: 10 }, isolated = { x: 14, y: 10 };
     add(state, 'camp', { x: 3, y: 10 }); restrictPlots(state, [clustered, isolated]);
-    state.world.tiles[clustered.y * 32 + clustered.x].fertility = .5;
+    state.world.tiles[clustered.y * 32 + clustered.x].fertility = 1;
     state.world.tiles[isolated.y * 32 + isolated.x].fertility = fertility;
     const plan = planAutomaticFarmSite(state, state.buildings[0])!;
     expect(fieldHarvestFoodForState(state, isolated.x, isolated.y)).toBeGreaterThan(fieldHarvestFoodForState(state, clustered.x, clustered.y));
     expect(plan.point).toEqual(clustered);
     expect(plan.expectedHarvest).toBeCloseTo(.8 * 4 / 3); // The preference never manufactures extra food.
-    state.world.tiles[isolated.y * 32 + isolated.x].fertility = 1;
+    state.world.tiles[isolated.y * 32 + isolated.x].fertility = 1.25;
     expect(planAutomaticFarmSite(state, state.buildings[0])?.point).toEqual(isolated);
   });
 

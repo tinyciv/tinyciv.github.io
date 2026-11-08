@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { clearArea, demolishBuildingsInArea } from '../src/game/area-tools';
-import { borderRadius, insideOwnBorders, territory } from '../src/game/borders';
+import { borderRadius, insideOwnBorders, territory, UNCLAIMED } from '../src/game/borders';
 import { buildingArmor } from '../src/game/defense-equipment';
 import { entityStore } from '../src/game/entity-store';
-import { FORT_BASE_HP, FORT_GOLD, FORT_UPKEEP, SKIRMISHER_SPEED, fortBrigadeCapacity, preserveDestroyedFort,
+import { FORT_BASE_HP, FORT_BUILD_SECONDS, FORT_GOLD, FORT_UPKEEP, SKIRMISHER_SPEED, fortBrigadeCapacity, preserveDestroyedFort,
   rebuildFort, rebuildFortStatus, updateForts, updateFortSkirmisher, upgradeFortBrigade, upgradeFortBrigadeStatus } from '../src/game/forts';
 import { buildAt, updateGame, validateBuildAt } from '../src/game/simulation';
 import { applyGameCommand } from '../src/multiplayer/commands';
@@ -49,9 +49,10 @@ describe('Forts', () => {
     expect(buildAt(state, 'supplyDepot', 9, 6).ok).toBe(true);
     expect(faction.gold).toBe(2000 - 300 - 120);
     const fort = state.buildings.find(site => site.kind === 'fort')!, depot = state.buildings.find(site => site.kind === 'supplyDepot')!;
-    expect(fort).toMatchObject({ maxHp: 2250, construction: { duration: 60, waitingForBuilder: true } });
+    expect(FORT_BUILD_SECONDS).toBe(240);
+    expect(fort).toMatchObject({ maxHp: 2250, construction: { duration: FORT_BUILD_SECONDS, waitingForBuilder: true } });
     expect(depot).toMatchObject({ construction: { duration: 45, waitingForBuilder: true } });
-    for (let i = 0; i < 720 && (fort.construction || depot.construction); i++) updateGame(state, .25, idle);
+    for (let i = 0; i < 1400 && (fort.construction || depot.construction); i++) updateGame(state, .25, idle);
     expect(fort.construction).toBeUndefined(); expect(depot.construction).toBeUndefined();
     expect(insideOwnBorders(state, 0, 19.5, 8.5)).toBe(true);
     leader.x = 14.5; leader.y = 8.5;
@@ -60,7 +61,8 @@ describe('Forts', () => {
       expect(validateBuildAt(state, 'fort', x, y).message).toContain('foundation is permanent');
     expect(validateBuildAt(state, 'fort', 17, 8).ok).toBe(true);
     expect(rebuildFort(state, fort).ok).toBe(true);
-    for (let i = 0; i < 400 && fort.construction; i++) updateGame(state, .25, idle);
+    expect(fort.construction?.duration).toBe(FORT_BUILD_SECONDS);
+    for (let i = 0; i < 1400 && fort.construction; i++) updateGame(state, .25, idle);
     expect(fort.construction).toBeUndefined(); expect(fort.hp).toBe(fort.maxHp);
   }, 20000);
 
@@ -147,7 +149,7 @@ describe('Forts', () => {
     expect(rebuildFortStatus(state, fort).cost).toBe(150);
   });
 
-  it('projects borders and gains additional reach from nearby friendly monuments only', () => {
+  it('projects fixed borders independently of culture and nearby monuments', () => {
     const state = fixture(), fort = state.buildings[1], initial = territory(state);
     expect(borderRadius('fort')).toBe(6.5);
     expect(insideOwnBorders(state, 0, 26.5, 21)).toBe(true);
@@ -155,12 +157,79 @@ describe('Forts', () => {
     entityStore(state).buildings.add(building(3, 'monument', 15, 20));
     const extended = territory(state);
     expect(extended.revision).toBeGreaterThan(initial.revision);
-    expect(extended.sourceRadii.get(fort.id)).toBe(8.5);
-    expect(insideOwnBorders(state, 0, 28.5, 21)).toBe(true);
+    expect(extended.sourceRadii.get(fort.id)).toBe(6.5);
+    expect(insideOwnBorders(state, 0, 28.5, 21)).toBe(false);
+    state.factions[0].culture = 100000;
+    expect(borderRadius('fort', 100000)).toBe(6.5);
+    expect(territory(state).sourceRadii.get(fort.id)).toBe(6.5);
     state.buildings[2].faction = 1;
     expect(territory(state).sourceRadii.get(fort.id)).toBe(6.5);
     fort.hp = 0;
     expect(territory(state).sourceRadii.has(fort.id)).toBe(false);
+  });
+
+  it('extends into unclaimed ground without displacing a neighboring faction frontier', () => {
+    const state = fixture();
+    entityStore(state).buildings.retain(() => false);
+    entityStore(state).buildings.add(building(1, 'palace', 14, 20), building(2, 'palace', 27, 20, 1));
+    const before = territory(state), originalEnemy = [...before.owners].flatMap((owner, cell) => owner === 1 ? [cell] : []);
+    const fort = building(100, 'fort', 19, 20);
+    for (let y = 20; y < 22; y++) for (let x = 19; x < 21; x++) expect(insideOwnBorders(state, 0, x, y, before)).toBe(true);
+    entityStore(state).buildings.add(fort);
+    const after = territory(state);
+    expect(originalEnemy.length).toBeGreaterThan(0);
+    expect(originalEnemy.every(cell => after.owners[cell] === 1)).toBe(true);
+    expect([...after.owners].some((owner, cell) => owner === 0 && before.owners[cell] === UNCLAIMED)).toBe(true);
+    // A fort's lower relative-distance score must not make the frontier depend
+    // on whether it happened to be visited before or after the enemy city.
+    entityStore(state).buildings.replace([...state.buildings].reverse());
+    expect(territory(state).owners).toEqual(after.owners);
+    // Adding a nearby civic source does not amplify the fort's own claims.
+    entityStore(state).buildings.add(building(101, 'monument', 18, 20));
+    const enlarged = territory(state);
+    expect(originalEnemy.every(cell => enlarged.owners[cell] === 1)).toBe(true);
+    entityStore(state).buildings.retain(site => site.faction !== 1);
+    const liberated = territory(state);
+    expect(originalEnemy.some(cell => liberated.owners[cell] === 0)).toBe(true);
+  });
+
+  it('limits a newly built fort in an established fort-only frontier to its protected buffer', () => {
+    const state = fixture();
+    entityStore(state).buildings.retain(() => false);
+    const older = building(10, 'fort', 20, 20, 1), newer = building(20, 'fort', 25, 20);
+    entityStore(state).buildings.add(older);
+    const before = territory(state);
+    entityStore(state).buildings.add(newer);
+    const after = territory(state);
+    expect([...before.owners].every((owner, cell) => {
+      const x = cell % state.world.width, y = Math.floor(cell / state.world.width);
+      const buffer = x >= newer.x - 1 && x <= newer.x + 2 && y >= newer.y - 1 && y <= newer.y + 2;
+      return owner !== 1 || after.owners[cell] === (buffer ? 0 : 1);
+    })).toBe(true);
+    expect([...after.owners].some(owner => owner === 0)).toBe(true);
+    entityStore(state).buildings.replace([...state.buildings].reverse());
+    expect(territory(state).owners).toEqual(after.owners);
+    state.factions[1].culture = 100000;
+    expect(territory(state).owners).toEqual(after.owners);
+    expect(territory(state).sourceRadii.get(older.id)).toBe(6.5);
+    expect(territory(structuredClone(state)).owners).toEqual(after.owners);
+  });
+
+  it('preserves neutral village reservations outside the fort’s minimum buffer', () => {
+    const state = fixture();
+    Object.assign(state.factions[1], { villageId: 1, relation: 'peace' });
+    state.villages = [{ id: 1, faction: 1, campId: 100, name: 'Neighbors', identity: 'growers', relation: 'neutral',
+      x: 25, y: 20, nextGrowthAt: 90, nextThinkAt: 0, nextRecruitAt: 90 }];
+    entityStore(state).buildings.add({ ...building(100, 'villageTent', 25, 20, 1), villageId: 1 });
+    const reserved = territory(state);
+    expect(insideOwnBorders(state, 1, 24.5, 20.5, reserved)).toBe(true);
+    state.buildings[1].hp = 0;
+    const withoutFort = territory(state);
+    expect([...withoutFort.owners].every((owner, cell) => {
+      const x = cell % state.world.width, y = Math.floor(cell / state.world.width);
+      const buffer = x >= 19 && x <= 22 && y >= 19 && y <= 22;
+      return owner !== 1 || reserved.owners[cell] === (buffer ? 0 : 1);
+    })).toBe(true);
   });
 
   it('charges 20 gold every thirty seconds and suspends service without accumulating arrears', () => {

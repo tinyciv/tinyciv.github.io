@@ -36,7 +36,7 @@ function cityMembers(state: GameState, palace: Building): Building[] {
 /** Empty reservations offer no defense. Once construction physically starts,
  * a watchtower or guard post must be destroyed before its city can fall. */
 export function palaceDefenses(state: GameState, palace: Building): Building[] {
-  if (palace.kind !== 'palace') return [];
+  if (palace.kind !== 'palace' || state.villages?.some(v => v.campId === palace.id && v.secededCity)) return [];
   let index = defenseIndexes.get(state);
   const revision = state.world.revision ?? 0, offers = state.palaceCaptures?.length ?? 0;
   if (!index || index.buildings !== state.buildings || index.length !== state.buildings.length || index.time !== state.time
@@ -67,9 +67,13 @@ export function palaceDefenses(state: GameState, palace: Building): Building[] {
 export function captureOffer(state: GameState, palace: Building): CaptureOffer {
   const buildings = cityMembers(state, palace).filter(building => !isWallKind(building.kind) && building.kind !== 'fort');
   const faction = state.factions.find(other => other.id === palace.faction);
-  const unhousedResidents = Math.max(0, palace.unhousedResidents ?? 0);
-  const residents = buildings.reduce((sum, building) => sum + (building.kind === 'house' && buildingReady(building)
+  let unhousedResidents = Math.max(0, palace.unhousedResidents ?? 0);
+  let residents = buildings.reduce((sum, building) => sum + (building.kind === 'house' && buildingReady(building)
     ? Math.min(building.capacity, Math.max(0, building.residents ?? 0)) : 0), unhousedResidents);
+  if (state.villages?.some(v => v.campId === palace.id && v.secededCity)) {
+    const overflow = Math.max(0, (faction?.population ?? 0) - residents);
+    unhousedResidents += overflow; residents += overflow;
+  }
   return { palaceId: palace.id, faction: palace.faction, x: palace.x, y: palace.y,
     cityName: palace.cityName ?? faction?.name ?? 'Captured city', buildingIds: buildings.map(building => building.id),
     workerIds: state.units.filter(unit => unit.kind === 'worker' && unit.faction === palace.faction && unit.home === palace.id && unit.hp > 0).map(unit => unit.id),
@@ -85,7 +89,7 @@ export function transferCapturedCity(state: GameState, offer: CaptureOffer, pala
     // Fort ownership and foundations are permanent even when surrounding cities fall.
     if (building.kind === 'fort' || !captured.has(building.id) || building.faction !== offer.faction || building.hp <= 0) continue;
     // An unstarted defense order is cancelled when the city falls.
-    if (defensive(building)) { building.hp = 0; continue; }
+    if (defensive(building) && !state.villages?.some(v => v.faction === offer.faction && v.secededCity)) { building.hp = 0; continue; }
     building.faction = palace.faction;
     delete building.repairerId; delete building.farmAbandonedAt;
     const site = building.construction;

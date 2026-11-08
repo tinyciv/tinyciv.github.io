@@ -1,8 +1,15 @@
 import { playerFaction } from './player-context';
 import { canTraverseEdge, canWalk, withNavigationFrame } from './pathfinding';
 import { type GameState, type Point, WATER, tileAt } from './types';
+import { researchLevel } from './research';
 
+export const INITIAL_BRIDGE_SPAN = 2;
 export const MAX_BRIDGE_SPAN = 8;
+export const bridgeSpanLimit = (state: GameState, faction = playerFaction(state)): number =>
+  researchLevel(state.factions.find(owner => owner.id === faction), 'engineering') ? MAX_BRIDGE_SPAN : INITIAL_BRIDGE_SPAN;
+const bridgeLimitMessage = (state: GameState, faction: number): string =>
+  `Bridges need clear land at both ends and may cross at most ${bridgeSpanLimit(state, faction)} water tiles.`
+  + (bridgeSpanLimit(state, faction) === INITIAL_BRIDGE_SPAN ? ' Research Engineering for 8-tile bridges.' : '');
 export type BridgeAxis = 'horizontal' | 'vertical';
 export interface BridgeSpan { axis: BridgeAxis; tiles: Point[]; banks: readonly [Point, Point] }
 const axisStep = (axis: BridgeAxis): Point => axis === 'horizontal' ? { x: 1, y: 0 } : { x: 0, y: 1 };
@@ -20,6 +27,7 @@ export function bridgeSpanAt(state: GameState, point: Point, faction = playerFac
 function findBridgeSpan(state: GameState, point: Point, faction: number, preferredAxis?: BridgeAxis): BridgeSpan | undefined {
   const origin = { x: Math.floor(point.x), y: Math.floor(point.y) };
   if (!waterAt(state, origin)) return;
+  const limit = bridgeSpanLimit(state, faction);
   const spans: BridgeSpan[] = [];
   for (const axis of preferredAxis ? [preferredAxis] : ['horizontal', 'vertical'] as const) {
     const step = axisStep(axis), halves: Point[][] = [], banks: Point[] = [];
@@ -27,7 +35,7 @@ function findBridgeSpan(state: GameState, point: Point, faction: number, preferr
     for (const sign of [-1, 1]) {
       const half: Point[] = [];
       let cursor = origin;
-      for (let distance = 1; distance <= MAX_BRIDGE_SPAN; distance++) {
+      for (let distance = 1; distance <= limit; distance++) {
         const next = { x: origin.x + step.x * sign * distance, y: origin.y + step.y * sign * distance };
         if (!canTraverseEdge(state.world, cursor, next)) { valid = false; break; }
         if (!waterAt(state, next)) {
@@ -42,7 +50,7 @@ function findBridgeSpan(state: GameState, point: Point, faction: number, preferr
     }
     if (!valid || banks.length !== 2) continue;
     const tiles = [...halves[0].reverse(), origin, ...halves[1]];
-    if (tiles.length <= MAX_BRIDGE_SPAN) spans.push({ axis, tiles, banks: banks as [Point, Point] });
+    if (tiles.length <= limit) spans.push({ axis, tiles, banks: banks as [Point, Point] });
   }
   // A click chooses the shortest crossing. Horizontal wins an exact tie, so
   // hover, preview, and purchase always agree without consuming game RNG.
@@ -53,7 +61,7 @@ export function validateBridgeTile(state: GameState, x: number, y: number, facti
   if (tileAt(state.world, x, y)?.waterfall) return { ok: false, message: 'Waterfalls cannot be bridged.' };
   if (!waterAt(state, { x, y })) return { ok: false, message: 'Bridges span water tiles.' };
   return bridgeSpanAt(state, { x, y }, faction) ? { ok: true, message: '' }
-    : { ok: false, message: `Bridges need clear land at both ends and may cross at most ${MAX_BRIDGE_SPAN} water tiles.` };
+    : { ok: false, message: bridgeLimitMessage(state, faction) };
 }
 
 /** Expand every touched water run into its whole bank-to-bank crossing. The
@@ -73,7 +81,7 @@ function expandBridgeStroke(state: GameState, points: readonly Point[], faction:
   for (const point of input) {
     if (!waterAt(state, point)) { result.set(`${point.x},${point.y}`, point); continue; }
     const span = bridgeSpanAt(state, point, faction, axis);
-    if (!span) return { ok: false, points: input, message: `Bridges need clear land at both ends and may cross at most ${MAX_BRIDGE_SPAN} water tiles.` };
+    if (!span) return { ok: false, points: input, message: bridgeLimitMessage(state, faction) };
     spans++;
     for (const tile of [span.banks[0], ...span.tiles, span.banks[1]]) result.set(`${tile.x},${tile.y}`, tile);
   }

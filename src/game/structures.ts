@@ -19,7 +19,7 @@ import { updateWallStats } from './wall-stats';
 
 /** Game seconds; starting settlements are already complete. */
 export const CONSTRUCTION_SECONDS: Record<BuildingKind, number> = {
-  observationPost: 0, fort: 60, supplyDepot: 45, villageTent: 0, stable: 60,
+  observationPost: 0, fort: 240, supplyDepot: 45, villageTent: 0, stable: 60,
   palace: 90, camp: FARM_BUILD_SECONDS, house: HOUSE_BUILD_SECONDS, shack: 20, cottage: 25, road: 2, wall: 4, irrigation: 4,
   palisade: 4, bridge: 12, tower: 25, woodenTower: 15, ruin: 0, well: 20, monument: 20, blacksmith: 90, guardPost: 30, archeryRange: 90, library: 90, scoutLodge: 45,
   healerShack: HEALER_SHACK_BUILD_SECONDS,

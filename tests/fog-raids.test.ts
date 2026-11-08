@@ -1,7 +1,7 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it, vi } from 'vitest';
 import { constructionEdges } from '../src/game/builders';
-import { fogRaidProfile, initializeFogRaids, updateFogRaids, MAX_RAIDER_GROUP_SIZE, MAX_RAIDER_WAVE_SIZE } from '../src/game/fog-raids';
+import { fogRaidProfile, initializeFogRaids, updateFogRaids, MAX_RAIDER_GROUP_SIZE, MAX_RAIDER_WAVE_SIZE, raiderGroupSize } from '../src/game/fog-raids';
 import { MAX_LIVE_RAIDERS, MAX_LIVE_RAIDERS_PER_CAMP, RAIDER_COLOR, RAIDER_CAMP_REBUILD_SECONDS, RAIDER_CAMP_RETRY_SECONDS, campSpawnTiles, raiderCampActive, raiderCampCenter, raiderCampWarning } from '../src/game/raider-camps';
 import { raiderWaveInterval } from '../src/game/raider-pressure';
 import { canWalk, findPath, travelTimeMapFrom } from '../src/game/pathfinding';
@@ -31,14 +31,25 @@ function due(state: GameState): void { initializeFogRaids(state); state.time = s
 const raiders = (state: GameState): Unit[] => state.units.filter(unit => state.marauderPacks?.some(pack => pack.raid && pack.id === unit.marauderPack) && unit.hp > 0);
 
 describe('destructible raider camps and ramped waves', () => {
-  it('doubles opening pressure, keeps increasing after five minutes, and saturates at two parties', () => {
-    expect([0, 60, 120, 180, 240, 300].map(time => fogRaidProfile(2, time).total)).toEqual([4, 4, 12, 20, 28, 36]);
-    expect(fogRaidProfile(2, 60)).toEqual({ total: 4, parties: 1, hp: 70, attack: 13, defense: 2 });
-    expect(fogRaidProfile(2, 300)).toEqual({ total: 36, parties: 2, hp: 91, attack: 17, defense: 3 });
-    expect([360, 600, 900, 1800, 3600].map(time => fogRaidProfile(2, time).total)).toEqual([38, 46, 56, 60, 60]);
+  it('keeps early formation parties at eighteen units while reducing total wave size only once', () => {
+    const state = fixture(24); initializeFogRaids(state);
+    const camp = state.raiderCamps![0];
+    for (const other of state.raiderCamps!) other.nextRaidAt = Infinity;
+    camp.nextRaidAt = 300; state.time = 300; state.fogRaids!.nextAt = 300;
+    updateFogRaids(state);
+    const attackers = raiders(state), parties = state.marauderPacks!.filter(pack => pack.raid && pack.raiderCamp === camp.id);
+    expect(attackers).toHaveLength(26); // The previous 44-unit wave, rounded after ×0.6.
+    expect(parties.map(pack => attackers.filter(unit => unit.marauderPack === pack.id).length)).toEqual([18, 8]);
+    expect(raiderGroupSize(900)).toBe(MAX_RAIDER_GROUP_SIZE);
+  });
+  it('reduces opening size by forty percent, recovers through fifteen minutes, and keeps the late cap', () => {
+    expect([0, 60, 120, 180, 240, 300].map(time => fogRaidProfile(2, time).total)).toEqual([2, 2, 7, 12, 17, 22]);
+    expect(fogRaidProfile(2, 60)).toEqual({ total: 2, parties: 1, hp: 70, attack: 13, defense: 2 });
+    expect(fogRaidProfile(2, 300)).toEqual({ total: 22, parties: 2, hp: 91, attack: 17, defense: 3 });
+    expect([360, 600, 900, 1800, 3600].map(time => fogRaidProfile(2, time).total)).toEqual([24, 37, 56, 60, 60]);
     expect(fogRaidProfile(10000, 86400)).toEqual(fogRaidProfile(60, 3600));
     expect(fogRaidProfile(2, 900).hp).toBe(fogRaidProfile(2, 300).hp);
-    expect(fogRaidProfile(24, 60).total).toBe(4);
+    expect(fogRaidProfile(24, 60).total).toBe(2);
     expect(fogRaidProfile(24, 300).total).toBeGreaterThan(fogRaidProfile(2, 300).total);
   });
 
@@ -366,7 +377,7 @@ describe('destructible raider camps and ramped waves', () => {
     const state = fixture(); initializeFogRaids(state); state.time = 60; state.paused = true;
     updateFogRaids(state); expect(raiders(state)).toEqual([]); expect(state.raiderCamps![0].nextRaidAt).toBe(60);
     state.paused = false; state.gameOver = true; updateFogRaids(state); expect(raiders(state)).toEqual([]);
-    state.gameOver = false; updateFogRaids(state); expect(raiders(state)).toHaveLength(4);
+    state.gameOver = false; updateFogRaids(state); expect(raiders(state)).toHaveLength(2);
   });
 
   it.each(['willow-raid', 'river-raid', 'coastal-raid'])('places reachable camps on generated world %s', { timeout: 120_000 }, seed => {

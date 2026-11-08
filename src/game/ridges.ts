@@ -1,9 +1,30 @@
 import { type Tile, type World, type Point, tileAt } from './types';
+import { resourceBlocksGround } from './resource-terrain';
 
 export const STAIR_UP = {
   north: { x: 0, y: -1 }, east: { x: 1, y: 0 }, south: { x: 0, y: 1 }, west: { x: -1, y: 0 },
 } as const;
 export type StairDirection = keyof typeof STAIR_UP;
+/** Keep the one-to-three-tile low passages in hill country free of props. */
+export function narrowHillPassage(world: World, x: number, y: number): boolean {
+  const tile = tileAt(world, x, y);
+  if (!tile?.hillBiome || tile.ridge) return false;
+  for (const [dx, dy] of [[1, 0], [0, 1]]) {
+    let near = 0, far = 0, first = 0, second = 0;
+    for (let step = 1; step <= 3; step++) {
+      const t = tileAt(world, x - dx * step, y - dy * step);
+      if (!t || ['ocean', 'coast', 'river', 'lake'].includes(t.terrain)) break;
+      if (t.ridge) { near = step; first = t.ridge; break; }
+    }
+    for (let step = 1; step <= 3; step++) {
+      const t = tileAt(world, x + dx * step, y + dy * step);
+      if (!t || ['ocean', 'coast', 'river', 'lake'].includes(t.terrain)) break;
+      if (t.ridge) { far = step; second = t.ridge; break; }
+    }
+    if (near && far && first !== second && near + far - 1 <= 3) return true;
+  }
+  return false;
+}
 const STAIR_ENTRIES = Object.entries(STAIR_UP) as [StairDirection, Point][];
 export const ridgeLevel = (tile: Tile | undefined): number => tile?.ridge ? tile.ridgeTier ?? 1 : 0;
 
@@ -73,21 +94,24 @@ export function ridgeEdgeAllowed(world: World, from: Point, to: Point): boolean 
   return !!up && up.x === dx * sign && up.y === dy * sign;
 }
 
-/** Structures may occupy a flat upper surface, but never bridge a ledge or
- * obstruct the only stair landing. x/y are the footprint's upper-left corner. */
+/** Natural props keep stair entrances readable; construction may block them. */
+export function ridgeStairAccess(world: World, x: number, y: number): boolean {
+  if (tileAt(world, x, y)?.stair) return true;
+  for (const [direction, up] of STAIR_ENTRIES) {
+    if (tileAt(world, x + up.x, y + up.y)?.stair === direction
+      || tileAt(world, x - up.x, y - up.y)?.stair === direction) return true;
+  }
+  return false;
+}
+
+/** Buildings may obstruct ramps and either landing, but must still fit one
+ * elevation and cannot occupy cliff faces or rocky deposits. x/y is the footprint's top left. */
 export function ridgeFootprintAllowed(world: World, x: number, y: number, width = 1, height = width): boolean {
   const level = ridgeLevel(tileAt(world, x, y));
   for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
     const tile = tileAt(world, x + dx, y + dy);
-    if (!tile || tile.waterfall || tile.stair || ridgeLevel(tile) !== level) return false;
+    if (!tile || tile.waterfall || resourceBlocksGround(tile) || ridgeLevel(tile) !== level) return false;
     if (ridgeIsLedge(world, x + dx, y + dy)) return false;
-    // Keep the low approach tile open as well as the high-side stair itself.
-    for (const [direction, up] of STAIR_ENTRIES) {
-      const landing = tileAt(world, x + dx + up.x, y + dy + up.y);
-      if (landing?.stair === direction && ridgeLevel(landing) > ridgeLevel(tile)) return false;
-      const stairBelow = tileAt(world, x + dx - up.x, y + dy - up.y);
-      if (stairBelow?.stair === direction) return false;
-    }
   }
   return true;
 }

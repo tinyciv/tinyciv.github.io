@@ -176,9 +176,13 @@ export function harmonizeRidgeTerrain(world: World): void {
     groups.set(group, merged);
   }
   for (const group of groups.values()) {
-    let desert = 0;
-    for (const i of group) desert += Number(tiles[i].terrain === 'desert');
-    const terrain = desert > group.size / 2 ? 'desert' : 'grassland';
+    const counts = { grassland: 0, desert: 0, plains: 0, tundra: 0 };
+    for (const i of group) {
+      const terrain = tiles[i].terrain;
+      if (terrain in counts) counts[terrain as keyof typeof counts]++;
+    }
+    const terrain = (Object.keys(counts) as (keyof typeof counts)[])
+      .sort((a, b) => counts[b] - counts[a])[0];
     for (const i of group) {
       const tile = tiles[i];
       if (tile.terrain === terrain) continue;

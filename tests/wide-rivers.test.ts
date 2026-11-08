@@ -119,7 +119,9 @@ describe('wide meandering rivers and complete fords', () => {
   it('keeps complete tributary crossings while broad main rivers remain barriers across generated watersheds', () => {
     let tributaryCrossings = 0;
     for (let seed = 0; seed < 30; seed++) {
-      const world = generateWorld(`wide-river-audit-${seed}`);
+      // Audit hydrology at a fixed size; production-size realm separation is
+      // covered separately by faction-start-spacing.test.ts.
+      const world = generateWorld(`wide-river-audit-${seed}`, 194, 153);
       checkCrossings(world);
       for (const group of fordGroups(world)) {
         if (group.some(cell => world.tiles[cell].channel === 'tributary')) tributaryCrossings++;
@@ -129,5 +131,5 @@ describe('wide meandering rivers and complete fords', () => {
       expect(world.tiles.every(tile => !tile.channel || tile.terrain === 'river' && tile.channelWidth! >= 1)).toBe(true);
     }
     expect(tributaryCrossings).toBeGreaterThan(100);
-  }, 120_000); // Audit every crossing on thirty enlarged worlds.
+  }, 120_000); // Audit every crossing on thirty fixed-size worlds.
 });

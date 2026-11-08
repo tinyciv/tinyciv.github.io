@@ -11,7 +11,7 @@
   ],
   "native_tile_size": 16,
   "rendered_tile_size": 32,
-  "changes": "Lossless rectangular crop; byte-identical to the approved warcamp preview palisades.png. No recoloring, filtering, resizing, or generated pixels. Native crops are composed and clipped for connections and road junctions.",
+  "changes": "Lossless rectangular crop; byte-identical to the approved warcamp preview palisades.png. No recoloring, filtering, resizing, or generated pixels. Native crops are composed inside one cell for wall connections. Gates use the complete closed NS/EW frames, preserving their visible timber bars and fittings. Exposed ends and isolated posts now use the original authored cap/pier cells; source image pixels remain unchanged.",
   "sha256": "6b787568c24d1ed4254f9a2c89ec5b0189eee6ab4397c5e4c0b0fda4ff99c4b0",
   "source_atlas_sha256": "cc4a4e95a8003250c0a44c9bc8e303280cba7a4357f1e119801c3f63eb280706",
   "tiles": {
@@ -72,6 +72,36 @@
     "open_gate_ew": [
       144,
       16,
+      16,
+      16
+    ],
+    "east_end": [
+      16,
+      48,
+      16,
+      16
+    ],
+    "west_end": [
+      48,
+      48,
+      16,
+      16
+    ],
+    "pier": [
+      0,
+      48,
+      16,
+      16
+    ],
+    "north_end": [
+      0,
+      32,
+      16,
+      16
+    ],
+    "south_end": [
+      0,
+      0,
       16,
       16
     ]

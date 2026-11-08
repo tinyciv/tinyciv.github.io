@@ -6,13 +6,13 @@ export type BuildingActivityKind = 'fort' | 'governor' | 'blacksmith' | 'farm' |
 
 /** Add a kind here when another building gains an activity panel. */
 export function buildingActivityKind(building: Building): BuildingActivityKind | undefined {
-  return building.kind === 'villageTent' ? 'village' : building.kind === 'palace' ? 'governor' : isFarmKind(building.kind) ? 'farm'
+  return building.villageId !== undefined || building.kind === 'villageTent' ? 'village' : building.kind === 'palace' ? 'governor' : isFarmKind(building.kind) ? 'farm'
     : ['fort', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'scoutLodge', 'stable'].includes(building.kind) ? building.kind as BuildingActivityKind : undefined;
 }
 
 /** Reach is measured from the actual footing, including its south/east edges. */
 export function buildingActivityAvailable(state: GameState, building: Building): boolean {
-  const village = building.kind === 'villageTent' && state.villages?.find(village => village.campId === building.id && !village.destroyed);
+  const village = building.villageId !== undefined && state.villages?.find(village => village.campId === building.id && !village.destroyed);
   if (state.gameOver || building.faction !== playerFaction(state) && !village || (!buildingReady(building) && !(building.kind === 'fort' && building.fort?.destroyed)) || !buildingActivityKind(building)) return false;
   const leader = state.units.find(unit => unit.faction === playerFaction(state) && unit.kind === 'leader' && unit.hp > 0 && !unit.inside);
   if (!leader) return false;

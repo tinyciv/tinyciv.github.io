@@ -51,8 +51,8 @@ const angleDifference = (a: number, b: number) => Math.atan2(Math.sin(a - b), Ma
 /** Reassign the same reachable cells, keeping levies on both outside wings. */
 function levyWingGoals(leader: Unit, members: Unit[], goals: Map<number, Point>, heading: number): Map<number, Point> {
   const levies = members.filter(unit => unit.kind === 'levyInfantry' && goals.has(unit.id));
-  if (!levies.length) return goals;
-  const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : unit.kind === 'archer' || unit.range > 1.5 ? 'ranged' : 'melee';
+  if (!levies.length && !members.some(unit => unit.kind === 'slinger')) return goals;
+  const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : (unit.kind === 'archer' || unit.kind === 'horseArcher') || unit.range > 1.5 ? 'ranged' : 'melee';
   const side = { x: -Math.sin(heading), y: Math.cos(heading) }, front = { x: Math.cos(heading), y: Math.sin(heading) };
   const projection = (point: Point, axis: Point) => (point.x - leader.x) * axis.x + (point.y - leader.y) * axis.y;
   const entries = [...goals.entries()].map(([id, point]) => ({ id, point }));
@@ -280,8 +280,8 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     formation.mode = 'mob'; formation.clearSince = undefined;
     return formation;
   }
-  const melee = members.filter(member => member.kind !== 'archer').sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
-  const ranged = members.filter(member => member.kind === 'archer').sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+  const melee = members.filter(member => member.kind !== 'archer' && member.kind !== 'horseArcher' && member.kind !== 'slinger').sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+  const ranged = members.filter(member => ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')).sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
   const mixed = melee.length > 0 && ranged.length > 0;
   const roleSlots = new Map([...melee.map((member, index) => [member.id, index] as const), ...ranged.map((member, index) => [member.id, index] as const)]);
   const line = new Map<number, Point>(), reserved = new Set<number>();
@@ -294,7 +294,7 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     // next vacancy without making every other escort cross through the mob.
     const rankSlot = mixed ? roleSlots.get(member.id)! : slot;
     const lateral = (rankSlot % 2 ? -1 : 1) * (Math.floor((rankSlot % 6) / 2) + 1) * 1.15;
-    const behind = .65 + (Math.floor(rankSlot / 6) + (mixed && member.kind === 'archer' ? Math.ceil(melee.length / 6) : 0)) * 1.2;
+    const behind = .65 + (Math.floor(rankSlot / 6) + (mixed && ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger') ? Math.ceil(melee.length / 6) : 0)) * 1.2;
     const offset = mobOffset(slot);
     const desired = marching ? { x: leader.x + offset.x, y: leader.y + offset.y }
       : { x: leader.x + side.x * lateral - forward.x * behind, y: leader.y + side.y * lateral - forward.y * behind };
@@ -316,12 +316,12 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     }
     reserved.add(key(point)); line.set(member.id, point);
   }
-  if (fits && members.some(member => member.kind === 'archer') && members.some(member => member.kind === 'warrior' || member.kind === 'spearman' || member.kind === 'horseman')) {
+  if (fits && members.some(member => ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')) && members.some(member => member.kind === 'warrior' || member.kind === 'swordsman' || member.kind === 'spearman' || (member.kind === 'horseman' || member.kind === 'knight'))) {
     // Reassign the same reachable cells, putting the ranged rank behind the
     // melee rank in the Leader's actual direction of travel.
     const points = [...line.values()].sort((a, b) => (b.x - a.x) * forward.x + (b.y - a.y) * forward.y
       || (a.x - b.x) * side.x + (a.y - b.y) * side.y);
-    const ranked = members.slice().sort((a, b) => Number(a.kind === 'archer') - Number(b.kind === 'archer')
+    const ranked = members.slice().sort((a, b) => Number(((a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger'))
       || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
     ranked.forEach((member, index) => line.set(member.id, points[index]));
   }
@@ -335,7 +335,7 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
   else formation.mode = marching ? 'mob' : 'line';
   formation.goals = formation.mode !== 'column' ? levyWingGoals(leader, members, line, formation.heading) : new Map();
   if (formation.mode === 'column') {
-    const ordered = members.slice().sort((a, b) => Number(a.kind === 'archer') - Number(b.kind === 'archer') || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+    const ordered = members.slice().sort((a, b) => Number(((a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger')) || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
     const trail = [{ x: leader.x, y: leader.y }, ...formation.trail];
     // Column gaps only increase, including duplicate-cell spacing retries.
     // Walk each breadcrumb segment once instead of starting at the Leader for

@@ -13,7 +13,7 @@ export function unitsCollide(a: CollisionUnit, b: CollisionUnit): boolean {
     if (a.faction === b.faction && (a.kind === 'leader' || b.kind === 'leader')) return false;
     return military(a) || military(b) || !!a.engineer && !!b.engineer;
   }
-  if (a.kind === 'levyInfantry' || b.kind === 'levyInfantry') return !civilianFootprint(a) && !civilianFootprint(b);
+  if ((a.kind === 'levyInfantry' || a.kind === 'slinger') || (b.kind === 'levyInfantry' || b.kind === 'slinger')) return !civilianFootprint(a) && !civilianFootprint(b);
   if (a.infantryDrillLeader !== undefined && a.infantryDrillLeader === b.infantryDrillLeader && a.faction === b.faction) return false;
   return (military(a) || military(b)) && !civilianFootprint(a) && !civilianFootprint(b);
 }

@@ -1,0 +1,8 @@
+.action-tooltip {
+  position: fixed; z-index: 100; pointer-events: none; box-sizing: border-box;
+  width: min(300px, calc(100vw - 16px)); padding: 10px 12px;
+  background: #101b22f5; color: #fff0cd; border: 1px solid #ad8d54;
+  border-radius: 6px; box-shadow: 0 3px 12px #0009;
+  font: 17px/20px var(--game-font); white-space: pre-line;
+}
+.action-tooltip[hidden] { display: none; }

@@ -27,7 +27,10 @@ export function sampleTerrainClimate(x: number, y: number, width: number, height
   // Latitude shifts the desert threshold instead of imposing a hard biome
   // boundary. Unusually dry northern patches and wet equatorial groves survive.
   const desertLimit = parameters.desertThreshold - (1 - warmth) * parameters.latitudeInfluence;
-  const terrain = moisture < desertLimit ? 'desert' : moisture < .48 ? 'plains' : 'grassland';
+  // Keep a dry-grass transition even when the selected desert threshold rises
+  // above the former fixed plains threshold. Climate controls must not turn
+  // the desert directly into lush grass at the next moisture value.
+  const terrain = moisture < desertLimit ? 'desert' : moisture < desertLimit + .14 ? 'plains' : 'grassland';
   return { moisture, terrain, wx, wy };
 }
 
@@ -75,8 +78,11 @@ export function applyWorldClimate(world: World, parameters: LandscapeParameters 
       tile.rainfall = rainfall;
       tile.moisture = clampUnit(rainfall - Math.max(0, temperature - .56) * .16 + Math.exp(-fresh[cell] / 4) * .10);
       if (!water) {
+        // Hot interiors and rain shadows produce recognisable desert regions,
+        // rather than just a handful of isolated sand cells. Cool, rainy north
+        // and maritime regions still follow the existing climate classification.
         tile.biome = climateBiome(temperature, rainfall, elevation,
-          .27 + parameters.desertThreshold - DEFAULT_LANDSCAPE_PARAMETERS.desertThreshold);
+          .33 + parameters.desertThreshold - DEFAULT_LANDSCAPE_PARAMETERS.desertThreshold);
         const old = terrainYields(tile.terrain, tile.overlay);
         if (!tile.beach && !cores[cell]) {
           tile.terrain = tile.biome === 'desert' ? 'desert'

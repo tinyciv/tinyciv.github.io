@@ -1,5 +1,5 @@
 import { FORT_UPKEEP } from './forts';
-import { ARCHER_EXTRA_UPKEEP } from './archery';
+import { retinueUpkeep } from './archery';
 import { guardPostUpkeep, GUARD_POST_UPKEEP } from './guard-posts';
 import { SETTLEMENT_MAINTENANCE, WATCHTOWER_MAINTENANCE, TAX_INCOME_MULTIPLIER } from './maintenance';
 import { housingGoldBonus } from './wells';
@@ -18,10 +18,10 @@ export function factionCommittedBudget(state: GameState, faction: Faction): { up
     else if (building.kind === 'fort') upkeep += FORT_UPKEEP;
     else if (building.kind === 'guardPost') upkeep += guardPostUpkeep(building);
   }
-  upkeep += state.units.filter(unit => unit.faction === faction.id && unit.kind === 'levyInfantry' && unit.hp > 0).length * 5;
+  upkeep += state.units.filter(unit => unit.faction === faction.id && (unit.kind === 'levyInfantry' || unit.kind === 'slinger') && unit.hp > 0).length * 5;
   upkeep += Math.max(0, cities - 1) * SETTLEMENT_MAINTENANCE;
   for (const unit of state.units) if (unit.faction === faction.id && unit.hp > 0 && isRetinueMember(unit))
-    soldiers += .5 + (unit.kind === 'archer' ? ARCHER_EXTRA_UPKEEP : 0);
+    soldiers += retinueUpkeep(unit);
   return { upkeep, surplus: (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER
     * enemyFactionStrength(state, faction.id) - soldiers - upkeep };
 }

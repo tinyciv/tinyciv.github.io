@@ -1,3 +1,4 @@
+import { silhouetteOutline } from './silhouette-outline';
 import { drawBuilding } from './sprites';
 import { punyWorldImage } from './puny-world';
 import { buildingArtTop, buildingWidth, buildingHeight, isFarmKind, type Building } from './types';
@@ -22,21 +23,7 @@ export function drawBuildingActivityOutline(c: CanvasRenderingContext2D, buildin
         drawFarmField(original, padding + dx * 32, padding - top * 32 + dy * 32, 32, building.orchard?.readyAt ?? 30,
           { id: 0, camp: building.id, faction: building.faction, x: dx, y: dy, planted: true, food: 1, nextHarvest: 30, orchard: building.orchard });
     } else drawBuilding(original, building, padding, padding - top * 32, 32, 0, color);
-    const canvas = document.createElement('canvas'); canvas.width = sprite.width; canvas.height = sprite.height;
-    const outline = canvas.getContext('2d')!;
-    // Bake the broad halo and bright pixel edge once, keeping the per-frame
-    // operation a single image draw even when several buildings are in reach.
-    for (const [radius, opacity, highlight] of [[5, .3, false], [3, 1, false], [1, .4, true]] as const) {
-      const ring = document.createElement('canvas'); ring.width = canvas.width; ring.height = canvas.height;
-      const mask = ring.getContext('2d')!;
-      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
-        if (dx * dx + dy * dy <= radius * radius) mask.drawImage(sprite, dx, dy);
-      }
-      mask.globalCompositeOperation = 'destination-out'; mask.drawImage(sprite, 0, 0);
-      mask.globalCompositeOperation = 'source-in'; mask.fillStyle = highlight ? '#eef8ff' : color;
-      mask.fillRect(0, 0, ring.width, ring.height);
-      outline.globalAlpha = opacity; outline.drawImage(ring, 0, 0);
-    }
+    const canvas = silhouetteOutline(sprite, color);
     cached = { canvas, top }; outlines.set(key, cached);
   }
   c.save(); c.imageSmoothingEnabled = false;

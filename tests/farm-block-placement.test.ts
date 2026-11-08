@@ -35,7 +35,8 @@ describe('manual farm block limits', () => {
     expect(buildAt(state, 'camp', 23, 15)).toMatchObject({ ok: true });
     const gold = state.factions[0].gold, count = state.buildings.length;
     const preview = planConstruction(state, 'camp', [{ x: 24, y: 15 }]);
-    expect(preview.ok).toBe(false); expect(preview.message).toContain('1.5');
+    expect(preview.ok).toBe(false); expect(preview.message).toContain('longest side at most 150% of the shorter side');
+    expect(preview.message).not.toMatch(/\d\.\d/);
     expect(preview.cells[0].ok).toBe(false);
     expect(buildAt(state, 'camp', 24, 15).ok).toBe(false);
     expect(state.factions[0].gold).toBe(gold); expect(state.buildings).toHaveLength(count);

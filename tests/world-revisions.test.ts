@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markWorldChanged, worldRevisions } from '../src/game/world-revisions';
+import { markWorldChanged, recordWorldTileChanges, worldChangesSince, worldRevisions } from '../src/game/world-revisions';
 import type { World } from '../src/game/types';
 
 const fixture = (): World => ({ width: 2, height: 2, seed: 'semantic-world', source: 'test', revision: 0, spawns: [],
@@ -7,6 +7,41 @@ const fixture = (): World => ({ width: 2, height: 2, seed: 'semantic-world', sou
     moisture: .5, food: 1, production: 1, gold: 0, variation: .5 })) });
 
 describe('semantic world revisions', () => {
+  it('lets independent consumers read deduplicated tile edits without structural false positives', () => {
+    const world = fixture(), start = worldChangesSince(world);
+    expect(start.full).toBe(true);
+    markWorldChanged(world);
+    expect(worldChangesSince(world, start.revision)).toEqual({ revision: start.revision, full: false, cells: [] });
+    world.tiles[1].overlay = 'forest'; markWorldChanged(world, 'sight', [1, 1]);
+    const fast = worldChangesSince(world, start.revision);
+    expect(fast.full).toBe(false); expect(fast.cells).toEqual([1]);
+    world.tiles[2].farm = 0; markWorldChanged(world, 'appearance', [2]);
+    expect(worldChangesSince(world, fast.revision).cells).toEqual([2]);
+    expect([...worldChangesSince(world, start.revision).cells].sort()).toEqual([1, 2]);
+    const raw = world.revision;
+    recordWorldTileChanges(world, [3]);
+    expect(world.revision).toBe(raw);
+    expect([...worldChangesSince(world, fast.revision).cells].sort()).toEqual([2, 3]);
+  });
+
+  it('falls back to complete data for unknown edits, rewinds, replacements and expired cursors', () => {
+    const world = fixture(), cursor = worldChangesSince(world).revision;
+    world.revision!++;
+    expect(worldChangesSince(world, cursor).full).toBe(true);
+    let next = worldChangesSince(world).revision;
+    world.tiles = world.tiles.map(tile => ({ ...tile }));
+    expect(worldChangesSince(world, next).full).toBe(true);
+    next = worldChangesSince(world).revision;
+    world.revision = -1;
+    expect(worldChangesSince(world, next).full).toBe(true);
+    next = worldChangesSince(world).revision;
+    for (let i = 0; i < 1100; i++) markWorldChanged(world, 'appearance', [i % 4]);
+    expect(worldChangesSince(world, next).full).toBe(true);
+    const fresh = worldChangesSince(world).revision;
+    expect(worldChangesSince(world, fresh)).toEqual({ revision: fresh, full: false, cells: [] });
+    expect(worldChangesSince(world, fresh + 1).full).toBe(true);
+  });
+
   it('keeps terrain and sight stable across structural edits while preserving the raw navigation revision', () => {
     const world = fixture(), before = worldRevisions(world);
     for (let i = 0; i < 20; i++) markWorldChanged(world);

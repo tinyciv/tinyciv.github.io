@@ -1,24 +1,64 @@
+import type { CityLoyalty } from './loyalty-model';
 import type { FishingState } from './fishing';
 import type { InfantryFormationState } from './infantry-drill';
+import type { ArmyWarning } from './army-warnings';
 import type { WorldGenerationStyle } from '../world/options';
 
 export type Terrain = 'ocean' | 'coast' | 'river' | 'lake' | 'desert' | 'plains' | 'grassland' | 'tundra';
 export type Overlay = 'none' | 'forest' | 'jungle' | 'swamp' | 'volcano' | 'glacier' | 'ford';
 export type TreeClass = 'tropical' | 'dry' | 'temperate' | 'conifer' | 'snowy';
 export type Biome = 'temperate' | 'taiga' | 'tundra' | 'rainforest' | 'savanna' | 'steppe' | 'desert' | 'wetland' | 'alpine';
-export type RegionalResource = 'clay' | 'iron' | 'stone' | 'salt' | 'fish';
+export type HillBiome = 'desert-hills' | 'forest-hills';
+export type RegionalResource = 'clay' | 'copper' | 'iron' | 'stone' | 'salt' | 'olives' | 'fish';
+export type ResourceWorkKind = 'copper' | 'iron' | 'stone' | 'salt' | 'olives';
+export interface ResourceWorkSite {
+    id: number;
+    faction: number;
+    resource: ResourceWorkKind;
+    cells: number[];
+    revision: number;
+    nextVisitAt: number;
+    roadComplete: boolean;
+    roadWorker?: number;
+    retryAt?: number;
+}
+export interface ResourceWork {
+    site: number;
+    revision: number;
+    resource: ResourceWorkKind;
+    phase: 'road' | 'outbound' | 'working' | 'returning';
+    goal: Point;
+    approach: Point;
+    roadCells?: Point[];
+    roadIndex?: number;
+    roadProgress?: number;
+    worked?: number;
+    roamAt?: number;
+    workTarget?: Point;
+    pulseUntil?: number;
+    nextPlanAt?: number;
+}
 export interface Tile {
+    /** Nonblocking 8FC desert decoration; permanently removed by construction. */
+    desertStone?: number;
     terrain: Terrain;
     overlay: Overlay;
     elevation: number;
     moisture: number;
-    /** Generated climate and soil suitability, normalized to 0..1. */
+    /** Generated climate fields, normalized to 0..1. */
     temperature?: number;
     rainfall?: number;
+    /** Base food multiplier: grass 100%, plains 75%, desert 50%, plus freshwater. */
     fertility?: number;
     /** Ecological identity uses the existing terrain and vegetation artwork. */
     biome?: Biome;
+    /** Local hill-country identity, independent of the underlying climate. */
+    hillBiome?: HillBiome;
     resource?: RegionalResource;
+    /** Connected geological deposit/grove identity, stable within this world. */
+    resourceGroup?: number;
+    /** Development belongs to the land; benefits follow its current city owner. */
+    resourceDeveloped?: boolean;
     /** Catchment runoff and downstream tile index in the generated drainage network. */
     flow?: number;
     drainage?: number;
@@ -94,6 +134,8 @@ export interface World {
     spawns: Point[];
     /** Second city for each rival, indexed by faction id minus one. */
     secondarySpawns?: Point[];
+    /** Initial city placement preserves this inter-faction separation. */
+    minimumFactionStartDistance?: number;
     source: string;
     revision?: number;
 }
@@ -108,6 +150,7 @@ export const isWallKind = (kind: BuildingKind): boolean => kind === 'wall' || ki
 export const isFarmKind = (kind: BuildingKind): boolean => kind === 'camp' || kind === 'shack' || kind === 'cottage';
 export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'stable', 'library', 'palace'];
 export interface Building extends Point {
+    loyalty?: CityLoyalty;
     fort?: { brigadeLevel: 0 | 1 | 2 | 3; nextUpkeepAt: number; funded: boolean; nextRecruitAt: number; destroyed?: boolean; initialGold?: number };
     supplyDepot?: { nextDispatchAt: number };
     id: number;
@@ -196,10 +239,12 @@ export interface Building extends Point {
     guardPost?: { nextUpkeepAt: number; funded: boolean; level?: 0 | 1 | 2; kills?: number; lastThreatAt?: number; needsRecruits?: boolean; wallsOnly?: boolean };
     construction?: { startedAt: number; duration: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number };
 }
-export type UnitKind = 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'spearman' | 'archer' | 'horseman' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich';
-export const isSoldier = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman' || unit.kind === 'levyInfantry' || unit.kind === 'skirmisher';
+export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich';
+export const isSoldier = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight' || unit.kind === 'levyInfantry' || unit.kind === 'slinger' || unit.kind === 'skirmisher';
 /** Dedicated lodge scouts explore independently of the Leader's combat retinue. */
-export const isRetinueMember = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman';
+export const isMountedKind = (kind: UnitKind): boolean => kind === 'horseman' || kind === 'horseArcher' || kind === 'knight';
+export const isMeleeCavalry = (kind: UnitKind): boolean => kind === 'horseman' || kind === 'knight';
+export const isRetinueMember = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight';
 export type EquipmentLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type UnitOrder = 'follow' | 'hold' | 'work' | 'raid' | 'wander' | 'flee';
 export type RetinueStance = 'defensive' | 'hold' | 'aggressive';
@@ -280,7 +325,7 @@ export interface Unit extends Point {
     /** A resident assigned to a concealed, stationary wilderness lookout. */
     observationPost?: { x: number; y: number; city: number; discoveredBy: number[]; nextUpkeepAt: number; nextSmokeAt: number; retreating?: boolean };
     /** Combat role changes require a physical visit to a range or stable. */
-    training?: { range: number; role: 'warrior' | 'spearman' | 'archer' | 'horseman'; enteredAt?: number };
+    training?: { range: number; role: 'warrior' | 'swordsman' | 'spearman' | 'archer' | 'horseman' | 'horseArcher' | 'knight'; enteredAt?: number };
     warriorStats?: { hp: number; attack: number; defense: number; speed?: number };
     /** Actual continuous running distance and the next allowed cavalry charge. */
     cavalryCharge?: { distance: number; dx: number; dy: number; lastMoveAt: number; readyAt: number };
@@ -364,6 +409,8 @@ export interface Unit extends Point {
     cultivating?: boolean;
     /** Dedicated palace peasants walk to orders and work at the site. */
     builder?: boolean;
+    /** A resident on a resource road job or timed visit; separate from builders and farm couriers. */
+    resourceWork?: ResourceWork;
     builderRetiring?: boolean;
     repairSite?: number;
     buildSite?: number;
@@ -471,12 +518,18 @@ export interface RaiderCamp extends Point {
 export type VillageIdentity = 'growers' | 'merchants' | 'builders' | 'scholars';
 export type VillageRelation = 'neutral' | 'trade' | 'allied' | 'war';
 export interface NeutralVillage extends Point {
+    /** A seceded city keeps its settlement, people and existing footprint. */
+    secededCity?: { formerFaction: number; territoryCells: number[] };
+    relationsByFaction?: Record<number, VillageRelation>;
+    alliedFaction?: number;
     id: number;
     faction: number;
     campId: number;
     name: string;
     identity: VillageIdentity;
     relation: VillageRelation;
+    /** Stable demand; access to a developed deposit quadruples this partner's trade. */
+    requiredResource?: ResourceWorkKind;
     trading?: boolean;
     /** Additional civilization partners; player trade is controlled by diplomacy. */
     tradingFactions?: number[];
@@ -518,7 +571,7 @@ export interface TradeRoute {
     goal?: Point;
     nextPlanAt?: number;
     stuckSince?: number;
-    /** Village routes are additional connections paying one fifth of city trade. */
+    /** Additional village connections use distance-based, resource-sensitive trade. */
     villageId?: number;
     river?: RiverTradeConnection;
     /** A new river partner is adopted only after the current caravan returns home. */
@@ -533,8 +586,8 @@ export interface RetinueSquad {
     faction: number;
     kills: number;
 }
-export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding'
-    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalTools' | 'fletching' | 'grainStorage';
+export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding' | 'compoundBow' | 'stirrups'
+    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering';
 export interface ResearchState {
     /** Resolved project; explicit priorities may refer to later technologies. */
     focus: ResearchBranchId;
@@ -584,7 +637,11 @@ export interface Faction {
     /** Desired fraction of the faction retinue trained as archers. */
     archerFraction?: number;
     spearmanFraction?: number;
+    swordsmanFraction?: number;
+    levySlingerFraction?: number;
     horsemanFraction?: number;
+    horseArcherFraction?: number;
+    knightFraction?: number;
     /** Scenario capacity without a purchased-slot maintenance charge. */
     bonusRetinueSlots?: number;
     /** Permanent paid retinue capacity, charged even while its slots are vacant. */
@@ -620,6 +677,11 @@ export interface Particle extends Point {
     kind?: 'hunt' | 'food' | 'damage';
     duration?: number;
     direction?: number;
+    /** Damaged unit's owner; color is chosen per viewer, including multiplayer. */
+    faction?: number;
+    damageUnitId?: number;
+    /** Also marks lingering hits on this casualty, so only its bounty remains for enemies. */
+    damageFatal?: boolean;
 }
 /** Short-lived impact flecks, independent of floating gold rewards. */
 export interface BloodEffect extends Point {
@@ -643,7 +705,7 @@ export interface BattleCasualty extends Point {
 export interface Projectile extends Point {
     /** Preserve Leader XP credit when a retinue archer dies before its arrow lands. */
     leaderXp?: number;
-    kind?: 'javelin' | 'arrow' | 'ballistaBolt';
+    kind?: 'stone' | 'javelin' | 'arrow' | 'ballistaBolt';
     start: Point;
     end: Point;
     /** Taller firing platforms interpolate down to the target's torso. */
@@ -675,8 +737,11 @@ export interface GameState {
         /** Snapshot membership before the fallen palace leaves the nearest-city map. */
         buildingIds: number[]; workerIds: number[]; population: number; unhousedResidents: number; populationGrowth: number }[];
     treasures?: TreasureChest[];
+    hermits?: Hermit[];
     factions: Faction[];
     villages?: NeutralVillage[];
+    nextLoyaltyAt?: number;
+    loyaltyUpdatedAt?: number;
     /** Surviving squads retain their experience while replacements arrive. */
     retinueSquads?: RetinueSquad[];
     nextRetinueSquadId?: number;
@@ -685,6 +750,8 @@ export interface GameState {
     paused: boolean;
     speed: number;
     events: GameEvent[];
+    armyWarnings?: ArmyWarning[];
+    nextArmyWarningId?: number;
     particles: Particle[];
     bloodEffects?: BloodEffect[];
     unitDeaths?: UnitDeath[];
@@ -696,6 +763,9 @@ export interface GameState {
     /** Player-designated exclusion cells for friendly units outside the Leader's retinue. */
     forbiddenZones?: { cells: number[]; revision: number };
     treeClearings?: { x: number; y: number; faction: number; workerId?: number }[];
+    /** Developed connected deposits dispatch resident workers on a game-time schedule. */
+    resourceWorkSites?: ResourceWorkSite[];
+    nextResourceWorkSiteId?: number;
     /** Temporary, walkable remains of felled trees; source coordinates preserve the tree family. */
     treeStumps?: { x: number; y: number; sourceX: number; sourceY: number; expiresAt: number }[];
     retinueStance?: RetinueStance;
@@ -757,9 +827,9 @@ export interface PlayerControlState {
 }
 export const TILE_SIZE = 32;
 /** Maximum span, for broad spatial queries. Use width/height for footprints. */
-export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'palace' || building.kind === 'fort' || building.kind === 'archeryRange' || building.kind === 'library' ? 2 : 1;
+export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'palace' || building.kind === 'fort' || building.kind === 'archeryRange' || building.kind === 'supplyDepot' || building.kind === 'library' ? 2 : 1;
 export const buildingWidth = (building: Pick<Building, 'kind'>): number => buildingSize(building);
-export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'archeryRange' ? 1 : buildingSize(building);
+export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'archeryRange' || building.kind === 'supplyDepot' ? 1 : buildingSize(building);
 /** Northward art overhang, in tiles; collision footprints remain unchanged. */
 export const buildingArtTop = (building: Pick<Building, 'kind' | 'construction'>): number =>
     !building.construction && (building.kind === 'tower' || building.kind === 'woodenTower') ? -.75 : 0;
@@ -772,3 +842,5 @@ export const isFord = (tile: Tile | undefined): boolean => tile?.terrain === 'ri
 export function tileAt(world: World, x: number, y: number): Tile | undefined { if (x < 0 || y < 0 || x >= world.width || y >= world.height)
     return undefined; return world.tiles[Math.floor(y) * world.width + Math.floor(x)]; }
 export function distance(a: Point, b: Point): number { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+export interface Hermit extends Point { id: number; status: "home" | "fleeing" | "gone"; position?: Point; path?: Point[]; retryAt?: number; }

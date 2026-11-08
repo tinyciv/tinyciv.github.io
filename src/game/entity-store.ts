@@ -1,3 +1,4 @@
+import { clearDesertStones } from './desert-stones';
 import { addComponent, addEntity, createWorld, query, removeComponent, removeEntity } from 'bitecs';
 import { isFarmKind, isSoldier, isRetinueMember, unitMaxHp, type Building, type GameState, type Unit } from './types';
 
@@ -32,12 +33,13 @@ class EntityCollection<T extends { id: number }, R extends string> {
   get revision(): number { return this.revisionValue; }
 
   constructor(private values: T[], private assign: (values: T[]) => void, private roles: readonly R[], private mask: (value: T) => number,
-    private revisionMask = -1) {
+    private revisionMask = -1, private onRegister?: (value: T) => void) {
     this.components = roles.map(() => ({}));
     for (let i = 0; i < values.length; i++) this.register(values[i], i);
   }
   private register(value: T, arrayOrder = this.values.length): void {
     if (this.records.has(value.id)) throw new Error(`Duplicate entity ID: ${value.id}`);
+    this.onRegister?.(value);
     const entry = { eid: addEntity(this.world), order: this.nextOrder++, value, mask: 0 };
     this.records.set(value.id, entry); this.entries[entry.eid] = entry;
     this.arrayOrders.set(value, arrayOrder);
@@ -109,7 +111,7 @@ export class EntityStore {
   }
   get buildings(): EntityCollection<Building, BuildingRole> {
     const owned = this.state as unknown as { buildings: Building[] };
-    return this.buildingCollection ??= new EntityCollection(owned.buildings, buildings => { owned.buildings = buildings; }, buildingRoles, buildingMask);
+    return this.buildingCollection ??= new EntityCollection(owned.buildings, buildings => { owned.buildings = buildings; }, buildingRoles, buildingMask, -1, building => clearDesertStones(this.state.world, building));
   }
   setUnitRole(unit: Unit, role: Pick<Unit, 'kind' | 'builder' | 'collector'>): void {
     if (unit.kind !== role.kind || 'builder' in role && unit.builder !== role.builder

@@ -2,17 +2,17 @@ import type { Unit } from './types';
 
 export const HORSEMAN_NATIVE_SCALE = 1.5;
 export interface HorsemanPose { rect: readonly [number, number, number, number]; anchor: readonly [number, number] }
-type ArtKind = 'Horseman' | 'Stable';
-const sizes = { Horseman: [128, 384], Stable: [16, 16] } as const;
+type ArtKind = 'Horseman' | 'Stable' | 'SpearRider' | 'HorseArcher';
+const sizes = { Horseman: [128, 384], Stable: [16, 16], SpearRider: [128, 384], HorseArcher: [128, 384] } as const;
 const originals = new Map<ArtKind, readonly [ImageData, ImageData]>();
 const sheets = new Map<string, HTMLCanvasElement>(), icons = new Map<string, string>();
 let loading: Promise<void> | undefined;
 
 export function loadCavalryArt(): Promise<void> {
-  return loading ??= Promise.all((['Horseman', 'Stable'] as const).map(async kind => {
+  return loading ??= Promise.all((['Horseman', 'Stable', 'SpearRider', 'HorseArcher'] as const).map(async kind => {
     const [width, height] = sizes[kind];
     const variants = await Promise.all(['Cyan', 'Red'].map(async color => {
-      const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/miniworld/${kind}-${color}.png`; await image.decode();
+      const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/miniworld/${kind === 'SpearRider' ? 'Spear-Rider.png' : kind === 'HorseArcher' ? 'Horse-Archer.png' : `${kind}-${color}.png`}`; await image.decode();
       if (image.naturalWidth !== width || image.naturalHeight !== height) throw new Error(`Invalid native cavalry asset: ${kind}-${color}`);
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
       const c = canvas.getContext('2d')!; c.drawImage(image, 0, 0); return c.getImageData(0, 0, width, height);
@@ -39,11 +39,23 @@ function factionSheet(kind: ArtKind, color: string): HTMLCanvasElement | undefin
   if (!sheet) {
     sheet = document.createElement('canvas'); [sheet.width, sheet.height] = sizes[kind];
     const c = sheet.getContext('2d')!, pixels = c.createImageData(sheet.width, sheet.height);
-    pixels.data.set(recolorCavalryPixels(source[0].data, source[1].data, color)); c.putImageData(pixels, 0, 0); sheets.set(key, sheet);
+    pixels.data.set(kind === 'SpearRider' || kind === 'HorseArcher' ? recolorLightCavalryPixels(source[0].data, color) : recolorCavalryPixels(source[0].data, source[1].data, color)); c.putImageData(pixels, 0, 0); sheets.set(key, sheet);
   }
   return sheet;
 }
-export const horsemanSheet = (color: string): HTMLCanvasElement | undefined => factionSheet('Horseman', color);
+export function recolorLightCavalryPixels(source: Uint8ClampedArray, color: string): Uint8ClampedArray {
+  const result = new Uint8ClampedArray(source), hex = /^#[\da-f]{6}$/i.test(color) ? color : '#c94c4c';
+  const rgb = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+  const shades: Record<string, number> = { '0,46,39': .30, '0,79,67': .52, '0,121,102': .78, '0,180,157': 1 };
+  for (let i = 0; i < result.length; i += 4) {
+    const shade = shades[`${source[i]},${source[i + 1]},${source[i + 2]}`];
+    if (!source[i + 3] || shade === undefined) continue;
+    for (let channel = 0; channel < 3; channel++) result[i + channel] = Math.round(rgb[channel] * shade);
+  }
+  return result;
+}
+export const horsemanSheet = (color: string, kind: Unit['kind'] = 'horseman'): HTMLCanvasElement | undefined =>
+  factionSheet(kind === 'knight' ? 'Horseman' : kind === 'horseArcher' ? 'HorseArcher' : 'SpearRider', color);
 export const stableSheet = (color: string): HTMLCanvasElement | undefined => factionSheet('Stable', color);
 
 /** The native knight provides four directions, each with idle/walk/attack. */
@@ -60,7 +72,7 @@ export function horsemanBounds(pose: HorsemanPose): { x: number; y: number; widt
     width: pose.rect[2] * HORSEMAN_NATIVE_SCALE, height: pose.rect[3] * HORSEMAN_NATIVE_SCALE };
 }
 export function drawHorseman(c: CanvasRenderingContext2D, unit: Unit, time: number, color: string): void {
-  const sheet = horsemanSheet(color); if (!sheet || unit.inside) return;
+  const sheet = horsemanSheet(color, unit.kind); if (!sheet || unit.inside) return;
   const pose = horsemanPose(unit, time), bounds = horsemanBounds(pose);
   c.save(); c.imageSmoothingEnabled = false; c.drawImage(sheet, ...pose.rect, bounds.x, bounds.y, bounds.width, bounds.height); c.restore();
 }
@@ -68,9 +80,9 @@ export function drawStable(c: CanvasRenderingContext2D, x: number, y: number, si
   const sheet = stableSheet(color); if (!sheet) return;
   c.save(); c.imageSmoothingEnabled = false; c.drawImage(sheet, 0, 0, 16, 16, x, y, size, size); c.restore();
 }
-export function horsemanIconUrl(color = '#c94c4c'): string {
-  const key = `horseman:${color}`, cached = icons.get(key); if (cached) return cached;
-  const sheet = horsemanSheet(color); if (!sheet) return '';
+export function horsemanIconUrl(color = '#c94c4c', kind: Unit['kind'] = 'horseman'): string {
+  const key = `${kind}:${color}`, cached = icons.get(key); if (cached) return cached;
+  const sheet = horsemanSheet(color, kind); if (!sheet) return '';
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;
   canvas.getContext('2d')!.drawImage(sheet, 0, 0, 32, 32, 0, 0, 32, 32);
   const icon = canvas.toDataURL(); icons.set(key, icon); return icon;

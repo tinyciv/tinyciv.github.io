@@ -77,9 +77,9 @@ describe('orchard upgrades', () => {
     state.world.tiles[fields[0].y * 48 + fields[0].x].terrain = 'desert';
     purchaseOrchardUpgrade(state, farm(state));
     const needs = cityDevelopmentNeeds(state, state.buildings[0]);
-    expect(needs.foodCapacity).toBeCloseTo((.1 * 4 / 3) * 1.5 * .9);
+    expect(needs.foodCapacity).toBeCloseTo((.2 * 4 / 3) * 1.5 * .9);
     state.time = 120; updateHarvests(state);
-    expect(fields[0].food).toBeCloseTo(FIELD_HARVEST_FOOD / 4 * 1.5);
+    expect(fields[0].food).toBeCloseTo(FIELD_HARVEST_FOOD / 2 * 1.5);
     const remembered = updateFog(state).fields.find(field => field.id === fields[0].id)!;
     expect(remembered.orchard).toEqual({ startedAt: 0, readyAt: 120 });
     expect(remembered.orchard).not.toBe(farm(state).orchard);

@@ -9,6 +9,7 @@ import { hasStaticPath } from '../src/game/pathfinding';
 import { constructionEdges, notifyRepairJobChanged, updateBuilder } from '../src/game/builders';
 import { factionCityTowers } from '../src/game/faction-tower-layout';
 import { type GameState, type Unit, type World } from '../src/game/types';
+import { withDevelopedResources } from './helpers/developed-resources';
 
 function world(): World {
   return { width: 84, height: 64, seed: 'fortified-ai', source: 'test', revision: 0,
@@ -138,6 +139,7 @@ describe('fortified, coordinated faction AI', () => {
 
   it('spends earned skill points and buys equipment only with treasury and physical access', () => {
     const state = army(), leader = state.units[0], faction = state.factions[1];
+    withDevelopedResources(state, ['iron'], 1);
     const palace = state.buildings.find(building => building.id === leader.home)!;
     Object.assign(leader, { x: palace.x - .5, y: palace.y + .5,
       leaderProgression: { level: 3, xp: 0, skillPoints: 2, skills: { power: 0, guard: 0, command: 0 } } });

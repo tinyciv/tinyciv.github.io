@@ -12,9 +12,13 @@ const RESEARCH_ICON_BRANCHES: readonly ResearchBranchId[] = [
 
 /** Existing forged glyphs plus the native healer artwork for medicine. */
 export function researchIconUrl(branch: ResearchBranchId): string {
+  if (branch === 'engineering') return `${import.meta.env.BASE_URL}assets/ui/research/forged/metalTools.webp`;
+  if (branch === 'compoundBow') return horsemanIconUrl('#df6262', 'horseArcher');
+  if (branch === 'stirrups') return horsemanIconUrl('#df6262', 'knight');
   if (branch === 'horsebackRiding') return horsemanIconUrl('#df6262');
   if (branch === 'sailing') return `${import.meta.env.BASE_URL}assets/pixelhole-overworld/Sailboat.png`;
   if (branch === 'siegeEngines') return ballistaIconUrl();
+  if (branch === 'metalCasting') return characterIconUrl('swordsman', '#df6262');
   if (branch === 'militaryTactics') return spearmanIconUrl('#df6262');
   if (branch === 'infantryDrill') return characterIconUrl('warrior', '#df6262', 1);
   if (branch === 'traditionalMedicine') return healerShackIconUrl();

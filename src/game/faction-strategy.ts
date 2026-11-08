@@ -1,11 +1,11 @@
 import { entityStore } from './entity-store';
 import { nearbyBuildings, nearbyUnits } from './spatial';
 import { isHumanFaction, withPlayerFaction } from './player-context';
-import { isSoldier, isWallKind } from './types';
+import { isSoldier } from './types';
 import { constructionEdges } from './builders';
 import { insideOwnBorders } from './borders';
 import { buildingSightRadius, unitSightRadius } from './fog';
-import { canWalk, hasStaticPath, travelTimeMap, withNavigationFrame } from './pathfinding';
+import { canWalk, hasStaticPath, travelTimeMap, wallBreachingNavigation, withNavigationFrame } from './pathfinding';
 import { buildingReady, buildingWidth, buildingHeight, distance, unitMaxHp, type Building, type GameState, type Point, type Unit } from './types';
 import { unitAttack, unitDefense, unitDamageTakenMultiplier } from './veterancy';
 import { maximumHighGroundSightMultiplier } from './sight';
@@ -319,8 +319,8 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
       && queries.hostile(leader.faction, building.faction));
     // Strategic planning may breach enemy walls. Water and ledges remain real
     // obstacles, so isolated islands never attract an impossible land campaign.
-    const planning = { ...state, buildings: state.buildings.filter(building =>
-      !isWallKind(building.kind) || !queries.hostile(leader.faction, building.faction)) };
+    const planning = wallBreachingNavigation(state, { kind: 'faction', faction: leader.faction,
+      hostile: owner => queries.hostile(leader.faction, owner) });
     const populations = new Map(cityResidents(state).map(city => [city.palace.id, city.population]));
     const levy = coordinated ? levyStatus(state, faction.id) : undefined;
     const worker = state.units.find(unit => unit.faction === faction.id && unit.kind === 'worker' && unit.hp > 0);

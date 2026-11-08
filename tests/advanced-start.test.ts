@@ -14,6 +14,7 @@ import { farmBlockGeometry } from './helpers/farm-block-geometry';
 import { cityResidents } from '../src/game/cities';
 import { generateWorld } from '../src/world/generator';
 import { entityStore } from '../src/game/entity-store';
+import { factionHasDevelopedResource } from '../src/game/resource-development';
 
 function world(water = false, raised = false): World {
   const width = 64, height = 56;
@@ -80,6 +81,21 @@ describe('advanced starting cities', () => {
     expect(ADVANCED_START_POPULATION).toBe(250); expect(ADVANCED_START_RETINUE).toBe(12);
     expect(desiredRetinueSize(faction)).toBe(12);
     expect(desiredRetinueSize({ ...faction, population: ADVANCED_START_POPULATION - 1 })).toBe(11);
+  });
+
+  it('requires copper to replace a spearman after the pre-equipped starting escort is granted', () => {
+    const state = createGame(world(), undefined, { advancedStart: true, banditIntensity: 0 });
+    const faction = state.factions[0], spearman = state.units.find(unit => unit.faction === 0 && unit.kind === 'spearman')!;
+    expect(spearman).toBeDefined();
+    expect(factionHasDevelopedResource(state, 0, 'copper')).toBe(false);
+    entityStore(state).units.retain(unit => unit.id !== spearman.id);
+    const before = new Set(state.units.map(unit => unit.id));
+    faction.nextRetinueAt = 0;
+    updateGame(state, .1, { up: false, down: false, left: false, right: false });
+    const replacement = state.units.find(unit => unit.faction === 0 && isRetinueMember(unit) && !before.has(unit.id));
+    expect(replacement?.kind).toBe('warrior');
+    expect(state.units.filter(unit => unit.faction === 0 && unit.kind === 'spearman')).toHaveLength(2);
+    expect(state.units.some(unit => unit.faction === 0 && unit.training?.role === 'spearman')).toBe(false);
   });
 
   it('houses the advanced population on a generated landscape and retains city assignment through an economy tick', () => {

@@ -44,7 +44,12 @@ describe('land-cover line of sight', () => {
         }
         expect(pointInSight(fog, 26.5, 22.5)).toBe(false);
         expect(isExplored(state, 26.5, 22.5)).toBe(false);
+        // Dense woodland keeps the first culture step inside the settlement's
+        // guaranteed 4×4 footing/buffer. No visible change needs a fog revision.
         state.factions[0].culture = 100;
+        expect([...territory(state).owners]).toEqual([...before.owners]);
+        expect(updateFog(state).revision).toBe(revision);
+        state.factions[0].culture = 300;
         const expanded = updateFog(state), claims = territory(state);
         expect(expanded.revision).toBeGreaterThan(revision);
         expect([...claims.owners].filter(owner => owner === 0).length).toBeGreaterThan([...before.owners].filter(owner => owner === 0).length);

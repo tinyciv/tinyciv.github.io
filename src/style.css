@@ -139,6 +139,17 @@ button:focus-visible, canvas:focus-visible, input:focus-visible, select:focus-vi
 .activity-village { gap: 8px; }
 .activity-village .activity-upgrade { min-height: 46px; padding: 8px; gap: 3px 8px; }
 .activity-village .village-status { color: #e7e8da; margin: 0 0 2px; }
+.village-trade-summary { padding: 8px 0; border-top: 2px solid #53634e; border-bottom: 2px solid #53634e; font-size: 14px; line-height: 18px; }
+.village-trade-summary p { margin: 0 0 6px; }
+.village-trade-demand strong { color: #f0dba0; }
+.village-trade-availability { display: block; color: var(--popup-muted); }
+.village-trade-summary .village-trade-rate-label { margin-top: 8px; color: var(--popup-muted); }
+.village-trade-summary dl { margin: 0; }
+.village-trade-summary dl > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; color: var(--popup-muted); }
+.village-trade-summary dt, .village-trade-summary dd { margin: 0; }
+.village-trade-summary dd { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.village-trade-summary .is-current { color: #d6e5a8; }
+.village-trade-summary .village-trade-unreachable { margin: 6px 0 0; color: #dbc19d; }
 .activity-village .village-war { min-height: 34px; background: #57372f; border-color: #9c6a50 #56392e #56392e #9c6a50; }
 .activity-village .village-war:hover:not(:disabled) { background: #704435; }
 .building-activity.is-archery { width: 300px; }

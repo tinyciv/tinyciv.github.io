@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { applyFactionEquipment, blacksmithUpgradeStatus, purchaseBlacksmithUpgrade } from '../src/game/blacksmith';
@@ -20,7 +21,7 @@ const building = (id: number, kind: Building['kind'], x: number, y: number, fact
   id, kind, faction, x, y, hp: 250, maxHp: 250, capacity: 0,
 });
 function fixture(): GameState {
-  return {
+  return withDevelopedResources({
     world: { width: 32, height: 24, seed: 'blacksmith', source: 'test', spawns: [],
       tiles: Array.from({ length: 32 * 24 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3,
         moisture: .5, food: 3, production: 1, gold: 0, variation: .5 })) },
@@ -32,7 +33,7 @@ function fixture(): GameState {
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'blacksmith', rngState: 1,
     marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1,
     fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 1 },
-  };
+  }, ['iron']);
 }
 
 describe('blacksmith construction', () => {

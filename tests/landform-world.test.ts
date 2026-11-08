@@ -4,6 +4,7 @@ import { LANDFORM_KINDS } from '../src/world/options';
 import { STARTING_FACTION_COUNT, OPPOSING_FACTION_COUNT } from '../src/game/civilizations';
 import { canTraverseEdge, traversable } from '../src/game/pathfinding';
 import { ridgeGroundWalkable } from '../src/game/ridges';
+import { resourceBlocksGround } from '../src/game/resource-terrain';
 import { WATER, type World } from '../src/game/types';
 
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
@@ -26,7 +27,9 @@ describe('geological worlds', () => {
   it.each(['GEOLOGY-PLAYABILITY', 'ALDER-REACH', 'SILVER-WATERS'])('creates six playable landscapes with open forests and complete drainage for %s', seed => {
     const signatures = new Set<string>();
     for (const family of LANDFORM_KINDS) {
-      const world = generateWorld(seed, undefined, undefined, { landformFamily: family });
+      // Keep this terrain audit comparable to its recorded geometry baseline;
+      // production-sized faction spacing has its own generation tests.
+      const world = generateWorld(seed, 194, 153, { landformFamily: family });
       expect(world.landformFamily).toBe(family);
       expect(world.landformProvinces?.some(province => province.kind === family)).toBe(true);
       expect(world.spawns).toHaveLength(STARTING_FACTION_COUNT);
@@ -43,7 +46,8 @@ describe('geological worlds', () => {
         const tile = world.tiles[cell], x = cell % world.width, y = Math.floor(cell / world.width);
         if (tile.terrain === 'river' && !wet.has(cell)) badWater.push(cell);
         if (tile.stair) expect(ridgeGroundWalkable(world, x, y), `${family}: stair ${cell}`).toBe(true);
-        if (tile.ridge && ridgeGroundWalkable(world, x, y) && !upperAccess.has(cell)) inaccessibleFloors.push(cell);
+        // Deposits are deliberate obstacles; water/ledge errors still fail.
+        if (tile.ridge && !resourceBlocksGround(tile) && ridgeGroundWalkable(world, x, y) && !upperAccess.has(cell)) inaccessibleFloors.push(cell);
         if (tile.overlay !== 'forest') continue;
         if (x + 1 < world.width && y + 1 < world.height
           && [cell + 1, cell + world.width, cell + world.width + 1].every(next => world.tiles[next].overlay === 'forest')) solid.push(cell);

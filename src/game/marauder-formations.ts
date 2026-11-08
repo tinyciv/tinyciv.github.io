@@ -1,4 +1,5 @@
 import { entityStore } from './entity-store';
+import { announceArmyMobilization } from './army-warnings';
 import { findPath } from './pathfinding';
 import { infantryFormationGoal, infantryFormationLeader } from './infantry-drill';
 import { isRaiderEnemyFaction } from './raid-targeting';
@@ -64,6 +65,7 @@ export function updateMarauderFormations(state: GameState, visible: (observer: U
       leader.infantryFormation = { active: true, heading: Math.atan2(goal.y - leader.y, goal.x - leader.x), mode: 'rectangle', modeSince: state.time,
         slots: [], spine: [], lengths: [], progress: 0, goalDistance: 0, history: [{ x: leader.x, y: leader.y }], slow: false };
       for (const member of group) { member.target = undefined; member.path = undefined; member.pathGoal = undefined; member.destination = undefined; member.infantryDrillLeader = leader.id; }
+      announceArmyMobilization(state, leader, 'formation');
     }
     leader.destination = { ...reachable };
   }

@@ -8,7 +8,7 @@ import { ensureMarauderLeaders } from './marauder-leaders';
 import { distance, type Building, type GameState, type RaiderCamp, type Unit } from './types';
 import { selectRaidTarget } from './raid-targeting';
 import { campSpawnTiles, initializeRaiderCamps, updateRaiderCamps, MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, RAIDER_FIRST_WAVE, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
-import { marauderBaseStats, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment } from './raider-pressure';
+import { marauderBaseStats, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment, raiderPartySize } from './raider-pressure';
 import { updateRaiderCampPressure } from './raider-camp-pressure';
 
 const PRESSURE_VERSION = 2;
@@ -17,18 +17,22 @@ const MAX_ACTIVE_WAVES = 8;
 /** Includes the commander. Later waves add parties, never oversized groups. */
 export const MAX_RAIDER_GROUP_SIZE = 30;
 export const MAX_RAIDER_WAVE_SIZE = 60;
-const PARTY_SIZE = MAX_RAIDER_GROUP_SIZE;
+export const raiderGroupSize = (elapsedSeconds: number): number => raiderPartySize(MAX_RAIDER_GROUP_SIZE, elapsedSeconds);
 
 /** Pressure grows through the opening, then approaches two full parties.
  * Neither elapsed time nor an enormous defending army can grow waves forever. */
-export function fogRaidProfile(retinue: number, elapsedSeconds = 0): { total: number; parties: number; hp: number; attack: number; defense: number } {
+function baseFogRaidProfile(retinue: number, elapsedSeconds = 0): { total: number; hp: number; attack: number; defense: number } {
     const strength = Math.min(60, Math.max(0, Math.floor(Number.isFinite(retinue) ? retinue : 0)));
     const elapsed = Math.max(0, Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0);
     const ramp = Math.max(0, Math.min(1, (elapsed - RAIDER_FIRST_WAVE) / 240));
     const continuingGrowth = Math.floor(Math.max(0, elapsed - 300) / 60);
     const total = Math.min(MAX_RAIDER_WAVE_SIZE, 2 * (2 + Math.round(16 * ramp) + Math.floor(strength / 6 * ramp) + continuingGrowth));
-    return { total, parties: Math.ceil(total / PARTY_SIZE), ...marauderBaseStats(Math.round(40 + 40 * ramp + Math.min(20, strength) * ramp),
+    return { total, ...marauderBaseStats(Math.round(40 + 40 * ramp + Math.min(20, strength) * ramp),
         6 + Math.round(8 * ramp) + Math.floor(strength / 8 * ramp), Math.floor(2 * ramp)) };
+}
+export function fogRaidProfile(retinue: number, elapsedSeconds = 0): { total: number; parties: number; hp: number; attack: number; defense: number } {
+    const profile = baseFogRaidProfile(retinue, elapsedSeconds), total = raiderPartySize(profile.total, elapsedSeconds);
+    return { ...profile, total, parties: Math.ceil(total / raiderGroupSize(elapsedSeconds)) };
 }
 
 /** The opening is melee; the mix reaches 20% archers at twelve minutes. */
@@ -132,26 +136,28 @@ function spawnCampWave(state: GameState, camp: RaiderCamp, target: Building, ret
         for (const [unit, before] of previous) { Object.assign(unit, before); entityStore(state).setUnitSleeping(unit, !!before.inside); }
         return false;
     };
-    const profile = fogRaidProfile(retinue, state.time);
+    // Plan the specialist role before reducing its size, so harassment/theft
+    // and siege minimums cannot bypass the opening reduction or apply it twice.
+    const profile = baseFogRaidProfile(retinue, state.time);
     const supplyTotal = raiderCampPartySize(state, camp, profile.total);
     if ((supplyTotal < 10 && motivation === 'siege') || (supplyTotal < 2 && motivation === 'harass')) motivation = 'assault';
     const sizePlan = raiderMotivationSize(motivation, supplyTotal, retinue);
-    sizePlan.initial = Math.min(sizePlan.initial, supplyTotal);
-    sizePlan.total = Math.min(sizePlan.total, supplyTotal);
-    const partyCount = Math.ceil(sizePlan.initial / PARTY_SIZE);
+    sizePlan.initial = raiderPartySize(Math.min(sizePlan.initial, supplyTotal), state.time);
+    sizePlan.total = raiderPartySize(Math.min(sizePlan.total, supplyTotal), state.time);
+    const partySize = raiderGroupSize(state.time), partyCount = Math.ceil(sizePlan.initial / partySize);
     let available = Math.max(0, Math.min(banditPopulationCap(state, MAX_LIVE_RAIDERS) - population.total,
         raiderCampPopulationCap(state, camp) - (population.byCamp.get(camp.id) ?? 0)));
     state.marauderPacks ??= [];
     const parties: { survivors: Unit[]; recruits: number }[] = [];
     for (let party = 0; party < partyCount; party++) {
-        const size = Math.min(PARTY_SIZE, sizePlan.initial - party * PARTY_SIZE);
+        const size = Math.min(partySize, sizePlan.initial - party * partySize);
         const survivors = takeReturnedMembers(state, returning, size);
         const recruits = Math.min(size - survivors.length, available);
         if (!survivors.length && !recruits) break;
         parties.push({ survivors, recruits }); available -= recruits;
     }
-    if (!parties.length || motivation === 'siege' && parties[0].survivors.length + parties[0].recruits < 10
-        || motivation === 'harass' && parties[0].survivors.length + parties[0].recruits < 2) return cancelRelease();
+    if (!parties.length || motivation === 'siege' && parties[0].survivors.length + parties[0].recruits < raiderPartySize(10, state.time)
+        || motivation === 'harass' && parties[0].survivors.length + parties[0].recruits < raiderPartySize(2, state.time)) return cancelRelease();
     const recruitCount = parties.reduce((total, party) => total + party.recruits, 0);
     // Reusing a returned veteran does not require another vacant spawn tile.
     const points = recruitCount ? campSpawnTiles(state, camp, recruitCount) : [];
@@ -197,8 +203,9 @@ function reinforceSieges(state: GameState, population: RaiderPopulation): void {
         if (pack.returning || pack.phase === 'attack' || !camp || !raiderCampActive(state, camp) || !members.length) {
             delete pack.siegeNextReinforceAt; continue;
         }
-        const wanted = Math.min(MAX_RAIDER_GROUP_SIZE, pack.musterTarget ?? 10);
-        const count = Math.max(0, Math.min(SIEGE_REINFORCEMENT_SIZE, wanted - members.length));
+        const spawnedAt = pack.spawnedAt ?? state.time;
+        const wanted = Math.min(raiderGroupSize(spawnedAt), pack.musterTarget ?? raiderPartySize(10, spawnedAt));
+        const count = Math.max(0, Math.min(raiderPartySize(SIEGE_REINFORCEMENT_SIZE, spawnedAt), wanted - members.length));
         pack.siegeNextReinforceAt = banditSpawnDeadline(state, SIEGE_REINFORCEMENT_SECONDS);
         if (!count) { delete pack.siegeNextReinforceAt; continue; }
         const survivors = takeReturnedMembers(state, returnedCampMembers(state, camp, population), count, false);

@@ -11,6 +11,7 @@ import { houseCapacity, updateWellUpgrades } from './wells';
 import { deliverFoodCargo, expireFoodCargo, refreshFoodCargo } from './food-cargo';
 import { ORCHARD_YIELD_MULTIPLIER } from './orchards';
 import { irrigationYieldMultiplier } from './irrigation';
+import { soilFertility } from './fertility';
 import { SimulationEvents } from './simulation-events';
 import { entityStore } from './entity-store';
 import { idleJobDecisionDue } from './settlement-decisions';
@@ -59,7 +60,7 @@ export function fieldSpoilsSoon(field: FarmField, time: number): boolean {
 
 function lostFood(state: GameState, point: Point, amount: number): void {
   if (amount <= 1e-7) return;
-  state.particles.push({ x: point.x + .5, y: point.y + .25, text: `−${Number(amount.toFixed(1))} food`, color: '#f46b63', life: 1.6 });
+  state.particles.push({ x: point.x + .5, y: point.y + .25, text: `−${Math.round(amount)} food`, color: '#f46b63', life: 1.6 });
 }
 
 /** Only newly ripened grain receives storage's longer deadline. Orchard fruit
@@ -101,8 +102,7 @@ const CLEARABLE = new Set(['forest', 'jungle', 'swamp']);
 export function fieldHarvestFood(world: World, x: number, y: number): number {
   const tile = tileAt(world, x, y);
   if (!tile || WATER.has(tile.terrain)) return 0;
-  const soil = tile.fertility === undefined ? 1 : .55 + Math.max(0, Math.min(1, tile.fertility)) * .9;
-  return FIELD_HARVEST_FOOD * (tile.terrain === 'desert' ? .25 : 1) * soil;
+  return FIELD_HARVEST_FOOD * soilFertility(world, x, y);
 }
 
 /** Actual and projected farm production share the same completed-ditch bonus. */
@@ -343,7 +343,7 @@ export function synchronizeFarms(state: GameState): void {
         delete tile.palm;
         delete tile.marsh;
         if (clearsCover) { tile.overlay = 'none'; Object.assign(tile, terrainYields(tile.terrain, 'none')); }
-        markWorldChanged(state.world, clearsCover ? 'sight' : 'appearance');
+        markWorldChanged(state.world, clearsCover ? 'sight' : 'appearance', [key]);
       }
     }
   }
@@ -356,7 +356,7 @@ export function synchronizeFarms(state: GameState): void {
     }
     const tile = tileAt(state.world, field.x, field.y);
     if (tile && !reserved.has(field.y * state.world.width + field.x)) delete tile.farm;
-    markWorldChanged(state.world, 'appearance');
+    markWorldChanged(state.world, 'appearance', [field.y * state.world.width + field.x]);
     state.farmVersion = (state.farmVersion ?? 0) + 1;
   }
   for (const camp of camps) if ((camp.storedFood ?? 0) > 0) {
@@ -905,9 +905,11 @@ function removeAbandonedFarms(state: GameState, camps: ReadonlyMap<number, Build
   for (const camp of camps.values()) if (camp.faction === -1 && camp.farmAbandonedAt !== undefined
     && state.time + 1e-7 >= camp.farmAbandonedAt + FARM_ABANDON_SECONDS) expired.add(camp.id);
   if (!expired.size) return;
+  const changed: number[] = [];
   for (const field of state.fields ?? []) if (expired.has(field.camp)) {
     const tile = tileAt(state.world, field.x, field.y);
     if (tile?.farm === field.faction) delete tile.farm;
+    changed.push(field.y * state.world.width + field.x);
     if (field.food > 0) lostFood(state, field, field.food);
   }
   state.fields = (state.fields ?? []).filter(field => !expired.has(field.camp));
@@ -918,7 +920,7 @@ function removeAbandonedFarms(state: GameState, camps: ReadonlyMap<number, Build
   }
   if (state.selectedType === 'building' && expired.has(state.selected ?? -1)) { state.selected = null; state.selectedType = null; }
   state.farmVersion = (state.farmVersion ?? 0) + 1;
-  markWorldChanged(state.world, 'appearance');
+  markWorldChanged(state.world, 'appearance', changed);
   synchronizeFarms(state); ensureCollectors(state);
 }
 

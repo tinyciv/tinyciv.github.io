@@ -7,7 +7,7 @@ export const HEALER_SHACK_COST = 200;
 export const HEALER_SHACK_BUILD_SECONDS = 45;
 export const HEALER_SHACK_HP = 160;
 
-const isHuman = (unit: Unit): boolean => unit.kind === 'leader' || unit.kind === 'warrior' || unit.kind === 'spearman' || unit.kind === 'horseman' || unit.kind === 'archer'
+const isHuman = (unit: Unit): boolean => unit.kind === 'leader' || unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || (unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight') || unit.kind === 'slinger' || unit.kind === 'archer'
   || unit.kind === 'scout' || unit.kind === 'militia' || unit.kind === 'worker' || unit.kind === 'merchant';
 
 /** Build once for a healing pass. Four-tile buckets limit each wounded unit

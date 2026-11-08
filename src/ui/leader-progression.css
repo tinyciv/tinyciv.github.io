@@ -36,6 +36,8 @@
 .leader-skill-pips { display: flex; gap: 3px; }
 .leader-skill-pips i { display: block; width: 13px; height: 13px; border: 2px solid #04090c; background: #3b4447; box-shadow: inset 1px 1px #697170; }
 .leader-skill-pips i.earned { background: #e2b341; box-shadow: inset 1px 1px #ffe493; }
+.leader-skill-pips.expanded { display: grid; grid-template-columns: repeat(5,9px); gap: 2px; }
+.leader-skill-pips.expanded i { width: 9px; height: 9px; }
 .leader-skills [data-leader-learn] { width: 44px; min-width: 44px; height: 44px; padding: 0; border: 3px ridge #e7bb63; border-radius: 3px; background: linear-gradient(#67471e,#30261a); box-shadow: inset 0 0 0 1px #a17a3d; font: bold 32px/1 var(--game-font); }
 .leader-skills [data-leader-learn]:hover:not(:disabled) { filter: brightness(1.25); }
 .leader-skills [data-leader-learn]:disabled { opacity: .4; cursor: default; }
@@ -63,6 +65,8 @@
   .leader-skill-ranks { font-size: 17px; }
   .leader-skill-pips { gap: 2px; }
   .leader-skill-pips i { width: 9px; height: 9px; }
+  .leader-skill-pips.expanded { grid-template-columns: repeat(5,5px); }
+  .leader-skill-pips.expanded i { width: 5px; height: 7px; border-width: 1px; }
 }
 @media(max-height:600px) {
   .leader-skills { z-index: 20; top: 46px; bottom: 8px; left: 50%; right: auto; transform: translateX(-50%); width: min(560px, calc(100vw - 120px)); max-height: calc(100dvh - 54px); padding: 10px; }

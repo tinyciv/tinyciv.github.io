@@ -44,18 +44,38 @@ describe('compact selection summaries', () => {
     expect(selectionSummary(state)!.attack).toBe(0);
   });
 
-  it('shows combat stats for units and fortifications, and HP only for other buildings', () => {
+  it('shows health only for attackable selections and combat stats for units and fortifications', () => {
     const state = fixture();
     expect(selectionSummary(state)!.showCombatStats).toBe(true);
     state.selectedType = 'building'; state.selected = 1;
     for (const kind of ['palace', 'house', 'camp', 'road', 'bridge', 'well', 'irrigation', 'monument', 'library', 'blacksmith', 'villageTent'] as const) {
       state.buildings[0].kind = kind;
       expect(selectionSummary(state)!.showCombatStats, kind).toBe(false);
+      expect(selectionSummary(state)!.showHealth, kind).toBe(!['camp', 'road', 'bridge', 'irrigation'].includes(kind));
     }
     for (const kind of ['wall', 'palisade', 'woodenTower', 'tower', 'guardPost'] as const) {
       state.buildings[0].kind = kind;
       expect(selectionSummary(state)!.showCombatStats, kind).toBe(true);
+      expect(selectionSummary(state)!.showHealth, kind).toBe(true);
     }
+  });
+
+  it('shows actual soil fertility on farm and other land-building cards without fractional text', () => {
+    const state = fixture(), building = state.buildings[0];
+    state.selectedType = 'building'; state.selected = building.id;
+    building.kind = 'camp';
+    const land = state.world.tiles[building.y * state.world.width + building.x];
+    state.world.tiles[building.y * state.world.width + building.x + 1].terrain = 'river';
+    expect(selectionSummary(state)).toMatchObject({ showHealth: false, fertility: 1.25 });
+    expect(selectionSummary(state)!.title).toContain('Soil fertility 125%');
+    land.terrain = 'plains';
+    expect(selectionSummary(state)!.fertility).toBe(1);
+    land.terrain = 'desert'; building.kind = 'house';
+    expect(selectionSummary(state)).toMatchObject({ showHealth: true, fertility: .75 });
+    expect(selectionSummary(state)!.title).toContain('Soil fertility 75%');
+    expect(selectionSummary(state)!.title).not.toMatch(/\d\.\d/);
+    land.terrain = 'coast'; building.kind = 'bridge';
+    expect(selectionSummary(state)!.fertility).toBeUndefined();
   });
 
   it('suppresses hidden enemies, dead units, and garrisoned friendlies', () => {

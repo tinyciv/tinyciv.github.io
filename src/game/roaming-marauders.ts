@@ -4,7 +4,7 @@ import { seededRandom } from '../world/generator';
 import { MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, raiderCampActive, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { initializeRaiderSkirmishes, RAIDER_CAMP_RESERVES } from './raider-activity';
 import { ensureMarauderLeaders } from './marauder-leaders';
-import { marauderBaseStats } from './raider-pressure';
+import { marauderBaseStats, raiderPartySize } from './raider-pressure';
 import { buildingReady, type GameState, type Unit } from './types';
 
 export const ROAMING_MARAUDERS_VERSION = 1;
@@ -44,7 +44,7 @@ export function initializeRoamingMarauders(state: GameState): void {
       .sort((a, b) => (counts.get(a.camp.id) ?? 0) - (counts.get(b.camp.id) ?? 0) || a.camp.id - b.camp.id)[0];
     if (!candidate) break;
     const { camp, tents } = candidate;
-    const size = Math.min(available, 2 + Math.floor(rng() * 5),
+    const size = Math.min(available, raiderPartySize(2 + Math.floor(rng() * 5), state.time),
       Math.min(RAIDER_CAMP_RESERVES, raiderCampPopulationCap(state, camp)) - (counts.get(camp.id) ?? 0));
     const id = ++packId, home = raiderCampRefuge(camp), name = `${camp.name} reserves`;
     (state.marauderPacks ??= []).push({ id, name, color: RAIDER_COLOR, targetFaction: 0, home, waypoint: { ...home },

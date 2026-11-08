@@ -47,11 +47,14 @@ export function recordGoldOutlay(state: Clock, faction: Faction, amount: number,
   if (!positive(amount) || !Number.isFinite(state.time)) return;
   const outlays = bucket(state, faction).outlays; outlays[category] = (outlays[category] ?? 0) + amount;
 }
-/** Affordability is the caller's existing policy. Mandatory expenses may leave
- * arrears; this helper deliberately does not clamp the remaining balance. */
-export function spendGold(state: Clock, faction: Faction, amount: number, category: GoldOutlayCategory): void {
-  if (!positive(amount)) return;
-  faction.gold -= amount; recordGoldOutlay(state, faction, amount, category);
+/** Purchases check affordability before committing. Mandatory charges consume
+ * only available gold, never create debt, and record only the actual payment. */
+export function spendGold(state: Clock, faction: Faction, amount: number, category: GoldOutlayCategory): number {
+  if (!positive(amount)) return 0;
+  const paid = Math.min(amount, Math.max(0, faction.gold));
+  faction.gold = Math.max(0, faction.gold - paid);
+  recordGoldOutlay(state, faction, paid, category);
+  return paid;
 }
 /** Returning an earlier payment is cash flow, not new earnings or Science. */
 export function refundGold(state: Clock, faction: Faction, amount: number): void {

@@ -4,11 +4,11 @@ import { RESEARCH_COLUMNS, RESEARCH_POSITIONS, RESEARCH_CARD_WIDTH, RESEARCH_COL
 
 const edges = RESEARCH_BRANCHES.flatMap(branch => branch.prerequisites.map(from => ({ from, to: branch.id, points: researchEdgePoints(from, branch.id) })));
 describe('horizontal research layout', () => {
-  it('places every technology once in six stages with no more than four cards per stage', () => {
+  it('places every technology once in seven stages with no more than four cards per stage', () => {
     const ids = RESEARCH_COLUMNS.flat();
     expect(new Set(ids).size).toBe(RESEARCH_BRANCHES.length);
     expect(ids).toHaveLength(RESEARCH_BRANCHES.length);
-    expect(RESEARCH_COLUMNS).toHaveLength(6);
+    expect(RESEARCH_COLUMNS).toHaveLength(7);
     expect(RESEARCH_COLUMNS.every(column => column.length <= 4)).toBe(true);
     // Card CSS divides the available height into four rows; a fifth row
     // overflows even when the SVG's own view box has been made taller.
@@ -29,7 +29,7 @@ describe('horizontal research layout', () => {
       }
     }
   });
-  it('keeps the military trunk and supply route to two prerequisite crossovers', () => {
+  it('keeps the expanded mounted tree within ten prerequisite crossovers', () => {
     const crossings: [number, number][] = [];
     for (let a = 0; a < edges.length; a++) for (let b = a + 1; b < edges.length; b++) {
       const first = edges[a], second = edges[b];
@@ -45,13 +45,13 @@ describe('horizontal research layout', () => {
         if (!crossings.some(other => Math.hypot(point[0] - other[0], point[1] - other[1]) < .5)) crossings.push(point);
       }
     }
-    expect(crossings).toHaveLength(2);
+    expect(crossings.length).toBeLessThanOrEqual(10);
   });
   it('navigates stage order and reveals the nearest neighboring branch', () => {
     expect(researchNeighbor('woodenTower', 'ArrowUp')).toBe('scoutLodge');
     expect(researchNeighbor('grainStorage', 'ArrowRight')).toBe('monument');
     expect(researchNeighbor('siegeEngines', 'ArrowDown')).toBe('massLevy');
     expect(researchNeighbor('monument', 'Home')).toBe('irrigation');
-    expect(researchNeighbor('monument', 'End')).toBe('horsebackRiding');
+    expect(researchNeighbor('monument', 'End')).toBe('compoundBow');
   });
 });

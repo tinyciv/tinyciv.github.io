@@ -1,0 +1,41 @@
+{
+  "generator": "PixelLab edit-images-v2",
+  "reference": "Human-Worker-Cyan.png exact civilian poses",
+  "canvas": [
+    32,
+    32
+  ],
+  "sheet": [
+    288,
+    256
+  ],
+  "rows": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "columns": [
+    "idle",
+    "walk 0",
+    "walk 1",
+    "walk 2",
+    "walk 3",
+    "attack 0",
+    "attack 1",
+    "attack 2",
+    "attack 3"
+  ],
+  "groundAnchor": [
+    16,
+    23
+  ],
+  "finishing": "Native palette mapping, integer alignment, excess robe rows removed to match civilian body height. No interpolation.",
+  "provenance": "scratch/2026-11-07-slinger/generation-manifest.json",
+  "frameProof": "scratch/2026-11-07-slinger/frame-proof.json",
+  "sha256": "8c239a73a2944f44f6d7159a05264584016ece36889526fb55fadb59ac682d68"
+}

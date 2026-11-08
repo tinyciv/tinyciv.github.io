@@ -68,7 +68,8 @@ describe('settlement borders', () => {
         const replaced = territory(state);
         expect(replaced.revision).toBe(expanded.revision + 1);
         state.world.tiles[8 * 48 + 8].terrain = 'ocean'; state.world.revision = 1;
-        expect(territory(state).owners[8 * 48 + 8]).toBe(UNCLAIMED);
+        // The settlement's protected footing remains owned even if the map is edited.
+        expect(territory(state).owners[8 * 48 + 8]).toBe(0);
     });
 
     it('uses fixed bases plus culture levels and ignores population, including cache invalidation', () => {
@@ -173,11 +174,12 @@ describe('settlement borders', () => {
 
     it('transmits influence across unclaimed water consistently in wooded surroundings', () => {
         const state = fixture();
-        for (let y = 0; y < 32; y++) state.world.tiles[y * 48 + 10].terrain = 'lake';
+        for (let y = 0; y < 32; y++) for (const x of [10, 11]) state.world.tiles[y * 48 + x].terrain = 'lake';
         expect(insideOwnBorders(state, 0, 12.5, 9.5)).toBe(true);
         state.world.tiles[5 * 48 + 5].overlay = 'forest'; state.world.revision = 1;
         expect(insideOwnBorders(state, 0, 12.5, 9.5)).toBe(true);
-        expect(insideOwnBorders(state, 0, 10.5, 9.5)).toBe(false);
+        expect(insideOwnBorders(state, 0, 10.5, 9.5)).toBe(true); // Immediate coastal buffer.
+        expect(insideOwnBorders(state, 0, 11.5, 9.5)).toBe(false); // Farther water remains unclaimed.
     });
 
     it('never grants territory to raider, neutral, missing or defeated factions', () => {

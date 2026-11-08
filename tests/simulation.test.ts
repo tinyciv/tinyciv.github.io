@@ -1015,7 +1015,7 @@ describe('independent raider camps', { timeout: 120_000 }, () => {
     state.time = state.fogRaids!.nextAt; updateFogRaids(state);
     expect(state.factions).toHaveLength(factionCount);
     const spawned = state.units.filter(unit => state.marauderPacks!.some(pack => pack.raid && !pack.microRaid && pack.id === unit.marauderPack));
-    expect(spawned).toHaveLength(4);
+    expect(spawned).toHaveLength(2);
     expect(spawned.every(unit => unit.faction === MARAUDER_FACTION && unit.hp === unit.maxHp && canWalk(state, unit.x, unit.y, MARAUDER_FACTION))).toBe(true);
     expect(state.marauderPacks!.find(pack => pack.raid && !pack.microRaid)!.raiderCamp).toBe(state.raiderCamps![0].id);
   });

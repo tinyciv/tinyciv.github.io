@@ -6,6 +6,7 @@ import { cityResidents, invalidateCitySummarySnapshot, withCitySummarySnapshot, 
 import { ORCHARD_YIELD_MULTIPLIER } from './orchards';
 import { palaceFoodProduction } from './city-support';
 import { cityOwnership } from './city-ownership';
+import { saltFoodConsumptionMultiplier } from './resource-development';
 
 export interface GovernorPermissions { farms: boolean; housing: boolean; }
 const DEFAULT_PERMISSIONS: Readonly<GovernorPermissions> = Object.freeze({ farms: true, housing: true });
@@ -65,7 +66,15 @@ export function withCityPlanningMutation<T>(state: GameState, operation: () => T
   const previous = planningScopes.get(state);
   planningScopes.delete(state);
   try { return withLiveCitySummaries(state, operation); }
-  finally { if (previous) { planningScopes.set(state, previous); invalidateCityPlanning(state); } }
+  finally {
+    if (previous) {
+      // The economic transaction reconciles its own scalar inputs. Retain its
+      // unaffected city aggregates even when an order makes no change; only
+      // discard the planner's pending-capacity and priority estimates here.
+      previous.summaries = undefined; previous.needs.clear(); previous.farmCities.clear();
+      planningScopes.set(state, previous);
+    }
+  }
 }
 
 /** City ownership uses the same nearest-palace rule as population and yields.
@@ -107,7 +116,8 @@ export function cityDevelopmentNeeds(state: GameState, palace: Building): CityDe
   const walking = palaceWalkingDistances(state, palace);
   const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(state.factions.find(faction => faction.id === palace.faction));
   // Budget surviving deliveries, not grain that will spoil around a long bend.
-  const foodCapacity = palaceFoodProduction(palace) + buildings.filter(building => isFarmKind(building.kind) && !building.farmSuppressed)
+  const foodCapacity = palaceFoodProduction(palace) + population * (1 - saltFoodConsumptionMultiplier(state, palace.faction))
+    + buildings.filter(building => isFarmKind(building.kind) && !building.farmSuppressed)
     .reduce((sum, farm) => sum + harvestFoodPerEconomyCycle(CAMP_FIELD_OFFSETS.reduce((food, [dx, dy]) => food + fieldHarvestFoodForState(state, farm.x + dx, farm.y + dy, farm.faction), 0))
       * (farm.orchard ? ORCHARD_YIELD_MULTIPLIER : 1)
       * expectedFarmDelivery(farmWalkingDistance(walking, state.world.width, farm.x, farm.y), farm.orchard ? FIELD_SPOIL_SECONDS : shelfLife), 0) * .9;

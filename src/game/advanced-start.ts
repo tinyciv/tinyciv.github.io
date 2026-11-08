@@ -6,6 +6,7 @@ import { canWalk, hasStaticPath } from './pathfinding';
 import { irrigationConnects } from './irrigation';
 import { ridgeFootprintAllowed } from './ridges';
 import { dockPlacement } from './dock';
+import { applySoilFertility } from '../world/soil';
 import { BUILDABLE_KINDS, buildingWidth, buildingHeight, tileAt, WATER, type Building, type BuildingKind, type Faction, type GameState, type Point, type ResearchBranchId } from './types';
 
 /** 4 base escorts + 5 from the first 100 residents + 3 from the next 150. */
@@ -33,6 +34,7 @@ export function prepareAdvancedCity(state: GameState, faction: Faction, city: Bu
   }
   unlock('militaryTactics');
   unlock('infantryDrill');
+  unlock('engineering');
   research.focus = RESEARCH_BRANCHES.find(branch => !research.levels[branch.id])?.id ?? 'woodenTower';
 
   const cells: Point[] = [];
@@ -130,4 +132,6 @@ export function prepareAdvancedCity(state: GameState, faction: Faction, city: Bu
     state.world.revision = (state.world.revision ?? 0) + 1;
   }
   create('dock', shore);
+  // The starter spring/harbor changes freshwater distance after world generation.
+  applySoilFertility(state.world);
 }

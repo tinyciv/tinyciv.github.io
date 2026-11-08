@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { archerFraction, nextRecruitRole, retinueComposition, scheduleArcheryTraining, setArcherFraction, setSpearmanFraction } from '../src/game/archery';
 import { entityStore } from '../src/game/entity-store';
@@ -19,7 +20,7 @@ describe('dedicated scouts and combat composition', () => {
   });
 
   it('keeps archer and spearman allocations independent of the lodge explorers', () => {
-    const state = scoutRealm(); addTestScouts(state);
+    const state = withDevelopedResources(scoutRealm(), ['copper']); addTestScouts(state);
     const smithy = { ...state.buildings[0], id: 102, kind: 'blacksmith' as const, x: 14 }; entityStore(state).buildings.add(smithy);
     expect(setArcherFraction(state, state.buildings[0], .5)).toBe(true);
     expect(setSpearmanFraction(state, smithy, .5)).toBe(true);

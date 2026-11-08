@@ -7,7 +7,7 @@ import { pointInSight, updateFog } from './fog';
 import { fogRaidProfile } from './fog-raids';
 import { campSpawnTiles, MAX_LIVE_RAIDERS, RAIDER_COLOR, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { ensureMarauderLeaders } from './marauder-leaders';
-import { marauderBaseStats, raiderEquipmentMultiplier } from './raider-pressure';
+import { marauderBaseStats, raiderEquipmentMultiplier, raiderPartySize } from './raider-pressure';
 import { refreshRaiderCampPressure } from './raider-camp-pressure';
 import { setSoldierRole } from './archery';
 import { selectRaidTarget } from './raid-targeting';
@@ -118,7 +118,8 @@ function defenderSpawnTiles(state: GameState, building: Building, attacker: Poin
 }
 function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendingSoldiers: number, defense = false,
   attackedBuilding?: Building, attacker?: Point): Unit[] {
-  size = defense ? Math.max(2, raiderCampPartySize(state, camp, size)) : raiderCampPartySize(state, camp, size);
+  const minimum = defense ? raiderPartySize(2, state.time) : 1;
+  size = defense ? Math.max(minimum, raiderCampPartySize(state, camp, size)) : raiderCampPartySize(state, camp, size);
   const units: Unit[] = [], previous = new Map<Unit, Unit>();
   const reserves = campReserves(state, camp);
   if (attackedBuilding) reserves.sort((a, b) => Number(b.raiderGarrison === attackedBuilding.id) - Number(a.raiderGarrison === attackedBuilding.id));
@@ -136,7 +137,7 @@ function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendi
   const needed = Math.min(size - units.length, capacity);
   const points = needed > 0 ? attackedBuilding && attacker ? defenderSpawnTiles(state, attackedBuilding, attacker, needed)
     : campSpawnTiles(state, camp, needed) : [];
-  if (defense && units.length + points.length < 2) {
+  if (defense && units.length + points.length < minimum) {
     for (const [unit, before] of previous) { Object.assign(unit, before); entityStore(state).setUnitSleeping(unit, !!before.inside); }
     return [];
   }
@@ -169,7 +170,7 @@ export function initializeRaiderSkirmishes(state: GameState): void {
     }
     candidates.sort((a, b) => Number(b.hidden) - Number(a.hidden) || Math.abs(a.cost - 10) - Math.abs(b.cost - 10));
     const source = candidates[0], living = state.units.filter(unit => unit.hp > 0 && unit.faction === -2).length;
-    const points = source ? candidates.filter(candidate => distance(candidate.point, source.point) <= 2).slice(0, Math.max(0, Math.min(Math.round(3 * banditIntensity(state)), banditPopulationCap(state, MAX_LIVE_RAIDERS) - living))).map(candidate => candidate.point) : [];
+    const points = source ? candidates.filter(candidate => distance(candidate.point, source.point) <= 2).slice(0, Math.max(0, Math.min(raiderPartySize(3 * banditIntensity(state), state.time), banditPopulationCap(state, MAX_LIVE_RAIDERS) - living))).map(candidate => candidate.point) : [];
     if (source && points.length) assignParty(state, palace, recruit(state, points, 0), source.point);
   }
 }
@@ -183,7 +184,7 @@ export function defendRaiderCamp(state: GameState, building: Building, attacker:
   refreshRaiderCampPressure(state, camp);
   if ((camp.defenderReadyAt?.[building.id] ?? -Infinity) > state.time) return 0;
   (camp.defenderReadyAt ??= {})[building.id] = banditSpawnDeadline(state, RAIDER_DEFENDER_COOLDOWN);
-  const count = 2 + Math.floor(random(state) * 4);
+  const count = raiderPartySize(2 + Math.floor(random(state) * 4), state.time);
   const target: Building = { id: -1, kind: 'house', faction: attacker.faction, x: attacker.x, y: attacker.y, hp: 1, maxHp: 1, capacity: 0 };
   const party = takeCampParty(state, camp, count, state.units.filter(unit => unit.faction === attacker.faction && unit.hp > 0 && isSoldier(unit)).length, true, building, attacker);
   if (!party.length) return 0;
@@ -342,7 +343,7 @@ export function updateRaiderActivity(state: GameState): void {
   for (const faction of fullFactions(state).sort((a, b) => (clock.nextByFaction[a.id] ?? 0) - (clock.nextByFaction[b.id] ?? 0) || a.id - b.id)) {
     if (state.time < (clock.nextByFaction[faction.id] ?? Infinity)) continue;
     const wave = clock.wavesByFaction[faction.id] ?? 0;
-    const launched = launchSkirmish(state, faction.id, 1 + wave % 5);
+    const launched = launchSkirmish(state, faction.id, raiderPartySize(1 + wave % 5, state.time));
     if (launched) clock.wavesByFaction[faction.id] = wave + 1;
     clock.nextByFaction[faction.id] = banditSpawnDeadline(state, launched ? RAIDER_SKIRMISH_MIN_SECONDS + random(state) * (RAIDER_SKIRMISH_MAX_SECONDS - RAIDER_SKIRMISH_MIN_SECONDS) : 5);
   }

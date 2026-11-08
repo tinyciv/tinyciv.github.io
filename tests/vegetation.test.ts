@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TREE_FAMILIES, vegetationStump, vegetationVariant } from '../src/game/vegetation-art';
+import { OLIVE_RESOURCE_VARIANTS, TREE_FAMILIES, vegetationStump, vegetationVariant } from '../src/game/vegetation-art';
 import type { Tile } from '../src/game/types';
 import { punyAtlas } from './puny-atlas.js';
 
@@ -29,7 +29,7 @@ describe('varied native vegetation', () => {
       variants.add(JSON.stringify(source)); sheets.add(source.sheet);
       expect(source.width).toBe(16); expect([16, 32]).toContain(source.height);
     }
-    expect(variants.size).toBe(4);
+    expect(variants.size).toBe(2);
     expect([...sheets]).toEqual(['medieval']);
   });
 
@@ -51,8 +51,17 @@ describe('varied native vegetation', () => {
         expect(TREE_FAMILIES[family]).toContainEqual(source);
         seen.add(JSON.stringify(source));
       }
-      expect(seen.size).toBeGreaterThanOrEqual(3);
+      expect(seen.size).toBe(TREE_FAMILIES[family].length);
     }
+  });
+
+  it('reserves both original olive sizes for resources instead of ordinary forest generation', () => {
+    expect(OLIVE_RESOURCE_VARIANTS.map(source => source.height)).toEqual([16, 32]);
+    for (const family of Object.keys(TREE_FAMILIES) as (keyof typeof TREE_FAMILIES)[])
+      for (let i = 0; i < 100; i++) {
+        const source = vegetationVariant(tile({ overlay: 'forest', treeClass: family, variation: i / 0x1000000 }));
+        expect(OLIVE_RESOURCE_VARIANTS).not.toContainEqual(source);
+      }
   });
 
   it('leaves bare desert clear of cactus while retaining its native trees and palms', () => {

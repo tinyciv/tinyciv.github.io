@@ -307,7 +307,9 @@ describe('geographic world generation', () => {
     for (let index = 0; index < 100; index++) {
       // Let Vitest service worker messages during this intentionally long sweep.
       if (index % 10 === 0) await new Promise(resolve => setTimeout(resolve, 0));
-      const world = generateWorld(`connected-world-${index}`);
+      // Keep this hundred-seed ecology/drainage audit at a fixed size. The
+      // real-game sizes and 80-tile realm separation have their own coverage.
+      const world = generateWorld(`connected-world-${index}`, 194, 153);
       longestRunTotal += longestStraightRiver(world) / (world.width / 112);
       const shore = new Set([...oceanShore(world)].filter(i => !world.tiles[i].marsh));
       const sandyShore = [...shore].filter(i => world.tiles[i].terrain === 'desert' || world.tiles[i].terrain === 'plains').length;

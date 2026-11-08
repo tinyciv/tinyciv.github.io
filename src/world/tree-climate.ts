@@ -10,8 +10,9 @@ export function treeClimateLatitude(y: number, height: number,
 /** Local transitions mix only neighboring climate families. The broad latitude
  * bands keep entire stands coherent instead of mixing every atlas tree. */
 export function climateTreeClass(latitude: number, tile: Pick<Tile, 'moisture' | 'elevation' | 'variation' | 'terrain' | 'temperature' | 'biome'>): TreeClass {
+  if (tile.terrain === 'tundra') return 'snowy';
   if (tile.temperature !== undefined) {
-    if (tile.temperature < .20 || tile.biome === 'alpine') return 'snowy';
+    if (tile.temperature < .20 || tile.biome === 'alpine') return 'conifer';
     if (tile.temperature < .37) return 'conifer';
     if (tile.temperature > .68 && tile.moisture > .49) return 'tropical';
     if (tile.moisture < .43 || tile.biome === 'savanna' || tile.terrain === 'desert') return 'dry';
@@ -19,7 +20,6 @@ export function climateTreeClass(latitude: number, tile: Pick<Tile, 'moisture' |
   }
   const cold = latitude + Math.max(0, tile.elevation - .5) * .22;
   const edge = (tile.variation - .5) * .035;
-  if (cold > .78 + edge || tile.terrain === 'tundra') return 'snowy';
   if (cold > .56 + edge) return 'conifer';
   if (latitude < .28 + edge && tile.moisture > .48) return 'tropical';
   if (tile.moisture < .49 || tile.terrain === 'desert') return 'dry';

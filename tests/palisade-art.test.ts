@@ -28,8 +28,6 @@ const render = (mask: number, gate?: number) => {
   drawPalisade(canvas as unknown as CanvasRenderingContext2D, links(mask), gate === undefined ? undefined : links(gate));
   return canvas;
 };
-const contains = ([x, y, width, height]: Rect, px: number, py: number) => px >= x && py >= y && px < x + width && py < y + height;
-const allowed = (draw: Draw, x: number, y: number) => draw.clips.every(region => region.some(rect => contains(rect, x, y)));
 
 beforeAll(async () => {
   vi.stubGlobal('Image', class {
@@ -73,28 +71,30 @@ describe('approved native Puny Medieval palisades', () => {
 
   it.each([
     [10, PALISADE_TILES.horizontal], [5, PALISADE_TILES.vertical],
+    [0, PALISADE_TILES.pier], [2, PALISADE_TILES.eastEnd], [8, PALISADE_TILES.westEnd],
+    [1, PALISADE_TILES.northEnd], [4, PALISADE_TILES.southEnd],
     [3, PALISADE_TILES.northeast], [6, PALISADE_TILES.southeast],
     [9, PALISADE_TILES.northwest], [12, PALISADE_TILES.southwest],
   ] as const)('uses the authored run or corner for mask %s', (mask, source) => {
     expect(render(mask).images.map(image => image.source)).toEqual([source]);
   });
 
-  it.each([1, 4, 5])('orients native open gates across north/south road mask %s', passage => {
-    expect(render(10, passage).images.map(image => image.source)).toEqual([PALISADE_TILES.openGateNS]);
+  it.each([1, 4, 5])('orients complete timber gates across north/south road mask %s', passage => {
+    expect(render(10, passage).images.map(image => image.source)).toEqual([PALISADE_TILES.closedGateNS]);
   });
-  it.each([2, 8, 10])('orients native open gates across east/west road mask %s', passage => {
-    expect(render(5, passage).images.map(image => image.source)).toEqual([PALISADE_TILES.openGateEW]);
+  it.each([2, 8, 10])('orients complete timber gates across east/west road mask %s', passage => {
+    expect(render(5, passage).images.map(image => image.source)).toEqual([PALISADE_TILES.closedGateEW]);
   });
-  it('opens an isolated road marker perpendicular to the wall run', () => {
-    expect(render(5, 0).images[0].source).toEqual(PALISADE_TILES.openGateEW);
-    expect(render(10, 0).images[0].source).toEqual(PALISADE_TILES.openGateNS);
+  it('orients an isolated road marker perpendicular to the wall run', () => {
+    expect(render(5, 0).images[0].source).toEqual(PALISADE_TILES.closedGateEW);
+    expect(render(10, 0).images[0].source).toEqual(PALISADE_TILES.closedGateNS);
   });
 
-  it.each([3, 6, 7, 9, 11, 12, 13, 14, 15])('keeps every road branch open for bent/junction gate mask %s', passage => {
-    const image = render(15, passage).images[0];
-    expect(allowed(image, 16, 16)).toBe(false);
-    for (const [bit, x, y] of [[1, 16, 1], [2, 31, 16], [4, 16, 31], [8, 1, 16]])
-      expect(allowed(image, x, y)).toBe(!(passage & bit));
-    for (const [x, y] of [[1, 1], [31, 1], [1, 31], [31, 31]]) expect(allowed(image, x, y)).toBe(true);
+  it.each([3, 6, 7, 9, 11, 12, 13, 14, 15])('preserves visible gate bars and fittings at road junction mask %s', passage => {
+    for (const [wallMask, source] of [[5, PALISADE_TILES.closedGateEW], [10, PALISADE_TILES.closedGateNS]] as const) {
+      const image = render(wallMask, passage).images[0];
+      expect(image.source).toEqual(source);
+      expect(image.clips).toEqual([[[0, 0, 32, 32]]]);
+    }
   });
 });

@@ -27,6 +27,12 @@ function hitList() {
 }
 
 describe('horseman running charge', () => {
+  it.each(['knight', 'horseArcher'] as const)('allows only melee cavalry to charge: %s', kind => {
+    const state = fixture(), rider = unit(1, 2.5, 5.5, 0, kind); ride(state, rider);
+    const target = unit(2, rider.x + 1, rider.y, 1);
+    expect(tryCavalryCharge(state, rider, target, hitList().combat)).toBe(kind === 'knight');
+  });
+
   it('requires three actual tiles, adds a primary bonus and damages nearby hostile units exactly once', () => {
     const state = fixture(), rider = unit(1, 2.5, 5.5), primary = unit(2, 6.5, 5.5, 1, 'warrior');
     const secondary = unit(3, 7.5, 5.5, 1, 'warrior'), ally = unit(4, 6.5, 6.5), outside = unit(5, 6.5, 7.01, 1);

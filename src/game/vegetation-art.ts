@@ -22,10 +22,15 @@ export function loadVegetationArt(): Promise<void> {
 
 /** Native Medieval World silhouettes, grouped into compatible local families.
  * Every tall tree uses its complete16×32 source rectangle and ground footing. */
+export const OLIVE_RESOURCE_VARIANTS: readonly VegetationSprite[] = [
+  sprite('medieval', 64, 96), sprite('medieval', 64, 112, 32),
+];
+
+/** Olive-colored trees are reserved for resource groves, not ordinary forests. */
 export const TREE_FAMILIES: Readonly<Record<TreeClass, readonly VegetationSprite[]>> = {
   tropical: [sprite('medieval', 0, 48), sprite('medieval', 0, 64, 32), sprite('medieval', 32, 64, 32)],
   dry: [sprite('medieval', 32, 0), sprite('medieval', 32, 16, 32), sprite('medieval', 96, 48), sprite('medieval', 96, 64, 32)],
-  temperate: [sprite('medieval', 0, 0), sprite('medieval', 0, 16, 32), sprite('medieval', 64, 96), sprite('medieval', 64, 112, 32)],
+  temperate: [sprite('medieval', 0, 0), sprite('medieval', 0, 16, 32)],
   conifer: [sprite('medieval', 64, 0), sprite('medieval', 96, 0), sprite('medieval', 64, 16, 32), sprite('medieval', 96, 16, 32)],
   snowy: [sprite('medieval', 0, 144), sprite('medieval', 32, 144), sprite('medieval', 0, 160, 32), sprite('medieval', 32, 160, 32)],
 };
@@ -40,9 +45,9 @@ export function vegetationVariant(tile: Tile): VegetationSprite | undefined {
   const variation = Math.floor(tile.variation * 0x1000000) >>> 0;
   if (tile.marsh) return WATER.has(tile.terrain) ? undefined : MARSH_PLANTS[variation % MARSH_PLANTS.length];
   if (tile.palm || tile.overlay === 'forest' || tile.overlay === 'jungle') {
-    const family = tile.treeClass ?? (tile.palm || tile.overlay === 'jungle' ? 'tropical'
-      : tile.terrain === 'tundra' ? 'snowy' : tile.terrain === 'desert' ? 'dry' : 'temperate');
-    const choices = tile.palm ? COASTAL_PALMS : TREE_FAMILIES[family];
+    const family = tile.terrain === 'tundra' ? 'snowy' : tile.treeClass === 'snowy' ? 'conifer' : tile.treeClass ?? (tile.palm || tile.overlay === 'jungle' ? 'tropical'
+      : tile.terrain === 'desert' ? 'dry' : 'temperate');
+    const choices = tile.palm && tile.terrain !== 'tundra' ? COASTAL_PALMS : TREE_FAMILIES[family];
     return choices[variation % choices.length];
   }
   return undefined;

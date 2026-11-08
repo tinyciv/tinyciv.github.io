@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { RAIDER_ATTACK_MULTIPLIER, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment } from '../src/game/raider-pressure';
+import { RAIDER_ATTACK_MULTIPLIER, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment, raiderPartySize, raiderPartySizeMultiplier } from '../src/game/raider-pressure';
 import { unitAttack, unitDamage, unitDefense } from '../src/game/veterancy';
 import type { Unit } from '../src/game/types';
 
 describe('raider equipment and frequency escalation', () => {
+  it('reduces opening parties once, then restores full strength gradually without exceeding the old size', () => {
+    expect([0, 60, 300, 600, 900, 7200].map(raiderPartySizeMultiplier)).toEqual([.6, .6, .6, .8, 1, 1]);
+    expect([0, 60, 300, 600, 900, 7200].map(time => raiderPartySize(30, time))).toEqual([18, 18, 18, 24, 30, 30]);
+    expect([1, 2, 3, 4, 5].map(count => raiderPartySize(count, 0))).toEqual([1, 1, 2, 2, 3]);
+    expect(raiderPartySize(0, 0)).toBe(0);
+    expect(raiderPartySize(30, Number.NaN)).toBe(18);
+  });
   it('reduces every raider hit once by fifteen percent after armor, independent of source and equipment', () => {
     const sources = [
       { kind: 'warrior', attack: 10 }, // Wilderness.

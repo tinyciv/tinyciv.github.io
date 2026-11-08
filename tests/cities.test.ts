@@ -7,6 +7,8 @@ import { drawCityPanelBackground, loadCityPanelArt } from '../src/game/city-pane
 import { createGame, diplomacyAction } from '../src/game/simulation';
 import type { Building, Faction, GameState, Unit, World } from '../src/game/types';
 import type { FogView } from '../src/game/fog';
+import { withSimulationReads } from '../src/game/simulation-reads';
+import { withCityPlanning, withCityPlanningMutation } from '../src/game/governor';
 
 const building = (id: number, kind: Building['kind'], x: number, extra: Partial<Building> = {}): Building => ({
     id, kind, x, y: 10, faction: 0, hp: 100, maxHp: 100, capacity: 0, ...extra,
@@ -16,7 +18,7 @@ const warrior = (id: number, x: number, extra: Partial<Unit> = {}): Unit => ({
     order: 'follow', cooldown: 0, lastCombat: 0, moving: false, facing: 0, attackTime: 0, ...extra,
 });
 const faction = (id = 0): Faction => ({ id, name: id ? 'Mosswood' : 'Willowhearth', color: '#397cc6', affinity: 100, relation: id ? 'peace' : 'self',
-    food: 500, gold: 500, production: 0, population: 12, yields: { food: -28 / 3, production: 0, gold: 12 * .7 - 1 - 37.5 }, nextRaid: 1000, defeated: false });
+    food: 500, gold: 500, production: 0, population: 12, yields: { food: 4 * (.4 * 4 / 3) * (1 + .5) - 12, production: 0, gold: 12 * .7 - 1 - 37.5 }, nextRaid: 1000, defeated: false });
 function world(): World { return { width: 70, height: 40, seed: 'city-ribbon-tests', source: 'test', spawns: [],
     tiles: Array.from({ length: 2800 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .6, food: 3, production: 1, gold: 0, variation: .3 })) }; }
 function realm(): GameState {
@@ -50,9 +52,9 @@ describe('palace cities', () => {
         const state = realm(), cities = citySummaries(state);
         expect(cities.map(({ name, population, housing, food, gold }) => ({ name, population, housing, food, gold }))).toEqual([
             // Four fields per city: grassland produces .4×4/3 meals per cycle;
-            // desert produces a quarter as much, before six residents eat.
+            // desert produces half as much, before six residents eat.
             { name: 'Ravenna', population: 6, housing: 6, food: expect.closeTo(4 * (.4 * 4 / 3) - 6), gold: expect.closeTo(3.7) },
-            { name: 'Carthage', population: 6, housing: 8, food: expect.closeTo(4 * (.1 * 4 / 3) - 6), gold: expect.closeTo(-33.8) },
+            { name: 'Carthage', population: 6, housing: 8, food: expect.closeTo(4 * (.2 * 4 / 3) - 6), gold: expect.closeTo(-33.8) },
         ]);
         expect(cities.reduce((sum, city) => sum + city.population, 0)).toBe(state.factions[0].population);
         expect(cities.reduce((sum, city) => sum + city.food, 0)).toBeCloseTo(state.factions[0].yields.food);
@@ -98,6 +100,41 @@ describe('palace cities', () => {
         expect(JSON.stringify(state)).toBe(before);
     });
 
+    it('updates local economic buckets exactly while retaining unaffected cities during live orders', () => {
+        const state = realm(); state.world.revision = 0;
+        const fresh = () => citySummaries(structuredClone(state));
+        withSimulationReads(state, () => withCityPlanning(state, () => {
+            let previous = citySummaries(state);
+            expect(previous).toEqual(fresh());
+            const localEdit = (edit: () => void) => withCityPlanningMutation(state, () => {
+                edit();
+                const current = citySummaries(state);
+                expect(current).toEqual(fresh());
+                expect(current[0]).not.toBe(previous[0]);
+                expect(current[1]).toBe(previous[1]);
+                previous = current;
+            });
+            localEdit(() => { state.fields![0].planted = false; });
+            localEdit(() => { state.units[0].kind = 'knight'; });
+            localEdit(() => { state.buildings[2].capacity++; });
+            localEdit(() => entityStore(state).buildings.add(building(30, 'guardPost', 13,
+                { guardPost: { funded: true, nextUpkeepAt: 30 } })));
+            localEdit(() => { state.buildings.find(building => building.id === 30)!.guardPost!.funded = false; });
+            localEdit(() => { state.fields![1].orchard = { startedAt: 0, readyAt: 5 }; });
+            localEdit(() => { state.time = 5; });
+            withCityPlanningMutation(state, () => {
+                entityStore(state).buildings.add(building(31, 'library', 55,
+                    { construction: { startedAt: state.time, duration: 30, waitingForBuilder: true } }));
+                const current = citySummaries(state);
+                expect(current).toEqual(fresh());
+                expect(current[0]).toBe(previous[0]);
+                expect(current[1]).toBe(previous[1]);
+                state.factions[0].villageBonuses = { food: .2, trade: 0, construction: 0, research: 0 };
+                expect(citySummaries(state)).toEqual(fresh());
+            });
+        }));
+    });
+
     it('names new cities without changing RNG and persists distinct palace identities through confederation', () => {
         const w = world(); w.spawns = [{ x: 10, y: 20 }, { x: 50, y: 20 }];
         const state = createGame(w), palaces = state.buildings.filter(building => building.kind === 'palace');
@@ -123,6 +160,7 @@ describe('palace cities', () => {
 class TextCanvas {
     fillStyle = ''; font = ''; labels: { text: string; x: number; y: number; color: string; font: string }[] = [];
     images: { x: number; y: number; width: number; height: number; source: number[] }[] = [];
+    fillRect() {}
     save() {} restore() {} beginPath() {} fill() {} stroke() {} moveTo() {} lineTo() {}
     drawImage(_image: unknown, sx: number, sy: number, sw: number, sh: number, x: number, y: number, width: number, height: number) {
         this.images.push({ x, y, width, height, source: [sx, sy, sw, sh] });
@@ -157,7 +195,7 @@ describe('city ribbon presentation', () => {
         const palace = state.buildings[1]; palace.faction = 1;
         state.buildings.find(building => building.id === 4)!.faction = 1;
         const context = drawCities(state, visibleFog(state), 32, 7, 11);
-        expect(context.labels.map(label => label.text)).toEqual(['Ravenna', '12 / 6', '-9', '+7', 'Carthage']);
+        expect(context.labels.map(label => label.text)).toEqual(['Ravenna', '12 / 6', '-9', '+7', '75', 'Carthage']);
         const enemyBox = context.boxes[1];
         expect(enemyBox.height).toBe(CITY_NAME_RIBBON_HEIGHT);
         expect(enemyBox.y + enemyBox.height).toBe(11 + palace.y * 32 - 6);
@@ -165,7 +203,7 @@ describe('city ribbon presentation', () => {
         // A captured city immediately gains the player's normal two-line display.
         palace.faction = 0;
         const captured = drawCities(state, visibleFog(state));
-        expect(captured.labels).toHaveLength(8);
+        expect(captured.labels).toHaveLength(10);
         expect(captured.boxes[1].height).toBe(CITY_RIBBON_HEIGHT);
     });
 
@@ -188,7 +226,7 @@ describe('city ribbon presentation', () => {
         // Even when remembered buildings and explored land remain, no live stats appear.
         expect(drawCities(state, fog).labels).toHaveLength(0);
         fog.visible[10 * fog.width + 10] = 1;
-        expect(drawCities(state, fog).labels.map(label => label.text)).toEqual(['Ravenna', '6 / 6', '-4', '+4']);
+        expect(drawCities(state, fog).labels.map(label => label.text)).toEqual(['Ravenna', '6 / 6', '-4', '+4', '75']);
     });
 
     it('truncates a long city name while preserving population and signed income columns', () => {
@@ -196,7 +234,7 @@ describe('city ribbon presentation', () => {
         city.name = 'New Constantinople on the Southern Frontier'; city.food = -12; city.gold = 19;
         drawCityRibbon(context as unknown as CanvasRenderingContext2D, city, 200, 100, 290);
         expect(context.labels[0].text).toMatch(/…$/);
-        expect(context.labels.slice(1).map(label => label.text)).toEqual(['6 / 6', '-12', '+19']);
+        expect(context.labels.slice(1).map(label => label.text)).toEqual(['6 / 6', '-12', '+19', '75']);
         expect(imageBounds(context.images).width).toBeLessThanOrEqual(290);
     });
 
@@ -207,8 +245,8 @@ describe('city ribbon presentation', () => {
         const bounds = imageBounds(context.images);
         expect(bounds.width % 2).toBe(0);
         expect(context.labels.every(label => label.font.includes('"Pixel Operator"'))).toBe(true);
-        expect(context.labels.map(label => label.font.match(/\d+px/)?.[0])).toEqual(['18px', ...Array(3).fill('20px')]);
-        expect(context.labels.slice(1).map(label => label.text)).toEqual(['1234 / 1600', '-1234', '+5678']);
+        expect(context.labels.map(label => label.font.match(/\d+px/)?.[0])).toEqual(['18px', ...Array(4).fill('20px')]);
+        expect(context.labels.slice(1).map(label => label.text)).toEqual(['1234 / 1600', '-1234', '+5678', '75']);
         for (const label of context.labels) {
             expect(label.x).toBeGreaterThanOrEqual(bounds.x + 12);
             expect(label.x + context.measureText(label.text).width).toBeLessThanOrEqual(bounds.x + bounds.width - 12);

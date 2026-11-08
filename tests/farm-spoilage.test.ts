@@ -42,7 +42,7 @@ describe('perishable farm harvests', () => {
     state.time = 30 + FIELD_SPOIL_SECONDS; updateHarvests(state);
     expect(field.food).toBeCloseTo(FIELD_HARVEST_FOOD);
     expect(field.expiresAt).toBe(35 + FIELD_SPOIL_SECONDS);
-    expect(state.particles.some(particle => particle.x === field.x + .5 && particle.text === `−${Number(FIELD_HARVEST_FOOD.toFixed(1))} food`)).toBe(true);
+    expect(state.particles.some(particle => particle.x === field.x + .5 && particle.text === `−${Math.round(FIELD_HARVEST_FOOD)} food`)).toBe(true);
     expect(state.factions[0].food).toBe(treasury);
   });
 

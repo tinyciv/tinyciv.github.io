@@ -54,6 +54,7 @@ describe('adaptive two-click construction', () => {
   });
   it('snaps a diagonal bridge end to a complete straight bank-to-bank crossing', () => {
     const state = fixture();
+    state.factions[0].research = { focus: 'engineering', levels: { engineering: 1 }, progress: {} };
     for (let y = 0; y < 32; y++) for (let x = 22; x <= 24; x++) state.world.tiles[y * 40 + x].terrain = 'river';
     const route = constructionRoute(state, 'bridge', { x: 21, y: 16 }, { x: 25, y: 17 });
     expect(contiguous(route)).toBe(true);
@@ -76,6 +77,7 @@ describe('adaptive two-click construction', () => {
   });
   it('authoritatively expands a single water-cell bridge command to the complete crossing', () => {
     const state = fixture();
+    state.factions[0].research = { focus: 'engineering', levels: { engineering: 1 }, progress: {} };
     for (let y = 0; y < 32; y++) for (let x = 22; x <= 24; x++) state.world.tiles[y * 40 + x].terrain = 'river';
     expect(applyGameCommand(state, 0, { type: 'build', kind: 'bridge', points: [{ x: 23, y: 16 }] }).ok).toBe(true);
     expect(state.buildings.filter(b => b.kind === 'bridge').map(b => b.x).sort()).toEqual([22, 23, 24]);

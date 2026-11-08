@@ -86,7 +86,7 @@ function history(state: GameState): CasualtyIndex {
 /** Called at the damage site, before dead units are removed. Each unit object
  * contributes once; numeric IDs can be reused after a dead unit is removed. */
 export function recordBattleDeath(state: GameState, unit: Unit): void {
-  if (unit.hp > 0 || !['leader', 'warrior', 'spearman', 'horseman', 'archer', 'scout', 'militia', 'worker'].includes(unit.kind)) return;
+  if (unit.hp > 0 || !['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker'].includes(unit.kind)) return;
   let recorded = recordedDeaths.get(state);
   if (!recorded) { recorded = new WeakSet(); recordedDeaths.set(state, recorded); }
   if (recorded.has(unit)) return;
@@ -144,7 +144,7 @@ function sampleCasualtyPressure(state: GameState, unit: Unit, hostile: (a: numbe
   }
   let living = 0;
   if (losses >= CASUALTY_FLOOR) forEachNearbyUnit(state, unit, CASUALTY_RADIUS, ally => {
-    if (ally.faction === unit.faction && ally.hp > 0 && !ally.inside && ['leader', 'warrior', 'spearman', 'horseman', 'archer', 'scout', 'militia', 'worker'].includes(ally.kind)
+    if (ally.faction === unit.faction && ally.hp > 0 && !ally.inside && ['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker'].includes(ally.kind)
       && distance(unit, ally) <= CASUALTY_RADIUS) living++;
   });
   const threshold = Math.max(CASUALTY_FLOOR, Math.ceil((living + losses) / 2));

@@ -1,3 +1,5 @@
+import { applyTundra } from './tundra';
+import { scatterDesertStones } from './desert-stones';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type Overlay, type Point, type Terrain, type Tile, type World } from '../game/types';
 import { EARTH_SAMPLES } from './data/earth-samples';
@@ -18,8 +20,11 @@ import { addWaterfallTributaries, markRiverWaterfalls } from './waterfalls';
 import { generateRiverDeltas } from './river-deltas';
 import { applySoilFertility } from './soil';
 import { assignRegionalResources } from './resources';
+import { applyStonePlains } from './stone-plains';
+import { applyDesertTransitions } from './desert-regions';
+import { finishHillBiomes, placeHillBiomes } from './hill-biomes';
 import { STAIR_UP } from '../game/ridges';
-import { packSettlementSites, spreadFactionStarts } from './starting-sites';
+import { MIN_FACTION_START_DISTANCE, packSettlementSites, spreadFactionStarts } from './starting-sites';
 import { generateMediterraneanWorld, MEDITERRANEAN_WIDTH, MEDITERRANEAN_HEIGHT } from './mediterranean';
 
 const PATCH = 24;
@@ -28,8 +33,8 @@ const STRIDE = PATCH - OVERLAP;
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 const DIAGONAL = [...CARDINAL, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
-export const DEFAULT_WORLD_WIDTH = 194;
-export const DEFAULT_WORLD_HEIGHT = 153;
+export const DEFAULT_WORLD_WIDTH = 320;
+export const DEFAULT_WORLD_HEIGHT = 256;
 
 /** A stable, local random stream: generation never mutates Math.random. */
 export function seededRandom(seed: string): () => number {
@@ -298,7 +303,7 @@ function largestWalkable(tiles: Tile[], width: number, height: number): number[]
 }
 
 export function settlements(tiles: Tile[], width: number, height: number, random: () => number,
-  parameters: LandscapeParameters): { capitals: Point[]; secondary: Point[] } {
+  parameters: LandscapeParameters, minimumFactionDistance = 0): { capitals: Point[]; secondary: Point[] } {
   const empty = { capitals: [], secondary: [] };
   const component = largestWalkable(tiles, width, height);
   if (component.length < Math.min(1200, width * height * 0.16)) return empty;
@@ -361,17 +366,24 @@ export function settlements(tiles: Tile[], width: number, height: number, random
   // keeping palace/road footprints and every reserved town distinct.
   const shortSide = Math.min(width, height);
   const minimumGap = shortSide < 80 ? 7 : Math.min(18, Math.floor(shortSide / 8));
-  let chosen: Point[] = spreadFactionStarts(candidates, OPPOSING_FACTION_COUNT + 1, minimumGap, parameters);
+  const factionGap = Math.max(minimumGap, minimumFactionDistance);
+  let chosen: Point[] = packSettlementSites(candidates, OPPOSING_FACTION_COUNT + 1, factionGap, parameters);
   if (chosen.length !== OPPOSING_FACTION_COUNT + 1) return empty;
-  const secondary: Point[] = [], occupied = chosen.slice();
+  const secondary: Point[] = [], occupied = chosen.map((point, faction) => ({ point, faction }));
   for (let faction = 1; faction <= OPPOSING_FACTION_COUNT; faction++) {
     let best: Point | undefined, score = -Infinity;
     const capital = chosen[faction];
     const travel = travelFrom(capital);
     for (const candidate of candidates) {
       let nearest = Infinity;
-      for (const point of occupied) nearest = Math.min(nearest, Math.hypot(point.x - candidate.x, point.y - candidate.y));
+      let foreignGap = Infinity;
+      for (const entry of occupied) {
+        const gap = Math.hypot(entry.point.x - candidate.x, entry.point.y - candidate.y);
+        nearest = Math.min(nearest, gap);
+        if (entry.faction !== faction) foreignGap = Math.min(foreignGap, gap);
+      }
       if (nearest < minimumGap) continue;
+      if (foreignGap < factionGap) continue;
       // Nearby second cities form readable realms and useful trade routes.
       const homeDistance = travel[candidate.y * width + candidate.x];
       const foreignDistance = Math.min(...chosen.filter((_, i) => i !== faction)
@@ -381,6 +393,9 @@ export function settlements(tiles: Tile[], width: number, height: number, random
       if (candidateScore > score) { best = candidate; score = candidateScore; }
     }
     if (!best) {
+      // Retry a different world instead of weakening the real-game spacing
+      // requirement when a realm has no room for its second city.
+      if (minimumFactionDistance) return empty;
       // Constrained islands/small maps can fit all towns even when a greedy
       // second-city choice uses the last viable gap. Reserve all towns first,
       // then distribute capitals over that packing and assign the remainder.
@@ -399,7 +414,7 @@ export function settlements(tiles: Tile[], width: number, height: number, random
       break;
     }
     secondary.push(best);
-    occupied.push(best);
+    occupied.push({ point: best, faction });
   }
   for (const point of [...chosen, ...secondary]) {
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
@@ -557,6 +572,7 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
     for (const tile of tiles) if (tile.ridge) tile.elevation = .76 + (tile.ridgeTier === 2 ? .14 : 0);
   } else placeLandformRelief(world, plan, parameters);
   applyWorldClimate(world, parameters);
+  placeHillBiomes(world, parameters);
   const lakeCount = developmentScale < 1 ? Math.max(1, Math.round(Math.max(3,
     Math.min(7, land.reduce((sum, value) => sum + value, 0) / 5500)) * parameters.lakeDensity * developmentScale)) : undefined;
   const usualLakes = lakeCount ?? Math.max(1, Math.round(Math.max(3,
@@ -585,16 +601,23 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
     }
   }
   addRiverFords(world);
-  const sites = settlements(tiles, width, height, random, parameters);
+  const minimumFactionDistance = width >= DEFAULT_WORLD_WIDTH && height >= DEFAULT_WORLD_HEIGHT ? MIN_FACTION_START_DISTANCE : 0;
+  world.minimumFactionStartDistance = minimumFactionDistance || undefined;
+  const sites = settlements(tiles, width, height, random, parameters, minimumFactionDistance);
   world.spawns = sites.capitals;
   world.secondarySpawns = sites.secondary;
   harmonizeRidgeTerrain(world);
   markRiverWaterfalls(world);
   addCoastalBeaches(world, attempt, parameters);
+  applyDesertTransitions(world);
+  finishHillBiomes(world);
   applyTerrainEcology(world, parameters);
   assignTreeClimate(world, parameters);
   applySoilFertility(world);
   assignRegionalResources(world);
+  applyStonePlains(world);
+  scatterDesertStones(world);
+  applyTundra(world, parameters);
   return world;
 }
 
@@ -602,6 +625,7 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
 export function generateWorld(seed: string, width?: number, height?: number,
   options: WorldGenerationOptions = {}): World {
   const style = options.style ?? DEFAULT_WORLD_STYLE;
+  const automaticSize = width === undefined && height === undefined;
   width ??= style === 'mediterranean' ? MEDITERRANEAN_WIDTH : DEFAULT_WORLD_WIDTH;
   height ??= style === 'mediterranean' ? MEDITERRANEAN_HEIGHT : DEFAULT_WORLD_HEIGHT;
   const landformFamily = options.landformFamily ?? 'mixed';
@@ -614,6 +638,14 @@ export function generateWorld(seed: string, width?: number, height?: number,
   }
   if (style === 'mediterranean') return generateMediterraneanWorld(seed, width, height);
   for (let attempt = 0; attempt < 20; attempt++) {
+    // Some branching continents have too little connected, fertile land for
+    // six separated realms. Give them more room instead of weakening the
+    // eighty-cell rule or spending every retry at an impossible size.
+    if (automaticSize && attempt > 0 && attempt % 3 === 0) {
+      const expansion = Math.min(1.2, 512 / width, 512 / height);
+      width = Math.min(512, Math.ceil(width * expansion));
+      height = Math.min(512, Math.ceil(height * expansion));
+    }
     const world = generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options.riverDeltas !== false);
     if (world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) return world;
   }
@@ -634,7 +666,6 @@ export function normalizePunyWorld(world: World): void {
     const terrain = tile.terrain, overlay = tile.overlay;
     // Old JSON saves may retain removed overlay names outside the current type.
     if (['hills', 'mountains'].includes(tile.overlay as string)) tile.overlay = 'none';
-    if (tile.terrain === 'tundra') tile.terrain = 'grassland';
     if (tile.overlay === 'jungle') tile.overlay = 'forest';
     else if (tile.overlay === 'swamp') tile.overlay = 'none';
     else if (tile.overlay === 'volcano' || tile.overlay === 'glacier') tile.overlay = 'none';

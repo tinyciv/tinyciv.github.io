@@ -4,16 +4,17 @@ import type { ResearchBranchId } from '../game/research';
 export const RESEARCH_COLUMNS: readonly (readonly ResearchBranchId[])[] = [
   ['irrigation', 'scoutLodge', 'woodenTower'],
   ['grainStorage', 'sailing', 'archeryRange', 'wall'],
-  ['monument', 'traditionalMedicine', 'blacksmith'],
-  ['coinage', 'metalTools', 'militaryTactics'],
+  ['monument', 'traditionalMedicine', 'engineering', 'blacksmith'],
+  ['coinage', 'supplyTrain', 'metalTools', 'militaryTactics'],
   ['urbanPlanning', 'reinforcedDefenses', 'fletching', 'infantryDrill'],
-  ['supplyTrain', 'siegeEngines', 'massLevy', 'horsebackRiding'],
+  ['metalCasting', 'siegeEngines', 'massLevy', 'horsebackRiding'],
+  ['stirrups', 'compoundBow'],
 ];
 export const RESEARCH_CARD_WIDTH = 220;
 export const RESEARCH_COLUMN_PITCH = 292;
-export const RESEARCH_BOARD_WIDTH = 1700;
+export const RESEARCH_BOARD_WIDTH = 1992;
 export const RESEARCH_BOARD_HEIGHT = 400;
-const rows = [[0, 1.5, 3], [0, 1, 2, 3], [0, 1, 3], [0, 1.5, 3], [0, 1, 2, 3], [0, 1, 2, 3]];
+const rows = [[0, 1.5, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 2]];
 export const RESEARCH_POSITIONS = new Map<ResearchBranchId, { x: number; y: number }>(
   RESEARCH_COLUMNS.flatMap((column, x) => column.map((id, i) => [id, { x, y: rows[x][i] }] as const)),
 );
@@ -21,11 +22,13 @@ export const RESEARCH_POSITIONS = new Map<ResearchBranchId, { x: number; y: numb
 type Point = [number, number];
 type Command = { kind: 'line'; to: Point } | { kind: 'curve'; a: Point; b: Point; to: Point };
 const channels: Partial<Record<ResearchBranchId, Partial<Record<ResearchBranchId, number[]>>>> = {
-  scoutLodge: { traditionalMedicine: [100] },
-  traditionalMedicine: { supplyTrain: [3, 3] },
+  scoutLodge: { traditionalMedicine: [100], horsebackRiding: [397, 397, 397, 397] },
+  traditionalMedicine: { supplyTrain: [] },
+  horsebackRiding: { compoundBow: [], stirrups: [] },
+  fletching: { compoundBow: [300] },
   militaryTactics: { massLevy: [300] },
   sailing: { coinage: [200] },
-  archeryRange: { fletching: [275, 275], militaryTactics: [275] },
+  archeryRange: { fletching: [300, 300], militaryTactics: [300] },
 };
 
 function edgeCommands(from: ResearchBranchId, to: ResearchBranchId): { start: Point; commands: Command[] } {

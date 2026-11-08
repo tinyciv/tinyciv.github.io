@@ -55,7 +55,8 @@ export function canDispatchPeasant(state: GameState, unit: Unit): boolean {
   if (workers && workers.size - Number(workers.has(unit)) < population) return true;
   let active = 0;
   for (const other of workers ?? state.units) {
-    if (other.kind === 'worker' && other.faction === unit.faction && other.hp > 0 && !other.inside
+    if (other.kind === 'worker' && other.faction === unit.faction && other.hp > 0
+      && (!other.inside || other.resourceWork?.phase === 'working')
       && workerHomeCity(state, other)?.id === city.id && ++active >= population) return false;
   }
   return true;

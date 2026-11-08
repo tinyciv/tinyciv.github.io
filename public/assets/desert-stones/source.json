@@ -1,0 +1,246 @@
+{
+  "source": "../lpc-rocks/rocks.png",
+  "gallery": "8FC",
+  "features": [
+    {
+      "file": "ochre-01.png",
+      "crop": [
+        308,
+        898,
+        11,
+        6
+      ],
+      "pixels": 41
+    },
+    {
+      "file": "ochre-02.png",
+      "crop": [
+        194,
+        899,
+        11,
+        7
+      ],
+      "pixels": 59
+    },
+    {
+      "file": "ochre-03.png",
+      "crop": [
+        11,
+        900,
+        9,
+        7
+      ],
+      "pixels": 57
+    },
+    {
+      "file": "ochre-04.png",
+      "crop": [
+        256,
+        900,
+        9,
+        7
+      ],
+      "pixels": 51
+    },
+    {
+      "file": "ochre-05.png",
+      "crop": [
+        291,
+        900,
+        5,
+        4
+      ],
+      "pixels": 13
+    },
+    {
+      "file": "ochre-06.png",
+      "crop": [
+        165,
+        903,
+        11,
+        7
+      ],
+      "pixels": 56
+    },
+    {
+      "file": "ochre-07.png",
+      "crop": [
+        299,
+        903,
+        7,
+        4
+      ],
+      "pixels": 20
+    },
+    {
+      "file": "ochre-08.png",
+      "crop": [
+        226,
+        904,
+        10,
+        8
+      ],
+      "pixels": 63
+    },
+    {
+      "file": "ochre-10.png",
+      "crop": [
+        209,
+        907,
+        11,
+        7
+      ],
+      "pixels": 54
+    },
+    {
+      "file": "ochre-11.png",
+      "crop": [
+        311,
+        907,
+        6,
+        4
+      ],
+      "pixels": 21
+    },
+    {
+      "file": "ochre-13.png",
+      "crop": [
+        289,
+        908,
+        11,
+        6
+      ],
+      "pixels": 41
+    },
+    {
+      "file": "ochre-14.png",
+      "crop": [
+        71,
+        911,
+        12,
+        8
+      ],
+      "pixels": 82
+    },
+    {
+      "file": "ochre-15.png",
+      "crop": [
+        43,
+        912,
+        11,
+        7
+      ],
+      "pixels": 51
+    },
+    {
+      "file": "ochre-16.png",
+      "crop": [
+        195,
+        912,
+        7,
+        5
+      ],
+      "pixels": 30
+    },
+    {
+      "file": "ochre-18.png",
+      "crop": [
+        305,
+        913,
+        5,
+        4
+      ],
+      "pixels": 13
+    },
+    {
+      "file": "ochre-19.png",
+      "crop": [
+        278,
+        915,
+        8,
+        5
+      ],
+      "pixels": 35
+    },
+    {
+      "file": "ochre-20.png",
+      "crop": [
+        175,
+        916,
+        12,
+        8
+      ],
+      "pixels": 82
+    },
+    {
+      "file": "ochre-21.png",
+      "crop": [
+        205,
+        916,
+        6,
+        4
+      ],
+      "pixels": 21
+    },
+    {
+      "file": "ochre-22.png",
+      "crop": [
+        296,
+        916,
+        6,
+        4
+      ],
+      "pixels": 21
+    },
+    {
+      "file": "ochre-23.png",
+      "crop": [
+        233,
+        917,
+        11,
+        7
+      ],
+      "pixels": 64
+    },
+    {
+      "file": "ochre-24.png",
+      "crop": [
+        216,
+        920,
+        7,
+        6
+      ],
+      "pixels": 40
+    },
+    {
+      "file": "ochre-25.png",
+      "crop": [
+        297,
+        922,
+        7,
+        4
+      ],
+      "pixels": 20
+    },
+    {
+      "file": "ochre-26.png",
+      "crop": [
+        290,
+        923,
+        5,
+        4
+      ],
+      "pixels": 13
+    },
+    {
+      "file": "ochre-27.png",
+      "crop": [
+        308,
+        924,
+        7,
+        4
+      ],
+      "pixels": 20
+    }
+  ]
+}

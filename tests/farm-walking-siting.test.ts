@@ -64,14 +64,14 @@ describe('farm walking-distance planning', () => {
     expect(farmCityQuery(state, 0)(farm)?.id).toBe(second.id);
     synchronizeFarms(state); ensureCollectors(state);
     expect(state.units.find(unit => unit.collectorCamp === farm.id)?.home).toBe(second.id);
-    expect(citySummaries(state).find(city => city.palace.id === second.id)?.food).toBeCloseTo(4 + .4 * 4 / 3 - 10);
+    expect(citySummaries(state).find(city => city.palace.id === second.id)?.food).toBeCloseTo(4 + .4 * 4 / 3 * 1.25 - 10);
   });
 
   it('applies a village harvest bonus consistently to owned crops and placement estimates', () => {
     const state = fixture(); add(state, 'camp', 5, 10);
     state.factions[0].villageBonuses = { food: .1, trade: 0, construction: 0, research: 0 };
     synchronizeFarms(state);
-    expect(fieldHarvestFoodForState(state, 5, 10, 0)).toBeCloseTo(.88 * 4 / 3);
-    expect(fieldHarvestYield(state, state.fields![0])).toBeCloseTo(.88 * 4 / 3);
+    expect(fieldHarvestFoodForState(state, 5, 10, 0)).toBeCloseTo(.8 * 4 / 3 * 1.25 * 1.1);
+    expect(fieldHarvestYield(state, state.fields![0])).toBeCloseTo(.8 * 4 / 3 * 1.25 * 1.1);
   });
 });

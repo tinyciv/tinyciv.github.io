@@ -16,7 +16,7 @@ import { markWorldChanged } from './world-revisions';
 export const FORT_GOLD = 300;
 /** The masonry layout multiplier is applied by wall-stats, exactly as for walls. */
 export const FORT_BASE_HP = 225;
-export const FORT_BUILD_SECONDS = 60;
+export const FORT_BUILD_SECONDS = 240;
 export const FORT_UPKEEP = 20;
 export const FORT_UPKEEP_INTERVAL = 30;
 export const FORT_BRIGADE_CAPACITIES = [0, 3, 6, 10] as const;

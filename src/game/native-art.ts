@@ -1,3 +1,4 @@
+import { silhouetteOutline } from './silhouette-outline';
 import { drawEngineerEquipment } from './leader-ability-art';
 import { CanvasSource, ImageSource, Rectangle, Texture, type TextureSource } from 'pixi.js';
 import { buildingArtTop, buildingHeight, buildingWidth, type Building, type FarmField, type Tile, type Unit } from './types';
@@ -20,6 +21,7 @@ import { ballistaFrame, spearmanBounds, spearmanPose, spearmanSheet } from './si
 import { dockArtBounds, dockConstructionBounds, sailboatMirrored } from './naval-art';
 import { galleyPose, galleyHullImage, galleyRigImage, galleyAttachmentOffset, drawGalleyHull, drawGalleyRig, drawGalleyPassenger, GALLEY_ART_BOUNDS, GALLEY_PIVOT } from './galley-art';
 import { trailArtVariant } from './road-sprites';
+import { drawResourceObject, drawResourceFence, resourceObjectBounds, resourceObjectKey, type ResourceCellArt } from './resource-art';
 import { damageMaskSheet, deathAnimationFrame, deathAnimationImage, decayAnimationImage, DEATH_FRAME_SIZE, DEATH_GROUND_ANCHOR,
     DEATH_FALL_FRAME_DURATIONS_MS, DECAY_FRAME_SIZE, DECAY_GROUND_ANCHOR } from './combat-effect-art';
 
@@ -37,11 +39,11 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
     if (unit.kind === 'levyInfantry' || unit.kind === 'skirmisher' || unit.kind === 'supplyCart') return auxiliaryArtKey(unit, time, color);
     if (unit.kind === 'sailboat') return `galley:${galleyPose(unit, time).row}:${galleyPose(unit, time).frame}:${passenger ? `${personFrame({ ...passenger, facing: unit.facing, moving: false, attackTime: 0 }, 0).row}:${color}:${armorVisualLevel(passenger.armorLevel)}` : 'empty'}`;
     if (unit.aboardRiverTrade) return `sailboat:${sailboatMirrored(unit)}`;
-    if (unit.kind === 'horseman') return `horseman:${horsemanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
+    if ((unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight')) return `${unit.kind}:${horsemanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
     if (unit.kind === 'spearman') return `spearman:${spearmanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
     if (unit.kind === 'boar' || unit.kind === 'marshBird') { const { row, frame } = wildlifeFrame(unit, time); return `${unit.kind}:${row}:${frame}`; }
     if (unit.kind === 'merchant') { const { row, column } = merchantFrame(unit, time); return `merchant:${row}:${column}:${!!unit.inside}`; }
-    if (!['leader', 'warrior', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'worker'].includes(unit.kind)) return `empty:${unit.kind}`;
+    if (!['leader', 'warrior', 'swordsman', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'slinger', 'worker'].includes(unit.kind)) return `empty:${unit.kind}`;
     const { role, row, frame } = personFrame(unit, time);
     return `person:${role}:${row}:${frame}:${color}:${armorVisualLevel(unit.armorLevel)}:${(unit.cargo ?? 0) > 0}:${!!unit.inside}:${!!unit.engineer}`;
 }
@@ -131,8 +133,8 @@ export class NativeArt {
                 overlays.push({ ...rig, x: rig.x + offset.x, y: rig.y + offset.y });
                 return { ...hull, rotation: pose.rotation, rotationPivot: GALLEY_PIVOT, overlays };
             }
-            if (unit.kind === 'horseman') {
-                const sheet = horsemanSheet(color), pose = horsemanPose(unit, time);
+            if ((unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight')) {
+                const sheet = horsemanSheet(color, unit.kind), pose = horsemanPose(unit, time);
                 if (sheet) return this.image(effectSheet(sheet, effect?.damageMask), [...pose.rect], horsemanBounds(pose));
             }
             if (unit.kind === 'spearman') {
@@ -147,7 +149,7 @@ export class NativeArt {
                 const { row, column } = merchantFrame(unit, time);
                 return this.image(effectSheet(merchantImage()!, effect?.damageMask), [column * 32, row * 32, 32, 32], { x: -8, y: -8, width: 48, height: 48 });
             }
-            if (['leader', 'warrior', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'worker'].includes(unit.kind)) {
+            if (['leader', 'warrior', 'swordsman', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'slinger', 'worker'].includes(unit.kind)) {
                 const { role, row, frame } = personFrame(unit, time), sheet = factionSheet(role, color, unit.armorLevel);
                 if (sheet) {
                     const art = this.image(effectSheet(sheet, effect?.damageMask), [frame * 32, row * 32, 32, 32], { x: -6.4, y: -4.44, width: 44.8, height: 44.8 });
@@ -197,6 +199,24 @@ export class NativeArt {
         const source = vegetationVariant(tile);
         return this.paint(`tree:${source?.sheet}:${source?.x}:${source?.y}`, vegetationArtBounds(tile),
             c => drawVegetation(c, tile, 0, 0, 32));
+    }
+    resource(resource: ResourceCellArt): BakedArt {
+        return this.paint(`resource:${resourceObjectKey(resource)}`, resourceObjectBounds(resource),
+            c => drawResourceObject(c, resource));
+    }
+    resourceOutline(resource: ResourceCellArt, color: string): BakedArt {
+        const bounds = resourceObjectBounds(resource), padding = 6;
+        return this.paint(`resource-outline:${resourceObjectKey(resource)}:${color}`,
+            { x: bounds.x - padding, y: bounds.y - padding, width: bounds.width + 2 * padding, height: bounds.height + 2 * padding }, c => {
+                const sprite = document.createElement('canvas');
+                sprite.width = bounds.width + 2 * padding; sprite.height = bounds.height + 2 * padding;
+                drawResourceObject(sprite.getContext('2d')!, { ...resource, developed: resource.resource === 'salt' || resource.developed }, padding - bounds.x, padding - bounds.y);
+                c.drawImage(silhouetteOutline(sprite, color), bounds.x - padding, bounds.y - padding);
+            });
+    }
+    resourceFence(resource: ResourceCellArt, front: boolean): BakedArt {
+        return this.paint(`resource-fence:${resource.fences}:${resource.gate}:${front}`, { x: 0, y: -8, width: 32, height: 40 },
+            c => drawResourceFence(c, resource, front));
     }
     field(field: FarmField, time: number, clipKey = '', clip?: (c: CanvasRenderingContext2D) => void, joins = 0): BakedArt {
         return this.paint(`${fieldKey(field, time, joins)}:${clipKey}`, { x: 0, y: 0, width: 32, height: 32 },

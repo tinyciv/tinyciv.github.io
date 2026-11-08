@@ -28,10 +28,10 @@ const rawUnitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Pa
  * does exactly 30% less damage rather than making armor disproportionately strong. */
 export const attackDamage = (attack: number, defense: number): number => Math.max(4, attack - defense) * DAMAGE_MULTIPLIER;
 export const unitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, faction?: Pick<Faction, 'research'>): number =>
-  rawUnitAttack(unit) * DAMAGE_MULTIPLIER * unitDamageDealtMultiplier(unit) * (unit.kind === 'archer' ? archerDamageMultiplier(faction) : 1)
+  rawUnitAttack(unit) * DAMAGE_MULTIPLIER * unitDamageDealtMultiplier(unit) * ((unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1)
     * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
 export const unitDamage = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, defense: number, faction?: Pick<Faction, 'research'>): number =>
-  unit.kind === 'scout' ? 0 : attackDamage(rawUnitAttack(unit), defense) * unitDamageDealtMultiplier(unit) * (unit.kind === 'archer' ? archerDamageMultiplier(faction) : 1)
+  unit.kind === 'scout' ? 0 : attackDamage(rawUnitAttack(unit), defense) * unitDamageDealtMultiplier(unit) * ((unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1)
     * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
 export const unitDefense = (unit: Pick<Unit, 'defense' | 'kills' | 'armorLevel'> & Partial<Pick<Unit, 'kind' | 'raiderEquipmentMultiplier' | 'brace'>>): number =>
   (unit.defense + DEFENSE_BONUSES[veterancy(unit)]) * equipmentMultiplier(unit.armorLevel) * (unit.raiderEquipmentMultiplier ?? 1) + (unit.brace?.defense ?? 0);

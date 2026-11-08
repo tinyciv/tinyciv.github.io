@@ -1,0 +1,325 @@
+{
+  "asset": "public/assets/resources/salt-pan-joins.png",
+  "nativeTileSize": 16,
+  "atlasSize": [
+    256,
+    256
+  ],
+  "format": "256 masks; tile position [(mask & 15)*16, (mask >> 4)*16]",
+  "bits": {
+    "N": 1,
+    "E": 2,
+    "S": 4,
+    "W": 8,
+    "NE": 16,
+    "SE": 32,
+    "SW": 64,
+    "NW": 128
+  },
+  "diagonals": "Enabled only when both adjoining cardinal neighbors belong to the same pan.",
+  "sourceShapes": {
+    "path": "public/assets/puny-world/overworld.png",
+    "pack": "Puny World",
+    "creator": "Shade / merchant-shade",
+    "license": "CC0-1.0",
+    "rimRect": [
+      192,
+      160,
+      48,
+      48
+    ],
+    "innerCornersRect": [
+      240,
+      160,
+      32,
+      32
+    ],
+    "sha256": "14d285bde8dee96cb0113947c8cce4922b86bf1d033b19123112145c7cef3a38"
+  },
+  "sourcePalette": {
+    "path": "scratch/2026-11-06-special-resources/outputs/salt-a.png",
+    "description": "Previously approved6A dry salt crust, PixelLab edit",
+    "sha256": "ce84338e176d978304420655126ec65bad4f06317b600701147a20bda14a52b1"
+  },
+  "processing": "Original16pxshoreline tiles reduced with nearest-neighbor sampling into8pxquarters and recolored using exact approved6A colors. Transparent exterior. Continuous flat ivory interior; no color filtering or repeated standalone-pan outlines.",
+  "palette": {
+    "43,196,169": [
+      237,
+      232,
+      217
+    ],
+    "71,196,157": [
+      226,
+      207,
+      179
+    ],
+    "76,196,149": [
+      221,
+      198,
+      164
+    ],
+    "81,197,139": [
+      214,
+      188,
+      156
+    ],
+    "82,195,154": [
+      221,
+      198,
+      164
+    ],
+    "94,209,182": [
+      231,
+      218,
+      198
+    ],
+    "126,223,206": [
+      237,
+      232,
+      217
+    ],
+    "159,234,221": [
+      237,
+      232,
+      217
+    ]
+  },
+  "sha256": "7724370e78c2bd154d8afd40f7ce28f81e9d62e9b6fc9d134c4dce752f480292",
+  "samples": [
+    {
+      "name": "single",
+      "terrain": "plains",
+      "pattern": [
+        ".......",
+        "...#...",
+        "......."
+      ],
+      "file": "proof/salt-single-plains.png",
+      "nativeSize": [
+        112,
+        48
+      ]
+    },
+    {
+      "name": "single",
+      "terrain": "desert",
+      "pattern": [
+        ".......",
+        "...#...",
+        "......."
+      ],
+      "file": "proof/salt-single-desert.png",
+      "nativeSize": [
+        112,
+        48
+      ]
+    },
+    {
+      "name": "thin",
+      "terrain": "plains",
+      "pattern": [
+        "...........",
+        "..#####....",
+        "......#....",
+        "..#...#....",
+        "...#.......",
+        "..........."
+      ],
+      "file": "proof/salt-thin-plains.png",
+      "nativeSize": [
+        176,
+        96
+      ]
+    },
+    {
+      "name": "thin",
+      "terrain": "desert",
+      "pattern": [
+        "...........",
+        "..#####....",
+        "......#....",
+        "..#...#....",
+        "...#.......",
+        "..........."
+      ],
+      "file": "proof/salt-thin-desert.png",
+      "nativeSize": [
+        176,
+        96
+      ]
+    },
+    {
+      "name": "square",
+      "terrain": "plains",
+      "pattern": [
+        "......",
+        "..##..",
+        "..##..",
+        "......"
+      ],
+      "file": "proof/salt-square-plains.png",
+      "nativeSize": [
+        96,
+        64
+      ]
+    },
+    {
+      "name": "square",
+      "terrain": "desert",
+      "pattern": [
+        "......",
+        "..##..",
+        "..##..",
+        "......"
+      ],
+      "file": "proof/salt-square-desert.png",
+      "nativeSize": [
+        96,
+        64
+      ]
+    },
+    {
+      "name": "rectangle",
+      "terrain": "plains",
+      "pattern": [
+        ".........",
+        "..#####..",
+        "..#####..",
+        "..#####..",
+        "........."
+      ],
+      "file": "proof/salt-rectangle-plains.png",
+      "nativeSize": [
+        144,
+        80
+      ]
+    },
+    {
+      "name": "rectangle",
+      "terrain": "desert",
+      "pattern": [
+        ".........",
+        "..#####..",
+        "..#####..",
+        "..#####..",
+        "........."
+      ],
+      "file": "proof/salt-rectangle-desert.png",
+      "nativeSize": [
+        144,
+        80
+      ]
+    },
+    {
+      "name": "irregular",
+      "terrain": "plains",
+      "pattern": [
+        "...........",
+        "...###.....",
+        "..#####....",
+        "..#######..",
+        "....#####..",
+        ".....###...",
+        "..........."
+      ],
+      "file": "proof/salt-irregular-plains.png",
+      "nativeSize": [
+        176,
+        112
+      ]
+    },
+    {
+      "name": "irregular",
+      "terrain": "desert",
+      "pattern": [
+        "...........",
+        "...###.....",
+        "..#####....",
+        "..#######..",
+        "....#####..",
+        ".....###...",
+        "..........."
+      ],
+      "file": "proof/salt-irregular-desert.png",
+      "nativeSize": [
+        176,
+        112
+      ]
+    },
+    {
+      "name": "ring",
+      "terrain": "plains",
+      "pattern": [
+        "...........",
+        "..#######..",
+        "..#######..",
+        "..##...##..",
+        "..##...##..",
+        "..#######..",
+        "..#######..",
+        "..........."
+      ],
+      "file": "proof/salt-ring-plains.png",
+      "nativeSize": [
+        176,
+        128
+      ]
+    },
+    {
+      "name": "ring",
+      "terrain": "desert",
+      "pattern": [
+        "...........",
+        "..#######..",
+        "..#######..",
+        "..##...##..",
+        "..##...##..",
+        "..#######..",
+        "..#######..",
+        "..........."
+      ],
+      "file": "proof/salt-ring-desert.png",
+      "nativeSize": [
+        176,
+        128
+      ]
+    },
+    {
+      "name": "concave",
+      "terrain": "plains",
+      "pattern": [
+        "...........",
+        "..#####....",
+        "..###......",
+        "..###......",
+        "..#######..",
+        "..#######..",
+        "..........."
+      ],
+      "file": "proof/salt-concave-plains.png",
+      "nativeSize": [
+        176,
+        112
+      ]
+    },
+    {
+      "name": "concave",
+      "terrain": "desert",
+      "pattern": [
+        "...........",
+        "..#####....",
+        "..###......",
+        "..###......",
+        "..#######..",
+        "..#######..",
+        "..........."
+      ],
+      "file": "proof/salt-concave-desert.png",
+      "nativeSize": [
+        176,
+        112
+      ]
+    }
+  ],
+  "builder": "scratch/2026-11-06-resource-revisions/build-salt-autotiles.py"
+}

@@ -20,9 +20,9 @@ export interface Territory {
     sourceRadii: ReadonlyMap<number, number>;
     edges: BorderEdge[]; paths: BorderPath[]; revision: number;
 }
-interface ClaimSource { id: number; kind: Building['kind']; faction: number; x: number; y: number; cultureAtFounding: number; level: number; initialCity: boolean; monumentBonus: number }
+interface ClaimSource { id: number; kind: Building['kind']; faction: number; x: number; y: number; cultureAtFounding: number; level: number; initialCity: boolean }
 interface CityClaim { id: number; faction: number; x: number; y: number; cultureAtFounding: number; level: number }
-interface VillageClaim { id: number; campId: number; faction: number; x: number; y: number; radius: number }
+interface VillageClaim { cells?: number[]; id: number; campId: number; faction: number; x: number; y: number; radius: number }
 interface CachedTerritory extends Territory {
     world: World; worldRevision: number; signature: string;
     levels: Map<number, number>; factions: { id: number; level: number }[]; sources: ClaimSource[]; cities: CityClaim[]; villages: VillageClaim[];
@@ -44,6 +44,7 @@ export const BASE_BORDER_RADIUS = { palace: 5, house: 2.5, monument: 4, fort: 5 
 export const BORDER_RADIUS_MULTIPLIER = 1.3;
 export const INHERITED_CITY_CULTURE_CAP = 100;
 export const INITIAL_CITY_BORDER_BONUS = 3;
+export const SETTLEMENT_BORDER_BUFFER = 1;
 export const VILLAGE_BORDER_START_RADIUS = 3;
 export const VILLAGE_BORDER_MAX_RADIUS = 6;
 
@@ -67,14 +68,14 @@ function villageClaims(state: GameState): VillageClaim[] {
     const camps = new Map<number, Building>(), development = new Map<number, number>();
     for (const building of state.buildings) {
         if (building.villageId === undefined || !buildingReady(building) || !factions.has(building.faction)) continue;
-        if (building.kind === 'villageTent') camps.set(building.id, building);
+        if (building.kind === 'villageTent' || building.kind === 'palace') camps.set(building.id, building);
         else if (['house', 'guardPost', 'woodenTower', 'tower'].includes(building.kind))
             development.set(building.villageId, (development.get(building.villageId) ?? 0) + 1);
     }
     return state.villages.filter(village => !village.destroyed && camps.get(village.campId)?.faction === village.faction
         && factions.get(village.faction)?.villageId === village.id).map(village => ({
         id: village.id, campId: village.campId, faction: village.faction, x: village.x + .5, y: village.y + .5,
-        radius: villageRadius(factions.get(village.faction)!.population, development.get(village.id) ?? 0),
+        radius: villageRadius(factions.get(village.faction)!.population, development.get(village.id) ?? 0), cells: village.secededCity?.territoryCells,
     }));
 }
 
@@ -107,16 +108,20 @@ export function borderCultureAt(state: GameState, faction: number, x: number, y:
 }
 
 function radiusAtLevel(kind: Building['kind'], level: number): number {
-    const base = kind === 'palace' || kind === 'house' || kind === 'monument' || kind === 'fort' ? BASE_BORDER_RADIUS[kind] : 0;
+    // Fixed military reach prevents older forts from expanding through another
+    // faction's frontier as culture or nearby civic sources grow.
+    if (kind === 'fort') return BASE_BORDER_RADIUS.fort * BORDER_RADIUS_MULTIPLIER;
+    const base = kind === 'palace' || kind === 'house' || kind === 'monument' ? BASE_BORDER_RADIUS[kind] : 0;
     return base ? (kind === 'monument' ? base : base * BORDER_RADIUS_MULTIPLIER) + level * BORDER_RADIUS_MULTIPLIER : 0;
 }
 const sourceRadius = (source: ClaimSource): number => radiusAtLevel(source.kind, source.level)
-    + (source.kind === 'palace' && source.initialCity ? INITIAL_CITY_BORDER_BONUS : 0) + source.monumentBonus;
+    + (source.kind === 'palace' && source.initialCity ? INITIAL_CITY_BORDER_BONUS : 0);
 
 /** Completed monuments immediately claim four tiles, without a culture gate.
- * Palace/house bases retain their 30% buffer; every source adds 1.3 tiles per
- * culture level. These are influence budgets: woodland consumes the same
- * extra distance as it does for sight. Population has no effect. */
+ * Palace/house bases retain their 30% buffer; civic sources add 1.3 tiles per
+ * culture level. Forts retain a fixed 6.5-tile reach. These are influence
+ * budgets: woodland consumes the same extra distance as it does for sight.
+ * Population has no effect. */
 export function borderRadius(kind: Building['kind'], culture = 0): number {
     return radiusAtLevel(kind, cultureLevel(culture));
 }
@@ -187,7 +192,7 @@ function computeTerritory(state: GameState): Territory {
         let unchanged = previous.villages.length === villages.length && villages.every((village, index) => {
             const old = previous.villages[index];
             return old.id === village.id && old.campId === village.campId && old.faction === village.faction
-                && old.x === village.x && old.y === village.y && old.radius === village.radius;
+                && old.x === village.x && old.y === village.y && old.radius === village.radius && old.cells?.length === village.cells?.length;
         }), index = 0;
         for (const faction of state.factions) {
             if (faction.id < 0 || faction.defeated || faction.villageId !== undefined) continue;
@@ -228,14 +233,12 @@ function computeTerritory(state: GameState): Territory {
         id: building.id, kind: building.kind, faction: building.faction, x: building.x, y: building.y,
         cultureAtFounding: cultureAmount(building.cultureAtFounding),
         initialCity: !!building.initialCity,
-        monumentBonus: building.kind === 'fort' ? Math.min(6, sources.filter(monument => monument.kind === 'monument' && monument.faction === building.faction
-            && Math.hypot(monument.x + .5 - building.x - 1, monument.y + .5 - building.y - 1) <= 10).length * 2) : 0,
-        level: (building.kind === 'palace' ? cities.find(city => city.id === building.id)
+        level: building.kind === 'fort' ? 0 : (building.kind === 'palace' ? cities.find(city => city.id === building.id)
             : nearestClaimCity(cities, building.faction, building.x + buildingWidth(building) / 2, building.y + buildingHeight(building) / 2))?.level
             ?? levels.get(building.faction)!,
     }));
-    const signature = `${worldRevision}|${[...levels].map(pair => pair.join(',')).join(';')}|${sourceScalars.map(b => `${b.id},${b.kind},${b.faction},${b.x},${b.y},${b.level},${Number(b.initialCity)},${b.monumentBonus}`).join(';')}`
-        + `|${villages.map(village => `${village.id},${village.campId},${village.faction},${village.x},${village.y},${village.radius}`).join(';')}`;
+    const signature = `${worldRevision}|${[...levels].map(pair => pair.join(',')).join(';')}|${sourceScalars.map(b => `${b.id},${b.kind},${b.faction},${b.x},${b.y},${b.level},${Number(b.initialCity)}`).join(';')}`
+        + `|${villages.map(village => `${village.id},${village.campId},${village.faction},${village.x},${village.y},${village.radius},${village.cells?.length ?? 0}`).join(';')}`;
     const factions = state.factions.filter(faction => faction.id >= 0 && !faction.defeated && faction.villageId === undefined)
         .map(faction => ({ id: faction.id, level: cultureLevel(faction.culture) }));
     if (previous?.world === world && previous.signature === signature) {
@@ -249,7 +252,14 @@ function computeTerritory(state: GameState): Territory {
     const alternateSourceIds = new Int32Array(width * height).fill(UNCLAIMED);
     const alternateInfluence = new Float32Array(width * height).fill(Infinity);
     const sourceRadii = new Map(sourceScalars.map(source => [source.id, sourceRadius(source)]));
-    for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    // Forts extend the frontier into unclaimed ground. Resolve all civic
+    // borders first, then older forts, so constructing a fort cannot displace
+    // another faction's settlement or an established fort frontier. Keep the
+    // original source order in the cache signature and use a separate index.
+    const claimOrder = sources.map((_, index) => index).sort((a, b) =>
+        Number(sources[a].kind === 'fort') - Number(sources[b].kind === 'fort')
+        || (sources[a].kind === 'fort' ? sources[a].id - sources[b].id : a - b));
+    for (const sourceIndex of claimOrder) {
         const source = sources[sourceIndex], radius = sourceRadius(sourceScalars[sourceIndex]);
         const cx = source.x + buildingWidth(source) / 2, cy = source.y + buildingHeight(source) / 2, radius2 = radius * radius;
         const origin = { x: cx, y: cy }, covered = hasSightCover(world, origin, radius);
@@ -260,6 +270,7 @@ function computeTerritory(state: GameState): Territory {
         const claim = (cell: number, distance: number): void => {
             const terrain = world.tiles[cell]?.terrain;
             if (!terrain || WATER.has(terrain) && terrain !== 'river') return;
+            if (source.kind === 'fort' && owners[cell] !== UNCLAIMED && owners[cell] !== source.faction) return;
             const score = distance * distance / radius2;
             if (score < influence[cell] - 1e-6 || Math.abs(score - influence[cell]) <= 1e-6
                 && (source.faction < owners[cell] || source.faction === owners[cell] && source.id < sourceIds[cell])) {
@@ -309,6 +320,13 @@ function computeTerritory(state: GameState): Territory {
     const villageInfluence = new Map<number, number>();
     for (const village of villages) {
         sourceRadii.set(village.campId, village.radius);
+        if (village.cells) {
+            for (const cell of village.cells) if (cell >= 0 && cell < owners.length) {
+                owners[cell] = village.faction; sourceIds[cell] = village.campId;
+                alternateOwners[cell] = UNCLAIMED; alternateSourceIds[cell] = UNCLAIMED;
+            }
+            continue;
+        }
         const r2 = village.radius ** 2;
         for (let y = Math.max(0, Math.floor(village.y - village.radius)); y <= Math.min(height - 1, Math.floor(village.y + village.radius)); y++)
             for (let x = Math.max(0, Math.floor(village.x - village.radius)); x <= Math.min(width - 1, Math.floor(village.x + village.radius)); x++) {
@@ -320,6 +338,38 @@ function computeTerritory(state: GameState): Territory {
                 owners[cell] = village.faction; sourceIds[cell] = village.campId;
                 alternateOwners[cell] = UNCLAIMED; alternateSourceIds[cell] = UNCLAIMED;
             }
+    }
+    // A standing settlement or fort keeps its footing and one complete cell
+    // around it, even against overwhelming culture or dense sight cover.
+    // This small reservation includes adjacent water, so a coastal city's
+    // border still has a continuous buffer. It does not enlarge fort claims
+    // elsewhere. In the rare case of overlapping reservations, a structure's
+    // own footprint wins before nearer rings, then its stable ID breaks ties.
+    // Keep the next independent claimant for ordinary property transfers.
+    type ProtectedClaim = { source: Building; distance: number };
+    const protectedCells = new Map<number, { first: ProtectedClaim; second?: ProtectedClaim }>();
+    const precedes = (a: ProtectedClaim, b: ProtectedClaim): boolean =>
+        a.distance < b.distance || a.distance === b.distance && a.source.id < b.source.id;
+    for (const source of sources) {
+        if (source.kind !== 'palace' && source.kind !== 'fort') continue;
+        const right = source.x + buildingWidth(source) - 1, bottom = source.y + buildingHeight(source) - 1;
+        for (let y = Math.max(0, source.y - SETTLEMENT_BORDER_BUFFER); y <= Math.min(height - 1, bottom + SETTLEMENT_BORDER_BUFFER); y++)
+            for (let x = Math.max(0, source.x - SETTLEMENT_BORDER_BUFFER); x <= Math.min(width - 1, right + SETTLEMENT_BORDER_BUFFER); x++) {
+                const cell = y * width + x;
+                const dx = Math.max(source.x - x, 0, x - right), dy = Math.max(source.y - y, 0, y - bottom);
+                const claim = { source, distance: dx * dx + dy * dy }, previous = protectedCells.get(cell);
+                if (!previous) protectedCells.set(cell, { first: claim });
+                else if (precedes(claim, previous.first)) { previous.second = previous.first; previous.first = claim; }
+                else if (!previous.second || precedes(claim, previous.second)) previous.second = claim;
+            }
+    }
+    for (const [cell, { first, second }] of protectedCells) {
+        if (second) {
+            alternateOwners[cell] = second.source.faction; alternateSourceIds[cell] = second.source.id;
+        } else if (sourceIds[cell] !== first.source.id) {
+            alternateOwners[cell] = owners[cell]; alternateSourceIds[cell] = sourceIds[cell];
+        }
+        owners[cell] = first.source.faction; sourceIds[cell] = first.source.id;
     }
     const edges: BorderEdge[] = [];
     const edge = (x: number, y: number, horizontal: boolean, faction: number, cell: number, neighborCell?: number): BorderEdge => ({

@@ -5,7 +5,7 @@ import { markWorldChanged } from './world-revisions';
 /** Keep a five-tile woodland clearing around the entire palace footprint. */
 export function clearPalaceWoodland(world: World, palace: Building): void {
   const size = buildingSize(palace);
-  let changed = false;
+  const changed: number[] = [];
   for (let y = Math.max(0, palace.y - 5); y < Math.min(world.height, palace.y + size + 5); y++)
     for (let x = Math.max(0, palace.x - 5); x < Math.min(world.width, palace.x + size + 5); x++) {
       const dx = Math.max(palace.x - x - .5, 0, x + .5 - palace.x - size);
@@ -16,7 +16,7 @@ export function clearPalaceWoodland(world: World, palace: Building): void {
       tile.overlay = 'none';
       for (const resource of ['food', 'production', 'gold'] as const)
         tile[resource] = Math.max(0, tile[resource] - before[resource] + after[resource]);
-      changed = true;
+      changed.push(y * world.width + x);
     }
-  if (changed) markWorldChanged(world, 'sight');
+  if (changed.length) markWorldChanged(world, 'sight', changed);
 }

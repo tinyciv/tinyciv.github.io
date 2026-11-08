@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { desiredRetinueSize, nextRecruitRole, retinueComposition, setArcherFraction, setSoldierRole, setSpearmanFraction } from '../src/game/archery';
 import { ballistaAttack, BALLISTA_ATTACK, BALLISTA_COOLDOWN, BALLISTA_RANGE, updateBallistae } from '../src/game/ballista';
@@ -23,7 +24,7 @@ const unit = (id: number, x: number, y: number, faction = 0): Unit => ({ id, x, 
 const building = (id: number, kind: Building['kind'], x: number, y: number, faction = 0): Building => ({ id, kind, x, y,
   faction, hp: 1000, maxHp: 1000, capacity: 0, populationGrowth: -10000, governorPermissions: { farms: false, housing: false } });
 function fixture(): GameState {
-  return { world: { width: 48, height: 32, seed: 'siege', source: 'test', spawns: [], revision: 0,
+  return withDevelopedResources({ world: { width: 48, height: 32, seed: 'siege', source: 'test', spawns: [], revision: 0,
     tiles: Array.from({ length: 48 * 32 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3,
       moisture: .5, food: 2, production: 1, gold: 0, variation: .5 })) },
     buildings: [building(1, 'palace', 4, 10)], units: [{ ...unit(10, 11.5, 12.5), kind: 'leader' }],
@@ -35,7 +36,7 @@ function fixture(): GameState {
     time: 0, tick: 0, paused: false, speed: 1, seed: 'siege', rngState: 1, gameOver: false, victory: false,
     events: [], particles: [], fields: [], selected: null, selectedType: null, buildMode: null, diplomacy: null,
     marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1, fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 2 },
-    wildlife: { herds: [], sequence: 0, nextRespawnAt: Infinity, targetHerds: 0 } };
+    wildlife: { herds: [], sequence: 0, nextRespawnAt: Infinity, targetHerds: 0 } }, ['iron', 'copper']);
 }
 
 describe('ballista siege engine', () => {

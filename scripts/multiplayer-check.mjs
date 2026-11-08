@@ -1,3 +1,4 @@
+import { ClientStateReplica, PROTOCOL_VERSION } from './multiplayer-wire.mjs';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -14,14 +15,15 @@ class Peer {
       const message = JSON.parse(data); this.messages.push(message);
       if (message.type === 'welcome') { this.token = message.token; this.seq = message.commandSequence; }
       if (message.type === 'room') this.room = message.room;
-      if (message.type === 'snapshot') this.state = message.state;
+      if (message.type === 'snapshot') { this.state = message.state; this.replica = new ClientStateReplica(this.state); }
       if (message.type === 'frame' && this.state) {
         for (const [index, tile] of message.tiles || []) this.state.world.tiles[index] = tile;
-        this.state = { ...message.state, world: this.state.world };
+        if (message.worldRevision !== undefined) this.state.world.revision = message.worldRevision;
+        this.replica.apply(message.delta);
       }
     });
     await new Promise((resolve, reject) => { this.socket.once('open', resolve); this.socket.once('error', reject); });
-    this.send({ type: 'hello', version: 1, ...(this.token ? { token: this.token } : {}) });
+    this.send({ type: 'hello', version: PROTOCOL_VERSION, ...(this.token ? { token: this.token } : {}) });
     await this.wait(message => message.type === 'welcome');
   }
   send(message) { this.socket.send(JSON.stringify(message)); }

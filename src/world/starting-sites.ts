@@ -2,6 +2,8 @@ import type { Point } from '../game/types';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
 
 export interface StartingSite extends Point { quality: number; scenic: number; tie: number }
+/** Minimum separation between starting cities belonging to different realms. */
+export const MIN_FACTION_START_DISTANCE = 80;
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Farthest-point seeding followed by constrained Lloyd relaxation spreads

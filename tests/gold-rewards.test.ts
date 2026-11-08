@@ -11,39 +11,53 @@ function render(particles: Particle[]) {
 }
 
 describe('gold reward feedback', () => {
-  it('shows positive gold rewards only, never saved damage numbers or expired events', () => {
-    const labels = render([reward(), reward({ text: '-25' }), reward({ text: '−10' }), reward({ text: '+100 food' }), reward({ life: 0 })]);
-    expect(labels).toHaveLength(1);
-    expect(labels[0]).toMatchObject({ text: '+8', alpha: 1 });
+  it('shows whole-number gold gains and losses in bright yellow, never untagged damage numbers or expired events', () => {
+    const labels = render([reward(), reward({ text: '−25.6 gold' }), reward({ text: '-25' }), reward({ text: '−10' }), reward({ life: 0 })]);
+    expect(labels).toHaveLength(2);
+    expect(labels).toMatchObject([{ text: '+8', color: '#ffe33d', alpha: 1 }, { text: '-26', color: '#ffe33d', alpha: 1 }]);
   });
 
   it('shows the full treasure reward and marauder leader bounty', () => {
     expect(render([reward({ text: '+200 gold' }), reward({ text: '+50 gold' })]).map(label => label.text)).toEqual(['+200', '+50']);
   });
 
-  it('shows the tagged hunting food reward without reviving unrelated saved food labels', () => {
-    expect(render([reward({ text: '+5 food', kind: 'hunt', color: '#b9df85' }), reward({ text: '+100 food' })]))
-      .toMatchObject([{ text: '+5', color: '#b9df85' }]);
+  it('shows tagged hunting and delivered food as whole numbers but hides unrelated untagged food', () => {
+    expect(render([reward({ text: '+5 food', kind: 'hunt', color: '#b9df85' }), reward({ text: '+100.6 food', kind: 'food', color: '#b9df85' }), reward({ text: '+100 food' })]))
+      .toMatchObject([{ text: '+5', color: '#b9df85' }, { text: '+101', color: '#b9df85' }]);
   });
 
-  it('shows the exact spoiled amount in red without revealing losses outside sight', () => {
+  it('rounds spoiled food labels in red without changing the amount or revealing losses outside sight', () => {
     const spoil = reward({ text: '−1.2 food', color: '#f46b63' });
-    expect(render([spoil])[0]).toMatchObject({ text: '-1.2', color: '#f46b63' });
+    expect(render([spoil])[0]).toMatchObject({ text: '-1', color: '#f46b63' });
     expect(spoil.text).toBe('−1.2 food');
     expect(render([{ ...spoil, x: 15, y: 15 }])).toEqual([]);
   });
 
   it('hides rewards outside current sight even if the map was explored and their label rises into sight', () => {
-    expect(render([reward({ x: 5, y: 7.5, life: .2 })])).toHaveLength(0);
-    expect(render([reward({ x: 15, y: 15 })])).toHaveLength(0);
+    for (const particle of [reward(), reward({ text: '−25 gold' }), reward({ text: '+100 food', kind: 'food' })]) {
+      expect(render([{ ...particle, x: 5, y: 7.5, life: .2 }])).toHaveLength(0);
+      expect(render([{ ...particle, x: 15, y: 15 }])).toHaveLength(0);
+    }
   });
 
-  it('briefly rises and fades while keeping the death location fixed for visibility', () => {
-    const particle = reward(), initial = render([particle])[0];
-    particle.life = .25;
-    const final = render([particle])[0];
-    expect(final.y).toBeLessThan(initial.y);
-    expect(final.alpha).toBe(.5);
+  it('glides upward without lateral bounce and gently fades while keeping the reward location fixed for visibility', () => {
+    const particle = reward();
+    const frames = [1.6, 1.2, .8, .4, .25].map(life => {
+      particle.life = life;
+      return render([particle])[0];
+    });
+    expect(frames[0].alpha).toBe(1);
+    expect(frames[1].alpha).toBe(1);
+    for (let i = 1; i < frames.length; i++) {
+      expect(frames[i].x).toBe(frames[0].x);
+      expect(frames[i].y).toBeLessThanOrEqual(frames[i - 1].y);
+      expect(frames[i].alpha).toBeLessThanOrEqual(frames[i - 1].alpha);
+    }
+    expect(frames.at(-1)!.y).toBeLessThan(frames[0].y);
+    expect(frames.at(-1)!.alpha).toBeGreaterThan(0);
+    expect(frames.at(-1)!.alpha).toBeLessThan(.2);
     expect(particle).toMatchObject({ x: 5, y: 5 });
+    particle.life = 0;
+    expect(render([particle])).toEqual([]);
   });
 });

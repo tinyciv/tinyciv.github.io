@@ -182,7 +182,7 @@ describe('marauder leaders', () => {
     state.time = 60; state.fogRaids!.nextAt = 60; updateFogRaids(state);
     expect(leader.marauderPack).not.toBe(pack.id); expect(leader.marauderRetreating).toBe(false);
     expect(leader.hp).toBe(70); expect(leader.maxHp).toBe(120); expect(leader.kills).toBe(12);
-    expect(state.units.filter(unit => unit.marauderPack === leader.marauderPack)).toHaveLength(4);
+    expect(state.units.filter(unit => unit.marauderPack === leader.marauderPack)).toHaveLength(2);
     expect(state.marauderPacks!.find(candidate => candidate.id === leader.marauderPack)!.leaderId).toBe(leader.id);
   });
 });

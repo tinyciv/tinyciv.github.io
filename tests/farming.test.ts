@@ -208,20 +208,20 @@ describe('compact farmland and food deliveries', () => {
     expect(state.units.filter(unit => unit.kind === 'worker').every(unit => unit.inside)).toBe(true);
   });
 
-  it('grows one quarter as much food on desert, including multiple overdue harvests', () => {
+  it('grows half as much food on desert, including multiple overdue harvests', () => {
     const state = realm(), [desert, fertile] = state.fields!.filter(field => field.planted);
     const food = state.factions[0].food;
     for (const field of state.fields!) field.nextHarvest = 1000;
     tileAt(state.world, desert.x, desert.y)!.terrain = 'desert';
     desert.nextHarvest = fertile.nextHarvest = FIELD_HARVEST_SECONDS;
-    expect(fieldHarvestFood(state.world, desert.x, desert.y)).toBe(FIELD_HARVEST_FOOD / 4);
+    expect(fieldHarvestFood(state.world, desert.x, desert.y)).toBe(FIELD_HARVEST_FOOD / 2);
     expect(fieldHarvestFood(state.world, fertile.x, fertile.y)).toBe(FIELD_HARVEST_FOOD);
     state.time = FIELD_HARVEST_SECONDS; updateHarvests(state);
-    expect(desert.food).toBe(FIELD_HARVEST_FOOD / 4); expect(fertile.food).toBe(FIELD_HARVEST_FOOD);
+    expect(desert.food).toBe(FIELD_HARVEST_FOOD / 2); expect(fertile.food).toBe(FIELD_HARVEST_FOOD);
     for (const farm of state.buildings.filter(building => building.kind === 'camp')) farm.farmLastVisitedAt = FIELD_HARVEST_SECONDS * 2;
     state.time = FIELD_HARVEST_SECONDS * 3; updateHarvests(state);
     // Earlier batches have spoiled; only the latest harvest remains.
-    expect(desert.food).toBeCloseTo(FIELD_HARVEST_FOOD / 4); expect(fertile.food).toBeCloseTo(FIELD_HARVEST_FOOD);
+    expect(desert.food).toBeCloseTo(FIELD_HARVEST_FOOD / 2); expect(fertile.food).toBeCloseTo(FIELD_HARVEST_FOOD);
     expect(desert.nextHarvest).toBe(FIELD_HARVEST_SECONDS * 4); expect(fertile.nextHarvest).toBe(FIELD_HARVEST_SECONDS * 4);
     expect(state.factions[0].food).toBe(food);
   });
@@ -253,16 +253,16 @@ describe('compact farmland and food deliveries', () => {
     field.wheatYieldAfter = 0;
     const food = state.factions[0].food;
     updateHarvests(state);
-    expect(field.food).toBe(FIELD_HARVEST_FOOD / 4);
+    expect(field.food).toBe(FIELD_HARVEST_FOOD / 2);
     advance(state, .2);
     const collector = state.units.find(unit => unit.field === field.id)!;
     expect(collector).toBeDefined();
     for (let step = 0; step < 200 && !collector.cargo; step++) advance(state, .1);
-    expect(collector.cargo).toBe(FIELD_HARVEST_FOOD / 4); expect(field.food).toBe(0);
+    expect(collector.cargo).toBe(FIELD_HARVEST_FOOD / 2); expect(field.food).toBe(0);
     expect(state.factions[0].food).toBe(food);
     for (let step = 0; step < 200 && !collector.inside; step++) advance(state, .1);
     expect(collector.inside).toBe(true); expect(collector.cargo).toBe(0);
-    expect(state.factions[0].food).toBe(food + FIELD_HARVEST_FOOD / 4);
+    expect(state.factions[0].food).toBe(food + FIELD_HARVEST_FOOD / 2);
   });
 
   it('ripens a connected crop block together and uses one shared peasant to sweep it', () => {

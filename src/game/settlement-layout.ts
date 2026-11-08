@@ -144,9 +144,21 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
   const palaceCells = ({ x, y }: Point): Point[] => [{ x, y }, { x: x + 1, y }, { x, y: y + 1 }, { x: x + 1, y: y + 1 }];
   const houseLane = (house: Point): boolean => NEIGHBORS.every(([dx, dy]) => usable({ x: house.x + dx, y: house.y + dy }));
   const origin = { x: Math.floor(spawn.x), y: Math.floor(spawn.y) };
+  const minimumFactionDistance = world.minimumFactionStartDistance ?? 0;
+  const sameSpawn = (point: Point): boolean => point.x === spawn.x && point.y === spawn.y;
+  const capitalOwner = world.spawns.findIndex(sameSpawn);
+  const secondaryOwner = world.secondarySpawns?.findIndex(sameSpawn) ?? -1;
+  const owner = capitalOwner >= 0 ? capitalOwner : secondaryOwner >= 0 ? secondaryOwner + 1 : -1;
+  const foreignStarts = minimumFactionDistance && owner >= 0 ? [
+    ...world.spawns.filter((_, faction) => faction !== owner),
+    ...(world.secondarySpawns ?? []).filter((_, index) => index + 1 !== owner),
+  ].map(point => ({ x: Math.floor(point.x), y: Math.floor(point.y) })) : [];
+  const foreignCities = [...foreignStarts, ...state.buildings.filter(building => building.kind === 'palace' && building.hp > 0 && building.faction !== owner)];
+  const respectsSeparation = (point: Point): boolean => !minimumFactionDistance || owner < 0
+    || foreignCities.every(other => (point.x - other.x) ** 2 + (point.y - other.y) ** 2 >= minimumFactionDistance ** 2);
   const candidates: Point[] = [];
   for (let y = 0; y < height - 1; y++) for (let x = 0; x < width - 1; x++)
-    candidates.push({ x, y });
+    if (respectsSeparation({ x, y })) candidates.push({ x, y });
   const distanceSquared = (point: Point): number => (point.x - origin.x) ** 2 + (point.y - origin.y) ** 2;
   candidates.sort((a, b) => distanceSquared(a) - distanceSquared(b) || a.y - b.y || a.x - b.x);
 
@@ -178,6 +190,7 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
     if (++completeCount >= 48) break;
   }
   if (best) return best;
+  if (minimumFactionDistance && !firstPalace) throw new Error('No valid starting settlement preserves faction separation.');
   const fallback = townAt(firstPalace ?? {
     x: Math.max(0, Math.min(width - 2, origin.x)), y: Math.max(0, Math.min(height - 2, origin.y)),
   }, population);

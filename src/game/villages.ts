@@ -1,3 +1,5 @@
+import { playerFaction } from './player-context';
+import { villageAlly, villageAlliedWith, villageRelation } from './village-relations';
 import { spendGold } from './gold-ledger';
 import { grantIncome } from './resource-income';
 import { isForbidden } from './forbidden-zones';
@@ -10,12 +12,16 @@ import { ridgeFootprintAllowed } from './ridges';
 import { invalidateFog } from './fog';
 import { updateTradeRoutes } from './trade';
 import { houseCapacity, houseLevel } from './wells';
-import { buildingReady, buildingWidth, buildingHeight, distance, tileAt, WATER, type Building, type BuildingKind, type GameState, type NeutralVillage, type Point, type Unit, type VillageIdentity } from './types';
+import { environmentRandom } from '../world/environment-fields';
+import { buildingReady, buildingWidth, buildingHeight, distance, tileAt, WATER, type Building, type BuildingKind, type GameState, type NeutralVillage, type Point, type ResourceWorkKind, type Unit, type VillageIdentity } from './types';
 
 export const VILLAGE_TRADE_COST = 250;
 export const VILLAGE_ALLIANCE_COST = 3000;
 export const VILLAGE_ALLIANCE_MIN_COST = 500;
 export const VILLAGE_TRADE_MULTIPLIER = .2;
+export const VILLAGE_TRADE_BASE_SCALE = .5;
+export const VILLAGE_RESOURCE_MULTIPLIER = 4;
+export const VILLAGE_REQUIRED_RESOURCES = ['copper', 'iron', 'stone', 'salt', 'olives'] as const;
 export const VILLAGE_SIGHT_RADIUS = 20;
 export const VILLAGES_PER_FACTION = 1.5;
 export const VILLAGE_IDENTITIES: Record<VillageIdentity, { name: string; bonus: string; description: string }> = {
@@ -38,9 +44,16 @@ function random(state: GameState): number {
 export function villageForBuilding(state: GameState, building: Building): NeutralVillage | undefined {
   return state.villages?.find(village => village.id === building.villageId);
 }
+/** Independent seeded demand leaves settlement placement and villager RNG
+ * unchanged. Explicit demands are stored when villages are created. */
+export function villageRequiredResource(state: GameState, village: NeutralVillage): ResourceWorkKind {
+  if (village.requiredResource) return village.requiredResource;
+  const random = environmentRandom(`${state.world.seed}:village-demand:${village.id}:${village.x}:${village.y}`);
+  return VILLAGE_REQUIRED_RESOURCES[Math.floor(random() * VILLAGE_REQUIRED_RESOURCES.length)];
+}
 export function villageCamp(state: GameState, village: NeutralVillage): Building | undefined {
   const camp = entityStore(state).buildings.get(village.campId);
-  return camp?.kind === 'villageTent' && buildingReady(camp) ? camp : undefined;
+  return camp && (camp.kind === 'villageTent' || village.secededCity && camp.kind === 'palace') && buildingReady(camp) ? camp : undefined;
 }
 export function villageTradeActive(state: GameState, village: NeutralVillage, faction = 0): boolean {
   const partner = state.factions.find(candidate => candidate.id === faction);
@@ -55,10 +68,10 @@ export function villageAllianceCost(village: Pick<NeutralVillage, 'tradeGoldByFa
 /** Both partners earn the delivered leg's revenue. Agreement fees, unfinished
  * journeys and combat bounties never count toward the lifetime trade discount. */
 export function recordVillageTrade(state: GameState, village: NeutralVillage, faction: number, gold: number): void {
-  if (!Number.isFinite(gold) || gold < 1 || !villageTradeActive(state, village, faction)) return;
+  if (!Number.isFinite(gold) || gold <= 0 || !villageTradeActive(state, village, faction)) return;
   const treasury = state.factions.find(candidate => candidate.id === village.faction);
   if (!treasury) return;
-  const earned = Math.floor(gold), ledger = village.tradeGoldByFaction ??= {};
+  const earned = gold, ledger = village.tradeGoldByFaction ??= {};
   grantIncome(treasury, { gold: earned }, state, 'trade');
   ledger[faction] = (ledger[faction] ?? 0) + earned;
 }
@@ -69,37 +82,38 @@ export function villageHostility(state: GameState, a: number, b: number): boolea
   if (!village) return undefined;
   const other = village.faction === a ? b : a;
   if (other === village.faction) return false;
-  // Independent villages stay out of raids. An alliance brings the camp into
-  // the player's wars, allowing its defenders to fight approaching raiders.
-  if (other === -2) return village.relation === 'allied';
+  const ally = villageAlly(village);
+  if (other === -2) return ally !== undefined;
   if (other < 0) return false;
+  if (villageRelation(village, other) === 'war') return true;
+  if (ally === undefined || other === ally) return false;
   const otherVillage = state.villages?.find(v => v.faction === other);
-  if (otherVillage) return village.relation === 'allied' && otherVillage.relation === 'war'
-    || village.relation === 'war' && otherVillage.relation === 'allied';
-  if (other === 0) return village.relation === 'war';
-  return village.relation === 'allied' && state.factions.find(f => f.id === other)?.relation === 'war';
+  if (otherVillage) return villageRelation(otherVillage, ally) === 'war';
+  if (state.multiplayer?.humanFactionIds.includes(ally) && state.multiplayer.humanFactionIds.includes(other)) return true;
+  return ally === 0 ? state.factions.find(f => f.id === other)?.relation === 'war'
+    : other === 0 ? state.factions.find(f => f.id === ally)?.relation === 'war' : false;
 }
 
 export function villageDiplomacyStatus(state: GameState, building: Building, remoteNegotiation = false) {
-  const village = villageForBuilding(state, building), player = state.factions.find(f => f.id === 0);
+  const viewer = playerFaction(state), village = villageForBuilding(state, building), player = state.factions.find(f => f.id === viewer);
   if (!village || village.destroyed || !villageCamp(state, village)) return;
-  const leader = state.units.find(u => u.kind === 'leader' && u.faction === 0 && u.hp > 0 && !u.inside);
+  const leader = state.units.find(u => u.kind === 'leader' && u.faction === viewer && u.hp > 0 && !u.inside);
   const camp = villageCamp(state, village)!;
-  const reach = leader && Math.hypot(Math.max(camp.x - leader.x, 0, leader.x - camp.x - 1), Math.max(camp.y - leader.y, 0, leader.y - camp.y - 1)) <= 3;
+  const reach = leader && Math.hypot(Math.max(camp.x - leader.x, 0, leader.x - camp.x - buildingWidth(camp)), Math.max(camp.y - leader.y, 0, leader.y - camp.y - buildingHeight(camp))) <= 3;
   const common = state.gameOver || !player || player.defeated ? 'Your realm can no longer negotiate.'
     : !leader ? 'Your Leader is no longer available.' : '';
   const option = (cost: number, unavailable: string) => {
-    const reason = common || (!reach && !remoteNegotiation ? 'Move your Leader within 3 tiles of the main tent.' : '')
+    const reason = common || (!reach && !remoteNegotiation ? 'Move your Leader within 3 tiles of the settlement or main tent.' : '')
       || unavailable || (player!.gold < cost ? `Need ${cost} gold.` : '');
     return { cost, available: !reason, reason };
   };
   const identity = VILLAGE_IDENTITIES[village.identity];
-  const allianceCost = villageAllianceCost(village);
-  return { village, relation: village.relation, bonusName: identity.bonus, bonusDescription: identity.description,
-    tradedGold: village.tradeGoldByFaction?.[0] ?? 0, allianceDiscount: VILLAGE_ALLIANCE_COST - allianceCost,
-    trade: option(VILLAGE_TRADE_COST, village.trading ? 'Trade already established.' : village.relation === 'war' ? 'At war with this village.' : ''),
-    ally: option(allianceCost, village.relation === 'allied' ? 'Already allied.' : village.relation === 'war' ? 'At war with this village.' : ''),
-    war: option(0, village.relation === 'war' ? 'Already at war.' : '') };
+  const allianceCost = villageAllianceCost(village, viewer), relation = villageRelation(village, viewer), trading = viewer === 0 ? village.trading : village.tradingFactions?.includes(viewer);
+  return { village, relation, bonusName: identity.bonus, bonusDescription: identity.description,
+    tradedGold: village.tradeGoldByFaction?.[viewer] ?? 0, allianceDiscount: VILLAGE_ALLIANCE_COST - allianceCost,
+    trade: option(VILLAGE_TRADE_COST, trading ? 'Trade already established.' : relation === 'war' ? 'At war with this village.' : ''),
+    ally: option(allianceCost, villageAlly(village) !== undefined ? 'Already allied.' : relation === 'war' ? 'At war with this village.' : ''),
+    war: option(0, relation === 'war' ? 'Already at war.' : '') };
 }
 /** Remote negotiations are reached through diplomacyAction, which revalidates
  * the visible village building and living Leader before any purchase. */
@@ -108,16 +122,22 @@ export function performVillageAction(state: GameState, building: Building, actio
   if (!status) return { ok: false, message: 'This village no longer has a camp.' };
   const option = status[action];
   if (!option.available) return { ok: false, message: option.reason };
-  spendGold(state, state.factions.find(f => f.id === 0)!, option.cost, 'diplomacy');
+  const viewer = playerFaction(state), village = status.village;
+  spendGold(state, state.factions.find(f => f.id === viewer)!, option.cost, 'diplomacy');
+  const relation = action === 'ally' ? 'allied' : action === 'war' ? 'war' : status.relation === 'allied' ? 'allied' : 'trade';
+  (village.relationsByFaction ??= {})[viewer] = relation;
+  if (viewer === 0) village.relation = relation;
   if (action === 'trade') {
-    status.village.trading = true;
-    if (status.village.relation !== 'allied') status.village.relation = 'trade';
-  } else {
-    status.village.relation = action === 'ally' ? 'allied' : 'war';
-    if (action === 'war') status.village.trading = false;
+    if (viewer === 0) village.trading = true;
+    else village.tradingFactions = [...new Set([...(village.tradingFactions ?? []), viewer])];
+  } else if (action === 'ally') village.alliedFaction = viewer;
+  else {
+    if (viewer === 0) village.trading = false;
+    else village.tradingFactions = village.tradingFactions?.filter(id => id !== viewer);
+    if (village.alliedFaction === viewer) delete village.alliedFaction;
   }
-  const faction = state.factions.find(f => f.id === status.village.faction)!;
-  faction.relation = action === 'war' ? 'war' : 'peace';
+  const faction = state.factions.find(f => f.id === village.faction)!;
+  if (viewer === 0) faction.relation = action === 'war' ? 'war' : 'peace';
   refreshVillageBonuses(state); invalidateFog(state);
   // Force trade reconciliation even when the simulation is paused.
   markWorldChanged(state.world);
@@ -130,11 +150,12 @@ export function performVillageAction(state: GameState, building: Building, actio
 
 /** Same-identity alliances do not stack, keeping a cluster of villages bounded. */
 export function refreshVillageBonuses(state: GameState): void {
-  const player = state.factions.find(f => f.id === 0);
-  if (!player) return;
-  const active = new Set((state.villages ?? []).filter(v => !v.destroyed && v.relation === 'allied' && villageCamp(state, v)).map(v => v.identity));
-  player.villageBonuses = { food: active.has('growers') ? .1 : 0, trade: active.has('merchants') ? .15 : 0,
-    construction: active.has('builders') ? .15 : 0, research: active.has('scholars') ? .15 : 0 };
+  for (const player of state.factions) {
+    if (player.villageId !== undefined) continue;
+    const active = new Set((state.villages ?? []).filter(v => villageAlliedWith(v, player.id) && villageCamp(state, v)).map(v => v.identity));
+    player.villageBonuses = { food: active.has('growers') ? .1 : 0, trade: active.has('merchants') ? .15 : 0,
+      construction: active.has('builders') ? .15 : 0, research: active.has('scholars') ? .15 : 0 };
+  }
 }
 
 function usable(state: GameState, point: Point): boolean {
@@ -154,7 +175,7 @@ function addBuilding(state: GameState, village: NeutralVillage, kind: BuildingKi
   const tile = tileAt(state.world, point.x, point.y)!;
   tile.overlay = 'none'; delete tile.palm;
   entityStore(state).buildings.add(building);
-  markWorldChanged(state.world, 'sight'); invalidateNavigation(state);
+  markWorldChanged(state.world, 'sight', [point.y * state.world.width + point.x]); invalidateNavigation(state);
   return building;
 }
 function addVillager(state: GameState, village: NeutralVillage, point: Point, guard = false, post?: number): void {
@@ -261,6 +282,7 @@ export function initializeVillages(state: GameState): void {
     const identity = IDENTITIES[Math.floor(random(state) * IDENTITIES.length)];
     const village: NeutralVillage = { id, faction: factionId, campId: -1, name: `${VILLAGE_IDENTITIES[identity].name} ${['Grove', 'Crossing', 'Hearth', 'Hollow', 'Rest'][id % 5]}`,
       identity, relation: 'neutral', ...point, nextGrowthAt: state.time + 90 + random(state) * 30, nextThinkAt: state.time, nextRecruitAt: state.time + 90 };
+    village.requiredResource = villageRequiredResource(state, village);
     state.villages.push(village);
     const population = 2 + Math.floor(random(state) * 4);
     state.factions.push({ id: factionId, villageId: id, name: village.name, color: '#ffffff', affinity: 50, relation: 'peace',
@@ -283,6 +305,8 @@ export function updateVillages(state: GameState): void {
       continue;
     }
     if (village.destroyed) continue;
+    // Seceded settlements retain their real residents and existing city structures.
+    if (village.secededCity) continue;
     if (state.time < village.nextThinkAt) continue;
     village.nextThinkAt = state.time + .5;
     const owned = state.buildings.filter(b => b.villageId === village.id && b.hp > 0);

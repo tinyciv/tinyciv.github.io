@@ -1,6 +1,8 @@
-import { leaderProgressionView, LEADER_SKILL_IDS, leaderSkillMaxRank, skillName, skillEffect, type LeaderSkillId } from '../game/leader-progression';
+import { actionTooltip } from './action-tooltips';
+import { leaderProgressionView, leaderXpRequired, LEADER_SKILL_IDS, leaderSkillMaxRank, skillName, skillEffect, type LeaderSkillId } from '../game/leader-progression';
 import type { GameState } from '../game/types';
 import './leader-progression.css';
+import { wholeNumber } from './number-format';
 
 /** Small, crisp glyphs share the palette and silhouettes of the approved pixel concept. */
 function skillIcon(skill: LeaderSkillId): string {
@@ -15,7 +17,7 @@ function skillIcon(skill: LeaderSkillId): string {
   return `<svg class="leader-skill-icon" viewBox="0 0 32 34" aria-hidden="true" shape-rendering="crispEdges">${art}</svg>`;
 }
 
-const number = (value: number) => String(Number(value.toFixed(1)));
+const number = wholeNumber;
 type LearnResult = { ok: boolean; message?: string; pending?: boolean };
 
 export class LeaderProgressionUI {
@@ -28,7 +30,7 @@ export class LeaderProgressionUI {
     private learn: (skill: LeaderSkillId) => LearnResult, private beforeOpen: () => void,
     private focusWorld: () => void, private canOpen: () => boolean) {
     rail.innerHTML = `<button type="button" class="leader-xp-open" aria-haspopup="dialog" aria-controls="leader-skills" aria-expanded="false" title="Leader skills">
-      <span class="leader-level-badge">1</span><span class="leader-xp-track" role="progressbar" aria-label="Leader experience" aria-valuemin="0"><span class="leader-xp-fill"></span><span class="leader-xp-text">0 / 800 XP</span></span>
+      <span class="leader-level-badge">1</span><span class="leader-xp-track" role="progressbar" aria-label="Leader experience" aria-valuemin="0"><span class="leader-xp-fill"></span><span class="leader-xp-text">0 / ${leaderXpRequired(1)} XP</span></span>
       </button><button type="button" class="leader-xp-points" aria-haspopup="dialog" aria-controls="leader-skills" aria-expanded="false" title="Leader skill points">0</button>`;
     popup.innerHTML = `<header class="leader-skills-header"><h2 id="leader-skills-title">Leader</h2><span class="leader-skills-level">Level 1</span><button type="button" data-leader-close aria-label="Close Leader skills">×</button></header>
       <div class="leader-skills-bonuses"><strong class="leader-skills-points">0 skill points</strong><span>Level bonus</span><span>+10 HP</span><span>+1 Attack</span></div>
@@ -55,7 +57,7 @@ export class LeaderProgressionUI {
   }
 
   private skillRow(skill: LeaderSkillId): string {
-    return `<article class="leader-skill-row" data-leader-skill="${skill}">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong><span>${skillEffect[skill]}</span><small class="leader-skill-preview"></small><small class="leader-skill-tech"></small></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span><button type="button" data-leader-learn="${skill}" aria-label="Learn ${skillName[skill]}">+</button></article>`;
+    return `<article class="leader-skill-row" data-leader-skill="${skill}">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong><span>${skillEffect[skill]}</span><small class="leader-skill-preview"></small><small class="leader-skill-tech"></small></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips${leaderSkillMaxRank(skill) > 3 ? ' expanded' : ''}" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span><button type="button" data-leader-learn="${skill}" aria-label="Learn ${skillName[skill]}">+</button></article>`;
   }
 
   get isOpen(): boolean { return this.opened; }
@@ -95,14 +97,14 @@ export class LeaderProgressionUI {
       }
     }
     this.rail.querySelector('.leader-level-badge')!.textContent = String(view.level);
-    this.rail.querySelector('.leader-xp-text')!.textContent = `${view.xp} / ${view.xpRequired} XP`;
+    this.rail.querySelector('.leader-xp-text')!.textContent = `${number(view.xp)} / ${number(view.xpRequired)} XP`;
     this.rail.querySelector<HTMLElement>('.leader-xp-fill')!.style.width = `${Math.min(100, view.xp / view.xpRequired * 100)}%`;
     const track = this.rail.querySelector('.leader-xp-track')!;
-    track.setAttribute('aria-valuenow', String(view.xp)); track.setAttribute('aria-valuemax', String(view.xpRequired));
-    track.setAttribute('aria-valuetext', `Level ${view.level}, ${view.xp} of ${view.xpRequired} XP`);
+    track.setAttribute('aria-valuenow', number(view.xp)); track.setAttribute('aria-valuemax', number(view.xpRequired));
+    track.setAttribute('aria-valuetext', `Level ${view.level}, ${number(view.xp)} of ${number(view.xpRequired)} XP`);
     const opener = this.rail.querySelector<HTMLButtonElement>('.leader-xp-open')!;
-    opener.setAttribute('aria-label', `Leader level ${view.level}, ${view.xp} of ${view.xpRequired} XP. Open skills`);
-    opener.title = `Leader level ${view.level} · ${view.xp} / ${view.xpRequired} XP · Open skills`;
+    opener.setAttribute('aria-label', `Leader level ${view.level}, ${number(view.xp)} of ${number(view.xpRequired)} XP. Open skills`);
+    opener.title = `Leader level ${view.level} · ${number(view.xp)} / ${number(view.xpRequired)} XP · Open skills`;
     const points = this.rail.querySelector<HTMLButtonElement>('.leader-xp-points')!;
     points.textContent = String(view.skillPoints); points.classList.toggle('has-points', view.skillPoints > 0);
     const pointText = `${view.skillPoints} skill point${view.skillPoints === 1 ? '' : 's'}`;
@@ -131,7 +133,7 @@ export class LeaderProgressionUI {
       const reason = waiting ? `Learning ${skill.name}…` : !skill.unlocked ? `${skill.name}: requires ${skill.requiredTech}`
         : skill.rank === skill.maxRank ? `${skill.name}: maximum rank` : this.pending ? `${skill.name}: waiting for the previous skill purchase`
         : view.skillPoints === 0 ? `${skill.name}: level up to earn a skill point` : `Learn ${skill.name} — 1 skill point`;
-      learn.title = reason; learn.setAttribute('aria-label', reason);
+      learn.title = actionTooltip(`${skill.name}: ${skill.effect}.`, '1 skill point', 0, skill.canLearn ? '' : reason); learn.setAttribute('aria-label', reason);
       learn.setAttribute('aria-busy', String(waiting));
       row.classList.toggle('is-pending', waiting);
     }

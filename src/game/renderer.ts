@@ -1,4 +1,10 @@
-import { damageNumberPose } from './combat-feedback';
+import { loyaltyWarning, loyaltyPanelAlpha, LOYALTY_START } from './loyalty-model';
+import { resourceInteractionColor } from './resource-interaction-highlight';
+import { hermitAvailable, hermitPosition } from './hermits';
+import { drawHermit, drawHermitCabin } from './hermit-art';
+import type { Hermit } from './types';
+import { drawDesertStone } from './desert-stone-art';
+import { damageNumberPose, damageNumberStyle, damageNumberVisible, goldNumberPose } from './combat-feedback';
 import { drawBraceShield } from './leader-ability-art';
 import { observationPostVisibleTo } from './observation-visibility';
 import { drawObservationCampfire, observationFireFrame, drawObservationSmoke } from './observation-post-art';
@@ -65,20 +71,23 @@ import { alliedVillageCamps, drawAllianceMarker } from './village-marker';
 import { forbiddenCells, forbiddenRegions } from './forbidden-zones';
 import { drawForbiddenCell, drawForbiddenMarker } from './forbidden-art';
 import { RESOURCE_COLORS } from './geography';
+import { ResourceArtMemory, drawResourceRoad, resourceHasObject, type ResourceCellArt } from './resource-art';
+import { trailArtVariant } from './road-sprites';
 export { TERRAIN_COLORS } from './terrain';
 export const MIN_ZOOM = .65;
 export const MAX_ZOOM = 2.2;
 const directions = [['north', 0, -1], ['east', 1, 0], ['south', 0, 1], ['west', -1, 0]] as const;
 const tileKey = (x: number, y: number) => `${x},${y}`;
-const isPerson = (u: Unit) => !u.aboardRiverTrade && (u.kind === 'leader' || u.kind === 'levyInfantry' || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'scout' || u.kind === 'militia' || u.kind === 'worker' || u.kind === 'merchant');
+const isPerson = (u: Unit) => !u.aboardRiverTrade && (u.kind === 'leader' || (u.kind === 'levyInfantry' || u.kind === 'slinger') || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'scout' || u.kind === 'militia' || u.kind === 'worker' || u.kind === 'merchant');
 // A person's world position is their footing, beneath the three-quarter figure.
 const unitTop = (u: Unit) => u.y - (isPerson(u) ? .85 : .5);
 const unitColor = (state: GameState, u: Unit) => factionColor(state, u.faction, state.marauderPacks?.find(p => p.id === u.marauderPack)?.color ?? (u.faction === -2 ? RAIDER_COLOR : '#ad8c57'));
 
 export { indexBuildings, type BuildingIndex } from './presentation-index';
 type Scenery = { x: number; y: number; tile: Tile };
-type SceneObject = { depth: number; b?: Building; u?: Unit; death?: UnitDeath; feature?: Scenery; sign?: Point & { variant: number };
+type SceneObject = { depth: number; hermit?: Hermit; hermitHome?: Hermit; b?: Building; u?: Unit; death?: UnitDeath; feature?: Scenery; sign?: Point & { variant: number };
     fish?: FishingFish; fishingBoat?: FishingBoat; riverPost?: Point;
+    resource?: { x: number; y: number; art: ResourceCellArt; fence?: boolean };
     orchard?: { field: FarmField; time: number; ditchLinks?: Connections; crossingLinks?: Connections } };
 
 /** Network frames replace GameState while preserving the same displayed world. */
@@ -254,6 +263,7 @@ export class Renderer {
     private constructionPreview?: { state: GameState; world: World; kind: GameState['buildMode']; key: string;
         nextRefreshAt: number; plan: ReturnType<typeof planConstruction> };
     private presentation?: PresentationIndex;
+    private resourceMemory = new ResourceArtMemory();
     private buildingObjects?: { structures: readonly Building[]; index: BuildingIndex; objects: SceneObject[] };
     constructor(canvas: HTMLCanvasElement, minimap: HTMLCanvasElement) { this.canvas = canvas; this.minimap = minimap; this.mini = minimap.getContext('2d')!; this.resize(); }
     resize() {
@@ -375,6 +385,7 @@ export class Renderer {
         const presentation = this.presentation ??= new PresentationIndex();
         presentation.update(fog);
         const buildingIndex = presentation.buildings, roadCells = presentation.roads, fields = presentation.fields;
+        const resources = this.resourceMemory.observe(w, fog.visible, fog.revision, playerFaction(state), fog.owned);
         const cropTime = (field: FarmField) => pointInSight(fog, field.x + .5, field.y + .5) ? time : fields.get(tileKey(field.x, field.y))!.observedAt;
         const cropMasks = new Map<FarmField, number>();
         const fieldJoins = (field: FarmField, fieldTime: number) => {
@@ -456,6 +467,15 @@ export class Renderer {
         // Remains lie on the ground: roads and new buildings can cover them.
         for (const stump of state.treeStumps ?? []) if (stump.expiresAt > time && visible(stump) && pointExplored(fog, stump.x, stump.y))
             bake(`stump:${JSON.stringify(stump)}`, ox + stump.x * s, oy + stump.y * s, 32, 32, c => drawTreeStump(c, stump, 0, 0, 32));
+        // Salt beds are terrain work, beneath roads, ditches and working civilians.
+        for (const [cell, resource] of resources) {
+            if (resource.resource !== 'salt' || !resource.developed) continue;
+            const x = cell % w.width, y = Math.floor(cell / w.width);
+            if (x < left || x >= right || y < top || y >= bottom || !pointExplored(fog, x, y)) continue;
+            const key = tileKey(x, y), occupants = buildingIndex.get(key);
+            if (fields.has(key) || occupants?.some(b => !['road', 'bridge', 'irrigation'].includes(b.kind))) continue;
+            scene.sprite(art.resource(resource), Math.round(ox + x * s), Math.round(oy + y * s), scale);
+        }
         // Roads remain below every crop stage, sack, and harvest warning.
         const irrigationIndex = state.buildMode === 'irrigation' ? previewIndex : buildingIndex;
         const knownWater = (x: number, y: number) => pointExplored(fog, x, y);
@@ -495,6 +515,9 @@ export class Renderer {
                 if (!pointExplored(fog, x, y)) continue;
                 const t = w.tiles[y * w.width + x], px = ox + x * s, py = oy + y * s;
                 const occupants = buildingIndex.get(tileKey(x, y));
+                if (t.desertStone !== undefined && t.terrain === 'desert' && !occupants?.length && !fields.has(tileKey(x, y)) && !t.resource && !t.villageTrail)
+                    bake(`desert-stone:${t.desertStone}:${Math.floor(t.variation * 16)}`, px, py, 32, 32,
+                        c => drawDesertStone(c, t.desertStone!, Math.floor(t.variation * 16) / 16));
                 if (t.villageTrail && !WATER.has(t.terrain) && !roadCells.has(y * w.width + x)) {
                     const links = villageTrailLinks(w, x, y, roadCells);
                     bake(`village-trail:${dirtRoadArtKey(links, x, y, 'trail')}`, ox + x * s, oy + y * s, 32, 32,
@@ -506,6 +529,17 @@ export class Renderer {
                 const crossingRoad = ditch && occupants?.find(b => b.kind === 'road' && buildingReady(b));
                 const crossingLinks = crossingRoad && buildingConnections(crossingRoad, buildingIndex, w);
                 const field = fields.get(tileKey(x, y));
+                const resource = resources.get(y * w.width + x);
+                const resourceCovered = !!field || occupants?.some(b => !['road', 'bridge', 'irrigation'].includes(b.kind));
+                if (resource && !resourceCovered) {
+                    if (resource.road && !roadCells.has(y * w.width + x))
+                        bake(`resource-road:${resource.road}:${trailArtVariant(x, y)}`, px, py, 32, 32, c => drawResourceRoad(c, resource, x, y));
+                    if (resource.resource === 'salt' || resourceHasObject(resource)) objects.push({ depth: vegetationRenderDepth(y), resource: { x, y, art: resource } });
+                    if (resource.fences) {
+                        scene.sprite(art.resourceFence(resource, false), Math.round(px), Math.round(py), scale);
+                        if (resource.fences & 4) objects.push({ depth: y + 1.01, resource: { x, y, art: resource, fence: true } });
+                    }
+                }
                 if (field) {
                     const viewed = pointInSight(fog, x + .5, y + .5), fieldTime = viewed ? time : field.observedAt;
                     if (field.orchard) objects.push({ depth: vegetationRenderDepth(y), orchard: { field, time: fieldTime, ditchLinks, crossingLinks } });
@@ -524,7 +558,7 @@ export class Renderer {
                     const palm = t.palm && !foliageOccupied;
                     const marsh = t.marsh && !WATER.has(t.terrain) && !foliageOccupied;
                     const bridgedFord = t.overlay === 'ford' && occupants?.some(b => b.kind === 'bridge' && buildingReady(b));
-                    if ((!t.marsh || marsh) && ((t.overlay !== 'none' && !clearedPath && !bridgedFord) || palm || marsh)) {
+                    if (!resource && (!t.marsh || marsh) && ((t.overlay !== 'none' && !clearedPath && !bridgedFord) || palm || marsh)) {
                         const feature = { x, y, tile: t.palm && foliageOccupied ? { ...t, palm: false } : t };
                         if ((!t.palm || !foliageOccupied) && vegetationVariant(t))
                             objects.push({ depth: vegetationRenderDepth(y), feature });
@@ -583,6 +617,11 @@ export class Renderer {
         if (atlas) for (const chest of state.treasures ?? []) if (!chest.collected && visible(chest) && pointInSight(fog, chest.x + .5, chest.y + .5))
             bake('treasure', Math.round(ox + chest.x * s), Math.round(oy + chest.y * s), 32, 32,
                 c => c.drawImage(atlas, TREASURE_SPRITE.x, TREASURE_SPRITE.y, 16, 16, 0, 0, 32, 32));
+        for (const h of state.hermits ?? []) {
+            if (visible(h) && pointInSight(fog, h.x + .5, h.y + .5)) objects.push({ depth: h.y + 1, hermitHome: h });
+            const p = hermitPosition(h);
+            if (h.status !== 'gone' && visible(p) && pointInSight(fog, p.x, p.y)) objects.push({ depth: p.y, hermit: h });
+        }
         const visibleUnits = state.units.filter(u => !u.inside && u.hp > 0 && observationPostVisibleTo(u, playerFaction(state)) && visible(u) && (u.faction === playerFaction(state) || pointInSight(fog, u.x, u.y)));
         for (const post of checks.riverPosts) if (visible(post) && pointInSight(fog, post.x + .5, post.y + .5))
             objects.push({ depth: post.y + .6, riverPost: post });
@@ -610,7 +649,23 @@ export class Renderer {
         }
         objects.sort((a, b) => a.depth - b.depth);
         for (const object of objects) {
-            if (object.riverPost) {
+            if (object.hermitHome) {
+                const h = object.hermitHome, frame = Math.floor(time * 7) % 6;
+                bake(`hermit-home:${h.status === 'home'}:${frame}`, Math.round(ox + h.x * s), Math.round(oy + h.y * s), 32, 40,
+                    c => drawHermitCabin(c, frame, h.status === 'home'));
+            } else if (object.hermit) {
+                const h = object.hermit, p = hermitPosition(h), highlight = hermitAvailable(state, h, playerFaction(state), fog), frame = Math.floor(time * 7) % 6;
+                bake(`hermit:${highlight}:${h.status}:${frame}`, Math.round(ox + (p.x - .42) * s), Math.round(oy + (p.y - .72) * s), 28, 28,
+                    c => drawHermit(c, highlight, h.status === 'fleeing', frame));
+            } else if (object.resource) {
+                const resource = object.resource;
+                const x = Math.round(ox + resource.x * s), y = Math.round(oy + resource.y * s);
+                const highlight = !resource.fence && resourceInteractionColor(state, resource.x, resource.y, fog);
+                if (highlight) scene.sprite(art.resourceOutline(resource.art, highlight), x, y, scale);
+                if (resource.fence || resource.art.resource !== 'salt')
+                    scene.sprite(resource.fence ? art.resourceFence(resource.art, true) : art.resource(resource.art), x, y, scale);
+            }
+            else if (object.riverPost) {
                 const post = object.riverPost;
                 bake('river-trading-post', Math.round(ox + post.x * s), Math.round(oy + post.y * s),
                     32, 32, c => drawRiverTradingPost(c, 0, 0, 32));
@@ -708,7 +763,8 @@ export class Renderer {
             }
         }
         // Damaged health bars stay readable; selection never draws a ground ring.
-        for (const b of structures) if (buildingPresent(b) && !isFarmKind(b.kind) && b.hp < b.maxHp && buildingInSight(fog, b)) {
+        for (const b of structures) if (buildingPresent(b) && !isFarmKind(b.kind) && !['road', 'bridge', 'irrigation'].includes(b.kind)
+            && !(b.kind === 'fort' && b.fort?.destroyed) && b.hp < b.maxHp && buildingInSight(fog, b)) {
             const offset = wellAttachedToHouse(b, previewIndex) ? HOUSE_WELL_OFFSET : { x: 0, y: 0 };
             const artTop = towerAttachedToWall(b, previewIndex) && b.construction ? -.25 : buildingArtTop(b);
             this.healthBar(scene, ox + (b.x + .5 + offset.x) * s, oy + (b.y + artTop + offset.y) * s - 5, b.hp / b.maxHp, s * .65);
@@ -728,7 +784,7 @@ export class Renderer {
             if ((u.brace?.defense ?? 0) > 0) scene.sprite(art.paint(`brace:${s}`, { x: -s * .3, y: -s * .3, width: s * .6, height: s * .6 }, c => drawBraceShield(c, s)), x + s * .5, y - s * (.18 + Math.sin(time * 2) * .025));
             if ((u.kills ?? 0) >= 10) scene.sprite(art.paint(`veterancy:${veterancy(u)}:${s}`, { x: 0, y: -s * .5, width: s, height: s }, c => drawVeterancy(c, u, 0, 0, s)), x, y);
             if (u.hp < unitMaxHp(u)) {
-                const top = u.kind === 'sailboat' ? -.85 : u.kind === 'worker' ? .04 : u.kind === 'leader' || u.kind === 'levyInfantry' || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'militia' ? -.035 : -.13;
+                const top = u.kind === 'sailboat' ? -.85 : u.kind === 'worker' ? .04 : u.kind === 'leader' || (u.kind === 'levyInfantry' || u.kind === 'slinger') || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'militia' ? -.035 : -.13;
                 this.healthBar(scene, x + s * .5, y + s * top, u.hp / unitMaxHp(u), s * (u.kind === 'sailboat' ? 1.2 : .72));
             }
             if (u.hp > 0 && (u.lastDamagedAt ?? -Infinity) < (u.healerHealingAt ?? -Infinity) && state.time - (u.healerHealingAt ?? -Infinity) < .2) {
@@ -762,6 +818,7 @@ export class Renderer {
             if (shot.elapsed >= shot.duration || !pointInSight(fog, shot.x, shot.y)) continue;
             const progress = shot.elapsed / shot.duration, height = (shot.startHeight ?? .48) * (1 - progress) + .48 * progress + Math.sin(progress * Math.PI) * .25;
             const projectile = art.paint(`projectile:${shot.kind}:${s}`, { x: -s, y: -s, width: s * 2, height: s * 2 }, c => {
+                if (shot.kind === 'stone') { const p = Math.max(1, Math.round(s / 32)); c.fillStyle = '#403d31'; c.fillRect(-p, -p, p * 2, p * 2); c.fillStyle = '#c4b990'; c.fillRect(-p, -p, p, p); return; }
                 if (shot.kind === 'arrow') { drawArrow(c, s); return; }
                 if (shot.kind === 'ballistaBolt') { drawBallistaBolt(c, s); return; }
                 const length = s * .42, tip = length * .5;
@@ -901,8 +958,8 @@ export class Renderer {
             if (!buildingReady(city.palace) || !buildingInSight(fog, city.palace) || !visible(city.palace, 6)) continue;
             const height = city.palace.faction === playerFaction(state) ? CITY_RIBBON_HEIGHT : CITY_NAME_RIBBON_HEIGHT;
             const x = ox + (city.palace.x + buildingWidth(city.palace) / 2) * s, y = oy + city.palace.y * s - 6 - height / 2;
-            const key = `city:${playerFaction(state)}:${city.name}:${city.palace.faction}:${city.population}:${city.housing}:${Math.round(city.food)}:${Math.round(city.gold)}`;
-            scene.sprite(art.paint(key, { x: -CITY_RIBBON_MAX_WIDTH / 2, y: -height / 2 - 1, width: CITY_RIBBON_MAX_WIDTH, height: height + 2 }, c => drawCityRibbon(c, city, 0, 0, Math.max(180, this.width - 16), playerFaction(state))), x, y);
+            const key = `city:${playerFaction(state)}:${city.name}:${city.palace.faction}:${city.population}:${city.housing}:${Math.round(city.food)}:${Math.round(city.gold)}:${Math.round(city.palace.loyalty?.value ?? LOYALTY_START)}:${loyaltyWarning(city.palace)}`;
+            scene.sprite(art.paint(key, { x: -CITY_RIBBON_MAX_WIDTH / 2, y: -height / 2 - 1, width: CITY_RIBBON_MAX_WIDTH, height: height + 2 }, c => drawCityRibbon(c, city, 0, 0, Math.max(180, this.width - 16), playerFaction(state))), x, y, 1, loyaltyPanelAlpha(city.palace, playerFaction(state), now));
         }
         for (const { camp, center } of checks.alliedCamps) {
             if (!buildingReady(camp) || !buildingInSight(fog, camp) || !visible(camp, 2)) continue;
@@ -924,14 +981,20 @@ export class Renderer {
             warning(ox + center.x * s, oy + (camp.y - .2) * s - Math.abs(Math.sin(time * 6)) * s * .35, '#ff3b30', '#1a1010', Math.max(18, s * 1.1), Math.max(3, s * .12), true);
         }
         for (const particle of state.particles) {
-            const damage = particle.kind === 'damage', hunt = (particle.kind === 'hunt' || particle.kind === 'food') && /^\+\d+ food$/.test(particle.text);
-            if (particle.life <= 0 || !damage && !hunt && !/^(?:\+\d+(?:\.\d+)? gold|[-−]\d+(?:\.\d+)? food)$/.test(particle.text) || !pointInSight(fog, particle.x, particle.y)) continue;
-            const label = particle.text.replace(/ (?:gold|food)$/, '').replace('−', '-'), font = Math.round(Math.max(11, Math.min(16, s * .32)));
-            const labelArt = art.paint(`reward:${label}:${particle.color}:${font}`, { x: -60, y: -24, width: 120, height: 28 }, c => {
+            const damage = particle.kind === 'damage', gold = /^[+−-]\d+(?:\.\d+)? gold$/.test(particle.text);
+            const food = /^[+−-]\d+(?:\.\d+)? food$/.test(particle.text)
+                && (particle.kind === 'hunt' || particle.kind === 'food' || /^[−-]/.test(particle.text));
+            if (particle.life <= 0 || !damage && !gold && !food || !pointInSight(fog, particle.x, particle.y)) continue;
+            if (damage && !damageNumberVisible(state, particle)) continue;
+            const damageStyle = damage ? damageNumberStyle(state, particle) : undefined;
+            const amount = Math.round(Number(particle.text.replace(/ (?:gold|food)$/, '').replace('−', '-')));
+            const label = damageStyle?.text ?? `${amount > 0 ? '+' : ''}${amount}`, color = damageStyle?.color ?? (gold ? '#ffe33d' : particle.color);
+            const font = Math.round(Math.max(11, Math.min(16, s * .32)));
+            const labelArt = art.paint(`reward:${label}:${color}:${font}`, { x: -60, y: -24, width: 120, height: 28 }, c => {
                 c.font = gameFont(font, 700); c.textAlign = 'center'; c.textBaseline = 'bottom'; c.strokeStyle = '#1d211a'; c.lineWidth = 3; c.lineJoin = 'round';
-                c.strokeText(label, 0, 0); c.fillStyle = particle.color; c.fillText(label, 0, 0);
+                c.strokeText(label, 0, 0); c.fillStyle = color; c.fillText(label, 0, 0);
             });
-            const pose = damage ? damageNumberPose(particle.life, particle.direction) : undefined;
+            const pose = damage ? damageNumberPose(particle.life, particle.direction) : gold ? goldNumberPose(particle.life, particle.duration) : undefined;
             scene.sprite(labelArt, Math.round(ox + (particle.x + (pose?.offset ?? 0)) * s),
                 Math.round(oy + (particle.y - .8 - (pose?.rise ?? Math.max(0, 1.6 - particle.life) * .3)) * s), 1,
                 pose?.alpha ?? Math.min(1, particle.life / .5));

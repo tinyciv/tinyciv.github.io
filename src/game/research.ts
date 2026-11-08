@@ -15,7 +15,7 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'woodenTower', label: 'Fortification', prerequisites: [], tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, militia, and settlement upgrades to Keeps with ten times the health.' }] },
   { id: 'wall', label: 'Masonry', prerequisites: ['woodenTower'], tiers: [{ name: 'Masonry', points: 24, description: 'Unlocks walls and gates.' }] },
   { id: 'monument', label: 'Statehood', prerequisites: ['grainStorage'], tiers: [{ name: 'Statehood', points: 42, description: 'Unlocks culture-producing monuments.' }] },
-  { id: 'blacksmith', label: 'Bronze Working', prerequisites: ['wall'], tiers: [{ name: 'Bronze Working', points: 87, description: 'Unlocks blacksmiths and armor/weapon upgrades.' }] },
+  { id: 'blacksmith', label: 'Bronze Working', prerequisites: ['wall'], tiers: [{ name: 'Bronze Working', points: 87, description: 'Unlocks blacksmiths. Armor/weapon upgrades also require a developed iron mine.' }] },
   { id: 'archeryRange', label: 'Archery', prerequisites: ['scoutLodge'], tiers: [{ name: 'Archery', points: 63, description: 'Unlocks archery ranges, archer training, and recruits.' }] },
   { id: 'irrigation', label: 'Irrigation', prerequisites: [], tiers: [{ name: 'Irrigation', points: 30, description: 'Unlocks irrigation channels for watering farms.' }] },
   { id: 'scoutLodge', label: 'Exploration', prerequisites: [], tiers: [{ name: 'Exploration', points: 30, description: 'Unlocks Scouts’ Lodges and their concealed observation posts.' }] },
@@ -24,15 +24,19 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'reinforcedDefenses', label: 'Reinforced Defenses', prerequisites: ['metalTools'], tiers: [{ name: 'Reinforced Defenses', points: 63, description: 'Walls and towers gain 30% maximum health.' }] },
   { id: 'coinage', label: 'Coinage', prerequisites: ['monument', 'sailing'], tiers: [{ name: 'Coinage', points: 54, description: 'Caravan deliveries earn 20% more gold.' }] },
   { id: 'urbanPlanning', label: 'Urban Planning', prerequisites: ['coinage', 'metalTools'], tiers: [{ name: 'Urban Planning', points: 75, description: 'Each house gains one housing place.' }] },
+  { id: 'metalCasting', label: 'Metal Casting', prerequisites: ['reinforcedDefenses', 'infantryDrill'], tiers: [{ name: 'Metal Casting', points: 100, description: 'Unlocks swordsmen at blacksmiths: twice the attack of spearmen, with lower defense and no piercing thrust.' }] },
   { id: 'metalTools', label: 'Metal Tools', prerequisites: ['blacksmith'], tiers: [{ name: 'Metal Tools', points: 63, description: 'Construction and repair speed increases by 25%.' }] },
   { id: 'fletching', label: 'Fletching', prerequisites: ['archeryRange', 'metalTools'], tiers: [{ name: 'Fletching', points: 42, description: 'Archers deal 15% more damage.' }] },
   { id: 'grainStorage', label: 'Grain Storage', prerequisites: ['irrigation'], tiers: [{ name: 'Grain Storage', points: 42, description: 'Newly harvested grain stays fresh 50% longer, including while carried.' }] },
-  { id: 'militaryTactics', label: 'Military Tactics', prerequisites: ['blacksmith', 'archeryRange'], tiers: [{ name: 'Military Tactics', points: 63, description: 'Unlocks spearmen at blacksmiths: stronger armor and thrusts piercing two enemies behind the first.' }] },
+  { id: 'militaryTactics', label: 'Military Tactics', prerequisites: ['blacksmith', 'archeryRange'], tiers: [{ name: 'Military Tactics', points: 63, description: 'Unlocks spearmen at blacksmiths with developed copper: stronger armor and thrusts piercing two enemies behind the first.' }] },
   { id: 'infantryDrill', label: 'Infantry Drill', prerequisites: ['militaryTactics'], tiers: [{ name: 'Infantry Drill', points: 42, description: 'Unlocks Formation 3 for the Leader’s retinue.' }] },
-  { id: 'siegeEngines', label: 'Siege Engines', prerequisites: ['reinforcedDefenses', 'fletching'], tiers: [{ name: 'Siege Engines', points: 87, description: 'Unlocks stationary ballistae: eighteen-tile range, automatic assembly outside borders, and slow heavy bolts aimed at defenses.' }] },
-  { id: 'horsebackRiding', label: 'Horseback Riding', prerequisites: ['infantryDrill'], tiers: [{ name: 'Horseback Riding', points: 87, description: 'Unlocks stables and fast, powerful horsemen. Assign mounted retinue at a stable; running charges deal bonus damage and area damage.' }] },
+  { id: 'siegeEngines', label: 'Siege Engines', prerequisites: ['reinforcedDefenses', 'fletching'], tiers: [{ name: 'Siege Engines', points: 87, description: 'Unlocks ballistae with developed iron: eighteen-tile range, automatic assembly outside borders, and slow heavy bolts aimed at defenses.' }] },
+  { id: 'horsebackRiding', label: 'Horseback Riding', prerequisites: ['scoutLodge'], tiers: [{ name: 'Horseback Riding', points: 63, description: 'Unlocks stables and fast unarmored spear horsemen. Assign mounted retinue at a stable; running charges deal bonus and area damage.' }] },
+  { id: 'compoundBow', label: 'Compound Bow', prerequisites: ['horsebackRiding', 'fletching'], tiers: [{ name: 'Compound Bow', points: 90, description: 'Unlocks horse archers at stables with Horseback Riding: fast, lightly protected cavalry firing arrows at range.' }] },
+  { id: 'stirrups', label: 'Stirrups', prerequisites: ['horsebackRiding', 'metalCasting'], tiers: [{ name: 'Stirrups', points: 120, description: 'Unlocks armored knights at stables: 180 base health, 43 base attack, 10 defense and powerful running charges. Higher upkeep than light cavalry.' }] },
   { id: 'supplyTrain', label: 'Supply train', prerequisites: ['traditionalMedicine'], tiers: [{ name: 'Supply train', points: 54, description: 'Unlocks supply depots. Each sends a vulnerable, population-free handcart to the Leader every 30 seconds. Delivery heals the Leader and all friendly units by up to 10 HP. Destroyed carts award no gold.' }] },
   { id: 'massLevy', label: 'Mass levy', prerequisites: ['militaryTactics'], tiers: [{ name: 'Mass levy', points: 63, description: 'The Leader can levy up to one third of the population. Levy infantry fight on formation wings with half warrior attack and defense, equipment upgrades, and 80% morale. Upkeep is 5 gold per soldier every 30 seconds; bankruptcy sends them home.' }] },
+  { id: 'engineering', label: 'Engineering', prerequisites: ['wall'], tiers: [{ name: 'Engineering', points: 42, description: 'Bridges can cross up to 8 water tiles instead of 2. Clear land is required at both ends.' }] },
 ];
 const baseBranchById = new Map(BASE_RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
 const depthCache = new Map<ResearchBranchId, number>();
@@ -40,12 +44,12 @@ function researchDepth(id: ResearchBranchId): number {
   if (!depthCache.has(id)) depthCache.set(id, Math.max(-1, ...baseBranchById.get(id)!.prerequisites.map(researchDepth)) + 1);
   return depthCache.get(id)!;
 }
-const researchStages = Math.max(...BASE_RESEARCH_BRANCHES.map(branch => researchDepth(branch.id))) + 1;
+const researchStages = 6;
 /** Fortification retains its introductory price. Every later branch ramps
  * linearly by dependency stage, reaching five times its old cost at the end. */
 export const RESEARCH_BRANCHES: readonly ResearchBranch[] = BASE_RESEARCH_BRANCHES.map(branch => ({
   ...branch, tiers: branch.tiers.map(tier => ({ ...tier, points: branch.id === 'woodenTower' ? tier.points
-    : Math.round(tier.points * (1 + 4 * (researchDepth(branch.id) + 1) / researchStages)) * (branch.id === 'scoutLodge' ? .5 : 1) })),
+    : Math.round(tier.points * (1 + 4 * Math.min(researchStages, researchDepth(branch.id) + 1) / researchStages)) * (branch.id === 'scoutLodge' ? .5 : 1) })),
 }));
 const branchById = (id: ResearchBranchId): ResearchBranch => RESEARCH_BRANCHES.find(branch => branch.id === id)!;
 export function researchLevel(faction: Pick<Faction, 'research'> | undefined, branch: ResearchBranchId): number {
@@ -63,8 +67,11 @@ export function isBuildingUnlocked(faction: Pick<Faction, 'research'> | undefine
 }
 export const areArchersUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'archeryRange') > 0;
 export const areScoutsUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'scoutLodge') > 0;
+export const areSwordsmenUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'metalCasting') > 0;
 export const areSpearmenUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'militaryTactics') > 0;
 export const areHorsemenUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'horsebackRiding') > 0;
+export const areHorseArchersUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => areHorsemenUnlocked(faction) && researchLevel(faction, 'compoundBow') > 0;
+export const areKnightsUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => areHorsemenUnlocked(faction) && researchLevel(faction, 'stirrups') > 0;
 export const isInfantryDrillUnlocked = (faction: Pick<Faction, 'research'> | undefined): boolean => researchLevel(faction, 'infantryDrill') > 0;
 export const DEFAULT_RESEARCH_ALLOCATION = .25;
 export const RESEARCH_INCOME_WINDOW = 30;

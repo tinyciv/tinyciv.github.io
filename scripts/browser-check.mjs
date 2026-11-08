@@ -139,7 +139,7 @@ try {
   assert.equal(towerFinished, true);
   check('Fortify/T tower UI, inert numeric slots, gold cost, preserved inspection and real timed construction');
 
-  await page.evaluate(() => { window.__game.state.factions[0].gold = 123; window.__game.save(); });
+  await page.evaluate(() => { window.__game.state.factions[0].gold = 123; return window.__game.save(); });
   await page.reload({ waitUntil: 'networkidle' }); await page.evaluate(() => window.__game.state.paused = true);
   assert.equal(await page.evaluate(() => window.__game.state.factions[0].gold), 123);
   assert.ok(await page.evaluate(() => window.__game.state.fields.length >= 8));

@@ -1,3 +1,4 @@
+import { canWalk } from '../src/game/pathfinding';
 import { describe, expect, it } from 'vitest';
 import { unitsCollide } from '../src/game/collisions';
 import { entityStore } from '../src/game/entity-store';
@@ -39,6 +40,13 @@ function fixture(): GameState {
 const levies = (state: GameState) => state.units.filter(unit => unit.kind === 'levyInfantry');
 
 describe('supply train', () => {
+  it('blocks both horizontal depot cells while leaving the row below walkable', () => {
+    const state = fixture();
+    expect(canWalk(state, 10, 10, 0)).toBe(false);
+    expect(canWalk(state, 11, 10, 0)).toBe(false);
+    expect(canWalk(state, 10, 11, 0)).toBe(true);
+    expect(canWalk(state, 11, 11, 0)).toBe(true);
+  });
   it('drives through a friendly battle line and delivers healing in the real movement loop', () => {
     const state = fixture(), leader = state.units[0];
     Object.assign(leader, { x: 21.5, y: 12.5, hp: 20, lastDamagedAt: 0, order: 'hold' });
@@ -267,7 +275,7 @@ describe('mass levy', () => {
       x: 21 + id % 4, y: 21, hp: 600, maxHp: 600, capacity: 0 });
     levyPopulation(state, 1); const levy = levies(state)[0]; expect(levy.levy!.nextUpkeepAt).toBeCloseTo(59.95);
     updateGame(state, .1, idle);
-    expect(state.factions[0].gold).toBeLessThan(0);
+    expect(state.factions[0].gold).toBe(0);
     updateGame(state, .4, idle);
     expect(levy).toMatchObject({ kind: 'worker', attack: 0, order: 'flee', routed: true });
   });

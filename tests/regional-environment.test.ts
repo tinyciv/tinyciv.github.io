@@ -67,14 +67,15 @@ describe('geography-driven climate and resources', () => {
     expect(world.tiles.every(tile => ['grassland', 'plains', 'desert'].includes(tile.terrain))).toBe(true);
   });
 
-  it('gives alluvial soil larger harvests and cold slopes smaller harvests while retaining fixture yields', () => {
+  it('adds the freshwater bonus without changing fertility for elevation or tree cover', () => {
     const world = map(), bank = 40 * world.width + 25, upland = 40 * world.width + 70;
     expect(fieldHarvestFood(world, 25, 40)).toBe(fieldHarvestFood(world, 70, 40));
     for (let y = 0; y < world.height; y++) world.tiles[y * world.width + 24].terrain = 'river';
     Object.assign(world.tiles[upland], { temperature: .12, elevation: .9, biome: 'alpine' });
     applySoilFertility(world);
-    expect(world.tiles[bank].fertility).toBeGreaterThan(world.tiles[upland].fertility! + .3);
-    expect(fieldHarvestFood(world, 25, 40)).toBeGreaterThan(fieldHarvestFood(world, 70, 40) * 1.3);
+    expect(world.tiles[bank].fertility).toBe(1.25);
+    expect(world.tiles[upland].fertility).toBe(1);
+    expect(fieldHarvestFood(world, 25, 40)).toBeCloseTo(fieldHarvestFood(world, 70, 40) * 1.25);
     const soil = world.tiles[bank].fertility;
     world.tiles[bank].overlay = 'forest'; applySoilFertility(world);
     expect(world.tiles[bank].fertility).toBe(soil);
@@ -98,7 +99,8 @@ describe('geography-driven climate and resources', () => {
       if (tile.resource === 'fish') expect(WATER.has(tile.terrain)).toBe(true);
       else expect(WATER.has(tile.terrain)).toBe(false);
       if (tile.resource === 'clay') expect(Math.abs(x - 80)).toBeLessThanOrEqual(3);
-      if (tile.resource === 'salt') expect(x).toBeLessThanOrEqual(9);
+      // Multi-cell salt pans use the broader six-cell dry coastal belt.
+      if (tile.resource === 'salt') expect(x).toBeLessThanOrEqual(13);
       if (tile.resource === 'stone' || tile.resource === 'iron') expect(x).toBeGreaterThan(100);
     }
     const adjacent = resources.filter(({ i, tile }) => world.tiles[i + 1]?.resource === tile.resource || world.tiles[i + world.width]?.resource === tile.resource);

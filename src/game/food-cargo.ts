@@ -18,7 +18,7 @@ export function expireFoodCargo(state: GameState, unit: Unit): void {
   if (!expired.length) return;
   const lost = expired.reduce((sum, batch) => sum + batch.amount, 0);
   if (lost > 1e-7) state.particles.push({ x: unit.x, y: unit.y - .25,
-    text: `−${Number(lost.toFixed(1))} food`, color: '#f46b63', life: 1.6 });
+    text: `−${Math.round(lost)} food`, color: '#f46b63', life: 1.6 });
   unit.cargoBatches = unit.cargoBatches!.filter(batch => batch.expiresAt > state.time + 1e-7);
   refreshFoodCargo(unit);
 }

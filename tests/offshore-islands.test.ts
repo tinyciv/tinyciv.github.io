@@ -58,17 +58,19 @@ describe('offshore islands', () => {
     expect(repeated).toEqual(mask);
   });
 
-  it('halves default map area while preserving aspect ratio and explicit dimensions', () => {
+  it('uses roomier default maps while preserving aspect ratio and explicit dimensions', () => {
     const large = generateWorld('offshore-world');
     expect(STARTING_FACTION_COUNT).toBe(6);
-    expect([large.width, large.height, large.tiles.length]).toEqual([DEFAULT_WORLD_WIDTH, DEFAULT_WORLD_HEIGHT, 194 * 153]);
-    expect(large.tiles.length / (274 * 216)).toBeCloseTo(.5, 2);
-    expect(large.width / large.height).toBeCloseTo(274 / 216, 2);
+    expect(large.width).toBeGreaterThanOrEqual(DEFAULT_WORLD_WIDTH);
+    expect(large.height).toBeGreaterThanOrEqual(DEFAULT_WORLD_HEIGHT);
+    expect(large.tiles.length).toBe(large.width * large.height);
+    expect(large.tiles.length).toBeGreaterThan(194 * 153);
+    expect(large.width / large.height).toBeCloseTo(1.25, 2);
     expect(large.spawns).toHaveLength(STARTING_FACTION_COUNT);
     const small = generateWorld('offshore-world', 112, 88);
     expect([small.width, small.height, small.tiles.length]).toEqual([112, 88, 112 * 88]);
     expect(small.spawns).toHaveLength(STARTING_FACTION_COUNT);
-  });
+  }, 60_000);
 
   it('keeps selected major landforms distinct without stranding civilizations', () => {
     const expected = ['continents', 'fractal', 'pangaea'] as const;

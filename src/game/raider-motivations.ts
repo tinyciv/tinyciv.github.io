@@ -231,7 +231,7 @@ function theftUnit(state: GameState, pack: MarauderPack, unit: Unit, dt: number,
     if (faction) spendGold(state, faction, amount, 'raided');
     unit.stolenGold = (unit.stolenGold ?? 0) + amount;
     pack.lootCarrier = unit.id; pack.raidObjectiveDone = true;
-    if (amount) state.particles.push({ ...center(palace), text: `−${Math.round(amount)} gold`, color: '#f46b63', life: 1.8 });
+    if (amount) state.particles.push({ ...center(palace), text: `−${Math.round(amount)} gold`, color: '#ffe33d', life: 1.8, duration: 1.8 });
     returnHome(pack, groupMembers(state, pack)); return;
   }
   const nearby = nearbyUnits(state, unit, 4).filter(enemy => hostile(state, enemy) && distance(enemy, unit) <= 4 && orders.visible(unit, enemy));

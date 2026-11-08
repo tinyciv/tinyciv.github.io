@@ -8,6 +8,7 @@ import { hasGateWall, validateNetworkPlacement } from './network-placement';
 import { buildingWithinBorders } from './border-placement';
 import { insideOwnBorders, territory, type Territory } from './borders';
 import { ridgeFootprintAllowed } from './ridges';
+import { resourceBlocksGround } from './resource-terrain';
 import { removeVillageTrailAt } from './village-trails';
 import { simulationReadsActive } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
@@ -121,6 +122,7 @@ export function hasNeighboringRoad(state: GameState, x: number, y: number, { inc
 
 /** Ordinary roads extend the network; a road inside an existing wall opens a gate. */
 export function canPlaceRoad(state: GameState, x: number, y: number, faction = playerFaction(state), borders?: Territory): boolean {
+  if (resourceBlocksGround(tileAt(state.world, x, y))) return false;
   if (isForbidden(state, x, y, faction) || !buildingWithinBorders(state, 'road', x, y, faction, borders)) return false;
   const structures = trafficStructures(state), owners = structures?.walls.get(Math.floor(y) * state.world.width + Math.floor(x));
   const gate = structures ? !!owners && (owners.has(faction) || owners.has(-1)) : hasGateWall(state, x, y, faction);
@@ -171,7 +173,7 @@ function addRoad(state: GameState, x: number, y: number, faction: number): boole
   const removedTrail = removeVillageTrailAt(state.world, x, y);
   if (tile) delete tile.palm;
   delete state.traffic?.[String(y * state.world.width + x)];
-  markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure');
+  markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure', removedPalm || removedTrail ? [y * state.world.width + x] : []);
   return true;
 }
 

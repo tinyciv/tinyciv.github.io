@@ -88,7 +88,7 @@ try {
   check('Every skill has its own + purchase; no Learn footer remains', await buy('power').innerText() === '+' && await page.locator('[data-leader-learn]').count() === 6 && await page.locator('.leader-skill-detail').count() === 0);
   check('No skill points disables every purchase', await page.locator('[data-leader-learn]:disabled').count() === 6);
   await capture('desktop-no-points');
-  await page.keyboard.press('Escape'); await award(800);
+  await page.keyboard.press('Escape'); await award(19200);
   check('Level-up updates points without opening popup', await popup().isHidden() && await page.locator('.leader-xp-points').innerText() === '1');
   await page.locator('.leader-xp-points').click();
   check('Advanced skills show required technology and remain locked', await buy('engineer').isDisabled() && (await page.locator('[data-leader-skill="engineer"] .leader-skill-tech').innerText()).startsWith('Requires:'));
@@ -96,14 +96,14 @@ try {
   check('A single + click learns Power, spends one point and updates its preview', powered.attack === before.attack + 2 && powered.leaderProgression.skills.power === 1 && powered.leaderProgression.skillPoints === 0
     && (await page.locator('[data-leader-skill="power"] .leader-skill-preview').innerText()).includes('→'));
   check('Purchase stays open without allowing overspending', await popup().isVisible() && await page.locator('[data-leader-learn]:disabled').count() === 6);
-  await award(7200);
-  await buy('power').click(); await settle(); await buy('power').click(); await settle();
-  check('Maximum rank cannot be purchased again', await buy('power').isDisabled() && await buy('power').innerText() === '+' && (await leader()).leaderProgression.skills.power === 3);
+  await award(1267200);
+  for (let rank = 2; rank <= 10; rank++) { await buy('power').click(); await settle(); }
+  check('Maximum rank cannot be purchased again', await buy('power').isDisabled() && await buy('power').innerText() === '+' && (await leader()).leaderProgression.skills.power === 10);
   await buy('guard').click(); await settle();
   check('Guard purchases directly from its own card', (await leader()).leaderProgression.skills.guard === 1);
-  await award(4000); await buy('command').click(); await settle();
+  await award(300000); await buy('command').click(); await settle();
   check('Command purchases directly from its own card', (await leader()).leaderProgression.skills.command === 1);
-  await award(4800);
+  await award(300000);
   await page.evaluate(() => { (__game.state.factions[0].research ??= { levels: {}, progress: {}, focus: 'wall' }).levels.metalTools = 1; }); await settle();
   await buy('engineer').click(); await settle();
   check('An unlocked technology skill purchases from its card', (await leader()).leaderProgression.skills.engineer === 1 && await buy('engineer').isDisabled());
@@ -120,17 +120,17 @@ try {
     ui.open(); button('power').click(); button('power').click(); button('guard').click();
     const duplicateBlocked = calls === 1 && button('power').disabled && button('power').getAttribute('aria-busy') === 'true';
     ui.close(); ui.open(); const reopenBlocked = button('power').disabled;
-    awardLeaderXp(state, 800); ui.refresh(); const unrelatedLevelBlocked = button('power').disabled;
+    awardLeaderXp(state, 19200); ui.refresh(); const unrelatedLevelBlocked = button('power').disabled;
     learnLeaderSkill(state, 'power'); ui.refresh(); const confirmed = !button('guard').disabled;
     reject = true; button('guard').click(); const rejectionShown = panel.querySelector('.leader-skill-status').textContent.includes('Not connected');
-    ui.close(); awardLeaderXp(state, 1600); ui.refresh(); const stayedClosed = !ui.isOpen;
+    ui.close(); awardLeaderXp(state, 38400); ui.refresh(); const stayedClosed = !ui.isOpen;
     return { duplicateBlocked, reopenBlocked, unrelatedLevelBlocked, confirmed, rejectionShown, stayedClosed };
   });
   check('Pending multiplayer purchases survive close/reopen and unrelated levels, then reconcile on rank confirmation', Object.values(pending).every(Boolean), pending);
   await desktop.close();
   for (const [width, height] of [[1044, 480], [844, 390]]) {
     const context = await launch(width, height, true), label = `mobile-${width}x${height}`;
-    await controls(label, true); await award(800); await page.locator('.leader-xp-points').tap(); await settle();
+    await controls(label, true); await award(19200); await page.locator('.leader-xp-points').tap(); await settle();
     await inspectSkillCards(label); await capture(`${label}-skills`);
     await buy('guard').tap(); await settle();
     check(`${label}: tapping a skill + spends exactly one point`, (await leader()).leaderProgression.skills.guard === 1 && (await leader()).leaderProgression.skillPoints === 0);

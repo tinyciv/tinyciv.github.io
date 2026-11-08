@@ -92,8 +92,9 @@ try {
     await openHouse(active.house); await page.locator('#declare-war').click();
     assert.deepEqual(await status(), { paused: false, relation: 'war', dialog: false, diplomacy: null });
     assert.deepEqual(await commands(), activeCommands, 'Confirming war does not order an attack');
-    const savedImmediately = await page.evaluate(() => {
-        const saved = JSON.parse(localStorage.getItem('tinyciv-save-v3')).state;
+    const savedImmediately = await page.evaluate(async () => {
+        const { readStoredGame } = await import('/src/game/game-storage.ts');
+        const saved = JSON.parse(await readStoredGame()).state;
         return { relation: saved.factions[1].relation, paused: saved.paused, forcedAttacks: saved.units.filter(unit => unit.forcedAttack).length };
     });
     assert.deepEqual(savedImmediately, { relation: 'war', paused: false, forcedAttacks: 0 });

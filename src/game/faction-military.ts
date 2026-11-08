@@ -10,6 +10,7 @@ import { desiredRetinueSize } from './archery';
 import { isInfantryDrillUnlocked } from './research';
 import { purchaseRetinueSlot, RETINUE_SLOT_COST, RETINUE_SLOT_UPKEEP } from './retinue-purchases';
 import { buildingReady, distance, type Building, type GameState, type Point, type Unit } from './types';
+import { factionHasDevelopedResource } from './resource-development';
 
 /** Real purchases with normal Leader reach, prices, treasury and equipment
  * effects. Return a nearby service destination when a physical visit is due. */
@@ -28,7 +29,7 @@ export function prepareFactionArmy(state: GameState, leader: Unit, palace: Build
   if (distance(leader, palace) > 12 || state.time - leader.lastCombat < 5) return;
   const armor = faction.armorLevel ?? 0, weapon = faction.weaponLevel ?? 0;
   const track = armor < weapon ? 'armor' : 'weapon', level = track === 'armor' ? armor : weapon;
-  const upgradeCost = BLACKSMITH_UPGRADE_COSTS.at(level);
+  const upgradeCost = factionHasDevelopedResource(state, faction.id, 'iron') ? BLACKSMITH_UPGRADE_COSTS.at(level) : undefined;
   const smith = state.buildings.filter(building => building.kind === 'blacksmith' && buildingReady(building)
     && building.faction === faction.id && distance(building, palace) < 12)
     .sort((a, b) => distance(a, leader) - distance(b, leader))[0];

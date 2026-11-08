@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { nextRecruitRole, setSpearmanFraction, updateArcheryTraining } from '../src/game/archery';
 import { entityStore } from '../src/game/entity-store';
@@ -5,7 +6,7 @@ import { applyGameCommand } from '../src/multiplayer/commands';
 import { scoutRealm } from './helpers/scouts';
 
 function fixture() {
-  const state = scoutRealm();
+  const state = withDevelopedResources(scoutRealm(), ['copper']);
   const smithy = { ...state.buildings[0], id: 102, kind: 'blacksmith' as const, x: 14 };
   entityStore(state).buildings.add(smithy);
   return { state, smithy, range: state.buildings[0] };

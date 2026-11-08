@@ -1,5 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
+import { resourceBlocksGround } from '../src/game/resource-terrain';
 import { generateWorld } from '../src/world/generator';
 import { placeRidges, ridgeStatistics } from '../src/world/ridges';
 import { ridgeEdgeAllowed, ridgeFootprintAllowed, ridgeGroundWalkable, ridgeIsLedge, ridgeLevel, STAIR_UP } from '../src/game/ridges';
@@ -106,11 +107,10 @@ describe('native ledges and correctly oriented stairs', () => {
     expect(hasStaticPath(state, { x: 5.5, y: 9.5 }, { x: 11.5, y: 9.5 }, 0)).toBe(false);
   });
 
-  it('reserves stair approaches and rejects a farm straddling two elevations', () => {
+  it('allows building on stairs and both landings but rejects a footprint straddling elevations', () => {
     const world = flat(); raised(world); world.tiles[6 * world.width + 11].stair = 'south';
     expect(ridgeFootprintAllowed(world, 10, 5, 3)).toBe(false);
-    expect(ridgeFootprintAllowed(world, 11, 5)).toBe(false);
-    expect(ridgeFootprintAllowed(world, 11, 6)).toBe(false);
+    for (const y of [5, 6, 7]) expect(ridgeFootprintAllowed(world, 11, y)).toBe(true);
     expect(ridgeFootprintAllowed(world, 10, 8, 3)).toBe(true);
   });
 
@@ -168,7 +168,8 @@ describe('world ridge placement', () => {
   it('varies hill coverage while keeping both tiers and all settlements reachable through legal stairs', () => {
     const counts = new Set<number>(), directions = new Set<string>(), ratios: number[] = [];
     for (let seed = 0; seed < 20; seed++) {
-      const world = generateWorld(`ridge-coverage-${seed}`);
+      // Fixed dimensions preserve the recorded terrain audit baseline.
+      const world = generateWorld(`ridge-coverage-${seed}`, 194, 153);
       if (!world.tiles.some(tile => tile.ridge)) placeRidges(world.tiles, world.width, world.height, world.seed, world.spawns);
       const stats = ridgeStatistics(world), ratio = stats.raised / stats.land;
       ratios.push(ratio);
@@ -235,7 +236,8 @@ describe('world ridge placement', () => {
       }
       for (let index = 0; index < world.tiles.length; index++) {
         const tile = world.tiles[index];
-        if (tile.ridge && !tile.stair && !ridgeIsLedge(world, index % world.width, Math.floor(index / world.width))) {
+        // Only rocky resources intentionally occupy an otherwise usable floor.
+        if (tile.ridge && !tile.stair && !resourceBlocksGround(tile) && !ridgeIsLedge(world, index % world.width, Math.floor(index / world.width))) {
           // Mountain silhouettes may have more than five separate floor caps.
           // Require actual entrances and local connectivity for every floor,
           // rather than limiting how many valid stairs can serve those caps.
@@ -283,10 +285,10 @@ describe('stacked ledge shelves', () => {
     expect(ridgeQuads(world, 15, 11)!.map(q => [q.sx - q.dx, q.sy - q.dy])).toEqual(Array(4).fill([16, 64]));
   });
 
-  it('forbids skipped tiers, diagonal cliff crossings, and structures across either stair landing', () => {
+  it('forbids skipped tiers and diagonal cliff crossings while permitting structures on stair landings', () => {
     const world = stacked();
     expect(ridgeEdgeAllowed(world, { x: 14, y: 10 }, { x: 15, y: 11 })).toBe(false);
-    for (const y of [3, 4, 5, 10, 11, 12]) expect(ridgeFootprintAllowed(world, 15, y)).toBe(false);
+    for (const y of [3, 4, 5, 10, 11, 12]) expect(ridgeFootprintAllowed(world, 15, y)).toBe(true);
     expect(ridgeFootprintAllowed(world, 7, 7, 3)).toBe(true);
     expect(ridgeFootprintAllowed(world, 13, 13, 3)).toBe(true);
     expect(ridgeFootprintAllowed(world, 13, 9, 3)).toBe(false);

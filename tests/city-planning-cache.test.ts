@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { citySummaries } from '../src/game/cities';
+import { citySummaries, invalidateCitySummarySnapshot } from '../src/game/cities';
 import { cityOwnership } from '../src/game/city-ownership';
 import { entityStore, resetEntities } from '../src/game/entity-store';
 import { cityDevelopmentNeeds, cityPlanningStats, governingPalace, withCityPlanning, withCityPlanningMutation } from '../src/game/governor';
 import type { Building, GameState } from '../src/game/types';
+import { withSimulationReads } from '../src/game/simulation-reads';
 
 function realm(): GameState {
   const make = (id: number, kind: Building['kind'], x: number): Building => ({ id, kind, x, y: 8,
@@ -95,5 +96,60 @@ describe('city ownership and planning snapshots', () => {
       withCityPlanningMutation(state, () => { state.factions[0].population = 0; throw new Error('order failed'); });
     })).toThrow('order failed');
     expect(cityDevelopmentNeeds(state, first).population).toBe(0);
+  });
+
+  it('retains calculated city aggregates across unsuccessful simulation orders', () => {
+    const state = realm(); state.world.revision = 0;
+    withSimulationReads(state, () => withCityPlanning(state, () => {
+      const before = citySummaries(state);
+      for (let attempt = 0; attempt < 4; attempt++) {
+        withCityPlanningMutation(state, () => {
+          expect(citySummaries(state)[0]).toBe(before[0]);
+          // Spending the budget does not change a city's recurring income.
+          state.factions[0].gold--;
+          expect(citySummaries(state)[1]).toBe(before[1]);
+        });
+        expect(citySummaries(state)[0]).toBe(before[0]);
+      }
+    }));
+  });
+
+  it('refreshes a changed faction during the order while retaining other city aggregates', () => {
+    const state = realm(); state.world.revision = 0;
+    state.buildings[1].faction = 1; state.buildings[3].faction = 1;
+    state.factions[0].population = 3;
+    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace', name: 'Second' });
+    let actual: ReturnType<typeof citySummaries>;
+    withSimulationReads(state, () => withCityPlanning(state, () => {
+      const before = citySummaries(state);
+      withCityPlanningMutation(state, () => {
+        state.buildings[2].residents = 4; state.factions[0].population = 4;
+        actual = citySummaries(state);
+        expect(actual[0].population).toBe(4);
+        expect(actual[0]).not.toBe(before[0]);
+        expect(actual[1]).toBe(before[1]);
+        // Explicit invalidation remains a full fresh read, even within orders.
+        invalidateCitySummarySnapshot(state);
+        expect(citySummaries(state)).toEqual(actual);
+      });
+    }));
+    expect(citySummaries(state)).toEqual(actual!);
+  });
+
+  it('reassigns economic ownership after a same-order capture and observes thrown mutations', () => {
+    const state = realm(); state.world.revision = 0;
+    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace', population: 0 });
+    let actual: ReturnType<typeof citySummaries>;
+    withSimulationReads(state, () => withCityPlanning(state, () => {
+      citySummaries(state);
+      expect(() => withCityPlanningMutation(state, () => {
+        state.buildings[0].faction = 1;
+        actual = citySummaries(state);
+        expect(actual.find(city => city.palace.id === 2)?.population).toBe(6);
+        throw new Error('changed before failure');
+      })).toThrow('changed before failure');
+      expect(citySummaries(state)).toEqual(actual!);
+    }));
+    expect(citySummaries(state)).toEqual(actual!);
   });
 });

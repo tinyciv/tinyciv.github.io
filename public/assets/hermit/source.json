@@ -1,0 +1,7 @@
+{
+  "cabin": {"source": "public/assets/puny-world/overworld.png", "rect": [240,544,16,16], "changes": "Approved brown palette only; original silhouette and alpha preserved", "groundAnchor": [8,16]},
+  "hermit": {"source": "MiniWorldSprites/Characters/Soldiers/Ranged/PurpleRanged/MagePurple.png", "rect": [0,0,16,16], "changes": "Brown robes, Puny World civilian face, brown inner hood sides", "faceSource": "public/assets/puny-world/characters/Human-Worker-Cyan.png", "faceRect": [13,14,6,4]},
+  "fire": {"source": "scratch/2026-11-07-hermit-fire", "frameSize": [4,4], "frameCount": 6},
+  "creator": "Shade / Merchant Shade (house and character source art)",
+  "review": "scratch/2026-11-07-hermit-hood-refined/gallery.html"
+}

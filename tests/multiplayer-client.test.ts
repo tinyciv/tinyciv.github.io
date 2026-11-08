@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MultiplayerClient } from '../src/multiplayer/client';
 import type { GameState, Unit } from '../src/game/types';
-import type { LobbyRoom, ServerMessage } from '../src/multiplayer/protocol';
+import { PROTOCOL_VERSION, type LobbyRoom, type ServerMessage } from '../src/multiplayer/protocol';
+import { StateDeltaEncoder } from '../src/multiplayer/state-delta';
+import { entityStore } from '../src/game/entity-store';
 import { NO_INPUT } from '../src/multiplayer/input';
 
 class Socket {
@@ -29,7 +31,7 @@ function setup() {
 }
 async function connected() {
   const result = setup(), pending = result.client.connect(), socket = Socket.instances[0];
-  socket.open(); socket.receive({ type: 'welcome', version: 1, playerId: 'one', token: 'session', commandSequence: 14 });
+  socket.open(); socket.receive({ type: 'welcome', version: PROTOCOL_VERSION, playerId: 'one', token: 'session', commandSequence: 14 });
   await pending; return { ...result, socket };
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -66,9 +68,9 @@ describe('multiplayer client lifecycle', () => {
     const { client, socket, events } = await connected();
     socket.receive({ type: 'room', room: room('playing'), faction: 0 });
     socket.receive({ type: 'snapshot', sequence: 2, state: state() });
-    socket.receive({ type: 'frame', sequence: 4, state: {} as GameState });
+    socket.receive({ type: 'frame', sequence: 4, delta: {} });
     expect(socket.sent.at(-1)).toEqual({ type: 'sync' });
-    socket.receive({ type: 'frame', sequence: 1, state: {} as GameState });
+    socket.receive({ type: 'frame', sequence: 1, delta: {} });
     expect(events.onState).toHaveBeenCalledTimes(1);
     client.disconnect();
   });
@@ -84,14 +86,15 @@ describe('multiplayer client lifecycle', () => {
     socket.receive({ type: 'room', room: room('playing'), faction: 1 });
     const leader = { id: 2, faction: 1, kind: 'leader', x: 5, y: 6,
       leaderProgression: { level: 2, xp: 25, skillPoints: 1, skills: { power: 0, guard: 0, command: 0 } } } as Unit;
-    socket.receive({ type: 'snapshot', sequence: 0, state: { ...state(), playerFaction: 1, units: [leader] } });
+    const initial = { ...state(), playerFaction: 1, units: [leader] };
+    const encoder = new StateDeltaEncoder(initial);
+    socket.receive({ type: 'snapshot', sequence: 0, state: initial });
     expect(events.onState.mock.calls.at(-1)![0].units[0].leaderProgression).toEqual(leader.leaderProgression);
     expect(client.command({ type: 'learnLeaderSkill', skill: 'power' })).toBe(true);
     expect(socket.sent.at(-1)).toEqual({ type: 'command', seq: 15, command: { type: 'learnLeaderSkill', skill: 'power' } });
     const learned = { ...leader, x: 5.5,
       leaderProgression: { level: 2, xp: 25, skillPoints: 0, skills: { power: 1, guard: 0, command: 0 } } };
-    const { world: _world, ...dynamic } = state();
-    socket.receive({ type: 'frame', sequence: 1, state: { ...dynamic, playerFaction: 1, units: [learned] } });
+    socket.receive({ type: 'frame', sequence: 1, delta: encoder.encode({ ...state(), playerFaction: 1, units: [learned] }) });
     client.updatePresentation(performance.now() + 1000);
     expect(events.onState.mock.calls.at(-1)![0].units[0].leaderProgression).toEqual(learned.leaderProgression);
     socket.receive({ type: 'snapshot', sequence: 5, state: { ...state(), playerFaction: 1, units: [learned] } });
@@ -106,27 +109,54 @@ describe('multiplayer client lifecycle', () => {
     socket.open(); socket.receive({ type: 'snapshot', sequence: 0, state: state() });
     expect(events.onState).not.toHaveBeenCalled(); expect(socket.sent).toEqual([]);
     const next = client.connect(), newSocket = Socket.instances[1]; newSocket.open();
-    newSocket.receive({ type: 'welcome', version: 1, playerId: 'one', token: 'session', commandSequence: 0 });
+    newSocket.receive({ type: 'welcome', version: PROTOCOL_VERSION, playerId: 'one', token: 'session', commandSequence: 0 });
     await next; expect(client.connected).toBe(true); client.disconnect();
   });
   it('smooths display positions between samples without changing resources or overshooting', async () => {
     let now = 100; vi.spyOn(performance, 'now').mockImplementation(() => now);
     const { client, socket, events } = await connected();
     socket.receive({ type: 'room', room: room('playing'), faction: 0 });
-    socket.receive({ type: 'snapshot', sequence: 0, state: { ...state(), units: [{ id: 1, x: 2, y: 3 } as Unit] } });
+    const initial = { ...state(), units: [{ id: 1, x: 2, y: 3 } as Unit] };
+    const encoder = new StateDeltaEncoder(initial);
+    socket.receive({ type: 'snapshot', sequence: 0, state: initial });
     now = 225;
-    socket.receive({ type: 'frame', sequence: 1, state: { ...state(), units: [{ id: 1, x: 3, y: 3 } as Unit], time: 5 } });
+    socket.receive({ type: 'frame', sequence: 1, delta: encoder.encode({ ...state(), units: [{ id: 1, x: 3, y: 3 } as Unit], time: 5 }) });
     const display = events.onState.mock.calls.at(-1)![0] as GameState;
     expect(display.units[0].x).toBe(2); expect(display.time).toBe(5);
     client.updatePresentation(287.5); expect(display.units[0].x).toBe(2.5);
     client.updatePresentation(1000); expect(display.units[0].x).toBe(3);
     expect(display.time).toBe(5); client.disconnect();
   });
+  it('applies sparse movement against authoritative targets and retains interpolation across non-position deltas', async () => {
+    let now = 100; vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const { client, socket, events } = await connected();
+    socket.receive({ type: 'room', room: room('playing'), faction: 0 });
+    const live = { ...state(), units: [{ id: 1, kind: 'worker', faction: 0, x: 2, y: 3, hp: 100, maxHp: 100 } as Unit] };
+    const encoder = new StateDeltaEncoder(live);
+    socket.receive({ type: 'snapshot', sequence: 0, state: live });
+    const display = events.onState.mock.calls.at(-1)![0] as GameState, unit = display.units[0], store = entityStore(display);
+    let sequence = 0;
+    const frame = () => socket.receive({ type: 'frame', sequence: ++sequence, delta: encoder.encode(live) });
+    now = 225; live.units[0].x = 3; live.units[0].y = 4; frame();
+    client.updatePresentation(287.5); expect([unit.x, unit.y]).toEqual([2.5, 3.5]);
+    now = 300; live.units[0].hp = 90; frame();
+    expect([unit.x, unit.y, unit.hp]).toEqual([2.5, 3.5, 90]);
+    client.updatePresentation(350); expect([unit.x, unit.y]).toEqual([3, 4]);
+    now = 400; live.units[0].y = 5; frame();
+    client.updatePresentation(450); expect([unit.x, unit.y]).toEqual([3, 4.5]);
+    now = 450; live.units[0].hp = 80; frame();
+    client.updatePresentation(500); expect([unit.x, unit.y]).toEqual([3, 5]);
+    expect(events.onState.mock.calls.at(-1)![0]).toBe(display); expect(entityStore(display)).toBe(store);
+    expect(store.units.get(1)).toBe(unit);
+    now = 600; live.units[0].x = 20; frame(); expect(unit.x).toBe(20);
+    client.updatePresentation(1000); expect(unit.x).toBe(20);
+    client.disconnect();
+  });
   it('clears identity only when explicitly abandoning a match', async () => {
     const { client } = await connected(); client.abandon(); await Promise.resolve();
     const pending = client.connect(), socket = Socket.instances.at(-1)!; socket.open();
-    expect(socket.sent[0]).toEqual({ type: 'hello', version: 1 });
-    socket.receive({ type: 'welcome', version: 1, playerId: 'new', token: 'fresh-session', commandSequence: 0 });
+    expect(socket.sent[0]).toEqual({ type: 'hello', version: PROTOCOL_VERSION });
+    socket.receive({ type: 'welcome', version: PROTOCOL_VERSION, playerId: 'new', token: 'fresh-session', commandSequence: 0 });
     await pending; client.disconnect();
   });
 });

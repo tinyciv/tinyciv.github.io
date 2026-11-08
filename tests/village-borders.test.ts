@@ -145,7 +145,7 @@ describe('neutral village reservations', () => {
     expect(partial.length).toBeLessThan(borders.paths.filter(path => path.edge.faction === 1).length);
   });
 
-  it('keeps automatic farms, merchant roads and settlement road rings outside village land', () => {
+  it('keeps automatic farms and merchant roads outside village land while reserving the settlement’s immediate ring', () => {
     const state = fixture(); state.buildings[0].x = 26;
     const farm = planAutomaticFarmSite(state, state.buildings[0]);
     expect(farm).toBeDefined();
@@ -154,9 +154,10 @@ describe('neutral village reservations', () => {
     entityStore(state).units.add(merchant);
     expect(recordMerchantRoad(state, merchant)).toBe(false);
     const palace = structure(300, 'palace', 27, 17); entityStore(state).buildings.add(palace);
-    expect(buildingOverlapsVillageBorders(state, 'road', 29, 18)).toBe(true);
+    expect(buildingOverlapsVillageBorders(state, 'road', 29, 18)).toBe(false);
+    expect(buildingOverlapsVillageBorders(state, 'road', 30, 18)).toBe(true);
     expect(addPalaceRoadRing(state, palace)).toBeGreaterThan(0);
-    expect(state.buildings.some(building => building.kind === 'road' && building.x === 29 && building.y === 18)).toBe(false);
+    expect(state.buildings.some(building => building.kind === 'road' && building.x === 29 && building.y === 18)).toBe(true);
     expect(state.buildings.filter(building => building.kind === 'road').every(road => !buildingOverlapsVillageBorders(state, 'road', road.x, road.y))).toBe(true);
   });
 });

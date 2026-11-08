@@ -268,17 +268,20 @@ describe('merchant roads', () => {
     expect(state.factions[0].gold).toBe(0);
   });
 
-  it('never paves a river, bridge, occupied building, stair, or a solid reserved footprint', () => {
+  it('paves stairs but never a river, bridge, occupied building, or a solid reserved footprint', () => {
     const state = fixture(), merchant = oneMerchant(state);
     state.world.tiles[8 * 72 + 20].terrain = 'river';
     state.world.tiles[8 * 72 + 22].stair = 'east'; state.world.tiles[8 * 72 + 22].ridge = 1;
     entityStore(state).buildings.add({ ...city(4, 24, 8), kind: 'camp' }, { ...city(5, 28, 8), kind: 'house', construction: { startedAt: 0, duration: 20 } },
       { ...city(6, 32, 8), kind: 'bridge' });
-    for (const [x, y] of [[20, 8], [22, 8], [28, 8], [32, 8], [6, 10]]) {
+    for (const [x, y] of [[20, 8], [28, 8], [32, 8], [6, 10]]) {
       merchant.x = x + .5; merchant.y = y + .5;
       expect(recordMerchantRoad(state, merchant)).toBe(false);
     }
     expect(state.buildings.filter(building => building.kind === 'road')).toHaveLength(0);
+    merchant.x = 22.5; merchant.y = 8.5;
+    expect(recordMerchantRoad(state, merchant)).toBe(true);
+    expect(state.buildings.filter(building => building.kind === 'road')).toMatchObject([{ x: 22, y: 8 }]);
   });
 
   it('relocates walked farm cells for free while preserving crops and irrigation', () => {

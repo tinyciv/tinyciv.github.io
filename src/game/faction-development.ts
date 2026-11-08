@@ -6,7 +6,7 @@ import { territory } from './borders';
 import { cityDevelopmentNeeds, governorPermissions, withCityPlanning, withCityPlanningMutation } from './governor';
 import { planHouseSite } from './housing';
 import { houseLevel, WELL_POPULATION_REQUIREMENT, WELL_RADIUS } from './wells';
-import { areArchersUnlocked, areHorsemenUnlocked, isBuildingUnlocked, researchStatus } from './research';
+import { areSwordsmenUnlocked, areArchersUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked, isBuildingUnlocked, researchStatus } from './research';
 import { type Building, type Faction, type GameState, type ResearchBranchId, buildingReady, distance } from './types';
 import { SimulationEvents } from './simulation-events';
 import { entityStore } from './entity-store';
@@ -17,6 +17,7 @@ import { factionIrrigationSites } from './faction-irrigation';
 import { HEALER_SHACK_COST } from './healer-shack';
 import { FORT_GOLD, FORT_UPKEEP } from './forts';
 import { SUPPLY_DEPOT_COST } from './supply-train';
+import { autoDevelopResources } from './resource-development';
 
 export type DevelopmentKind = 'well' | 'monument' | 'library' | 'guardPost' | 'archeryRange' | 'blacksmith' | 'irrigation' | 'healerShack' | 'stable' | 'fort' | 'supplyDepot';
 export interface DevelopmentOrders {
@@ -192,7 +193,12 @@ function developUnlockedBuildings(state: GameState, faction: Faction, palace: Bu
   const owned = state.buildings.filter(building => building.faction === faction.id && building.hp > 0);
   if (areArchersUnlocked(faction) && owned.some(building => building.kind === 'archeryRange' && buildingReady(building)))
     faction.archerFraction = .25;
-  if (areHorsemenUnlocked(faction) && owned.some(building => building.kind === 'stable' && buildingReady(building))) faction.horsemanFraction = .25;
+  if (areHorsemenUnlocked(faction) && owned.some(building => building.kind === 'stable' && buildingReady(building))) {
+    faction.knightFraction = areKnightsUnlocked(faction) ? .25 : 0;
+    faction.horseArcherFraction = areHorseArchersUnlocked(faction) ? .15 : 0;
+    faction.horsemanFraction = faction.knightFraction ? 0 : .25;
+  }
+  if (areSwordsmenUnlocked(faction) && owned.some(building => building.kind === 'blacksmith' && buildingReady(building))) faction.swordsmanFraction = .25;
   if (owned.filter(building => building.construction && productiveKinds.includes(building.kind)
     && ownedByCity(state, building, palace)).length >= 2) return;
   const reserve = factionDevelopmentReserve(state, faction);
@@ -252,11 +258,17 @@ export function updateFactionDevelopment(state: GameState, orders: DevelopmentOr
 }
 
 function planFactionDevelopment(state: GameState, orders: DevelopmentOrders, plans: readonly CityPlan[]): void {
+  const resourceAttempts = new Set<number>();
   for (const { faction, interval, palace } of plans) {
     if (state.time + 1e-7 < (palace.governorNextPlanAt ?? Infinity)) continue;
     palace.governorNextPlanAt = state.time + interval;
     if (faction.id > 0 && !isHumanFaction(state, faction.id) && faction.population < 1) continue;
     if (faction.id > 0 && !isHumanFaction(state, faction.id) && palace.depopulated && cityDevelopmentNeeds(state, palace).population <= 0) continue;
+    if (!isHumanFaction(state, faction.id) && !resourceAttempts.has(faction.id)) {
+      resourceAttempts.add(faction.id);
+      withCityPlanningMutation(state, () => autoDevelopResources(state, faction.id,
+        Math.max(0, faction.gold - factionDevelopmentReserve(state, faction))));
+    }
     // Establish one library when the city can afford the construction work.
     if (faction.id > 0 && !isHumanFaction(state, faction.id) && state.buildings.filter(building => building.construction && productiveKinds.includes(building.kind)
       && ownedByCity(state, building, palace)).length < 3 && establishResearch(state, faction, palace, orders)) continue;

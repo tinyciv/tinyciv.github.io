@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { purchaseBlacksmithUpgrade } from '../src/game/blacksmith';
 import { removeCoveredRoads } from '../src/game/covered-roads';
@@ -19,7 +20,7 @@ function fixture(): GameState {
   const state = researchFixture();
   entityStore(state).buildings.replace([building(1, 'palace', 6, 10)]);
   state.factions[0].gold = 10000;
-  return state;
+  return withDevelopedResources(state, ['iron']);
 }
 function nearby(state: GameState, target: Building): void {
   Object.assign(state.units[0], { x: target.x + .5, y: target.y + buildingHeight(target) + .5 });
@@ -96,9 +97,9 @@ describe('gold ledger records actual gameplay transactions', () => {
     route.distance = 100; route.goal = { x: merchant.x, y: merchant.y };
     updateMerchant(state, merchant, .1, () => {}); updateMerchant(state, merchant, .1, () => {});
     expect(route.journeys).toBe(1);
-    expect(goldFlowSummary(state, faction).inputs).toMatchObject([{ category: 'trade', amount: 120 }]);
-    expect(goldFlowSummary(state, village)).toMatchObject({ inputs: [{ category: 'trade', amount: 120 }], outlays: [], net: 120 });
-    expect(faction.gold - 10000).toBe(-130); expect(village.gold).toBe(120);
+    expect(goldFlowSummary(state, faction).inputs).toMatchObject([{ category: 'trade', amount: 60 }]);
+    expect(goldFlowSummary(state, village)).toMatchObject({ inputs: [{ category: 'trade', amount: 60 }], outlays: [], net: 60 });
+    expect(faction.gold - 10000).toBe(-190); expect(village.gold).toBe(60);
   });
 
   it('records actual village construction and guard purchases from its treasury', () => {
@@ -136,7 +137,7 @@ describe('gold ledger records actual gameplay transactions', () => {
     const pack: MarauderPack = { id: 50, name: 'Thieves', color: '#111', targetFaction: 0, targetBuilding: palace.id,
       raid: true, motivation: 'theft', phase: 'approach', home: { x: 2.5, y: 2.5 }, waypoint: { x: 7, y: 11 },
       nextWanderAt: 0, startingTroops: 2, leaderId: 100, raiderCamp: 60 };
-    const members = [100, 101, 102].map(id => ({ ...person(id, 'warrior', palace.x - .5, palace.y + .5, -2),
+    const members = [100, 101, 102].map(id => ({ ...person(id, 'warrior', palace.x + .5, palace.y - .5, -2),
       marauderPack: pack.id, order: 'raid' as const }));
     state.marauderPacks = [pack]; entityStore(state).units.add(...members);
     updateRaiderGroupMotivation(state, pack, members);

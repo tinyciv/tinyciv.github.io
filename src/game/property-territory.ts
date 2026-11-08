@@ -1,10 +1,15 @@
 import { territory, territoryClaimWithoutSource, UNCLAIMED, type Territory } from './borders';
-import { buildingHeight, buildingWidth, isFarmKind, type Building, type GameState } from './types';
+import { buildingHeight, buildingWidth, buildingReady, isFarmKind, type Building, type GameState } from './types';
 
 /** Solid buildings belong inside one complete claim. Outlying farms change
  * hands on first border contact, but keep their owner while any plot is home. */
 export function buildingTerritoryOwner(state: GameState, building: Building, borders = territory(state)): number | undefined {
     if (building.villageId !== undefined) return building.faction;
+    // Cities and forts anchor their own minimum territory. Their protected
+    // footprint must not be bypassed by the independent-source test below;
+    // a settlement changes allegiance through combat capture instead.
+    if ((building.kind === 'palace' || building.kind === 'fort') && buildingReady(building)
+        && state.factions.some(faction => faction.id === building.faction && faction.id >= 0 && !faction.defeated)) return building.faction;
     // Village borders reserve land without passively annexing neighboring
     // civilizations' existing cities, homes or fields.
     const villages = new Set(state.villages?.map(village => village.faction));

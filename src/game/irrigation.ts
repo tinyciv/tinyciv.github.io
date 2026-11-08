@@ -81,8 +81,10 @@ export function irrigationAt(state: GameState, x: number, y: number): boolean {
 }
 
 /** Water benefits nearby farmland irrespective of ownership; overlap never stacks. */
-export function irrigationYieldMultiplier(state: GameState, x: number, y: number): 1 | 2 {
+export function irrigationYieldMultiplier(state: GameState, x: number, y: number): 1 | 2 | 3 {
   const tx = Math.floor(x), ty = Math.floor(y);
   if (tx < 0 || ty < 0 || tx >= state.world.width || ty >= state.world.height) return 1;
-  return prepareIrrigation(state).coverage[ty * state.world.width + tx] ? 2 : 1;
+  if (!prepareIrrigation(state).coverage[ty * state.world.width + tx]) return 1;
+  // Double the added benefit: +200% on desert, +100% on other ground.
+  return tileAt(state.world, tx, ty)?.terrain === 'desert' ? 3 : 2;
 }

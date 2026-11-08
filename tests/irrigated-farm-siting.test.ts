@@ -105,7 +105,7 @@ describe('farm placement around palace streets', () => {
 describe('irrigated automatic farm placement', () => {
   it('keeps the ordinary nearby collection ring when yields are equal', () => {
     const state = fixture();
-    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD });
+    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD * 1.25 });
   });
 
   it.each(['forest', 'jungle', 'palm'] as const)('queues and completes a nearby farm through %s instead of choosing the distant clearing', vegetation => {
@@ -156,12 +156,12 @@ describe('irrigated automatic farm placement', () => {
     const state = fixture(); transport(state); add(state, 'irrigation', far);
     const site = plan(state)!;
     expect(site).toMatchObject({ point: far, irrigatedPlots: 1 });
-    expect(site.harvest).toBeCloseTo(FIELD_HARVEST_FOOD * 2); expect(site.harvest).toBeCloseTo(harvest(state, far));
+    expect(site.harvest).toBeCloseTo(FIELD_HARVEST_FOOD * 2.5); expect(site.harvest).toBeCloseTo(harvest(state, far));
   });
 
   it('counts a single irrigated plot and lets that extra yield beat the distance preference', () => {
     const state = fixture(); transport(state); add(state, 'irrigation', { x: 23, y: 18 });
-    expect(plan(state)).toMatchObject({ point: far, irrigatedPlots: 1, harvest: FIELD_HARVEST_FOOD * 2 });
+    expect(plan(state)).toMatchObject({ point: far, irrigatedPlots: 1, harvest: FIELD_HARVEST_FOOD * 2.5 });
   });
 
   it('rejects irrigation whose long walk will spoil the harvest', () => {
@@ -169,7 +169,7 @@ describe('irrigated automatic farm placement', () => {
     for (let x = far.x; x <= far.x + 1; x++) tileAt(state.world, x, far.y + 1)!.terrain = 'lake';
     for (let x = 27; x <= edge.x; x++) tileAt(state.world, x, 18)!.terrain = 'grassland';
     clearPlot(state, edge); add(state, 'irrigation', { x: 28, y: 18 });
-    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD });
+    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD * 1.25 });
   });
 
   it('does not stack overlapping ditches on a crop tile', () => {
@@ -177,7 +177,7 @@ describe('irrigated automatic farm placement', () => {
     add(state, 'irrigation', far); add(state, 'irrigation', { x: far.x + 1, y: far.y });
     const site = plan(state)!;
     expect(site).toMatchObject({ point: far, irrigatedPlots: 1 });
-    expect(site.harvest).toBeCloseTo(FIELD_HARVEST_FOOD * 2); expect(site.harvest).toBeCloseTo(harvest(state, far));
+    expect(site.harvest).toBeCloseTo(FIELD_HARVEST_FOOD * 2.5); expect(site.harvest).toBeCloseTo(harvest(state, far));
   });
 
   it('orders a real crop tile over its own ditch while retaining nearby roads', () => {
@@ -191,13 +191,13 @@ describe('irrigated automatic farm placement', () => {
     expect(cityDevelopmentNeeds(state, state.buildings[0]).foodCapacity).toBeGreaterThan(0);
     delete farm.construction; synchronizeFarms(state);
     expect(state.fields).toHaveLength(1);
-    expect(state.fields!.every(field => fieldHarvestFoodForState(state, field.x, field.y) === FIELD_HARVEST_FOOD * 2)).toBe(true);
+    expect(state.fields!.every(field => fieldHarvestFoodForState(state, field.x, field.y) === FIELD_HARVEST_FOOD * 2.5)).toBe(true);
   });
 
   it.each(['unfinished', 'dead'] as const)('does not promise a harvest bonus from a %s ditch', status => {
     const state = fixture(); add(state, 'irrigation', far, status === 'dead' ? { hp: 0 }
       : { construction: { startedAt: 0, duration: 4, waitingForBuilder: true } });
-    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD });
+    expect(plan(state)).toMatchObject({ point: near, irrigatedPlots: 0, harvest: FIELD_HARVEST_FOOD * 1.25 });
   });
 
   it.each(['road', 'irrigation'] as const)('does not build over a foreign %s even when its plots receive irrigation', kind => {
@@ -223,10 +223,10 @@ describe('irrigated automatic farm placement', () => {
     expect(plan(state)?.point).toEqual(near);
   });
 
-  it('uses actual food output, so irrigated desert does not displace a more productive fertile site', () => {
-    const state = fixture(); add(state, 'irrigation', far);
+  it('uses actual food output, so desert irrigation can outweigh nearer unwatered grassland', () => {
+    const state = fixture(); transport(state); add(state, 'irrigation', far);
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) tileAt(state.world, far.x + dx, far.y + dy)!.terrain = 'desert';
-    expect(harvest(state, far)).toBeCloseTo(FIELD_HARVEST_FOOD / 2);
-    expect(plan(state)?.point).toEqual(near);
+    expect(harvest(state, far)).toBeCloseTo(FIELD_HARVEST_FOOD * .75 * 3);
+    expect(plan(state)?.point).toEqual(far);
   });
 });

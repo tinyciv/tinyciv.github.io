@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAMAGE_NUMBER_DURATION, damageNumberPose, recordUnitDamage } from '../src/game/combat-feedback';
+import { DAMAGE_NUMBER_DURATION, damageNumberPose, damageNumberStyle, damageNumberVisible, goldNumberPose, recordUnitDamage } from '../src/game/combat-feedback';
 import { type GameState, type Unit } from '../src/game/types';
 import { RespawnCamera } from '../src/ui/respawn-camera';
 function soldier(id: number, x: number, faction = 0): Unit {
@@ -27,11 +27,42 @@ describe('combat feedback', () => {
     for (let i = 0; i < 400; i++) recordUnitDamage(state, target, 7);
     expect(state.particles).toHaveLength(240);
   });
+  it('hides all damage labels for an enemy casualty but keeps its gold reward and nearby living units', () => {
+    const state = game(), enemy = state.units[3];
+    recordUnitDamage(state, enemy, 100);
+    recordUnitDamage(state, state.units[0], 100);
+    expect(damageNumberVisible(state, state.particles[0])).toBe(true);
+    enemy.hp = 0; recordUnitDamage(state, enemy, 80, 1);
+    state.particles.push({ x: enemy.x, y: enemy.y, text: '+6 gold', color: '#ffe33d', life: 1.6 });
+    expect(state.particles.filter(p => p.kind !== 'damage' || damageNumberVisible(state, p)).map(p => p.text)).toEqual(['-20', '+6 gold']);
+    // The same replicated particles retain friendly casualty feedback for the victim's owner.
+    state.playerFaction = 1;
+    expect(state.particles.filter(p => p.damageUnitId === enemy.id).every(p => damageNumberVisible(state, p))).toBe(true);
+  });
   it('rises into an arc, drifts sideways, then fades away', () => {
     const start = damageNumberPose(.85), apex = damageNumberPose(.425), end = damageNumberPose(0);
     expect(apex.rise).toBeGreaterThan(start.rise); expect(apex.rise).toBeGreaterThan(end.rise);
     expect(end.offset).toBeGreaterThan(start.offset); expect(end.alpha).toBe(0);
     expect(damageNumberPose(.425, -1).offset).toBe(-apex.offset);
+  });
+  it('colors damage from the viewer perspective and omits enemy damage signs', () => {
+    const state = game();
+    recordUnitDamage(state, state.units[0], 100);
+    const particle = state.particles[0];
+    expect(damageNumberStyle(state, particle)).toEqual({ text: '-20', color: '#ff5252' });
+    state.playerFaction = 1;
+    expect(damageNumberStyle(state, particle)).toEqual({ text: '20', color: '#ffffff' });
+    particle.faction = 1; particle.text = '-12.6';
+    expect(damageNumberStyle(state, particle)).toEqual({ text: '-13', color: '#ff5252' });
+  });
+  it('lets gold glide steadily upward and fade without the damage bounce', () => {
+    const frames = [1.6, 1.2, .8, .4, 0].map(life => goldNumberPose(life));
+    for (let i = 1; i < frames.length; i++) {
+      expect(frames[i].rise).toBeGreaterThan(frames[i - 1].rise);
+      expect(frames[i].alpha).toBeLessThanOrEqual(frames[i - 1].alpha);
+      expect(frames[i].offset).toBe(0);
+    }
+    expect(frames[0].alpha).toBe(1); expect(frames.at(-1)!.alpha).toBe(0);
   });
 });
 describe('respawn camera', () => {

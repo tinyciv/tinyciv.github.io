@@ -1,15 +1,20 @@
+import { applyTundra } from './tundra';
+import { scatterDesertStones } from './desert-stones';
 import { createNoise2D } from 'simplex-noise';
 import { type Point, type World, type Tile, WATER } from '../game/types';
 import { STARTING_FACTION_COUNT, OPPOSING_FACTION_COUNT } from '../game/civilizations';
 import { ridgeGroundWalkable, ridgeIsLedge, STAIR_UP } from '../game/ridges';
 import { MEDITERRANEAN_DATA as DATA } from './data/mediterranean-data';
 import { seededRandom, settlements, terrainYields } from './generator';
+import { MIN_FACTION_START_DISTANCE } from './starting-sites';
 import { DEFAULT_LANDSCAPE_PARAMETERS } from './options';
 import { addMediterraneanRelief } from './mediterranean-relief';
 import { pruneShortRiverSpurs } from './river-spurs';
 import { addWaterfallTributaries } from './waterfalls';
 import { applySoilFertility } from './soil';
 import { assignRegionalResources } from './resources';
+import { applyStonePlains } from './stone-plains';
+import { applyDesertTransitions } from './desert-regions';
 
 export const MEDITERRANEAN_WIDTH = 384;
 export const MEDITERRANEAN_HEIGHT = 199;
@@ -219,7 +224,9 @@ export function generateMediterraneanWorld(seed: string, width = MEDITERRANEAN_W
     if (freshwater[cell] <= 2) { tile.food++; tile.moisture = clamp(tile.moisture + .23); }
   }
   // Reserve connected, buildable towns before raising shelves around them.
-  const sites = settlements(world.tiles, width, height, random, DEFAULT_LANDSCAPE_PARAMETERS);
+  const minimumFactionDistance = width >= MEDITERRANEAN_WIDTH && height >= MEDITERRANEAN_HEIGHT ? MIN_FACTION_START_DISTANCE : 0;
+  world.minimumFactionStartDistance = minimumFactionDistance || undefined;
+  const sites = settlements(world.tiles, width, height, random, DEFAULT_LANDSCAPE_PARAMETERS, minimumFactionDistance);
   if (sites.capitals.length !== STARTING_FACTION_COUNT || sites.secondary.length !== OPPOSING_FACTION_COUNT)
     throw new Error('Mediterranean map needs more room for connected starting towns.');
   world.spawns = sites.capitals; world.secondarySpawns = sites.secondary;
@@ -245,6 +252,7 @@ export function generateMediterraneanWorld(seed: string, width = MEDITERRANEAN_W
       if (tile.terrain === 'desert') tile.terrain = 'plains';
     }
   }
+  applyDesertTransitions(world);
   const alpineChannels = new Set(alpine.paths.flatMap(path => path.slice(0, -1)));
   const starts = [...world.spawns, ...world.secondarySpawns];
   for (let cell = 0; cell < world.tiles.length; cell++) {
@@ -275,5 +283,8 @@ export function generateMediterraneanWorld(seed: string, width = MEDITERRANEAN_W
     Object.assign(tile, terrainYields(tile.terrain, tile.overlay)); if (freshwater[cell] <= 2) tile.food++;
   }
   applySoilFertility(world); assignRegionalResources(world);
+  applyStonePlains(world);
+  scatterDesertStones(world);
+  applyTundra(world);
   return world;
 }

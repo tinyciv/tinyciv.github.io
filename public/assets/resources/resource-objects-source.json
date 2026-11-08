@@ -1,0 +1,178 @@
+{
+  "assets": [
+    {
+      "name": "copper",
+      "source": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "sourceRect": [
+        3264,
+        112,
+        16,
+        16
+      ],
+      "packedRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "sourceSHA256": "cc4a4e95a8003250c0a44c9bc8e303280cba7a4357f1e119801c3f63eb280706",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "Purchased Puny World Medieval project license"
+    },
+    {
+      "name": "iron",
+      "source": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "sourceRect": [
+        3296,
+        112,
+        16,
+        16
+      ],
+      "packedRect": [
+        16,
+        0,
+        16,
+        16
+      ],
+      "sourceSHA256": "cc4a4e95a8003250c0a44c9bc8e303280cba7a4357f1e119801c3f63eb280706",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "Purchased Puny World Medieval project license"
+    },
+    {
+      "name": "stone",
+      "source": "scratch/2026-10-28-puny-medieval/pack/PUNY-WORLD-PAID_v1/punyworld-atlas.png",
+      "sourceRect": [
+        3264,
+        128,
+        16,
+        16
+      ],
+      "packedRect": [
+        32,
+        0,
+        16,
+        16
+      ],
+      "sourceSHA256": "cc4a4e95a8003250c0a44c9bc8e303280cba7a4357f1e119801c3f63eb280706",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "Purchased Puny World Medieval project license"
+    },
+    {
+      "name": "olive-small",
+      "source": "public/assets/vegetation/medieval-nature.png",
+      "sourceRect": [
+        64,
+        96,
+        16,
+        16
+      ],
+      "packedRect": [
+        48,
+        0,
+        16,
+        16
+      ],
+      "sourceSHA256": "260f962b95a637caa5f78c907180d067efadde27482ea8133915f593b5a5e050",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "Purchased Puny World Medieval project license"
+    },
+    {
+      "name": "olive-tall",
+      "source": "public/assets/vegetation/medieval-nature.png",
+      "sourceRect": [
+        64,
+        112,
+        16,
+        32
+      ],
+      "packedRect": [
+        64,
+        0,
+        16,
+        32
+      ],
+      "sourceSHA256": "260f962b95a637caa5f78c907180d067efadde27482ea8133915f593b5a5e050",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "Purchased Puny World Medieval project license"
+    },
+    {
+      "name": "copper-mine",
+      "source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/CaveV2.png",
+      "sourceRect": [
+        0,
+        16,
+        16,
+        16
+      ],
+      "packedRect": [
+        0,
+        16,
+        16,
+        16
+      ],
+      "sourceSHA256": "45036d94390cc942811ba2a88b0c1d3aab048510df3c8a1aafa33e3ff21db3d0",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "CC0-1.0 / Shade MiniWorld"
+    },
+    {
+      "name": "iron-mine",
+      "source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/CaveV2.png",
+      "sourceRect": [
+        32,
+        0,
+        16,
+        16
+      ],
+      "packedRect": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "sourceSHA256": "45036d94390cc942811ba2a88b0c1d3aab048510df3c8a1aafa33e3ff21db3d0",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "CC0-1.0 / Shade MiniWorld"
+    },
+    {
+      "name": "stone-mine",
+      "source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/CaveV2.png",
+      "sourceRect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "packedRect": [
+        32,
+        16,
+        16,
+        16
+      ],
+      "sourceSHA256": "45036d94390cc942811ba2a88b0c1d3aab048510df3c8a1aafa33e3ff21db3d0",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "CC0-1.0 / Shade MiniWorld"
+    },
+    {
+      "name": "salt-pit",
+      "source": "scratch/2026-10-26-miniworld-assets/pack/MiniWorldSprites/Buildings/Wood/CaveV2.png",
+      "sourceRect": [
+        1,
+        8,
+        14,
+        8
+      ],
+      "packedRect": [
+        80,
+        0,
+        14,
+        8
+      ],
+      "sourceSHA256": "45036d94390cc942811ba2a88b0c1d3aab048510df3c8a1aafa33e3ff21db3d0",
+      "processing": "Exact native crop, unchanged pixels and transparency.",
+      "license": "CC0-1.0 / Shade MiniWorld"
+    }
+  ],
+  "fence": "Existing Cozy Farm Lite fence-h/v/post.png, compact native source-row selections; see ../cozy-farm-lite/source.json for CC-BY4.0 attribution.",
+  "saltPit": "Original timber-braced mine opening reused as a shallow excavation; no new artwork.",
+  "sha256": "c93424d4cc1493ad0032439b7743314630eaf976c7cd5b6a317003506437ee38"
+}

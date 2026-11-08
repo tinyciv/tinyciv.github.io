@@ -23,6 +23,8 @@ import { buildLabel, buildMenuForSelection } from './build-controls';
 import { isKeep, settlementLabel } from '../game/settlement-upgrades';
 import { buildingArmor, isDefensiveBuilding } from '../game/defense-equipment';
 import { HEALER_SHACK_RADIUS, HEALER_SHACK_MULTIPLIER } from '../game/healer-shack';
+import { multiplierPercent, wholeNumber } from './number-format';
+import { soilFertility } from '../game/fertility';
 
 /** Unformatted values let the compact HUD choose its own precision and markup. */
 export interface SelectionSummary {
@@ -33,17 +35,21 @@ export interface SelectionSummary {
   armorLevel?: number;
   hp: number;
   maxHp: number;
+  showHealth: boolean;
   showCombatStats: boolean;
   attack: number;
   defense: number;
+  fertility?: number;
   title: string;
   hint?: string;
 }
 
 function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   let name = unit.marauderLeader ? 'Marauder Leader' : unit.name ?? unit.kind[0].toUpperCase() + unit.kind.slice(1);
-  let picture = unit.kind === 'leader' ? 'crown' : ['archer', 'horseman', 'spearman', 'scout', 'warrior', 'militia', 'boar', 'marshBird', 'merchant'].includes(unit.kind) ? unit.kind : 'worker';
+  let picture = unit.kind === 'leader' ? 'crown' : ['archer', 'horseman', 'horseArcher', 'knight', 'spearman', 'scout', 'warrior', 'swordsman', 'militia', 'boar', 'marshBird', 'merchant'].includes(unit.kind) ? unit.kind : 'worker';
   if (unit.marauderPack !== undefined) picture = unit.marauderLeader ? 'crown' : unit.kind === 'archer' ? 'archer' : 'marauder';
+  if (unit.kind === 'horseArcher') name = 'Horse Archer';
+  if (unit.kind === 'slinger') { name = 'Slinger'; picture = 'slinger'; }
   if (unit.kind === 'levyInfantry') { name = 'Levy Infantry'; picture = 'levyInfantry'; }
   if (unit.kind === 'skirmisher') { name = 'Skirmisher'; picture = 'skirmisher'; }
   if (unit.kind === 'supplyCart') { name = 'Supply cart'; picture = 'supplyCart'; }
@@ -52,11 +58,15 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   if (unit.kind === 'marshBird') name = 'Marsh bird';
   if (unit.builder) name = 'Builder';
   if (unit.kind === 'sailboat') { name = unit.sailboat?.passenger !== undefined ? 'Galley · Leader aboard' : 'Galley'; picture = 'sailboat'; }
-  const details = [name, `Speed ${unit.speed.toFixed(2)}`, `Range ${unit.range}`, `Morale ${Math.ceil(unit.morale)}`];
+  const details = [name, `Speed ${wholeNumber(unit.speed)}`, `Range ${wholeNumber(unit.range)}`, `Morale ${wholeNumber(unit.morale)}`];
+  if (unit.kind === 'slinger') details.push('Stone projectiles', '80 maximum morale', '5 gold every 30s', 'Dismisses when gold runs out');
   if (unit.kind === 'levyInfantry') details.push('Half warrior attack and defense', '80 maximum morale', '5 gold every 30s', 'Dismisses when gold runs out');
   if (unit.kind === 'skirmisher') details.push('Fort patrol', 'Throws javelins and evades approaching enemies');
   if (unit.kind === 'supplyCart') details.push('Delivers 10 HP healing to the Leader and all friendly units', 'No population or kill reward');
+  if (unit.kind === 'horseArcher') details.push('Fast mounted archer', 'Light armor · Retreats from melee');
+  if (unit.kind === 'knight') details.push('Heavy armor · Powerful melee attack', 'Running charge · Area damage', '2 gold every 30s');
   if (unit.kind === 'horseman') details.push('65% faster · 50% greater base attack', 'Running charge · Area damage');
+  if (unit.kind === 'swordsman') details.push('Twice spearman base attack', 'Lower defense than spearmen');
   if (unit.kind === 'spearman') details.push('50% greater base defense', 'Thrusts pierce up to two additional enemies');
   if (unit.kind === 'scout') details.push('Automatically maps unexplored land', 'Avoids combat', 'Independent of the retinue');
   if (unit.kind === 'marshBird') details.push('Hunt: +20 food', 'Stays in marshes; crosses water');
@@ -74,7 +84,7 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   }
   if (unit.builder) details.push(unit.buildPhase === 'clearing' ? 'Clearing trees' : unit.buildPhase === 'repairing' ? 'Repairing'
     : unit.buildPhase === 'working' ? 'Building' : unit.buildPhase === 'outbound' ? 'On the way' : unit.inside ? 'Idle' : 'Returning');
-  if (unit.collector) details.push(`Carrying ${Number((unit.cargo ?? 0).toFixed(1))} food`);
+  if (unit.collector) details.push(`Carrying ${wholeNumber(unit.cargo ?? 0)} food`);
   if (unit.kind === 'merchant') {
     const route = state.tradeRoutes?.find(route => route.merchantId === unit.id);
     if (route) {
@@ -86,7 +96,7 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   if (unit.kind === 'militia') details.push(unit.target !== undefined ? 'Defending city' : 'Returning to guard post');
   return {
     name, picture, factionColor: factionColor(state, unit.faction, state.marauderPacks?.find(pack => pack.id === unit.marauderPack)?.color ?? '#b6a77e'),
-    armorLevel: unit.armorLevel ?? 0, hp: unit.hp, maxHp: unitMaxHp(unit),
+    armorLevel: unit.armorLevel ?? 0, hp: unit.hp, maxHp: unitMaxHp(unit), showHealth: true,
     showCombatStats: unit.kind !== 'sailboat', attack: unitAttack(unit, state.factions.find(faction => faction.id === unit.faction)), defense: unitDefense(unit), title: details.join(' · '),
     hint: unit.kind === 'sailboat' && unit.faction === playerFaction(state) ? unit.sailboat?.passenger !== undefined
       ? 'W/S thrust · A/D strafe · Q/E turn · Right-click shore: land.' : 'Right-click this boat to board with the Leader.' : undefined,
@@ -95,6 +105,7 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
 
 function buildingSummary(state: GameState, building: Building): SelectionSummary {
   const ready = buildingReady(building);
+  const fertility = soilFertility(state.world, building.x, building.y) || undefined;
   const owner = state.factions.find(faction => faction.id === building.faction);
   const gate = ready && (building.kind === 'wall' || building.kind === 'palisade')
     && state.buildings.some(other => other.kind === 'road' && other.hp > 0 && other.x === building.x && other.y === building.y);
@@ -106,7 +117,8 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
   if (isFarmKind(building.kind) && building.farmFallow) name += ' · Fallow';
   if (building.kind === 'fort' && building.fort?.destroyed) name = 'Fort foundation';
   const details = [name];
-  if (building.kind === 'fort') details.push(building.fort?.destroyed ? `Rebuild for ${(building.fort.initialGold ?? FORT_GOLD) / 2} gold` : 'Fires at two targets · Expands borders', '20 gold every 30s');
+  if (fertility !== undefined) details.push(`Soil fertility ${multiplierPercent(fertility)}`);
+  if (building.kind === 'fort') details.push(building.fort?.destroyed ? `Rebuild for ${wholeNumber((building.fort.initialGold ?? FORT_GOLD) / 2)} gold` : 'Fires at two targets · Expands borders', '20 gold every 30s');
   if (building.kind === 'supplyDepot') details.push('Sends one supply cart every 30s', 'Each delivery heals the Leader and all units by up to 10 HP');
   if (building.cityName) details.push(building.cityName);
   if (building.capacity) details.push(`Residents ${building.residents ?? 0}/${building.capacity}`);
@@ -118,24 +130,24 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
   } else {
     if (building.faction >= 0 && building.villageId === undefined && ['palace', 'tower', 'woodenTower'].includes(building.kind)) {
       const upkeep = buildingMaintenance(state, building);
-      if (upkeep) details.push(`Upkeep ${upkeep} gold every ${ECONOMY_INTERVAL}s`);
+      if (upkeep) details.push(`Upkeep ${wholeNumber(upkeep)} gold every ${ECONOMY_INTERVAL}s`);
       else if (building.kind === 'palace') details.push('Capital: administration exempt');
     }
     if (building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) details.push(`Range ${WOODEN_TOWER_RANGE}`);
     if (isKeep(building)) details.push('Immune to raider theft');
     if (isDefensiveBuilding(building)) {
-      if (owner?.armorLevel) details.push(`Armor ${equipmentMultiplier(owner.armorLevel)}×`);
-      if ((building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) && owner?.weaponLevel) details.push(`Weapons ${equipmentMultiplier(owner.weaponLevel)}×`);
+      if (owner?.armorLevel) details.push(`Armor ${multiplierPercent(equipmentMultiplier(owner.armorLevel))}`);
+      if ((building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) && owner?.weaponLevel) details.push(`Weapons ${multiplierPercent(equipmentMultiplier(owner.weaponLevel))}`);
     }
     if (building.kind === 'well') details.push(`Level 2 housing within ${WELL_RADIUS} tiles`);
     if (building.kind === 'dock') details.push('Launches one galley for the Leader', 'Right-click the boat to board');
     if (building.kind === 'ballista') details.push('Range 18 tiles · One shot every 4 seconds', 'Prioritizes towers, guard posts and walls');
     if (building.kind === 'healerShack') details.push(`${HEALER_SHACK_MULTIPLIER}× friendly healing within ${HEALER_SHACK_RADIUS} tiles`, 'Own borders · Normal recovery delay · Does not stack');
-    if (building.kind === 'irrigation') details.push(`Doubles farmland yield within ${IRRIGATION_RADIUS} tiles`, 'Immune to enemy attacks');
-    if (building.kind === 'monument') details.push(`+${Number(MONUMENT_CULTURE_PER_SECOND.toFixed(2))} culture/s`);
+    if (building.kind === 'irrigation') details.push(`Farmland yield: 2× on other land, 3× on desert within ${IRRIGATION_RADIUS} tiles`, 'Immune to enemy attacks');
+    if (building.kind === 'monument') details.push(`+${wholeNumber(MONUMENT_CULTURE_PER_SECOND * 60)} culture/min`);
     if (building.kind === 'blacksmith') {
       const owner = state.factions.find(faction => faction.id === building.faction);
-      details.push(`Armor ${equipmentMultiplier(owner?.armorLevel)}×`, `Weapons ${equipmentMultiplier(owner?.weaponLevel)}×`);
+      details.push(`Armor ${multiplierPercent(equipmentMultiplier(owner?.armorLevel))}`, `Weapons ${multiplierPercent(equipmentMultiplier(owner?.weaponLevel))}`);
     }
     if (building.kind === 'guardPost' && building.villageId === undefined) {
       const guards = state.units.filter(unit => unit.kind === 'militia' && unit.guardPost === building.id && unit.hp > 0);
@@ -158,9 +170,10 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
     factionColor: factionColor(state, building.faction, building.faction === -2 ? RAIDER_COLOR : '#b6a77e'),
     houseTier: building.kind === 'house' ? nativeHouseTier(building) : undefined,
     hp: building.hp, maxHp: building.maxHp,
+    showHealth: !isFarmKind(building.kind) && !['road', 'bridge', 'irrigation'].includes(building.kind) && !building.fort?.destroyed,
     showCombatStats: buildMenuForSelection(building.kind) === 'fortifications' || isKeep(building),
     attack: ready && (building.kind === 'woodenTower' || building.kind === 'fort' || isKeep(building)) ? attackDamage(woodenTowerAttack(building, owner), 0) : 0,
-    defense: buildingArmor(building, owner), title: details.join(' · '),
+    defense: buildingArmor(building, owner), fertility, title: details.join(' · '),
     hint: ready && building.kind === 'dock' && building.faction === playerFaction(state)
       ? building.dockBoatLaunched ? 'Right-click your galley to board.' : 'Waiting for a clear water berth to launch.' : undefined,
   };

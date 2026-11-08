@@ -1,24 +1,28 @@
+import { tundraWaterMask } from './tundra-water';
+import { tundraPixels } from './tundra-art';
 import { TILE_SIZE, WATER, type Terrain, type Tile, type World } from './types';
 import { drawPuny, punyDesertLedgeImage, punyDesertLedgePixels, punyWorldPixels } from './puny-world';
 import { prepareWaterDepth, waterDepthField, WATER_BAND_COLORS, type WaterDepthField } from './water-depth';
 import { ridgeQuads } from './ridge-art';
 import { creekConnections, creekLayers, creekMouthConnections, drawCreekWater } from './creek-art';
 import { bankedRiver, bankedRiverPixels, bankedRiverSprite, drawBankedRiver, riverWaterPixel, WATERFALL_FRAME_SECONDS } from './banked-river-art';
+import { isSaltPan, saltPanJoinMask, saltPanPixels } from './salt-pan-art';
 export { waterDepthAt, waterDepthField, prepareWaterDepth } from './water-depth';
 
 /** Minimap colors sampled from the native tiles; game ground is always atlas art. */
 export const TERRAIN_COLORS: Record<Terrain, string> = {
     ocean: '#038aab', coast: '#2bc4a9', river: '#2bc4a9', lake: '#2bc4a9',
-    grassland: '#85a643', plains: '#c9b266', desert: '#c9b266', tundra: '#85a643',
+    grassland: '#85a643', plains: '#c4b253', desert: '#c9b266', tundra: '#94a99d',
 };
 export interface TerrainRaster { width: number; height: number; pixels: Uint8ClampedArray; water: Uint8Array }
 export interface TerrainRegion { x: number; y: number; width: number; height: number }
-export interface TerrainQuad { sx: number; sy: number; dx: number; dy: number; shallowGrass?: boolean }
+export interface TerrainQuad { sx: number; sy: number; dx: number; dy: number; shallowGrass?: boolean; plainsFringe?: boolean }
 const at = (world: World, x: number, y: number) => x >= 0 && y >= 0 && x < world.width && y < world.height ? world.tiles[y * world.width + x] : undefined;
 const isSand = (tile?: Tile) => {
     const ground = tile?.creek || bankedRiver(tile) ? tile?.creekGround : tile?.terrain;
     return ground === 'desert' || ground === 'plains';
 };
+const isPlains = (tile?: Tile) => !tile?.beach && (tile?.creek || bankedRiver(tile) ? tile?.creekGround : tile?.terrain) === 'plains';
 const broadWater = (tile?: Tile) => !!tile && !tile.creek && !bankedRiver(tile) && WATER.has(tile.terrain);
 
 export function terrainMinimapColor(world: World, x: number, y: number): string {
@@ -42,6 +46,14 @@ function autotile(x: number, y: number, member: (x: number, y: number) => boolea
     return quads;
 }
 
+/** Original Puny rounded/frayed land edges, now shared by tundra. */
+export function tundraEdgeQuads(world: World, x: number, y: number): TerrainQuad[] {
+    return autotile(x, y, (nx, ny) => {
+        const tile = at(world, nx, ny);
+        return !tile || tile.terrain === 'tundra' || WATER.has(tile.terrain);
+    }, 22, 0, 25, 0);
+}
+
 /** Native atlas source rectangles, shared by cached and animated terrain. */
 export function terrainQuads(world: World, x: number, y: number, frame = 0, depths = waterDepthField(world)): TerrainQuad[] {
     const tile = at(world, x, y)!;
@@ -58,12 +70,18 @@ export function terrainQuads(world: World, x: number, y: number, frame = 0, dept
         const grass = autotile(x, y, waterMember, 7, 10 + frame * 3, 10, 10 + frame * 2);
         return oceanQuads(world, x, y, frame, depths, grass, waterMember);
     }
-    // Use the shore's matching warm sand palette for every connected sandy
-    // biome; adjoining inland dunes must not introduce a square color seam.
+    // Keep native ochre plains and warm sand distinct. Their shared boundary
+    // uses the native sand rim against plains pixels instead of a square edge
+    // or a green grass fringe. Beaches keep the coastal sand palette.
+    if (isPlains(tile)) return autotile(x, y, (nx, ny) => isSand(at(world, nx, ny)), 10, 0, 13, 0);
     if (isSand(tile)) return autotile(x, y, (nx, ny) => {
         const neighbor = at(world, nx, ny);
-        return isSand(neighbor) || (!!tile.beach && broadWater(neighbor));
-    }, 22, 0, 25, 0);
+        return (isSand(neighbor) && !isPlains(neighbor)) || (!!tile.beach && broadWater(neighbor));
+    }, 22, 0, 25, 0).map((quad, q) => {
+        const dx = q % 2 ? 1 : -1, dy = q < 2 ? -1 : 1;
+        return [at(world, x + dx, y), at(world, x, y + dy), at(world, x + dx, y + dy)].some(isPlains)
+            ? { ...quad, plainsFringe: true } : quad;
+    });
     const variant = Math.min(8, Math.floor(tile.variation * 9));
     return [0, 1, 2, 3].map(q => ({ sx: variant % 3 * 16 + q % 2 * 8, sy: Math.floor(variant / 3) * 16 + Math.floor(q / 2) * 8, dx: q % 2 * 8, dy: Math.floor(q / 2) * 8 }));
 }
@@ -87,6 +105,9 @@ function oceanQuads(world: World, x: number, y: number, frame: number, depths: W
 /** Keep the original grassy bank shape, but use the atlas's turquoise shelf
  * fill in place of its cyan fill. Its grass, foam, and animation stay intact. */
 const shelfFill = (r: number, g: number, b: number): boolean => r === 4 && g === 160 && b === 180;
+const sandGrassFringe = (r: number, g: number, b: number): boolean =>
+    (r === 133 && g === 166 && b === 67) || (r === 157 && g === 167 && b === 71)
+    || (r === 184 && g === 175 && b === 73) || (r === 183 && g === 162 && b === 72);
 let shallowGrassSheet: HTMLCanvasElement | undefined;
 function grassShelfSheet(): HTMLCanvasElement | undefined {
     if (shallowGrassSheet) return shallowGrassSheet;
@@ -101,8 +122,22 @@ function grassShelfSheet(): HTMLCanvasElement | undefined {
     c.putImageData(pixels, 0, 0); shallowGrassSheet = canvas; return canvas;
 }
 
+let plainsSandSheet: HTMLCanvasElement | undefined;
+function sandPlainsSheet(): HTMLCanvasElement | undefined {
+    if (plainsSandSheet) return plainsSandSheet;
+    const source = punyWorldPixels();
+    if (!source) return;
+    const canvas = document.createElement('canvas'); canvas.width = source.width; canvas.height = source.height;
+    const c = canvas.getContext('2d')!, pixels = c.createImageData(source.width, source.height);
+    pixels.data.set(source.data);
+    for (let i = 0; i < pixels.data.length; i += 4) if (sandGrassFringe(pixels.data[i], pixels.data[i + 1], pixels.data[i + 2])) {
+        pixels.data[i] = 196; pixels.data[i + 1] = 178; pixels.data[i + 2] = 83;
+    }
+    c.putImageData(pixels, 0, 0); plainsSandSheet = canvas; return canvas;
+}
+
 /** Native source pixels and the matching native shelf fill share one shoreline clip. */
-export function rasterTerrain(world: World, region?: TerrainRegion, source = punyWorldPixels(), desertLedges = punyDesertLedgePixels()): TerrainRaster {
+export function rasterTerrain(world: World, region?: TerrainRegion, source = punyWorldPixels(), desertLedges = punyDesertLedgePixels(), saltPans = saltPanPixels(), frame = 0, tundraSource = tundraPixels()): TerrainRaster {
     if (!source) throw new Error('Load Puny World before painting terrain.');
     const depths = prepareWaterDepth(world);
     const originX = region?.x ?? 0, originY = region?.y ?? 0;
@@ -114,18 +149,75 @@ export function rasterTerrain(world: World, region?: TerrainRegion, source = pun
         const sheet = sandyRidge ? desertLedges : source;
         if (!sheet) throw new Error('Load desert ledges before painting sandy ridges.');
         const sourceY = sandyRidge ? 64 : 0;
-        for (const q of terrainQuads(world, originX + tx, originY + ty, 0, depths)) for (let py = 0; py < 8; py++) for (let px = 0; px < 8; px++) {
+        for (const q of terrainQuads(world, originX + tx, originY + ty, frame, depths)) for (let py = 0; py < 8; py++) for (let px = 0; px < 8; px++) {
             const src = ((q.sy - sourceY + py) * sheet.width + q.sx + px) * 4;
             const i = (ty * 16 + q.dy + py) * width + tx * 16 + q.dx + px;
             pixels.set(sheet.data.subarray(src, src + 4), i * 4);
             if (q.shallowGrass && shelfFill(pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2])) {
                 pixels[i * 4] = 43; pixels[i * 4 + 1] = 196; pixels[i * 4 + 2] = 169;
             }
+            if (q.plainsFringe && sandGrassFringe(pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2])) {
+                pixels[i * 4] = 196; pixels[i * 4 + 1] = 178; pixels[i * 4 + 2] = 83;
+            }
             // The native cyan, turquoise, and pale foam shades are water;
             // olive grass/earth and beach sand remain available to the farm clip.
             water[i] = Number(broadWater(tile) && sheet.data[src + 1] > sheet.data[src] + 20 && sheet.data[src + 2] > sheet.data[src] + 20);
         }
-        for (const layer of creekLayers(world, originX + tx, originY + ty, 0)) for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
+        const tundra = tundraSource;
+        if (tile.terrain === 'tundra' && tundra) {
+            const wx = originX + tx, wy = originY + ty;
+            const joins = tundraEdgeQuads(world, wx, wy);
+            const neighbors: { dx: number; dy: number; terrain: Terrain }[] = [];
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                const n = at(world, wx + dx, wy + dy);
+                if (n && n.terrain !== 'tundra' && !WATER.has(n.terrain)) neighbors.push({ dx, dy, terrain: n.terrain });
+            }
+            const variant = Math.min(8, Math.floor(tile.variation * 9));
+            for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
+                const i = ((ty * 16 + py) * width + tx * 16 + px) * 4;
+                if (tile.ridge || tile.stair) {
+                    // Preserve the native ledge geometry and shading; cool its grassy surface.
+                    const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+                    if (g > b * 1.15 && g >= r * .9) {
+                        pixels[i] = Math.round(g * .88); pixels[i + 1] = g; pixels[i + 2] = Math.round(g * .93);
+                    }
+                } else {
+                    const src = ((Math.floor(variant / 3) * 16 + py) * 48 + variant % 3 * 16 + px) * 4;
+                    pixels.set(tundra.data.subarray(src, src + 4), i);
+                    if (neighbors.length) {
+                        // Reuse the authored Puny sand rim, including its inner corners,
+                        // as a blend mask. Keep hard native pixels, never a blurred edge.
+                        const q = joins[(py >= 8 ? 2 : 0) + Number(px >= 8)];
+                        const mask = ((q.sy + py % 8) * source.width + q.sx + px % 8) * 4;
+                        const alpha = Math.max(0, Math.min(1, Math.round((source.data[mask] - source.data[mask + 1] + 33) / 56 * 3) / 3));
+                        if (alpha < 1) {
+                            let nearest = neighbors[0], distance = Infinity;
+                            for (const n of neighbors) {
+                                const d = (px - (8 + n.dx * 16)) ** 2 + (py - (8 + n.dy * 16)) ** 2;
+                                if (d < distance) { distance = d; nearest = n; }
+                            }
+                            const sx = nearest.terrain === 'desert' ? 23 * 16 : nearest.terrain === 'plains' ? 11 * 16 : variant % 3 * 16;
+                            const sy = nearest.terrain === 'desert' || nearest.terrain === 'plains' ? 16 : Math.floor(variant / 3) * 16;
+                            const ground = ((sy + py) * source.width + sx + px) * 4;
+                            for (let channel = 0; channel < 3; channel++) pixels[i + channel] = Math.round(
+                                pixels[i + channel] * alpha + source.data[ground + channel] * (1 - alpha));
+                        }
+                    }
+                }
+            }
+        }
+        if (saltPans && isSaltPan(tile)) {
+            const mask = saltPanJoinMask(world, originX + tx, originY + ty), sx = (mask & 15) * 16, sy = (mask >> 4) * 16;
+            for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
+                const src = ((sy + py) * saltPans.width + sx + px) * 4;
+                const i = (ty * 16 + py) * width + tx * 16 + px;
+                // Transparent outer corners preserve the actual grass/plains/sand.
+                // Coastal terrain's water pixels keep their native shoreline.
+                if (!saltPans.data[src + 3] || water[i]) continue;
+                pixels.set(saltPans.data.subarray(src, src + 4), i * 4);
+            }
+        }
+        for (const layer of creekLayers(world, originX + tx, originY + ty, frame)) for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
             const src = ((layer.sy + py) * layer.pixels.width + layer.sx + px) * 4, alpha = layer.pixels.data[src + 3] / 255;
             if (!alpha) continue;
             const i = (ty * 16 + py) * width + tx * 16 + px;
@@ -134,7 +226,7 @@ export function rasterTerrain(world: World, region?: TerrainRegion, source = pun
             pixels[i * 4 + 3] = 255;
             water[i] = Number(layer.pixels.data[src + 1] > layer.pixels.data[src] + 20 && layer.pixels.data[src + 2] > layer.pixels.data[src] + 20);
         }
-        const river = bankedRiverSprite(world, originX + tx, originY + ty);
+        const river = bankedRiverSprite(world, originX + tx, originY + ty, frame);
         if (river) {
             const riverSheet = bankedRiverPixels(source, isSand(tile), desertLedges);
             for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
@@ -142,6 +234,21 @@ export function rasterTerrain(world: World, region?: TerrainRegion, source = pun
                 const i = (ty * 16 + py) * width + tx * 16 + px;
                 pixels.set(riverSheet.data.subarray(src, src + 4), i * 4);
                 water[i] = Number(riverWaterPixel(riverSheet.data[src], riverSheet.data[src + 1], riverSheet.data[src + 2]));
+            }
+        }
+        const coldBanks = tundra ? tundraWaterMask(world, originX + tx, originY + ty) : 0;
+        if (coldBanks && tundra) {
+            const variant = Math.min(8, Math.floor(tile.variation * 9));
+            for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
+                if (!(coldBanks & 1 << ((py >= 8 ? 2 : 0) + Number(px >= 8)))) continue;
+                const i = ((ty * 16 + py) * width + tx * 16 + px) * 4;
+                const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+                // Only grass/earth shades: water, foam, rock and transparency
+                // retain their original pixels and collision/farm clipping masks.
+                if (g <= b * 1.15 || r <= b * 1.15) continue;
+                const src = ((Math.floor(variant / 3) * 16 + py) * tundra.width + variant % 3 * 16 + px) * 4;
+                const shade = Math.min(1, g / 166);
+                for (let channel = 0; channel < 3; channel++) pixels[i + channel] = Math.round(tundra.data[src + channel] * shade);
             }
         }
     }
@@ -156,9 +263,18 @@ export function drawAnimatedWater(c: CanvasRenderingContext2D, world: World, tx:
     const tile = at(world, tx, ty)!;
     if (!WATER.has(tile.terrain)) return;
     const frame = waterAnimationFrame(tile, time);
+    if (tundraPixels() && tundraWaterMask(world, tx, ty)) {
+        // The same raster pass paints both the cached ground and all four
+        // animated frames. The renderer caches this sprite by waterArtKey.
+        const raster = rasterTerrain(world, { x: tx, y: ty, width: 1, height: 1 }, undefined, undefined, undefined, frame);
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
+        const context = canvas.getContext('2d')!, image = context.createImageData(16, 16);
+        image.data.set(raster.pixels); context.putImageData(image, 0, 0);
+        c.drawImage(canvas, x, y, size, size); return;
+    }
     const desertLedge = tile.ridge && isSand(tile) ? punyDesertLedgeImage() : undefined;
     for (const q of terrainQuads(world, tx, ty, frame)) {
-        const sheet = q.shallowGrass ? grassShelfSheet() : undefined;
+        const sheet = q.shallowGrass ? grassShelfSheet() : q.plainsFringe ? sandPlainsSheet() : undefined;
         if (desertLedge) c.drawImage(desertLedge, q.sx, q.sy - 64, 8, 8, x + q.dx / 16 * size, y + q.dy / 16 * size, size / 2, size / 2);
         else if (sheet) c.drawImage(sheet, q.sx, q.sy, 8, 8, x + q.dx / 16 * size, y + q.dy / 16 * size, size / 2, size / 2);
         else drawPuny(c, q.sx, q.sy, 8, 8, x + q.dx / 16 * size, y + q.dy / 16 * size, size / 2, size / 2);
@@ -170,7 +286,7 @@ export function drawAnimatedWater(c: CanvasRenderingContext2D, world: World, tx:
 /** Animation and crop caches include the narrow ribbon and its actual ground. */
 export function waterArtKey(world: World, x: number, y: number, frame = 0): string {
     const tile = at(world, x, y)!;
-    return `${JSON.stringify(terrainQuads(world, x, y, frame))}:${Number(!!tile.creek)}:${tile.creek ? creekConnections(world, x, y) || 5 : creekMouthConnections(world, x, y)}:${frame}:${Number(isSand(tile))}:${JSON.stringify(bankedRiverSprite(world, x, y, frame))}`;
+    return `${JSON.stringify(terrainQuads(world, x, y, frame))}:${Number(!!tile.creek)}:${tile.creek ? creekConnections(world, x, y) || 5 : creekMouthConnections(world, x, y)}:${frame}:${Number(isSand(tile))}:${tundraWaterMask(world, x, y)}:${Math.floor(tile.variation * 9)}:${JSON.stringify(bankedRiverSprite(world, x, y, frame))}`;
 }
 
 const terrainIds = new Map(Object.keys(TERRAIN_COLORS).map((terrain, i) => [terrain, i]));
@@ -218,8 +334,8 @@ export function paintTerrain(canvas: HTMLCanvasElement, world: World): TerrainRe
         const surface = (((terrainIds.get(tile.terrain)! * 2 + Number(tile.farm !== undefined)) * 2 + Number(!!tile.beach)) * 9 + variant) * 3 + depths.bands[i];
         // Eight height slots support stacked mountain shelves. Float64 keeps
         // large plateau IDs exact instead of wrapping a 32-bit signature.
-        signatures[i] = ((((tile.ridge ?? 0) * 8 + (tile.ridge ? tile.ridgeTier ?? 1 : 0)) * 5 + stair) * 8192
-            + (surface * 2 + Number(!!tile.creek)) * 4 + ground) * 4 + Number(!!tile.riverArt) * 2 + Number(!!tile.waterfall);
+        signatures[i] = (((((tile.ridge ?? 0) * 8 + (tile.ridge ? tile.ridgeTier ?? 1 : 0)) * 5 + stair) * 8192
+            + (surface * 2 + Number(!!tile.creek)) * 4 + ground) * 4 + Number(!!tile.riverArt) * 2 + Number(!!tile.waterfall)) * 2 + Number(isSaltPan(tile));
         if (!incremental || signatures[i] !== previous.signatures[i]) {
             const x = i % world.width, y = Math.floor(i / world.width);
             left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x); bottom = Math.max(bottom, y);

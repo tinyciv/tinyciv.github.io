@@ -11,7 +11,7 @@ export function downhillRangeBonus(world: World, from: Point, target: Point | Bu
   const aim = aimPoint(target), source = tileAt(world, from.x, from.y), destination = tileAt(world, aim.x, aim.y);
   return source && destination && ridgeLevel(source) > ridgeLevel(destination) ? HIGH_GROUND_RANGE_BONUS : 0;
 }
-const firesProjectiles = (unit: Unit): boolean => (unit.kind === 'leader' || unit.kind === 'archer' || unit.kind === 'skirmisher') && unit.range > 0;
+const firesProjectiles = (unit: Unit): boolean => (unit.kind === 'leader' || (unit.kind === 'archer' || unit.kind === 'horseArcher') || unit.kind === 'skirmisher' || unit.kind === 'slinger') && unit.range > 0;
 /** Broad-phase searches include the extra tile; each shot still checks its target. */
 export const maximumUnitRange = (unit: Unit): number => unit.range + (firesProjectiles(unit) ? HIGH_GROUND_RANGE_BONUS : 0);
 export const unitAttackRange = (world: World, unit: Unit, target: Point | Building, from: Point = unit): number =>

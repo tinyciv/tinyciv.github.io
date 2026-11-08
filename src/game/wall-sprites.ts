@@ -16,16 +16,16 @@ export const PUNY_WALL_TILES = {
 } as const;
 
 /** Native wall cells keep their authored widths and 2× pixel scale. The four
- * corners, runs and open arch are verified against Shade's samplemap5. The
+ * corners, runs and gate frames are verified against Shade's samplemap5. The
  * pack has no dedicated T/cross cells: a native closed pier joins those arms.
  * Unlike the former shrunken center turret, that pier reaches the tile seams. */
 export function drawPunyWall(c: CanvasRenderingContext2D, links: RoadLinks, gate: RoadLinks | undefined): void {
   c.imageSmoothingEnabled = false;
   const mask = wallConnectionMask(links), tiles = PUNY_WALL_TILES;
   if (gate) {
-    // Keep the complete authored arch and dark doorway. Roads pass behind its
-    // lintel; clipping the road corridor out would destroy this native asset.
-    drawPuny(c, ...tiles.openGate, 0, 0, 32, 32);
+    // The native portcullis makes this a visible gate rather than an empty arch.
+    // Roads pass behind it; ownership controls passage independently of the art.
+    drawPuny(c, ...tiles.barredGate, 0, 0, 32, 32);
   } else if (mask === 1 || mask === 4) {
     drawPuny(c, ...tiles.vertical, 0, 0, 32, 32);
     // Close only the free end of a vertical run with native cap pixels.

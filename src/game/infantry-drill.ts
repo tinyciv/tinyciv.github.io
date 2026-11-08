@@ -1,4 +1,5 @@
 import { simulationReadsActive } from './simulation-reads';
+import { announceArmyMobilization } from './army-warnings';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { CHECK_INTERVAL } from './work-cadence';
 import { buildingBlockerView, canMove, canWalk, findPath } from './pathfinding';
@@ -117,6 +118,7 @@ export function toggleInfantryFormation(state: GameState): { ok: boolean; messag
     unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0;
     unit.infantryDrillLeader = leader.id;
   }
+  announceArmyMobilization(state, leader, 'formation');
   return { ok: true, message: 'Forming ranks around the Leader.' };
 }
 /** Balanced ranks describe a rectangle, rather than filling a diamond outward

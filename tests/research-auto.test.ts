@@ -9,12 +9,12 @@ import { fixture, building, points } from './helpers/research-income';
 
 describe('automatic income research', () => {
   it('defaults to 25%, never spends existing savings, and credits exactly one Science per diverted gold', () => {
-    const state = fixture(), faction = state.factions[0]; faction.gold = -20;
+    const state = fixture(), faction = state.factions[0]; faction.gold = 0;
     expect(researchStatus(state,0)).toMatchObject({ allocation:.25, focus:'woodenTower', active:true, progress:0 });
-    updateResearch(state,10000); expect(faction.gold).toBe(-20); expect(faction.research).toBeUndefined();
+    updateResearch(state,10000); expect(faction.gold).toBe(0); expect(faction.research).toBeUndefined();
     grantIncome(faction,{gold:12,food:9,culture:2},state);
     expect(researchStatus(state,0).progress).toBe(0); updateResearch(state,30);
-    expect(faction.gold).toBe(-11); expect(researchStatus(state,0).progress).toBe(3);
+    expect(faction.gold).toBe(9); expect(researchStatus(state,0).progress).toBe(3);
     expect(faction.incomeTotals).toEqual({gold:12,food:9,culture:2}); expect(faction.food).toBe(509);
     faction.gold -= 8; updateResearch(state,10000); expect(researchStatus(state,0).progress).toBe(3);
   });
@@ -24,8 +24,8 @@ describe('automatic income research', () => {
     expect(researchStatus(state,0).completed).toBe(false); updateResearch(state,1000);
     expect(researchStatus(state,0)).toMatchObject({completed:true,active:false});
     expect(faction.gold).toBeCloseTo(2000+(total+10)/.25-total);
-    expect(state.events.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual(['Fortification', 'Exploration', 'Irrigation', 'Masonry', 'Sailing', 'Grain Storage', 'Statehood', 'Traditional Medicine', 'Archery', 'Coinage', 'Supply train', 'Bronze Working', 'Metal Tools', 'Fletching', 'Military Tactics', 'Infantry Drill', 'Reinforced Defenses', 'Mass levy', 'Urban Planning', 'Siege Engines', 'Horseback Riding']);
-    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toHaveLength(21);
+    expect(state.events.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual(['Fortification', 'Exploration', 'Irrigation', 'Masonry', 'Sailing', 'Grain Storage', 'Statehood', 'Traditional Medicine', 'Engineering', 'Archery', 'Coinage', 'Supply train', 'Bronze Working', 'Metal Tools', 'Fletching', 'Military Tactics', 'Infantry Drill', 'Reinforced Defenses', 'Mass levy', 'Urban Planning', 'Siege Engines', 'Horseback Riding']);
+    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toHaveLength(22);
   });
   it('automatically resolves distant prerequisites while preserving ordered priorities and partial progress', () => {
     const state=fixture(), library=state.buildings[1], faction=state.factions[0];

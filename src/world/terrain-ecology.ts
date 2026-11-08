@@ -1,5 +1,5 @@
 import { createNoise2D } from 'simplex-noise';
-import { ridgeEdgeAllowed, ridgeGroundWalkable, ridgeLevel, STAIR_UP } from '../game/ridges';
+import { narrowHillPassage, ridgeEdgeAllowed, ridgeGroundWalkable, ridgeLevel, STAIR_UP } from '../game/ridges';
 import { WATER, type Tile, type World } from '../game/types';
 import { terrainYields } from './generator';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
@@ -110,13 +110,14 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
     if (tile.marsh) { tile.biome = 'wetland'; tile.moisture = Math.max(.9, tile.moisture); continue; }
     if (WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
     ground[cell] = Number(ridgeGroundWalkable(world, x, y));
-    const eligible = ground[cell] && !clear[cell] && !tile.beach && !tile.palm && !tile.mountainPass;
+    const eligible = ground[cell] && !clear[cell] && !tile.beach && !tile.palm && !tile.mountainPass && !narrowHillPassage(world, x, y);
     const dry = tile.terrain === 'desert';
     // Sandy regions retain open desert, with a few groves along wetter pockets.
     const threshold = parameters.forestThreshold + (dry ? .14 : 0);
-    const suitability = fields.woodland[cell] - threshold;
+    const hillWoodland = tile.hillBiome === 'forest-hills';
+    const suitability = hillWoodland ? Math.max(.04, fields.woodland[cell] - threshold) : fields.woodland[cell] - threshold;
     // Wet, sheltered woodland has more trees, but even its core is perforated.
-    const occupancy = .58 + Math.min(.10, Math.max(0, suitability) * .4);
+    const occupancy = hillWoodland ? .24 + fields.woodland[cell] * .16 : .58 + Math.min(.10, Math.max(0, suitability) * .4);
     trees[cell] = Number(eligible && suitability > 0 && (!dry || fields.moisture[cell] > .43) && rank[cell] < occupancy);
   }
   for (let y = 0; y < height - 1; y++) for (let x = 0; x < width - 1; x++) {

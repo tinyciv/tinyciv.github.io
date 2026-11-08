@@ -105,7 +105,7 @@ export function farmBlockPlacementQuery(state: GameState, options: FarmBlockQuer
     if (blocks.some(block => block.size > FARM_BLOCK_MAX_CELLS))
       return { ok: false, reason: 'size', message: `Farm blocks can contain at most ${FARM_BLOCK_MAX_CELLS} plots. Leave a gap for another block.`, blocks };
     if (blocks.some(block => block.size > FARM_BLOCK_SHAPE_THRESHOLD && block.aspectRatio > FARM_BLOCK_MAX_ASPECT))
-      return { ok: false, reason: 'shape', message: `Farm blocks over ${FARM_BLOCK_SHAPE_THRESHOLD} plots must have an aspect ratio of at most ${FARM_BLOCK_MAX_ASPECT}:1.`, blocks };
+      return { ok: false, reason: 'shape', message: `Farm blocks over ${FARM_BLOCK_SHAPE_THRESHOLD} plots must have a longest side at most ${Math.round(FARM_BLOCK_MAX_ASPECT * 100)}% of the shorter side.`, blocks };
     return { ok: true, message: '', blocks };
   };
   return { canAdd: point => canAddAll([point]), canAddAll };

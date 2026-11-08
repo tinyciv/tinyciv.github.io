@@ -11,7 +11,7 @@ const recordedDeaths = new WeakMap<GameState, WeakSet<Unit>>();
  * guard retirement and hidden worker reconciliation are not deaths. */
 export function recordUnitDeath(state: GameState, unit: Unit): void {
     if (unit.hp > 0 || unit.inside || unit.guardRetired
-        || !['leader', 'warrior', 'spearman', 'horseman', 'archer', 'scout', 'militia', 'worker', 'merchant'].includes(unit.kind)) return;
+        || !['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker', 'merchant'].includes(unit.kind)) return;
     let recorded = recordedDeaths.get(state);
     if (!recorded) { recorded = new WeakSet(); recordedDeaths.set(state, recorded); }
     if (recorded.has(unit)) return;

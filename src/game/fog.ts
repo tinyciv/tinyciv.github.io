@@ -1,3 +1,4 @@
+import { villageAlliedWith } from './village-relations';
 import { observationPostVisibleTo } from './observation-visibility';
 import { HIGH_GROUND_RANGE_BONUS } from './combat-range';
 import { BALLISTA_RANGE } from './ballista';
@@ -48,6 +49,10 @@ interface CachedFog extends FogView {
     patches: Map<string, number[]>; coverage: Uint32Array; worldRevision: number; territoryRevision: number;
 }
 const cache = new WeakMap<object, CachedFog>();
+const replicatedFog = new WeakSet<GameState>();
+/** A network client's persisted memories are an authoritative delta baseline.
+ * Rendering may derive visibility/memories but must never edit that baseline. */
+export function useReplicatedFog(state: GameState): void { replicatedFog.add(state); }
 const contextKeys = new WeakMap<GameState, Map<number, object>>();
 function contextKey(state: GameState): object {
     let keys = contextKeys.get(state); if (!keys) { keys = new Map(); contextKeys.set(state, keys); }
@@ -255,7 +260,7 @@ function refreshSightSources(state: GameState, fog: CachedFog): boolean {
     for (const boat of state.fishing?.boats ?? []) if (boat.faction === playerFaction(state) && boat.hp > 0)
         add(boat, quantize(boat.x), quantize(boat.y), 4);
     const staticKey = frame && `${worldStructureRevision(state.world)}|${entityStore(state).buildings.revision}|${structureChangeRevision(state)}|`
-        + (state.villages ?? []).map(v => `${v.id},${v.campId},${v.relation},${Number(!!v.destroyed)}`).join(';');
+        + (state.villages ?? []).map(v => `${v.id},${v.campId},${v.relation},${v.alliedFaction ?? -1},${Number(!!v.destroyed)}`).join(';');
     if (frame?.staticSources && frame.staticKey === staticKey) records.push(...frame.staticSources);
     else {
     const start = records.length;
@@ -263,7 +268,7 @@ function refreshSightSources(state: GameState, fog: CachedFog): boolean {
         const x = b.x + buildingWidth(b) / 2, y = b.y + buildingHeight(b) / 2;
         add(b, x, y, buildingSightRadius(b));
     }
-    for (const village of state.villages ?? []) if (village.relation === 'allied' && !village.destroyed) {
+    for (const village of state.villages ?? []) if (villageAlliedWith(village, playerFaction(state))) {
         const candidate = entityStore(state).buildings.get(village.campId);
         const camp = candidate && buildingReady(candidate) ? candidate : undefined;
         if (camp) {
@@ -583,7 +588,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
             const visible = Number(!!fog.owned![i] || fog.coverage[i] > 0);
             if (fog.visible[i] !== visible) visibilityChanged = true;
             fog.visible[i] = visible;
-            if (fog.visible[i] && !fog.explored[i]) { fog.explored[i] = 1; discovered = true; }
+            if (!replicatedFog.has(state) && fog.visible[i] && !fog.explored[i]) { fog.explored[i] = 1; discovered = true; }
         }
         if (ownershipChanged) fog.ownershipRevision = (fog.ownershipRevision ?? 0) + 1;
         fog.worldRevision = worldRevision;
@@ -615,7 +620,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
             if (!previous || !buildingMemoryCurrent(previous, b)) { memories.set(b.id, rememberBuilding(b)); buildingsChanged = true; }
         }
         if (buildingsChanged) fog.buildings = [...memories.values()];
-        persisted.buildings = fog.buildings;
+        if (!replicatedFog.has(state)) persisted.buildings = fog.buildings;
         // Fields are remembered independently of camps: a scout can observe
         // one side of a farm without seeing its camp or the opposite fields.
         const fieldMemories = fog.fieldMemories, liveFields = fog.liveFields;
@@ -635,7 +640,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
             else previous.observedAt = state.time;
         }
         if (fieldsChanged) fog.fields = [...fieldMemories.values()];
-        persisted.fields = fog.fields;
+        if (!replicatedFog.has(state)) persisted.fields = fog.fields;
     }
     if (trusted && sampleMemories) fog.rememberedAt = state.time;
     // An explicit/editor query is a new live observation; it must not leave a

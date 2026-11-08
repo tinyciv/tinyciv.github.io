@@ -1,3 +1,4 @@
+import { actionTooltip } from './action-tooltips';
 import { RESEARCH_BRANCHES, researchStatus, type ResearchBranchId, type ResearchStatus } from '../game/research';
 import type { Building, GameState } from '../game/types';
 import { researchIconUrl } from './research-icons';
@@ -8,13 +9,17 @@ import './research-tree.css';
 
 const definitions = new Map(RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
 const summaries: Partial<Record<ResearchBranchId, string>> = {
+  metalCasting: 'Train swordsmen at blacksmiths: twice spear attack, less defense.',
   woodenTower: 'Unlocks wooden towers, guard posts and settlement upgrades to Keeps.',
   traditionalMedicine: 'Healers’ shacks triple nearby healing inside your borders.',
   scoutLodge: 'Build Scouts’ Lodges to unlock concealed observation posts.',
   sailing: 'Unlocks docks, exploration galleys and automatic river trade.',
+  engineering: 'Extends bridges from 2 to 8 water tiles, with land at both ends.',
   militaryTactics: 'Train defensive spearmen whose thrusts pierce multiple enemies.',
   infantryDrill: 'Close ranks with stronger frontal combat. Requires eight retinue soldiers.',
-  horsebackRiding: 'Stables train fast horsemen with a powerful charging attack.',
+  horsebackRiding: 'Stables train fast spear cavalry with a running charge.',
+  compoundBow: 'Train mobile horse archers at stables.',
+  stirrups: 'Train heavily armored knights with devastating charges.',
   siegeEngines: 'Build long-range ballistae to attack enemy fortifications.',
   supplyTrain: 'Supply carts reach the Leader and heal all friendly units by 10 HP.',
   massLevy: 'Levy one third of your population; 5 gold per soldier every 30 seconds.',
@@ -138,7 +143,7 @@ export class ResearchTree {
       button.classList.toggle('is-locked', !!missing.length); button.classList.toggle('is-current', current); button.classList.toggle('is-priority', priority >= 0);
       button.setAttribute('aria-pressed', String(selected === branch.id));
       const requirement = branch.prerequisites.length ? `Requires ${branch.prerequisites.map(id => definitions.get(id)!.label).join(' and ')}. ` : '';
-      button.title = `${branch.label} · ${formatResearchCost(branch.required)} Science. ${requirement}${definitions.get(branch.id)!.tiers[0].description}`;
+      button.title = actionTooltip(definitions.get(branch.id)!.tiers[0].description, `${formatResearchCost(branch.required)} Science`, 0, requirement);
       button.setAttribute('aria-label', `${branch.label}, ${formatResearchCost(branch.required)} Science, ${label}. ${requirement}`);
       text(button.querySelector<HTMLElement>('.research-cost-number')!, formatResearchCost(branch.required));
       button.querySelector<HTMLElement>('.research-node-price')!.setAttribute('aria-label', `${formatResearchCost(branch.required)} Science`);
@@ -147,7 +152,7 @@ export class ResearchTree {
       bar.firstElementChild!.setAttribute('style', `width:${percent}%`);
       const chip = this.chips.get(branch.id)!; chip.hidden = priority < 0; chip.style.order = String(priority);
       text(chip, `${priority + 1}. ${branch.label}`); chip.classList.toggle('is-selected', selected === branch.id);
-      chip.title = `Priority ${priority + 1}: ${branch.label}. Select to change priority.`;
+      chip.title = actionTooltip(`Selects ${branch.label} to change its research priority.`);
     }
     this.element.querySelector<HTMLElement>('.research-default')!.hidden = status.priorities.length > 0;
     for (const edge of this.element.querySelectorAll<SVGGElement>('.research-edge')) {
@@ -171,6 +176,8 @@ export class ResearchTree {
     plan.hidden = !plan.textContent;
     const prioritize = this.element.querySelector<HTMLButtonElement>('.research-prioritize')!, remove = this.element.querySelector<HTMLButtonElement>('.research-remove')!;
     prioritize.hidden = branch.complete; prioritize.disabled = priority === 0;
+    prioritize.title = actionTooltip('Researches this technology and its prerequisites first.');
+    remove.title = actionTooltip('Removes this technology from your research priorities.');
     text(prioritize, priority === 0 ? 'First priority' : priority > 0 ? 'Make first priority' : 'Prioritize'); remove.hidden = priority < 0 || branch.complete;
     const progress = this.element.querySelector<HTMLProgressElement>('.research-progress')!, percent = branch.complete ? 100 : percentage(branch.progress, branch.required);
     progress.value = percent; progress.setAttribute('aria-valuetext', `${Math.floor(branch.progress)} of ${formatResearchCost(branch.required)} Science`);

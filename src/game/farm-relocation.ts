@@ -2,7 +2,7 @@ import { forbiddenRevision, isForbidden } from './forbidden-zones';
 import { type Building, type BuildingKind, type GameState, type Point, buildingPresent, buildingReady, buildingWidth, buildingHeight, isFarmKind, isWallKind, tileAt } from './types';
 import { CAMP_FIELD_OFFSETS, invalidateScheduledHarvests, synchronizeFarms } from './farms';
 import { terrainYields } from '../world/generator';
-import { markWorldChanged } from './world-revisions';
+import { markWorldChanged, recordWorldTileChanges } from './world-revisions';
 import { constructionEdges } from './builders';
 import { createReachabilityQuery, invalidateNavigation, traversable, withNavigationFrame } from './pathfinding';
 import { palaceReachability } from './placement';
@@ -248,22 +248,26 @@ export function relocateFarm(state: GameState, plan: FarmRelocationPlan, house: 
  * Authoritative purchases still use relocateFarm and its live revalidation. */
 export function previewFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
   const farm = state.buildings.find(building => building.id === plan.camp)!;
+  const changed: number[] = [];
   const dx = plan.to.x - farm.x, dy = plan.to.y - farm.y;
   for (const field of state.fields ?? []) if (field.camp === farm.id) {
     const old = tileAt(state.world, field.x, field.y);
+    changed.push(field.y * state.world.width + field.x);
     if (old?.farm === farm.faction) delete old.farm;
     field.x += dx; field.y += dy; field.id = field.y * state.world.width + field.x + 1;
+    changed.push(field.id - 1);
     const tile = tileAt(state.world, field.x, field.y);
     if (tile) {
       tile.farm = farm.faction;
       if (['forest', 'jungle', 'swamp'].includes(tile.overlay)) {
         tile.overlay = 'none'; delete tile.palm; delete tile.marsh;
         Object.assign(tile, terrainYields(tile.terrain, 'none'));
-        markWorldChanged(state.world, 'sight');
+        markWorldChanged(state.world, 'sight', changed);
       }
     }
   }
   farm.x = plan.to.x; farm.y = plan.to.y;
+  recordWorldTileChanges(state.world, changed);
   if (farm.construction) { farm.construction.waitingForBuilder = true; farm.construction.cleared = false; }
   invalidateNavigation(state);
 }
@@ -271,12 +275,15 @@ export function previewFarmRelocation(state: GameState, plan: FarmRelocationPlan
 /** Called only after every move in the transaction has passed validation. */
 function applyFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
   const camp = state.buildings.find(building => building.id === plan.camp)!;
+  const changed: number[] = [];
   const dx = plan.to.x - camp.x, dy = plan.to.y - camp.y, ids = new Map<number, number>();
   for (const field of state.fields ?? []) if (field.camp === camp.id) {
     const oldTile = tileAt(state.world, field.x, field.y);
+    changed.push(field.y * state.world.width + field.x);
     if (oldTile?.farm === camp.faction) delete oldTile.farm;
     const oldId = field.id;
     field.x += dx; field.y += dy; field.id = field.y * state.world.width + field.x + 1;
+    changed.push(field.id - 1);
     ids.set(oldId, field.id);
     // Relocation is an atomic edit, while global farm reconciliation is sampled.
     // Publish the moved plot itself now so another order cannot reuse its ground.
@@ -285,14 +292,16 @@ function applyFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
       const clearsCover = ['forest', 'jungle', 'swamp'].includes(tile.overlay);
       tile.farm = camp.faction; delete tile.palm; delete tile.marsh;
       if (clearsCover) { tile.overlay = 'none'; Object.assign(tile, terrainYields(tile.terrain, 'none')); }
-      markWorldChanged(state.world, clearsCover ? 'sight' : 'appearance');
+      markWorldChanged(state.world, clearsCover ? 'sight' : 'appearance', changed);
     }
   }
   for (const [ox, oy] of CAMP_FIELD_OFFSETS) {
     const tile = tileAt(state.world, camp.x + ox, camp.y + oy);
     if (tile?.farm === camp.faction) delete tile.farm;
+    changed.push((camp.y + oy) * state.world.width + camp.x + ox);
   }
   camp.x = plan.to.x; camp.y = plan.to.y;
+  recordWorldTileChanges(state.world, changed);
   const site = camp.construction;
   if (site) {
     // Active work freezes until its builder reaches the new plot. An order
@@ -315,7 +324,7 @@ function applyFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
 }
 
 function finishFarmRelocations(state: GameState): void {
-  markWorldChanged(state.world, 'appearance');
+  markWorldChanged(state.world, 'appearance', []);
   state.farmVersion = (state.farmVersion ?? 0) + 1;
   // Existing field objects changed IDs and positions. Queries must stop using
   // the previous lookup even when the next global staffing pass is not due.

@@ -24,5 +24,5 @@
     32,
     64
   ],
-  "processing": "Original PNG bytes unchanged. Renderer crops transparent margins, preserves aspect ratio and colors, and uses nearest-neighbor sampling."
+  "processing": "Original PNG bytes unchanged. Renderer crops transparent margins, preserves aspect ratio, applies faction color only to the blue roof at runtime while retaining its shading, and uses nearest-neighbor sampling."
 }

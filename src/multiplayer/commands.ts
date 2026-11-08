@@ -1,3 +1,5 @@
+import { setLevySlingerFraction } from '../game/mass-levy';
+import { askHermit } from '../game/hermits';
 import { upgradeFortBrigade, rebuildFort } from '../game/forts';
 import { toggleGarrison } from '../game/garrison';
 import { levyPopulation, dismissLevy } from '../game/mass-levy';
@@ -15,11 +17,12 @@ import { purchaseRetinueSlot } from '../game/retinue-purchases';
 import { purchaseOrchardUpgrade } from '../game/orchards';
 import { upgradeGuardPost, setGuardPostWallsOnly } from '../game/guard-posts';
 import { upgradeSettlement, purchaseKeepHousing } from '../game/settlement-upgrades';
-import { setArcherFraction, setSpearmanFraction, setHorsemanFraction } from '../game/archery';
+import { setArcherFraction, setSwordsmanFraction, setSpearmanFraction, setHorsemanFraction, setHorseArcherFraction, setKnightFraction } from '../game/archery';
 import { performVillageAction } from '../game/villages';
 import { learnLeaderSkill } from '../game/leader-progression';
 import { toggleInfantryFormation } from '../game/infantry-drill';
 import { setAutomaticallyRebuildDefenses } from '../game/defense-rebuilding';
+import { developResourceGroup } from '../game/resource-development';
 import type { GameState, Point } from '../game/types';
 import type { CommandResult, GameCommand } from './protocol';
 
@@ -40,6 +43,7 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
   const command = value as unknown as GameCommand;
   return withPlayerFaction(state, actor, () => {
     switch (command.type) {
+      case 'hermit': return Number.isInteger(command.hermitId) ? askHermit(state, command.hermitId) : fail();
       case 'move': case 'attack': case 'interact':
         if (!point(state, command)) return fail();
         if (command.type === 'move') return success(commandMove(state, command.x, command.y));
@@ -61,6 +65,9 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
         if (!['power', 'guard', 'command', 'engineer', 'brace', 'discretion'].includes(command.skill)) return fail();
         return learnLeaderSkill(state, command.skill, actor);
       case 'respawn': return state.multiplayer ? fail('This match has ended.') : respawnLeader(state);
+      case 'develop-resource':
+        if (!point(state, command) || !Number.isInteger(command.x) || !Number.isInteger(command.y)) return fail();
+        return developResourceGroup(state, command.x, command.y, actor);
       case 'build': {
         if (typeof command.kind !== 'string' || command.kind !== 'clearTrees' && !Object.hasOwn(BUILD_COSTS, command.kind)
           || !Array.isArray(command.points) || !command.points.length || command.points.length > 256 || !command.points.every(item => point(state, item))) return fail();
@@ -78,13 +85,15 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
         return { ok: true, message: setForbiddenRectangle(state, command.start, command.end, command.enabled).message };
       case 'diplomacy':
         // The two human opponents remain enemies for the entire duel.
-        if (state.multiplayer) return fail('The opposing player is already at war with you.');
+        if (state.multiplayer && state.factions.find(f => f.id === command.faction)?.villageId === undefined) return fail('The opposing player is already at war with you.');
         if (!Number.isSafeInteger(command.faction) || !['war', 'trade', 'ally', 'confederate'].includes(command.action)) return fail();
         return diplomacyAction(state, command.faction, command.action, command.buildingId);
       case 'capture': return fail('Captures are resolved by the server.');
     }
     if (!('buildingId' in command) || !Number.isSafeInteger(command.buildingId)) return fail();
     const building = state.buildings.find(item => item.id === command.buildingId);
+    if (command.type === 'village') return building && building.villageId !== undefined && ['trade', 'ally', 'war'].includes(command.action)
+      ? performVillageAction(state, building, command.action) : fail();
     if (!building || building.faction !== actor || !buildingActivityAvailable(state, building)) return fail('Move your Leader closer to your building.');
     switch (command.type) {
       case 'research-priority': case 'research-remove-priority':
@@ -101,13 +110,13 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
       case 'keep-housing': return purchaseKeepHousing(state, building);
       case 'orchard': return command.count === 1 || command.count === 10 ? purchaseOrchardUpgrade(state, building, command.count) : fail();
       case 'blacksmith': return command.track === 'armor' || command.track === 'weapon' ? purchaseBlacksmithUpgrade(state, building, command.track) : fail();
-      case 'archers': case 'spearmen': case 'horsemen':
+      case 'levy-composition': return success(setLevySlingerFraction(state, building, command.fraction));
+      case 'archers': case 'swordsmen': case 'spearmen': case 'horsemen': case 'horse-archers': case 'knights':
         if (typeof command.fraction !== 'number' || !Number.isFinite(command.fraction) || command.fraction < 0 || command.fraction > 1) return fail();
-        return success(command.type === 'horsemen' ? setHorsemanFraction(state, building, command.fraction) : command.type === 'archers' ? setArcherFraction(state, building, command.fraction) : setSpearmanFraction(state, building, command.fraction));
+        return success(command.type === 'knights' ? setKnightFraction(state, building, command.fraction) : command.type === 'horse-archers' ? setHorseArcherFraction(state, building, command.fraction) : command.type === 'swordsmen' ? setSwordsmanFraction(state, building, command.fraction) : command.type === 'horsemen' ? setHorsemanFraction(state, building, command.fraction) : command.type === 'archers' ? setArcherFraction(state, building, command.fraction) : setSpearmanFraction(state, building, command.fraction));
       case 'governor':
         if (!['farms', 'housing'].includes(command.permission) || typeof command.enabled !== 'boolean' || building.kind !== 'palace') return fail();
         setGovernorPermission(building, command.permission, command.enabled); return success();
-      case 'village': return ['trade', 'ally', 'war'].includes(command.action) ? performVillageAction(state, building, command.action) : fail();
       default: return fail();
     }
   });

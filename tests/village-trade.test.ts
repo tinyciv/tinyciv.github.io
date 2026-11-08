@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { moveUnit, updateGame } from '../src/game/simulation';
-import { updateTradeRoutes, updateMerchant, MERCHANT_REPLACEMENT_SECONDS } from '../src/game/trade';
+import { updateTradeRoutes, updateMerchant, villageTradePayout, MERCHANT_REPLACEMENT_SECONDS } from '../src/game/trade';
 import { performVillageAction, recordVillageTrade, updateVillages, villageAllianceCost, villageDiplomacyStatus } from '../src/game/villages';
 import { parseGameSave, serializeGameSave } from '../src/game/game-save';
 import { type Building, type GameState, type Unit } from '../src/game/types';
+import { withDevelopedResources } from './helpers/developed-resources';
+import { markWorldChanged } from '../src/game/world-revisions';
 
 const idle = { up: false, down: false, left: false, right: false };
 const person = (id: number, kind: Unit['kind'], faction: number, x: number, y: number): Unit => ({ id, kind, faction, x, y,
@@ -22,7 +24,7 @@ function fixture(): GameState {
       production: 0, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false },
     { id: 1, villageId: 1, name: 'Sabine Hearth', color: '#ffffff', affinity: 50, relation: 'peace', population: 1, food: 0, gold: 0,
       production: 0, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false }],
-    villages: [{ id: 1, faction: 1, campId: 3, name: 'Sabine Hearth', identity: 'growers', relation: 'neutral', x: 50, y: 10,
+    villages: [{ id: 1, faction: 1, campId: 3, name: 'Sabine Hearth', identity: 'growers', relation: 'neutral', requiredResource: 'copper', x: 50, y: 10,
       nextGrowthAt: Infinity, nextRecruitAt: Infinity, nextThinkAt: 0 }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], fields: [], selected: null, selectedType: null, buildMode: null,
     diplomacy: null, gameOver: false, victory: false, seed: 'village-trade', rngState: 9,
@@ -36,6 +38,59 @@ function openTrade(state: GameState) {
 }
 
 describe('village trade integration', () => {
+  it.each(['copper', 'iron', 'stone', 'salt', 'olives'] as const)('quadruples completed deliveries for faction-wide developed %s', resource => {
+    const state = fixture(), village = state.villages![0]; village.requiredResource = resource;
+    const { route, merchant } = openTrade(state);
+    expect(route.origin).toBe(2);
+    // The supply belongs to the other city, so matching is faction-wide.
+    withDevelopedResources(state, [resource]);
+    const without = villageTradePayout(state, village, 0, 100, false), supplied = villageTradePayout(state, village, 0, 100);
+    expect(supplied).toBeCloseTo(without * 4);
+    const gold = state.factions[0].gold;
+    route.distance = 100; route.goal = { x: merchant.x, y: merchant.y };
+    updateMerchant(state, merchant, .1, () => {});
+    expect(state.factions[0].gold - gold).toBeCloseTo(supplied);
+    expect(state.factions[1].gold).toBeCloseTo(supplied);
+    expect(village.tradeGoldByFaction?.[0]).toBeCloseTo(supplied);
+  });
+
+  it('requires the matching developed resource and checks ownership again for the next delivery', () => {
+    const state = fixture(), village = state.villages![0]; village.requiredResource = 'copper';
+    const { route, merchant } = openTrade(state);
+    withDevelopedResources(state, ['iron']);
+    expect(villageTradePayout(state, village, 0, 100)).toBe(60);
+    const cell = 10 * state.world.width + 5;
+    state.world.tiles[cell].resource = 'copper'; state.world.tiles[cell].resourceDeveloped = false;
+    markWorldChanged(state.world, 'appearance');
+    expect(villageTradePayout(state, village, 0, 100)).toBe(60);
+    state.world.tiles[cell].resourceDeveloped = true; markWorldChanged(state.world, 'appearance');
+    expect(villageTradePayout(state, village, 0, 100)).toBe(240);
+    const before = state.factions[0].gold;
+    state.factions.push({ ...state.factions[0], id: 2, name: 'Captor', relation: 'peace' });
+    state.buildings[0].faction = 2; markWorldChanged(state.world, 'structure');
+    route.distance = 100; route.goal = { x: merchant.x, y: merchant.y };
+    updateMerchant(state, merchant, .1, () => {});
+    expect(state.factions[0].gold - before).toBe(60);
+    expect(villageTradePayout(state, village, 2, 100)).toBe(240);
+    expect(villageTradePayout(state, village, 0, 100)).toBe(60);
+  });
+
+  it.each([1, 5, 20])('gives both partners 2% more delivered trade per developed olive tree (%s trees)', trees => {
+    const state = fixture(), { route, merchant } = openTrade(state), gold = state.factions[0].gold;
+    // A compact grove near the first city benefits a route from the second city.
+    withDevelopedResources(state, []);
+    const origin = 6 * state.world.width + 4;
+    for (let i = 0; i < trees; i++) Object.assign(state.world.tiles[origin + Math.floor(i / 5) * state.world.width + i % 5],
+      { resource: 'olives', resourceDeveloped: true, resourceGroup: 9000 });
+    state.world.revision!++;
+    route.distance = 100; route.goal = { x: merchant.x, y: merchant.y };
+    updateMerchant(state, merchant, .1, () => {});
+    const expected = 60 * (1 + trees * .02);
+    expect(state.factions[0].gold - gold).toBeCloseTo(expected);
+    expect(state.factions[1].gold).toBeCloseTo(expected);
+    expect(state.villages![0].tradeGoldByFaction![0]).toBeCloseTo(expected);
+  });
+
   it('adds one village caravan while preserving the regular city connection', () => {
     const state = fixture(), { route, merchant } = openTrade(state);
     expect(route).toMatchObject({ origin: 2, partner: 3, villageId: 1, faction: 0 });
@@ -47,7 +102,7 @@ describe('village trade integration', () => {
     expect(route.merchantId).toBe(merchant.id);
   });
 
-  it.each([[100, 120, 2990], [3, 3, 3000]])('triples the base %i-tile village delivery after rounding without paying for partial travel', (tiles, payout, allianceCost) => {
+  it.each([[100, 60, 2995], [3, 1.5, 3000]])('halves the previous %i-tile village delivery without paying for partial travel', (tiles, payout, allianceCost) => {
     const state = fixture(), { route, merchant } = openTrade(state), gold = state.factions[0].gold;
     state.time = .1; updateMerchant(state, merchant, .1, moveUnit);
     expect(route.distance).toBeGreaterThan(0); expect(state.factions[0].gold).toBe(gold);
@@ -75,6 +130,7 @@ describe('village trade integration', () => {
     expect(villageAllianceCost(village)).toBe(500);
     const restored = parseGameSave(serializeGameSave(state));
     expect(restored.villages![0].tradeGoldByFaction).toEqual({ 0: 30009 });
+    expect(restored.villages![0].requiredResource).toBe('copper');
     expect(restored.factions[1].gold).toBe(20000);
     expect(villageAllianceCost(restored.villages![0])).toBe(500);
     restored.factions[0].gold = 499;
@@ -98,12 +154,12 @@ describe('village trade integration', () => {
     const rivalMerchant = state.units.find(unit => unit.id === rivalRoute.merchantId)!;
     rivalRoute.distance = 100; rivalRoute.goal = { x: rivalMerchant.x, y: rivalMerchant.y };
     updateMerchant(state, rivalMerchant, .1, () => {});
-    expect(state.factions[2].gold).toBe(1870); expect(state.factions[1].gold).toBe(120);
-    expect(state.villages![0].tradeGoldByFaction).toEqual({ 2: 120 });
+    expect(state.factions[2].gold).toBe(1810); expect(state.factions[1].gold).toBe(60);
+    expect(state.villages![0].tradeGoldByFaction).toEqual({ 2: 60 });
     expect(villageAllianceCost(state.villages![0])).toBe(3000);
     for (let time = 95; time < 200; time += 5) { state.time = time; updateTradeRoutes(state); }
     expect(state.tradeRoutes!.filter(route => route.villageId === 1)).toHaveLength(2);
-    expect(state.factions[2].gold).toBe(1870);
+    expect(state.factions[2].gold).toBe(1810);
     // Player war does not end an independent village's other agreements.
     performVillageAction(state, state.buildings[2], 'war');
     expect(playerMerchant.hp).toBe(0); expect(rivalMerchant.hp).toBeGreaterThan(0);

@@ -120,7 +120,7 @@ describe('wilderness treasure', () => {
         leader.hp = 100; updateTreasureChests(state);
         expect(state.factions[0].gold).toBe(50 + TREASURE_GOLD);
         expect(state.treasures[0].collected).toBe(true);
-        expect(state.particles).toEqual([{ x: 20.5, y: 20.5, text: '+200 gold', color: '#f5d875', life: 1.6 }]);
+        expect(state.particles).toEqual([{ x: 20.5, y: 20.5, text: '+200 gold', color: '#ffe33d', life: 1.6, duration: 1.6 }]);
         const restored: GameState = JSON.parse(JSON.stringify(state));
         initializeTreasureChests(restored); updateTreasureChests(restored);
         expect(restored.treasures).toEqual(state.treasures); expect(restored.factions[0].gold).toBe(250);

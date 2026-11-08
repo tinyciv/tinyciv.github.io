@@ -47,7 +47,7 @@ describe('Bandit intensity', () => {
     state.time = 60; state.raiderCamps![0].nextRaidAt = 60; state.fogRaids!.nextAt = 60;
     updateFogRaids(state);
     expect(state.fogRaids!.waves).toBe(1);
-    expect(raiders(state)).toHaveLength(4);
+    expect(raiders(state)).toHaveLength(2);
     expect(state.raiderCamps![0].nextRaidAt).toBeCloseTo(60 + raiderWaveInterval(60) / intensity);
     expect(raiders(state).filter(unit => !unit.marauderLeader).every(unit => unit.maxHp === 70 && unit.attack === 13)).toBe(true);
   });

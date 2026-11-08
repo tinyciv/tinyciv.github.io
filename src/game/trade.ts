@@ -13,9 +13,10 @@ import { validateNetworkPlacement } from './network-placement';
 import { canWalk, findPath, hasStaticPath, invalidateNavigation, withNavigationFrame } from './pathfinding';
 import { ridgeFootprintAllowed } from './ridges';
 import { regionalTradeMultiplier } from './regional-economy';
+import { factionHasDevelopedResource, oliveVillageTradeMultiplier } from './resource-development';
 import { tradeGoldMultiplier } from './research-bonuses';
-import { recordVillageTrade, villageCamp, villageHostility, villageTradeActive, VILLAGE_TRADE_COST, VILLAGE_TRADE_MULTIPLIER } from './villages';
-import { buildingReady, buildingWidth, buildingHeight, distance, isFarmKind, tileAt, WATER, type Building, type GameState, type Point, type TradeRoute, type Unit } from './types';
+import { recordVillageTrade, villageCamp, villageHostility, villageTradeActive, villageRequiredResource, VILLAGE_TRADE_COST, VILLAGE_TRADE_MULTIPLIER, VILLAGE_TRADE_BASE_SCALE, VILLAGE_RESOURCE_MULTIPLIER } from './villages';
+import { buildingReady, buildingWidth, buildingHeight, distance, isFarmKind, tileAt, WATER, type Building, type GameState, type NeutralVillage, type Point, type TradeRoute, type Unit } from './types';
 import { advanceRiverTrade, beginRiverTradeLeg, findRiverTradeConnection } from './river-trade';
 
 export const TRADE_INCOME_MULTIPLIER = 3;
@@ -38,6 +39,20 @@ type Move = (state: GameState, unit: Unit, goal: Point, dt: number) => void;
 export function tradePayout(tiles: number): number {
   if (!Number.isFinite(tiles) || tiles < 1) return 0;
   return Math.round(tiles * TRADE_GOLD_PER_TILE * (1 + Math.floor((tiles + 1e-7) / TRADE_BONUS_DISTANCE) * .01));
+}
+
+/** A complete village delivery, shared by settlement payments and popup
+ * estimates. Demand uses the trading faction's current resource access, not
+ * the village's own deposits. Halving follows the original rounding so short
+ * journeys retain fractional gold instead of rounding away their income. */
+export function villageTradePayout(state: GameState, village: NeutralVillage, factionId: number, tiles: number,
+  hasResourceOverride?: boolean): number {
+  const faction = state.factions.find(candidate => candidate.id === factionId);
+  if (!faction) return 0;
+  const supplied = hasResourceOverride ?? factionHasDevelopedResource(state, factionId, villageRequiredResource(state, village));
+  const base = TRADE_INCOME_MULTIPLIER * Math.round(tradePayout(tiles) * tradeGoldMultiplier(faction) * VILLAGE_TRADE_MULTIPLIER)
+    * oliveVillageTradeMultiplier(state, factionId) * VILLAGE_TRADE_BASE_SCALE;
+  return base * (supplied ? VILLAGE_RESOURCE_MULTIPLIER : 1);
 }
 
 /** A city's trade capacity is its residents, shared among its connections.
@@ -141,7 +156,7 @@ const completedCities = (state: GameState): Building[] => state.buildings.filter
 
 /** One static component probe rejects an inaccessible city before pathfinding.
  * Prefer the nearest clear pair of doors, keeping all movement outside walls. */
-function connection(state: GameState, origin: Building, partner: Building): { start: Point; goal: Point } | undefined {
+export function tradeConnection(state: GameState, origin: Building, partner: Building): { start: Point; goal: Point } | undefined {
   if (buildingWorkForbidden(state, origin) || buildingWorkForbidden(state, partner, origin.faction)) return;
   const pairs = constructionEdges(state, origin, true).flatMap(start => constructionEdges(state, partner, true).map(goal => ({ start, goal })));
   pairs.sort((a, b) => distance(a.start, a.goal) - distance(b.start, b.goal));
@@ -156,7 +171,7 @@ function riverPartner(state: GameState, origin: Building, cities: Building[]): B
 function choosePartner(state: GameState, origin: Building, cities: Building[]): Building | undefined {
   return riverPartner(state, origin, cities) ?? cities.filter(city => city.id !== origin.id && city.faction === origin.faction)
     .sort((a, b) => distance(origin, b) - distance(origin, a) || a.id - b.id)
-    .find(city => connection(state, origin, city));
+    .find(city => tradeConnection(state, origin, city));
 }
 
 function idleAtOrigin(state: GameState, route: TradeRoute, origin: Building, merchant?: Unit): boolean {
@@ -178,7 +193,7 @@ function establishFactionVillageTrade(state: GameState, cities: Building[]): voi
       && !villageHostility(state, village.faction, faction.id))
       .flatMap(village => origins.map(origin => ({ village, origin, camp: villageCamp(state, village)! })));
     options.sort((a, b) => distance(a.origin, a.camp) - distance(b.origin, b.camp) || a.village.id - b.village.id);
-    const chosen = options.find(({ origin, camp }) => connection(state, origin, camp));
+    const chosen = options.find(({ origin, camp }) => tradeConnection(state, origin, camp));
     if (!chosen) continue;
     spendGold(state, faction, VILLAGE_TRADE_COST, 'diplomacy');
     (chosen.village.tradingFactions ??= []).push(faction.id);
@@ -291,7 +306,7 @@ export function updateTradeRoutes(state: GameState): void {
     cityById.set(camp.id, camp);
     if (retained.some(route => route.villageId === village.id && route.faction === faction)) continue;
     const origin = cities.filter(city => city.faction === faction)
-      .sort((a, b) => distance(a, camp) - distance(b, camp) || a.id - b.id).find(city => connection(state, city, camp));
+      .sort((a, b) => distance(a, camp) - distance(b, camp) || a.id - b.id).find(city => tradeConnection(state, city, camp));
     if (!origin) continue;
     const pair = cityPair(origin.id, camp.id);
     retained.push({ id: villageRouteId(camp.id, faction), faction, villageId: village.id, origin: origin.id, partner: camp.id, target: camp.id,
@@ -305,7 +320,7 @@ export function updateTradeRoutes(state: GameState): void {
     if (live) { live.speed = MERCHANT_SPEED; continue; }
     if (state.time < Math.max(route.nextDepartureAt, state.tradeCooldowns?.[cityPair(route.origin, route.partner)] ?? 0,
       route.villageId === undefined ? 0 : state.tradeCooldowns?.[villageCooldown(route.villageId, route.faction)] ?? 0)) continue;
-    const connected = route.river ? { start: route.river.origin.door, goal: route.river.origin.shore } : connection(state, origin, partner);
+    const connected = route.river ? { start: route.river.origin.door, goal: route.river.origin.shore } : tradeConnection(state, origin, partner);
     if (!connected) continue;
     const exits = constructionEdges(state, origin, true).sort((a, b) => distance(a, connected.goal) - distance(b, connected.goal));
     // Merchants pass through other units, including a crowded city entrance.
@@ -390,12 +405,12 @@ function finishDelivery(state: GameState, route: TradeRoute, merchant: Unit): vo
   const faction = state.factions.find(candidate => candidate.id === merchant.faction);
   if (!faction) return;
   const village = route.villageId === undefined ? undefined : state.villages?.find(v => v.id === route.villageId);
-  const gold = village ? TRADE_INCOME_MULTIPLIER * Math.round(tradePayout(route.distance) * tradeGoldMultiplier(faction) * VILLAGE_TRADE_MULTIPLIER) : route.legValue!.gold;
+  const gold = village ? villageTradePayout(state, village, faction.id, route.distance) : route.legValue!.gold;
   if (!village || gold > 0) route.journeys++;
   if (gold > 0) {
     grantIncome(faction, { gold }, state, 'trade');
     if (village) recordVillageTrade(state, village, faction.id, gold);
-    if (Math.round(gold) > 0) state.particles.push({ x: merchant.x, y: merchant.y, text: `+${Math.round(gold)} gold`, color: '#efd069', life: 1.4 });
+    if (Math.round(gold) > 0) state.particles.push({ x: merchant.x, y: merchant.y, text: `+${Math.round(gold)} gold`, color: '#ffe33d', life: 1.4, duration: 1.4 });
   }
   route.target = route.target === route.origin ? route.partner : route.origin;
   route.distance = 0; route.goal = undefined; route.legValue = undefined; route.riverLeg = undefined; route.nextPlanAt = state.time + 1.5;
@@ -405,7 +420,7 @@ function finishDelivery(state: GameState, route: TradeRoute, merchant: Unit): vo
 }
 
 /** A merchant deliberately creates his travelled road outside borders too.
- * Farms move to a free plot; ditches remain. Water, stairs and solid
+ * Farms move to a free plot; ditches remain. Water, cliff faces and solid
  * structures remain untouched, and caravans never open gates in walls. */
 export function recordMerchantRoad(state: GameState, merchant: Unit, _from?: Point): boolean {
   if (merchant.kind !== 'merchant' || merchant.hp <= 0 || merchant.inside || merchant.aboardRiverTrade || merchant.tradeRoute === undefined) return false;
@@ -425,7 +440,7 @@ export function recordMerchantRoad(state: GameState, merchant: Unit, _from?: Poi
   const removedPalm = !!tile.palm, removedTrail = removeVillageTrailAt(state.world, x, y);
   delete tile.palm;
   delete state.traffic?.[String(key)];
-  markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure');
+  markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure', removedPalm || removedTrail ? [key] : []);
   invalidateNavigation(state);
   return true;
 }

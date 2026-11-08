@@ -95,13 +95,13 @@ describe('irrigation coverage and harvests', () => {
     expect(citySummaries(state)[0].food).toBeCloseTo(.8 * 4 / 3);
     expect(cityDevelopmentNeeds(state, palace).foodCapacity).toBeCloseTo((.8 * 4 / 3) * .9);
     tileAt(state.world, field.x, field.y)!.terrain = 'desert';
-    expect(fieldHarvestFoodForState(state, field.x, field.y)).toBeCloseTo(.4 * 4 / 3);
+    expect(fieldHarvestFoodForState(state, field.x, field.y)).toBeCloseTo(1.2 * 4 / 3);
     field.orchard = { startedAt: 0, readyAt: 10 };
     expect(fieldHarvestYield(state, field, 9)).toBe(0);
-    expect(fieldHarvestYield(state, field, 10)).toBeCloseTo(.6 * 4 / 3);
+    expect(fieldHarvestYield(state, field, 10)).toBeCloseTo(1.8 * 4 / 3);
     expect(citySummaries(state)[0].food).toBeCloseTo(0);
     state.time = 10;
-    expect(citySummaries(state)[0].food).toBeCloseTo(.3 * 4 / 3);
+    expect(citySummaries(state)[0].food).toBeCloseTo(.9 * 4 / 3);
   });
 });
 

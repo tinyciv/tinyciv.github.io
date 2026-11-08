@@ -17,6 +17,7 @@ export function addPalaceRoadRing(state: GameState, palace: Building): number {
   for (let y = palace.y - 1; y <= palace.y + size; y++) for (let x = palace.x - 1; x <= palace.x + size; x++)
     if (x === palace.x - 1 || x === palace.x + size || y === palace.y - 1 || y === palace.y + size) ring.add(y * state.world.width + x);
   let id = 0, added = 0, removedPalm = false, removedTrail = false;
+  const changed: number[] = [];
   for (const entity of state.units) id = Math.max(id, entity.id);
   for (const entity of state.buildings) id = Math.max(id, entity.id);
   for (let y = palace.y - 1; y <= palace.y + size; y++) for (let x = palace.x - 1; x <= palace.x + size; x++) {
@@ -40,12 +41,13 @@ export function addPalaceRoadRing(state: GameState, palace: Building): number {
     if (state.fields?.some(field => field.x === x && field.y === y)) continue;
     entityStore(state).buildings.add({ id: ++id, kind: 'road', faction: palace.faction, x, y,
       hp: 100, maxHp: 100, capacity: 0, armor: 2 });
-    removedPalm ||= !!tile.palm; delete tile.palm;
-    if (removeVillageTrailAt(state.world, x, y)) removedTrail = true;
+    const palm = !!tile.palm, trail = removeVillageTrailAt(state.world, x, y);
+    removedPalm ||= palm; removedTrail ||= trail; delete tile.palm;
+    if (palm || trail) changed.push(y * state.world.width + x);
     added++;
   }
   if (added) {
-    markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure');
+    markWorldChanged(state.world, removedPalm || removedTrail ? 'appearance' : 'structure', changed);
     invalidateNavigation(state);
   }
   return added;

@@ -1,3 +1,4 @@
+import { drawSupplyDepot } from './supply-depot-art';
 import { drawEngineerEquipment } from './leader-ability-art';
 import { drawObservationCampfire, drawObservationPost } from './observation-post-art';
 import { buildingWidth, buildingHeight, isFarmKind, type Building, type Overlay, type Unit } from './types';
@@ -54,7 +55,7 @@ export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number,
   }
   if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderGalley(c, unit, passenger, x, y, size, time, color); return; }
   if (unit.aboardRiverTrade) { if (!unit.inside) drawSailboat(c, unit, x, y, size); return; }
-  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
+  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'slinger' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
   setup(c, x, y, size);
   if (unit.observationPost && !unit.observationPost.retreating) drawObservationCampfire(c, time);
   if (unit.kind === 'boar' || unit.kind === 'marshBird') drawWildlife(c, unit, time);
@@ -128,12 +129,9 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
           c.save(); c.beginPath(); c.rect(dx, dy + 22, 32, 10); c.clip();
           c.translate(dx, dy); drawPunyWall(c, NO_CONNECTIONS, undefined); c.restore();
         }
-      } else drawFort(c, 0, 0, 64);
+      } else drawFort(c, 0, 0, 64, color);
       break;
-    case 'supplyDepot':
-      drawGuardPost(c, 0, 0, 32, color);
-      drawPuny(c, 146, 501, 12, 10, 2, 20, 13, 11);
-      break;
+    case 'supplyDepot': drawSupplyDepot(c, 0, 0, 32); break;
     case 'dock': drawDock(c, b, 0, 0, 32); break;
     case 'palace':
       drawPalace(c, 0, 0, 64, color, b.palaceLevel);

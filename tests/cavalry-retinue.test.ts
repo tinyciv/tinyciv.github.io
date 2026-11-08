@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { scoutRealm } from './helpers/scouts';
 import { entityStore } from '../src/game/entity-store';
@@ -16,6 +17,7 @@ function realm() {
   entityStore(state).buildings.add(stable, { ...stable, id: 103, kind: 'palace', x: 10, y: 9, capacity: 4,
     governorPermissions: { farms: false, housing: false } });
   state.factions[0].research!.levels.horsebackRiding = 1;
+  withDevelopedResources(state, ['copper']);
   return { state, stable };
 }
 
@@ -27,8 +29,8 @@ describe('mounted retinue and stable', () => {
     expect(isBuildingUnlocked(state.factions[0], 'stable')).toBe(false);
     expect(buildAt(state, 'stable', 14, 13).ok).toBe(false);
     const technology = RESEARCH_BRANCHES.find(b => b.id === 'horsebackRiding')!;
-    expect(technology.prerequisites).toEqual(['infantryDrill']);
-    expect(technology.tiers[0]).toMatchObject({ points: 435 });
+    expect(technology.prerequisites).toEqual(['scoutLodge']);
+    expect(technology.tiers[0]).toMatchObject({ points: 147 });
     expect(technology.tiers[0]).not.toHaveProperty('seconds');
     expect(technology.tiers[0]).not.toHaveProperty('gold');
     state.factions[0].research!.levels.horsebackRiding = 1;
@@ -70,7 +72,7 @@ describe('mounted retinue and stable', () => {
     for (let i = 0; i < 200 && soldier.kind !== 'horseman'; i++) {
       state.time += .1; updateArcheryTraining(state, soldier, .1, moveUnit);
     }
-    expect(soldier).toMatchObject({ kind: 'horseman', hp: 60, maxHp: 100, attack: 25.5, defense: 4,
+    expect(soldier).toMatchObject({ kind: 'horseman', hp: 60, maxHp: 100, attack: 25.5, defense: 3,
       retinueSquad: squad, kills: 250, weaponLevel: 3, armorLevel: 2, joiningRetinue: true, inside: false });
     expect(soldier.speed).toBeCloseTo(3.96 * 1.65);
     expect(unitRespectsForbidden(state, soldier)).toBe(false);

@@ -186,14 +186,14 @@ describe('building artwork and construction stages', () => {
     expect(paint.mock.calls[0][0]).not.toBe(paint.mock.calls[1][0]);
   });
 
-  it('uses the complete native open arch for a road gate and retains the cell footprint', () => {
+  it('uses the complete native barred gate and retains the cell footprint', () => {
     const canvas = new RecordingCanvas(), palisade = structure('wall');
     const links = { north: false, east: true, south: false, west: true };
     const gate = { north: true, east: false, south: true, west: false };
     drawBuilding(canvas as unknown as CanvasRenderingContext2D, palisade, 64, 96, 64, 10, '#3988ff', links, gate);
     expect(Math.min(...canvas.images.map(image => image.x))).toBe(64);
     expect(Math.max(...canvas.images.map(image => image.x + image.width))).toBe(128);
-    expect(canvas.sources).toEqual([{ rect: [304, 464, 16, 16] }]);
+    expect(canvas.sources).toEqual([{ rect: [320, 464, 16, 16] }]);
     expect(canvas.clips).toEqual([]);
   });
 

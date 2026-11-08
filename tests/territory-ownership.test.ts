@@ -85,7 +85,7 @@ describe('territory ownership', () => {
         updateWallOwnership(state); expect(protectedHouse.faction).toBe(1);
     });
 
-    it.each(['palace', 'house', 'monument'] as const)('does not exchange overlapping %s ownership back and forth', kind => {
+    it.each(['house', 'monument'] as const)('does not exchange overlapping %s ownership back and forth', kind => {
         const state = fixture(), first = add(state, kind, 0, 5, 5), second = add(state, kind, 1, 7, 5);
         expect(updateWallOwnership(state)).toBe(true);
         const owners = [first.faction, second.faction];
@@ -93,6 +93,15 @@ describe('territory ownership', () => {
         for (let i = 0; i < 8; i++) {
             state.time++; expect(updateWallOwnership(state)).toBe(false);
             expect([first.faction, second.faction]).toEqual(owners);
+        }
+    });
+
+    it('keeps both overlapping settlements loyal regardless of cultural pressure', () => {
+        const state = fixture(), first = add(state, 'palace', 0, 5, 5), second = add(state, 'palace', 1, 7, 5);
+        state.factions[0].culture = 100000;
+        for (let i = 0; i < 8; i++) {
+            state.time++; expect(updateWallOwnership(state)).toBe(false);
+            expect([first.faction, second.faction]).toEqual([0, 1]);
         }
     });
 

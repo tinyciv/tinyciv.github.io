@@ -56,7 +56,7 @@ describe('income-funded technology unlocks', () => {
     complete(state,'archeryRange'); expect(areArchersUnlocked(faction)).toBe(true); expect(setArcherFraction(state,range,1)).toBe(true); expect(nextRecruitRole(state,faction)).toBe('archer');
     complete(state,'infantryDrill'); expect(isInfantryDrillUnlocked(faction)).toBe(true); expect(faction.research?.levels).toMatchObject({ blacksmith:1, woodenTower:1, militaryTactics:1, infantryDrill:1 });
     complete(state,'scoutLodge'); expect(areScoutsUnlocked(faction)).toBe(true); expect(buildingResearchRequirement('guardPost')).toBe('woodenTower');
-    expect(RESEARCH_BRANCHES).toHaveLength(21);
+    expect(RESEARCH_BRANCHES).toHaveLength(25);
   });
 });
 

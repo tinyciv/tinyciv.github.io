@@ -1,0 +1,5 @@
+.resource-activity { width: 310px; }
+.resource-activity .resource-effect { margin: 4px 0 8px; color: var(--popup-ink); font: 16px/20px var(--game-font); }
+.resource-activity .resource-message { margin: 0; color: var(--popup-ink); font: 14px/18px var(--game-font); }
+.resource-activity .resource-message:empty { display: none; }
+.resource-activity .resource-count { grid-column: 1 / -1; }

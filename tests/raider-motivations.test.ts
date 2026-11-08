@@ -280,24 +280,24 @@ describe('specialist wave scheduling and saturation', () => {
     state.time = 600; updateFogRaids(state);
     const pack = state.marauderPacks!.find(pack => pack.raiderCamp === camp.id)!;
     const count = () => state.units.filter(unit => unit.hp > 0 && unit.marauderPack === pack.id).length;
-    expect(pack.motivation).toBe('siege'); expect(count()).toBe(10); expect(pack.musterTarget).toBe(20);
+    expect(pack.motivation).toBe('siege'); expect(count()).toBe(8); expect(pack.musterTarget).toBe(16);
     for (const member of state.units.filter(unit => unit.marauderPack === pack.id)) { member.x = 15.5; member.y = 20.5; }
-    state.time = 614.9; updateFogRaids(state); expect(count()).toBe(10);
-    state.time = 615; updateFogRaids(state); expect(count()).toBe(15);
+    state.time = 614.9; updateFogRaids(state); expect(count()).toBe(8);
+    state.time = 615; updateFogRaids(state); expect(count()).toBe(12);
     for (const member of state.units.filter(unit => unit.marauderPack === pack.id)) { member.x = 15.5; member.y = 20.5; }
-    state.time = 630; updateFogRaids(state); expect(count()).toBe(20);
+    state.time = 630; updateFogRaids(state); expect(count()).toBe(16);
     expect(state.fogRaids!.waves).toBe(1); expect(pack.siegeNextReinforceAt).toBeUndefined();
-    expect(pack.startingTroops).toBe(19);
+    expect(pack.startingTroops).toBe(15);
   });
   it('shares the global/camp caps with siege reinforcements and stops them after camp destruction', () => {
     const state = campFixture(100), camp = state.raiderCamps![0]; camp.waves = 7;
     state.time = 600; updateFogRaids(state);
-    const pack = state.marauderPacks![0]; expect(pack.musterTarget).toBe(30);
+    const pack = state.marauderPacks![0]; expect(pack.musterTarget).toBe(24);
     const count = () => state.units.filter(unit => unit.hp > 0 && unit.faction === -2).length;
     let id = 10000;
     while (count() < MAX_LIVE_RAIDERS) entityStore(state).units.add({ ...person(id++, 15.5, 20.5), marauderPack: pack.id + 100 });
     state.time = 615; updateFogRaids(state); expect(count()).toBe(MAX_LIVE_RAIDERS);
-    expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(10);
+    expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(8);
     for (const house of state.buildings) if (camp.coreTowers!.includes(house.id)) house.hp = 0;
     state.units.filter(unit => unit.marauderPack === pack.id + 100).slice(0, 20).forEach(unit => { unit.hp = 0; });
     state.time = 630; updateFogRaids(state);

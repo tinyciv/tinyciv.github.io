@@ -289,7 +289,7 @@ export function updateHerdAnimal(state: GameState, unit: Unit, dt: number,
  * combat should be checked before calling this helper. */
 export function nearestHuntTarget(state: GameState, hunter: Unit, visible: (animal: Unit) => boolean): Unit | undefined {
   if (hunter.faction < 0 || hunter.hp <= 0 || hunter.inside || hunter.attack <= 0
-    || !['leader', 'warrior', 'horseman'].includes(hunter.kind) || hunter.order === 'flee' || hunter.recallIssuedAt !== undefined) return;
+    || !['leader', 'warrior', 'swordsman', 'horseman', 'knight'].includes(hunter.kind) || hunter.order === 'flee' || hunter.recallIssuedAt !== undefined) return;
   // The role view changes with spawning/removal. A wildlife-free world needs
   // no spatial search, and health/allegiance are still checked on live animals.
   if (!entityStore(state).units.query('wildlife').length) return;

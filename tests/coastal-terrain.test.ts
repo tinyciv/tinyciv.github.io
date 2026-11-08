@@ -77,7 +77,7 @@ describe('Puny World coastal water', () => {
         expect(raster.water[y * raster.width + 4 * 16 + 8]).toBe(1);
     });
 
-    it('joins beach sand seamlessly to adjacent inland desert and plains', () => {
+    it('keeps desert and beach sand warm and plains ochre without green seams between them', () => {
         const w = world();
         for (let y = 0; y < w.height; y++) for (let x = 0; x < 3; x++) {
             w.tiles[y * w.width + x].beach = undefined;
@@ -86,8 +86,30 @@ describe('Puny World coastal water', () => {
         const raster = rasterTerrain(w, undefined, atlas);
         for (let x = 16; x < 4 * 16; x++) {
             const at = ((8 * 16 + 8) * raster.width + x) * 4;
-            expect(Array.from(raster.pixels.slice(at, at + 3))).toEqual([201, 178, 102]);
+            expect([[196, 178, 83], [201, 178, 102], [198, 173, 90]])
+                .toContainEqual(Array.from(raster.pixels.slice(at, at + 3)));
         }
+        expect(terrainMinimapColor(w, 2, 8)).toBe('#c4b253');
+        expect(terrainMinimapColor(w, 3, 8)).toBe('#c9b266');
+    });
+
+    it('composites native sand rims against plains for every corner shape without green seams or holes', () => {
+        const neighbors = [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2]];
+        let curved = false;
+        for (let mask = 0; mask < 256; mask++) {
+            const w = world(3, 3);
+            for (const tile of w.tiles) { tile.terrain = 'desert'; tile.beach = undefined; }
+            neighbors.forEach(([x, y], bit) => { if (mask & (1 << bit)) w.tiles[y * 3 + x].terrain = 'plains'; });
+            const raster = rasterTerrain(w, { x: 1, y: 1, width: 1, height: 1 }, atlas);
+            const shades = new Set<string>();
+            for (let i = 0; i < raster.pixels.length; i += 4) {
+                const [r, g, b, alpha] = raster.pixels.slice(i, i + 4);
+                if (alpha !== 255 || g > r) throw new Error(`Invalid desert/plains rim at mask ${mask}`);
+                shades.add(`${r},${g},${b}`);
+            }
+            if (shades.has('201,178,102') && shades.has('196,178,83')) curved = true;
+        }
+        expect(curved, 'Native curved sand fringes replace square tile boundaries').toBe(true);
     });
 
     it('keeps repeated sampling constant-time and invalidates manual coast edits during preparation', () => {

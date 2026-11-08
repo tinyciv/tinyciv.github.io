@@ -191,11 +191,11 @@ describe('camp activity and small raids', () => {
     expect(state.units.filter(unit => unit.hp > 0 && unit.faction === -2)).toHaveLength(MAX_LIVE_RAIDERS);
   });
 
-  it.each(['house', 'wall', 'road'] as const)('responds to each actual %s once per episode with 2–5 soldiers outside its footprint', kind => {
+  it.each(['house', 'wall', 'road'] as const)('responds to each actual %s once per episode with 1–3 early soldiers outside its footprint', kind => {
     const state = fixture(), building = state.buildings[1]; building.kind = kind;
     const attacker = { x: building.x - .5, y: building.y + .5, faction: 0 };
     const first = defendRaiderCamp(state, building, attacker);
-    expect(first).toBeGreaterThanOrEqual(2); expect(first).toBeLessThanOrEqual(5);
+    expect(first).toBeGreaterThanOrEqual(1); expect(first).toBeLessThanOrEqual(3);
     expect(defenders(state).every(unit => unit.kind === 'warrior' || unit.kind === 'archer')).toBe(true);
     for (const unit of defenders(state)) {
       expect(unit.marauderLeader).not.toBe(true); expect(canWalk(state, unit.x, unit.y, -2)).toBe(true);
@@ -204,8 +204,8 @@ describe('camp activity and small raids', () => {
     expect(defendRaiderCamp(state, building, attacker)).toBe(0);
     // The first attack grants ten seconds at double recruitment speed.
     state.time = 19.99; expect(defendRaiderCamp(state, building, attacker)).toBe(0);
-    state.time = 20; expect(defendRaiderCamp(state, building, attacker)).toBeGreaterThanOrEqual(2);
-    expect(defendRaiderCamp(state, state.buildings[2], attacker)).toBeGreaterThanOrEqual(2);
+    state.time = 20; expect(defendRaiderCamp(state, building, attacker)).toBeGreaterThanOrEqual(1);
+    expect(defendRaiderCamp(state, state.buildings[2], attacker)).toBeGreaterThanOrEqual(1);
   });
 
   it('reduces camp-defense archer assignments by one-third across small parties', () => {
@@ -235,7 +235,7 @@ describe('camp activity and small raids', () => {
     updateGame(state, .1, idle);
     expect(target.hp).toBe(0);
     const response = state.units.filter(unit => unit.faction === -2);
-    expect(response.length).toBeGreaterThanOrEqual(2); expect(response.length).toBeLessThanOrEqual(5);
+    expect(response.length).toBeGreaterThanOrEqual(1); expect(response.length).toBeLessThanOrEqual(3);
     expect(state.raiderCamps![0].defenderReadyAt?.[target.id]).toBeGreaterThan(30);
   });
 
@@ -278,8 +278,8 @@ describe('camp activity and small raids', () => {
     }
   });
 
-  it('never emits a one-person camp defense when only one body slot is available', () => {
-    const state = fixture();
+  it('keeps the late-game two-person defense minimum when only one body slot is available', () => {
+    const state = fixture(); state.time = 900;
     entityStore(state).units.add(...Array.from({ length: MAX_LIVE_RAIDERS - 1 }, (_, i) => person(100 + i, 50.5, 30.5)));
     expect(defendRaiderCamp(state, state.buildings[1], state.units[0])).toBe(0);
     expect(state.units.filter(unit => unit.faction === -2)).toHaveLength(MAX_LIVE_RAIDERS - 1);
@@ -320,7 +320,7 @@ describe('camp activity and small raids', () => {
     expect(members.filter(unit => !unit.inside).every(unit => entityStore(state).units.query('active').includes(unit))).toBe(true);
   });
 
-  it('seeds real reachable opening attacks and fairly schedules 1–5-person parties for full factions', () => {
+  it('seeds real reachable opening attacks and fairly schedules 1–3-person early parties for full factions', () => {
     const state = fixture();
     state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' }, { ...state.factions[0], id: 2, relation: 'peace', villageId: 1 });
     entityStore(state).buildings.add({ ...state.buildings[0], id: 30, faction: 1, x: 53, y: 18 });
@@ -332,7 +332,7 @@ describe('camp activity and small raids', () => {
       const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === pack.targetFaction)!;
       const travel = travelTimeMap(state, leader, -2, 2.35, 18);
       const members = state.units.filter(unit => unit.marauderPack === pack.id);
-      expect(members).toHaveLength(3);
+      expect(members).toHaveLength(2);
       for (const unit of members) expect(travel[Math.floor(unit.y) * state.world.width + Math.floor(unit.x)]).toBeLessThanOrEqual(18);
     }
     expect(state.raiderSkirmishes!.nextByFaction[2]).toBeUndefined();
@@ -341,12 +341,12 @@ describe('camp activity and small raids', () => {
       updateRaiderActivity(state);
       for (const faction of [0, 1]) {
         const pack = state.marauderPacks!.filter(pack => pack.microRaid && pack.targetFaction === faction && pack.spawnedAt === state.time).at(-1)!;
-        expect(pack).toBeDefined(); expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(wave + 1);
+        expect(pack).toBeDefined(); expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(Math.max(1, Math.round((wave + 1) * .6)));
         expect(state.raiderSkirmishes!.nextByFaction[faction] - state.time).toBeGreaterThanOrEqual(18);
         expect(state.raiderSkirmishes!.nextByFaction[faction] - state.time).toBeLessThanOrEqual(24);
       }
     }
-    expect(state.fogRaids).toEqual(clock); expect(fogRaidProfile(5, 60).total).toBe(4);
+    expect(state.fogRaids).toEqual(clock); expect(fogRaidProfile(5, 60).total).toBe(2);
   });
 
   it('does not count garrisoned or small parties against ordinary-wave slots and reuses sleeping veterans', () => {

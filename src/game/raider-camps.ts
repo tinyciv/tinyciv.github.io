@@ -2,7 +2,7 @@ import { entityStore } from './entity-store';
 import { banditIntensity, banditPopulationCap, banditSpawnDeadline } from './bandit-intensity';
 import { markWorldChanged } from './world-revisions';
 import { constructionEdges } from './builders';
-import { canMove, canWalk, travelTimeMap, travelTimeMapFrom } from './pathfinding';
+import { canMove, canWalk, travelTimeMap, travelTimeMapFrom, wallBreachingNavigation } from './pathfinding';
 import { terrainYields } from '../world/generator';
 import { isBuildable, planCamp } from './warcamp-planner';
 import { pointInSight, humanFogViews } from './fog';
@@ -38,7 +38,7 @@ function refreshCampRoadStyles(state: GameState): boolean {
     && building.raiderCamp !== undefined && building.roadStyle !== 'trail') {
     building.roadStyle = 'trail'; changed = true;
   }
-  if (changed) markWorldChanged(state.world, 'appearance');
+  if (changed) markWorldChanged(state.world, 'appearance', []);
   return changed;
 }
 
@@ -127,11 +127,12 @@ export function updateRaiderCamps(state: GameState): boolean {
 }
 
 function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): number {
+  const clearedCells: number[] = [];
   const palaces = state.buildings.filter(building => building.kind === 'palace' && building.faction >= 0 && buildingReady(building));
   if (!palaces.length) return 0;
   const { width, height } = state.world;
   const sizeOrder: readonly CampSize[] = width * height >= 10000 ? CAMP_SIZE_ORDER : ['medium', 'small'];
-  const planning = { ...state, buildings: state.buildings.filter(building => !(isWallKind(building.kind) && building.faction >= 0)) };
+  const planning = wallBreachingNavigation(state, { kind: 'raider' });
   const access = palaces.flatMap(palace => {
     const exit = constructionEdges(planning, palace)[0];
     return exit ? [travelTimeMap(planning, exit, RAIDER_FACTION, 2.35, 100)] : [];
@@ -244,7 +245,7 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
         const tile = state.world.tiles[p.y * width + p.x];
         if (tile.overlay !== 'forest' && tile.overlay !== 'jungle') continue;
         const before = terrainYields(tile.terrain, tile.overlay), after = terrainYields(tile.terrain, 'none');
-        tile.overlay = 'none';
+        tile.overlay = 'none'; clearedCells.push(p.y * width + p.x);
         for (const resource of ['food', 'production', 'gold'] as const)
           tile[resource] = Math.max(0, tile[resource] - before[resource] + after[resource]);
       }
@@ -256,7 +257,7 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
     }
     if (!placed) failedSizes.add(size);
   }
-  if (spawned) markWorldChanged(state.world, 'sight');
+  if (spawned) markWorldChanged(state.world, 'sight', clearedCells);
   return spawned;
 }
 

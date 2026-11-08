@@ -1,3 +1,4 @@
+import { withDevelopedResources } from './helpers/developed-resources';
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { buildingArmor, buildingWeaponMultiplier, isDefensiveBuilding } from '../src/game/defense-equipment';
@@ -16,7 +17,7 @@ const unit = (id: number, kind: Unit['kind'], x: number, y: number, faction = 0)
     range: kind === 'warrior' ? 1.1 : 4, order: 'hold', cooldown: 0, lastCombat: -60,
     moving: false, facing: 0, attackTime: 0 });
 function fixture(): GameState {
-  return { world: { width: 32, height: 24, seed: 'defense-equipment', source: 'test', spawns: [], revision: 1,
+  return withDevelopedResources({ world: { width: 32, height: 24, seed: 'defense-equipment', source: 'test', spawns: [], revision: 1,
     tiles: Array.from({ length: 768 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4,
       moisture: .6, food: 3, production: 1, gold: 0, variation: .5 })) },
     buildings: [{ ...building(1, 'palace', 3, 10), governorPermissions: { farms: false, housing: false } },
@@ -29,7 +30,7 @@ function fixture(): GameState {
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'defense-equipment', rngState: 1,
     marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1,
     fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 1 },
-    wildlife: { herds: [], sequence: 0, nextRespawnAt: Infinity, targetHerds: 0 } };
+    wildlife: { herds: [], sequence: 0, nextRespawnAt: Infinity, targetHerds: 0 } }, ['iron']);
 }
 
 describe('faction equipment on defensive buildings', () => {

@@ -85,8 +85,8 @@ describe('scheduled farm harvests', () => {
     expect(field.food).toBeCloseTo(FIELD_HARVEST_FOOD);
     expect(field.foodBatches).toEqual([{ amount: FIELD_HARVEST_FOOD, expiresAt: FIELD_HARVEST_SECONDS * 3 + FIELD_SPOIL_SECONDS }]);
     // The two expired batches retain fractional quantities; their visible loss
-    // is rounded to one decimal rather than exposing a recurring fraction.
-    const displayedLoss = Math.round(FIELD_HARVEST_FOOD * 2 * 10) / 10;
+    // is rounded to a whole number while the simulation retains every fraction.
+    const displayedLoss = Math.round(FIELD_HARVEST_FOOD * 2);
     expect(state.particles.some(particle => particle.x === field.x + .5 && particle.text === `−${displayedLoss} food`)).toBe(true);
   });
 

@@ -53,7 +53,7 @@ export function isForbidden(state: GameState, x: number, y: number, faction = pl
 /** Only the Leader and combat retinue may ignore forbidden work areas. */
 export function unitRespectsForbidden(state: GameState, unit: Pick<Unit, 'kind' | 'faction' | 'villageId' | 'guardPost' | 'engineer'>): boolean {
   const retinue = unit.villageId === undefined && unit.guardPost === undefined
-    && (unit.kind === 'warrior' || unit.kind === 'spearman' || unit.kind === 'horseman' || unit.kind === 'archer');
+    && (unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || (unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight') || unit.kind === 'archer');
   return unit.kind !== 'leader' && !unit.engineer && !retinue && factionRespectsForbidden(state, unit.faction);
 }
 

@@ -16,7 +16,7 @@ function ancestors(id: ResearchBranchId, visiting = new Set<ResearchBranchId>())
 
 describe('six-stage science dependency graph', () => {
   it('has only three roots, no missing dependencies or cycles, six stages and at most five technologies per earliest stage', () => {
-    expect(definitions.size).toBe(21);
+    expect(definitions.size).toBe(25);
     expect(RESEARCH_BRANCHES.filter(branch => !branch.prerequisites.length).map(branch => branch.id))
       .toEqual(['woodenTower', 'irrigation', 'scoutLodge']);
     const stage = (id: ResearchBranchId): number => 1 + Math.max(0, ...definitions.get(id)!.prerequisites.map(stage));
@@ -28,12 +28,12 @@ describe('six-stage science dependency graph', () => {
         expect(branch.prerequisites.some(other => other !== prerequisite && ancestors(other).has(prerequisite))).toBe(false);
       const number = stage(branch.id); stages.set(number, [...(stages.get(number) ?? []), branch.id]);
     }
-    expect([...stages.keys()].sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([...stages.keys()].sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect([...stages.values()].every(group => group.length <= 5)).toBe(true);
-    expect(stage('horsebackRiding')).toBe(6); expect(stage('siegeEngines')).toBe(6);
+    expect(stage('horsebackRiding')).toBe(2); expect(stage('siegeEngines')).toBe(6);
     expect(DEFAULT_RESEARCH_ALLOCATION).toBe(.25);
-    expect(RESEARCH_BRANCHES.map(branch => branch.tiers[0].points)).toEqual([24,56,126,261,147,50,25,70,126,273,198,325,231,182,98,231,182,435,435,198,273]);
-    expect(RESEARCH_BRANCHES.reduce((total, branch) => total + branch.tiers[0].points, 0)).toBe(3946);
+    expect(RESEARCH_BRANCHES.map(branch => branch.tiers[0].points)).toEqual([24,56,126,261,147,50,25,70,126,273,198,325,500,231,182,98,231,182,435,147,450,600,198,273,126]);
+    expect(RESEARCH_BRANCHES.reduce((total, branch) => total + branch.tiers[0].points, 0)).toBe(5334);
   });
 
   it('links military, economic and exploration progress instead of leaving advanced branches as independent roots', () => {
@@ -42,8 +42,9 @@ describe('six-stage science dependency graph', () => {
     expect(definitions.get('militaryTactics')!.prerequisites).toEqual(['blacksmith', 'archeryRange']);
     expect(definitions.get('coinage')!.prerequisites).toEqual(['monument', 'sailing']);
     expect(definitions.get('urbanPlanning')!.prerequisites).toEqual(['coinage', 'metalTools']);
-    expect(definitions.get('horsebackRiding')!.prerequisites).toEqual(['infantryDrill']);
+    expect(definitions.get('horsebackRiding')!.prerequisites).toEqual(['scoutLodge']);
     expect(definitions.get('reinforcedDefenses')!.prerequisites).toEqual(['metalTools']);
+    expect(definitions.get('engineering')!.prerequisites).toEqual(['wall']);
     expect(definitions.get('siegeEngines')!.prerequisites).toEqual(['reinforcedDefenses', 'fletching']);
     expect(ancestors('siegeEngines')).toEqual(new Set(['woodenTower', 'wall', 'blacksmith', 'metalTools', 'reinforcedDefenses', 'scoutLodge', 'archeryRange', 'fletching']));
   });
