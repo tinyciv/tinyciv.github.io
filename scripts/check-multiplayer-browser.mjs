@@ -2,11 +2,11 @@ import { ClientStateReplica } from './multiplayer-wire.mjs';
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {writeFile,mkdir} from 'node:fs/promises';
-const out='output/multiplayer-browser',checks=[],errors=[],diagnostics=[],states=new Map(),replicas=new Map(),sequences=new Map(),wireCounts=new Map(),roomName=`Browser UI QA ${Date.now()}`;
+const out='output/multiplayer-browser',checks=[],errors=[],diagnostics=[],states=new Map(),replicas=new Map(),sequences=new Map(),resyncing=new Set(),wireCounts=new Map(),roomName=`Browser UI QA ${Date.now()}`;
 await mkdir(out,{recursive:true});
 const endpoint=process.env.GAME_URL||'https://d120onxzjgx6ss.cloudfront.net';
 const executablePath=process.env.CHROME_PATH||(process.platform==='darwin'?'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome':undefined);
-const browser=await chromium.launch({headless:true,...(executablePath?{executablePath}:{})});
+const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swiftshader'],...(executablePath?{executablePath}:{})});
 const contextA=await browser.newContext({viewport:{width:1440,height:900}}),contextB=await browser.newContext({viewport:{width:390,height:700}}),a=await contextA.newPage(),b=await contextB.newPage();
 const check=(name,pass,detail)=>{checks.push({name,pass,detail});console.log(`${pass?'PASS':'FAIL'} ${name}`);assert.ok(pass,`${name}: ${JSON.stringify(detail)}`);};
 const game=async page=>{const s=states.get(page);const l=s?.units.find(u=>u.kind==='leader'&&u.faction===s.playerFaction);return {faction:s?.playerFaction,x:l?.x,y:l?.y,stance:s?.retinueStance,time:s?.time,paused:s?.paused};};
@@ -32,7 +32,7 @@ try{
   // game's socket available even when a production proxy shares that origin.
   await page.routeWebSocket(url=>url.origin.replace(/^ws/,'http')===new URL(endpoint).origin&&url.pathname!=='/api/ws',()=>{});
   await page.addInitScript(multiplayerUrl=>{const Original=window.WebSocket;window.__qaSockets=[];window.WebSocket=class extends Original{constructor(...args){if(multiplayerUrl&&new URL(String(args[0]),location.href).pathname==='/api/ws'){const target=new URL(multiplayerUrl);target.protocol=target.protocol==='https:'?'wss:':'ws:';target.pathname='/api/ws';target.search='';target.hash='';args[0]=target.href;}super(...args);window.__qaSockets.push(this);}};},process.env.MULTIPLAYER_URL||null);await page.goto(endpoint,{waitUntil:'networkidle'});await page.waitForFunction(()=>document.documentElement.dataset.assets==='ready',null,{timeout:120000});await page.locator('[data-frontend-action="multiplayer"]').click();await page.locator('[data-form="server"]').waitFor();}
- await a.locator('[name="player-name"]').fill('Blue Commander');await a.locator('[name="room-name"]').fill(roomName);await a.locator('[data-form="server"] button[type="submit"]').click();await a.locator('.lobby-players').waitFor();
+ await a.locator('[name="player-name"]').fill('Blue Commander');await a.locator('[name="room-name"]').fill(roomName);await a.getByText('World options',{exact:true}).click();await a.locator('[name="seed"]').fill('BTV-E2E-1V1');await a.locator('[name="style"]').selectOption('pangaea');await a.locator('[data-form="server"] button[type="submit"]').click();await a.locator('.lobby-players').waitFor();
  await b.locator('[data-frontend-action="refresh"]').click();await b.getByRole('button',{name:roomName,exact:true}).waitFor();await b.locator('[name="player-name"]').fill('Red Commander');await b.locator('[name="player-color"]').selectOption('#df6262');await b.getByRole('button',{name:roomName,exact:true}).click();check('Browser row selection preserves profile draft',await b.locator('[name="player-name"]').inputValue()==='Red Commander');await b.locator('[data-frontend-action="join"]').click();await b.locator('.lobby-players').waitFor();await a.getByText('Red Commander',{exact:true}).waitFor();
  check('Both players appear in lobby',await a.locator('.lobby-player').count()===2&&await b.getByText('Blue Commander',{exact:true}).isVisible());
  await a.screenshot({path:`${out}/production-lobby-1440.png`});await b.screenshot({path:`${out}/production-lobby-390.png`});

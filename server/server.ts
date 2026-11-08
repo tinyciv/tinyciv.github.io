@@ -8,6 +8,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { PROTOCOL_VERSION, FACTION_COLORS, type LobbyRoom, type LobbyPlayer, type ServerMessage, type MatchOptions } from '../src/multiplayer/protocol';
 import { LANDFORM_KINDS, WORLD_GENERATION_STYLES } from '../src/world/options';
 import { validatedInput } from '../src/multiplayer/input';
+import { ReplicationFlow } from './replication-flow';
 
 const port = Number(process.env.PORT || 8080);
 const maxRooms = Number(process.env.MAX_ROOMS || 4);
@@ -20,7 +21,7 @@ interface Room { info: LobbyRoom; worker?: Worker; abandonedAt?: number; finishe
 const sessions = new Map<string, Session>();
 const rooms = new Map<string, Room>();
 const sockets = new Set<WebSocket>();
-const pendingSync = new WeakSet<WebSocket>();
+const replication = new ReplicationFlow();
 const counters = { matchesStarted: 0, commands: 0 };
 const safeText = (value: unknown, fallback: string, length = 24): string => typeof value === 'string'
   ? value.replace(/[\x00-\x1f\x7f<>]/g, '').trim().slice(0, length) || fallback : fallback;
@@ -81,9 +82,7 @@ function startMatch(room: Room): void {
       const socket = player && getSession(player.id)?.socket;
       if (socket?.readyState !== WebSocket.OPEN) return;
       if (message.messageType !== 'frame' && message.messageType !== 'snapshot') { socket.send(message.payload); return; }
-      if (socket.bufferedAmount > 2 * 1024 * 1024) { pendingSync.add(socket); return; }
-      if (pendingSync.has(socket)) { pendingSync.delete(socket); worker.postMessage({ type: 'sync', faction: player!.faction }); return; }
-      socket.send(message.payload);
+      replication.send(socket, message.messageType, message.payload, () => worker.postMessage({ type: 'sync', faction: player!.faction }));
     } else if (message.type === 'ready') { room.info.phase = 'playing'; connectionChanged(room); }
     else if (message.type === 'finished') { room.info.phase = 'finished'; room.finishedAt = Date.now(); roomChanged(room); }
     else if (message.type === 'failure') failMatch(room, message.message);
@@ -223,6 +222,7 @@ wss.on('connection', socket => {
     try { handle(session, message); } catch (failure) { console.error('Command failed:', failure instanceof Error ? failure.message : 'Unknown error'); error(session, 'The request could not be completed.'); }
   });
   socket.on('close', () => {
+    replication.close(socket);
     sockets.delete(socket); clearTimeout(helloDeadline); clearInterval(heartbeat);
     if (!session || session.socket !== socket) return;
     session.socket = undefined; session.lastSeen = Date.now();
@@ -234,11 +234,10 @@ setInterval(() => {
   const now = Date.now();
   // Finished matches stop ticking. A congested socket still needs its terminal
   // snapshot once it drains, even when no later frame arrives to trigger sync.
-  for (const session of sessions.values()) if (session.socket && pendingSync.has(session.socket) && session.socket.bufferedAmount < 512 * 1024) {
-    pendingSync.delete(session.socket);
+  for (const session of sessions.values()) if (session.socket) replication.drain(session.socket, () => {
     const room = rooms.get(session.roomId ?? ''), player = room?.info.players.find(player => player.id === session.id);
     if (player) room?.worker?.postMessage({ type: 'sync', faction: player.faction });
-  }
+  });
   for (const [token, session] of sessions) if (!session.socket && now - session.lastSeen > (session.roomId ? grace : 300000)) { leave(session); sessions.delete(token); }
   for (const room of rooms.values()) if (room.finishedAt && now - room.finishedAt > 300000) {
     for (const player of [...room.info.players]) { const session = getSession(player.id); if (session) leave(session); }
