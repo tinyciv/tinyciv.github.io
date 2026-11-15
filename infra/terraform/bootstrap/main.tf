@@ -186,6 +186,12 @@ resource "aws_iam_role_policy" "terraform" {
         ]
       },
       {
+        Sid      = "ReadRegionalDatabaseInventory"
+        Effect   = "Allow"
+        Action   = "rds:DescribeDBInstances"
+        Resource = "arn:aws:rds:${local.region}:${local.account}:db:*"
+      },
+      {
         Sid       = "InspectAccountDatabaseNetwork"
         Effect    = "Allow"
         Action    = ["ec2:DescribeSecurityGroups", "ec2:DescribeSecurityGroupRules", "ec2:DescribeSubnets", "ec2:DescribeVpcs"]
@@ -207,10 +213,19 @@ resource "aws_iam_role_policy" "terraform" {
         Condition = { StringEquals = { "ec2:ResourceTag/Component" = "Accounts" } }
       },
       {
+        Sid      = "CreateTaggedAccountDatabaseRules"
+        Effect   = "Allow"
+        Action   = "ec2:AuthorizeSecurityGroupIngress"
+        Resource = "arn:aws:ec2:${local.region}:${local.account}:security-group-rule/*"
+        Condition = {
+          StringEquals = { "aws:RequestTag/Project" = "BTV", "aws:RequestTag/Component" = "Accounts" }
+        }
+      },
+      {
         Sid    = "ManageDatabaseSecretContainers"
         Effect = "Allow"
         Action = [
-          "secretsmanager:CreateSecret", "secretsmanager:DescribeSecret",
+          "secretsmanager:CreateSecret", "secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy",
           "secretsmanager:UpdateSecret", "secretsmanager:DeleteSecret",
           "secretsmanager:TagResource", "secretsmanager:UntagResource"
         ]
@@ -230,6 +245,13 @@ resource "aws_iam_role_policy" "terraform" {
         Effect   = "Allow"
         Action   = ["ssm:PutParameter", "ssm:GetParameter", "ssm:DeleteParameter", "ssm:AddTagsToResource", "ssm:RemoveTagsFromResource", "ssm:ListTagsForResource"]
         Resource = "arn:aws:ssm:${local.region}:${local.account}:parameter/tinyciv/accounts/database"
+      },
+      {
+        Sid       = "ReadParameterMetadata"
+        Effect    = "Allow"
+        Action    = "ssm:DescribeParameters"
+        Resource  = "*"
+        Condition = { StringEquals = { "aws:RequestedRegion" = local.region } }
       },
       {
         Sid       = "CreateRdsServiceRole"

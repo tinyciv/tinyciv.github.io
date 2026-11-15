@@ -16,7 +16,7 @@ locals {
 # Adopt the running stack rather than creating another server/distribution.
 import {
   to = aws_cloudformation_stack.multiplayer
-  id = "btv-multiplayer"
+  id = "arn:aws:cloudformation:us-west-2:780705957578:stack/btv-multiplayer/5cb0e830-d688-11f1-bb56-0afff1dffb61"
 }
 
 resource "aws_cloudformation_stack" "multiplayer" {

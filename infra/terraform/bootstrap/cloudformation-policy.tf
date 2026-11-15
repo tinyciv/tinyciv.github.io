@@ -7,6 +7,14 @@ resource "aws_iam_role_policy" "cloudformation" {
     Version = "2012-10-17"
     Statement = [
       {
+        # CloudFront checks these dependent read permissions in its global
+        # request context, even when the origin instance is in Oregon.
+        Sid      = "InspectCloudFrontVpcOriginPrerequisites"
+        Effect   = "Allow"
+        Action   = ["ec2:DescribeInstances", "ec2:DescribeInternetGateways", "elasticloadbalancing:DescribeLoadBalancers"]
+        Resource = "*"
+      },
+      {
         Sid    = "InspectOregonNetwork"
         Effect = "Allow"
         Action = [

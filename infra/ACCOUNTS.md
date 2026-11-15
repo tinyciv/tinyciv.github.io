@@ -50,7 +50,9 @@ bundled `accounts-admin.mjs configure` command. Under a SQL advisory lock, it
 creates the account tables and a `tinyciv_app` database role with table access
 and no database, role, schema-creation, or superuser privileges. The initializer
 generates the application database password into Secrets Manager if the secret
-has no value; it reuses that value on subsequent releases.
+has no value; it reuses that value on subsequent releases. The AWS CLI receives the
+new service credential through a temporary file in a private directory, with
+file mode `0600`; the file is removed on success or failure.
 
 The installer writes only the restricted database connection settings to
 `/etc/btv-database.json` as `root:btv`, mode `0640`. The existing unprivileged

@@ -23,7 +23,7 @@ def main():
     deploy = runpy.run_path(str(root / 'scripts/deploy-multiplayer.py'))
     deploy['verify_account']()
     stack = deploy['stack_status']('btv-multiplayer')
-    if not stack or stack['StackStatus'] not in ('CREATE_COMPLETE', 'UPDATE_COMPLETE'):
+    if not stack or stack['StackStatus'] not in ('CREATE_COMPLETE', 'UPDATE_COMPLETE', 'UPDATE_ROLLBACK_COMPLETE'):
         raise RuntimeError('Infrastructure changes require the existing stable TinyCiv stack')
     deploy['wait_for_idle'](deploy['outputs'](stack)['BackendUrl'], 1200)
 

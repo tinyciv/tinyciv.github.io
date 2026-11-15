@@ -7,6 +7,7 @@ import { SCHEMA } from './accounts/schema';
 import { validPasswordHash } from './accounts/password';
 import { normalizedEmail } from './accounts/http';
 import { accountDatabase } from './accounts/database';
+import { withPrivateJson } from './accounts/private-json';
 
 function aws(...args: string[]): any {
   return JSON.parse(execFileSync('aws', ['--region', 'us-west-2', ...args, '--output', 'json'],
@@ -28,9 +29,11 @@ async function configure(): Promise<void> {
     const stderr = String((error as { stderr?: Buffer }).stderr ?? '');
     if (!stderr.includes('ResourceNotFoundException')) throw error;
     app = { username: 'tinyciv_app', password: randomBytes(48).toString('base64url') };
-    execFileSync('aws', ['--region', 'us-west-2', 'secretsmanager', 'put-secret-value',
-      '--secret-id', config.appSecretArn, '--secret-string', 'file:///dev/stdin', '--output', 'json'],
-    { input: JSON.stringify(app), stdio: ['pipe', 'pipe', 'pipe'] });
+    // Node's child stdin is a socket on Linux and cannot be reopened as
+    // /dev/stdin by AWS CLI's file loader. Use a private, temporary file.
+    withPrivateJson(app, path => execFileSync('aws', ['--region', 'us-west-2', 'secretsmanager', 'put-secret-value',
+      '--secret-id', config.appSecretArn, '--secret-string', 'file://' + path, '--output', 'json'],
+    { stdio: ['ignore', 'pipe', 'pipe'] }));
   }
   if (app.username !== 'tinyciv_app' || !app.password) throw new Error('Invalid application credentials.');
   const pool = new Pool({ host: config.host, port: config.port, database: config.database,
