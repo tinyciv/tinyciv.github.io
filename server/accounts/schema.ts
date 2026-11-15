@@ -1,0 +1,33 @@
+export const SCHEMA = `
+CREATE SCHEMA IF NOT EXISTS accounts;
+CREATE TABLE IF NOT EXISTS accounts.users (
+  id uuid PRIMARY KEY,
+  email text NOT NULL UNIQUE CHECK (email = lower(email) AND length(email) <= 254),
+  password_hash text NOT NULL CHECK (password_hash ~ '^scrypt\\$131072\\$8\\$1\\$[a-f0-9]{32}\\$[a-f0-9]{64}$'),
+  display_name text NOT NULL CHECK (length(display_name) BETWEEN 1 AND 40),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS accounts.user_data (
+  user_id uuid PRIMARY KEY REFERENCES accounts.users(id) ON DELETE CASCADE,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(data) = 'object' AND octet_length(data::text) <= 16384),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS accounts.sessions (
+  token_hash char(64) PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES accounts.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_expiry ON accounts.sessions(expires_at);
+CREATE INDEX IF NOT EXISTS sessions_user ON accounts.sessions(user_id);
+CREATE TABLE IF NOT EXISTS accounts.auth_limits (
+  key char(64) PRIMARY KEY,
+  attempts integer NOT NULL,
+  reset_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS auth_limits_expiry ON accounts.auth_limits(reset_at);
+REVOKE ALL ON SCHEMA accounts FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA accounts FROM PUBLIC;
+GRANT USAGE ON SCHEMA accounts TO tinyciv_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA accounts TO tinyciv_app;
+`;

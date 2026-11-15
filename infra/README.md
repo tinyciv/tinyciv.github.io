@@ -1,5 +1,14 @@
 # TinyCiv hosting
 
+Terraform manages the hosting stack through GitHub Actions. See
+[Terraform setup](terraform/README.md) for the one-time state/role bootstrap,
+adoption of the existing stack, and adding cloud resources. CloudFormation
+continues managing the stack's child resources.
+
+Email sign-in and account profile data use a private RDS PostgreSQL database.
+See [account storage and verification](ACCOUNTS.md) for its security model,
+deployment initialization and operational checks.
+
 The `btv-multiplayer` CloudFormation stack is separate from Bolts. It uses one
 Oregon `t3.small` (2 GiB RAM, standard CPU credits), Amazon Linux 2023, Node 22,
 an encrypted 12 GiB root disk, and its own security group, instance role and
@@ -39,8 +48,9 @@ denied access to instance metadata; only the SSM deployment commands use the
 instance role. Node is called by its versioned `/usr/bin/node-22` path, as
 described in the [Amazon Linux Node.js documentation](https://docs.aws.amazon.com/linux/al2023/ug/nodejs.html).
 
-Rooms and sessions are ephemeral. There is no game database or match-state
-backup; restarting the service ends existing matches. The installer defers
+Rooms and multiplayer reconnect sessions are ephemeral. Account identities,
+account sessions and profile data persist in RDS; match state has no database
+backup. Restarting the service ends existing matches. The installer defers
 updates while a room contains players or reconnect reservations. It stages a
 versioned release, checks both JavaScript bundles, atomically switches the
 current symlink, and rolls back the previous release, service and environment if local
@@ -63,15 +73,21 @@ unexpected failures and runtime/collection errors fail the release.
 Only the original repository's `main` branch can deploy. After tests pass, the
 server job verifies every downloaded artifact's SHA-256 and source commit,
 obtains short-lived AWS credentials using GitHub OIDC, and updates the existing
-stack. It waits up to 20 minutes for occupied rooms to empty; if the wait expires,
-the deployment fails without replacing the server or publishing the new Pages
-build. The Pages job runs only after the server passes its health checks. Releases
+application. Before that job, Terraform validates, plans and applies the hosting
+stack using a separate infrastructure role. It waits for empty matches when the
+stack changes. The application installer waits up to 20 minutes for occupied
+rooms to empty; if the wait expires, the deployment fails without replacing
+the server or publishing the new Pages build. The Pages job runs only after
+the server passes its health checks. Releases
 are serialized, and an in-progress release is never cancelled by a newer push.
 Pull requests only test and build; they receive neither AWS credentials nor Pages
 write access. Actions are pinned to immutable commit hashes.
 
 Set repository variable `AWS_DEPLOY_ROLE_ARN` to the role created using
-[the AWS OIDC setup instructions](ACTIONS-AWS.md). No long-lived AWS access-key
+[the AWS OIDC setup instructions](ACTIONS-AWS.md), and complete the
+[Terraform bootstrap](terraform/README.md). The infrastructure role ARN has
+a fixed workflow default; `AWS_TERRAFORM_ROLE_ARN` is an optional override.
+No long-lived AWS access-key
 secrets are needed. Use the `github-pages` environment for Pages and restrict its
 deployment branches to `main`. Deployment logs, checksums and release identifiers
 are retained as workflow artifacts; build products are not pushed to a branch.
@@ -100,7 +116,7 @@ python3 scripts/deploy-multiplayer.py --status
 python3 scripts/deploy-multiplayer.py --apply --existing-only --wait-for-idle 1200 --origins 'https://tinyciv.github.io,https://d120onxzjgx6ss.cloudfront.net,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:5177,http://localhost:5177'
 ```
 
-The release includes only `server.mjs`, `match-worker.mjs`, `navigation.wasm`,
+The release includes only `server.mjs`, `match-worker.mjs`, `simulation.wasm`,
 the service/installer, and generated files below `dist/`. Symlinks are rejected.
 It excludes source trees, local saves, environment files and credentials.
 Artifacts, checksums, AWS outputs and command IDs are in ignored `infra/.state/`.
@@ -109,12 +125,12 @@ uses an instance deployment lock and previous-release check, uploads a private
 checksum-addressed S3 archive, then installs it through SSM. Ordinary application
 updates do not modify CloudFormation or replace instances.
 
-Creating infrastructure is a separate, deliberate operation using `--provision`;
-the Actions deployment role cannot create or update the stack.
-The first infrastructure creation can take several minutes while IAM, EC2,
-the private origin and CloudFront finish. If interrupted, inspect `--status`
-and `infra/.state/last-command.json` before retrying. A pending stack creation
-is resumed instead of blindly creating another stack. Failed stacks require
+Infrastructure changes go through Terraform in Actions, using its dedicated
+role and the CloudFormation execution role. The application deployment role
+cannot create or update the stack. The old `--provision` helper is for the
+historical initial setup; do not use it once Terraform owns this stack.
+If interrupted, inspect the workflow, stack status and
+`infra/.state/last-command.json` before retrying. Failed stacks require
 inspection; the helper does not automatically destroy or recreate them.
 
 ## Verify and operate

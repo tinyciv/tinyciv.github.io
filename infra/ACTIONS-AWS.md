@@ -1,12 +1,20 @@
 # AWS access for GitHub Actions
 
+Infrastructure now uses a separate `TinyCivGitHubTerraform` OIDC role and
+`TinyCivCloudFormation` execution role. Complete the
+[Terraform bootstrap and adoption](terraform/README.md) before running the
+updated workflow. The Terraform role ARN has a fixed workflow default;
+`AWS_TERRAFORM_ROLE_ARN` is an optional override. Keep the existing
+`AWS_DEPLOY_ROLE_ARN`. Terraform runs after the build and before the server
+release. Pull requests receive no AWS credentials.
+
 The deployment job exchanges GitHub's OIDC token for a short-lived session on
 `arn:aws:iam::780705957578:role/TinyCivGitHubDeploy`. Do not add AWS access keys
 to GitHub secrets. Only `tinyciv/tinyciv.github.io` on `main` is trusted. Pull
 requests, other branches, forks, and jobs using a GitHub environment have a
 different subject and cannot assume this role.
 
-The checked-in [permission policy](actions-deploy-policy.json) permits:
+The initial [permission policy](actions-deploy-policy.json) permits:
 
 - Reading outputs of the existing `btv-multiplayer` stack.
 - Uploading release archives below `releases/` in the existing private bucket.
@@ -22,6 +30,12 @@ code. The role cannot create infrastructure, pass IAM roles, alter IAM, or
 upload to unrelated buckets.
 
 ## One-time setup
+
+The helper below describes initial application-role setup. On this already
+deployed repository, use the Terraform adoption instructions above. After
+adoption, Terraform manages the role's inline release permission policy from
+live stack outputs; do not overwrite it with this helper. Its OIDC trust
+continues to use the exact repository/main subject.
 
 Use the repository's numeric owner and repository IDs from GitHub's repository
 metadata. Repositories created after July 15, 2026 use immutable IDs in their

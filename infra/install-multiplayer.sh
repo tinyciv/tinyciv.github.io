@@ -34,7 +34,7 @@ for room in rooms:
 verify_empty_rooms
 target=/opt/btv/releases/$release
 install -d -m 0755 "$target/server-dist"
-for name in server.mjs match-worker.mjs navigation.wasm; do
+for name in server.mjs match-worker.mjs navigation.wasm accounts-admin.mjs rds-ca.pem; do
   test -s "$source_dir/server-dist/$name"
   install -m 0644 "$source_dir/server-dist/$name" "$target/server-dist/$name"
 done
@@ -46,6 +46,9 @@ chmod -R u=rwX,go=rX "$target/server-dist/client"
 runuser -u btv -- test -r "$target/server-dist/client/index.html"
 /usr/bin/node-22 --check "$target/server-dist/server.mjs"
 /usr/bin/node-22 --check "$target/server-dist/match-worker.mjs"
+# Root management reads Secrets Manager; the service retains its metadata block
+# and receives only restricted application database credentials.
+/usr/bin/node-22 "$target/server-dist/accounts-admin.mjs" configure
 verify_empty_rooms
 config_backup=$(mktemp /var/tmp/btv-env.XXXXXX)
 service_backup=$(mktemp /var/tmp/btv-service.XXXXXX)
@@ -62,6 +65,7 @@ MAX_ROOMS=2
 ALLOWED_ORIGINS=$origins
 DATA_DIR=/var/lib/btv
 APP_DIR=/opt/btv/current/server-dist/client
+ACCOUNT_DATABASE_CONFIG=/etc/btv-database.json
 EOF
 chmod 0600 /etc/btv.env.next
 mv /etc/btv.env.next /etc/btv.env

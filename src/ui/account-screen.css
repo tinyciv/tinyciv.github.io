@@ -1,0 +1,36 @@
+/* Account screens reuse the approved menu plates and the existing scene. */
+.frontend-account.menu-sheet{top:296px;width:382px;max-height:min(622px,calc(var(--menu-visible-height,941px) - 312px));padding:18px 22px;container-type:inline-size}
+.frontend-account>header{margin-bottom:10px}
+.frontend .frontend-account h1{font-size:32px}
+.account-intro{margin:0 0 16px;color:#d5c8a7;font-size:20px;line-height:1.2}
+/* Outrank the shared menu-button rules, regardless of stylesheet load order.
+ * Size labels against the panel width, leaving room for each plate's brass stud. */
+.frontend .frontend-account .account-plate{width:100%;height:44px;aspect-ratio:auto;padding:0 12px 2px 15%;justify-content:center;font:700 clamp(16px,6.6cqi,22px)/1 var(--game-font);letter-spacing:0;text-align:center}
+.frontend .frontend-account .account-plate>span{min-width:0;max-width:100%;white-space:normal}
+.frontend .account-plate::before,.frontend .account-plate::after{inset:-5px}
+.frontend .account-plate:hover::after,.frontend .account-plate:focus-visible::after{opacity:1}
+.frontend .account-plate:focus-visible{outline:2px solid #f7dfa0;outline-offset:5px}
+.account-divider{display:flex;align-items:center;gap:10px;margin:15px 0 12px;color:#b9b195;font-size:16px}
+.account-divider::before,.account-divider::after{content:'';height:1px;flex:1;background:#786440}
+.account-form{display:grid;gap:6px}
+.account-form label{font-size:18px;line-height:1.1}
+.account-form input+label{margin-top:5px}
+.account-form input{padding:6px 9px}
+.account-form input:user-invalid{border-color:#eb9a77}
+.account-form input::placeholder{color:#a69b80}
+.account-form .frontend-hint{margin:0;font-size:15px}
+.frontend .account-form .account-submit{margin-top:14px}
+.frontend .account-link,.frontend .account-link:hover{min-height:32px;padding:3px 0;border:0;border-radius:0;background:none;box-shadow:none;color:#ebca83;font:19px/1.2 var(--game-font);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.frontend .account-link:hover{color:#fff0bb}
+.account-forgot{justify-self:end}
+.account-navigation{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:12px;font-size:18px}
+.account-notice{margin:14px 0 0;padding:9px 10px;border-left:2px solid #d3a24f;background:#14120fbf;color:#f0c977;font-size:18px;line-height:1.25;overflow-wrap:anywhere}
+.account-notice:empty{display:none}
+.frontend .frontend-account .account-guest{margin-top:14px}
+.frontend-main>.menu-account{position:absolute;right:0;top:-42px}
+.is-compact .frontend-account{max-height:none}
+.frontend.is-compact .frontend-account .account-plate{height:44px;aspect-ratio:auto;padding:0 12px 2px 15%;font-size:clamp(16px,6.6cqi,22px)}
+.is-compact .frontend-main>.menu-account{position:static;display:block;margin:0 9px 14px auto}
+
+/* Existing release menu layout. */
+.frontend-panel>.menu-account{position:static;display:block;margin-bottom:12px}

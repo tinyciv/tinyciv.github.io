@@ -2,10 +2,14 @@ import { FACTION_COLORS, type LobbyRoom, type MatchOptions } from '../multiplaye
 import { DEFAULT_WORLD_STYLE, LANDFORM_NAMES, WORLD_GENERATION_STYLES, WORLD_STYLE_DESCRIPTIONS, WORLD_STYLE_NAMES } from '../world/options';
 import { DEFAULT_BANDIT_INTENSITY, MIN_BANDIT_INTENSITY, MAX_BANDIT_INTENSITY } from '../game/bandit-intensity';
 import './frontend.css';
+import { AccountScreen, isAccountView, type AccountView } from './account-screen';
+import type { AccountUser } from '../account/client';
 
-export type FrontendView = 'main' | 'single' | 'servers' | 'lobby' | 'options' | 'controls' | 'loading' | 'error';
+export type FrontendView = AccountView | 'main' | 'single' | 'servers' | 'lobby' | 'options' | 'controls' | 'loading' | 'error';
 export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: number; follow: boolean; fullscreen: boolean; banditIntensity: number; enemyStrength: number; autoRebuildDefenses: boolean; }
 export type FrontendAction =
+  | { type: 'account-submit'; mode: 'login' | 'create-account'; email: string; password: string }
+  | { type: 'account-logout' }
   | { type: 'resume' | 'continue' | 'save' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
   | { type: 'new'; options: MatchOptions }
   | { type: 'create'; name: string; playerName: string; color: string; options: MatchOptions }
@@ -39,6 +43,9 @@ export class Frontend {
   private canReturnFromError = true;
   private settings: FrontendSettings = { zoom: 1, minZoom: .55, maxZoom: 3, follow: true, fullscreen: false, banditIntensity: DEFAULT_BANDIT_INTENSITY, enemyStrength: 1, autoRebuildDefenses: true };
   private lobbySignature = '';
+  private readonly account = new AccountScreen();
+  private accountUser: AccountUser | null = null;
+  private accountBusy = false;
   constructor(readonly element: HTMLElement, private readonly action: (action: FrontendAction) => void) {
     element.className = 'frontend'; element.setAttribute('role', 'dialog'); element.setAttribute('aria-modal', 'true');
     element.setAttribute('aria-labelledby', 'frontend-title');
@@ -47,6 +54,10 @@ export class Frontend {
     element.addEventListener('change', event => this.change(event));
     element.addEventListener('input', event => {
       const input = event.target as HTMLInputElement;
+      if (input.form?.dataset.form === 'account') {
+        const confirm = input.form.elements.namedItem('account-confirm');
+        if (confirm instanceof HTMLInputElement) confirm.setCustomValidity('');
+      }
       if (input.name === 'enemy-strength') this.updateEnemyLabel(Number(input.value) / 100);
       if (input.name === 'bandit-intensity') this.updateBanditLabel(Number(input.value) / 100);
     });
@@ -63,8 +74,16 @@ export class Frontend {
   get active(): boolean { return !this.element.hidden; }
   get currentView(): FrontendView { return this.view; }
   setSession(resumable: boolean, saved: boolean, online = false): void { this.resumable = resumable; this.saved = saved; this.online = online; }
+  setAccount(user: AccountUser | null): void { this.accountUser = user; if (this.active) this.render(); }
+  setAccountBusy(busy: boolean): void {
+    this.accountBusy = busy;
+    this.element.querySelectorAll<HTMLButtonElement>('.account-submit,[data-frontend-action="account-logout"]').forEach(button => button.disabled = busy);
+  }
+  setAccountMessage(message: string): void { this.account.setMessage(this.element, message); }
   setSettings(settings: FrontendSettings): void { this.settings = settings; }
   show(view: FrontendView = 'main'): void {
+    if (isAccountView(this.view)) this.account.rememberEmail(this.element.querySelector('[data-form="account"]'));
+    if (this.view !== view) this.account.clearMessage();
     if (['options', 'controls'].includes(view) && !['options', 'controls'].includes(this.view)) this.returnView = this.view;
     this.view = view; this.element.hidden = false; this.render();
     this.element.querySelector<HTMLElement>('button:not(:disabled),input')?.focus({ preventScroll: true });
@@ -89,6 +108,7 @@ export class Frontend {
   private back(): void {
     if (this.view === 'loading') { if (this.cancellableLoading) this.action({ type: 'cancel-loading' }); return; }
     if (this.view === 'error' && !this.canReturnFromError) return;
+    if (isAccountView(this.view)) { this.show(this.view === 'login' ? 'main' : 'login'); return; }
     if (this.view === 'lobby') { this.action({ type: 'leave' }); return; }
     if (['options', 'controls'].includes(this.view)) { this.show(this.returnView); return; }
     if (this.view === 'main' && this.resumable) this.action({ type: 'resume' });
@@ -111,12 +131,17 @@ export class Frontend {
   }
   private submit(event: Event): void {
     event.preventDefault(); const form = event.target as HTMLFormElement;
+    if (form.dataset.form === 'account') {
+      if (!this.accountBusy) this.account.submit(form, this.element, (mode, email, password) => this.action({ type: 'account-submit', mode, email, password }));
+      return;
+    }
     if (form.dataset.form === 'single') this.action({ type: 'new', options: this.readOptions(form) });
     if (form.dataset.form === 'server') { this.readProfile(form); this.action({ type: 'create', name: String(new FormData(form).get('room-name') || '').trim() || `${this.name}'s game`, playerName: this.name, color: this.color, options: this.readOptions(form) }); }
     if (form.dataset.form === 'profile') { this.readProfile(form); this.action({ type: 'profile', name: this.name, color: this.color }); }
   }
   private click(event: Event): void {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button || button.disabled) return;
+    if (button.dataset.accountAction === 'google') { this.account.google(this.element); return; }
     if (button.dataset.view) { this.show(button.dataset.view as FrontendView); return; }
     if (button.dataset.room) { this.selectedRoom = button.dataset.room; this.render(); return; }
     const action = button.dataset.frontendAction;
@@ -174,9 +199,13 @@ export class Frontend {
     }
     const active = this.element.contains(document.activeElement) ? document.activeElement as HTMLInputElement : null;
     const focusedName = active?.getAttribute('name');
-    const title: Record<FrontendView, string> = { main: 'TinyCiv', single: 'Single player', servers: 'Multiplayer', lobby: 'Lobby', options: 'Options', controls: 'Controls', loading: this.loadingTitle, error: 'Error' };
+    const title: Record<FrontendView, string> = { login: 'Sign in', 'create-account': 'Create account', 'forgot-password': 'Reset password', main: 'TinyCiv', single: 'Single player', servers: 'Multiplayer', lobby: 'Lobby', options: 'Options', controls: 'Controls', loading: this.loadingTitle, error: 'Error' };
     let body = '';
     if (this.view === 'main') body = `<nav class="frontend-main-actions" aria-label="Main menu">${this.resumable ? '<button class="primary" data-frontend-action="resume">Resume game</button>' : this.saved ? '<button class="primary" data-frontend-action="continue">Continue</button>' : ''}${!this.online ? '<button data-view="single">Single player</button><button data-frontend-action="multiplayer">Multiplayer</button>' : '<button data-frontend-action="leave">Leave match</button>'}<button data-view="options">Options</button><button data-view="controls">Controls</button>${this.resumable && !this.online ? '<button data-frontend-action="save">Save game</button>' : ''}</nav>${this.online ? '<p class="frontend-hint">Online matches do not pause.</p>' : ''}`;
+    if (this.view === 'main') body = (this.accountUser
+      ? `<button class="account-link menu-account" type="button" data-frontend-action="account-logout">${escape(this.accountUser.email)} · Sign out</button>`
+      : '<button class="account-link menu-account" type="button" data-view="login">Sign in / Create account</button>') + body;
+    if (isAccountView(this.view)) body = this.account.markup(this.view);
     if (this.view === 'single') body = `<form data-form="single" class="frontend-form">${this.worldFields()}<label class="frontend-check"><input type="checkbox" name="advanced-start" ${this.options.advancedStart ? 'checked' : ''}>Advanced start</label><p class="frontend-hint">250 population · Every building · 12 retinue · All 4 soldier types</p><p class="frontend-hint">Replaces your single-player save.</p><button class="primary" type="submit">New game</button></form>`;
     if (this.view === 'servers') body = `<div class="server-browser"><div class="server-toolbar"><button data-frontend-action="refresh">Refresh</button><button class="primary" data-frontend-action="join" ${!this.selectedRoom || !this.rooms.some(room => room.id === this.selectedRoom && room.players.length < 2 && room.phase === 'waiting') ? 'disabled' : ''}>Join selected</button></div><div class="server-table-wrap"><table><thead><tr><th>Name</th><th>Location</th><th>Players</th><th>Ping</th></tr></thead><tbody>${this.rooms.length ? this.rooms.map(room => `<tr class="${room.id === this.selectedRoom ? 'is-selected' : ''}"><td><button data-room="${escape(room.id)}" ${room.phase !== 'waiting' || room.players.length >= 2 ? 'disabled' : ''}>${escape(room.name)}</button></td><td>${escape(room.location)}</td><td>${room.players.length} / 2</td><td>${this.ping ? `${Math.round(this.ping)} ms` : '--'}</td></tr>`).join('') : '<tr><td colspan="4">No open games.</td></tr>'}</tbody></table></div><form data-form="server" class="frontend-form server-create"><h2>New 1v1 game</h2>${this.profileFields()}<label>Game name<input name="room-name" maxlength="40" placeholder="Game name"></label><details><summary>World options</summary>${this.worldFields()}</details><button class="primary" type="submit">Create game</button></form></div>`;
     if (this.view === 'lobby') {
@@ -187,7 +216,8 @@ export class Frontend {
     if (this.view === 'controls') body = `<dl class="frontend-controls"><dt>WASD / arrows</dt><dd>Move the Leader; in Formation 3, W/S advance/reverse and A/D strafe; in a boat, W/S control throttle</dd><dt>Right click</dt><dd>Move, attack, or diplomacy</dd><dt>Left click</dt><dd>Select units and buildings</dd><dt>1 / E</dt><dd>Recall; hold E to steer right in a boat or rotate Formation 3</dd><dt>2 / Q</dt><dd>Change stance; hold Q to steer left in a boat or rotate Formation 3</dd><dt>3</dt><dd>Toggle close ranks after Infantry Drill; hold Q/E to rotate continuously; release to stop</dd><dt>4 / 5</dt><dd>Raise/dismiss levy; garrison/recall city defenders</dd><dt>Boats</dt><dd>Hold Q/E to steer; allow room to coast and brake</dd><dt>Shift</dt><dd>Separate mob / travel movement setting</dd><dt>B / F</dt><dd>Buildings / fortifications</dd><dt>C</dt><dd>Clear trees and structures</dd><dt>Mouse wheel</dt><dd>Camera zoom</dd><dt>Home</dt><dd>Center on the Leader</dd><dt>Space / + / -</dt><dd>Pause / speed in single player</dd><dt>Escape</dt><dd>Close panels or open the menu</dd></dl>`;
     if (this.view === 'loading') body = `<div class="frontend-loading"><progress aria-label="Loading progress" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
     if (this.view === 'error') body = `<div class="frontend-error-actions"><button class="primary" data-frontend-action="retry">Retry</button>${this.canReturnFromError ? '<button data-frontend-action="main">Main menu</button>' : ''}</div>`;
-    this.element.innerHTML = `<section class="frontend-panel frontend-${this.view}"><header><h1 id="frontend-title">${escape(title[this.view])}</h1>${this.view !== 'main' && this.view !== 'loading' && this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>${body}<p class="frontend-status" role="status" aria-live="polite">${escape(this.status)}</p></section>`;
+    this.element.innerHTML = `<section class="frontend-panel ${isAccountView(this.view) ? 'frontend-account ' : ''}frontend-${this.view}"><header><h1 id="frontend-title">${escape(title[this.view])}</h1>${this.view !== 'main' && this.view !== 'loading' && this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>${body}<p class="frontend-status" role="status" aria-live="polite">${escape(this.status)}</p></section>`;
+    this.setAccountBusy(this.accountBusy);
     const roomName = this.element.querySelector<HTMLInputElement>('[name="room-name"]'); if (roomName) roomName.value = this.roomName;
     const worldForm = this.element.querySelector<HTMLSelectElement>('[name="style"]')?.form;
     if (worldForm) this.updateWorldOptions(worldForm);

@@ -19,7 +19,7 @@ STATE = ROOT / 'infra/.state'
 REGION = 'us-west-2'
 ACCOUNT = '780705957578'
 NETWORK = {'VpcId': 'vpc-b000bdd5', 'SubnetId': 'subnet-239e3554', 'CloudFrontServiceSecurityGroup': 'sg-06e81587caba552e4'}
-FILES = ['server-dist/server.mjs', 'server-dist/match-worker.mjs', 'server-dist/navigation.wasm', 'infra/tinyciv.service', 'infra/install-multiplayer.sh']
+FILES = ['server-dist/server.mjs', 'server-dist/match-worker.mjs', 'server-dist/navigation.wasm', 'server-dist/accounts-admin.mjs', 'server-dist/rds-ca.pem', 'infra/tinyciv.service', 'infra/install-multiplayer.sh']
 
 
 def aws(*arguments, output='json'):

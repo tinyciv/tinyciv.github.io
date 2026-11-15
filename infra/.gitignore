@@ -1,1 +1,10 @@
 .state/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+terraform/bootstrap/backend.tf

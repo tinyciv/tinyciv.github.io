@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { handleAccountRequest } from './accounts/http';
+import { accountsConfigured, accountsHealthy } from './accounts/database';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
 import { createReadStream } from 'node:fs';
@@ -163,10 +165,14 @@ const contentTypes: Record<string, string> = { '.html': 'text/html; charset=utf-
 const server = createServer(async (request, response) => {
   if (!secretMatches(request.headers['x-tinyciv-origin']) && request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1') { response.writeHead(403).end(); return; }
   if (request.headers.origin && origins.has(request.headers.origin)) response.setHeader('Access-Control-Allow-Origin', request.headers.origin);
+  response.setHeader('Vary', 'Origin');
   response.setHeader('Cache-Control', 'no-store'); response.setHeader('Content-Type', 'application/json');
   const path = request.url?.split('?')[0];
+  if (await handleAccountRequest(request, response, origins)) return;
   if (request.method === 'GET' && (path === '/health' || path === '/api/health')) {
-    response.end(JSON.stringify({ ok: true, game: 'tinyciv', protocol: PROTOCOL_VERSION, rooms: rooms.size, connections: sockets.size }));
+    const accounts = await accountsHealthy();
+    response.statusCode = accounts ? 200 : 503;
+    response.end(JSON.stringify({ ok: accounts, accounts: accountsConfigured() && accounts, game: 'tinyciv', protocol: PROTOCOL_VERSION, rooms: rooms.size, connections: sockets.size }));
   } else if (request.method === 'GET' && path === '/api/lobbies') response.end(JSON.stringify({ rooms: publicRooms() }));
   else if (appDirectory && (request.method === 'GET' || request.method === 'HEAD')) {
     try {
@@ -184,6 +190,8 @@ const server = createServer(async (request, response) => {
     } catch { response.writeHead(404).end(); }
   } else response.writeHead(404).end(JSON.stringify({ error: 'Not found.' }));
 });
+server.requestTimeout = 15000;
+server.headersTimeout = 10000;
 const wss = new WebSocketServer({ noServer: true, maxPayload: 32768, perMessageDeflate: { threshold: 512, serverNoContextTakeover: true, clientNoContextTakeover: true, concurrencyLimit: 4 } });
 server.on('upgrade', (request, socket, head) => {
   const origin = request.headers.origin;

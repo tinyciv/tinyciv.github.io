@@ -95,6 +95,7 @@ import { fieldHarvestFoodForState } from './game/farms';
 import { parseGameSave, serializeGameSave } from './game/game-save';
 import { readStoredGame, writeStoredGame } from './game/game-storage';
 import { Frontend, type FrontendAction, type FrontendView } from './ui/frontend';
+import { AccountClient } from './account/client';
 import { MultiplayerClient } from './multiplayer/client';
 import type { GameCommand } from './multiplayer/protocol';
 import { playerFaction } from './game/player-context';
@@ -279,6 +280,16 @@ const pendingCaptures = new Set<number>();
 let retryFrontend: () => void = () => location.reload();
 let leaveDestination: FrontendView = 'servers';
 const frontend = new Frontend($('#frontend'), action => handleFrontendAction(action));
+const accounts = new AccountClient();
+void accounts.restore().then(user => frontend.setAccount(user)).catch(() => {});
+async function submitAccount(action: Extract<FrontendAction, { type: 'account-submit' }>): Promise<void> {
+  frontend.setAccountBusy(true);
+  try {
+    const user = await accounts.signIn(action.mode, action.email, action.password);
+    frontend.setAccount(user); frontend.show('main');
+  } catch (error) { frontend.setAccountMessage(error instanceof Error ? error.message : 'Sign-in failed. Try again.'); }
+  finally { action.password = ''; frontend.setAccountBusy(false); }
+}
 const multiplayer = new MultiplayerClient({
   onRooms: rooms => frontend.setRooms(rooms, multiplayer.ping),
   onRoom: (room, _faction) => {
@@ -363,6 +374,14 @@ async function openMultiplayer(): Promise<void> {
   catch (error) { if (attempt === connectionAttempt) frontend.error(error instanceof Error ? error.message : 'Unable to connect. Try again.'); }
 }
 function handleFrontendAction(action: FrontendAction): void {
+  if (action.type === 'account-submit') { void submitAccount(action); return; }
+  if (action.type === 'account-logout') {
+    frontend.setAccountBusy(true);
+    void accounts.logout().then(() => frontend.setAccount(null)).catch(() => frontend.setStatus('Sign-out failed. Try again.'))
+      .finally(() => frontend.setAccountBusy(false));
+    return;
+  }
+
   if (action.type === 'resume' || action.type === 'continue') { sessionStarted = true; hideFrontend(); updateUI(); return; }
   if (action.type === 'save') {
     frontend.setStatus('Saving…');

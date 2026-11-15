@@ -21,6 +21,34 @@ defaults:
     shell: bash
 
 jobs:
+  terraform-check:
+    name: Check Terraform
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_INPUT: 'false'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra/terraform
+      - name: Validate production configuration without AWS access
+        run: |
+          terraform -chdir=infra/terraform init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=infra/terraform validate
+      - name: Validate administrator bootstrap without AWS access
+        run: |
+          terraform -chdir=infra/terraform/bootstrap init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=infra/terraform/bootstrap validate
+
   build:
     name: Test and build
     runs-on: ubuntu-24.04
@@ -41,6 +69,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Verify PostgreSQL accounts over TLS
+        run: python3 infra/test-accounts.py
       - name: Build navigation WASM for tests
         run: npm run build:wasm
       - name: Run game tests
@@ -90,9 +120,52 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
+  deploy-infrastructure:
+    name: Apply AWS infrastructure
+    needs: [build, terraform-check]
+    if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_INPUT: 'false'
+      TERRAFORM_ROLE_ARN: ${{ vars.AWS_TERRAFORM_ROLE_ARN || 'arn:aws:iam::780705957578:role/TinyCivGitHubTerraform' }}
+    # Keep the branch OIDC subject; adding an environment changes the subject.
+    steps:
+      - name: Check out infrastructure
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - name: Obtain temporary infrastructure credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.TERRAFORM_ROLE_ARN }}
+          role-session-name: tinyciv-infra-${{ github.run_id }}-${{ github.run_attempt }}
+          aws-region: us-west-2
+          allowed-account-ids: '780705957578'
+          role-duration-seconds: 7200
+          unset-current-credentials: true
+          action-timeout-s: 120
+      - name: Initialize locked remote state
+        run: terraform -chdir=infra/terraform init -input=false -lockfile=readonly
+      - name: Plan infrastructure
+        run: terraform -chdir=infra/terraform plan -input=false -lock-timeout=5m -out=production.tfplan
+      - name: Wait for empty matches before changing the stack
+        run: python3 infra/terraform/wait-for-idle.py infra/terraform/production.tfplan
+      - name: Apply the saved plan
+        run: terraform -chdir=infra/terraform apply -input=false -lock-timeout=5m production.tfplan
+
   deploy-server:
     name: Deploy multiplayer server
-    needs: build
+    needs: [build, deploy-infrastructure]
     if: github.repository == 'tinyciv/tinyciv.github.io' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
