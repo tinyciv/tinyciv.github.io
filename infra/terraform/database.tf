@@ -31,8 +31,9 @@ resource "aws_db_parameter_group" "accounts" {
   tags   = local.database_tags
 
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
   parameter {
     name  = "password_encryption"
