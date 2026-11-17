@@ -8,10 +8,12 @@ on:
   workflow_dispatch:
 
 # A release must finish its server and Pages deployments before the next starts.
+# Keep pending releases when another push arrives (up to GitHub's 100-run limit).
 # Pull requests use separate groups and never receive deployment credentials.
 concurrency:
   group: tinyciv-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
