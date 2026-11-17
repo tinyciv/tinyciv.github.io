@@ -17,7 +17,8 @@ function fixture(kind: Unit['kind'] = 'leader'): GameState {
   };
 }
 function plateau(state: GameState, x0 = 12, y0 = 12, x1 = 20, y1 = 20, id = 1): void {
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) state.world.tiles[y * state.world.width + x].ridge = id;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
+    Object.assign(state.world.tiles[y * state.world.width + x], { relief: 'hills', reliefLevel: 1, reliefRegion: id });
   state.world.revision!++;
 }
 
@@ -26,7 +27,7 @@ describe('downhill unit visibility', () => {
     const state = fixture(kind); plateau(state); plateau(state, 26, 12, 34, 20, 2);
     const scout = state.units[0], radius = unitSightRadius(scout), fog = updateFog(state);
     for (let y = 0; y < fog.height; y++) for (let x = 0; x < fog.width; x++) {
-      const downhill = !state.world.tiles[y * fog.width + x].ridge;
+      const downhill = !state.world.tiles[y * fog.width + x].relief;
       const expected = Math.hypot(x + .5 - scout.x, y + .5 - scout.y) <= radius * (downhill ? 1.5 : 1);
       expect(pointInSight(fog, x + .5, y + .5)).toBe(expected);
     }
@@ -55,7 +56,9 @@ describe('downhill unit visibility', () => {
     for (const tile of state.world.tiles) tile.overlay = 'forest';
     state.world.revision!++;
     // A continuous forest still cuts the increased range to 30%.
-    delete state.world.tiles[16 * 48 + 20].ridge;
+    delete state.world.tiles[16 * 48 + 20].relief;
+    delete state.world.tiles[16 * 48 + 20].reliefLevel;
+    delete state.world.tiles[16 * 48 + 20].reliefRegion;
     expect(pointInSight(updateFog(state), 20.5, 16.5)).toBe(true); // 4 < 9 * 1.5 * .3
     expect(pointInSight(updateFog(state), 21.5, 16.5)).toBe(false);
     expect(pointInSight(updateFog(state), 19.5, 16.5)).toBe(false); // Equal elevation: 3 > 9 * .3
@@ -73,7 +76,9 @@ describe('downhill unit visibility', () => {
       expect(descended.explored[27 * 48 + 16]).toBe(1);
       scout.x = 16.5; refreshFogUnit(state, scout);
       expect(pointInSight(updateFog(state), target.x, target.y)).toBe(true);
-      for (const tile of state.world.tiles) delete tile.ridge;
+      for (const tile of state.world.tiles) {
+        delete tile.relief; delete tile.reliefLevel; delete tile.reliefRegion;
+      }
       state.world.revision!++;
       expect(pointInSight(updateFog(state), target.x, target.y)).toBe(false);
     } finally { endFogFrame(state); }
@@ -90,9 +95,8 @@ describe('downhill unit visibility', () => {
     expect(pointInSight(updateFog(state), 22.5, 16.5)).toBe(true);
   });
 
-  it('lets a unit on the high-side ramp look downhill', () => {
+  it('lets a unit on the edge of a hill look downhill', () => {
     const state = fixture(); plateau(state);
-    state.world.tiles[16 * 48 + 20].stair = 'west';
     state.units[0].x = 20.5;
     expect(pointInSight(updateFog(state), 32.5, 16.5)).toBe(true);
     expect(pointInSight(updateFog(state), 34.5, 16.5)).toBe(false);

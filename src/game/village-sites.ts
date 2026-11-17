@@ -5,7 +5,8 @@ import { canWalk, createReachabilityQuery, hasStaticPath, invalidateNavigation }
 import { territory } from './borders';
 import { territoryValue } from './territory-cells';
 import { removeVillageTrailAt } from './village-trails';
-import { dockPlacement, DOCK_HP } from './dock';
+import { dockPlacement } from './dock';
+import { DOCK_HP } from './dock-config';
 import { houseCapacity } from './wells';
 import { validatePhysicalFootprint } from './placement-physical';
 import { scenarioStructuresAllowed } from './scenario-access-native';

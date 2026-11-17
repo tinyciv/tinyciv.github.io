@@ -5,7 +5,7 @@ import { createGame } from '../src/game/simulation';
 import { hasStaticPath } from '../src/game/pathfinding';
 import { buildingHeight, buildingWidth, isWallKind, tileAt, WATER, type Building } from '../src/game/types';
 import { generateWorld } from '../src/world/generator';
-import { harmonizeRidgeTerrain, ridgeStatistics } from '../src/world/ridges';
+import { harmonizeRidgeTerrain } from '../src/world/ridges';
 
 describe('six-civilization starting worlds', () => {
   it.each(['CROWN', '42', 'first-light'])('starts five distinct two-city rivals with a funded economy on %s', seed => {
@@ -56,9 +56,10 @@ describe('six-civilization starting worlds', () => {
   it('keeps six factions and eleven non-overlapping palaces on a small development map', () => {
     const state = createGame(generateWorld('small', 64, 64));
     expect(state.factions.filter(faction => faction.villageId === undefined)).toHaveLength(STARTING_FACTION_COUNT);
-    const ridges = ridgeStatistics(state.world);
-    expect(ridges.raised / ridges.land).toBeGreaterThan(.01);
-    expect(ridges.raised / ridges.land).toBeLessThanOrEqual(.12);
+    const land = state.world.tiles.filter(tile => !WATER.has(tile.terrain)).length;
+    const raised = state.world.tiles.filter(tile => tile.relief).length;
+    expect(raised / land).toBeGreaterThan(.01);
+    expect(raised / land).toBeLessThanOrEqual(.12);
     const palaces = state.buildings.filter(building => building.kind === 'palace');
     expect(palaces).toHaveLength(STARTING_FACTION_COUNT + OPPOSING_FACTION_COUNT);
     for (let i = 0; i < palaces.length; i++) for (let j = 0; j < i; j++)
@@ -66,25 +67,20 @@ describe('six-civilization starting worlds', () => {
   });
 });
 
-describe('uniform ledge surroundings', () => {
-  it.each(['CROWN', '42', 'first-light'])('has one grass/desert palette through each two-cell apron on %s', seed => {
+describe('native relief terrain', () => {
+  it.each(['CROWN', '42', 'first-light'])('keeps relief on dry ground with explicit native policy on %s', seed => {
     const world = generateWorld(seed);
-    expect(world.tiles.some(tile => tile.ridge)).toBe(true);
+    expect(world.tiles.some(tile => tile.relief)).toBe(true);
     for (let i = 0; i < world.tiles.length; i++) {
       const tile = world.tiles[i];
-      if (!tile.ridge) continue;
-      if (WATER.has(tile.terrain)) {
-        expect(tile.terrain).toBe('river'); expect(tile.riverArt).toBe('banked'); continue;
-      }
-      // Ledge aprons also support the current plains and polar ground palettes.
+      expect(tile.ridge).toBeUndefined(); expect(tile.stair).toBeUndefined();
+      if (!tile.relief) continue;
+      expect(WATER.has(tile.terrain)).toBe(false);
       expect(['grassland', 'desert', 'plains', 'tundra']).toContain(tile.terrain);
-      const x = i % world.width, y = Math.floor(i / world.width);
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-        const neighbor = tileAt(world, x + dx, y + dy)!;
-        // River canyons intentionally cut the dry apron; water must retain its own palette.
-        if (!WATER.has(neighbor.terrain)) expect(neighbor.terrain).toBe(tile.terrain);
-        expect(neighbor.beach).not.toBe(true);
-      }
+      expect(tile.reliefRegion).toBeGreaterThan(0);
+      expect([0, 5, 7]).toContain(tile.reliefFlags);
+      expect([0, 1, 2]).toContain(tile.reliefLevel);
+      expect(tile.reliefSpeed).toBeGreaterThan(0); expect(tile.reliefSpeed).toBeLessThanOrEqual(1);
     }
   });
 

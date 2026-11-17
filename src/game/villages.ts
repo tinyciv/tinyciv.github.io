@@ -17,7 +17,8 @@ import { territory } from './borders';
 import { territoryValue } from './territory-cells';
 import { environmentRandom } from '../world/environment-fields';
 import { addVillageBuilding, addVillager } from './village-sites';
-import { confederateVillage, settlementHost } from './settlement-transfer';
+import { confederateVillage } from './settlement-transfer';
+import { settlementHost } from './settlement-host';
 import { SETTLEMENT_CONSTANTS } from './settlement-constants';
 import { ACTION, applyVillageBonuses, chooseVillageLayout, FAMILY_NAMES, REACH, settlementRow, settlements, STAGE_NAMES,
   villageCenter, villageRelationView, villageTrading, villageHostilesView, hostileView } from './settlement-bridge';

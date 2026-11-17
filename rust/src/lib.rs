@@ -892,7 +892,7 @@ pub extern "C" fn sim_harbor_step(handle: u32, now: f64, dt: f64) -> *const f64 
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_trade_boat_steer(handle: u32, x: f64, y: f64, facing: f64, tx: f64, ty: f64, dt: f64, until: f64, now: f64) -> *const f64 {
-    with_sim(handle, |game| game.world.resource_mut::<sim::harbor_trade::HarborTrade>().steer_merchant(x, y, facing, tx, ty, dt, sim::fisheries::speed(until, now, 1.6)))
+    with_sim(handle, |game| game.world.resource_mut::<sim::harbor_trade::HarborTrade>().steer_merchant(x, y, facing, tx, ty, dt, sim::fisheries::speed(until, now, 1.3)))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_harbor_push(handle: u32, village: f64, faction: i32, x: f64, y: f64) {

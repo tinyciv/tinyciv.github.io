@@ -5,6 +5,7 @@ import type { Building, FarmField } from '../src/game/types';
 import { punyAtlas } from './puny-atlas.js';
 import { drawPuny } from '../src/game/puny-world';
 import { fieldKey } from '../src/game/native-art';
+import { runtimeArtUrl } from '../src/game/runtime-art';
 
 vi.mock('../src/game/puny-world', async importOriginal => ({
   ...await importOriginal<typeof import('../src/game/puny-world')>(), drawPuny: vi.fn(),
@@ -27,7 +28,8 @@ beforeAll(async () => {
     filename = '';
     onload?: () => void;
     set src(value: string) {
-      const index = filenames.findIndex(file => value.endsWith(file));
+      const index = filenames.findIndex(file => value === runtimeArtUrl(`${import.meta.env.BASE_URL}assets/pixelhole-overworld/${file}`));
+      if (index < 0) throw new Error(`Unexpected farm sheet: ${value}`);
       this.filename = filenames[index]; this.pixels = sheets[index];
       this.width = this.pixels.width; this.height = this.pixels.height;
       queueMicrotask(() => this.onload?.());

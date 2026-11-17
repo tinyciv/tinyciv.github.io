@@ -80,7 +80,7 @@ describe('settlements and economy', () => {
       const houses = a.buildings.filter(building => building.faction === faction.id && building.kind === 'house');
       expect(houses).toHaveLength(faction.id === 0 ? 8 : 4);
       expect(houses.map(house => house.residents)).toEqual(faction.id === 0 ? [2, 2, 2, 2, 2, 2, 2, 2] : [2, 2, 1, 0]);
-      expect(a.buildings.filter(building => building.faction === faction.id && building.kind === 'road')).toHaveLength(faction.id === 0 ? 12 : 16);
+      expect(a.buildings.filter(building => building.faction === faction.id && building.kind === 'road')).toHaveLength(36);
       expect(a.units.filter(unit => unit.faction === faction.id && unit.kind === 'warrior')).toHaveLength(faction.id === 0 ? 5 : 4);
       const workers = a.units.filter(unit => unit.faction === faction.id && unit.collector);
       const sharedFarmWorkforce = farmWorkGroups(a).groups.filter(group => group.faction === faction.id).length;
@@ -328,9 +328,9 @@ describe('movement, construction and roads', () => {
     expect(buildAt(state, 'wall', 45, 2).ok).toBe(false);
     expect(state.factions[0].gold).toBe(50);
     expect(buildAt(state, 'wall', 19, 10).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(20);
+    expect(state.factions[0].gold).toBe(35);
     expect(buildAt(state, 'wall', 19, 10).ok).toBe(false);
-    expect(state.factions[0].gold).toBe(20);
+    expect(state.factions[0].gold).toBe(35);
     expect(canWalk(state, 19.5, 10.5, 0)).toBe(true);
     expect(canWalk(state, 19.5, 10.5, 1)).toBe(true);
     state.factions[0].gold = 1;
@@ -346,7 +346,7 @@ describe('movement, construction and roads', () => {
     extendFixtureRoad(state, 21, 10);
     expect(buildAt(state, first, 22, 10).ok).toBe(true);
     expect(buildAt(state, second, 22, 10).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(10);
+    expect(state.factions[0].gold).toBe(25);
     expect(state.buildings.filter(building => building.x === 22 && building.y === 10).map(building => building.kind).sort()).toEqual(['road', 'wall']);
     expect(canWalk(state, 22.5, 10.5, 0)).toBe(true);
     finishOrders(state);
@@ -457,20 +457,20 @@ describe('movement, construction and roads', () => {
     expect({ x: outsider.x, y: outsider.y }).not.toEqual({ x: 22.5, y: 10.5 });
   });
 
-  it('extends the enclosing road ring cardinally without creating isolated roads or direct food income', () => {
+  it('extends a starting road arm cardinally without creating isolated roads or direct food income', () => {
     const state = game(), leader = getLeader(state)!;
     const palace = state.buildings.find(building => building.kind === 'palace' && building.faction === 0)!;
     entityStore(state).buildings.replace(state.buildings.filter(building => building.kind === 'palace' || building.kind === 'road' && building.faction === 0));
     synchronizeFarms(state); // Removed farms no longer reserve stale crop cells.
     const worker = state.units.find(unit => unit.faction === 0 && unit.kind === 'worker')!;
     entityStore(state).units.replace(state.units.filter(unit => unit.kind === 'leader' || unit.id === worker.id));
-    worker.x = palace.x + 3.5; worker.y = palace.y + 0.5;
-    leader.x = palace.x + 4.5; leader.y = palace.y + 1.5;
+    worker.x = palace.x + 8.5; worker.y = palace.y - .5;
+    leader.x = palace.x + 9.5; leader.y = palace.y + .5;
     state.factions[0].gold = 50;
-    expect(buildAt(state, 'road', palace.x + 4, palace.y)).toEqual({ ok: false, message: 'Extend an existing road or bridge, or start from a ford.' });
+    expect(buildAt(state, 'road', palace.x + 10, palace.y - 1)).toEqual({ ok: false, message: 'Extend an existing road or bridge, or start from a ford.' });
     expect(state.factions[0].gold).toBe(50);
-    expect(buildAt(state, 'road', palace.x + 3, palace.y).ok).toBe(true);
-    expect(buildAt(state, 'road', palace.x + 4, palace.y).ok).toBe(true);
+    expect(buildAt(state, 'road', palace.x + 9, palace.y - 1).ok).toBe(true);
+    expect(buildAt(state, 'road', palace.x + 10, palace.y - 1).ok).toBe(true);
     const roadFoodYield = state.factions[0].yields.food;
     const food = state.factions[0].food;
     finishOrders(state);
@@ -486,37 +486,41 @@ describe('movement, construction and roads', () => {
     const worker = state.units.find(unit => unit.faction === 0 && unit.kind === 'worker')!;
     entityStore(state).buildings.replace(state.buildings.filter(building => building.kind === 'palace' || building.kind === 'road' && building.faction === 0));
     entityStore(state).units.replace(state.units.filter(unit => unit.kind === 'leader' || unit.id === worker.id));
-    leader.x = palace.x + 2.5; leader.y = palace.y + 2.5;
-    worker.x = palace.x + 8.5; worker.y = palace.y + 0.5;
+    const crossing = { x: palace.x + 9, y: palace.y - 1 };
+    leader.x = crossing.x - 1.5; leader.y = crossing.y + 1.5;
+    worker.x = crossing.x - .5; worker.y = crossing.y + .5;
     state.factions[0].gold = 100;
-    for (let y = 0; y < state.world.height; y++) tileAt(state.world, palace.x + 3, y)!.terrain = terrain;
-    expect(canWalk(state, palace.x + 3.5, palace.y + 0.5, 0)).toBe(false);
-    expect(buildAt(state, 'road', palace.x + 4, palace.y).ok).toBe(false);
+    for (let y = 0; y < state.world.height; y++) tileAt(state.world, crossing.x, y)!.terrain = terrain;
+    expect(canWalk(state, crossing.x + .5, crossing.y + .5, 0)).toBe(false);
+    expect(buildAt(state, 'road', crossing.x + 1, crossing.y).ok).toBe(false);
     synchronizeFarms(state);
     const disconnectedFood = citySummaries(state).filter(city => city.palace.faction === 0).reduce((sum, city) => sum + city.food, 0);
     const before = state.factions[0].gold;
-    expect(buildAt(state, 'bridge', palace.x + 3, palace.y).ok).toBe(true);
+    expect(buildAt(state, 'bridge', crossing.x, crossing.y).ok).toBe(true);
     expect(state.factions[0].gold).toBe(before - 10);
-    expect(buildAt(state, 'road', palace.x + 4, palace.y).ok).toBe(true);
+    expect(buildAt(state, 'road', crossing.x + 1, crossing.y).ok).toBe(true);
     expect(state.factions[0].yields.food).toBe(disconnectedFood);
-    expect(canWalk(state, palace.x + 3.5, palace.y + .5, 0)).toBe(false);
+    expect(canWalk(state, crossing.x + .5, crossing.y + .5, 0)).toBe(false);
     finishOrders(state);
     expect(roadsReachPalaces(state)).toBe(true);
-    expect(canWalk(state, palace.x + 3.5, palace.y + 0.5, 0)).toBe(true);
-    expect(movementMultiplier(state, palace.x + 3.5, palace.y + 0.5)).toBe(1);
-    expect(findPath(state, { x: palace.x + 2.5, y: palace.y + 0.5 }, { x: palace.x + 4.5, y: palace.y + 0.5 }, 0)).toHaveLength(2);
-    leader.x = palace.x + 3.5; leader.y = palace.y + 0.5;
+    expect(canWalk(state, crossing.x + .5, crossing.y + .5, 0)).toBe(true);
+    expect(movementMultiplier(state, crossing.x + .5, crossing.y + .5)).toBe(1);
+    expect(findPath(state, { x: crossing.x - .5, y: crossing.y + .5 }, { x: crossing.x + 1.5, y: crossing.y + .5 }, 0)).toHaveLength(2);
+    leader.x = crossing.x + .5; leader.y = crossing.y + .5;
     updateGame(state, 0.05, { ...idle, right: true });
-    expect(leader.x - palace.x - 3.5).toBeCloseTo(3.6 * 0.05, 8);
+    expect(leader.x - crossing.x - .5).toBeCloseTo(3.6 * 0.05, 8);
     // The bank is for its road approach, never another paid bridge segment.
-    expect(buildAt(state, 'bridge', palace.x + 4, palace.y + 1)).toEqual({ ok: false, message: 'Bridges span water tiles.' });
+    expect(buildAt(state, 'bridge', crossing.x + 1, crossing.y + 1)).toEqual({ ok: false, message: 'Bridges span water tiles.' });
+    // Complete parallel bank approaches so the adjacent crossing would close
+    // a 2×2 route block, while a separated crossing remains legal.
+    entityStore(state).buildings.add(...[-1, 1].map(dx => ({ id: entityStore(state).allocateId(), kind: 'road' as const,
+      faction: 0, x: crossing.x + dx, y: crossing.y + 1, hp: 100, maxHp: 100, capacity: 0 })));
     const snapshot = JSON.stringify(state);
-    // A parallel bridge here would create neighboring junctions on the palace loop.
-    expect(validateBuildAt(state, 'bridge', palace.x + 3, palace.y + 1)).toMatchObject({ ok: false });
-    expect(validateBuildAt(state, 'bridge', palace.x + 3, palace.y + 3).ok).toBe(true);
+    expect(validateBuildAt(state, 'bridge', crossing.x, crossing.y + 1)).toMatchObject({ ok: false });
+    expect(validateBuildAt(state, 'bridge', crossing.x, crossing.y + 3).ok).toBe(true);
     expect(JSON.stringify(state)).toBe(snapshot);
     // The cheaper farm is now affordable and the completed bridge gives its builder a route.
-    expect(buildAt(state, 'camp', palace.x + 5, palace.y + 1).ok).toBe(true);
+    expect(buildAt(state, 'camp', crossing.x + 2, crossing.y + 1).ok).toBe(true);
   });
 
   it('selects warriors without interrupting follow and holds only on an explicit command', () => {

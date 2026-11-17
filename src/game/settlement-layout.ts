@@ -175,7 +175,11 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
     const virtual: GameState = { ...state, buildings: [...state.buildings, palace,
       ...layout.houses.map((point, i) => placeholder('house', point, -2 - i)),
       ...layout.roads.map((point, i) => placeholder('road', point, -20 - i))] };
-    return planStartingFarmSites(virtual, palace, population, point => usable(point) && !reserved.has(key(point)));
+    // Roads remain reachable in the virtual walking grid. Reserve the planned
+    // layout explicitly so that productive road cells cannot become farms.
+    const plannedCells = new Set([...palaceCells(layout.palace), ...layout.houses, ...layout.roads].map(key));
+    return planStartingFarmSites(virtual, palace, population, point => usable(point)
+      && !reserved.has(key(point)) && !plannedCells.has(key(point)));
   }
 
   let best: StartingSettlementLayout | undefined, bestSupply = -1, firstPalace: Point | undefined, completeCount = 0;

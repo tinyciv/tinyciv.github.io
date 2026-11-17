@@ -17,7 +17,8 @@ import { invalidateSettlementDecisions } from './settlement-decisions';
 import { invalidateFactionStrategies } from './faction-strategy';
 import { civAffiliation, settlements } from './settlement-bridge';
 import { findFactionTradeEndpoints, factionTradeIncomeEstimate, updateTradeRoutes } from './trade';
-import { invalidateCityTransfer, resetOrders, settlementHost } from './settlement-transfer';
+import { invalidateCityTransfer, resetOrders } from './settlement-transfer';
+import { settlementHost } from './settlement-host';
 import { applyDefenseResearch } from './defense-research';
 import { isHumanFaction, playerFaction } from './player-context';
 import { TREATY, diplomaticRelationship, emptyDiplomacyTerms, type DiplomaticHistory, type DiplomaticOffer,

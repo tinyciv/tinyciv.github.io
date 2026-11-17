@@ -6,10 +6,11 @@ import { paintTerrain } from '../src/game/terrain';
 import { markWorldChanged, worldChangesSince } from '../src/game/world-revisions';
 import { type Building, type GameState, type Tile, type World } from '../src/game/types';
 
-vi.mock('../src/game/puny-world', async () => {
+vi.mock('../src/game/puny-world', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/game/puny-world')>();
   const { punyAtlas } = await import('./puny-atlas');
   const atlas = punyAtlas();
-  return { drawPuny: vi.fn(), punyWorldPixels: () => atlas, punyDesertLedgePixels: () => undefined };
+  return { ...actual, loadPunyWorld: async () => undefined, drawPuny: vi.fn(), punyWorldPixels: () => atlas, punyDesertLedgePixels: () => undefined };
 });
 afterEach(() => vi.unstubAllGlobals());
 

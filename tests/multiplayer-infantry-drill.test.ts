@@ -9,9 +9,10 @@ function fixture(unlocked = true) {
   const world: World = { width: 64, height: 36, seed: 'multiplayer-drill', source: 'fixture', spawns: [{ x: 8, y: 18 }, { x: 54, y: 18 }],
     tiles: Array.from({ length: 64 * 36 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .5, food: 3, production: 0, gold: 0, variation: .5 })) };
   const state = createDuelGame(world);
-  if (unlocked) for (const faction of state.factions) faction.research = { focus: 'infantryDrill', levels: { infantryDrill: 1 }, progress: {} };
+  const players = state.factions.filter(faction => state.multiplayer!.humanFactionIds.includes(faction.id));
+  if (unlocked) for (const faction of players) faction.research = { focus: 'infantryDrill', levels: { infantryDrill: 1 }, progress: {} };
   let id = Math.max(...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id)) + 1;
-  for (const faction of state.factions) {
+  for (const faction of players) {
     const recruit = state.units.find(unit => unit.faction === faction.id && isSoldier(unit) && unit.guardPost === undefined)!;
     while (infantryFormationSoldierCount(state, faction.id) < 8)
       entityStore(state).units.add({ ...recruit, id: id++, inside: false, training: undefined, joiningRetinue: undefined });

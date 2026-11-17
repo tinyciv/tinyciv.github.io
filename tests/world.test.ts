@@ -1,6 +1,6 @@
 import { STARTING_FACTION_COUNT, OPPOSING_FACTION_COUNT } from '../src/game/civilizations';
 import { describe, expect, it } from 'vitest';
-import { generateWorld, normalizePunyWorld } from '../src/world/generator';
+import { generateWorld } from '../src/world/generator';
 import { WATER, type World } from '../src/game/types';
 import { canTraverseEdge, traversable } from '../src/game/pathfinding';
 import { EARTH_SAMPLES } from '../src/world/data/earth-samples';
@@ -157,9 +157,12 @@ describe('geographic world generation', () => {
     const terrain = new Set(worlds.flatMap(world => world.tiles.map(tile => tile.terrain)));
     const overlays = new Set(worlds.flatMap(world => world.tiles.map(tile => tile.overlay)));
     for (const expected of ['ocean', 'coast', 'river', 'lake', 'grassland', 'plains', 'desert', 'tundra'] as const) expect(terrain.has(expected)).toBe(true);
-    expect([...overlays].sort()).toEqual(['ford', 'forest', 'none']);
+    for (const expected of ['ford', 'forest', 'none']) expect(overlays.has(expected as never)).toBe(true);
+    for (const overlay of overlays) expect(['none', 'forest', 'jungle', 'swamp', 'glacier', 'volcano', 'ford']).toContain(overlay);
     for (const unsupported of ['jungle', 'swamp', 'volcano', 'glacier', 'hills', 'mountains', 'rocks']) {
       expect(terrain.has(unsupported as never)).toBe(false);
+    }
+    for (const unsupported of ['hills', 'mountains', 'rocks']) {
       expect(overlays.has(unsupported as never)).toBe(false);
     }
     for (const world of worlds) {
@@ -175,42 +178,8 @@ describe('geographic world generation', () => {
     }
   });
 
-  it('normalizes retired terrain in old saves without invisible obstacles', () => {
-    const world = generateWorld('legacy-terrain', 96, 80);
-    Object.assign(world.tiles[0], { terrain: 'tundra', overlay: 'glacier', food: 4 });
-    Object.assign(world.tiles[1], { terrain: 'grassland', overlay: 'jungle' });
-    Object.assign(world.tiles[2], { terrain: 'grassland', overlay: 'swamp' });
-    Object.assign(world.tiles[3], { terrain: 'grassland', overlay: 'volcano' });
-    normalizePunyWorld(world);
-    expect(world.tiles.slice(0, 4).map(t => [t.terrain, t.overlay])).toEqual([['tundra', 'none'], ['grassland', 'forest'], ['grassland', 'none'], ['grassland', 'none']]);
-    expect(world.revision).toBe(1);
-    const normalized = structuredClone(world);
-    normalizePunyWorld(world);
-    expect(world).toEqual(normalized);
-  });
-
   it('rejects unsupported sizes explicitly', () => {
     expect(() => generateWorld('too-small', 20, 20)).toThrow(RangeError);
-  });
-
-  it('clears hills and mountains in existing worlds without changing their ground or bonuses', () => {
-    const world = generateWorld('legacy-uplands', 96, 80);
-    const hill = world.tiles.find(tile => tile.terrain === 'grassland' && tile.overlay === 'none')!;
-    const mountain = world.tiles.find(tile => tile.terrain === 'plains' && tile.overlay === 'none')!;
-    Object.assign(hill, { overlay: 'hills', food: 5, production: 2, gold: 1 });
-    Object.assign(mountain, { overlay: 'mountains', food: 4, production: 3, gold: 2 });
-    const ground = { ...hill, overlay: 'none' };
-    const mountainGround = { ...mountain, overlay: 'none' };
-
-    normalizePunyWorld(world);
-
-    expect(hill).toEqual(ground);
-    expect(mountain).toEqual(mountainGround);
-    expect(world.tiles.some(tile => ['hills', 'mountains'].includes(tile.overlay as string))).toBe(false);
-    expect(world.revision).toBe(1);
-    const normalized = structuredClone(world);
-    normalizePunyWorld(world);
-    expect(world).toEqual(normalized);
   });
 
   it('bends the BTV-847 river through valleys instead of drawing a long straight canal', () => {

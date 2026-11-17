@@ -33,7 +33,7 @@ function place(state: GameState, layout: StartingSettlementLayout, faction: numb
 }
 
 function assertLayout(state: GameState, layout: StartingSettlementLayout): void {
-  expect(layout.roads).toHaveLength(12);
+  expect(layout.roads).toHaveLength(36);
   expect(layout.houses).toHaveLength(4);
   expect(layout.farms.length).toBeGreaterThanOrEqual(4);
   for (const block of farmBlockGeometry(layout.farms)) {
@@ -42,8 +42,22 @@ function assertLayout(state: GameState, layout: StartingSettlementLayout): void 
   }
   const cell = ({ x, y }: Point) => `${x},${y}`;
   const roads = new Set(layout.roads.map(cell));
+  const ring = layout.roads.filter(road => road.x >= layout.palace.x - 1 && road.x <= layout.palace.x + 2
+    && road.y >= layout.palace.y - 1 && road.y <= layout.palace.y + 2);
+  const ringCells = new Set(ring.map(cell));
+  expect(ring).toHaveLength(12);
+  for (const road of ring)
+    expect([[1, 0], [0, 1], [-1, 0], [0, -1]].filter(([dx, dy]) => ringCells.has(`${road.x + dx},${road.y + dy}`))).toHaveLength(2);
+  const connected = new Set(ringCells), queue = [...ring];
+  for (let head = 0; head < queue.length; head++) for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+    const point = { x: queue[head].x + dx, y: queue[head].y + dy }, key = cell(point);
+    if (!roads.has(key) || connected.has(key)) continue;
+    connected.add(key); queue.push(point);
+  }
+  expect(connected.size).toBe(roads.size);
+  expect(layout.roads.filter(road => [[1, 0], [0, 1], [-1, 0], [0, -1]]
+    .filter(([dx, dy]) => roads.has(`${road.x + dx},${road.y + dy}`)).length === 1)).toHaveLength(4);
   for (const road of layout.roads) {
-    expect([[1, 0], [0, 1], [-1, 0], [0, -1]].filter(([dx, dy]) => roads.has(`${road.x + dx},${road.y + dy}`))).toHaveLength(2);
     expect(road.x < layout.palace.x || road.y < layout.palace.y || road.x >= layout.palace.x + 2 || road.y >= layout.palace.y + 2).toBe(true);
   }
   for (const house of layout.houses) {
@@ -142,7 +156,7 @@ describe('starting settlement layout', () => {
 
   it('retains a valid compact town on maps too small for distant farms', () => {
     const state = stateFor(grass(8, 8)), layout = planStartingSettlement(state, { x: 3, y: 3 });
-    expect(layout.roads).toHaveLength(12); expect(layout.houses).toHaveLength(4); expect(layout.farms.length).toBeGreaterThan(0);
+    expect(layout.roads).toHaveLength(20); expect(layout.houses).toHaveLength(4); expect(layout.farms.length).toBeGreaterThan(0);
     for (const point of [...layout.roads, ...layout.houses]) expect(tileAt(state.world, point.x, point.y)).toBeDefined();
   });
 

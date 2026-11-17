@@ -24,7 +24,9 @@ function fixture(retinue = 2): GameState {
     tiles: Array.from({ length: 80 * 72 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .2,
       moisture: .5, food: 1, production: 0, gold: 0, variation: .5 })) };
   return { world, units: [unit(1, 42.5, 36.5, 'leader'), ...Array.from({ length: retinue }, (_, index) => unit(index + 2, 43.5 + index % 3, 34.5 + Math.floor(index / 3)))],
-    buildings: [building(100, 39, 35)], factions: [], time: 0, tick: 0, paused: false, speed: 1,
+    buildings: [building(100, 39, 35)], factions: [{ id: 0, name: 'Test', color: '#d54b42', relation: 'self',
+      food: 500, gold: 500, production: 0, population: 20, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false }],
+    time: 0, tick: 0, paused: false, speed: 1,
     events: [], particles: [], selected: null, selectedType: null, buildMode: null, diplomacy: null,
     gameOver: false, victory: false, seed: world.seed, rngState: 731, marauderPacks: [] };
 }

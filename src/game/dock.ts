@@ -8,9 +8,7 @@ import { buildingWidth, buildingHeight, isFarmKind, tileAt, WATER, type Building
 /** Cardinal direction from the dry house cell toward its jetty. */
 export type DockFacing = 0 | 1 | 2 | 3;
 export const DOCK_DIRECTIONS: readonly Point[] = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
-export const DOCK_COST = 100;
-export const DOCK_HP = 250;
-export const DOCK_BUILD_SECONDS = 30;
+export { DOCK_COST, DOCK_HP, DOCK_BUILD_SECONDS } from './dock-config';
 
 /** The house occupies one land tile; the jetty reserves the neighboring water
  * tile without turning that water into walkable land. */

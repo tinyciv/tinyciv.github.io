@@ -53,8 +53,13 @@ describe('explicit world generation styles', () => {
       const world = worlds[n];
       expect(world.generationStyle).toBe(proceduralStyles[n]);
       expect(world.tiles.some(tile => 'hill' in tile), 'No gentle-hill elevation fields').toBe(false);
-      expect(world.tiles.some(tile => tile.ridge), 'Native ledge shelves remain').toBe(true);
-      expect(world.tiles.some(tile => tile.stair), 'Ledge stair access remains').toBe(true);
+      expect(world.tiles.some(tile => tile.relief), 'Native hill and mountain regions remain').toBe(true);
+      expect(world.tiles.some(tile => tile.ridge || tile.stair), 'Retired ledge metadata is absent').toBe(false);
+      for (const tile of world.tiles.filter(tile => tile.relief)) {
+        expect(tile.reliefRegion).toBeGreaterThan(0);
+        expect([0, 5, 7]).toContain(tile.reliefFlags);
+        expect([0, 1, 2]).toContain(tile.reliefLevel);
+      }
       expect(world.spawns).toHaveLength(STARTING_FACTION_COUNT); expect(world.secondarySpawns).toHaveLength(OPPOSING_FACTION_COUNT);
       const mainland = new Set(landmasses(world)[0]);
       for (const town of [...world.spawns, ...world.secondarySpawns!])

@@ -45,6 +45,7 @@ export function courierRouteCacheStats(state: GameState): {
   outboundHits: number; outboundSearches: number; outboundTargets: number; outboundNodes: number;
   reverseFields: number; reverseNodes: number; reverseExpanded: number; reverseSearches: number; reverseHits: number;
 } {
+  state = workNavigationState(state, false, -1, undefined, true);
   const cache = caches.get(state), outbound = outboundCaches.get(state);
   return { hits: cache?.hits ?? 0, searches: cache?.searches ?? 0, fallbacks: cache?.fallbacks ?? 0,
     doors: cache?.doors.size ?? 0, nodes: cache?.allocated ?? 0,

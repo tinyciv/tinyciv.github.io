@@ -30,7 +30,7 @@ function fixture(): GameState {
 }
 function plateau(state: GameState, x: number, y: number, tier = 1): void {
   for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
-    Object.assign(state.world.tiles[(y + dy) * state.world.width + x + dx], { ridge: 1, ridgeTier: tier });
+    Object.assign(state.world.tiles[(y + dy) * state.world.width + x + dx], { relief: 'hills', reliefLevel: tier });
   state.world.revision!++;
 }
 
@@ -39,12 +39,12 @@ describe('downhill firing range', () => {
     const state = fixture(), archer = soldier(10, 'archer', 12.5, 12.5), target = { x: 17.5, y: 12.5 };
     state.world.tiles[12 * 48 + 12].elevation = .99;
     expect(unitAttackRange(state.world, archer, target)).toBe(4);
-    plateau(state, 12, 12, 3);
+    plateau(state, 12, 12, 1);
     expect(downhillRangeBonus(state.world, archer, target)).toBe(1);
     expect(unitAttackRange(state.world, archer, target)).toBe(5);
-    plateau(state, 18, 12, 3);
+    plateau(state, 18, 12, 1);
     expect(unitAttackRange(state.world, archer, target)).toBe(4);
-    plateau(state, 18, 12, 4);
+    plateau(state, 18, 12, 2);
     expect(unitAttackRange(state.world, archer, target)).toBe(4);
   });
 

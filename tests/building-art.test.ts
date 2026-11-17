@@ -6,6 +6,7 @@ import { loadPalisadeTowerArt } from '../src/game/palisade-tower-art';
 import { loadStoneWallTowerArt } from '../src/game/stone-wall-tower-art';
 import { loadConstructionArt } from '../src/game/construction-art';
 import type { TowerWallKind } from '../src/game/wall-towers';
+import { runtimeArtUrl } from '../src/game/runtime-art';
 
 // Capture destination geometry after the same canvas transforms a real atlas
 // draw uses. This verifies art sizing independently of its logical footprint.
@@ -18,6 +19,8 @@ vi.mock('../src/game/puny-world', () => ({
     c.sources.push({ rect: [sx, sy, sw, sh] });
   },
 }));
+// Geometry checks record the source before the offscreen banner color transform.
+vi.mock('../src/game/tower-banner-art', () => ({ towerBannerImage: (source: HTMLImageElement) => source }));
 // Keep the real tier selector and production building wrappers. Only replace
 // the final canvas raster boundary, recording the actual chosen atlas crop
 // and team color rather than stubbing each building into a generic rectangle.
@@ -78,8 +81,8 @@ describe('building artwork and construction stages', () => {
   beforeAll(async () => {
     vi.stubGlobal('Image', class {
       src = '';
-      get naturalWidth() { return this.src.endsWith('construction/2x2.png') ? 32 : 16; }
-      get naturalHeight() { return this.src.includes('assets/construction/') ? this.naturalWidth : 28; }
+      get naturalWidth() { return this.src === runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/2x2.png`) ? 32 : 16; }
+      get naturalHeight() { return [1, 2].some(size => this.src === runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/${size}x${size}.png`)) ? this.naturalWidth : 28; }
       async decode() {}
     });
     await Promise.all([loadPalisadeTowerArt(), loadStoneWallTowerArt(), loadConstructionArt()]);
@@ -128,7 +131,7 @@ describe('building artwork and construction stages', () => {
     };
     const reserved = draw();
     expect(reserved.sources).toEqual([]);
-    expect(reserved.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(reserved.spriteSources).toEqual([runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/1x1.png`)]);
     expect(reserved.images).toEqual([{ x: 40, y: 108, width: 64, height: 64 }]);
     expect(reserved.fills).toHaveLength(0);
     well.construction.waitingForBuilder = false;
@@ -187,7 +190,7 @@ describe('building artwork and construction stages', () => {
     ['wall', 'stone-wall-tower.png'],
   ] as const)('uses the approved %s-supported watchtower sprite at the original ground anchor', (support, filename) => {
     const tower = structure('woodenTower'), canvas = render(tower, 10, support !== undefined, support);
-    expect(canvas.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/buildings/${filename}`]);
+    expect(canvas.spriteSources).toEqual([runtimeArtUrl(`${import.meta.env.BASE_URL}assets/buildings/${filename}`)]);
     expect(canvas.sources).toEqual([]);
     expect(canvas.images).toEqual([{ x: 64, y: 48, width: 64, height: 112 }]);
     tower.construction = { startedAt: 0, duration: 15, waitingForBuilder: true };
@@ -230,7 +233,7 @@ describe('building artwork and construction stages', () => {
     const house = structure('house');
     house.construction = { startedAt: 0, duration: 20, waitingForBuilder: true };
     const reserved = render(house);
-    expect(reserved.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(reserved.spriteSources).toEqual([runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/1x1.png`)]);
     expect(reserved.images).toEqual([{ x: 64, y: 96, width: 64, height: 64 }]);
     expect(reserved.fills).toHaveLength(0);
     house.construction.waitingForBuilder = false;
@@ -253,7 +256,7 @@ describe('building artwork and construction stages', () => {
     farm.construction = { startedAt: 0, duration: 15, waitingForBuilder: true };
     const outline = render(farm);
     expect(outline.images).toHaveLength(1);
-    expect(outline.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(outline.spriteSources).toEqual([runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/1x1.png`)]);
     expect(outline.fills).toHaveLength(0);
     // The selected site retains the one-cell footprint and native pixel scale.
     expect(buildingSize(farm)).toBe(1);
@@ -275,7 +278,7 @@ describe('building artwork and construction stages', () => {
     expect(building.construction!.duration).toBe(4);
     const outline = render(building, 10);
     expect(outline.images).toHaveLength(1);
-    expect(outline.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(outline.spriteSources).toEqual([runtimeArtUrl(`${import.meta.env.BASE_URL}assets/construction/1x1.png`)]);
     expect(outline.fills).toHaveLength(0);
     expect(render(building, 13.9).images).toEqual(outline.images);
     expect(render(building, 13.9).fills).toHaveLength(0);

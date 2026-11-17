@@ -132,7 +132,7 @@ describe('coastal dock placement', () => {
 
   it('reserves a galley bow across its full footprint rather than only its center tile', () => {
     const state = fixture(); coast(state); water(state, 6, 7);
-    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 7.1, y: 7.5, facing: 0 };
+    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 7.25, y: 7.5, facing: 0 };
     entityStore(state).units.add(boat);
     expect(dockPlacement(state, 8, 6)).toBeUndefined();
     boat.facing = Math.PI / 2;
@@ -156,7 +156,7 @@ describe('coastal dock placement', () => {
   it('blocks bridge construction under a galley end and refreshes the preview when it turns', () => {
     const state = fixture();
     for (let x = 7; x <= 11; x++) water(state, x, 7);
-    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 9.1, y: 7.5, facing: 0 };
+    const boat = { ...state.units[0], id: 101, kind: 'sailboat' as const, x: 9.25, y: 7.5, facing: 0 };
     entityStore(state).units.add(boat);
     expect(validateBuildAt(state, 'bridge', 10, 7)).toMatchObject({ ok: false, message: 'Move the galley before building a bridge here.' });
     const preview = constructionPreviewContext(state);
@@ -173,13 +173,13 @@ describe('coastal dock placement', () => {
     expect(dockPlacement(state, 8, 6)?.facing).toBe(2);
   });
 
-  it('keeps ford crossings and cliff shores clear', () => {
+  it('allows a navigable ford berth but keeps mountain shores clear', () => {
     const state = fixture(); coast(state);
     state.world.tiles[7 * state.world.width + 8].terrain = 'river';
     state.world.tiles[7 * state.world.width + 8].overlay = 'ford';
-    expect(dockPlacement(state, 8, 6)).toBeUndefined();
+    expect(dockPlacement(state, 8, 6)?.facing).toBe(2);
     state.world.tiles[7 * state.world.width + 8].overlay = 'none';
-    state.world.tiles[6 * state.world.width + 8].ridge = 1;
+    state.world.tiles[6 * state.world.width + 8].relief = 'mountains';
     expect(dockPlacement(state, 8, 6)).toBeUndefined();
   });
 

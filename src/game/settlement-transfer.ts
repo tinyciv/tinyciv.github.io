@@ -17,14 +17,8 @@ import { applyDefenseResearch } from './defense-research';
 import { addPalaceRoadRing } from './palace-roads';
 import { validatePhysicalFootprint } from './placement-physical';
 import { applyVillageBonuses, settlements, TRANSFER, villageTreasury } from './settlement-bridge';
+import type { SettlementHost } from './settlement-host';
 import { buildingPresent, buildingReady, type Building, type GameState, type NeutralVillage, type Point, type Unit } from './types';
-
-/** Host effects of ownership transfers Rust has already decided. */
-export interface SettlementHost {
-  makePalace(state: GameState, faction: number, point: Point): Building;
-  log(state: GameState, text: string, kind?: 'info' | 'good' | 'warning'): void;
-  afterTransfer(state: GameState, faction: number): void;
-}
 
 export function resetOrders(unit: Unit): void {
   unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined;
@@ -169,12 +163,4 @@ export function confederateVillage(state: GameState, village: NeutralVillage, fa
   settlements(state).commitTransfer(camp.id, palace.id, factionId, TRANSFER.confederateVillage, village.id);
   applyVillageBonuses(state); invalidateCityTransfer(state); host.afterTransfer(state, factionId);
   return true;
-}
-
-let registeredHost: SettlementHost | undefined;
-/** simulation.ts registers palace construction and post-transfer refreshes. */
-export function registerSettlementHost(host: SettlementHost): void { registeredHost = host; }
-export function settlementHost(): SettlementHost {
-  if (!registeredHost) throw new Error('The town host is not registered.');
-  return registeredHost;
 }

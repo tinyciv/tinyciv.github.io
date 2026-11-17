@@ -4,6 +4,11 @@ import { deathAnimationFrame } from '../../src/game/combat-effect-art';
 import { ResourceArtMemory, resourceObjectKey, type ResourceCellArt } from '../../src/game/resource-art';
 import * as fogModule from '../../src/game/fog';
 import type { GameState, Point } from '../../src/game/types';
+import { MeadowPlacementCache } from '../../src/game/meadow-art';
+import * as terrainModule from '../../src/game/terrain';
+import { punyAtlas } from '../puny-atlas.js';
+
+let terrainPixels: ReturnType<typeof punyAtlas> | undefined;
 
 interface Text { key: string; text: string; x: number; y: number; color: string; alpha: number }
 interface Rect { key: string; x: number; y: number; width: number; height: number; color: string; alpha: number }
@@ -66,7 +71,7 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
         unit: (_unit: unknown, _time: number, _color: string, effect?: { damageMask?: boolean }) => ({
             key: effect?.damageMask ? 'unit-damage' : 'unit' }),
         death: (age: number) => deathAnimationFrame(age) < 0 ? undefined : ({ key: `unit-death:${deathAnimationFrame(age)}` }),
-        vegetation: () => ({ key: 'vegetation' }), overlay: () => ({ key: 'overlay' }),
+        vegetation: () => ({ key: 'vegetation' }), overlay: () => ({ key: 'overlay' }), meadow: () => undefined,
         resource: (resource: ResourceCellArt) => ({ key: `resource:${resourceObjectKey(resource)}` }),
         resourceOutline: (resource: ResourceCellArt, color: string) => ({ key: `resource-outline:${resourceObjectKey(resource)}:${color}` }),
         resourceFence: (resource: ResourceCellArt, front: boolean) => ({ key: `resource-fence:${resource.fences}:${resource.gate}:${front}` }) };
@@ -79,12 +84,22 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
             },
             retainedGraphics(_key: unknown, draw: (shape: Shape) => void) { const shape = graphics(); draw(shape); return shape; },
             drawFog() { drawOrder.push('fog'); }, finishFrame() {} },
-        width, height, zoom: size / 32, camera: { x: (width / 2 - ox) / size, y: (height / 2 - oy) / size }, follow: false,
-        terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), buildPreview: options.buildPreview ?? [],
+        width, height, zoom: size / 32, camera: { x: (width / 2 - ox) / size, y: (height / 2 - oy) / size }, follow: false, overlays: true,
+        terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), meadowPlacements: new MeadowPlacementCache(),
+        presentationStamps: [], vesselSight: new WeakMap(), buildPreview: options.buildPreview ?? [],
         constructionGesture: options.constructionGesture, pendingConstruction: options.pendingConstruction ?? [],
         hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},
     }) as Renderer;
     const fog = options.fog && vi.spyOn(fogModule, 'presentationFog').mockReturnValue(options.fog);
-    try { renderer.draw(state, 0); } finally { fog?.mockRestore(); }
+    // Preserve real atlas rasterization while replacing only its browser-only
+    // canvas upload, just as the other final drawing boundaries above.
+    const water = vi.spyOn(terrainModule, 'drawAnimatedWater').mockImplementation((context, world, tx, ty, x, y, size, time) => {
+        const frame = terrainModule.waterAnimationFrame(world.tiles[ty * world.width + tx], time);
+        const raster = terrainModule.rasterTerrain(world, { x: tx, y: ty, width: 1, height: 1 }, terrainPixels ??= punyAtlas(),
+            undefined, undefined, frame);
+        const source = { width: raster.width, height: raster.height, pixels: raster.pixels };
+        context.drawImage(source as unknown as CanvasImageSource, 0, 0, raster.width, raster.height, x, y, size, size);
+    });
+    try { renderer.draw(state, 0); } finally { fog?.mockRestore(); water.mockRestore(); }
     return { renderer, sprites, texts, rects, images, strokes, drawOrder };
 }

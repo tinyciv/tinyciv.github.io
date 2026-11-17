@@ -54,7 +54,7 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'culturalIdentity', label: 'Cultural Identity', prerequisites: ['monument', 'traditionalMedicine'], tiers: [{ name: 'Cultural Identity', points: 75, description: 'Unlocks forums, where culture purchases permanent faction achievements.' }] },
   { id: 'engineering', label: 'Engineering', prerequisites: ['wall'], tiers: [{ name: 'Engineering', points: 42, description: 'Bridges can cross up to 8 water tiles instead of 2. Clear land is required at both ends.' }] },
   { id: 'roadBuilding', label: 'Road Building', prerequisites: ['wall'], tiers: [{ name: 'Road Building', points: 54, description: 'Roads become paved where the median completed friendly house within 10 tiles is level 4. Paved roads give 25% faster movement than dirt roads.' }] },
-  { id: 'militaryScience', label: 'Military Science', prerequisites: ['infantryDrill', 'gunpowder'], tiers: [{ name: 'Military Science', points: 120, description: 'Unlocks the Military Academy and formation choices.' }] },
+  { id: 'militaryScience', label: 'Military Science', prerequisites: ['gunpowder'], tiers: [{ name: 'Military Science', points: 120, description: 'Unlocks the Military Academy and formation choices.' }] },
   { id: 'officerCorps', label: 'Officer Corps', prerequisites: ['infantryDrill'], tiers: [{ name: 'Officer Corps', points: 90, description: 'Unlocks Offensive for the Leader’s retinue.' }] },
 ];
 const baseBranchById = new Map(BASE_RESEARCH_BRANCHES.map(branch => [branch.id, branch]));

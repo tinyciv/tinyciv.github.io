@@ -260,3 +260,90 @@ impl Relief {
         self.schedule.run(&mut self.world);self.world.resource::<Generated>().0.as_ptr()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn terrain_policy_separates_walkable_hills_from_blocking_mountains() {
+        assert_eq!(policy(0), WALK | BUILD | TREES);
+        assert_eq!(policy(1), WALK | TREES);
+        assert_eq!(policy(2), 0);
+        assert_eq!(construction_allowed(policy(0), false), 1);
+        assert_eq!(construction_allowed(policy(1), false), 0);
+        assert_eq!(construction_allowed(policy(1), true), 1);
+        assert_eq!(construction_allowed(policy(2), true), 0);
+        assert_eq!(construction_allowed(0, false), 0);
+    }
+
+    #[test]
+    fn diagonal_edges_require_both_side_cells_and_height_never_stacks() {
+        assert_eq!(edge(3), 1);
+        assert_eq!(edge(1), 0);
+        assert_eq!(edge(3 | 16), 0);
+        assert_eq!(edge(3 | 4 | 16), 0);
+        assert_eq!(edge(3 | 8 | 16), 0);
+        assert_eq!(edge(3 | 4 | 8 | 16), 1);
+        assert_eq!(higher(1, 0), 1);
+        assert_eq!(higher(2, 0), 1);
+        assert_eq!(higher(2, 1), 1);
+        assert_eq!(higher(1, 1), 0);
+        assert_eq!(higher(0, 1), 0);
+    }
+
+    #[test]
+    fn mountain_pruning_keeps_the_minimum_connected_core() {
+        let (width, height) = (12, 8);
+        let mut kind = vec![0; width * height];
+        for y in 1..=5 { for x in 1..=4 { kind[y * width + x] = 2; } }
+        for y in 1..=3 { for x in 7..=8 { kind[y * width + x] = 2; } }
+        kind[6 * width + 10] = 2;
+        let removed = prune_small_mountains(&mut kind, width, height);
+        assert_eq!(removed.len(), 7);
+        assert_eq!(kind.iter().filter(|&&value| value == 2).count(), MIN_MOUNTAIN_CELLS);
+        for y in 1..=5 { for x in 1..=4 { assert_eq!(kind[y * width + x], 2); } }
+        assert!(removed.iter().all(|&cell| kind[cell] == 0));
+    }
+
+    fn generated_fixture(seed: u32) -> Vec<f64> {
+        let (width, height) = (64, 48);
+        let count = width * height;
+        let mut input = vec![0.0; 3 + count * 8];
+        input[0] = count as f64;
+        for cell in 0..count {
+            let at = 3 + cell * 8;
+            input[at] = 0.5;
+            input[at + 1] = u32::from(cell % width == width / 2) as f64;
+            input[at + 2] = 0.55;
+            input[at + 3] = 0.5;
+            input[at + 4] = 0.5;
+            input[at + 5] = u32::from((10..15).contains(&(cell % width)) && (10..15).contains(&(cell / width))) as f64;
+            input[at + 7] = 0.5;
+        }
+        let mut relief = Relief::default();
+        relief.world.resource_mut::<Input>().0 = input;
+        relief.generate(width, height, seed, 0.12, 0.4, 1.0, 0.85, 1.0, 0.27, 0.21, 20.0, 56.0, 4.3, 0.6);
+        relief.world.resource::<Generated>().0.clone()
+    }
+
+    #[test]
+    fn generation_is_deterministic_and_preserves_water_and_reserved_ground() {
+        let rows = generated_fixture(42);
+        assert_eq!(rows, generated_fixture(42));
+        assert_ne!(rows, generated_fixture(43));
+        assert!(rows.chunks_exact(STRIDE).any(|row| row[0] != 0.0));
+        for (cell, row) in rows.chunks_exact(STRIDE).enumerate() {
+            let (x, y) = (cell % 64, cell / 64);
+            let kind = row[0] as u32;
+            assert!(kind <= 2);
+            assert_eq!(row[2], kind as f64);
+            assert_eq!(row[3], policy(kind) as f64);
+            if kind != 0 { assert!(row[1] > 0.0); }
+            if (x as isize - 32).abs() < 3 || (10..15).contains(&x) && (10..15).contains(&y)
+                || x < 3 || y < 3 || x + 3 >= 64 || y + 3 >= 48 {
+                assert_eq!(kind, 0, "protected cell {x},{y}");
+            }
+        }
+    }
+}

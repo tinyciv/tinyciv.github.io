@@ -7,6 +7,7 @@ import { domesticTradePayout, MERCHANT_REPLACEMENT_SECONDS, MERCHANT_SPEED, upda
 import { moveUnit, updateGame } from '../src/game/simulation';
 import { markWorldChanged } from '../src/game/world-revisions';
 import { distance, type Building, type GameState, type Unit } from '../src/game/types';
+import { navigableWaterCell } from '../src/game/water-navigation';
 
 function fixture(): GameState {
   const city = (id: number, x: number): Building => ({ id, kind: 'palace', faction: 0, x, y: 12,
@@ -151,16 +152,30 @@ describe('river trade eligibility', () => {
     expect(riverTradingPosts(state)).toHaveLength(2); expect(state.units).toHaveLength(1);
   });
 
-  it.each(['ocean', 'coast', 'lake', 'ford', 'bridge', 'waterfall'] as const)('does not connect two river stretches through %s', blocker => {
+  it.each(['ocean', 'coast', 'lake', 'bridge', 'waterfall'] as const)('does not connect two river stretches through %s', blocker => {
     const state = fixture();
     for (let y = 18; y <= 20; y++) {
       const tile = state.world.tiles[y * 80 + 35];
-      if (blocker === 'ford') tile.overlay = 'ford';
-      else if (blocker === 'waterfall') tile.waterfall = 'south';
+      if (blocker === 'waterfall') tile.waterfall = 'south';
       else if (blocker === 'bridge') entityStore(state).buildings.add({ id: 100 + y, kind: 'bridge', x: 35, y, faction: 0, hp: 100, maxHp: 100, capacity: 0 });
       else tile.terrain = blocker;
     }
     expect(findRiverTradeConnection(state, ...state.buildings.slice(0, 2) as [Building, Building])).toBeUndefined();
+  });
+
+  it('keeps a continuous river route through navigable fords', () => {
+    const state = fixture();
+    for (let y = 18; y <= 20; y++) state.world.tiles[y * 80 + 35].overlay = 'ford';
+    const connection = findRiverTradeConnection(state, ...state.buildings as [Building, Building]);
+    expect(connection).toBeDefined();
+    const path = connection!.waterPath;
+    expect(path.some(point => Math.floor(point.x) === 35)).toBe(true);
+    for (let index = 0; index < path.length; index++) {
+      const point = path[index];
+      expect(state.world.tiles[Math.floor(point.y) * 80 + Math.floor(point.x)].terrain).toBe('river');
+      expect(navigableWaterCell(state.world, point.x, point.y)).toBe(true);
+      if (index) expect(distance(path[index - 1], point)).toBeLessThanOrEqual(Math.SQRT2);
+    }
   });
 
   it('rejects a river outside city borders and a route with too much walking at either end', () => {
@@ -171,12 +186,12 @@ describe('river trade eligibility', () => {
     expect(findRiverTradeConnection(short, ...short.buildings as [Building, Building])).toBeUndefined();
   });
 
-  it('requires reachable dry access, and never treats a cliff shore as an entrance', () => {
+  it('requires reachable dry access, and never treats a mountain shore as an entrance', () => {
     const state = fixture();
     for (let x = 0; x < 80; x++) entityStore(state).buildings.add({ id: 100 + x, kind: 'wall', faction: -2, x, y: 16, hp: 2250, maxHp: 2250, capacity: 0 });
     expect(findRiverTradeConnection(state, ...state.buildings.slice(0, 2) as [Building, Building])).toBeUndefined();
     const cliffs = fixture();
-    for (let y = 0; y < 18; y++) for (let x = 0; x < 80; x++) cliffs.world.tiles[y * 80 + x].ridge = 1;
+    for (let y = 0; y < 18; y++) for (let x = 0; x < 80; x++) cliffs.world.tiles[y * 80 + x].relief = 'mountains';
     expect(findRiverTradeConnection(cliffs, ...cliffs.buildings as [Building, Building])).toBeUndefined();
   });
 });
