@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      validation_scope:
+        description: Release validation (focused requires explicit release approval)
+        type: choice
+        required: true
+        default: full
+        options:
+          - full
+          - focused
 
 # A release must finish its server and Pages deployments before the next starts.
 # Keep pending releases when another push arrives (up to GitHub's 100-run limit).
@@ -80,7 +89,11 @@ jobs:
       - name: Build Rust simulation WASM for tests
         run: npm run build:wasm
       - name: Run game tests
+        if: github.event_name != 'workflow_dispatch' || inputs.validation_scope != 'focused'
         run: npm run test:ci
+      - name: Run native Rust tests for approved focused release
+        if: github.event_name == 'workflow_dispatch' && inputs.validation_scope == 'focused'
+        run: npm run test:rust
       - name: Test deployment safeguards
         run: python3 -m unittest discover -s tests -p 'test_actions_deploy.py'
       - name: Build production client
@@ -89,6 +102,8 @@ jobs:
         run: npm run build:server
       - name: Install Chromium for browser smoke test
         run: npx --no-install playwright install --with-deps chromium
+      - name: Verify browser startup
+        run: npm run test:startup
       - name: Verify production browser and multiplayer
         run: node scripts/ci-smoke.mjs
       - name: Prepare Pages site
@@ -104,6 +119,7 @@ jobs:
           path: |
             output/ci-tests/
             output/ci-smoke/
+            output/startup/
           if-no-files-found: warn
           retention-days: 14
       - name: Upload tested server and client

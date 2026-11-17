@@ -67,7 +67,10 @@ try {
   a.send({ type: 'start' });
   await Promise.all([a.wait(message => message.type === 'snapshot', 120000), b.wait(message => message.type === 'snapshot', 120000)]);
   assert.equal(a.state.playerFaction, 0); assert.equal(b.state.playerFaction, 1);
-  assert.equal(a.state.factions.length, 2); assert.equal(b.state.factions.length, 2);
+  for (const peer of [a, b]) {
+    assert.deepEqual(peer.state.multiplayer.humanFactionIds, [0, 1]);
+    assert.equal(peer.state.factions.filter(faction => faction.villageId === undefined).length, 2);
+  }
   assert.equal(a.state.seed, b.state.seed); assert.deepEqual(a.state.world.spawns, b.state.world.spawns);
   assert.equal(a.state.factions[0].gold, a.state.factions[1].gold);
   assert.notDeepEqual(a.state.fog.explored, b.state.fog.explored); check('Shared generated world, two equal human factions, independent fog');
@@ -90,12 +93,18 @@ try {
   assert.equal((await b.command({ type: 'move', x: Infinity, y: 1 })).ok, false);
   check('Opponent-building mutations and invalid coordinates rejected');
   const palace = b.state.buildings.find(building => building.kind === 'palace' && building.faction === 1);
+  const existingRoadIds = new Set(b.state.buildings.filter(building => building.kind === 'road').map(building => building.id));
   let road;
   for (let y = palace.y - 3; y <= palace.y + 4 && !road; y++) for (let x = palace.x - 3; x <= palace.x + 4 && !road; x++) {
+    if (b.state.buildings.some(building => building.hp > 0 && building.kind === 'road' && building.x === x && building.y === y)) continue;
     if ((await b.command({ type: 'build', kind: 'road', points: [{x,y}] })).ok) road = {x,y};
   }
   assert.ok(road, 'Player 2 can construct in its own realm');
-  await a.until(() => [a,b].every(peer => peer.state.buildings.some(building => building.kind === 'road' && building.faction === 1 && building.x === road.x && building.y === road.y)));
+  const isNewRoad = building => building.kind === 'road' && building.faction === 1
+    && building.x === road.x && building.y === road.y && !existingRoadIds.has(building.id);
+  await b.until(() => b.state.buildings.some(isNewRoad));
+  const roadId = b.state.buildings.find(isNewRoad).id;
+  await a.until(() => [a,b].every(peer => peer.state.buildings.some(building => building.id === roadId && isNewRoad(building))));
   check('Player 2 construction is authoritative and replicated to both clients');
   b.close(); await a.wait(message => message.type === 'status' && /disconnected/.test(message.message));
   await a.until(() => a.state.paused);

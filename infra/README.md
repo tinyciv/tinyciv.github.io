@@ -68,12 +68,19 @@ not deploy production. This checkout's `production` remote points to
 `https://github.com/tinyciv/tinyciv.github.io.git`; `origin` remains the
 development repository. Production releases must reach the production
 repository's `main` branch.
-It installs the locked dependencies on Node 22, builds navigation WASM, runs the
+It installs the locked dependencies on Node 22, builds Rust simulation WASM, runs the
 game test gate, type-checks and builds both client and server, then exercises an
 isolated local multiplayer match and the production UI in Chromium. Test reports
 and desktop/mobile screenshots are retained with the workflow run. The test gate
 documents the existing terrain assertions in `tests/ci-known-failures.json`;
 unexpected failures and runtime/collection errors fail the release.
+
+Pushes, pull requests, and manual runs default to full validation. A manually
+dispatched release may select `validation_scope: focused` after explicit release
+approval. That path requires native Rust tests, client/server builds, browser
+startup, and the production browser/multiplayer smoke checks; it does not run
+the TypeScript unit suite. Infrastructure, account TLS, deployment safeguards,
+artifact verification, and server-before-Pages deployment remain required.
 
 Only the original repository's `main` branch can deploy. After tests pass, the
 server job verifies every downloaded artifact's SHA-256 and source commit,
