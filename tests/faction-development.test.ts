@@ -2,7 +2,7 @@ import { grantIncome } from '../src/game/resource-income';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { BUILD_COSTS, buildAt, createGame, updateGame, validateBuildAt } from '../src/game/simulation';
-import { factionCityDevelopmentPriority, factionDevelopmentReserve, factionResearchTarget, updateFactionDevelopment, type DevelopmentKind } from '../src/game/faction-development';
+import { advanceFactionDevelopment, factionCityDevelopmentPriority, factionDevelopmentReserve, factionResearchTarget, updateFactionDevelopment, type DevelopmentKind } from '../src/game/faction-development';
 import { updateFactionDefenses } from '../src/game/faction-defense';
 import { canSustainFactionDefense, factionCommittedBudget } from '../src/game/faction-budget';
 import { factionIrrigationSites } from '../src/game/faction-irrigation';
@@ -19,7 +19,7 @@ function realm(): GameState {
   state.raiderCamps = []; state.marauderPacks = []; state.fogRaids = { nextAt: 1e9, waves: 0 };
   entityStore(state).units.replace(state.units.filter(unit => unit.faction >= 0 && unit.villageId === undefined));
   // These scenarios isolate paid development from the starting-defense grant;
-  // the complete free enclosure and its upkeep are covered in faction-ai-upgrade.
+  // the free-standing tower grant is covered in faction-ai-upgrade.
   entityStore(state).buildings.replace(state.buildings.filter(building => building.faction >= 0 && building.villageId === undefined
     && !['palisade', 'woodenTower'].includes(building.kind)
     && (building.kind !== 'road' || state.buildings.some(city => city.kind === 'palace' && city.faction === building.faction
@@ -213,8 +213,8 @@ describe('rival city development', () => {
     const locked = { ...orders(state), validate: () => { throw Error('Do not search locked branches'); } };
     updateFactionDevelopment(state, locked);
     state.time = 15;
-    updateFactionDefenses(state, { validate: (_id, kind) => { expect(['palisade', 'road']).toContain(kind); return { ok: false }; },
-      build: () => { throw Error('Do not build rejected defenses'); } });
+    updateFactionDefenses(state, { validate: () => { throw Error('Do not search locked defenses'); },
+      build: () => { throw Error('Do not build locked defenses'); } });
     faction.population = 60;
     faction.research = { focus: 'wall', levels: { wall: 1, woodenTower: 1, archeryRange: 1, blacksmith: 1 }, progress: {} };
     updateFactionDevelopment(state, orders(state));
@@ -328,6 +328,33 @@ describe('rival city development', () => {
     expect(faction.gold).toBe(450);
   });
 
+  it.each(['housing disabled', 'construction paused', 'houses covered'] as const)('does not buy a suspended well after %s', change => {
+    const state = realm(), faction = state.factions[1], palace = own(state, 'palace')[0];
+    faction.population = 34; faction.gold = 500; state.time = 3;
+    entityStore(state).buildings.retain(building => building.faction !== 1 || building.kind !== 'camp');
+    synchronizeFarms(state);
+    let id = 10000;
+    for (const [dx, dy] of [[-4, -2], [-4, -1], [-4, 0], [-4, 1]])
+      entityStore(state).buildings.add({ id: id++, kind: 'house', faction: 1, x: palace.x + dx, y: palace.y + dy, hp: 160, maxHp: 160, capacity: 4 });
+    supplyFood(state, 35);
+    entityStore(state).buildings.add({ id: 20000, kind: 'library', faction: 1, x: palace.x + 2, y: palace.y + 2,
+      hp: 250, maxHp: 250, capacity: 0 });
+    const calls = orders(state), validate = calls.validate;
+    let wellsValidated = 0;
+    calls.validate = (...args) => { if (args[1] === 'well') wellsValidated++; return validate(...args); };
+    for (let step = 0; step < 5 && !wellsValidated; step++) advanceFactionDevelopment(state, calls);
+    expect(wellsValidated).toBeGreaterThan(0);
+    expect(own(state, 'well')).toHaveLength(0);
+    if (change === 'housing disabled') palace.governorPermissions = { farms: true, housing: false };
+    else if (change === 'construction paused') faction.constructionPauseUntil = { well: 100 };
+    else for (const house of own(state, 'house')) entityStore(state).buildings.add({
+      id: 30000 + id++, kind: 'well', faction: 1, x: house.x, y: house.y, hp: 100, maxHp: 100, capacity: 0 });
+    const wells = own(state, 'well').length;
+    for (let step = 0; step < 100; step++) advanceFactionDevelopment(state, calls);
+    expect(own(state, 'well')).toHaveLength(wells);
+    expect(faction.gold).toBe(500);
+  });
+
   it('plans between economy ticks but throttles repeated frames', () => {
     const state = researchRealm(); state.time = 3;
     let farmCalls = 0, houseSeconds = 0;
@@ -362,10 +389,16 @@ describe('rival city development', () => {
     expect(faction.research.progress.monument).toBe(1);
   });
 
-  it('counts pending defensive upkeep and avoids funding a garrison from one-off treasury wealth', () => {
+  it('exempts AI towers from committed upkeep while reserving pending guard-post service', () => {
     const state = researchRealm(), faction = state.factions[1]; faction.gold = 10000; faction.population = 20;
     expect(canSustainFactionDefense(state, faction, 'woodenTower')).toBe(true);
     const palace = own(state, 'palace')[0];
+    const beforeTowers = factionCommittedBudget(state, faction).upkeep;
+    entityStore(state).buildings.add({ id: 29998, kind: 'woodenTower', faction: 1, x: palace.x - 3, y: palace.y,
+      hp: 600, maxHp: 600, capacity: 0 },
+      { id: 29999, kind: 'woodenTower', faction: 1, x: palace.x, y: palace.y - 3,
+        hp: 100, maxHp: 600, capacity: 0, construction: { startedAt: 0, duration: 30, waitingForBuilder: true } });
+    expect(factionCommittedBudget(state, faction).upkeep).toBe(beforeTowers);
     entityStore(state).buildings.add({ id: 30000, kind: 'guardPost', faction: 1, x: palace.x + 3, y: palace.y,
       hp: 100, maxHp: 100, capacity: 0, construction: { startedAt: 0, duration: 30, waitingForBuilder: true } });
     expect(factionCommittedBudget(state, faction).upkeep).toBe(15);
@@ -373,13 +406,14 @@ describe('rival city development', () => {
     expect(canSustainFactionDefense(state, faction, 'guardPost')).toBe(false);
   });
 
-  it('encloses an existing watchtower before stone-wall research and excludes neutral villages from both planners', () => {
+  it('keeps existing watchtowers free of palisades and excludes neutral villages from both planners', () => {
     const state = realm(); state.time = 10;
     const palace = own(state, 'palace')[0];
     entityStore(state).buildings.add({ id: 30001, kind: 'woodenTower', faction: 1, x: palace.x - 4, y: palace.y - 4,
       hp: 600, maxHp: 600, capacity: 0 });
     updateFactionDefenses(state, { validate: (id, kind, x, y) => validateBuildAt(state, kind, x, y, id), build: (id, kind, x, y) => buildAt(state, kind, x, y, id) });
-    expect(own(state, 'palisade').length).toBeGreaterThan(0);
+    expect(own(state, 'palisade')).toHaveLength(0);
+    expect(own(state, 'woodenTower').some(tower => tower.id === 30001)).toBe(true);
     expect(state.factions[1].research?.levels.wall).toBeUndefined();
     state.factions[1].villageId = 123; state.time = 30;
     const fail = () => { throw Error('Village must retain its own development system'); };

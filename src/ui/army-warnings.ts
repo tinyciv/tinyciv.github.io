@@ -1,8 +1,16 @@
 import type { GameState, Point } from '../game/types';
 import { ArmyWarningFeed, armyWarningPosition, separateArmyWarning, type PresentedArmyWarning } from './army-warning-layout';
 import './army-warnings.css';
+import { MeasuredSize } from './measured-size';
 
 let nextTooltip = 0;
+/** Approved art is installed at this path after review; until then town
+ * alerts keep the plain exclamation sign rather than a broken image. */
+const townArtwork = import.meta.glob('/public/assets/ui/alerts/town.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const TOWN_ICON_URL = townArtwork['/public/assets/ui/alerts/town.png'];
+let townIconReady = false;
+if (TOWN_ICON_URL && typeof Image === 'function') { const probe = new Image(); probe.onload = () => { townIconReady = true; }; probe.src = TOWN_ICON_URL; }
+
 export class ArmyWarnings {
   private readonly feed = new ArmyWarningFeed();
   private readonly layer = document.createElement('div');
@@ -10,10 +18,13 @@ export class ArmyWarnings {
   private readonly markers = new Map<number, HTMLButtonElement>();
   private selected?: number;
   private generation = -1;
+  private readonly parentSize: MeasuredSize;
   constructor(private readonly parent: HTMLElement, private readonly getState: () => GameState,
     private readonly screenPoint: (point: Point) => Point) {
+    this.parentSize = new MeasuredSize(parent);
     this.layer.className = 'army-warnings';
-    this.layer.setAttribute('aria-label', 'Enemy army warnings');
+    this.layer.setAttribute('aria-label', 'Army and town alerts');
+    if (TOWN_ICON_URL) this.layer.style.setProperty('--town-icon', `url('${TOWN_ICON_URL}')`);
     this.tooltip.className = 'army-warning-tooltip'; this.tooltip.id = `army-warning-tooltip-${++nextTooltip}`;
     this.tooltip.setAttribute('role', 'tooltip'); this.tooltip.hidden = true;
     this.layer.append(this.tooltip); parent.append(this.layer);
@@ -25,7 +36,9 @@ export class ArmyWarnings {
     marker.dataset.warningId = String(event.id); marker.dataset.kind = event.kind;
     marker.setAttribute('aria-label', event.message); marker.setAttribute('aria-describedby', this.tooltip.id);
     marker.style.setProperty('--faction-color', event.color);
-    const sign = document.createElement('span'); sign.className = 'army-warning-sign'; sign.textContent = '!'; sign.setAttribute('aria-hidden', 'true');
+    const sign = document.createElement('span'); sign.className = 'army-warning-sign'; sign.setAttribute('aria-hidden', 'true');
+    // Town alerts show the city icon once its approved art is installed.
+    if (event.kind === 'town' && townIconReady) sign.classList.add('town-icon'); else sign.textContent = '!';
     const bearing = document.createElement('span'); bearing.className = 'army-warning-bearing'; bearing.setAttribute('aria-hidden', 'true');
     marker.append(sign, bearing);
     const show = () => {
@@ -62,7 +75,7 @@ export class ArmyWarnings {
       if (this.selected === id) { this.selected = undefined; this.tooltip.hidden = true; }
     }
     if (!enabled) return;
-    const width = this.parent.clientWidth, height = this.parent.clientHeight, occupied: Point[] = [];
+    const { width, height } = this.parentSize.read(), occupied: Point[] = [];
     for (const event of events) {
       const position = separateArmyWarning(armyWarningPosition(this.screenPoint({ x: event.x, y: event.y - 1.2 }), width, height), occupied, width, height);
       occupied.push(position);

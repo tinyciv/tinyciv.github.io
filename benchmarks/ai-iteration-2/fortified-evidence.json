@@ -1,0 +1,194 @@
+{
+  "file": "benchmarks/ai-iteration-2/fortified-transfer.json",
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "matches": 36,
+  "standings": {
+    "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+    "table": [
+      {
+        "policy": "expansionist",
+        "matches": 18,
+        "wins": 0,
+        "draws": 18,
+        "losses": 0,
+        "points": 18,
+        "winRate": 0,
+        "meanSurvivingArmyHP": 230.143333
+      },
+      {
+        "policy": "hard-assault",
+        "matches": 18,
+        "wins": 0,
+        "draws": 18,
+        "losses": 0,
+        "points": 18,
+        "winRate": 0,
+        "meanSurvivingArmyHP": 242.850444
+      },
+      {
+        "policy": "evolved-assault",
+        "matches": 18,
+        "wins": 0,
+        "draws": 18,
+        "losses": 0,
+        "points": 18,
+        "winRate": 0,
+        "meanSurvivingArmyHP": 262.128778
+      },
+      {
+        "policy": "field-concentration",
+        "matches": 18,
+        "wins": 0,
+        "draws": 18,
+        "losses": 0,
+        "points": 18,
+        "winRate": 0,
+        "meanSurvivingArmyHP": 233.559111
+      }
+    ],
+    "uniqueLeader": null,
+    "byScenario": {
+      "siege-war": [
+        {
+          "policy": "expansionist",
+          "wins": 0,
+          "draws": 18,
+          "losses": 0
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 0,
+          "draws": 18,
+          "losses": 0
+        },
+        {
+          "policy": "evolved-assault",
+          "wins": 0,
+          "draws": 18,
+          "losses": 0
+        },
+        {
+          "policy": "field-concentration",
+          "wins": 0,
+          "draws": 18,
+          "losses": 0
+        }
+      ]
+    }
+  },
+  "comparisons": [
+    {
+      "policy": "expansionist",
+      "control": "hard-assault",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    },
+    {
+      "policy": "hard-assault",
+      "control": "expansionist",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    },
+    {
+      "policy": "evolved-assault",
+      "control": "expansionist",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    },
+    {
+      "policy": "evolved-assault",
+      "control": "hard-assault",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    },
+    {
+      "policy": "field-concentration",
+      "control": "expansionist",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    },
+    {
+      "policy": "field-concentration",
+      "control": "hard-assault",
+      "matches": 6,
+      "wins": 0,
+      "draws": 6,
+      "losses": 0,
+      "positive": 0,
+      "negative": 0,
+      "tied": 3,
+      "pairs": 3,
+      "seeds": 3,
+      "signTestP": 1,
+      "byScenario": {
+        "siege-war": 0
+      }
+    }
+  ],
+  "diagnostics": {
+    "faults": 0,
+    "wallSeconds": 264.12868699999996,
+    "simulatedSeconds": 12960,
+    "fortressMatches": 36,
+    "fortressDefeats": 0,
+    "finalSiegeEngines": 0
+  }
+}

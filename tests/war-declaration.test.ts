@@ -5,6 +5,8 @@ import { updateFog } from '../src/game/fog';
 import { villageDiplomacyStatus } from '../src/game/villages';
 import { neutralVillageEntityAt } from '../src/game/hit-testing';
 import { alliedVillageCamps } from '../src/game/village-marker';
+import { settlementStep } from '../src/game/settlement-step';
+import { civConfederateStatus, setSettlementAffiliation, setVillageRelation, villageRelationView, villageTrading } from '../src/game/settlement-bridge';
 import type { Building, GameState, Unit } from '../src/game/types';
 
 function fixture(): GameState {
@@ -77,8 +79,7 @@ function villageFixture(): GameState {
   entityStore(state).buildings.replace(state.buildings.map(building => building.id === 3
     ? { ...building, kind: 'villageTent', villageId: 1, x: 18, y: 10 }
     : building.id === 4 ? { ...building, kind: 'villageTent', villageId: 1 } : building));
-  state.villages = [{ id: 1, faction: 1, campId: 3, x: 18, y: 10, name: 'Willow tribe', identity: 'scholars', relation: 'neutral',
-    nextGrowthAt: 1000, nextThinkAt: 1000, nextRecruitAt: 1000 }];
+  state.villages = [{ id: 1, faction: 1, campId: 3, x: 18, y: 10, name: 'Willow tribe', identity: 'scholars', relation: 'neutral' }];
   updateFog(state);
   return state;
 }
@@ -100,13 +101,13 @@ describe('village agreements through the building diplomacy popup', () => {
     const state = villageFixture(), tent = state.buildings[2], point = { x: 12.5, y: 10.5 };
     expect(neutralVillageEntityAt(state, point)).toBe(tent);
     expect(alliedVillageCamps(state)).toEqual([]);
-    state.villages![0].relation = 'allied';
+    setVillageRelation(state, state.villages![0], 0, 'allied');
     expect(neutralVillageEntityAt(state, point)).toBe(tent);
     expect(alliedVillageCamps(state)).toEqual([state.buildings[1]]);
-    state.villages![0].relation = 'war';
+    setVillageRelation(state, state.villages![0], 0, 'war');
     expect(neutralVillageEntityAt(state, point)).toBeUndefined();
     expect(alliedVillageCamps(state)).toEqual([]);
-    state.villages![0].relation = 'allied'; state.buildings[1].hp = 0;
+    setVillageRelation(state, state.villages![0], 0, 'allied'); state.buildings[1].hp = 0;
     expect(neutralVillageEntityAt(state, point)).toBeUndefined();
     expect(alliedVillageCamps(state)).toEqual([]);
   });
@@ -119,19 +120,20 @@ describe('village agreements through the building diplomacy popup', () => {
     expect(warDeclarationTargetAt(state, 12.5, 10.5)).toBe(tent);
     expect(diplomacyAction(state, 1, 'trade', tent.id).ok).toBe(true);
     expect(state.factions[0].gold).toBe(3750);
-    expect(state.villages![0]).toMatchObject({ trading: true, relation: 'trade' });
+    expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['trade', true]);
+    setSettlementAffiliation(state, 3, 0, 50);
     expect(state.tradeRoutes?.filter(route => route.villageId === 1)).toHaveLength(1);
     expect(warDeclarationTargetAt(state, 12.5, 10.5)).toBe(tent);
     expect(diplomacyAction(state, 1, 'ally', tent.id).ok).toBe(true);
     expect(state.factions[0].gold).toBe(750);
-    expect(state.villages![0]).toMatchObject({ trading: true, relation: 'allied' });
+    expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['allied', true]);
     expect(state.factions[0].villageBonuses?.research).toBe(.15);
     expect(JSON.stringify(leader)).toBe(orders);
     expect(diplomacyAction(state, 1, 'trade', tent.id).ok).toBe(false);
     expect(diplomacyAction(state, 1, 'ally', tent.id).ok).toBe(false);
     expect(state.factions[0].gold).toBe(750);
     expect(diplomacyAction(state, 1, 'war', tent.id).ok).toBe(true);
-    expect(state.villages![0]).toMatchObject({ trading: false, relation: 'war' });
+    expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['war', false]);
     expect(state.factions[0].villageBonuses?.research).toBe(0);
     expect(state.tradeRoutes?.filter(route => route.villageId === 1)).toHaveLength(0);
   });
@@ -149,14 +151,24 @@ describe('village agreements through the building diplomacy popup', () => {
         const gold = state.factions[0].gold;
         expect(diplomacyAction(state, 1, action, tent.id).ok).toBe(false);
         expect(state.factions[0].gold).toBe(gold);
-        expect(state.villages![0].relation).toBe('neutral');
+        expect(villageRelationView(state, state.villages![0], 0)).toBe('neutral');
       }
     });
 
   it('does not treat village agreements as ordinary civilization confederation', () => {
     const state = fixture();
-    expect(diplomacyAction(state, 1, 'trade', 4).ok).toBe(false);
     expect(diplomacyAction(state, 1, 'ally', 4).ok).toBe(false);
+    expect(diplomacyAction(state, 1, 'petition', 4).ok).toBe(false);
     expect(state.factions[1].relation).toBe('peace');
+  });
+
+  it('rolls civilization confederation against the population-weighted affiliation of their cities', () => {
+    const state = fixture(); settlementStep(state);
+    setSettlementAffiliation(state, 3, 0, 0);
+    const low = civConfederateStatus(state, 1, 0);
+    setSettlementAffiliation(state, 3, 0, 100);
+    const high = civConfederateStatus(state, 1, 0);
+    expect(low.affiliation).toBe(0); expect(high.affiliation).toBe(100);
+    expect(low.chancePercent).toBe(10); expect(high.chancePercent).toBe(90);
   });
 });

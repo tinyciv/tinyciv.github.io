@@ -34,9 +34,10 @@ function fixture(): GameState {
 }
 function ring(state: GameState, x0 = 4, y0 = 5, x1 = 16, y1 = 19): Building[] {
   let id = Math.max(99, ...state.buildings.map(b => b.id)) + 1;
+  // Wooden enclosures isolate ground-duty restrictions from stone parapet patrols.
   const walls: Building[] = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
-    if (x === x0 || x === x1 || y === y0 || y === y1) walls.push(building(id++, 'wall', x, y));
+    if (x === x0 || x === x1 || y === y0 || y === y1) walls.push(building(id++, 'palisade', x, y));
   entityStore(state).buildings.add(...walls);
   // A populated perimeter retains ownership; an isolated distant wall is
   // intentionally neutralized by the normal wall-claim mechanic.
@@ -133,7 +134,7 @@ describe('guard posts restricted to their physical city enclosure', () => {
     advance(state, 2); expect(guards(state).every(u => u.inside)).toBe(true); expect(enemy.hp).toBe(10000);
     const walls = ring(state); advance(state, 2); expect(enemy.hp).toBeLessThan(10000);
     walls.find(wall => wall.x === 16 && wall.y === 12)!.hp = 0;
-    expect(palaceEnclosures(state, true).regions).toHaveLength(0); const hp = enemy.hp;
+    expect(palaceEnclosures(state, true).regions).toHaveLength(0); refresh(state); const hp = enemy.hp;
     advance(state, 8, () => expect(guards(state).every(u => u.target === undefined)).toBe(true));
     expect(enemy.hp).toBe(hp); expect(guards(state).every(u => u.inside)).toBe(true);
   });

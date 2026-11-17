@@ -7,6 +7,7 @@ import { raiderMotivationForWave, raiderMotivationSize, selectTheftPalace, SIEGE
 import { ensureMarauderLeaders } from './marauder-leaders';
 import { distance, type Building, type GameState, type RaiderCamp, type Unit } from './types';
 import { selectRaidTarget } from './raid-targeting';
+import { raiderMayAttack } from './raider-aggression';
 import { campSpawnTiles, initializeRaiderCamps, updateRaiderCamps, MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, RAIDER_FIRST_WAVE, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { marauderBaseStats, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment, raiderPartySize } from './raider-pressure';
 import { updateRaiderCampPressure } from './raider-camp-pressure';
@@ -78,7 +79,7 @@ function raiderPopulation(state: GameState): RaiderPopulation {
     const camps = new Map((state.marauderPacks ?? []).map(pack => [pack.id, pack.raiderCamp]));
     const population: RaiderPopulation = { total: 0, byCamp: new Map(), members: new Map() };
     for (const unit of state.units) {
-        if (unit.hp <= 0 || unit.faction !== RAIDER_FACTION) continue;
+        if (unit.hp <= 0 || unit.faction !== RAIDER_FACTION || unit.seaInvasion !== undefined) continue;
         population.total++; // Includes returning bands, destroyed-camp survivors and unassigned raiders.
         if (unit.marauderPack === undefined) continue;
         const members = population.members.get(unit.marauderPack);
@@ -162,7 +163,6 @@ function spawnCampWave(state: GameState, camp: RaiderCamp, target: Building, ret
     // Reusing a returned veteran does not require another vacant spawn tile.
     const points = recruitCount ? campSpawnTiles(state, camp, recruitCount) : [];
     if (points.length < recruitCount) return cancelRelease();
-    let unitId = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
     let packId = Math.max(0, ...(state.marauderPacks ?? []).map(pack => pack.id), ...state.units.map(unit => unit.marauderPack ?? 0));
     let pointOffset = 0;
     const spawned: MarauderPack[] = [];
@@ -179,7 +179,7 @@ function spawnCampWave(state: GameState, camp: RaiderCamp, target: Building, ret
         state.marauderPacks.push(pack); spawned.push(pack);
         for (const survivor of survivors) redeploySurvivor(survivor, pack);
         for (const point of points.slice(pointOffset, pointOffset + recruits)) entityStore(state).units.add({
-            id: ++unitId, ...point, kind: 'warrior', faction: RAIDER_FACTION, marauderPack: id, name,
+            id: entityStore(state).allocateId(), ...point, kind: 'warrior', faction: RAIDER_FACTION, marauderPack: id, name,
             hp: profile.hp, maxHp: profile.hp, attack: profile.attack, defense: profile.defense, morale: 100, speed: 2.35, range: 1.1,
             raiderEquipmentMultiplier: raiderEquipmentMultiplier(state.time),
             order: 'raid', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time,
@@ -214,9 +214,8 @@ function reinforceSieges(state: GameState, population: RaiderPopulation): void {
         const points = recruits ? campSpawnTiles(state, camp, recruits) : [];
         const profile = fogRaidProfile(pack.retinueAtSpawn ?? 0, pack.spawnedAt ?? state.time);
         for (const survivor of survivors) { redeploySurvivor(survivor, pack); members.push(survivor); }
-        let id = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
         for (const point of points) {
-            const recruit: Unit = { id: ++id, ...point, kind: 'warrior', faction: RAIDER_FACTION, marauderPack: pack.id, name: pack.name,
+            const recruit: Unit = { id: entityStore(state).allocateId(), ...point, kind: 'warrior', faction: RAIDER_FACTION, marauderPack: pack.id, name: pack.name,
                 hp: profile.hp, maxHp: profile.hp, attack: profile.attack, defense: profile.defense, morale: 100, speed: 2.35, range: 1.1,
                 raiderEquipmentMultiplier: raiderEquipmentMultiplier(state.time),
                 order: 'raid', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time };
@@ -256,6 +255,9 @@ export function updateFogRaids(state: GameState): void {
     const due = state.raiderCamps.filter(camp => raiderCampActive(state, camp) && camp.nextRaidAt <= state.time).sort((a, b) => a.nextRaidAt - b.nextRaidAt || a.id - b.id);
     const interval = banditSpawnDelay(state, Math.max(1, state.raiderCamps.length) * raiderWaveInterval(state.time));
     for (const camp of due) {
+        if (!state.factions.some(faction => raiderMayAttack(state, faction.id, camp.id))) {
+            camp.nextRaidAt = state.time + interval; continue;
+        }
         if (activeWaves.size >= banditPopulationCap(state, MAX_ACTIVE_WAVES)) { camp.nextRaidAt = banditSpawnDeadline(state, RETRY_SECONDS); continue; }
         const returning = returnedCampMembers(state, camp, population);
         if ((population.total >= banditPopulationCap(state, MAX_LIVE_RAIDERS) || (population.byCamp.get(camp.id) ?? 0) >= raiderCampPopulationCap(state, camp))
@@ -267,11 +269,11 @@ export function updateFogRaids(state: GameState): void {
         const previous = [...state.marauderPacks].reverse().find(pack => pack.raiderCamp === camp.id);
         const origin = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
         let motivation = raiderMotivationForWave(camp.waves);
-        const theft = motivation === 'theft' ? selectTheftPalace(state, origin) : undefined;
+        const theft = motivation === 'theft' ? selectTheftPalace(state, origin, undefined, camp.id) : undefined;
         // Closed cities turn an attempted theft into a regular assault instead
         // of emitting thieves who could never reach their objective.
         if (motivation === 'theft' && !theft) motivation = 'assault';
-        const target = theft?.palace ?? selectRaidTarget(state, origin, undefined, previous?.targetFaction);
+        const target = theft?.palace ?? selectRaidTarget(state, origin, undefined, previous?.targetFaction, camp.id);
         const retinue = living.filter(unit => unit.faction === target?.faction && isSoldier(unit)).length;
         if (!target || !spawnCampWave(state, camp, target, retinue, population, returning, motivation, theft?.entrance)) { camp.nextRaidAt = banditSpawnDeadline(state, RETRY_SECONDS); continue; }
         camp.waves++; clock.waves++; activeWaves.add(`${camp.id}:${state.time}`);

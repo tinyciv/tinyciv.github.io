@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "baseline": "expansionist",
+  "seed": "creative-ai-search-1",
+  "generations": 3,
+  "population": 4,
+  "archiveSize": 3,
+  "jobs": 2,
+  "maxMatches": 1200,
+  "maxWallSeconds": 7200,
+  "screening": { "seconds": 180, "seeds": 2, "scenarios": ["field-battle", "siege-war"] },
+  "confirmation": { "seconds": 240, "seeds": 8, "scenarios": ["field-battle", "siege-war"] },
+  "promotion": { "minPositiveSeeds": 4, "alpha": 0.05 }
+}

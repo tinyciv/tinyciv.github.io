@@ -12,8 +12,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'output/ci-release.json'
 BUILD_DIRS = ('dist', 'server-dist')
-REQUIRED = ('dist/index.html', 'dist/wasm/navigation.wasm',
-            'server-dist/server.mjs', 'server-dist/match-worker.mjs', 'server-dist/navigation.wasm',
+REQUIRED = ('dist/index.html', 'dist/wasm/simulation.wasm',
+            'server-dist/server.mjs', 'server-dist/match-worker.mjs', 'server-dist/simulation.wasm',
             'server-dist/accounts-admin.mjs', 'server-dist/rds-ca.pem')
 
 

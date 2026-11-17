@@ -69,11 +69,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Install Rust and WebAssembly target
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+          rustup default stable
       - name: Install locked dependencies
         run: npm ci
       - name: Verify PostgreSQL accounts over TLS
         run: python3 infra/test-accounts.py
-      - name: Build navigation WASM for tests
+      - name: Build Rust simulation WASM for tests
         run: npm run build:wasm
       - name: Run game tests
         run: npm run test:ci

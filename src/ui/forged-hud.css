@@ -2,8 +2,7 @@
    Frames are generated from the approved concept; text and game values stay live. */
 :root {
   --hud-scale: 1; --top-scale: 1; --bar-height: 46px;
-  --forged-panel: url('/assets/ui/forged/panel-frame.png');
-  --forged-reference: url('/assets/ui/forged/approved-reference.png');
+  --forged-panel: url('/assets/runtime/ui/forged/panel-frame-hud.webp');
 }
 .game-area { overflow: hidden; }
 .leader-action-feedback { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%,-100%); pointer-events: none; user-select: none; }
@@ -17,16 +16,14 @@
   pointer-events: none; align-items: flex-start; overflow: visible;
 }
 .resources {
-  display: flex; align-items: stretch; flex: none; width: max-content; height: 47px; pointer-events: auto; background: var(--slate) center / 500px 90px;
-  border: 3px ridge #9c743e; border-top: 1px solid #725332; border-radius: 0 0 18px 0;
-  box-shadow: inset 0 0 0 2px #0a1011, 0 2px 3px #000b; overflow: hidden;
+  display: flex; align-items: stretch; flex: none; width: max-content; height: 47px; pointer-events: auto; overflow: hidden;
 }
 .resource { position: relative; flex: none; height: 41px; }
 .resource.food, .resource.gold { width: 142px; }
 .resource.population { width: 168px; }
 .resource.culture { position: relative; inset: auto; width: 134px; background: none; }
 .resource-icon { position: absolute; left: 12px; top: 7px; width: 28px; height: 28px; object-fit: contain; pointer-events: none; }
-.resource::after { content: ''; position: absolute; top: 1px; right: 0; width: 2px; height: 39px; background: linear-gradient(#3b2b1b,#bd9653,#372819); }
+.resource::after { content: ''; position: absolute; top: 4px; right: 0; width: 1px; height: calc(100% - 8px); background: linear-gradient(#d2a25a22,#d2a25a99,#69421f44); }
 .resource:last-child::after { display: none; }
 .resource-values { position: absolute; display: flex; align-items: center; white-space: nowrap; inset: 0 12px 0 50px; background: none; gap: 5px; }
 .resource strong { font-size: calc(22px * var(--value-fit, 1)); letter-spacing: 0; line-height: 1; }
@@ -36,21 +33,28 @@
 #food-yield.negative, #gold-yield.negative, #culture-rate.negative { color: #e79886; }
 #gold.negative { color: #e79886; }
 .time-controls { display: flex; align-items: stretch; position: absolute; top: 2px; right: 3px; height: 44px; gap: 5px; pointer-events: auto; padding: 0; }
-/* Rounded brass is drawn by CSS so the bevel follows the curved corners. */
-.time-controls button, .time-controls button#speed {
-  display: flex; align-items: center; justify-content: center; width: 63px; height: 44px; padding: 0;
+/* One surface for the entire top HUD, using the existing approved slate art.
+   The brass bevel follows the rounded corners at every panel width. */
+.resources, .research-toolbar, .time-controls button,
+.time-controls button:is(#speed, #diplomacy-menu) {
   border: 3px solid transparent; border-radius: 9px;
+  border-image: none;
   background: linear-gradient(#24313355,#02080999) padding-box,
     var(--slate) center / 500px 90px padding-box,
     linear-gradient(135deg,#e8c17a,#8c602f 24%,#d2a25a 45%,#69421f 70%,#d6ad65) border-box;
   box-shadow: inset 0 0 0 1px #050908, inset 0 2px 2px #d3b47340, inset 0 -2px 3px #000b,
     0 0 0 1px #0b0d0c, 0 2px 3px #000b;
+  color: #f2e4ba; font-family: var(--game-font); image-rendering: auto;
+}
+.time-controls button, .time-controls button#speed {
+  display: flex; align-items: center; justify-content: center; width: 63px; height: 44px; padding: 0;
   font-size: 21px; text-shadow: 1px 2px #000;
 }
 .time-controls button#menu { display: flex; gap: 12px; width: 126px; }
 .menu-glyph { display: block; flex: none; width: 17px; height: 14px; background: linear-gradient(to bottom, currentColor 0 3px, transparent 3px 6px, currentColor 6px 9px, transparent 9px 12px, currentColor 12px 14px); color: #d6b879; }
 .time-controls .text-icon, .speed-value { width: auto; height: auto; background: none; font-size: 23px; }
 .time-controls button:hover { filter: brightness(1.25); }
+.time-controls button:active:not(:disabled) { filter: brightness(.85); }
 #paused { position: absolute; top: 52px; left: 50%; right: auto; transform: translateX(-50%); border: 0; padding: 4px 12px; background: #101b20b3; border-radius: 3px; color: #d4c29e; font-size: 12px; pointer-events: none; }
 /* Compact inspection card, intentionally outside the bottom HUD transform. */
 .selection-panel {
@@ -76,18 +80,18 @@
 .hud { position: absolute; z-index: 2; inset: auto auto 0 0; width: calc(100% / var(--hud-scale)); height: 290px; transform: scale(var(--hud-scale)); transform-origin: bottom left; pointer-events: none; }
 .minimap-panel { position: absolute; bottom: 0; left: 0; width: 274px; height: 274px; background: none; transform: none; pointer-events: none; }
 #minimap { position: absolute; left: 45px; top: 36px; width: 184px; height: 184px; border-radius: 50%; clip-path: circle(50%); pointer-events: auto; background: #000; image-rendering: pixelated; cursor: crosshair; }
-.minimap-frame { position: absolute; inset: 0; background: url('/assets/ui/forged/minimap-frame.png') center / 100% 100% no-repeat; pointer-events: none; }
+.minimap-frame { position: absolute; inset: 0; background: url('/assets/runtime/ui/forged/minimap-frame.webp') center / 100% 100% no-repeat; pointer-events: none; }
 .minimap-north { position: absolute; top: 26px; left: 126px; width: 22px; text-align: center; color: #fff2ce; font-size: 19px; text-shadow: 1px 2px #000; pointer-events: none; }
 .minimap-control { position: absolute; bottom: 37px; z-index: 1; pointer-events: auto; width: 36px; height: 36px; border: 3px ridge #b18d52; border-radius: 50%; background: radial-gradient(#1d2b2e,#050a0c); box-shadow: 0 0 0 2px #080f10; color: #eed8a3; font: 23px/1 var(--game-font); }
 #minimap-zoom-in { left: 24px; }
 #minimap-zoom-out { right: 24px; }
 .hotbar { position: absolute; left: 266px; right: 246px; bottom: 14px; height: 80px; background: #0b1518; display: grid; grid-template-columns: repeat(10,minmax(0,1fr)); gap: 7px; padding: 0 10px; pointer-events: auto; }
-.hotbar::before { content: ''; position: absolute; z-index: -1; left: -62px; right: -62px; top: -72px; bottom: -18px; background: url('/assets/ui/forged/hotbar-frame.png') center / 107.6% 210.2% no-repeat; pointer-events: none; }
+.hotbar::before { content: ''; position: absolute; z-index: -1; left: -62px; right: -62px; top: -72px; bottom: -18px; background: url('/assets/runtime/ui/forged/hotbar-frame.png') center / 107.6% 210.2% no-repeat; pointer-events: none; }
 .action-slot { container-type: inline-size; position: relative; min-width: 0; height: 80px; padding: 0; border: 0; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--forged-panel) center / 100% 100% no-repeat; color: #f3e9d0; box-shadow: inset 0 0 12px #0008; }
 .action-slot:disabled { opacity: 1; cursor: default; }
 .action-slot:hover:not(:disabled), .action-slot:focus-visible { filter: brightness(1.2); }
 .action-slot kbd { position: absolute; z-index: 3; top: 5px; left: 7px; padding: 0; border: 0; background: none; color: #eee0bf; font: 20px/1 var(--game-font); text-shadow: 1px 2px #000; box-shadow: none; }
-.hotbar-art { display: block; width: min(40px, calc(100% - 10px)); aspect-ratio: 1; flex: none; background: url('/assets/ui/forged/retinue-actions-pixel.png') 0 0 / 200% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
+.hotbar-art { display: block; width: min(40px, calc(100% - 10px)); aspect-ratio: 1; flex: none; background: url('/assets/runtime/ui/forged/retinue-actions-pixel.webp') 0 0 / 200% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 .hotbar-stance { background-position: 100% 0; }
 .hotbar-auxiliary { background: none; }
 .hotbar-auxiliary .icon { width: 100%; height: 100%; }
@@ -111,28 +115,27 @@
 .special-actions kbd { font: inherit; }
 .special-actions button:hover:not(:disabled), .special-actions button:focus-visible { filter: brightness(1.2); }
 .special-actions button.active { box-shadow: inset 0 0 0 2px #ffd85b, inset 0 0 12px #f1ae2980, 0 0 5px #edb735; }
-.command-art { display: block; width: 46px; height: 46px; flex: 0 0 46px; background-image: url('/assets/ui/forged/action-symbols.png'); background-repeat: no-repeat; background-size: 200% 200%; }
-.command-build, .command-fortify, .command-clear { background-image: url('/assets/ui/forged/action-symbols-pixel.png'); background-size: 300% 100%; image-rendering: pixelated; }
+.command-art { display: block; width: 46px; height: 46px; flex: 0 0 46px; background-image: url('/assets/runtime/ui/forged/action-symbols.webp'); background-repeat: no-repeat; background-size: 200% 200%; }
+.command-build, .command-fortify, .command-clear { background-image: url('/assets/runtime/ui/forged/action-symbols-pixel.webp'); background-size: 300% 100%; image-rendering: pixelated; }
 .command-build { background-position: 0 0; }
 .command-fortify { background-position: 50% 0; }
 .command-clear { background-position: 100% 0; }
 .command-forbid { background-position: 100% 100%; }
 /* A titleless three-column flyout. Keyboard hints remain in each upper-right corner. */
-.build-panel { position: absolute; right: 6px; bottom: 218px; width: 372px; height: auto; padding: 36px 12px 12px; transform: none; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: 0 4px 12px #0006; pointer-events: auto; }
+.build-panel { position: absolute; right: 6px; bottom: 218px; width: min(372px,calc(100vw / var(--hud-scale) - 12px)); height: auto; max-height: calc((100dvh - 64px) / var(--hud-scale) - 218px); padding: 36px 12px 12px; transform: none; pointer-events: auto; display: flex; flex-direction: column; }
 .build-panel.is-building-menu { padding-bottom: 32px; }
-#close-build { position: absolute; right: 12px; top: 9px; width: 25px; height: 23px; padding: 0; border: 1px solid #bd9155; border-radius: 3px; background: #0b1519; color: #e5c184; font: 22px/19px var(--game-font); }
-.build-actions { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
-.build-actions button { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; text-shadow: 1px 1px #000; height: 64px; min-width: 0; padding: 15px 5px 5px; gap: 0; border: 0; border-radius: 3px; background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: none; }
-.build-actions .action-label { font: 20px/1.05 var(--game-font); text-wrap: balance; white-space: normal; max-width: 100%; }
+#close-build { position: absolute; right: 12px; top: 9px; width: 28px; height: 28px; padding: 0; }
+.build-actions { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-auto-rows: max-content; align-content: start; gap: 5px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
+.build-actions button { container-type: inline-size; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 68px; min-width: 0; padding: 19px 7px 7px; gap: 0; }
+.build-actions .action-label { flex-shrink: 0; font: clamp(14px,18cqi,18px)/1.1 var(--game-font); text-wrap: balance; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .build-actions kbd { position: absolute; top: 5px; right: 7px; color: #e5c389; font: 13px/1 var(--game-font); }
-.build-actions button:hover:not(:disabled) { background: var(--forged-panel) center / 100% 100% no-repeat; filter: brightness(1.25); box-shadow: none; }
-.build-actions button.active { background: var(--forged-panel) center / 100% 100% no-repeat; box-shadow: inset 0 0 0 2px #d6b666; }
+.build-actions button.active { outline: 2px solid #d6b666; outline-offset: -5px; }
 .build-actions button:disabled { opacity: .48; }
 /* Transient tool instructions and feedback sit under resources, never in the bottom bar. */
-.build-status { position: absolute; z-index: 3; top: 56px; left: 12px; width: auto; max-width: min(620px,calc(100% - 280px)); height: auto; padding: 7px 10px; border: 1px solid #977545; background: #122023e8; font-size: 12px; line-height: 1.4; pointer-events: none; }
+.build-status { position: absolute; z-index: 3; top: 56px; left: 12px; width: auto; max-width: min(620px,calc(100% - 280px)); height: auto; padding: 7px 10px; font-size: 12px; line-height: 1.4; pointer-events: none; }
 .build-status:empty { display: none; }
-.build-status:not(:empty) { margin: 0; border-top: 1px solid #977545; }
-#tile-tooltip { position: absolute; z-index: 3; padding: 7px 11px; border: 1px solid #9d875d; background: #172023; font-size: 12px; line-height: 1.4; color: #dbe0c8; pointer-events: none; bottom: auto; top: 90px; left: 12px; right: auto; max-width: min(620px,calc(100% - 280px)); }
+.build-status:not(:empty) { margin: 0; }
+#tile-tooltip { position: absolute; z-index: 3; padding: 7px 11px; font-size: 12px; line-height: 1.4; pointer-events: none; bottom: auto; top: 90px; left: 12px; right: auto; max-width: min(620px,calc(100% - 280px)); }
 .game-menu-actions { display: grid; gap: 10px; }
 @media(max-width:1500px) { :root { --hud-scale: .9; } }
 @media(max-width:1250px) { :root { --hud-scale: .8; } .resources { transform: scale(.85); transform-origin: top left; } .time-controls { transform: scale(.85); transform-origin: top right; } .selection-panel { top: 46px; } }
@@ -154,7 +157,7 @@
   .action-slot { height: 80px; }
   .action-slot kbd { font-size: 14px; left: 4px; }
   .hotbar-art { width: 30px; }
-  .build-panel { bottom: 310px; }
+  .build-panel { bottom: 310px; max-height: calc((100dvh - 52px) / var(--hud-scale) - 310px); }
   .build-status { top: 38px; max-width: calc(100% - 184px); font-size: 11px; left: 6px; }
   #tile-tooltip { top: 124px; max-width: calc(100% - 12px); left: 6px; }
 }

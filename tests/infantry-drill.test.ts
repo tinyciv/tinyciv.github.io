@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { advanceInfantryFormations, infantryFormationActive, infantryFormationGoal, infantryAttackMultiplier, infantryDefenseMultiplier, infantryPointClear,
   infantryRectangleOffsets, toggleInfantryFormation, enforceInfantryFormationStrength, infantryFormationSoldierCount,
-  INFANTRY_FORMATION_ASPECT, infantryFormationAspect, INFANTRY_SPACING } from '../src/game/infantry-drill';
+  infantryAttackCooldown, INFANTRY_SPACING } from '../src/game/infantry-drill';
+import { militaryFormationControl, selectMilitaryFormation } from '../src/game/military-academy';
 import { moveUnit, updateGame } from '../src/game/simulation';
 import { unitObstructs, unitsCollide } from '../src/game/collisions';
 import { beginUnitFrame, endUnitFrame, refreshIndexedUnit } from '../src/game/spatial';
@@ -10,6 +11,8 @@ import { withPlayerFaction } from '../src/game/player-context';
 import { entityStore } from '../src/game/entity-store';
 import { markWorldChanged } from '../src/game/world-revisions';
 import { distance, type GameState, type InputState, type Unit } from '../src/game/types';
+import * as navigation from '../src/game/pathfinding';
+import { MOVEMENT_PATH_REQUESTS_PER_UPDATE, requestMovementPath, withMovementPathBudget } from '../src/game/movement-path-schedule';
 
 const idle: InputState = { up: false, down: false, left: false, right: false };
 function soldier(id: number, x: number, y: number, kind: Unit['kind'] = 'warrior', faction = 0): Unit {
@@ -61,6 +64,53 @@ function step(state: GameState, input: InputState = idle, dt = .05) {
 function run(state: GameState, seconds: number, input: InputState = idle) { for (let i = 0; i < Math.round(seconds / .05); i++) step(state, input); }
 
 describe('Infantry Drill commands and ownership', () => {
+  it('requires a completed academy and Military Science before selecting wide ranks', () => {
+    const { state, leader } = fixture(12);
+    expect(selectMilitaryFormation(state, 'wide').ok).toBe(false);
+    state.factions[0].research!.levels.militaryScience = 1;
+    const academy = { id: 1001, kind: 'militaryAcademy' as const, faction: 0, x: 3, y: 1, hp: 750, maxHp: 750, capacity: 0 };
+    entityStore(state).buildings.add(academy);
+    expect(militaryFormationControl(state)).toMatchObject({ enabled: true, type: 'standard' });
+    expect(selectMilitaryFormation(state, 'wide').ok).toBe(true);
+    run(state, 1);
+    expect(leader.infantryFormation?.type).toBe('wide');
+    expect(new Set(leader.infantryFormation!.slots.map(slot => slot.x)).size).toBe(2);
+    expect(infantryDefenseMultiplier(state, leader, { x: leader.x + 1, y: leader.y })).toBe(1);
+    expect(infantryAttackCooldown(state, leader, 2.5)).toBeCloseTo(2.5 / 1.3, 10);
+    academy.hp = 0; run(state, .5);
+    expect(militaryFormationControl(state)).toMatchObject({ enabled: false, type: 'standard' });
+    expect(leader.infantryFormation?.type).toBe('standard');
+    expect(infantryDefenseMultiplier(state, leader, { x: leader.x + 1, y: leader.y })).toBe(1.5);
+    expect(infantryAttackCooldown(state, leader, 2.5)).toBe(2.5);
+  });
+
+  it('defers member detours without spending local retries and keeps retained routes moving', () => {
+    const { state, leader, members } = fixture(8), member = members[0];
+    member.x = 2.5; member.y = 14.5;
+    for (let y = 4; y < 23; y++) state.world.tiles[y * state.world.width + 5].terrain = 'lake';
+    markWorldChanged(state.world, 'geometry');
+    const exhaust = () => {
+      for (let i = 0; i < MOVEMENT_PATH_REQUESTS_PER_UPDATE; i++)
+        expect(requestMovementPath(state, { id: -i - 1, hp: 100 } as Unit)).toBe(true);
+    };
+    const searches = vi.spyOn(navigation, 'findPath');
+    try {
+      withMovementPathBudget(state, () => { exhaust(); step(state); });
+      expect(searches).not.toHaveBeenCalled();
+      expect(leader.infantryFormation?.active).toBe(true);
+      // The next update is still inside the same local retry interval. A
+      // deferred request must retain its allowance and take its fair turn.
+      withMovementPathBudget(state, () => step(state));
+      expect(searches).toHaveBeenCalled();
+      const previous = { x: member.x, y: member.y };
+      searches.mockClear();
+      withMovementPathBudget(state, () => { exhaust(); step(state); });
+      expect(searches).not.toHaveBeenCalled();
+      expect(distance(member, previous)).toBeGreaterThan(0);
+      expect(leader.infantryFormation?.active).toBe(true);
+    } finally { searches.mockRestore(); }
+  });
+
   it.each([0, 1, 4, 7])('rejects activation with %i soldiers, excluding the Leader from the requirement', count => {
     const { state, leader } = fixture(count, 'field', false);
     expect(infantryFormationSoldierCount(state)).toBe(count);
@@ -188,39 +238,33 @@ describe('tight centered movement', () => {
     const slots = leader.infantryFormation!.slots; step(state); expect(leader.infantryFormation!.slots).toBe(slots);
   });
 
-  it.each([4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 30, 31, 32, 48, 80, 120])(
-    'uses the correct balanced rectangle for %i soldiers without crowding', count => {
-      const offsets = infantryRectangleOffsets(count), occupied = [{ x: 0, y: 0 }, ...offsets];
+  it.each(['wide', 'standard', 'deep'] as const)('uses the selected fixed depth for %s without overlapping bodies', type => {
+    const expectedRows = type === 'wide' ? 2 : type === 'deep' ? 4 : 3;
+    for (const count of [4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 30, 31, 32, 48, 80, 120]) {
+      const offsets = infantryRectangleOffsets(count, type), occupied = [{ x: 0, y: 0 }, ...offsets];
       const depth = Math.max(...offsets.map(point => point.x)) - Math.min(...offsets.map(point => point.x));
-      const width = Math.max(...offsets.map(point => point.y)) - Math.min(...offsets.map(point => point.y));
-      expect(offsets).toHaveLength(count); expect(width / depth).toBeCloseTo(infantryFormationAspect(count), 10);
-      const ranks = new Map<number, number>();
-      for (const point of occupied) ranks.set(point.x, (ranks.get(point.x) ?? 0) + 1);
-      expect(Math.max(...ranks.values()) - Math.min(...ranks.values())).toBeLessThanOrEqual(2);
+      expect(offsets).toHaveLength(count);
+      expect(new Set(offsets.map(point => point.x)).size).toBe(expectedRows);
+      expect(depth).toBeCloseTo((expectedRows - 1) * INFANTRY_SPACING, 10);
       for (let a = 0; a < occupied.length; a++) for (let b = a + 1; b < occupied.length; b++)
-        expect(distance(occupied[a], occupied[b])).toBeGreaterThanOrEqual(INFANTRY_SPACING - 1e-9);
-      if (count % 2 === 0) for (const point of offsets)
-        expect(offsets.some(other => Math.abs(point.x + other.x) < 1e-9 && Math.abs(point.y + other.y) < 1e-9)).toBe(true);
-    });
+        expect(distance(occupied[a], occupied[b])).toBeGreaterThan(.34);
+    }
+  });
 
-  it('widens above thirty soldiers and reforms after casualties and reinforcements, with archers still behind melee', () => {
+  it('retains three ranks through casualties and reinforcements, with archers still behind melee', () => {
     const { state, leader, members } = fixture(31);
-    const aspect = () => {
-      const slots = leader.infantryFormation!.slots;
-      return (Math.max(...slots.map(slot => slot.y)) - Math.min(...slots.map(slot => slot.y)))
-        / (Math.max(...slots.map(slot => slot.x)) - Math.min(...slots.map(slot => slot.x)));
-    };
+    const ranks = () => new Set(leader.infantryFormation!.slots.map(slot => slot.x)).size;
     const rangedInRear = () => {
       const slots = leader.infantryFormation!.slots;
       const ranged = slots.filter(slot => state.units.find(unit => unit.id === slot.id)!.range > 1.5);
       const melee = slots.filter(slot => state.units.find(unit => unit.id === slot.id)!.range <= 1.5);
       expect(Math.max(...ranged.map(slot => slot.x))).toBeLessThanOrEqual(Math.min(...melee.map(slot => slot.x)));
     };
-    expect(aspect()).toBeCloseTo(2.2, 10); rangedInRear();
+    expect(ranks()).toBe(3); rangedInRear();
     members.at(-1)!.hp = 0; run(state, .5);
-    expect(leader.infantryFormation!.slots).toHaveLength(30); expect(aspect()).toBeCloseTo(1.6, 10); rangedInRear();
+    expect(leader.infantryFormation!.slots).toHaveLength(30); expect(ranks()).toBe(3); rangedInRear();
     entityStore(state).units.add(soldier(200, leader.x - 1, leader.y, 'archer')); run(state, .5);
-    expect(leader.infantryFormation!.slots).toHaveLength(31); expect(aspect()).toBeCloseTo(2.2, 10); rangedInRear();
+    expect(leader.infantryFormation!.slots).toHaveLength(31); expect(ranks()).toBe(3); rangedInRear();
     const settled = leader.infantryFormation!.slots;
     run(state, .5); expect(leader.infantryFormation!.slots).toBe(settled);
   });
@@ -239,7 +283,8 @@ describe('tight centered movement', () => {
         lateral: -(unit.x - leader.x) * Math.sin(heading) + (unit.y - leader.y) * Math.cos(heading) }));
       const depth = Math.max(...projected.map(point => point.forward)) - Math.min(...projected.map(point => point.forward));
       const width = Math.max(...projected.map(point => point.lateral)) - Math.min(...projected.map(point => point.lateral));
-      expect(width / depth).toBeCloseTo(INFANTRY_FORMATION_ASPECT, 4);
+      expect(depth).toBeCloseTo(2 * INFANTRY_SPACING, 4);
+      expect(width).toBeGreaterThan(depth);
       expect(Math.max(...projected.filter(point => point.unit.kind === 'archer').map(point => point.forward)))
         .toBeLessThanOrEqual(Math.min(...projected.filter(point => point.unit.kind !== 'archer').map(point => point.forward)) + .01);
       expect(members.every(unit => distance(unit, infantryFormationGoal(state, unit)!) < .01)).toBe(true);

@@ -1,0 +1,194 @@
+{
+  "file": "benchmarks/ai-iteration-2/independent-final.json",
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "matches": 288,
+  "standings": {
+    "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+    "table": [
+      {
+        "policy": "evolved-assault",
+        "matches": 144,
+        "wins": 62,
+        "draws": 53,
+        "losses": 29,
+        "points": 239,
+        "winRate": 0.430556,
+        "meanSurvivingArmyHP": 273.253331
+      },
+      {
+        "policy": "field-concentration",
+        "matches": 144,
+        "wins": 61,
+        "draws": 50,
+        "losses": 33,
+        "points": 233,
+        "winRate": 0.423611,
+        "meanSurvivingArmyHP": 290.061502
+      },
+      {
+        "policy": "hard-assault",
+        "matches": 144,
+        "wins": 27,
+        "draws": 69,
+        "losses": 48,
+        "points": 150,
+        "winRate": 0.1875,
+        "meanSurvivingArmyHP": 245.809275
+      },
+      {
+        "policy": "expansionist",
+        "matches": 144,
+        "wins": 19,
+        "draws": 66,
+        "losses": 59,
+        "points": 123,
+        "winRate": 0.131944,
+        "meanSurvivingArmyHP": 198.88265
+      }
+    ],
+    "uniqueLeader": "evolved-assault",
+    "byScenario": {
+      "field-battle": [
+        {
+          "policy": "expansionist",
+          "wins": 19,
+          "draws": 66,
+          "losses": 59
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 27,
+          "draws": 69,
+          "losses": 48
+        },
+        {
+          "policy": "evolved-assault",
+          "wins": 62,
+          "draws": 53,
+          "losses": 29
+        },
+        {
+          "policy": "field-concentration",
+          "wins": 61,
+          "draws": 50,
+          "losses": 33
+        }
+      ]
+    }
+  },
+  "comparisons": [
+    {
+      "policy": "expansionist",
+      "control": "hard-assault",
+      "matches": 48,
+      "wins": 6,
+      "draws": 28,
+      "losses": 14,
+      "positive": 2,
+      "negative": 7,
+      "tied": 15,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 1,
+      "byScenario": {
+        "field-battle": -8
+      }
+    },
+    {
+      "policy": "hard-assault",
+      "control": "expansionist",
+      "matches": 48,
+      "wins": 14,
+      "draws": 28,
+      "losses": 6,
+      "positive": 7,
+      "negative": 2,
+      "tied": 15,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 0.08984374999999997,
+      "byScenario": {
+        "field-battle": 8
+      }
+    },
+    {
+      "policy": "evolved-assault",
+      "control": "expansionist",
+      "matches": 48,
+      "wins": 24,
+      "draws": 20,
+      "losses": 4,
+      "positive": 18,
+      "negative": 0,
+      "tied": 6,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 0.000003814697265624994,
+      "byScenario": {
+        "field-battle": 20
+      }
+    },
+    {
+      "policy": "evolved-assault",
+      "control": "hard-assault",
+      "matches": 48,
+      "wins": 21,
+      "draws": 21,
+      "losses": 6,
+      "positive": 12,
+      "negative": 1,
+      "tied": 11,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 0.0017089843750000004,
+      "byScenario": {
+        "field-battle": 15
+      }
+    },
+    {
+      "policy": "field-concentration",
+      "control": "expansionist",
+      "matches": 48,
+      "wins": 21,
+      "draws": 18,
+      "losses": 9,
+      "positive": 11,
+      "negative": 1,
+      "tied": 12,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 0.003173828125000001,
+      "byScenario": {
+        "field-battle": 12
+      }
+    },
+    {
+      "policy": "field-concentration",
+      "control": "hard-assault",
+      "matches": 48,
+      "wins": 21,
+      "draws": 20,
+      "losses": 7,
+      "positive": 11,
+      "negative": 0,
+      "tied": 13,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 0.00048828124999999995,
+      "byScenario": {
+        "field-battle": 14
+      }
+    }
+  ],
+  "diagnostics": {
+    "faults": 0,
+    "wallSeconds": 531.769192791,
+    "simulatedSeconds": 49513.60000000002,
+    "fortressMatches": 0,
+    "fortressDefeats": 0,
+    "finalSiegeEngines": 0
+  }
+}

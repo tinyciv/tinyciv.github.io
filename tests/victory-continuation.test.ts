@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { continueAfterVictory, createGame, getLeader, canRespawnLeader, updateGame, updateLeaderRespawns } from '../src/game/simulation';
 import type { GameState } from '../src/game/types';
 
@@ -41,18 +41,15 @@ describe('continuing a victorious world', () => {
 
   it('automatically respawns a fallen Leader after ten seconds without announcing the same victory again', () => {
     const state = victory(); continueAfterVictory(state);
-    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
-    try {
-      getLeader(state)!.hp = 0; updateGame(state, .4, idle);
-      expect(state).toMatchObject({ gameOver: false, victoryContinued: true });
-      expect(state.factions[0].leaderRespawn?.readyAtWallTime).toBe(1_010_000);
-      expect(state.events.filter(event => event.text.includes('Victory!'))).toHaveLength(1);
-      updateLeaderRespawns(state, 1_009_999); expect(getLeader(state)).toBeUndefined();
-      updateLeaderRespawns(state, 1_010_000); updateGame(state, .1, idle);
-      expect(getLeader(state)?.hp).toBeGreaterThan(0);
-      expect(state).toMatchObject({ gameOver: false, victory: false, victoryContinued: true });
-      expect(state.events.filter(event => event.text.includes('Victory!'))).toHaveLength(1);
-    } finally { clock.mockRestore(); }
+    getLeader(state)!.hp = 0; updateGame(state, .4, idle, { wallNow: 1_000_000 });
+    expect(state).toMatchObject({ gameOver: false, victoryContinued: true });
+    expect(state.factions[0].leaderRespawn?.readyAtWallTime).toBe(1_010_000);
+    expect(state.events.filter(event => event.text.includes('Victory!'))).toHaveLength(1);
+    updateLeaderRespawns(state, 1_009_999); expect(getLeader(state)).toBeUndefined();
+    updateLeaderRespawns(state, 1_010_000); updateGame(state, .1, idle, { wallNow: 1_010_000 });
+    expect(getLeader(state)?.hp).toBeGreaterThan(0);
+    expect(state).toMatchObject({ gameOver: false, victory: false, victoryContinued: true });
+    expect(state.events.filter(event => event.text.includes('Victory!'))).toHaveLength(1);
   });
 
   it('still allows true defeat after the last settlement is lost in a continued world', () => {

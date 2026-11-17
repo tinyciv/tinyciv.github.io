@@ -2,19 +2,23 @@ import { playerFaction } from './player-context';
 import { buildingArtTop, buildingReady, buildingWidth, buildingHeight, isFarmKind, type Building, type GameState, type Point } from './types';
 
 export const BUILDING_ACTIVITY_RANGE = 3;
-export type BuildingActivityKind = 'fort' | 'governor' | 'blacksmith' | 'farm' | 'guardPost' | 'archeryRange' | 'library' | 'scoutLodge' | 'stable' | 'village';
+export type BuildingActivityKind = 'fort' | 'governor' | 'blacksmith' | 'farm' | 'guardPost' | 'archeryRange' | 'library' | 'forum' | 'scoutLodge' | 'stable' | 'barracks' | 'village' | 'shipyard' | 'foundry' | 'militaryAcademy';
+
+/** Each of these buildings opens the same faction-wide army controls. */
+export const isCompositionBuilding = (building: Building): boolean =>
+  ['archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'].includes(building.kind);
 
 /** Add a kind here when another building gains an activity panel. */
 export function buildingActivityKind(building: Building): BuildingActivityKind | undefined {
   return building.villageId !== undefined || building.kind === 'villageTent' ? 'village' : building.kind === 'palace' ? 'governor' : isFarmKind(building.kind) ? 'farm'
-    : ['fort', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'scoutLodge', 'stable'].includes(building.kind) ? building.kind as BuildingActivityKind : undefined;
+    : ['fort', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'forum', 'scoutLodge', 'stable', 'barracks', 'shipyard', 'foundry', 'militaryAcademy'].includes(building.kind) ? building.kind as BuildingActivityKind : undefined;
 }
 
 /** Reach is measured from the actual footing, including its south/east edges. */
 export function buildingActivityAvailable(state: GameState, building: Building): boolean {
   const village = building.villageId !== undefined && state.villages?.find(village => village.campId === building.id && !village.destroyed);
   if (state.gameOver || building.faction !== playerFaction(state) && !village || (!buildingReady(building) && !(building.kind === 'fort' && building.fort?.destroyed)) || !buildingActivityKind(building)) return false;
-  const leader = state.units.find(unit => unit.faction === playerFaction(state) && unit.kind === 'leader' && unit.hp > 0 && !unit.inside);
+  const leader = state.units.find(unit => unit.faction === playerFaction(state) && unit.kind === 'leader' && unit.hp > 0 && (!unit.inside || unit.embarkedOn !== undefined));
   if (!leader) return false;
   const dx = Math.max(building.x - leader.x, 0, leader.x - building.x - buildingWidth(building));
   const dy = Math.max(building.y - leader.y, 0, leader.y - building.y - buildingHeight(building));

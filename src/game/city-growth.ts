@@ -1,10 +1,25 @@
 import type { CitySummary } from './cities';
-import { houseBirthProgress } from './enclosures';
-import { CITY_GROWTH_SPEED } from './economy-constants';
-import { type Building, type Faction, type GameState, buildingReady } from './types';
+import { houseBirthProgress, palaceEnclosures } from './enclosures';
+import { type Faction, type GameState, buildingReady } from './types';
+import { rustEngine } from './rust-engine';
+import { SIM_ENGINE, SimSlot, simCore } from './sim-handle';
+import { colosseumGrowthMultiplier } from './colosseum';
+import { recordCampaignPopulation } from './campaign-stats';
 
 /** Scale the release allowance too, so banked or enclosed growth is not clipped. */
-export const MAX_CITY_BIRTHS_PER_TICK = 10;
+export const MAX_CITY_BIRTHS_PER_TICK = rustEngine.population_constant(1);
+const CITY_INPUT_STRIDE = 9, HOUSE_INPUT_STRIDE = 6, CITY_OUTPUT_STRIDE = 3;
+/** The game's persistent population pools (one engine per simulation core). */
+const engines = new SimSlot<{ handle: number }>();
+function populationEngine(state: GameState): number {
+  let engine = engines.get(state);
+  if (!engine) {
+    const core = simCore(state), owner = { core, handle: 0 };
+    owner.handle = core.engine(owner, SIM_ENGINE.population);
+    engine = engines.set(state, owner);
+  }
+  return engine.handle;
+}
 
 /** Advance every city's birth clock once per economy tick. Food stores remain shared,
  * but a city's production, credit, vacant homes and birth allowance do not.
@@ -13,56 +28,46 @@ export const MAX_CITY_BIRTHS_PER_TICK = 10;
 export function advanceCityPopulation(state: GameState, faction: Faction, summaries: readonly CitySummary[],
   huntingMultiplier: number, unfed = 0): number {
   const cities = summaries.filter(city => city.palace.faction === faction.id && buildingReady(city.palace));
-  const homes = new Map<number, Building[]>();
-  for (const city of cities) homes.set(city.palace.id, []);
-  // Only the small city list is examined for each house. Do not call
-  // citySummaries/governingPalace here and repeatedly rescan every building.
-  for (const house of state.buildings) {
-    if (house.faction !== faction.id || house.kind !== 'house' || !buildingReady(house)
-      || (house.residents ?? 0) >= house.capacity) continue;
-    let nearest: CitySummary | undefined, best = Infinity;
-    for (const city of cities) {
-      const d = (house.x + .5 - city.palace.x - 1) ** 2 + (house.y + .5 - city.palace.y - 1) ** 2;
-      if (d < best || d === best && city.palace.id < nearest!.palace.id) { nearest = city; best = d; }
-    }
-    if (nearest) homes.get(nearest.palace.id)!.push(house);
+  if (!cities.length) return 0;
+  const homes = state.buildings.filter(house => house.faction === faction.id && house.kind === 'house' && buildingReady(house)
+    && !((house.residents ?? 0) >= house.capacity));
+  // Resolve the enclosure map once per economy batch. Finish all native cache
+  // reads before obtaining the transfer view, since they may grow WASM memory.
+  const enclosures = homes.length ? palaceEnclosures(state) : undefined;
+  // Native birth credit and its release cap share the faction growth bonus,
+  // including residents born into the palace rather than a separate house.
+  const growth = rustEngine.sim_offensive_growth(simCore(state).handle, faction.id, colosseumGrowthMultiplier(state, faction.id));
+  const required = homes.map(home => houseBirthProgress(state, home, enclosures));
+  const engine = populationEngine(state);
+  const pointer = rustEngine.population_configure(engine, cities.length, homes.length);
+  const input = new Float64Array(rustEngine.memory.buffer, pointer, cities.length * CITY_INPUT_STRIDE + homes.length * HOUSE_INPUT_STRIDE);
+  for (let row = 0; row < cities.length; row++) {
+    const city = cities[row], palace = city.palace, offset = row * CITY_INPUT_STRIDE;
+    input[offset] = palace.id; input[offset + 1] = palace.x; input[offset + 2] = palace.y;
+    input[offset + 3] = city.population; input[offset + 4] = city.food; input[offset + 5] = palace.populationGrowth ?? 0;
+    input[offset + 6] = palace.capacity; input[offset + 7] = palace.unhousedResidents ?? 0;
+    input[offset + 8] = palace.depopulated === undefined ? 0 : palace.depopulated ? 2 : 1;
   }
-
-  // Capture food eligibility before anyone spends it. An earlier city's births
-  // must not change the amount of progress a later city earns this tick.
-  const stocked = faction.food >= 6;
-  const eligible: CitySummary[] = [];
-  for (const city of cities) {
-    const palace = city.palace;
-    palace.populationGrowth ??= 0;
-    if (city.population > 0) delete palace.depopulated;
-    if (palace.depopulated && city.population <= 0) { palace.populationGrowth = 0; continue; }
-    if (city.food > 0 && stocked) {
-      palace.populationGrowth += CITY_GROWTH_SPEED * Math.min(2.4, .14 + city.food / 13) * huntingMultiplier;
-      eligible.push(city);
-    } else if (unfed > 1e-7) palace.populationGrowth = Math.max(0, palace.populationGrowth - .3);
+  for (let row = 0; row < homes.length; row++) {
+    const home = homes[row], offset = cities.length * CITY_INPUT_STRIDE + row * HOUSE_INPUT_STRIDE;
+    input[offset] = home.id; input[offset + 1] = home.x; input[offset + 2] = home.y;
+    input[offset + 3] = home.residents ?? 0; input[offset + 4] = home.capacity; input[offset + 5] = required[row];
   }
-
-  let totalBirths = 0;
-  for (const city of eligible) {
-    const palace = city.palace, vacant = homes.get(palace.id)!;
-    let births = 0, cursor = 0;
-    while (births < MAX_CITY_BIRTHS_PER_TICK && faction.food + 1e-7 >= 4) {
-      while (cursor < vacant.length && (vacant[cursor].residents ?? 0) >= vacant[cursor].capacity) cursor++;
-      // Palace quarters provide the first four beds, so an empty settlement
-      // can earn and retain its first residents without an existing house.
-      const palaceVacancy = Math.max(0, palace.capacity - (palace.unhousedResidents ?? 0));
-      const home = vacant[cursor] ?? (palaceVacancy ? palace : undefined);
-      if (!home) break;
-      const required = home.kind === 'house' ? houseBirthProgress(state, home) : 1;
-      if (palace.populationGrowth! + 1e-9 < required) break;
-      if (home.kind === 'palace') home.unhousedResidents = (home.unhousedResidents ?? 0) + 1;
-      else home.residents = (home.residents ?? 0) + 1;
-      faction.population++;
-      faction.food = Math.max(0, faction.food - 4);
-      palace.populationGrowth = Math.max(0, palace.populationGrowth! - required);
-      births++; totalBirths++;
-    }
+  const outputPointer = rustEngine.population_run(engine, faction.food, faction.population, huntingMultiplier, unfed, growth, faction.achievements ?? 0);
+  const output = new Float64Array(rustEngine.memory.buffer, outputPointer, 3 + cities.length * CITY_OUTPUT_STRIDE + homes.length);
+  faction.food = output[0]; faction.population = output[1];
+  for (let row = 0; row < cities.length; row++) {
+    const palace = cities[row].palace, offset = 3 + row * CITY_OUTPUT_STRIDE;
+    palace.populationGrowth = output[offset];
+    if (output[offset + 1] !== (palace.unhousedResidents ?? 0)) palace.unhousedResidents = output[offset + 1];
+    if (output[offset + 2] === 0) delete palace.depopulated;
+    else palace.depopulated = output[offset + 2] === 2;
   }
-  return totalBirths;
+  const housesOffset = 3 + cities.length * CITY_OUTPUT_STRIDE;
+  for (let row = 0; row < homes.length; row++)
+    if (output[housesOffset + row] !== (homes[row].residents ?? 0)) homes[row].residents = output[housesOffset + row];
+  const births = output[2];
+  rustEngine.sim_offensive_births(simCore(state).handle, faction.id, births);
+  recordCampaignPopulation(state, faction);
+  return births;
 }

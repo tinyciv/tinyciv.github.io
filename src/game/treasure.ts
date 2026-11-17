@@ -2,8 +2,7 @@ import { playerFaction, withPlayerFaction } from './player-context';
 import { grantIncome } from './resource-income';
 import { buildingSize, buildingWidth, buildingHeight, tileAt, type GameState, type TreasureChest, type World, WATER } from './types';
 import { updateFog } from './fog';
-import { travelTimeMap } from './pathfinding';
-import { ridgeFootprintAllowed, ridgeStairAccess } from './ridges';
+import { travelTimeMap, traversable } from './pathfinding';
 import { loadPunyWorld } from './puny-world';
 
 export const TREASURE_GOLD = 200;
@@ -50,7 +49,7 @@ export function geographicDiscoveryAt(world: World, x: number, y: number): Disco
     const arms = ring.filter((wet, i) => wet && !ring[(i + ring.length - 1) % ring.length]).length;
     if (arms >= 3) return 'river-confluence';
     if (lake >= 6 && lake <= 32) return 'lake-shore';
-    if (seaSides.size >= 3 && (tile.ridge || tile.relief || tile.elevation > .62)) return 'coastal-headland';
+    if (seaSides.size >= 3 && (tile.relief || tile.elevation > .62)) return 'coastal-headland';
     if (trees >= 22 && land >= 32) return 'ancient-grove';
 }
 
@@ -86,7 +85,7 @@ export function initializeTreasureChests(state: GameState): void {
         if (!tile || WATER.has(tile.terrain) || fog.explored[cell] || occupied.has(cell) || !Number.isFinite(reachable[cell])) continue;
         // A chest needs readable open ground; forest treasure remains visible
         // in small clearings instead of being buried under opaque tree art.
-        if (tile.overlay !== 'none' || ridgeStairAccess(state.world, x, y) || !ridgeFootprintAllowed(state.world, x, y)) continue;
+        if (tile.overlay !== 'none' || !traversable(state.world, x, y)) continue;
         if (settlements.some(source => (x + .5 - source.x) ** 2 + (y + .5 - source.y) ** 2 < source.radius ** 2)) continue;
         candidates.push(cell);
     }
@@ -95,7 +94,7 @@ export function initializeTreasureChests(state: GameState): void {
         const j = Math.floor(random() * (i + 1));
         [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
     }
-    const count = Math.min(24, Math.max(1, Math.round(width * height / 650)));
+    const count = 2 * Math.min(24, Math.max(1, Math.round(width * height / 650)));
     const discoveryLimit = Math.min(4, Math.floor(count / 3)), found = new Set<Discovery>();
     for (const cell of candidates) {
         if (state.treasures.length >= discoveryLimit) break;

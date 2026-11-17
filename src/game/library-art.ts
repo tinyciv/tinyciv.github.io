@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { loadPunyWorld, punyWorldPixels } from './puny-world';
 import { NATIVE_BUILDINGS, recolorPunyBuildingPixels } from './puny-building-art';
 
@@ -12,7 +13,7 @@ export function loadLibraryArt(): Promise<void> {
     await loadPunyWorld();
     const images = await Promise.all(['Library', 'Library-blue', 'Library-red'].map(async name => {
       const image = new Image();
-      image.src = `${import.meta.env.BASE_URL}assets/medieval/${name}.png`;
+      image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/medieval/${name}.png`);
       await image.decode();
       if (image.naturalWidth !== 32 || image.naturalHeight !== 32) throw new Error('Invalid primitive library cell.');
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;

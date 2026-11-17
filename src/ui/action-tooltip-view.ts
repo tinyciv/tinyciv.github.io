@@ -5,6 +5,9 @@ const selector = '[data-build], [data-action], [data-hotbar-action], .activity-u
 export class ActionTooltips {
   private readonly popup = document.createElement('div');
   private active?: HTMLElement;
+  // Frame updates re-place the popup only when its item or text changes, or on
+  // a slow clock; reading layout every frame forced a synchronous reflow.
+  private placed?: { item: HTMLElement; text: string; at: number };
   constructor() {
     this.popup.id = 'action-tooltip'; this.popup.className = 'action-tooltip'; this.popup.hidden = true;
     this.popup.setAttribute('role', 'tooltip'); document.body.append(this.popup);
@@ -29,18 +32,21 @@ export class ActionTooltips {
   }
   private capture(item: HTMLElement): void {
     if (item.title) { item.dataset.tooltip = item.title; item.removeAttribute('title'); }
-    if (item.dataset.tooltip) item.setAttribute('aria-description', item.dataset.tooltip);
+    const text = item.dataset.tooltip;
+    if (text && item.getAttribute('aria-description') !== text) item.setAttribute('aria-description', text);
   }
   private close(): void {
-    this.active?.removeAttribute('aria-describedby'); this.active = undefined; this.popup.hidden = true;
+    this.active?.removeAttribute('aria-describedby'); this.active = undefined; this.placed = undefined; this.popup.hidden = true;
   }
   update(): void {
     const item = this.active;
     if (!item) return;
-    if (!item.isConnected || !item.getClientRects().length || item.closest('[hidden]')) { this.close(); return; }
     this.capture(item);
-    const text = item.dataset.tooltip;
+    const text = item.dataset.tooltip, now = performance.now(), placed = this.placed;
+    if (placed && placed.item === item && placed.text === text && now - placed.at < 250) return;
+    if (!item.isConnected || !item.getClientRects().length || item.closest('[hidden]')) { this.close(); return; }
     if (!text) { this.close(); return; }
+    this.placed = { item, text, at: now };
     if (this.popup.textContent !== text) this.popup.textContent = text;
     this.popup.hidden = false; item.setAttribute('aria-describedby', this.popup.id);
     const rect = item.getBoundingClientRect(), width = this.popup.offsetWidth, height = this.popup.offsetHeight;

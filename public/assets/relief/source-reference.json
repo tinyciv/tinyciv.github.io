@@ -1,0 +1,72 @@
+{
+  "provider": "built-in imagegen",
+  "sourcePrompts": "scratch/2026-11-16-reference-hill-ranges/prompts.json",
+  "referenceImages": "Four user-attached hill screenshots",
+  "referenceImagePaths": [],
+  "referenceImagePathNote": "The four style-reference screenshots were attached in the conversation; no local file paths were provided.",
+  "atlases": [
+    {
+      "file": "hills-reference.png",
+      "style": 3,
+      "source": "scratch/2026-11-16-reference-hill-ranges/hills.png",
+      "generatedSource": "/Users/ckrapu/.codex/generated_images/01a1e700-8ffe-7b62-8fdf-b03ddd501147/exec-4a0af21d-a044-433a-b66e-056ae0196ac9.png",
+      "sha256": "af13b5c5f7214da83be247b126a74edeb9965f501660243d5b09026ba6867181",
+      "nativeWidths": [
+        24,
+        32,
+        32,
+        40,
+        40,
+        48,
+        48,
+        56,
+        56,
+        64,
+        64,
+        64
+      ],
+      "prompt": "Use case: stylized-concept.\nAsset type: very simple BLOCKY pixel-art grassy hill terrain sprites.\nInput images: the FOUR most recent screenshots attached by the user are the exact visual target. Match the green HILLS in those screenshots as faithfully as possible: same coarse pixels, same simplified shapes, same bright lime/olive/deep-green color bands. Ignore every non-hill element.\nPrimary request: extract the visual language of those hills into a clean transparent atlas of twelve separate complete basic grassy hill sprites. These must look JUST LIKE the screenshot hills, not a redesign.\n\nShape: low broad hill bodies 2.5\u20134 times wider than tall. Slightly rounded or short flat CAPS, and coarse diagonal FLANKS built from large regular square stair steps. The top is a short rounded/flat cap rather than a sharp point. Some long sloping shoulders, some off-center caps, some wider low hills. These are simple building blocks meant to overlap into a range. Left and right feet fully included.\nShading: exactly THREE dominant broad connected color masses: a thick bright warm yellow-lime upper-slope/crest band, an olive-green middle slope, one deep-green right/front shadow wedge. The band runs up the left flank and over the rounded cap, then bends down the right shoulder, like the reference. A little darker-green stepped rear edge is okay. Completely flat solid colors in each region. Absolutely no surface texture, dots, flecks, tufts, cracks, thin highlight dashes, striations, intricate facets or extra contour lines.\nPixel scale: very coarse and deliberately simple, about 16\u201332 big square pixel steps across each basic hill, only about 6\u201312 big square steps in height. Display pixels uniformly enlarged. Crisp hard pixel boundaries. Do NOT render highly detailed art then pixelate it. Follow the reference's bold large shapes and color masses exactly.\nLayout: wide 4:3 atlas, FOUR columns by THREE rows, equal square cells, one hill per cell, transparent around each. Row1 small low foothills; row2 medium hills; row3 larger broader hills. Within each row vary width and height independently: narrow asymmetric, broad low, left-heavy crest, right-heavy crest. Larger hills use the SAME large pixel scale and simple shading, not more detail. Keep all objects centered, feet on the same relative baseline at80% cell height, 10% clear margins all sides.\nCamera: same upright strategy-map viewpoint as the screenshots, visible front slopes, no isometric diamond.\nBackground: true transparency; each hill fully opaque. No ground tile, oval base, pedestal, detached shadow, fuzzy fringe or stray pixels. No stones/rock yet; grass-only hills. No trees, buildings, characters, rivers, UI, text, grid lines or watermark.\nPriority: match the provided SCREENSHOTS, particularly their chunky rounded hillcaps, coarse diagonal sides and broad lime/olive/deep-green bands.",
+      "editTarget": null
+    },
+    {
+      "file": "rocky-hills-reference.png",
+      "style": 4,
+      "source": "scratch/2026-11-16-reference-hill-ranges/rocky-hills.png",
+      "generatedSource": "/Users/ckrapu/.codex/generated_images/01a1e700-8ffe-7b62-8fdf-b03ddd501147/exec-3815f446-6c83-4527-9294-65962eb7da57.png",
+      "sha256": "7c2413064618892e60c65c164ad3770643a7591e5b4cdcd97232831fb7ccbaf2",
+      "nativeWidths": [
+        24,
+        32,
+        32,
+        40,
+        40,
+        48,
+        48,
+        56,
+        56,
+        64,
+        64,
+        64
+      ],
+      "prompt": "Use case: precise-object-edit.\nEdit target: the MOST RECENT generated atlas of twelve simple blocky grass hills.\nSupporting references: the four user-attached game screenshots immediately before it; match their embedded cream-and-gray rock faces.\nKeep the atlas layout, every grassy silhouette, all flat rounded caps, coarse square pixel grid, THREE broad green bands, palette, camera, complete feet and transparent background exactly the same.\nChange only: add ONE simple chunky exposed rock face embedded near the front/lower slope of each hill, like the grassy rocky hills in the screenshots. One low irregular triangular stone patch, 10\u201325% of the hill body, smaller on row1, medium on row2, largest on row3. Broad cream-lit left plane, gray middle, dark charcoal right face, at most THREE flat connected stone colors. Grass still covers most of each silhouette and keeps its rounded/short-flat hilltop. Stone shape stays inside the grass silhouette, never peaks above it.\nKeep it VERY SIMPLE AND BLOCKY: only about6\u201312 chunky square steps across a rock patch, no cracks, texture, pebbles, thin lines, highlightspecks or gradients. Match the source screenshots, not realistic mountains. Preserve all12 objects in a precise4column3row atlas. Fully opaque sprites, genuine transparency outside. No background, text, grid, trees, buildings, characters or added loose objects.",
+      "editTarget": "scratch/2026-11-16-reference-hill-ranges/hills.png"
+    }
+  ],
+  "layout": {
+    "columns": 4,
+    "rows": [
+      "small low foothills",
+      "medium hills",
+      "larger broader hills"
+    ],
+    "actualSlots": 12,
+    "nativeSlotsPerStyle": 16,
+    "unusedNativeSlots": [
+      12,
+      13,
+      14,
+      15
+    ]
+  },
+  "runtime": "Source PNGs copied unchanged. Crop alpha bounds, nearest-neighbor sample each slot at its recorded nativeWidth, and use the existing alpha cutoff. Source art is not redrawn, palette-quantized, mirrored, or rotated."
+}

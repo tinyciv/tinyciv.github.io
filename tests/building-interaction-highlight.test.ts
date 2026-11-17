@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { setVillageRelation } from '../src/game/settlement-bridge';
 import { buildingInteractionHighlighted } from '../src/game/building-interaction-highlight';
 import type { FogView } from '../src/game/fog';
 import type { Building, GameState, NeutralVillage } from '../src/game/types';
@@ -9,14 +10,16 @@ function fixture() {
         ({ id, kind, faction: 4, villageId: 1, x, y, hp: 200, maxHp: 200, capacity: 0 });
     const buildings = [building(10, 'villageTent', 10, 10), building(11, 'villageTent', 12, 10), building(12, 'villageTent', 14, 10),
         building(13, 'house', 10, 13), building(14, 'guardPost', 13, 13), building(15, 'woodenTower', 16, 13)];
-    const village: NeutralVillage = { id: 1, faction: 4, campId: 10, x: 10, y: 10, name: 'Willow tribe', identity: 'growers', relation: 'neutral',
-        nextGrowthAt: 120, nextThinkAt: 0, nextRecruitAt: 120 };
+    const village: NeutralVillage = { id: 1, faction: 4, campId: 10, x: 10, y: 10, name: 'Willow tribe', identity: 'growers', relation: 'neutral' };
     const state: GameState = {
         world: { width: 30, height: 30, seed: 'interaction-halos', source: 'test', spawns: [],
             tiles: Array.from({ length: 900 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 2, production: 1, gold: 0, variation: .3 })) },
         units: [{ id: 1, kind: 'leader', faction: 0, x: 10.5, y: 23, hp: 100, morale: 100, attack: 25, defense: 5,
             speed: 3.6, range: 4, order: 'hold', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0 }],
-        buildings, villages: [village], factions: [], time: 0, tick: 0, paused: true, speed: 1, events: [], particles: [],
+        buildings, villages: [village], time: 0,
+        // Village relations live in the Rust settlement engine, keyed by faction rows.
+        factions: [0, 4].map(id => ({ id, name: `${id}`, color: '#fff', relation: id ? 'peace' as const : 'self' as const, food: 0, gold: 0, production: 0,
+            population: 0, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false, ...(id ? { villageId: 1 } : {}) })), tick: 0, paused: true, speed: 1, events: [], particles: [],
         selected: null, selectedType: null, buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'interaction-halos', rngState: 1,
     };
     const fog: FogView = { width: 30, height: 30, visible: new Uint8Array(900).fill(1), explored: Array(900).fill(1),
@@ -28,7 +31,7 @@ describe('building interaction silhouettes', () => {
     it('outlines every visible village tent, house, guard post and tower beyond the local activity range', () => {
         const { state, buildings, village, fog } = fixture();
         for (const relation of ['neutral', 'trade', 'allied'] as const) {
-            village.relation = relation;
+            setVillageRelation(state, village, 0, relation);
             expect(buildings.map(building => buildingInteractionHighlighted(state, building, fog))).toEqual(Array(6).fill(true));
         }
         const halos = recordNativeFrame(state, { fog }).sprites.filter(sprite => sprite.key.startsWith('activity:'));
@@ -49,8 +52,8 @@ describe('building interaction silhouettes', () => {
 
     it('suppresses hostile, destroyed, unfinished and orphaned village structures', () => {
         const { state, buildings, village, fog } = fixture(), house = buildings[3];
-        village.relation = 'war'; expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
-        village.relation = 'neutral'; village.destroyed = true; expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
+        setVillageRelation(state, village, 0, 'war'); expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
+        setVillageRelation(state, village, 0, 'neutral'); village.destroyed = true; expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
         delete village.destroyed; buildings[0].hp = 0; expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
         buildings[0].hp = 200; house.hp = 0; expect(buildingInteractionHighlighted(state, house, fog)).toBe(false);
         house.hp = 200; house.construction = { startedAt: 0, duration: 10 };

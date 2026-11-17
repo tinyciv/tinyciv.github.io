@@ -1,10 +1,13 @@
+import { territoryValue } from './territory-cells';
+import { rustEngine } from './rust-engine';
+import { updateWallPatrol } from './wall-patrols';
 import { simulationReadsActive } from './simulation-reads';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { spendGold } from './gold-ledger';
-import { playerFaction } from './player-context';
+import { isHumanFaction, playerFaction } from './player-context';
 import { isForbidden } from './forbidden-zones';
 import { buildingWorkForbidden } from './forbidden-work';
-import { entityStore } from './entity-store';
+import { entityStore, buildingWithId } from './entity-store';
 import { constructionEdges } from './builders';
 import { insideOwnBorders, territory, type Territory } from './borders';
 import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-activity';
@@ -33,6 +36,7 @@ interface GuardPostOrders { hostile: (a: number, b: number) => boolean }
 interface MilitiaOrders {
   move: (state: GameState, unit: Unit, goal: Point, dt: number) => void;
   engage: (unit: Unit, target: Unit, dt: number) => void;
+  shoot?: (unit: Unit, target: Unit) => void;
   canEngage?: (unit: Unit, target: Unit) => boolean;
 }
 interface GuardEnclosure { cells: ReadonlySet<number>; boundary: ReadonlySet<number> }
@@ -72,7 +76,7 @@ function insideEnclosure(state: GameState, enclosure: GuardEnclosure | undefined
   return x >= 0 && y >= 0 && x < state.world.width && y < state.world.height
     && !!enclosure?.cells.has(y * state.world.width + x);
 }
-const human = (unit: Unit): boolean => ['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'militia', 'worker', 'merchant'].includes(unit.kind);
+const human = (unit: Unit): boolean => ['leader', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'militia', 'worker', 'merchant'].includes(unit.kind);
 const civilian = (unit: Unit): boolean => unit.kind === 'worker' || unit.kind === 'merchant';
 const center = (building: Building): Point => ({ x: building.x + .5, y: building.y + .5 });
 export const guardPostLevel = (post: Building): 0 | 1 | 2 => Math.max(0, Math.min(2, Math.floor(post.guardPost?.level ?? 0))) as 0 | 1 | 2;
@@ -102,6 +106,21 @@ export function upgradeGuardPost(state: GameState, post: Building): { ok: boolea
   post.guardPost.level = (guardPostLevel(post) + 1) as 1 | 2;
   post.guardPost.needsRecruits = true;
   return { ok: true, message: `Guard post expanded to ${status.nextCapacity} guards.` };
+}
+
+/** Guards avoid forbidden zones unless their post allows them through. */
+const postAvoidsForbidden = (post: Building): boolean => !post.guardPost?.ignoreForbidden;
+export function setGuardPostAvoidForbidden(state: GameState, post: Building, enabled: boolean): { ok: boolean; message: string } {
+  if (post.kind !== 'guardPost' || post.faction !== playerFaction(state) || !state.buildings.includes(post))
+    return { ok: false, message: 'Choose your own guard post.' };
+  if (!buildingActivityAvailable(state, post) || state.factions.find(faction => faction.id === post.faction)?.defeated)
+    return { ok: false, message: 'Move your Leader within 3 tiles of a completed guard post.' };
+  post.guardPost ??= { nextUpkeepAt: state.time + GUARD_POST_UPKEEP_INTERVAL, funded: true, needsRecruits: true };
+  post.guardPost.ignoreForbidden = enabled ? undefined : true;
+  for (const unit of state.units) if (unit.guardPost === post.id && unit.faction === post.faction && unit.hp > 0) {
+    clearJourney(unit); releaseAttackSpot(state, unit);
+  }
+  return { ok: true, message: enabled ? 'Guards will avoid forbidden areas.' : 'Guards may enter forbidden areas.' };
 }
 
 /** Each post controls its own garrison; ordinary pursuit remains the default. */
@@ -179,11 +198,11 @@ function makeMilitia(state: GameState, post: Building, city: Building, id: numbe
 }
 
 /** Return true when the post recorded the kill instead of individual veterancy. */
-export function recordGuardKill(state: GameState, unit: Unit): boolean {
+export function recordGuardKill(state: GameState, unit: Unit, experience = 1): boolean {
   if (unit.kind !== 'militia') return false;
-  const post = state.buildings.find(building => building.id === unit.guardPost && building.kind === 'guardPost' && buildingReady(building) && building.faction === unit.faction);
+  const post = buildingWithId(state, unit.guardPost, building => building.kind === 'guardPost' && buildingReady(building) && building.faction === unit.faction);
   if (!post?.guardPost) return false;
-  post.guardPost.kills = Math.max(0, post.guardPost.kills ?? 0) + 1;
+  post.guardPost.kills = rustEngine.combat_record_kill_amount(post.guardPost.kills ?? 0, experience);
   for (const guard of state.units) if (guard.kind === 'militia' && guard.guardPost === post.id && guard.faction === post.faction && guard.hp > 0)
     guard.kills = post.guardPost.kills;
   return true;
@@ -212,7 +231,7 @@ export function recordGuardCasualty(state: GameState, unit: Unit): boolean {
 /** The first thirty seconds are included with construction. A missed payment
  * suspends service; resuming buys a new interval instead of accumulating debt. */
 function collectUpkeep(state: GameState, post: Building, faction: Faction): boolean {
-  const guard = post.guardPost!, cost = guardPostUpkeep(post);
+  const guard = post.guardPost!, cost = isHumanFaction(state, faction.id) ? guardPostUpkeep(post) : 0;
   let replenish = false;
   while (state.time + 1e-7 >= guard.nextUpkeepAt) {
     if (faction.gold + 1e-7 < cost) { guard.funded = false; break; }
@@ -242,9 +261,7 @@ export function updateGuardPosts(state: GameState, orders: GuardPostOrders): Set
   const factions = new Map(state.factions.filter(faction => !faction.defeated && faction.id >= 0).map(faction => [faction.id, faction]));
   const cities = new Map<number, Building[]>(), posts = new Map<number, PostDefense>();
   const threats = new Map<number, Unit[]>(), rosters = new Map<number, Unit[]>();
-  let nextId = 1;
   for (const building of state.buildings) {
-    nextId = Math.max(nextId, building.id + 1);
     if (building.kind === 'palace' && buildingReady(building) && factions.has(building.faction)) {
       const group = cities.get(building.faction) ?? [];
       group.push(building); cities.set(building.faction, group);
@@ -281,7 +298,6 @@ export function updateGuardPosts(state: GameState, orders: GuardPostOrders): Set
   const enclosedCities = new Map<number, PostDefense>();
   for (const defense of posts.values()) if (defense.enclosure) enclosedCities.set(defense.city.id, defense);
   for (const unit of state.units) {
-    nextId = Math.max(nextId, unit.id + 1);
     if (unit.kind === 'militia') {
       const defense = posts.get(unit.guardPost ?? -1);
       if (!defense || defense.post.faction !== unit.faction) { if (unit.hp > 0) retire(unit); changed.add(unit.faction); continue; }
@@ -296,7 +312,7 @@ export function updateGuardPosts(state: GameState, orders: GuardPostOrders): Set
     const key = `${Math.floor(unit.x / bucketSize)},${Math.floor(unit.y / bucketSize)}`;
     const bucket = enemyBuckets.get(key) ?? [];
     bucket.push(unit); enemyBuckets.set(key, bucket);
-    const owner = borders.owners[Math.floor(unit.y) * borders.width + Math.floor(unit.x)];
+    const owner = territoryValue(borders, Math.floor(unit.y) * borders.width + Math.floor(unit.x));
     const threatenedCity = orders.hostile(owner, unit.faction) ? nearestCity(cities.get(owner) ?? [], unit) : undefined;
     if (threatenedCity) threats.get(threatenedCity.id)?.push(unit);
     // Walls may enclose more land than the current cultural border. Intruders
@@ -342,7 +358,7 @@ export function updateGuardPosts(state: GameState, orders: GuardPostOrders): Set
     serving.set(city.id, otherServing + count);
     for (const troop of roster) if (troop.hp > 0) troop.kills = post.guardPost.kills ?? 0;
     if (post.guardPost.funded && (first || replenish || post.guardPost.needsRecruits)) {
-      for (; count < limit; count++) { makeMilitia(state, post, city, nextId++); serving.set(city.id, (serving.get(city.id) ?? 0) + 1); }
+      for (; count < limit; count++) { makeMilitia(state, post, city, entityStore(state).allocateId()); serving.set(city.id, (serving.get(city.id) ?? 0) + 1); }
       post.guardPost.needsRecruits = count < capacity;
     }
   }
@@ -353,10 +369,10 @@ export function updateGuardPosts(state: GameState, orders: GuardPostOrders): Set
 /** New threats are detected in the home city or near its civilians. Engaged
  * guards can continue a chase within twenty tiles of their post. */
 export function militiaCityContains(state: GameState, unit: Unit, point: Point): boolean {
-  if (isForbidden(state, point.x, point.y, unit.faction)) return false;
   const frame = frames.get(state), defense = frame?.posts.get(unit.guardPost ?? -1);
   if (!frame || !defense || !buildingReady(defense.post) || !buildingReady(defense.city)
     || defense.post.faction !== unit.faction || defense.city.faction !== unit.faction) return false;
+  if (postAvoidsForbidden(defense.post) && isForbidden(state, point.x, point.y, unit.faction)) return false;
   if (defense.post.guardPost?.wallsOnly) return insideEnclosure(state, defense.enclosure, point);
   if (!unit.inside && unit.target !== undefined && distance(point, center(defense.post)) <= GUARD_PURSUIT_RADIUS) return true;
   if (nearestCity(frame.cities.get(unit.faction) ?? [], point)?.id !== defense.city.id) return false;
@@ -367,7 +383,7 @@ export function militiaCityContains(state: GameState, unit: Unit, point: Point):
 
 function validThreat(state: GameState, unit: Unit, target: Unit, frame: DefenseFrame): boolean {
   const defense = frame.posts.get(unit.guardPost ?? -1);
-  if (isForbidden(state, target.x, target.y, unit.faction)) return false;
+  if (defense && postAvoidsForbidden(defense.post) && isForbidden(state, target.x, target.y, unit.faction)) return false;
   if (!defense || buildingWorkForbidden(state, defense.post) || target.hp <= 0 || target.inside || !human(target) || !frame.hostile(unit.faction, target.faction)) return false;
   if (defense.post.guardPost?.wallsOnly) return insideEnclosure(state, defense.enclosure, target);
   const ownCity = insideOwnBorders(state, unit.faction, target.x, target.y, frame.borders)
@@ -416,6 +432,7 @@ export function updateMilitia(state: GameState, unit: Unit, dt: number, orders: 
   const frame = frames.get(state), defense = frame?.posts.get(unit.guardPost ?? -1);
   if (!frame || !defense || !buildingReady(defense.post) || defense.post.faction !== unit.faction
     || !buildingReady(defense.city) || defense.city.faction !== unit.faction) { retire(unit); return; }
+  if (orders.shoot && updateWallPatrol(state, unit, defense.city, defense.post, dt, orders.move, orders.shoot, frame.hostile)) return;
   if (defense.post.guardPost?.wallsOnly && (!insideEnclosure(state, defense.enclosure, unit)
     || !insideEnclosure(state, defense.enclosure, defense.post))) {
     returnToPost(state, unit, defense.post, dt, orders); return;
@@ -434,7 +451,7 @@ export function updateMilitia(state: GameState, unit: Unit, dt: number, orders: 
   }
   const cached = plan.target;
   const target = cached && cached.hp > 0 && !cached.inside && defense.post.guardPost?.funded
-    && frame.hostile(unit.faction, cached.faction) && !isForbidden(state, cached.x, cached.y, unit.faction)
+    && frame.hostile(unit.faction, cached.faction) && !(postAvoidsForbidden(defense.post) && isForbidden(state, cached.x, cached.y, unit.faction))
     && (!defense.post.guardPost?.wallsOnly || insideEnclosure(state, defense.enclosure, cached))
     && distance(cached, center(defense.post)) <= GUARD_PURSUIT_RADIUS ? cached : undefined;
   if (!target) {

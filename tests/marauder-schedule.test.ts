@@ -3,7 +3,7 @@ import { entityStore } from '../src/game/entity-store';
 import * as fog from '../src/game/fog';
 import * as navigation from '../src/game/pathfinding';
 import * as motivation from '../src/game/raider-motivations';
-import { beginMarauderFrame, marauderPackUpdateDue, marauderUpdateElapsed } from '../src/game/marauder-schedule';
+import { beginMarauderFrame, marauderFormationElapsed, marauderPackUpdateDue, marauderUpdateElapsed } from '../src/game/marauder-schedule';
 import { movementProfile, setMovementProfiling } from '../src/game/movement-profile';
 import { moveUnit, updateGame } from '../src/game/simulation';
 import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
@@ -35,6 +35,25 @@ function sightFixture(state: GameState, visible: boolean): void {
 }
 
 describe('hidden marauder update schedule', () => {
+  it('coalesces a hidden formation and wakes the whole group when any member becomes visible', () => {
+    const { state, raider } = fixture();
+    const commander = { ...raider, id: 1006, marauderLeader: true }, member = { ...raider, id: 1001 };
+    let elapsed = 0, updates = 0;
+    for (let i = 0; i < 50; i++) {
+      stepClock(state, .02);
+      const dt = marauderFormationElapsed(state, commander, [member], .02);
+      elapsed += dt; if (dt) updates++;
+    }
+    expect(updates).toBe(10); expect(elapsed).toBeCloseTo(1, 10);
+    stepClock(state, .02); expect(marauderFormationElapsed(state, commander, [member], .02)).toBe(0);
+    member.x = state.units[0].x + 1; member.y = state.units[0].y;
+    stepClock(state, .02); expect(marauderFormationElapsed(state, commander, [member], .02)).toBeCloseTo(.04, 10);
+    stepClock(state, .02); expect(marauderFormationElapsed(state, commander, [member], .02)).toBeCloseTo(.02, 10);
+    // A newly activated group never receives time spent inactive in camp.
+    for (let i = 0; i < 8; i++) stepClock(state, .02);
+    stepClock(state, .02); expect(marauderFormationElapsed(state, commander, [member], .02)).toBeCloseTo(.02, 10);
+  });
+
   it('updates exactly one fifth of a hidden crowd on each step and conserves elapsed time', () => {
     const { state, raider } = fixture();
     const crowd = Array.from({ length: 100 }, (_, i) => ({ ...raider, id: 1000 + i }));

@@ -111,6 +111,7 @@ describe('sleeping farm couriers', () => {
     const field = state.fields!.find(plot => plot.camp === 4)!;
     expect(workers.every(worker => worker.collectorCamp !== field.camp)).toBe(true);
     field.food = 3; field.expiresAt = 11; field.foodBatches = [{ amount: 3, expiresAt: 11 }];
+    updateHarvests(state); ensureCollectors(state);
     const input = { up: false, down: false, left: false, right: false };
     for (let step = 0; step < 8; step++) updateGame(state, .1, input);
     const gatherer = couriers(state).find(worker => worker.field === field.id)!;

@@ -1,0 +1,19 @@
+{
+  "selectedId": "evo-g2-c3",
+  "finalists": [
+    "evolved-assault",
+    "field-concentration"
+  ],
+  "selectedGenomeHash": "68f1bfc5a771aaa46184efffad7a4cebf7281eaa783c04ee900c07e98a6d7419",
+  "fieldGenomeHash": "d4e0ab542d4bcfd52963a13be1dfe652f89916551b5e4910bf4ca831d53b579a",
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "screeningGeneration": 3,
+  "comparisonAlpha": 0.0125,
+  "independentSeedFamily": "iteration-2-independent-final",
+  "seeds": 24,
+  "seconds": 240,
+  "protocolSha256": "b20b8fd52e1a0d4ee85324ff684cdb15f61b6a07e4629f2f7ea458535bf19004"
+}

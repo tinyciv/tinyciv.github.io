@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { buildingBlockerView, canTraverseEdge, canWalk, findPath, invalidateNavigation, movementMultiplier,
-  terrainNavigationEdges, travelTimeMap, wallBreachingNavigation } from '../src/game/pathfinding';
+  terrainNavigationEdges, travelTimeMap, wallBreachingNavigation, forkTerrainNavigation } from '../src/game/pathfinding';
 import { markWorldChanged } from '../src/game/world-revisions';
 import type { Building, GameState, World } from '../src/game/types';
 
@@ -18,6 +18,23 @@ const building = (id: number, kind: Building['kind'], x: number, y: number, fact
 const origin = { x: .5, y: .5 };
 const times = (state: GameState, faction = 0) => Array.from(travelTimeMap(state, origin, faction, 1, Infinity));
 const freshTimes = (state: GameState, faction = 0) => times(structuredClone(state), faction);
+
+it('forks terrain navigation without rescanning and isolates transaction edits', () => {
+  const state = fixture(), original = times(state), copy = structuredClone(state);
+  forkTerrainNavigation(state.world, copy.world);
+  let reads = 0;
+  const tile = copy.world.tiles[255], terrain = tile.terrain;
+  Object.defineProperty(tile, 'terrain', { configurable: true, get: () => { reads++; return terrain; } });
+  copy.world.tiles[34].overlay = 'forest'; markWorldChanged(copy.world, 'sight', [34]);
+  const changed = times(copy);
+  expect(reads).toBe(0);
+  expect(changed).not.toEqual(original);
+  expect(times(state)).toEqual(original);
+  expect(changed).toEqual(freshTimes(copy));
+  state.world.tiles[52].terrain = 'lake'; markWorldChanged(state.world, 'geometry', [52]);
+  expect(times(state)[52]).toBe(Infinity);
+  expect(times(copy)[52]).toBeLessThan(Infinity);
+});
 
 it('retains isolated strategic access views while source state and hostility change', () => {
   const state = fixture(12, 6), store = entityStore(state);
@@ -136,4 +153,33 @@ it('falls back safely after structural change history rolls over', () => {
     markWorldChanged(state.world); times(state, 0);
   }
   expect(times(state, 1)).toEqual(freshTimes(state, 1));
+});
+
+
+it('clips partly off-map footprints without wrapping into adjacent rows', () => {
+  const state = fixture(), store = entityStore(state);
+  store.buildings.add(building(1, 'palace', -1, 4), building(2, 'wall', 16, 7), building(3, 'road', -1, 9));
+  expect(canWalk(state, .5, 4.5, 0)).toBe(false);
+  expect(canWalk(state, .5, 5.5, 0)).toBe(false);
+  expect(canWalk(state, 15.5, 3.5, 0)).toBe(true);
+  expect(canWalk(state, .5, 8.5, 0)).toBe(true);
+  expect(movementMultiplier(state, 15.5, 8.5)).toBe(1);
+  expect(times(state)).toEqual(freshTimes(state));
+  store.buildings.retain(() => false);
+  expect(canWalk(state, .5, 4.5, 0)).toBe(true);
+});
+
+it('rebuilds access safely when a state world is replaced or resized', () => {
+  const state = fixture(), store = entityStore(state);
+  store.buildings.add(building(1, 'wall', 4, 4));
+  times(state, 0); times(state, 1);
+  const replacement = fixture().world;
+  replacement.tiles[2].terrain = 'lake'; state.world = replacement;
+  expect(times(state, 0)).toEqual(freshTimes(state, 0));
+  expect(times(state, 1)).toEqual(freshTimes(state, 1));
+  // Same world identity and tile count, with different row boundaries.
+  state.world.width = 8; state.world.height = 32;
+  expect(times(state, 0)).toEqual(freshTimes(state, 0));
+  expect(canWalk(state, 4.5, 4.5, 0)).toBe(false);
+  expect(canWalk(state, 4.5, 8.5, 0)).toBe(true);
 });

@@ -1,0 +1,594 @@
+{
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "initialExplorationArtifacts": {
+    "bundleSha256": "c5f36c50a254ee074216e8a86a2a91b564cee07bf54d4b5f7a6103c79df0efbb",
+    "wasmSha256": "9696b86c7af001ea4c47178a0ce351fd7f1deba431fa3fd1e486558903dec41e"
+  },
+  "matchedEngineForSearchConfirmationTransfer": true,
+  "uniqueSeedFamilies": true,
+  "totalMatches": 612,
+  "fixedOpponentRuns": 36,
+  "generatedWorldRuns": 2,
+  "search": {
+    "generations": 3,
+    "matches": 228,
+    "promotions": 0
+  },
+  "independent": {
+    "seeds": 24,
+    "seconds": 240,
+    "comparisons": [
+      {
+        "policy": "evolved-assault",
+        "control": "expansionist",
+        "matches": 48,
+        "wins": 24,
+        "draws": 20,
+        "losses": 4,
+        "positive": 18,
+        "negative": 0,
+        "tied": 6,
+        "pairs": 24,
+        "seeds": 24,
+        "signTestP": 0.000003814697265624994,
+        "byScenario": {
+          "field-battle": 20
+        },
+        "alpha": 0.0125,
+        "confirmedImprovement": true
+      },
+      {
+        "policy": "evolved-assault",
+        "control": "hard-assault",
+        "matches": 48,
+        "wins": 21,
+        "draws": 21,
+        "losses": 6,
+        "positive": 12,
+        "negative": 1,
+        "tied": 11,
+        "pairs": 24,
+        "seeds": 24,
+        "signTestP": 0.0017089843750000004,
+        "byScenario": {
+          "field-battle": 15
+        },
+        "alpha": 0.0125,
+        "confirmedImprovement": true
+      },
+      {
+        "policy": "field-concentration",
+        "control": "expansionist",
+        "matches": 48,
+        "wins": 21,
+        "draws": 18,
+        "losses": 9,
+        "positive": 11,
+        "negative": 1,
+        "tied": 12,
+        "pairs": 24,
+        "seeds": 24,
+        "signTestP": 0.003173828125000001,
+        "byScenario": {
+          "field-battle": 12
+        },
+        "alpha": 0.0125,
+        "confirmedImprovement": true
+      },
+      {
+        "policy": "field-concentration",
+        "control": "hard-assault",
+        "matches": 48,
+        "wins": 21,
+        "draws": 20,
+        "losses": 7,
+        "positive": 11,
+        "negative": 0,
+        "tied": 13,
+        "pairs": 24,
+        "seeds": 24,
+        "signTestP": 0.00048828124999999995,
+        "byScenario": {
+          "field-battle": 14
+        },
+        "alpha": 0.0125,
+        "confirmedImprovement": true
+      }
+    ],
+    "standings": {
+      "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+      "table": [
+        {
+          "policy": "evolved-assault",
+          "matches": 144,
+          "wins": 62,
+          "draws": 53,
+          "losses": 29,
+          "points": 239,
+          "winRate": 0.430556,
+          "meanSurvivingArmyHP": 273.253331
+        },
+        {
+          "policy": "field-concentration",
+          "matches": 144,
+          "wins": 61,
+          "draws": 50,
+          "losses": 33,
+          "points": 233,
+          "winRate": 0.423611,
+          "meanSurvivingArmyHP": 290.061502
+        },
+        {
+          "policy": "hard-assault",
+          "matches": 144,
+          "wins": 27,
+          "draws": 69,
+          "losses": 48,
+          "points": 150,
+          "winRate": 0.1875,
+          "meanSurvivingArmyHP": 245.809275
+        },
+        {
+          "policy": "expansionist",
+          "matches": 144,
+          "wins": 19,
+          "draws": 66,
+          "losses": 59,
+          "points": 123,
+          "winRate": 0.131944,
+          "meanSurvivingArmyHP": 198.88265
+        }
+      ],
+      "uniqueLeader": "evolved-assault",
+      "byScenario": {
+        "field-battle": [
+          {
+            "policy": "expansionist",
+            "wins": 19,
+            "draws": 66,
+            "losses": 59
+          },
+          {
+            "policy": "hard-assault",
+            "wins": 27,
+            "draws": 69,
+            "losses": 48
+          },
+          {
+            "policy": "evolved-assault",
+            "wins": 62,
+            "draws": 53,
+            "losses": 29
+          },
+          {
+            "policy": "field-concentration",
+            "wins": 61,
+            "draws": 50,
+            "losses": 33
+          }
+        ]
+      }
+    },
+    "recoveryAblation": {
+      "wins": 17,
+      "draws": 12,
+      "losses": 19,
+      "positive": 1,
+      "negative": 3,
+      "tied": 20,
+      "pairs": 24,
+      "seeds": 24,
+      "signTestP": 1,
+      "byScenario": {
+        "field-battle": -2
+      }
+    }
+  },
+  "fortified": {
+    "faults": 0,
+    "wallSeconds": 264.12868699999996,
+    "simulatedSeconds": 12960,
+    "fortressMatches": 36,
+    "fortressDefeats": 0,
+    "finalSiegeEngines": 0
+  },
+  "transfer": {
+    "summary": [
+      {
+        "policy": "evolved-assault",
+        "runs": 9,
+        "survivalRate": 1,
+        "meanScore": 321.35,
+        "meanKills": 17.11,
+        "meanSurvivors": 8.78,
+        "meanFormationSeconds": 46.77
+      },
+      {
+        "policy": "hard-assault",
+        "runs": 9,
+        "survivalRate": 1,
+        "meanScore": 317.35,
+        "meanKills": 16.56,
+        "meanSurvivors": 8.89,
+        "meanFormationSeconds": 47.27
+      },
+      {
+        "policy": "field-concentration",
+        "runs": 9,
+        "survivalRate": 1,
+        "meanScore": 316.47,
+        "meanKills": 16.44,
+        "meanSurvivors": 9,
+        "meanFormationSeconds": 46.93
+      },
+      {
+        "policy": "expansionist",
+        "runs": 9,
+        "survivalRate": 1,
+        "meanScore": 315.43,
+        "meanKills": 16.11,
+        "meanSurvivors": 9.33,
+        "meanFormationSeconds": 45.21
+      }
+    ],
+    "paired": {
+      "baseline": "hard-assault",
+      "intervalMethod": "Normal approximation to paired mean score differences (mean +/- 1.96 standard errors); descriptive, especially with few seeds.",
+      "comparisons": [
+        {
+          "policy": "evolved-assault",
+          "matchedPairs": 9,
+          "wins": 3,
+          "ties": 6,
+          "losses": 0,
+          "meanScoreDelta": 4,
+          "pairedScoreSD": 6.469252,
+          "approximate95PercentInterval": [
+            -0.226578,
+            8.226578
+          ],
+          "meanLeaderSurvivalDelta": 0,
+          "meanKillsDelta": 0.555556,
+          "meanSurvivorsDelta": -0.111111,
+          "scenarios": {
+            "open-battle": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            },
+            "fortified-assault": {
+              "matchedPairs": 3,
+              "wins": 3,
+              "ties": 0,
+              "losses": 0,
+              "meanScoreDelta": 12,
+              "pairedScoreSD": 4.837861,
+              "approximate95PercentInterval": [
+                6.525445,
+                17.474555
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 1.666667,
+              "meanSurvivorsDelta": -0.333333
+            },
+            "outnumbered-defense": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            }
+          }
+        },
+        {
+          "policy": "field-concentration",
+          "matchedPairs": 9,
+          "wins": 1,
+          "ties": 6,
+          "losses": 2,
+          "meanScoreDelta": -0.883333,
+          "pairedScoreSD": 3.331321,
+          "approximate95PercentInterval": [
+            -3.059796,
+            1.29313
+          ],
+          "meanLeaderSurvivalDelta": 0,
+          "meanKillsDelta": -0.111111,
+          "meanSurvivorsDelta": 0.111111,
+          "scenarios": {
+            "open-battle": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            },
+            "fortified-assault": {
+              "matchedPairs": 3,
+              "wins": 1,
+              "ties": 0,
+              "losses": 2,
+              "meanScoreDelta": -2.65,
+              "pairedScoreSD": 6.112962,
+              "approximate95PercentInterval": [
+                -9.567467,
+                4.267467
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": -0.333333,
+              "meanSurvivorsDelta": 0.333333
+            },
+            "outnumbered-defense": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            }
+          }
+        },
+        {
+          "policy": "expansionist",
+          "matchedPairs": 9,
+          "wins": 1,
+          "ties": 6,
+          "losses": 2,
+          "meanScoreDelta": -1.914444,
+          "pairedScoreSD": 5.850487,
+          "approximate95PercentInterval": [
+            -5.736763,
+            1.907874
+          ],
+          "meanLeaderSurvivalDelta": 0,
+          "meanKillsDelta": -0.444444,
+          "meanSurvivorsDelta": 0.444444,
+          "scenarios": {
+            "open-battle": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            },
+            "fortified-assault": {
+              "matchedPairs": 3,
+              "wins": 1,
+              "ties": 0,
+              "losses": 2,
+              "meanScoreDelta": -5.743333,
+              "pairedScoreSD": 10.194456,
+              "approximate95PercentInterval": [
+                -17.279446,
+                5.79278
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": -1.333333,
+              "meanSurvivorsDelta": 1.333333
+            },
+            "outnumbered-defense": {
+              "matchedPairs": 3,
+              "wins": 0,
+              "ties": 3,
+              "losses": 0,
+              "meanScoreDelta": 0,
+              "pairedScoreSD": 0,
+              "approximate95PercentInterval": [
+                0,
+                0
+              ],
+              "meanLeaderSurvivalDelta": 0,
+              "meanKillsDelta": 0,
+              "meanSurvivorsDelta": 0
+            }
+          }
+        }
+      ]
+    }
+  },
+  "worlds": [
+    {
+      "policy": "expansionist",
+      "seed": "iteration-2-world-check",
+      "initialStateHash": "721d139e9efebf7881d74f82cc16f825b65bde7c51466727bac9f1ea130fa490",
+      "simulatedSeconds": 3600,
+      "stopReason": "duration",
+      "wallSeconds": 913.725087,
+      "rivals": [
+        {
+          "id": 1,
+          "defeated": false,
+          "population": 33,
+          "cities": 2,
+          "forts": 0,
+          "siegeEngines": 0,
+          "territory": 652,
+          "kills": 1,
+          "gold": 0
+        },
+        {
+          "id": 2,
+          "defeated": false,
+          "population": 142,
+          "cities": 2,
+          "forts": 0,
+          "siegeEngines": 0,
+          "territory": 871,
+          "kills": 3808,
+          "gold": 1095.36
+        },
+        {
+          "id": 3,
+          "defeated": false,
+          "population": 119,
+          "cities": 1,
+          "forts": 0,
+          "siegeEngines": 0,
+          "territory": 353,
+          "kills": 1376,
+          "gold": 4406.15
+        }
+      ],
+      "totals": {
+        "population": 396,
+        "food": 3022.52,
+        "gold": 5501.51,
+        "incomeFood": 25104.84,
+        "incomeGold": 48135.81,
+        "culture": 4238.96,
+        "researchLevels": 41,
+        "buildingsReady": 2159,
+        "buildingsConstruction": 15,
+        "units": 705,
+        "soldiers": 65,
+        "hostileUnits": 243,
+        "territoryCells": 2322,
+        "deaths": 1795,
+        "kills": 5584,
+        "projectilesFired": 9501,
+        "villageStageSum": 14,
+        "villageStages": [
+          0,
+          1,
+          3,
+          1,
+          1
+        ],
+        "villagesActive": 6,
+        "defeatedFactions": 1,
+        "raiderCamps": 3,
+        "marauderPacks": 44,
+        "pathSearches": 491402,
+        "travelMaps": 7317,
+        "nearestMaps": 3534
+      }
+    },
+    {
+      "policy": "evolved-assault",
+      "seed": "iteration-2-world-check",
+      "initialStateHash": "721d139e9efebf7881d74f82cc16f825b65bde7c51466727bac9f1ea130fa490",
+      "simulatedSeconds": 3600,
+      "stopReason": "duration",
+      "wallSeconds": 712.258873,
+      "rivals": [
+        {
+          "id": 1,
+          "defeated": false,
+          "population": 33,
+          "cities": 2,
+          "forts": 0,
+          "siegeEngines": 0,
+          "territory": 652,
+          "kills": 1,
+          "gold": 0
+        },
+        {
+          "id": 2,
+          "defeated": false,
+          "population": 159,
+          "cities": 2,
+          "forts": 0,
+          "siegeEngines": 0,
+          "territory": 861,
+          "kills": 2662,
+          "gold": 473.63
+        },
+        {
+          "id": 3,
+          "defeated": false,
+          "population": 114,
+          "cities": 2,
+          "forts": 4,
+          "siegeEngines": 0,
+          "territory": 784,
+          "kills": 4756,
+          "gold": 420.74
+        }
+      ],
+      "totals": {
+        "population": 409,
+        "food": 1696.76,
+        "gold": 894.37,
+        "incomeFood": 15924.92,
+        "incomeGold": 44187.55,
+        "culture": 4381.04,
+        "researchLevels": 38,
+        "buildingsReady": 2053,
+        "buildingsConstruction": 17,
+        "units": 657,
+        "soldiers": 70,
+        "hostileUnits": 180,
+        "territoryCells": 2757,
+        "deaths": 2269,
+        "kills": 7818,
+        "projectilesFired": 10369,
+        "villageStageSum": 14,
+        "villageStages": [
+          0,
+          1,
+          3,
+          1,
+          1
+        ],
+        "villagesActive": 6,
+        "defeatedFactions": 1,
+        "raiderCamps": 3,
+        "marauderPacks": 45,
+        "pathSearches": 468313,
+        "travelMaps": 6751,
+        "nearestMaps": 3197
+      }
+    }
+  ],
+  "limits": [
+    "The initial 60-match hypothesis screen used an earlier engine and is not pooled with later evidence.",
+    "The final comparison is controlled field combat; the fortified check and fixed-opponent scenarios are transfer diagnostics.",
+    "Both starting sides are grouped by seed; four final candidate/control comparisons use alpha 0.0125 each.",
+    "Generated-world results cover one paired map, and must not be treated as a population-wide economic or conquest result.",
+    "The live default was not changed."
+  ]
+}

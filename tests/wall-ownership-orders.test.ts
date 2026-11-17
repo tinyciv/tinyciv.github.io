@@ -23,7 +23,8 @@ function fixture(claimed: boolean) {
             food: 0, gold: 0, production: 0, population: 0, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false })),
         time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], projectiles: [], fields: [], raiderCamps: [], marauderPacks: [],
         selected: null, selectedType: null, buildMode: null, diplomacy: null, gameOver: false, victory: false,
-        retinueStance: 'hold', seed: 'claimed-wall-orders', rngState: 1,
+        // These orders must finish even after the last rival is defeated.
+        victoryContinued: true, retinueStance: 'hold', seed: 'claimed-wall-orders', rngState: 1,
     };
     if (claimed) entityStore(state).buildings.add(building(7, 'well', 0, 11, 14));
     setRetinueStance(state, 'hold');
@@ -42,6 +43,7 @@ describe('orders after wall ownership changes', () => {
         expect(distance(warrior, post)).toBeGreaterThan(.5);
         const wallHealth = wall.hp;
         support.hp = 0;
+        state.factions[1].defeated = true;
         updateGame(state, .4, idle);
         expect(wall.faction).toBe(claimed ? 0 : -1);
         expect(warrior.forcedAttack).toBeUndefined();
@@ -60,6 +62,7 @@ describe('orders after wall ownership changes', () => {
         expect(warrior.forcedAttack?.previousRecallIssuedAt).toBe(0);
         expect(leader.forcedAttack?.previousDestination).toEqual({ x: 6.5, y: 10.5 });
         support.hp = 0;
+        state.factions[1].defeated = true;
         updateGame(state, .4, idle);
         expect(wall.faction).toBe(claimed ? 0 : -1);
         expect(leader.forcedAttack).toBeUndefined(); expect(leader.destination).toEqual({ x: 6.5, y: 10.5 });

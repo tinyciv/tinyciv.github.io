@@ -1,8 +1,10 @@
 import { recordNativeFrame } from './helpers/native-renderer';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { borderRadius, insideOwnBorders, territory, UNCLAIMED } from '../src/game/borders';
+import { borderRadius, forkTerritory, insideOwnBorders, territory, UNCLAIMED } from '../src/game/borders';
 import { updateFog } from '../src/game/fog';
+import { withSimulationReads } from '../src/game/simulation-reads';
+import { markWorldChanged } from '../src/game/world-revisions';
 import type { Building, GameState } from '../src/game/types';
 
 const building = (id: number, faction: number, x: number, y: number, kind: Building['kind'] = 'house'): Building => ({ id, faction, x, y, kind, hp: 100, maxHp: 100, capacity: 4 });
@@ -17,6 +19,44 @@ function fixture(): GameState {
 }
 
 describe('settlement borders', () => {
+    it('borrows unchanged preview claims and detaches after target sources, culture or sight change', () => {
+        const state = fixture(); state.world.revision = 0;
+        entityStore(state).buildings.add(building(9, 0, 10, 10, 'camp'));
+        const live = territory(state), owners = live.owners.slice();
+        const preview: GameState = { ...state, world: { ...state.world, tiles: [...state.world.tiles] },
+            buildings: state.buildings.filter(value => value.kind !== 'camp').map(value => ({ ...value })),
+            factions: state.factions.map(value => ({ ...value })) };
+        forkTerritory(state, preview);
+        const read = () => withSimulationReads(preview, () => territory(preview));
+        expect(read().owners).toBe(live.owners);
+        entityStore(preview).buildings.add(building(10, 0, 12, 10, 'road'));
+        markWorldChanged(preview.world, 'structure');
+        expect(read().owners).toBe(live.owners);
+        preview.world.tiles[10 * 48 + 10] = { ...preview.world.tiles[10 * 48 + 10], farm: 0 };
+        markWorldChanged(preview.world, 'appearance', [10 * 48 + 10]);
+        expect(read().owners).toBe(live.owners);
+        entityStore(preview).buildings.add(building(11, 0, 28, 18));
+        const expanded = read();
+        expect(expanded.owners).not.toBe(live.owners);
+        expect(expanded.owners[18 * 48 + 28]).toBe(0);
+        preview.factions[0].culture = 300;
+        const cultural = read(); expect(cultural.owners).not.toBe(expanded.owners);
+        preview.world.tiles[18 * 48 + 29] = { ...preview.world.tiles[18 * 48 + 29], overlay: 'forest' };
+        markWorldChanged(preview.world, 'sight', [18 * 48 + 29]);
+        expect(read().owners).not.toBe(cultural.owners);
+        expect(territory(state).owners).toEqual(owners);
+    });
+
+    it('checks an already different target before accepting borrowed territory', () => {
+        const state = fixture(), live = territory(state);
+        const target = { ...state, buildings: [building(1, 1, 30, 20, 'palace')] };
+        forkTerritory(state, target);
+        const result = withSimulationReads(target, () => territory(target));
+        expect(result.owners).not.toBe(live.owners);
+        expect(result.owners[20 * 48 + 30]).toBe(1);
+        expect(territory(state)).toBe(live);
+    });
+
     it('validates direct source edits and equivalent array replacements without retaining object aliases', () => {
         const state = fixture(); entityStore(state).buildings.replace([building(1, 0, 8, 8)]);
         const first = territory(state);

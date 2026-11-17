@@ -1,0 +1,46 @@
+{
+  "generator": "PixelLab API",
+  "approved": "User selected 1A, 2B and 3C for in-game use, 2026-11-15",
+  "grounding": "public/assets/puny-world/overworld.png",
+  "camera": "high top-down, non-isometric",
+  "review": "scratch/2026-11-15-water-animations/index.html",
+  "assets": [
+    {
+      "variant": "1A",
+      "file": "coast-1a.png",
+      "frameSize": 32,
+      "frameCount": 16,
+      "frameDurationMs": 170,
+      "layout": "horizontal",
+      "endpoint": "/animate-with-text-v2",
+      "jobId": "0d086fdc-e97e-41ba-8869-554abbde62da",
+      "seed": 26111500,
+      "sha256": "f8880882ac6ad825cb96873eead2748851d622cbbccdbf598c41da2112a3921b"
+    },
+    {
+      "variant": "2B",
+      "file": "ocean-2b.png",
+      "frameSize": 48,
+      "frameCount": 16,
+      "frameDurationMs": 170,
+      "layout": "horizontal",
+      "endpoint": "/animate-with-text-v2",
+      "jobId": "bcc81b47-31d8-4fe6-bfd2-877276ad4a2e",
+      "seed": 26111503,
+      "sha256": "9b876d71794e29ac984dcad917bedd8d3501d5c2e49fe3881213c686ee23f38b"
+    },
+    {
+      "variant": "3C",
+      "file": "river-3c.png",
+      "frameSize": 16,
+      "frameCount": 9,
+      "frameDurationMs": 170,
+      "layout": "horizontal",
+      "endpoint": "/animate-with-text-v3",
+      "jobId": "ad3a4b14-eff7-4f24-b70d-4e6f927781fd",
+      "seed": 26111536,
+      "sha256": "2a9b9a081b328c5c0935a08c3b54ae4c7376efdacd4022ff8730c519a1fb1098"
+    }
+  ],
+  "rendering": "Original generated sheets copied unchanged. Only generated water highlights are composited on the native water mask; native land, foam, depth colors and shoreline shapes are preserved. 1A uses 2x2 cells; 2B uses 3x3 cells; 3C uses one 16px cell and follows the local river direction. Waterfalls retain native art. Coast sampling uses the lower 32x16 water-only strip of 1A to exclude its generated sandy bank. Broad river surfaces subtract each source pixel's minimum color across all nine frames to remove fixed bank highlights, then sample the remaining motion at native scale on a shared world grid. Only narrow channels stretch and orient the source to local flow."
+}

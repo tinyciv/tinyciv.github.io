@@ -1,7 +1,11 @@
 import { recordNativeFrame } from './helpers/native-renderer';
+import { setSettlementAffiliation } from '../src/game/settlement-bridge';
+import { settlementStep } from '../src/game/settlement-step';
 import { entityStore } from '../src/game/entity-store';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { citySummaries, nextCityName } from '../src/game/cities';
+import { citySummaries, citySummariesForFaction, nextCityName, withCitySummarySnapshot } from '../src/game/cities';
+import * as cityQueries from '../src/game/cities';
+import * as farmTravel from '../src/game/farm-travel';
 import { CITY_FOOD_COLOR, CITY_GOLD_COLOR, CITY_RIBBON_HEIGHT, CITY_NAME_RIBBON_HEIGHT, drawCityRibbon } from '../src/game/city-ribbon';
 import { drawCityPanelBackground, loadCityPanelArt } from '../src/game/city-panel-art';
 import { createGame, diplomacyAction } from '../src/game/simulation';
@@ -37,6 +41,42 @@ function realm(): GameState {
 }
 
 describe('palace cities', () => {
+    it('matches the full ledger for one faction without querying other factions farm routes', () => {
+        const state = realm(); state.world.revision = 0;
+        state.factions.push(faction(1));
+        entityStore(state).buildings.add(building(7, 'palace', 58, { faction: 1 }),
+            building(8, 'house', 60, { faction: 1, capacity: 8, residents: 8 }), building(9, 'camp', 62, { faction: 1 }));
+        entityStore(state).units.add(warrior(102, 59, { faction: 1 }));
+        // A just-captured farm can retain its former field faction temporarily.
+        state.fields!.push({ id: 40, camp: 9, faction: 0, x: 62, y: 10, planted: true, food: 0, nextHarvest: 30 });
+        const expected = citySummaries(structuredClone(state));
+        const routes = vi.spyOn(farmTravel, 'farmCityQuery');
+        try {
+            withSimulationReads(state, () => withCitySummarySnapshot(state, () => {
+                const own = citySummariesForFaction(state, 0);
+                expect(own).toEqual(expected.filter(city => city.palace.faction === 0));
+                expect(citySummariesForFaction(state, 0)).toBe(own);
+            }));
+            expect(routes.mock.calls.map(([, owner]) => owner)).toEqual([0]);
+            expect(citySummariesForFaction(state, 1)).toEqual(expected.filter(city => city.palace.faction === 1));
+            state.buildings[2].residents = 3; state.factions[0].population = 9;
+            expect(citySummariesForFaction(state, 0)).toEqual(citySummaries(structuredClone(state)).filter(city => city.palace.faction === 0));
+        } finally { routes.mockRestore(); }
+    });
+
+    it('discards faction display summaries across a live mutation inside a shared read scope', () => {
+        const state = realm(); state.world.revision = 0;
+        withSimulationReads(state, () => withCityPlanning(state, () => {
+            const before = citySummariesForFaction(state, 0);
+            withCityPlanningMutation(state, () => {
+                state.buildings[2].residents = 3; state.factions[0].population = 9;
+                expect(citySummariesForFaction(state, 0)[0].population).toBe(3);
+            });
+            expect(citySummariesForFaction(state, 0)).not.toBe(before);
+            expect(citySummariesForFaction(state, 0)).toEqual(citySummaries(structuredClone(state)));
+        }));
+    });
+
     it('uses a varied, nonrepeating Roman city list without consuming simulation randomness', () => {
         const state = realm(); entityStore(state).buildings.replace([]);
         const rng = state.rngState, names: string[] = [];
@@ -135,6 +175,39 @@ describe('palace cities', () => {
         }));
     });
 
+    it('reconciles persisted economic storage across live turns, snapshots, ownership changes and removals', () => {
+        const state = realm(); state.world.revision = 0;
+        const read = () => withSimulationReads(state, () => citySummaries(state));
+        const fresh = () => citySummaries(structuredClone(state));
+        const original = read();
+        expect(read()[0]).toBe(original[0]);
+        expect(withSimulationReads(state, () => withCityPlanning(state, () => citySummaries(state)))[1]).toBe(original[1]);
+        const edits: (() => void)[] = [
+            () => { state.fields![0].planted = false; },
+            () => { state.units[0].kind = 'knight'; },
+            () => { state.buildings[2].capacity++; state.buildings[2].houseLevel = 3; },
+            () => { state.factions[0].purchasedRetinueSlots = 2; },
+            () => { state.fields![1].orchard = { startedAt: 0, readyAt: 5 }; },
+            () => { state.time = 5; },
+            () => { state.factions[0].villageBonuses = { food: .2, trade: 0, construction: 0, research: 0 }; },
+            () => { state.world.tiles[10 * state.world.width + 17].fertility = .9; state.world.revision!++; },
+            () => entityStore(state).buildings.add(building(30, 'guardPost', 13, { guardPost: { funded: true, nextUpkeepAt: 30 } })),
+            () => { state.buildings.find(building => building.id === 30)!.guardPost!.funded = false; },
+            () => { entityStore(state).buildings.retain(building => building.id !== 5); state.fields = state.fields!.filter(field => field.camp !== 5); },
+            () => { state.factions.push(faction(1)); state.buildings[1].faction = 1; },
+            () => { state.buildings[1].construction = { startedAt: 0, duration: 30 }; },
+            () => { delete state.buildings[1].construction; },
+            () => { state.factions[1].defeated = true; },
+            () => { state.factions.splice(1); },
+            () => { state.world = structuredClone(state.world); },
+        ];
+        for (const edit of edits) {
+            edit();
+            expect(read()).toEqual(fresh());
+            expect(withSimulationReads(state, () => withCityPlanning(state, () => citySummaries(state)))).toEqual(fresh());
+        }
+    });
+
     it('names new cities without changing RNG and persists distinct palace identities through confederation', () => {
         const w = world(); w.spawns = [{ x: 10, y: 20 }, { x: 50, y: 20 }];
         const state = createGame(w), palaces = state.buildings.filter(building => building.kind === 'palace');
@@ -146,7 +219,9 @@ describe('palace cities', () => {
         expect(nextCityName(state, 0)).toBe('Ostia'); expect(state.rngState).toBe(rng);
         const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === 0)!;
         leader.x = palaces[1].x - .5; leader.y = palaces[1].y + .5;
-        state.factions[1].affinity = 200; state.factions[1].relation = 'peace';
+        state.factions[1].relation = 'peace';
+        // Rust rolls against their cities' affiliation toward you (capped at 90%; seeded).
+        settlementStep(state); setSettlementAffiliation(state, palaces[1].id, 0, 100);
         expect(diplomacyAction(state, 1, 'confederate').ok).toBe(true);
         expect(palaces.map(palace => palace.faction)).toEqual([0, 0]);
         expect(palaces.map(palace => palace.cityName)).toEqual(original);
@@ -189,6 +264,23 @@ describe('city ribbon presentation', () => {
     beforeAll(async () => {
         vi.stubGlobal('Image', class { naturalWidth = 103; naturalHeight = 20; src = ''; async decode() {} });
         try { await loadCityPanelArt(); } finally { vi.unstubAllGlobals(); }
+    });
+    it('does no economic query for foreign-only or concealed city ribbons', () => {
+        const state = realm(); state.factions.push(faction(1));
+        state.buildings[1].faction = 1;
+        const fog = visibleFog(state); fog.visible.fill(0);
+        fog.visible[10 * fog.width + 40] = 1;
+        const summaries = vi.spyOn(cityQueries, 'citySummariesForFaction');
+        try {
+            expect(drawCities(state, fog).labels.map(label => label.text)).toEqual(['Carthage']);
+            expect(summaries).not.toHaveBeenCalled();
+            fog.visible.fill(0);
+            expect(drawCities(state, fog).labels).toHaveLength(0);
+            expect(summaries).not.toHaveBeenCalled();
+            fog.visible[10 * fog.width + 10] = 1;
+            drawCities(state, fog);
+            expect(summaries).toHaveBeenCalledExactlyOnceWith(state, 0);
+        } finally { summaries.mockRestore(); }
     });
     it.each(['war', 'peace'] as const)('shows another faction city name without population, housing or income during %s', relation => {
         const state = realm(), other = faction(1); other.relation = relation; state.factions.push(other);

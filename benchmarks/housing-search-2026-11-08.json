@@ -1,0 +1,1344 @@
+{
+  "method": "Exact governor house-site queries, alternating frozen/current engines, with warm terrain, city travel and territory caches. Includes enclosure priority, city boundaries, farm relocation and unreachable-site rejection. Reports selection CPU and allowed-predicate calls, not live FPS.",
+  "cpu": "Apple M3 Pro",
+  "snapshot": "/tmp/btv-smooth-2026-11-08/state.json",
+  "rounds": 3,
+  "bundles": {
+    "beforeSha256": "1c80f509671400031301c980f77cee901860f5f359561a068d82cb12a44dc615",
+    "afterSha256": "37432a60229d21363955b1f12aeedcd3e19024485cc9b06025212992a4017887"
+  },
+  "timings": {
+    "before": {
+      "ms": {
+        "samples": 72,
+        "median": 11.912291000000096,
+        "p95": 27.823084000000108,
+        "mean": 13.659413194444433
+      },
+      "candidates": {
+        "samples": 72,
+        "median": 44206,
+        "p95": 44301,
+        "mean": 44221.5
+      }
+    },
+    "after": {
+      "ms": {
+        "samples": 72,
+        "median": 0.7454160000002048,
+        "p95": 16.38933300000008,
+        "mean": 2.2726643611111337
+      },
+      "candidates": {
+        "samples": 72,
+        "median": 12,
+        "p95": 38,
+        "mean": 10.166666666666666
+      }
+    }
+  },
+  "parity": [
+    {
+      "key": "0:1:false",
+      "equal": true
+    },
+    {
+      "key": "0:78:false",
+      "equal": true
+    },
+    {
+      "key": "0:146:false",
+      "equal": true
+    },
+    {
+      "key": "0:219:false",
+      "equal": true
+    },
+    {
+      "key": "0:288:false",
+      "equal": true
+    },
+    {
+      "key": "0:362:false",
+      "equal": true
+    },
+    {
+      "key": "0:431:false",
+      "equal": true
+    },
+    {
+      "key": "0:504:false",
+      "equal": true
+    },
+    {
+      "key": "0:573:false",
+      "equal": true
+    },
+    {
+      "key": "0:647:false",
+      "equal": true
+    },
+    {
+      "key": "0:716:false",
+      "equal": true
+    },
+    {
+      "key": "0:4730:false",
+      "equal": true
+    },
+    {
+      "key": "0:1:true",
+      "equal": true
+    },
+    {
+      "key": "0:78:true",
+      "equal": true
+    },
+    {
+      "key": "0:146:true",
+      "equal": true
+    },
+    {
+      "key": "0:219:true",
+      "equal": true
+    },
+    {
+      "key": "0:288:true",
+      "equal": true
+    },
+    {
+      "key": "0:362:true",
+      "equal": true
+    },
+    {
+      "key": "0:431:true",
+      "equal": true
+    },
+    {
+      "key": "0:504:true",
+      "equal": true
+    },
+    {
+      "key": "0:573:true",
+      "equal": true
+    },
+    {
+      "key": "0:647:true",
+      "equal": true
+    },
+    {
+      "key": "0:716:true",
+      "equal": true
+    },
+    {
+      "key": "0:4730:true",
+      "equal": true
+    },
+    {
+      "key": "1:1:false",
+      "equal": true
+    },
+    {
+      "key": "1:78:false",
+      "equal": true
+    },
+    {
+      "key": "1:146:false",
+      "equal": true
+    },
+    {
+      "key": "1:219:false",
+      "equal": true
+    },
+    {
+      "key": "1:288:false",
+      "equal": true
+    },
+    {
+      "key": "1:362:false",
+      "equal": true
+    },
+    {
+      "key": "1:431:false",
+      "equal": true
+    },
+    {
+      "key": "1:504:false",
+      "equal": true
+    },
+    {
+      "key": "1:573:false",
+      "equal": true
+    },
+    {
+      "key": "1:647:false",
+      "equal": true
+    },
+    {
+      "key": "1:716:false",
+      "equal": true
+    },
+    {
+      "key": "1:4730:false",
+      "equal": true
+    },
+    {
+      "key": "1:1:true",
+      "equal": true
+    },
+    {
+      "key": "1:78:true",
+      "equal": true
+    },
+    {
+      "key": "1:146:true",
+      "equal": true
+    },
+    {
+      "key": "1:219:true",
+      "equal": true
+    },
+    {
+      "key": "1:288:true",
+      "equal": true
+    },
+    {
+      "key": "1:362:true",
+      "equal": true
+    },
+    {
+      "key": "1:431:true",
+      "equal": true
+    },
+    {
+      "key": "1:504:true",
+      "equal": true
+    },
+    {
+      "key": "1:573:true",
+      "equal": true
+    },
+    {
+      "key": "1:647:true",
+      "equal": true
+    },
+    {
+      "key": "1:716:true",
+      "equal": true
+    },
+    {
+      "key": "1:4730:true",
+      "equal": true
+    },
+    {
+      "key": "2:1:false",
+      "equal": true
+    },
+    {
+      "key": "2:78:false",
+      "equal": true
+    },
+    {
+      "key": "2:146:false",
+      "equal": true
+    },
+    {
+      "key": "2:219:false",
+      "equal": true
+    },
+    {
+      "key": "2:288:false",
+      "equal": true
+    },
+    {
+      "key": "2:362:false",
+      "equal": true
+    },
+    {
+      "key": "2:431:false",
+      "equal": true
+    },
+    {
+      "key": "2:504:false",
+      "equal": true
+    },
+    {
+      "key": "2:573:false",
+      "equal": true
+    },
+    {
+      "key": "2:647:false",
+      "equal": true
+    },
+    {
+      "key": "2:716:false",
+      "equal": true
+    },
+    {
+      "key": "2:4730:false",
+      "equal": true
+    },
+    {
+      "key": "2:1:true",
+      "equal": true
+    },
+    {
+      "key": "2:78:true",
+      "equal": true
+    },
+    {
+      "key": "2:146:true",
+      "equal": true
+    },
+    {
+      "key": "2:219:true",
+      "equal": true
+    },
+    {
+      "key": "2:288:true",
+      "equal": true
+    },
+    {
+      "key": "2:362:true",
+      "equal": true
+    },
+    {
+      "key": "2:431:true",
+      "equal": true
+    },
+    {
+      "key": "2:504:true",
+      "equal": true
+    },
+    {
+      "key": "2:573:true",
+      "equal": true
+    },
+    {
+      "key": "2:647:true",
+      "equal": true
+    },
+    {
+      "key": "2:716:true",
+      "equal": true
+    },
+    {
+      "key": "2:4730:true",
+      "equal": true
+    }
+  ],
+  "samples": {
+    "before": [
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 21.899999999999977,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 13.429750000000013,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 13.88737500000002,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 12.955417000000011,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 11.737333000000035,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 11.968332999999916,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 12.236125000000015,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 11.739000000000033,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 11.318457999999964,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 11.297374999999988,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 10.828666999999996,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 11.769583000000011,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 29.263833999999974,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 11.44358299999999,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 11.34329200000002,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 11.719290999999885,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 12.526667000000089,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 12.750291999999945,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 11.616792000000032,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 11.255791999999929,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 11.749791999999843,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 12.019625000000133,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 10.986249999999927,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 26.982250000000022,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 17.085125000000062,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 12.309999999999945,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 11.901374999999916,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 12.456416999999874,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 12.54620900000009,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 12.0603329999999,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 12.255375000000186,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 12.460791999999856,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 11.730165999999826,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 11.004957999999988,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 11.12191699999994,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 12.042417000000114,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 27.823084000000108,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 10.994333000000097,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 10.760000000000218,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 11.341457999999875,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 11.079999999999927,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 11.422624999999698,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 11.11324999999988,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 11.391125000000102,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 13.961334000000079,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 10.907541999999921,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 10.862875000000258,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 40.00841700000001,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 15.278291999999965,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 12.668083000000024,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 11.506208999999672,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 13.055207999999766,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 13.265207999999802,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 12.53816599999982,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 12.298499999999876,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 12.301665999999841,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 12.821083000000272,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 11.351458000000093,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 11.16479100000015,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 12.941208000000188,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 29.8247080000001,
+        "candidates": 44301,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 11.994166999999834,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 11.387124999999742,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 11.810042000000067,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 11.849083000000064,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 11.912291000000096,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 11.975625000000036,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 11.760166000000027,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 11.568374999999833,
+        "candidates": 44205,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 11.362541999999848,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 10.857167000000118,
+        "candidates": 44206,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 26.620584000000235,
+        "candidates": 44301,
+        "found": true
+      }
+    ],
+    "after": [
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 5.511250000000018,
+        "candidates": 38,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 1.678625000000011,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 2.390999999999849,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 1.6007500000000618,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 2.179208000000017,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 1.5732920000000377,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 1.5616249999998217,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 1.3907500000000255,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 1.6585830000001351,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 1.1649589999999534,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 0.6826670000000377,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 1.1268749999999272,
+        "candidates": 40,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 18.16883299999995,
+        "candidates": 19,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 0.8672920000001341,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 0.6955000000000382,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 0.8730000000000473,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 0.7038749999999254,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 1.079040999999961,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 0.7852500000001328,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 0.7917919999999867,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 0.7288750000000164,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 0.9726670000000013,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 0.7074999999999818,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 17.57566699999984,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 1.3970830000002934,
+        "candidates": 38,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 1.011540999999852,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 0.8347089999997479,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 0.8655830000002425,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 0.6859169999997903,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 0.7284999999997126,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 0.6196669999999358,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 0.71225000000004,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 0.6482500000001892,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 0.7454160000002048,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 0.6200840000001335,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 1.1321670000002086,
+        "candidates": 40,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 16.39191699999992,
+        "candidates": 19,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 0.9304999999999382,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 0.7050830000002861,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 0.7132500000002437,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 0.6169159999999465,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 0.6641249999997854,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 0.5805000000000291,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 0.6307919999999285,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 0.591291000000183,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 0.6371659999999792,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 0.5898749999996653,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 15.18445900000006,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": false,
+        "ms": 1.4909999999999854,
+        "candidates": 38,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": false,
+        "ms": 0.8701670000000377,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": false,
+        "ms": 0.7217909999999392,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": false,
+        "ms": 0.7248340000005555,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": false,
+        "ms": 0.72137500000008,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": false,
+        "ms": 0.8481670000001031,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": false,
+        "ms": 0.6191670000007434,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": false,
+        "ms": 0.6696250000004511,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": false,
+        "ms": 0.5828750000000582,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": false,
+        "ms": 0.9553340000002208,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": false,
+        "ms": 0.6842499999993379,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": false,
+        "ms": 1.1648329999998168,
+        "candidates": 40,
+        "found": true
+      },
+      {
+        "palace": 1,
+        "replaceFarms": true,
+        "ms": 16.38933300000008,
+        "candidates": 19,
+        "found": true
+      },
+      {
+        "palace": 78,
+        "replaceFarms": true,
+        "ms": 0.820292000000336,
+        "candidates": 11,
+        "found": true
+      },
+      {
+        "palace": 146,
+        "replaceFarms": true,
+        "ms": 0.6552910000000338,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 219,
+        "replaceFarms": true,
+        "ms": 0.6211659999999029,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 288,
+        "replaceFarms": true,
+        "ms": 0.5808749999996508,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 362,
+        "replaceFarms": true,
+        "ms": 0.6107910000000629,
+        "candidates": 14,
+        "found": true
+      },
+      {
+        "palace": 431,
+        "replaceFarms": true,
+        "ms": 0.639166999999361,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 504,
+        "replaceFarms": true,
+        "ms": 0.6181249999999636,
+        "candidates": 12,
+        "found": true
+      },
+      {
+        "palace": 573,
+        "replaceFarms": true,
+        "ms": 0.5935420000005251,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 647,
+        "replaceFarms": true,
+        "ms": 0.6851249999999709,
+        "candidates": 13,
+        "found": true
+      },
+      {
+        "palace": 716,
+        "replaceFarms": true,
+        "ms": 0.7067919999999503,
+        "candidates": 1,
+        "found": true
+      },
+      {
+        "palace": 4730,
+        "replaceFarms": true,
+        "ms": 15.952000000000226,
+        "candidates": 13,
+        "found": true
+      }
+    ]
+  }
+}

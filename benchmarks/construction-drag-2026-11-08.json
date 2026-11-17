@@ -1,0 +1,129 @@
+{
+  "method": "Recorded browser drag coordinates on the captured384x308 world, alternating frozen/current engines with native navigation. Simulates routine deferred paving, cosmetic changes and changing treasury on every pointer move. Compares every quote and final committed farms/fields/roads/gold.",
+  "before": "/tmp/btv-smooth-2026-11-08/final-smooth",
+  "snapshot": "/tmp/btv-smooth-2026-11-08/state.json",
+  "dragFile": "/tmp/btv-smooth-2026-11-08/completed-drag.json",
+  "rounds": 2,
+  "timings": {
+    "before": {
+      "changingEndpoints": {
+        "samples": 24,
+        "median": 135.371666,
+        "p95": 167.1005,
+        "mean": 108.0307135833334
+      },
+      "repeatEndpoints": {
+        "samples": 24,
+        "median": 132.43562499999985,
+        "p95": 166.3594579999999,
+        "mean": 102.30824825000002
+      },
+      "commit": {
+        "samples": 2,
+        "median": 220.53354100000024,
+        "p95": 220.53354100000024,
+        "mean": 206.1148955000001
+      }
+    },
+    "after": {
+      "changingEndpoints": {
+        "samples": 24,
+        "median": 29.411041999999725,
+        "p95": 35.63033399999949,
+        "mean": 25.780187583333298
+      },
+      "repeatEndpoints": {
+        "samples": 24,
+        "median": 1.4634169999999358,
+        "p95": 1.554457999999613,
+        "mean": 1.4975937083332838
+      },
+      "commit": {
+        "samples": 2,
+        "median": 175.80462499999976,
+        "p95": 175.80462499999976,
+        "mean": 172.54054199999973
+      }
+    }
+  },
+  "kernels": [
+    {
+      "name": "before",
+      "round": 0,
+      "instances": 23,
+      "travelMaps": 32,
+      "nearestMaps": 24
+    },
+    {
+      "name": "after",
+      "round": 0,
+      "instances": 5,
+      "travelMaps": 0,
+      "nearestMaps": 6
+    },
+    {
+      "name": "after",
+      "round": 1,
+      "instances": 5,
+      "travelMaps": 0,
+      "nearestMaps": 6
+    },
+    {
+      "name": "before",
+      "round": 1,
+      "instances": 23,
+      "travelMaps": 32,
+      "nearestMaps": 24
+    }
+  ],
+  "parity": [
+    {
+      "round": 0,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "equal": true
+    }
+  ],
+  "scope": "Exact planner after persistent drafts, local road context, lazy crop-candidate ordering and placement occupancy indexes; before UI-only optimistic road display helpers. Only the player travel fields were warmed; Node commit includes cold nonplayer collector fields and is not comparable to browser release latency.",
+  "subsequentRuntimeBehavior": {
+    "display": "Local road gestures use crop-free geometry and affordability checks. Farm replacement feasibility is checked when each cell is purchased, so an optimistic preview can leave unavailable cells unbuilt. Other construction previews retain the ordinary planner.",
+    "purchase": "The single-player UI resolves the original gesture endpoints against the current local context and treasury, then attempts at most one new road cell per eligible animation frame. Existing roads and fords are free. Every live purchase rechecks placement and payment, and all gesture cells remain reserved against crop relocation.",
+    "cleanup": "After queued road cells, separate animation frames synchronize farms, staff collectors, staff builders/archery, and refresh one affected faction yield record. This also completes while paused without advancing simulation time.",
+    "safety": "State/world/faction/leader loss cancels unpurchased cells; accepted cells and queued cleanup remain. Invalid or unaffordable cells never spend money or relocate a crop. Public buildStroke and multiplayer commands remain immediate.",
+    "noOp": "All-existing linear plans skip draft construction. All-existing friendly road display plans also skip territory/context and crop-free view preparation.",
+    "measurement": "The Node timings above measure the exact public planner before these UI-only changes; use the browser replay for current gesture latency."
+  },
+  "targetedValidation": {
+    "latestRun": {
+      "passed": 38,
+      "files": [
+        "construction-display.test.ts (6)",
+        "construction-preview-cache.test.ts (16)",
+        "construction-route.test.ts (9)",
+        "road-purchase.test.ts (7)"
+      ]
+    },
+    "additionalRelevantRun": {
+      "passed": 40,
+      "files": [
+        "road-purchase.test.ts (7)",
+        "construction-display.test.ts (5 before no-op regression)",
+        "construction-preview-cache.test.ts (16)",
+        "construction-batch.test.ts (3)",
+        "work-cadence.test.ts (9)"
+      ],
+      "note": "Overlaps the latest run; do not add these totals."
+    },
+    "coverage": [
+      "Reversed stroke matches immediate purchase gold/building/field layout",
+      "Paused warmed-clock cleanup completes in four distinct phases",
+      "Whole-stroke reservation prevents crop relocation into later cells",
+      "Impossible relocation cannot seed a disconnected road remainder",
+      "Changing treasury, leader loss, and world/state replacement are rechecked",
+      "No-op road ghosts perform no quote-context or draft work"
+    ],
+    "independentReview": "Simulation agent reviewed per-cell validation, payment, reservations, connected growth, cancellation, paused cleanup, and deferred elapsed-credit handling; no outstanding findings."
+  }
+}

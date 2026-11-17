@@ -1,0 +1,212 @@
+/* The reference's charcoal faces and fine brass frames. Imagegen artwork is
+   nine-sliced so labels, shortcuts, and hit targets remain live DOM controls. */
+:root {
+  --command-button-art: url('/assets/runtime/ui/reference-buttons/primary.png');
+  --compact-button-art: url('/assets/runtime/ui/reference-buttons/compact.png');
+  --button-ink: #e7d7af;
+  --button-key: #bc8e3d;
+  --command-width: 336px;
+}
+
+.game-area :is(.building-activity, .leader-skills, .build-actions) button,
+.dialog button,
+.game-area :is(.action-slot, .minimap-control, .leader-xp-points, .mobile-center, .mobile-turns button, .offensive-placement button),
+.game-area .leader-level-badge {
+  border: 3px solid transparent;
+  border-image: var(--compact-button-art) 4 fill / 3px / 0 stretch;
+  border-radius: 0;
+  background: #172122;
+  background-clip: padding-box;
+  box-shadow: 0 2px 3px #0008;
+  color: var(--button-ink);
+  font-family: var(--game-font);
+  text-shadow: 0 1px #080e0f;
+  image-rendering: auto;
+}
+
+.game-area :is(.building-activity, .leader-skills, .build-actions) button:hover:not(:disabled),
+.dialog button:hover:not(:disabled),
+.game-area :is(.action-slot, .minimap-control, .leader-xp-points, .mobile-center, .mobile-turns button, .offensive-placement button):hover:not(:disabled) {
+  filter: brightness(1.18);
+}
+
+.game-area :is(.building-activity, .leader-skills, .build-actions) button:active:not(:disabled),
+.dialog button:active:not(:disabled),
+.game-area :is(.action-slot, .minimap-control, .leader-xp-points, .mobile-center, .mobile-turns button, .offensive-placement button):active:not(:disabled) {
+  filter: brightness(.82);
+}
+
+.game-area :is(.building-activity, .leader-skills, .build-actions) button:focus-visible,
+.dialog button:focus-visible,
+.game-area :is(.action-slot, .minimap-control, .leader-xp-points, .mobile-center, .mobile-turns button, .offensive-placement button):focus-visible {
+  outline: 2px solid #efd091;
+  outline-offset: -4px;
+}
+
+/* Four text-only commands, with the flyout aligned over their right edge. */
+.game-area .special-actions {
+  right: 10px;
+  bottom: 22px;
+  width: var(--command-width);
+  height: 60px;
+  padding: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  gap: 4px;
+  background: none;
+}
+
+.game-area .special-actions button {
+  min-height: 0;
+  padding: 4px 3px;
+  justify-content: center;
+  border: 5px solid transparent;
+  border-image: var(--command-button-art) 9 fill / 5px / 0 stretch;
+  border-radius: 0;
+  background: #172122;
+  background-clip: padding-box;
+  box-shadow: 0 3px 4px #0009;
+  color: var(--button-ink);
+  font-family: var(--game-font);
+  text-shadow: 0 1px #080e0f;
+  image-rendering: auto;
+}
+
+.game-area .special-actions .action-label {
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.game-area .special-actions button.active {
+  filter: brightness(1.15);
+  box-shadow: inset 0 0 12px #b18a3933, 0 3px 4px #0009;
+}
+.game-area .build-actions button.active {
+  filter: brightness(1.3);
+  box-shadow: inset 0 0 12px #b18a3933, 0 0 0 1px #d0a352;
+  outline: 0;
+}
+
+.game-area .special-actions button:active:not(:disabled) { filter: brightness(.82); }
+.game-area .special-actions button:focus-visible { outline: 2px solid #efd091; outline-offset: -5px; }
+
+.game-area .build-panel,
+.game-area .build-panel.is-building-menu {
+  right: 16px;
+  bottom: 104px;
+  width: min(300px, calc(100vw / var(--hud-scale) - 24px));
+  max-height: calc((100dvh - 64px) / var(--hud-scale) - 104px);
+  padding: 28px 9px 10px;
+  border: 4px solid transparent;
+  border-image: var(--command-button-art) 9 fill / 4px / 0 stretch;
+  background: #131e20;
+  background-clip: padding-box;
+  box-shadow: 3px 5px 5px #0009;
+  image-rendering: auto;
+}
+
+.game-area .build-actions { gap: 3px 4px; }
+.game-area .build-actions button {
+  min-height: 36px;
+  padding: 1px 5px;
+  border-width: 3px;
+  border-image-width: 3px;
+}
+.game-area .build-actions .action-label {
+  max-width: 100%;
+  font-size: 16px;
+  line-height: 14px;
+  overflow-wrap: normal;
+}
+.game-area .build-actions kbd {
+  top: 2px;
+  right: 4px;
+  color: var(--button-key);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Close remains a live Pixel Operator glyph, with the same quiet frame. */
+.game-area #close-build,
+.game-area .building-activity .activity-close,
+.dialog .close-dialog,
+.game-area .leader-skills [data-leader-close] {
+  border: 2px solid transparent;
+  border-image: var(--compact-button-art) 4 fill / 2px / 0 stretch;
+  background: #172122;
+  background-clip: padding-box;
+  color: #d7b56b;
+  font: 22px/1 var(--game-font);
+  box-shadow: none;
+  image-rendering: auto;
+}
+.game-area #close-build {
+  display: grid;
+  place-items: center;
+  right: 5px;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+}
+.dialog .close-dialog .icon { display: inline-flex; }
+.game-area .leader-xp-points.has-points {
+  color: #fff0c3;
+  filter: brightness(1.4);
+  box-shadow: inset 0 0 10px #be913b55, 0 0 6px #d3a64e80;
+}
+
+/* Reserve a full command row next to the existing hotbar and leader rail. */
+@media (min-width: 761px) and (pointer: fine) {
+  .game-area .hotbar { right: calc(var(--command-width) + 86px); }
+  .game-area .leader-xp { right: calc(var(--command-width) + 96px); }
+}
+@media (min-width: 761px) and (max-width: 900px) and (pointer: fine) {
+  .game-area .hotbar { right: 10px; }
+  .game-area .special-actions { bottom: 114px; }
+  .game-area .build-panel,
+  .game-area .build-panel.is-building-menu { bottom: 196px; max-height: calc((100dvh - 64px) / var(--hud-scale) - 196px); }
+}
+@media (max-width: 760px) and (pointer: fine) {
+  .game-area .hotbar { bottom: 214px; }
+  .game-area .leader-xp { bottom: 312px; }
+  .game-area .build-panel,
+  .game-area .build-panel.is-building-menu { bottom: 360px; max-height: calc((100dvh - 52px) / var(--hud-scale) - 360px); }
+}
+
+/* Keep touch targets at least 44px while retaining the same four-column row. */
+@media (pointer: coarse) {
+  .game-area .special-actions {
+    transform: none;
+    right: max(6px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+    width: min(336px, calc(100vw - 12px));
+    height: 52px;
+  }
+  .game-area .special-actions button { min-height: 44px; }
+  .game-area .special-actions .action-label { font-size: 17px; }
+  .game-area .hotbar {
+    right: 8px;
+    bottom: max(68px, calc(62px + env(safe-area-inset-bottom)));
+    width: calc((100% - 256px) / .7);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .game-area .leader-xp { left: 248px; right: 8px; bottom: 122px; }
+  .game-area .build-panel,
+  .game-area .build-panel.is-building-menu {
+    transform: none;
+    right: max(6px, env(safe-area-inset-right));
+    bottom: max(158px, calc(152px + env(safe-area-inset-bottom)));
+    width: min(336px, calc(100vw - 12px));
+    max-height: calc(100dvh - 216px);
+    padding: 46px 8px 10px;
+  }
+  .game-area .build-actions button { min-height: 44px; padding: 4px 14px 4px 4px; }
+  .game-area #close-build { min-width: 44px; min-height: 44px; right: 2px; top: 0; }
+}
+@media (pointer: coarse) and (orientation: portrait) {
+  .game-area .hotbar { right: 8px; width: calc((100% - 16px) / .7); bottom: 206px; }
+  .game-area .leader-xp { left: 16px; right: 8px; bottom: 258px; }
+  .game-area .build-panel,
+  .game-area .build-panel.is-building-menu { bottom: 296px; max-height: calc(100dvh - 354px); }
+}

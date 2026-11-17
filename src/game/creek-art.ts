@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { tileAt, WATER, type World } from './types';
 import type { PunyPixels } from './puny-world';
 
@@ -11,7 +12,7 @@ let loading: Promise<void> | undefined;
 export function loadCreekArt(): Promise<void> {
     return loading ??= Promise.all([['ditch', 256], ['inlet', 64]].map(async ([name, width]) => {
         const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}assets/irrigation/${name}.png`;
+        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/irrigation/${name}.png`);
         await image.decode();
         if (image.naturalWidth !== width || image.naturalHeight !== 64) throw new Error(`Invalid creek ${name} sheet.`);
         const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;

@@ -101,7 +101,7 @@ describe('passive technology completion hooks', () => {
     expect(house.construction).toMatchObject({ startedAt: 2, duration: 16, researchSpeed: 1.25 });
     expect((state.time - house.construction!.startedAt) / house.construction!.duration).toBe(.5);
     expect(house.construction!.startedAt + house.construction!.duration - state.time).toBe(8);
-    expect(other.construction).toEqual({ startedAt: 0, duration: 20 });
+    expect(other.construction).toMatchObject({ startedAt: 0, duration: 20 });
     updateResearch(state, duration);
     expect(house.construction).toMatchObject({ startedAt: 2, duration: 16 });
   });

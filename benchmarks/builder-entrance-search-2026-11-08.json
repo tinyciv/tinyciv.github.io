@@ -1,0 +1,5119 @@
+{
+  "method": "Alternating exact weighted entrance/working-side queries on live pending sites, warm navigation, native backend. All origin/target pairs retain original lower-bound pruning. Multi-source search preserves minimum route cost; equal-cost endpoint/path ties may differ deterministically.",
+  "snapshot": "/tmp/btv-pop800-2026-11-08/state.json",
+  "rounds": 3,
+  "comparisons": 282,
+  "parity": true,
+  "timings": {
+    "pairs": {
+      "ms": {
+        "count": 282,
+        "mean": 4.604579925531921,
+        "median": 1.368832999999995,
+        "p95": 16.42537500000003,
+        "max": 33.06370800000013
+      },
+      "searches": {
+        "count": 282,
+        "mean": 23.925531914893618,
+        "median": 28,
+        "p95": 32,
+        "max": 32
+      }
+    },
+    "shared": {
+      "ms": {
+        "count": 282,
+        "mean": 0.15335223758865255,
+        "median": 0.05004200000007586,
+        "p95": 0.5629160000000866,
+        "max": 0.9608330000000933
+      },
+      "searches": {
+        "count": 282,
+        "mean": 1,
+        "median": 1,
+        "p95": 1,
+        "max": 1
+      }
+    }
+  },
+  "rows": [
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 2.004415999999992,
+      "searches": 16,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.05829199999999446,
+      "searches": 1,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.3426670000000058,
+      "searches": 24,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.049083999999993466,
+      "searches": 1,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 2.140209000000027,
+      "searches": 32,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05895799999996143,
+      "searches": 1,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.648666999999989,
+      "searches": 24,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.06429100000002563,
+      "searches": 1,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.5756660000000124,
+      "searches": 32,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.07487499999996317,
+      "searches": 1,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 2.498542000000043,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.0877500000000282,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 2.4325829999999655,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 1,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.07745799999997871,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.3077920000000063,
+      "searches": 12,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.01362499999999045,
+      "searches": 1,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.03341699999998582,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.006957999999997355,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.011541999999963082,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.006624999999985448,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.5904999999999632,
+      "searches": 28,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.016208000000005995,
+      "searches": 1,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.2970839999999839,
+      "searches": 14,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.015041999999994005,
+      "searches": 1,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.3446660000000179,
+      "searches": 14,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.01858399999997573,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.31570799999997234,
+      "searches": 14,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.01495900000003303,
+      "searches": 1,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.6010420000000067,
+      "searches": 28,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.017042000000003554,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.32091700000000856,
+      "searches": 14,
+      "cost": 16.190355937288494
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.016833000000019638,
+      "searches": 1,
+      "cost": 16.19035593728849
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.5806249999999977,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.015750000000025466,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.6065419999999904,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 0,
+      "city": 68,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.01587499999999409,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.010290999999995165,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.004541000000017448,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.2674170000000231,
+      "searches": 18,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.012042000000008102,
+      "searches": 1,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.31741699999997763,
+      "searches": 16,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.014875000000017735,
+      "searches": 1,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.939625000000035,
+      "searches": 16,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.0504579999999919,
+      "searches": 1,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.4252920000000131,
+      "searches": 8,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.04308399999996482,
+      "searches": 1,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.5016250000000468,
+      "searches": 8,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.05479099999996606,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.008583999999984826,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.004250000000013188,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.8488330000000133,
+      "searches": 16,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.04591699999997445,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.5269579999999792,
+      "searches": 8,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.07949999999999591,
+      "searches": 1,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.9333330000000046,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.053999999999973625,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.947291000000007,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 0,
+      "city": 137,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.05500000000000682,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8960,
+      "method": "pairs",
+      "ms": 19.78716700000001,
+      "searches": 32,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8960,
+      "method": "shared",
+      "ms": 0.6230840000000057,
+      "searches": 1,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8966,
+      "method": "pairs",
+      "ms": 13.555917000000022,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8966,
+      "method": "shared",
+      "ms": 0.40108299999997143,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8970,
+      "method": "pairs",
+      "ms": 14.058582999999999,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8970,
+      "method": "shared",
+      "ms": 0.41862500000002,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8978,
+      "method": "pairs",
+      "ms": 12.521249999999952,
+      "searches": 32,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 8978,
+      "method": "shared",
+      "ms": 0.4107500000000073,
+      "searches": 1,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9029,
+      "method": "pairs",
+      "ms": 16.42537500000003,
+      "searches": 32,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9029,
+      "method": "shared",
+      "ms": 0.49612500000000637,
+      "searches": 1,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9596,
+      "method": "pairs",
+      "ms": 12.862083999999982,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9596,
+      "method": "shared",
+      "ms": 0.398666999999989,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9645,
+      "method": "pairs",
+      "ms": 12.571500000000071,
+      "searches": 32,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9645,
+      "method": "shared",
+      "ms": 0.369083000000046,
+      "searches": 1,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9656,
+      "method": "pairs",
+      "ms": 13.836540999999897,
+      "searches": 32,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9656,
+      "method": "shared",
+      "ms": 0.45954199999994216,
+      "searches": 1,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9681,
+      "method": "pairs",
+      "ms": 18.815000000000055,
+      "searches": 32,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9681,
+      "method": "shared",
+      "ms": 0.5686249999999973,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9683,
+      "method": "pairs",
+      "ms": 18.709790999999996,
+      "searches": 32,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9683,
+      "method": "shared",
+      "ms": 0.5767090000000508,
+      "searches": 1,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9684,
+      "method": "pairs",
+      "ms": 14.047124999999937,
+      "searches": 24,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9684,
+      "method": "shared",
+      "ms": 0.5647500000000036,
+      "searches": 1,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9685,
+      "method": "pairs",
+      "ms": 19.039750000000026,
+      "searches": 32,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9685,
+      "method": "shared",
+      "ms": 0.5909169999999904,
+      "searches": 1,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9723,
+      "method": "pairs",
+      "ms": 13.895833000000039,
+      "searches": 24,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9723,
+      "method": "shared",
+      "ms": 0.6120829999999842,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9758,
+      "method": "pairs",
+      "ms": 14.229542000000038,
+      "searches": 32,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9758,
+      "method": "shared",
+      "ms": 0.44466700000009496,
+      "searches": 1,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9954,
+      "method": "pairs",
+      "ms": 0.03387499999996635,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 9954,
+      "method": "shared",
+      "ms": 0.006750000000010914,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10073,
+      "method": "pairs",
+      "ms": 13.938833000000045,
+      "searches": 32,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10073,
+      "method": "shared",
+      "ms": 0.4735000000000582,
+      "searches": 1,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10132,
+      "method": "pairs",
+      "ms": 13.27212499999996,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10132,
+      "method": "shared",
+      "ms": 0.3996670000000222,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10163,
+      "method": "pairs",
+      "ms": 14.992208000000005,
+      "searches": 32,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10163,
+      "method": "shared",
+      "ms": 0.44870800000001054,
+      "searches": 1,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10170,
+      "method": "pairs",
+      "ms": 12.725834000000077,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10170,
+      "method": "shared",
+      "ms": 0.37816700000007586,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10175,
+      "method": "pairs",
+      "ms": 13.136916999999926,
+      "searches": 32,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10175,
+      "method": "shared",
+      "ms": 0.42412500000000364,
+      "searches": 1,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10176,
+      "method": "pairs",
+      "ms": 14.459499999999935,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10176,
+      "method": "shared",
+      "ms": 0.46241699999995944,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10177,
+      "method": "pairs",
+      "ms": 14.469875000000002,
+      "searches": 32,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10177,
+      "method": "shared",
+      "ms": 0.44091600000001563,
+      "searches": 1,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10179,
+      "method": "pairs",
+      "ms": 10.820249999999987,
+      "searches": 24,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10179,
+      "method": "shared",
+      "ms": 0.43020799999999326,
+      "searches": 1,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10180,
+      "method": "pairs",
+      "ms": 11.928334000000063,
+      "searches": 24,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10180,
+      "method": "shared",
+      "ms": 0.49766700000009223,
+      "searches": 1,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10181,
+      "method": "pairs",
+      "ms": 13.093124999999986,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10181,
+      "method": "shared",
+      "ms": 0.4202910000000202,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10227,
+      "method": "pairs",
+      "ms": 14.403125000000045,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10227,
+      "method": "shared",
+      "ms": 0.4387500000000273,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10823,
+      "method": "pairs",
+      "ms": 0.05499999999994998,
+      "searches": 6,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 10823,
+      "method": "shared",
+      "ms": 0.00745900000003985,
+      "searches": 1,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 11712,
+      "method": "pairs",
+      "ms": 0.023708999999939806,
+      "searches": 3,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 11712,
+      "method": "shared",
+      "ms": 0.005625000000009095,
+      "searches": 1,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 18724,
+      "method": "pairs",
+      "ms": 0.07375000000001819,
+      "searches": 8,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 18724,
+      "method": "shared",
+      "ms": 0.007500000000050022,
+      "searches": 1,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 20235,
+      "method": "pairs",
+      "ms": 0.04866600000002563,
+      "searches": 6,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 0,
+      "city": 704,
+      "site": 20235,
+      "method": "shared",
+      "ms": 0.006625000000099135,
+      "searches": 1,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 1.0038339999999835,
+      "searches": 16,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.06349999999997635,
+      "searches": 1,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.948833000000036,
+      "searches": 24,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.07662500000003547,
+      "searches": 1,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 3.2791670000000295,
+      "searches": 32,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.0957499999999527,
+      "searches": 1,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 2.600332999999978,
+      "searches": 24,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.10654199999999037,
+      "searches": 1,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.063833000000045,
+      "searches": 32,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.06354099999998652,
+      "searches": 1,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 2.2539170000000013,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.0883329999999205,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 2.1576250000000528,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 6126,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.07583299999998871,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.6490000000000009,
+      "searches": 16,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.04537500000003547,
+      "searches": 1,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.02699999999993,
+      "searches": 24,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.04141700000002402,
+      "searches": 1,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.843040999999971,
+      "searches": 32,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05341699999996763,
+      "searches": 1,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.6002909999999702,
+      "searches": 24,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.06304199999999582,
+      "searches": 1,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.4728750000000446,
+      "searches": 32,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.03987500000005184,
+      "searches": 1,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.5799999999999272,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.05999999999994543,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.5560409999999365,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 9994,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.04841699999997218,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.7870410000000447,
+      "searches": 16,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.04899999999997817,
+      "searches": 1,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.044832999999926,
+      "searches": 24,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.03970800000001873,
+      "searches": 1,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.9120420000000422,
+      "searches": 32,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.0532500000000482,
+      "searches": 1,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.5855420000000322,
+      "searches": 24,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.060207999999988715,
+      "searches": 1,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.3576659999999947,
+      "searches": 28,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.015166999999905784,
+      "searches": 1,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.46358299999997143,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.01308300000005147,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.44166599999994105,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 12419,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.012500000000045475,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.42033299999991414,
+      "searches": 16,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.024666999999908512,
+      "searches": 1,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0575830000000224,
+      "searches": 24,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.0432500000000573,
+      "searches": 1,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.368832999999995,
+      "searches": 32,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.0418329999999969,
+      "searches": 1,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.0267499999999927,
+      "searches": 24,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.042584000000033484,
+      "searches": 1,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.7018750000000864,
+      "searches": 31,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.022416999999904874,
+      "searches": 1,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.7865830000000642,
+      "searches": 32,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.02295800000001691,
+      "searches": 1,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.8147089999999935,
+      "searches": 32,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 0,
+      "city": 13312,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.024958000000083302,
+      "searches": 1,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.21733400000005076,
+      "searches": 16,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.013832999999976892,
+      "searches": 1,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 0.4015829999999596,
+      "searches": 24,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.014167000000043117,
+      "searches": 1,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 0.8019580000000133,
+      "searches": 32,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.012791999999990367,
+      "searches": 1,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 0.43508299999996325,
+      "searches": 24,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.018083000000046923,
+      "searches": 1,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.6409580000000688,
+      "searches": 32,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.04845799999998235,
+      "searches": 1,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.6141250000000582,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.050749999999993634,
+      "searches": 1,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.5497500000000173,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 0,
+      "city": 18704,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.047207999999955064,
+      "searches": 1,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.05200000000002092,
+      "searches": 1,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.726709000000028,
+      "searches": 16,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.044458000000076936,
+      "searches": 1,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.1866249999999354,
+      "searches": 24,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05533300000001873,
+      "searches": 1,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.9045830000000024,
+      "searches": 32,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.06141700000000583,
+      "searches": 1,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.5305420000000822,
+      "searches": 24,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.06879100000003291,
+      "searches": 1,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.26558399999999,
+      "searches": 32,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.0715420000000222,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 2.2300410000000284,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.06887499999993452,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 1,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 2.2267910000000484,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.018791000000078384,
+      "searches": 1,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.18716600000004746,
+      "searches": 12,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.009291999999959444,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.025958999999943444,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.005790999999931046,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.008166999999957625,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.017291000000000167,
+      "searches": 1,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.5278749999999945,
+      "searches": 28,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.014833000000066932,
+      "searches": 1,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.26545899999996436,
+      "searches": 14,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.020415999999954693,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.30037499999991724,
+      "searches": 14,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.015208000000029642,
+      "searches": 1,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.26883299999997234,
+      "searches": 14,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.01629200000002129,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.5352499999999054,
+      "searches": 28,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.01712499999996453,
+      "searches": 1,
+      "cost": 16.19035593728849
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.2894580000000815,
+      "searches": 14,
+      "cost": 16.190355937288494
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.016291000000023814,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.5685829999999896,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.015416999999956715,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 1,
+      "city": 68,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.5572089999999434,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.004958999999985281,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.00837500000000091,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.01270800000008876,
+      "searches": 1,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.2247499999999718,
+      "searches": 18,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.013832999999976892,
+      "searches": 1,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.2642920000000686,
+      "searches": 16,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.05475000000001273,
+      "searches": 1,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.8621249999999918,
+      "searches": 16,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.04454199999997854,
+      "searches": 1,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.38200000000006185,
+      "searches": 8,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.05370900000002621,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.46387500000003,
+      "searches": 8,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.004792000000065855,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.006999999999948159,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.044125000000008185,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.8130419999999958,
+      "searches": 16,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.05050000000005639,
+      "searches": 1,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.45958299999995234,
+      "searches": 8,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.04595900000003894,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.7830410000000256,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.04816600000003746,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 1,
+      "city": 137,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.8137920000000349,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8960,
+      "method": "shared",
+      "ms": 0.6053749999999809,
+      "searches": 1,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8960,
+      "method": "pairs",
+      "ms": 19.056249999999977,
+      "searches": 32,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8966,
+      "method": "shared",
+      "ms": 0.36749999999995,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8966,
+      "method": "pairs",
+      "ms": 12.83562500000005,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8970,
+      "method": "shared",
+      "ms": 0.3890839999999116,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8970,
+      "method": "pairs",
+      "ms": 12.713208000000009,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8978,
+      "method": "shared",
+      "ms": 0.3858750000000555,
+      "searches": 1,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 8978,
+      "method": "pairs",
+      "ms": 12.391375000000039,
+      "searches": 32,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9029,
+      "method": "shared",
+      "ms": 0.49949999999989814,
+      "searches": 1,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9029,
+      "method": "pairs",
+      "ms": 16.656333000000018,
+      "searches": 32,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9596,
+      "method": "shared",
+      "ms": 0.45233299999995324,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9596,
+      "method": "pairs",
+      "ms": 12.851999999999975,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9645,
+      "method": "shared",
+      "ms": 0.3795829999999114,
+      "searches": 1,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9645,
+      "method": "pairs",
+      "ms": 12.228124999999977,
+      "searches": 32,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9656,
+      "method": "shared",
+      "ms": 0.41658299999994597,
+      "searches": 1,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9656,
+      "method": "pairs",
+      "ms": 13.98483299999998,
+      "searches": 32,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9681,
+      "method": "shared",
+      "ms": 0.5780829999999924,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9681,
+      "method": "pairs",
+      "ms": 18.61470799999995,
+      "searches": 32,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9683,
+      "method": "shared",
+      "ms": 0.5407079999999951,
+      "searches": 1,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9683,
+      "method": "pairs",
+      "ms": 18.732583999999974,
+      "searches": 32,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9684,
+      "method": "shared",
+      "ms": 0.6218750000000455,
+      "searches": 1,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9684,
+      "method": "pairs",
+      "ms": 14.389250000000061,
+      "searches": 24,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9685,
+      "method": "shared",
+      "ms": 0.5629160000000866,
+      "searches": 1,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9685,
+      "method": "pairs",
+      "ms": 19.27479200000016,
+      "searches": 32,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9723,
+      "method": "shared",
+      "ms": 0.5616660000000593,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9723,
+      "method": "pairs",
+      "ms": 13.742582999999968,
+      "searches": 24,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9758,
+      "method": "shared",
+      "ms": 0.43212500000004184,
+      "searches": 1,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9758,
+      "method": "pairs",
+      "ms": 14.380374999999958,
+      "searches": 32,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9954,
+      "method": "shared",
+      "ms": 0.01904100000001563,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 9954,
+      "method": "pairs",
+      "ms": 0.02204200000005585,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10073,
+      "method": "shared",
+      "ms": 0.4415419999997994,
+      "searches": 1,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10073,
+      "method": "pairs",
+      "ms": 14.414625000000115,
+      "searches": 32,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10132,
+      "method": "shared",
+      "ms": 0.4118750000000091,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10132,
+      "method": "pairs",
+      "ms": 13.230708999999933,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10163,
+      "method": "shared",
+      "ms": 0.4880000000000564,
+      "searches": 1,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10163,
+      "method": "pairs",
+      "ms": 14.860666999999921,
+      "searches": 32,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10170,
+      "method": "shared",
+      "ms": 0.38541699999996126,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10170,
+      "method": "pairs",
+      "ms": 12.839249999999993,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10175,
+      "method": "shared",
+      "ms": 0.3854999999998654,
+      "searches": 1,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10175,
+      "method": "pairs",
+      "ms": 12.733707999999979,
+      "searches": 32,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10176,
+      "method": "shared",
+      "ms": 0.45045799999979863,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10176,
+      "method": "pairs",
+      "ms": 14.156917000000021,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10177,
+      "method": "shared",
+      "ms": 0.4239580000000842,
+      "searches": 1,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10177,
+      "method": "pairs",
+      "ms": 14.795125000000098,
+      "searches": 32,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10179,
+      "method": "shared",
+      "ms": 0.4551249999999527,
+      "searches": 1,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10179,
+      "method": "pairs",
+      "ms": 10.725834000000077,
+      "searches": 24,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10180,
+      "method": "shared",
+      "ms": 0.44970899999998437,
+      "searches": 1,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10180,
+      "method": "pairs",
+      "ms": 11.138791000000083,
+      "searches": 24,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10181,
+      "method": "shared",
+      "ms": 0.3871249999999691,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10181,
+      "method": "pairs",
+      "ms": 12.700708000000077,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10227,
+      "method": "shared",
+      "ms": 0.43545899999980975,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10227,
+      "method": "pairs",
+      "ms": 14.300833999999895,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10823,
+      "method": "shared",
+      "ms": 0.008583999999927983,
+      "searches": 1,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 10823,
+      "method": "pairs",
+      "ms": 0.049500000000080036,
+      "searches": 6,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 11712,
+      "method": "shared",
+      "ms": 0.005249999999932697,
+      "searches": 1,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 11712,
+      "method": "pairs",
+      "ms": 0.02299999999991087,
+      "searches": 3,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 18724,
+      "method": "shared",
+      "ms": 0.007832999999891399,
+      "searches": 1,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 18724,
+      "method": "pairs",
+      "ms": 0.07100000000014006,
+      "searches": 8,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 20235,
+      "method": "shared",
+      "ms": 0.006416000000172062,
+      "searches": 1,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 1,
+      "city": 704,
+      "site": 20235,
+      "method": "pairs",
+      "ms": 0.04804100000001199,
+      "searches": 6,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.07124999999996362,
+      "searches": 1,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.9553339999999935,
+      "searches": 16,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.07504199999993943,
+      "searches": 1,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.9137500000001637,
+      "searches": 24,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.09712500000000546,
+      "searches": 1,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 3.2459579999999733,
+      "searches": 32,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.10641700000019227,
+      "searches": 1,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 2.7313749999998436,
+      "searches": 24,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.08662499999991269,
+      "searches": 1,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.001792000000023,
+      "searches": 32,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.08924999999999272,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.9963330000000497,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.0652500000001055,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 6126,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.9791250000000673,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.043791999999939435,
+      "searches": 1,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.6277500000001055,
+      "searches": 16,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.04966699999999946,
+      "searches": 1,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0279160000000047,
+      "searches": 24,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05970899999988433,
+      "searches": 1,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.839666999999963,
+      "searches": 32,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.0625,
+      "searches": 1,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.6440000000000055,
+      "searches": 24,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.03933399999982612,
+      "searches": 1,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.431666999999834,
+      "searches": 32,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.04387500000007094,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.4610830000001442,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.04316700000003948,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 9994,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.6769999999999072,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.06470800000010968,
+      "searches": 1,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.7792090000000371,
+      "searches": 16,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.0420000000001437,
+      "searches": 1,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0507500000001073,
+      "searches": 24,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05670800000007148,
+      "searches": 1,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.8939589999999953,
+      "searches": 32,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.06120900000018992,
+      "searches": 1,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.5395840000001044,
+      "searches": 24,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.011375000000043656,
+      "searches": 1,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.34245800000007875,
+      "searches": 28,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.011625000000094587,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.40591700000004494,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.011416000000053828,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 12419,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.4021659999998519,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.024667000000135886,
+      "searches": 1,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.3832079999999678,
+      "searches": 16,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.04112499999996544,
+      "searches": 1,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0271660000000793,
+      "searches": 24,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.03895800000009331,
+      "searches": 1,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.3360000000000127,
+      "searches": 32,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.041958999999906155,
+      "searches": 1,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.0291670000001432,
+      "searches": 24,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.026499999999941792,
+      "searches": 1,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.7337909999998828,
+      "searches": 31,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.04716699999994489,
+      "searches": 1,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.8144589999999425,
+      "searches": 32,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.024709000000029846,
+      "searches": 1,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 1,
+      "city": 13312,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.795165999999881,
+      "searches": 32,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.014750000000049113,
+      "searches": 1,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.23550000000000182,
+      "searches": 16,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.013791000000082931,
+      "searches": 1,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 0.40945800000008603,
+      "searches": 24,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.011958000000049651,
+      "searches": 1,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 0.5049999999998818,
+      "searches": 32,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.01379199999996672,
+      "searches": 1,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 0.42316699999992125,
+      "searches": 24,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.04804100000001199,
+      "searches": 1,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.6684579999998732,
+      "searches": 32,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.04916700000012497,
+      "searches": 1,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.6127500000000055,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.046790999999984706,
+      "searches": 1,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 1,
+      "city": 18704,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.516459000000168,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.7006670000000668,
+      "searches": 16,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.0439169999999649,
+      "searches": 1,
+      "cost": 33.89949493661168
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.1479999999999109,
+      "searches": 24,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.04287500000009459,
+      "searches": 1,
+      "cost": 29.608546767557627
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.8877919999999904,
+      "searches": 32,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05337499999995998,
+      "searches": 1,
+      "cost": 33.94351550375335
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.499042000000145,
+      "searches": 24,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.059166000000004715,
+      "searches": 1,
+      "cost": 35.67962661486447
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.2769170000001395,
+      "searches": 32,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.06879200000003038,
+      "searches": 1,
+      "cost": 40.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 2.2035000000000764,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.07370900000000802,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 2.1646249999998872,
+      "searches": 32,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 1,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.07083299999999326,
+      "searches": 1,
+      "cost": 41.2634559672906
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.19120799999996052,
+      "searches": 12,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.011665999999877386,
+      "searches": 1,
+      "cost": 14.38071187457698
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.025916999999935797,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.006041999999979453,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.00829199999998309,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.006125000000110958,
+      "searches": 1,
+      "cost": 0.8333333333333333
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.5362499999998818,
+      "searches": 28,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.016290999999910127,
+      "searches": 1,
+      "cost": 15.15888646762901
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.2625829999999496,
+      "searches": 14,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.014290999999957421,
+      "searches": 1,
+      "cost": 15.502032218136627
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.2991669999998976,
+      "searches": 14,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.01637499999992542,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.2687919999998485,
+      "searches": 14,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.016958999999815205,
+      "searches": 1,
+      "cost": 14.771236166328249
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.5405000000000655,
+      "searches": 28,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.015750000000025466,
+      "searches": 1,
+      "cost": 15.190355937288492
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.2928749999998672,
+      "searches": 14,
+      "cost": 16.190355937288494
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.017041000000062922,
+      "searches": 1,
+      "cost": 16.19035593728849
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.5340830000000096,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.015750000000025466,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.6100000000001273,
+      "searches": 28,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 2,
+      "city": 68,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.024458000000095126,
+      "searches": 1,
+      "cost": 15.604569499661588
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20597,
+      "method": "pairs",
+      "ms": 0.009666999999808468,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20597,
+      "method": "shared",
+      "ms": 0.004916999999977634,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20639,
+      "method": "pairs",
+      "ms": 0.234958000000006,
+      "searches": 18,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20639,
+      "method": "shared",
+      "ms": 0.01316699999983939,
+      "searches": 1,
+      "cost": 11.771236166328253
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20714,
+      "method": "pairs",
+      "ms": 0.2724580000001424,
+      "searches": 16,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20714,
+      "method": "shared",
+      "ms": 0.015625,
+      "searches": 1,
+      "cost": 16.214045207910317
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20945,
+      "method": "pairs",
+      "ms": 0.8742500000000746,
+      "searches": 16,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20945,
+      "method": "shared",
+      "ms": 0.05545799999981682,
+      "searches": 1,
+      "cost": 29.44687347785532
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20946,
+      "method": "pairs",
+      "ms": 0.4326250000001437,
+      "searches": 8,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20946,
+      "method": "shared",
+      "ms": 0.046250000000100044,
+      "searches": 1,
+      "cost": 29.93993505113155
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20948,
+      "method": "pairs",
+      "ms": 0.4824159999998301,
+      "searches": 8,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20948,
+      "method": "shared",
+      "ms": 0.054416999999830296,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20949,
+      "method": "pairs",
+      "ms": 0.007458999999926164,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20949,
+      "method": "shared",
+      "ms": 0.004249999999956344,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20955,
+      "method": "pairs",
+      "ms": 0.8082919999999376,
+      "searches": 16,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20955,
+      "method": "shared",
+      "ms": 0.04637500000012551,
+      "searches": 1,
+      "cost": 30.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20956,
+      "method": "pairs",
+      "ms": 0.4726250000001073,
+      "searches": 8,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20956,
+      "method": "shared",
+      "ms": 0.05608400000005531,
+      "searches": 1,
+      "cost": 31.571067811865472
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20957,
+      "method": "pairs",
+      "ms": 0.8091670000001159,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20957,
+      "method": "shared",
+      "ms": 0.047207999999955064,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20958,
+      "method": "pairs",
+      "ms": 0.8418749999998454,
+      "searches": 16,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 2,
+      "city": 137,
+      "site": 20958,
+      "method": "shared",
+      "ms": 0.04912500000000364,
+      "searches": 1,
+      "cost": 30.985281374238568
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8960,
+      "method": "pairs",
+      "ms": 19.27970899999991,
+      "searches": 32,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8960,
+      "method": "shared",
+      "ms": 0.5853329999999914,
+      "searches": 1,
+      "cost": 131.69917479069653
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8966,
+      "method": "pairs",
+      "ms": 12.513583000000153,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8966,
+      "method": "shared",
+      "ms": 0.36583299999983865,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8970,
+      "method": "pairs",
+      "ms": 12.791375000000016,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8970,
+      "method": "shared",
+      "ms": 0.38362499999993815,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8978,
+      "method": "pairs",
+      "ms": 12.630375000000186,
+      "searches": 32,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 8978,
+      "method": "shared",
+      "ms": 0.4070000000001528,
+      "searches": 1,
+      "cost": 109.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9029,
+      "method": "pairs",
+      "ms": 33.06370800000013,
+      "searches": 32,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9029,
+      "method": "shared",
+      "ms": 0.9608330000000933,
+      "searches": 1,
+      "cost": 120.17898022867443
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9596,
+      "method": "pairs",
+      "ms": 15.812249999999949,
+      "searches": 32,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9596,
+      "method": "shared",
+      "ms": 0.43820899999991525,
+      "searches": 1,
+      "cost": 109.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9645,
+      "method": "pairs",
+      "ms": 13.107124999999996,
+      "searches": 32,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9645,
+      "method": "shared",
+      "ms": 0.4026249999999436,
+      "searches": 1,
+      "cost": 110.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9656,
+      "method": "pairs",
+      "ms": 15.216458000000102,
+      "searches": 32,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9656,
+      "method": "shared",
+      "ms": 0.47804199999995944,
+      "searches": 1,
+      "cost": 112.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9681,
+      "method": "pairs",
+      "ms": 19.33283399999982,
+      "searches": 32,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9681,
+      "method": "shared",
+      "ms": 0.5960410000000138,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9683,
+      "method": "pairs",
+      "ms": 18.72466700000018,
+      "searches": 32,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9683,
+      "method": "shared",
+      "ms": 0.5822500000001583,
+      "searches": 1,
+      "cost": 129.98191546495778
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9684,
+      "method": "pairs",
+      "ms": 14.10545900000011,
+      "searches": 24,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9684,
+      "method": "shared",
+      "ms": 0.5593340000000353,
+      "searches": 1,
+      "cost": 132.35728423127748
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9685,
+      "method": "pairs",
+      "ms": 18.702375000000075,
+      "searches": 32,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9685,
+      "method": "shared",
+      "ms": 0.5984160000000429,
+      "searches": 1,
+      "cost": 129.22581134316562
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9723,
+      "method": "pairs",
+      "ms": 13.951250000000073,
+      "searches": 24,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9723,
+      "method": "shared",
+      "ms": 0.5612499999999727,
+      "searches": 1,
+      "cost": 130.94307066890437
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9758,
+      "method": "pairs",
+      "ms": 14.28191599999991,
+      "searches": 32,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9758,
+      "method": "shared",
+      "ms": 0.4588340000000244,
+      "searches": 1,
+      "cost": 117.12669547884362
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9954,
+      "method": "pairs",
+      "ms": 0.03429200000005039,
+      "searches": 3,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 9954,
+      "method": "shared",
+      "ms": 0.013208999999960724,
+      "searches": 1,
+      "cost": 0.6666666666666666
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10073,
+      "method": "pairs",
+      "ms": 13.949124999999867,
+      "searches": 32,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10073,
+      "method": "shared",
+      "ms": 0.43270800000004783,
+      "searches": 1,
+      "cost": 112.04784746794041
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10132,
+      "method": "pairs",
+      "ms": 13.736083000000008,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10132,
+      "method": "shared",
+      "ms": 0.4347089999998843,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10163,
+      "method": "pairs",
+      "ms": 14.955832999999984,
+      "searches": 32,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10163,
+      "method": "shared",
+      "ms": 0.44537500000001273,
+      "searches": 1,
+      "cost": 113.54294125935326
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10170,
+      "method": "pairs",
+      "ms": 12.856624999999894,
+      "searches": 32,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10170,
+      "method": "shared",
+      "ms": 0.4256249999998545,
+      "searches": 1,
+      "cost": 110.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10175,
+      "method": "pairs",
+      "ms": 13.410041000000092,
+      "searches": 32,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10175,
+      "method": "shared",
+      "ms": 0.3962089999999989,
+      "searches": 1,
+      "cost": 111.28845593692307
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10176,
+      "method": "pairs",
+      "ms": 14.287917000000107,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10176,
+      "method": "shared",
+      "ms": 0.4314999999999145,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10177,
+      "method": "pairs",
+      "ms": 14.348709000000099,
+      "searches": 32,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10177,
+      "method": "shared",
+      "ms": 0.4577079999999114,
+      "searches": 1,
+      "cost": 112.54294125935326
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10179,
+      "method": "pairs",
+      "ms": 10.88129200000003,
+      "searches": 24,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10179,
+      "method": "shared",
+      "ms": 0.4415000000001328,
+      "searches": 1,
+      "cost": 113.8762745926866
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10180,
+      "method": "pairs",
+      "ms": 11.756125000000111,
+      "searches": 24,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10180,
+      "method": "shared",
+      "ms": 0.46908300000018244,
+      "searches": 1,
+      "cost": 113.95715482172635
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10181,
+      "method": "pairs",
+      "ms": 13.009792000000061,
+      "searches": 32,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10181,
+      "method": "shared",
+      "ms": 0.38687499999991815,
+      "searches": 1,
+      "cost": 111.63363390556732
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10227,
+      "method": "pairs",
+      "ms": 14.382917000000134,
+      "searches": 32,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10227,
+      "method": "shared",
+      "ms": 0.4316670000000613,
+      "searches": 1,
+      "cost": 113.4620610303135
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10823,
+      "method": "pairs",
+      "ms": 0.05454099999997197,
+      "searches": 6,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 10823,
+      "method": "shared",
+      "ms": 0.0072920000000067375,
+      "searches": 1,
+      "cost": 6.71895141649746
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 11712,
+      "method": "pairs",
+      "ms": 0.024042000000008557,
+      "searches": 3,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 11712,
+      "method": "shared",
+      "ms": 0.005208000000038737,
+      "searches": 1,
+      "cost": 5.885618083164127
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 18724,
+      "method": "pairs",
+      "ms": 0.0756250000001728,
+      "searches": 8,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 18724,
+      "method": "shared",
+      "ms": 0.008458000000018728,
+      "searches": 1,
+      "cost": 5.287987010226308
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 20235,
+      "method": "pairs",
+      "ms": 0.051083000000062384,
+      "searches": 6,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 2,
+      "city": 704,
+      "site": 20235,
+      "method": "shared",
+      "ms": 0.006790999999793712,
+      "searches": 1,
+      "cost": 4.454653676892975
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 1.0125419999999394,
+      "searches": 16,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.06154199999991761,
+      "searches": 1,
+      "cost": 41.68257573825084
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.9517909999999574,
+      "searches": 24,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.07520900000008623,
+      "searches": 1,
+      "cost": 37.391627569196814
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 3.224040999999943,
+      "searches": 32,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.09487500000000182,
+      "searches": 1,
+      "cost": 41.726596305392526
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 2.603874999999789,
+      "searches": 24,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.11229099999991377,
+      "searches": 1,
+      "cost": 43.46270741650364
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 2.040625000000091,
+      "searches": 32,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.05933299999992414,
+      "searches": 1,
+      "cost": 39.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 2.046875,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.07462499999996908,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 2.12887499999988,
+      "searches": 32,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 6126,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.06425000000012915,
+      "searches": 1,
+      "cost": 40.930122633957254
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.6404579999998532,
+      "searches": 16,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.042167000000063126,
+      "searches": 1,
+      "cost": 32.727922061357866
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0476249999999254,
+      "searches": 24,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.03904199999988123,
+      "searches": 1,
+      "cost": 28.436973892303815
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.8887500000000728,
+      "searches": 32,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.052042000000028565,
+      "searches": 1,
+      "cost": 32.77194262849954
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.6437080000000606,
+      "searches": 24,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.06083300000000236,
+      "searches": 1,
+      "cost": 34.50805373961065
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.4481249999998909,
+      "searches": 32,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.03879099999994651,
+      "searches": 1,
+      "cost": 30.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.4933750000000146,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.05004200000007586,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.49675000000002,
+      "searches": 32,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 9994,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.04166699999996126,
+      "searches": 1,
+      "cost": 31.506096654409884
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.7467079999998987,
+      "searches": 16,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.04524999999989632,
+      "searches": 1,
+      "cost": 32.33739776960659
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.0311659999999847,
+      "searches": 24,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.03733400000010079,
+      "searches": 1,
+      "cost": 28.43697389230381
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.9143340000000535,
+      "searches": 32,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.05008299999985866,
+      "searches": 1,
+      "cost": 32.38141833674826
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.5848329999998896,
+      "searches": 24,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.05791700000008859,
+      "searches": 1,
+      "cost": 34.117529447859376
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.3494579999999132,
+      "searches": 28,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.009624999999914507,
+      "searches": 1,
+      "cost": 9.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.41887500000007094,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.011625000000094587,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.4175829999999223,
+      "searches": 32,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 12419,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.010332999999945969,
+      "searches": 1,
+      "cost": 10.778174593052023
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.40525000000002365,
+      "searches": 16,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.024166000000150234,
+      "searches": 1,
+      "cost": 28.370899457402704
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 1.1276660000000902,
+      "searches": 24,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.05429199999980483,
+      "searches": 1,
+      "cost": 35.65101910021414
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 1.3927499999999782,
+      "searches": 32,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.04425000000014734,
+      "searches": 1,
+      "cost": 35.56213120837386
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 1.0625840000000153,
+      "searches": 24,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.04458299999987503,
+      "searches": 1,
+      "cost": 37.29824231948498
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 0.6919580000001133,
+      "searches": 31,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.021666999999979453,
+      "searches": 1,
+      "cost": 21.123352561696265
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 0.7761250000000928,
+      "searches": 32,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.027082999999947788,
+      "searches": 1,
+      "cost": 22.123352561696265
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 0.7880830000001424,
+      "searches": 32,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 2,
+      "city": 13312,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.02391699999998309,
+      "searches": 1,
+      "cost": 23.53756612406936
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20721,
+      "method": "pairs",
+      "ms": 0.21137500000008913,
+      "searches": 16,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20721,
+      "method": "shared",
+      "ms": 0.013666999999941254,
+      "searches": 1,
+      "cost": 9.737734478532142
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20722,
+      "method": "pairs",
+      "ms": 0.39779199999998127,
+      "searches": 24,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20722,
+      "method": "shared",
+      "ms": 0.01375000000007276,
+      "searches": 1,
+      "cost": 9.670643934562708
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20723,
+      "method": "pairs",
+      "ms": 0.49812500000007276,
+      "searches": 32,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20723,
+      "method": "shared",
+      "ms": 0.011916000000155691,
+      "searches": 1,
+      "cost": 9.781755045673819
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20724,
+      "method": "pairs",
+      "ms": 0.4189170000001923,
+      "searches": 24,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20724,
+      "method": "shared",
+      "ms": 0.013541000000032,
+      "searches": 1,
+      "cost": 11.51786615678493
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20940,
+      "method": "pairs",
+      "ms": 1.6438750000002074,
+      "searches": 32,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20940,
+      "method": "shared",
+      "ms": 0.04937500000005457,
+      "searches": 1,
+      "cost": 33.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20941,
+      "method": "pairs",
+      "ms": 1.6290409999999156,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20941,
+      "method": "shared",
+      "ms": 0.049291000000039276,
+      "searches": 1,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20943,
+      "method": "pairs",
+      "ms": 1.5326250000000528,
+      "searches": 32,
+      "cost": 34.48240738378806
+    },
+    {
+      "round": 2,
+      "city": 18704,
+      "site": 20943,
+      "method": "shared",
+      "ms": 0.04770800000005693,
+      "searches": 1,
+      "cost": 34.48240738378806
+    }
+  ]
+}

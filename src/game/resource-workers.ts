@@ -1,22 +1,28 @@
+import { oreWorkYield } from './ore-native';
+import { grantIncome } from './resource-income';
+import { territoryValue } from './territory-cells';
+import { unitNavigationState } from './unit-navigation';
 import { territory, UNCLAIMED } from './borders';
 import { constructionEdges } from './builders';
 import { civilianWorkforcePopulations, recordCivilianCasualties, workerHomeCity } from './civilian-population';
 import { unitPositionBlocked } from './civilian-movement';
 import { entityStore } from './entity-store';
 import { forbiddenRevision, isForbidden } from './forbidden-zones';
-import { canTraverseEdge, canWalk, findPath, withNavigationFrame } from './pathfinding';
+import { canTraverseNavigationEdge, canWalk, findPath, saltWorkNavigationState, withNavigationFrame } from './pathfinding';
+import { resourceWorkAccess } from './resource-terrain';
 import { canDispatchPeasant } from './peasant-capacity';
-import { planResourceRoad, buildResourceRoadTile, resourceRoadTileReady } from './resource-roads';
+import { planResourceRoad, createResourceRoadCursor, resourceRoadOrigins, buildResourceRoadTile, resourceRoadTileReady, type ResourceRoadJourney, type ResourceRoadCursor } from './resource-roads';
+import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { southernResourceCell } from './resource-worksite';
 import { worldRevisions, worldStructureRevision } from './world-revisions';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, distance, WATER,
-    type GameState, type Point, type ResourceWorkKind, type ResourceWorkSite, type Unit } from './types';
+    type Building, type GameState, type Point, type ResourceWorkKind, type ResourceWorkSite, type Unit } from './types';
 
 export const RESOURCE_VISIT_INTERVAL = 10;
 export const RESOURCE_WORK_SECONDS = 5;
 export const RESOURCE_ROAD_TILE_SECONDS = .55;
-const kinds = new Set(['copper', 'iron', 'stone', 'salt', 'olives']);
-const metal = (resource: ResourceWorkKind) => resource === 'copper' || resource === 'iron';
+const kinds = new Set(['copper', 'iron', 'gold', 'stone', 'salt', 'olives']);
+const metal = (resource: ResourceWorkKind) => resource === 'copper' || resource === 'iron' || resource === 'gold';
 type Move = (state: GameState, unit: Unit, goal: Point, dt: number, direct?: boolean, allowPartial?: boolean, avoidForbidden?: boolean) => void;
 interface SitesCache {
     world: GameState['world']; tiles: GameState['world']['tiles']; appearance: number; structure: number; borders: number; buildings: number; factions: string;
@@ -24,6 +30,27 @@ interface SitesCache {
 }
 const caches = new WeakMap<GameState, SitesCache>();
 const journeys = new WeakMap<ResourceWorkSite, { state: GameState; key: string; journey: ReturnType<typeof planResourceRoad> }>();
+interface PendingDispatch { site: ResourceWorkSite; road: boolean; visit: boolean; key?: string; cities: Building[]; next: number; notBefore: number }
+interface DispatchQueue { world: GameState['world']; tiles: GameState['world']['tiles']; store: ReturnType<typeof entityStore>; observedAt: number; jobs: Map<ResourceWorkSite, PendingDispatch>; active?: { job: PendingDispatch; city: Building; revision: number; cursor: ResourceRoadCursor } }
+const dispatchQueues = new WeakMap<GameState, DispatchQueue>();
+function dispatchQueue(state: GameState): DispatchQueue {
+    const store = entityStore(state);
+    let queue = dispatchQueues.get(state);
+    if (!queue || queue.world !== state.world || queue.tiles !== state.world.tiles || queue.store !== store || state.time < queue.observedAt) {
+        queue?.active?.cursor.cancel();
+        queue = { world: state.world, tiles: state.world.tiles, store, observedAt: state.time, jobs: new Map() };
+        dispatchQueues.set(state, queue);
+    }
+    queue.observedAt = state.time; return queue;
+}
+function journeyContext(state: GameState, site: ResourceWorkSite) {
+    const populations = civilianWorkforcePopulations(state), cities = resourceRoadOrigins(state, site.faction, site.cells, populations);
+    // Counts may grow without changing the origins a route search can use.
+    const origins = cities.map(city => `${city.id}:${city.x}:${city.y}`).join(',');
+    const relations = state.factions.map(faction => `${faction.id}:${faction.relation}:${Number(faction.defeated)}`).join(',');
+    const key = `${site.revision}:${worldStructureRevision(state.world)}:${entityStore(state).buildings.revision}:${structureChangeRevision(state)}:${forbiddenRevision(state, site.faction)}:${territory(state).revision}:${origins}:${relations}`;
+    return { populations, cities, key };
+}
 const pointAt = (state: GameState, cell: number): Point => ({ x: cell % state.world.width + .5, y: Math.floor(cell / state.world.width) + .5 });
 const clearPath = (unit: Unit) => { unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.repathAt = 0; unit.moving = false; };
 
@@ -46,20 +73,20 @@ function reconcileSites(state: GameState, force = false): SitesCache {
     const owners = new Set(state.buildings.filter(b => b.kind === 'palace' && buildingReady(b)
         && !state.factions.find(f => f.id === b.faction)?.defeated).map(b => b.faction));
     const remaining = new Set(candidates.filter(cell => {
-        const t = world.tiles[cell], owner = borders.owners[cell];
+        const t = world.tiles[cell], owner = territoryValue(borders, cell);
         return t.resourceDeveloped && !blocked.has(cell) && !WATER.has(t.terrain) && !t.creek
             && owner !== UNCLAIMED && owners.has(owner);
     }));
     const sites: ResourceWorkSite[] = [];
     let sequence = Math.max(state.nextResourceWorkSiteId ?? 1, ...previous.map(site => site.id + 1));
     for (const start of remaining) {
-        const cells = [start], tile = world.tiles[start], faction = borders.owners[start]; remaining.delete(start);
+        const cells = [start], tile = world.tiles[start], faction = territoryValue(borders, start); remaining.delete(start);
         for (let head = 0; head < cells.length; head++) {
             const cell = cells[head], x = cell % world.width, y = Math.floor(cell / world.width);
             for (const [nx, ny] of [[x, y - 1], [x + 1, y], [x, y + 1], [x - 1, y]]) {
                 if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) continue;
                 const next = ny * world.width + nx, t = world.tiles[next];
-                if (!remaining.has(next) || borders.owners[next] !== faction || t.resource !== tile.resource
+                if (!remaining.has(next) || territoryValue(borders, next) !== faction || t.resource !== tile.resource
                     || tile.resourceGroup !== undefined && t.resourceGroup !== undefined && tile.resourceGroup !== t.resourceGroup) continue;
                 remaining.delete(next); cells.push(next);
             }
@@ -90,23 +117,18 @@ function nextUnitId(state: GameState): number {
     return id + 1;
 }
 function workPoint(state: GameState, site: ResourceWorkSite, approach: Point): Point | undefined {
+    const navigation = resourceWorkAccess(site.resource, 'outbound') ? saltWorkNavigationState(state, site.cells) : state;
     const cell = southernResourceCell(site.cells, state.world.width)!;
     const point = pointAt(state, cell);
     // Rocky deposits are solid. Miners enter from the exterior approach;
     // quarry workers remain there to hammer the exposed face.
     const choices = site.resource === 'stone' || metal(site.resource) ? [approach]
         : [point, ...site.cells.map(cell => pointAt(state, cell)).sort((a, b) => distance(a, approach) - distance(b, approach))];
-    return choices.find(goal => canWalk(state, goal.x, goal.y, site.faction, undefined, true)
-        && (distance(goal, approach) < .12 || findPath(state, approach, goal, site.faction, false, undefined, undefined, undefined, false, true).length > 0));
+    return choices.find(goal => canWalk(navigation, goal.x, goal.y, site.faction, undefined, true)
+        && (distance(goal, approach) < .12 || findPath(navigation, approach, goal, site.faction, false, undefined, undefined, undefined, false, true).length > 0));
 }
-function dispatch(state: GameState, site: ResourceWorkSite, road: boolean): boolean {
-    const populations = civilianWorkforcePopulations(state);
-    const key = `${site.revision}:${worldStructureRevision(state.world)}:${entityStore(state).buildings.revision}:${forbiddenRevision(state, site.faction)}:${[...populations].map(([id, n]) => `${id}:${n}`).join(',')}`;
-    let cached = journeys.get(site);
-    if (cached?.state !== state || cached.key !== key) {
-        cached = { state, key, journey: planResourceRoad(state, site.faction, site.cells, site.resource) }; journeys.set(site, cached);
-    }
-    const journey = cached.journey;
+function dispatchJourney(state: GameState, site: ResourceWorkSite, road: boolean, journey: ResourceRoadJourney | undefined,
+    populations = civilianWorkforcePopulations(state)): boolean {
     if (!journey) { site.retryAt = state.time + 3; return false; }
     const population = populations.get(journey.home) ?? 0;
     if (population <= 0) { site.retryAt = state.time + 3; return false; }
@@ -120,12 +142,90 @@ function dispatch(state: GameState, site: ResourceWorkSite, road: boolean): bool
     }
     const goal = workPoint(state, site, journey.goal);
     if (!goal) { site.retryAt = state.time + 3; return false; }
-    unit.resourceWork = { site: site.id, revision: site.revision, resource: site.resource, phase: road ? 'road' : 'outbound',
+    unit.resourceWork = { site: site.id, revision: site.revision, resource: site.resource, cells: site.cells, phase: road ? 'road' : 'outbound',
         goal, approach: { ...journey.goal }, roadCells: road ? journey.roadCells : undefined, roadIndex: road ? 0 : undefined };
     unit.inside = false;
     entityStore(state).units.add(unit);
     if (road) site.roadWorker = unit.id;
     return true;
+}
+function dispatch(state: GameState, site: ResourceWorkSite, road: boolean, queued = false): boolean | undefined {
+    const { populations, cities, key } = journeyContext(state, site);
+    let cached = journeys.get(site);
+    if (cached?.state !== state || cached.key !== key) {
+        if (queued) {
+            const queue = dispatchQueue(state), old = queue.jobs.get(site);
+            if (old) { old.road ||= road; old.visit ||= !road; }
+            else queue.jobs.set(site, { site, road, visit: !road, cities, next: 0, key, notBefore: state.time });
+            return;
+        }
+        cached = { state, key, journey: planResourceRoad(state, site.faction, site.cells, site.resource) }; journeys.set(site, cached);
+    }
+    return dispatchJourney(state, site, road, cached.journey, populations);
+}
+
+function consumeVisit(state: GameState, site: ResourceWorkSite): void {
+    if (state.time + 1e-8 >= site.nextVisitAt)
+        site.nextVisitAt += (1 + Math.floor((state.time - site.nextVisitAt + 1e-8) / RESOURCE_VISIT_INTERVAL)) * RESOURCE_VISIT_INTERVAL;
+}
+
+/** One bounded search chunk per fast step, rotating sites after each origin. Successful
+ * searches use live geometry; a changed topology cannot publish an old failure.
+ * Unfinished work is neither a failed route nor a consumed visit. Repeated
+ * edits back off an invalidated cohort instead of searching on every frame. */
+export function advanceResourceWorkforce(state: GameState): void {
+    if (state.paused || state.gameOver) return;
+    const queue = dispatchQueue(state);
+    const entries = queue.active ? [[queue.active.job.site, queue.active.job] as const] : queue.jobs.entries();
+    for (const [site, job] of entries) {
+        if (state.time < job.notBefore) continue;
+        queue.jobs.delete(site);
+        if (caches.get(state)?.sites.get(site.id) !== site || state.factions.find(f => f.id === site.faction)?.defeated) {
+            queue.active?.cursor.cancel(); queue.active = undefined; continue;
+        }
+        const context = journeyContext(state, site);
+        if (!queue.active && job.key !== context.key && job.next === 0) { job.key = context.key; job.cities = context.cities; }
+        const siteRevision = site.revision;
+        let active = queue.active;
+        if (active && (active.revision !== siteRevision || !context.cities.includes(active.city))) {
+            active.cursor.cancel(); queue.active = active = undefined;
+            job.key = undefined; job.cities = []; job.next = 0; job.notBefore = state.time;
+            queue.jobs.set(site, job); return;
+        }
+        const city = active?.city ?? job.cities[job.next];
+        if (!active && city && context.cities.includes(city)) {
+            active = { job, city, revision: siteRevision, cursor: createResourceRoadCursor(state, city, site.cells, site.resource) };
+            queue.active = active;
+        }
+        const progress = active?.cursor.advance(1024, 64, context.key);
+        if (progress && !progress.done) { queue.jobs.set(site, job); return; }
+        active?.cursor.cancel(); queue.active = undefined;
+        if (progress?.invalidated) {
+            queue.jobs.set(site, job); return;
+        }
+        job.next++;
+        const journey = progress?.journey;
+        if (journey) {
+            // The site list has a slower sensing clock than this queue. Do not
+            // dispatch to a deposit captured, removed or built over meanwhile.
+            if (reconcileSites(state).sites.get(site.id) !== site) return;
+            if (site.revision !== siteRevision) {
+                job.key = undefined; job.cities = []; job.next = 0; job.notBefore = state.time;
+                queue.jobs.set(site, job); return;
+            }
+        }
+        if (!journey && job.next < job.cities.length) { queue.jobs.set(site, job); return; }
+        if (!journey && job.key !== context.key) {
+            job.key = undefined; job.cities = []; job.next = 0; job.notBefore = state.time + 3;
+            queue.jobs.set(site, job); return;
+        }
+        journeys.set(site, { state, key: context.key, journey });
+        const worker = entityStore(state).units.get(site.roadWorker ?? -1);
+        if (job.road && !site.roadComplete && (!worker || worker.hp <= 0 || worker.resourceWork?.phase !== 'road' || worker.faction !== site.faction))
+            dispatchJourney(state, site, true, journey, context.populations);
+        if (job.visit && state.time + 1e-8 >= site.nextVisitAt) { dispatchJourney(state, site, false, journey, context.populations); consumeVisit(state, site); }
+        return;
+    }
 }
 
 /** Called by development itself, including AI and authenticated multiplayer
@@ -135,7 +235,7 @@ export function onResourceDeveloped(state: GameState, cells: readonly number[], 
     withNavigationFrame(state, () => {
         for (const site of cache.sites.values()) if (site.faction === faction && site.cells.some(cell => added.has(cell))) {
             const worker = entityStore(state).units.get(site.roadWorker ?? -1);
-            if (!site.roadComplete && (!worker || worker.hp <= 0)) dispatch(state, site, true);
+            if (!site.roadComplete && (!worker || worker.hp <= 0)) dispatch(state, site, true, simulationReadsActive(state));
         }
     });
 }
@@ -151,10 +251,9 @@ export function updateResourceWorkforce(state: GameState): void {
             if (state.time < (site.retryAt ?? -Infinity)) continue;
             const roadWorker = entityStore(state).units.get(site.roadWorker ?? -1);
             if (!site.roadComplete && (!roadWorker || roadWorker.hp <= 0 || roadWorker.kind !== 'worker' || roadWorker.resourceWork?.phase !== 'road'
-                || roadWorker.faction !== site.faction)) dispatch(state, site, true);
+                || roadWorker.faction !== site.faction)) dispatch(state, site, true, simulationReadsActive(state));
             if (state.time + 1e-8 < site.nextVisitAt) continue;
-            site.nextVisitAt += (1 + Math.floor((state.time - site.nextVisitAt + 1e-8) / RESOURCE_VISIT_INTERVAL)) * RESOURCE_VISIT_INTERVAL;
-            dispatch(state, site, false);
+            if (dispatch(state, site, false, simulationReadsActive(state)) !== undefined) consumeVisit(state, site);
         }
     });
 }
@@ -192,7 +291,7 @@ function returnHome(state: GameState, unit: Unit, dt: number, move: Move): void 
         const choices = constructionEdges(state, home, true).sort((a, b) => distance(unit, a) - distance(unit, b));
         let found = false;
         for (const goal of choices) {
-            const path = findPath(state, unit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
+            const path = findPath(unitNavigationState(state, unit), unit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
             if (!path.length && distance(unit, goal) > .12) continue;
             clearPath(unit); unit.destination = { ...goal }; unit.pathGoal = { ...goal }; unit.path = path; found = true; break;
         }
@@ -221,8 +320,13 @@ function roadWork(state: GameState, unit: Unit, site: ResourceWorkSite, dt: numb
 }
 function workResource(state: GameState, unit: Unit, site: ResourceWorkSite, dt: number, move: Move): void {
     const job = unit.resourceWork!;
+    const navigation = unitNavigationState(state, unit);
     job.worked = (job.worked ?? 0) + dt;
-    if (job.worked + 1e-8 >= RESOURCE_WORK_SECONDS) { beginReturn(state, unit); return; }
+    if (job.worked + 1e-8 >= RESOURCE_WORK_SECONDS) {
+        const gold = oreWorkYield(site.resource, site.cells.length), faction = state.factions.find(f => f.id === site.faction);
+        if (gold > 0 && faction) grantIncome(faction, { gold }, state, 'mining');
+        beginReturn(state, unit); return;
+    }
     if (metal(site.resource)) { unit.inside = true; unit.moving = false; unit.order = 'hold'; return; }
     unit.inside = false;
     if (site.resource === 'stone') {
@@ -241,8 +345,8 @@ function workResource(state: GameState, unit: Unit, site: ResourceWorkSite, dt: 
         .filter(cell => Math.abs(cell % state.world.width - current % state.world.width)
             + Math.abs(Math.floor(cell / state.world.width) - Math.floor(current / state.world.width)) === 1)
         .map(cell => ({ cell, point: pointAt(state, cell) }))
-        .filter(({ point }) => distance(unit, point) < 2.1 && canTraverseEdge(state.world, unit, point)
-            && canWalk(state, point.x, point.y, unit.faction, undefined, true)
+        .filter(({ point }) => distance(unit, point) < 2.1 && canTraverseNavigationEdge(navigation, unit, point)
+            && canWalk(navigation, point.x, point.y, unit.faction, undefined, true)
             && !isForbidden(state, point.x, point.y, unit.faction));
     if (!candidates.length) { unit.order = 'work'; return; }
     candidates.sort((a, b) => a.cell - b.cell);

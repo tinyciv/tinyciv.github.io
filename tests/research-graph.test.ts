@@ -16,7 +16,7 @@ function ancestors(id: ResearchBranchId, visiting = new Set<ResearchBranchId>())
 
 describe('six-stage science dependency graph', () => {
   it('has only three roots, no missing dependencies or cycles, six stages and at most five technologies per earliest stage', () => {
-    expect(definitions.size).toBe(25);
+    expect(definitions.size).toBe(26);
     expect(RESEARCH_BRANCHES.filter(branch => !branch.prerequisites.length).map(branch => branch.id))
       .toEqual(['woodenTower', 'irrigation', 'scoutLodge']);
     const stage = (id: ResearchBranchId): number => 1 + Math.max(0, ...definitions.get(id)!.prerequisites.map(stage));
@@ -32,8 +32,8 @@ describe('six-stage science dependency graph', () => {
     expect([...stages.values()].every(group => group.length <= 5)).toBe(true);
     expect(stage('horsebackRiding')).toBe(2); expect(stage('siegeEngines')).toBe(6);
     expect(DEFAULT_RESEARCH_ALLOCATION).toBe(.25);
-    expect(RESEARCH_BRANCHES.map(branch => branch.tiers[0].points)).toEqual([24,56,126,261,147,50,25,70,126,273,198,325,500,231,182,98,231,182,435,147,450,600,198,273,126]);
-    expect(RESEARCH_BRANCHES.reduce((total, branch) => total + branch.tiers[0].points, 0)).toBe(5334);
+    expect(RESEARCH_BRANCHES.map(branch => branch.tiers[0].points)).toEqual([24,28,126,261,147,50,25,70,126,273,198,325,500,231,182,98,231,182,435,147,450,600,198,273,126,231]);
+    expect(RESEARCH_BRANCHES.reduce((total, branch) => total + branch.tiers[0].points, 0)).toBe(5537);
   });
 
   it('links military, economic and exploration progress instead of leaving advanced branches as independent roots', () => {

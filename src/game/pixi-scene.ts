@@ -1,13 +1,17 @@
-import { Container, Graphics, Sprite, Texture, WebGLRenderer } from 'pixi.js';
+import { Container, Graphics, GraphicsContext, Sprite, Texture, WebGLRenderer } from 'pixi.js';
 import { NativeArt, type BakedArt } from './native-art';
 
 /** The world is a native Pixi display list. Canvas is used only to bake art. */
 export class PixiScene {
     readonly art = new NativeArt();
     readonly stage = new Container();
+    private world = this.stage.addChild(new Container({ isRenderGroup: true }));
     private renderer = new WebGLRenderer();
     private sprites: Sprite[] = [];
     private shapes: Graphics[] = [];
+    private sharedShapes: Graphics[] = [];
+    private contexts = new Map<string, GraphicsContext>();
+    private sharedShapeCount = 0;
     private spriteCount = 0;
     private shapeCount = 0;
     private childCount = 0;
@@ -16,28 +20,33 @@ export class PixiScene {
     private terrainRevision = 0;
     private chunks = new Map<string, { canvas: HTMLCanvasElement; texture: Texture; revision: number }>();
     private fog?: Texture;
+    private rasterLayers = new Map<string, { canvas: HTMLCanvasElement; texture: Texture; key?: readonly unknown[] }>();
+    private layerUploads = 0;
     private terrainUploads = 0;
     get stats() { return { ...this.art.stats, atlasPages: this.art.atlasPages, sprites: this.spriteCount, directImages: this.spriteCount,
-        textureUploads: this.art.stats.textureUploads + this.terrainUploads, sceneMutations: this.sceneMutations }; }
+        textureUploads: this.art.stats.textureUploads + this.terrainUploads + this.layerUploads, sceneMutations: this.sceneMutations }; }
     async initialize(canvas: HTMLCanvasElement, width: number, height: number, resolution: number) {
         await this.renderer.init({ canvas, width, height, resolution, antialias: false, background: '#000' });
     }
     resize(width: number, height: number, resolution: number) { this.renderer.resize(width, height, resolution); }
+    /** Camera motion changes one group transform, leaving world geometry local. */
+    setCamera(x: number, y: number): void { this.world.position.set(x, y); }
     beginFrame() {
         this.sceneMutations = 0;
         // Atlas eviction is exceptional. Detach before pruning its textures so
         // retained batches cannot refer to destroyed sources. Ordinary frames
         // retain their child order and Pixi's scene structure.
-        if (this.art.atlasPages > 8 && this.stage.children.length) { this.stage.removeChildren(); this.sceneMutations++; }
-        for (const source of this.art.prune()) source.destroy();
-        this.art.beginFrame(); this.spriteCount = this.shapeCount = this.childCount = this.terrainUploads = 0;
+        for (const source of this.art.prune(() => {
+            if (this.world.children.length) { this.world.removeChildren(); this.sceneMutations++; }
+        })) source.destroy();
+        this.art.beginFrame(); this.spriteCount = this.shapeCount = this.sharedShapeCount = this.childCount = this.terrainUploads = this.layerUploads = 0;
     }
     private place(child: Sprite | Graphics): void {
-        if (this.stage.children[this.childCount] !== child) { this.stage.addChildAt(child, this.childCount); this.sceneMutations++; }
+        if (this.world.children[this.childCount] !== child) { this.world.addChildAt(child, this.childCount); this.sceneMutations++; }
         this.childCount++;
     }
     image(texture: Texture, x: number, y: number, width: number, height: number, alpha = 1): Sprite {
-        const sprite = this.sprites[this.spriteCount] ??= new Sprite(); this.spriteCount++;
+        const sprite = this.sprites[this.spriteCount] ??= new Sprite({ roundPixels: true }); this.spriteCount++;
         sprite.texture = texture; sprite.position.set(x, y); sprite.width = width; sprite.height = height;
         sprite.alpha = alpha; sprite.rotation = 0; sprite.anchor.set(0); sprite.pivot.set(0); this.place(sprite); return sprite;
     }
@@ -56,7 +65,17 @@ export class PixiScene {
     }
     graphics(): Graphics {
         const graphics = this.shapes[this.shapeCount] ??= new Graphics(); this.shapeCount++;
-        this.shapeKeys.delete(graphics); graphics.clear(); this.place(graphics); return graphics;
+        this.shapeKeys.delete(graphics); graphics.clear(); graphics.position.set(0); this.place(graphics); return graphics;
+    }
+    /** Shared immutable vectors: changing a pose never rebuilds geometry. */
+    sharedGraphics(key: string, draw: (context: GraphicsContext) => void, x: number, y: number, alpha = 1): Graphics {
+        let context = this.contexts.get(key);
+        if (!context) { context = new GraphicsContext(); draw(context); this.contexts.set(key, context); }
+        const graphics = this.sharedShapes[this.sharedShapeCount] ??= new Graphics({ context }); this.sharedShapeCount++;
+        graphics.context = context; graphics.position.set(x, y); graphics.alpha = alpha;
+        // Pooled shapes can switch from posed route arrows to ordinary markers.
+        graphics.rotation = 0; graphics.scale.set(1); graphics.pivot.set(0); graphics.skew.set(0);
+        this.place(graphics); return graphics;
     }
     /** Keep expensive immutable geometry until its declared inputs change. */
     retainedGraphics(key: readonly unknown[], draw: (graphics: Graphics) => void): Graphics {
@@ -65,7 +84,27 @@ export class PixiScene {
         if (!previous || previous.length !== key.length || key.some((value, index) => value !== previous[index])) {
             graphics.clear(); draw(graphics); this.shapeKeys.set(graphics, key);
         }
-        this.place(graphics); return graphics;
+        graphics.position.set(0); this.place(graphics); return graphics;
+    }
+    /** Dense pixel effects use one reusable texture instead of thousands of
+     * transient vector rectangles and their per-frame GPU tessellation. */
+    rasterLayer(name: string, key: readonly unknown[], width: number, height: number, draw: (context: CanvasRenderingContext2D) => void, x = 0, y = 0): void {
+        width = Math.max(1, Math.ceil(width)); height = Math.max(1, Math.ceil(height));
+        let layer = this.rasterLayers.get(name);
+        if (layer && (layer.canvas.width !== width || layer.canvas.height !== height)) {
+            layer.texture.destroy(true); this.rasterLayers.delete(name); layer = undefined;
+        }
+        if (!layer) {
+            const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+            const texture = Texture.from(canvas); texture.source.scaleMode = 'nearest';
+            layer = { canvas, texture }; this.rasterLayers.set(name, layer);
+        }
+        if (!layer.key || layer.key.length !== key.length || key.some((value, index) => value !== layer!.key![index])) {
+            const context = layer.canvas.getContext('2d')!;
+            context.clearRect(0, 0, width, height); context.save(); draw(context); context.restore();
+            layer.texture.source.update(); layer.key = key; this.layerUploads++;
+        }
+        this.image(layer.texture, x, y, width, height);
     }
     invalidateTerrain(region?: { x: number; y: number; width: number; height: number }) {
         if (!region) { this.terrainRevision++; return; }
@@ -94,7 +133,7 @@ export class PixiScene {
                 chunk.canvas.getContext('2d')!.drawImage(canvas, sx, sy, chunk.canvas.width, chunk.canvas.height, 0, 0, chunk.canvas.width, chunk.canvas.height);
                 chunk.texture.source.update(); chunk.revision = this.terrainRevision; this.terrainUploads++;
             }
-            this.image(chunk.texture, x + sx * scale, y + sy * scale, chunk.canvas.width * scale, chunk.canvas.height * scale);
+            this.image(chunk.texture, x - this.world.x + sx * scale, y - this.world.y + sy * scale, chunk.canvas.width * scale, chunk.canvas.height * scale);
         }
     }
     updateFog(canvas: HTMLCanvasElement) {
@@ -105,7 +144,7 @@ export class PixiScene {
     }
     drawFog(x: number, y: number, width: number, height: number) { if (this.fog) this.image(this.fog, x, y, width, height); }
     finishFrame() {
-        if (this.stage.children.length > this.childCount) { this.stage.removeChildren(this.childCount); this.sceneMutations++; }
+        if (this.world.children.length > this.childCount) { this.world.removeChildren(this.childCount); this.sceneMutations++; }
         this.art.flush(); this.renderer.render(this.stage);
     }
     snapshot() {
@@ -113,16 +152,24 @@ export class PixiScene {
         return this.renderer.extract.canvas({ target: this.stage, frame: this.renderer.screen, resolution: this.renderer.resolution, clearColor: '#000' }) as HTMLCanvasElement;
     }
     resetWorld() {
-        this.stage.removeChildren();
+        this.world.removeChildren();
         this.shapeKeys = new WeakMap();
         for (const source of this.art.clear()) source.destroy();
         for (const chunk of this.chunks.values()) chunk.texture.destroy(true);
         this.chunks.clear(); this.fog?.destroy(true); this.fog = undefined;
+        for (const layer of this.rasterLayers.values()) layer.texture.destroy(true);
+        this.rasterLayers.clear();
+        // Shared Graphics do not own their contexts. Release users first and
+        // destroy each context once at the world boundary (including zoom keys).
+        for (const shape of this.sharedShapes) shape.destroy({ context: false });
+        this.sharedShapes = [];
+        for (const context of this.contexts.values()) context.destroy();
+        this.contexts.clear();
     }
     destroy() {
         this.resetWorld(); this.art.destroy();
         for (const sprite of this.sprites) sprite.destroy();
         for (const shape of this.shapes) shape.destroy();
-        this.stage.destroy(); this.renderer.destroy();
+        this.world.destroy(); this.stage.destroy(); this.renderer.destroy();
     }
 }

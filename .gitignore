@@ -5,6 +5,7 @@ server-dist/
 scratch/
 .DS_Store
 *.log
+rust/target/
 
 # Local deployment records and environment credentials never enter Pages.
 infra/.state/
@@ -12,3 +13,24 @@ infra/.state/
 .env.*
 !.env.example
 !.env.production
+
+dev/
+scripts/*
+!scripts/startup-check.mjs
+!scripts/startup-arms-preview.mjs
+!scripts/startup-offensive-preview.mjs
+!scripts/startup-building-preview.mjs
+!scripts/startup-cannon-fire-preview.mjs
+!scripts/startup-shell-impact-preview.mjs
+!scripts/frozen.mjs
+!scripts/world.mjs
+!scripts/benchmark-faction-ai.mjs
+!scripts/sim-parity.mjs
+!scripts/sim-parity-compare.mjs
+.env.production
+
+# Local secrets (PixelLab key, multiplayer URL)
+.env.local
+
+# Storybook static build
+storybook-static/

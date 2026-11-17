@@ -1,0 +1,43 @@
+{
+  "footprint": [
+    3,
+    3
+  ],
+  "nativeSize": [
+    48,
+    48
+  ],
+  "centerAnchor": [
+    24,
+    24
+  ],
+  "generation": "Original fort plus the previously approved imagegen moat layer",
+  "processing": "Level 1 unchanged. Level 2 copies every original fort pixel intact over the approved moat. Both levels share the same roof recoloring, center and 3x3 footprint.",
+  "levels": [
+    {
+      "level": 1,
+      "file": "fort-level-1.png",
+      "source": "scratch/2026-11-16-fort-three-levels/1-fort-registered.png",
+      "sha256": "2375d9cb856d265df858b990a40a374c41c4ee4a57f85e5dd480644f827cde3a",
+      "roofRectangle": [
+        18,
+        13,
+        13,
+        7
+      ]
+    },
+    {
+      "level": 2,
+      "file": "fort-level-2.png",
+      "source": "scratch/2026-11-16-fort-two-levels/fort-level-2.png",
+      "sha256": "b4d7d7c1ee0f64a14c5d9d0428ba513878fff26d981d551a5b6c6858687bc6d8",
+      "roofRectangle": [
+        18,
+        13,
+        13,
+        7
+      ]
+    }
+  ],
+  "preservationRecord": "scratch/2026-11-16-fort-two-levels/metadata.json"
+}

@@ -30,7 +30,6 @@ export function initializeRoamingMarauders(state: GameState): void {
   const livePacks = new Set(state.units.filter(unit => unit.hp > 0 && unit.marauderPack !== undefined).map(unit => unit.marauderPack));
   const wanted = Math.max(0, roamingPackTarget(state) - livePacks.size);
   let available = Math.max(0, banditPopulationCap(state, MAX_LIVE_RAIDERS) - state.units.filter(unit => unit.faction === RAIDER_FACTION && unit.hp > 0).length);
-  let nextId = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
   let packId = Math.max(0, ...(state.marauderPacks ?? []).map(pack => pack.id));
   for (let band = 0; band < wanted && available >= 2; band++) {
     const counts = new Map<number, number>();
@@ -52,7 +51,7 @@ export function initializeRoamingMarauders(state: GameState): void {
     for (let member = 0; member < size; member++) {
       const tent = tents[(band + member) % tents.length]!;
       const stats = marauderBaseStats(65, 10, 2);
-      const unit: Unit = { id: ++nextId, x: tent.x + .5, y: tent.y + .5, kind: 'warrior', faction: RAIDER_FACTION,
+      const unit: Unit = { id: entityStore(state).allocateId(), x: tent.x + .5, y: tent.y + .5, kind: 'warrior', faction: RAIDER_FACTION,
         marauderPack: id, name, ...stats, maxHp: stats.hp, morale: 100, speed: 2.35, range: 1.1,
         inside: true, raiderGarrison: tent.id, order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
         moving: false, facing: rng() * Math.PI * 2, attackTime: 0, bornAt: state.time };

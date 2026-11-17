@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { buildAt, validateBuildAt } from '../src/game/simulation';
 import { canMove, canWalk, findPath, hasStaticPath, traversable } from '../src/game/pathfinding';
+import { unitNavigationState } from '../src/game/unit-navigation';
+import { withSimulationReads } from '../src/game/simulation-reads';
 import { installNavigationWasm, setNavigationWasmEnabled } from '../src/game/navigation-wasm';
 import { markWorldChanged } from '../src/game/world-revisions';
 import { resourceBlocksGround } from '../src/game/resource-terrain';
@@ -11,7 +13,7 @@ import { recordMerchantRoad } from '../src/game/trade';
 import { canPlaceRoad } from '../src/game/traffic';
 import { tileAt, type GameState, type RegionalResource } from '../src/game/types';
 
-beforeAll(async () => installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/navigation.wasm'))));
+beforeAll(async () => installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/simulation.wasm'))));
 function fixture(): GameState {
   return {
     world: { width: 30, height: 24, seed: 'solid-resources', source: 'test', spawns: [], revision: 1,
@@ -30,7 +32,7 @@ function fixture(): GameState {
 }
 
 describe('solid stone and ore deposits', () => {
-  it.each(['stone', 'copper', 'iron'] as const)('routes both navigation backends around %s, developed or undeveloped', resource => {
+  it.each(['stone', 'copper', 'iron', 'salt'] as const)('routes both navigation backends around %s, developed or undeveloped', resource => {
     const state = fixture(), from = { x: 3.5, y: 4.5 }, to = { x: 9.5, y: 4.5 };
     for (let y = 2; y <= 6; y++) state.world.tiles[y * 30 + 6].resource = resource;
     markWorldChanged(state.world, 'appearance');
@@ -87,7 +89,44 @@ describe('solid stone and ore deposits', () => {
     expect(resourceBlocksGround(tileAt(state.world, alternate.point.x, alternate.point.y))).toBe(false);
   });
 
-  it.each(['clay', 'salt', 'olives', 'fish'] as RegionalResource[])('retains ordinary traversal of non-rock resource %s', resource => {
+  it('limits salt access to the assigned mining footprint, including the return trip', () => {
+    const state = fixture(), cells = [4 * 30 + 6, 5 * 30 + 6], other = 4 * 30 + 9;
+    for (const cell of [...cells, other]) Object.assign(state.world.tiles[cell], { resource: 'salt', resourceDeveloped: true });
+    markWorldChanged(state.world, 'appearance');
+    const worker = { ...state.units[0], id: 3, kind: 'worker' as const, x: 5.5, y: 4.5,
+      resourceWork: { site: 1, revision: 0, resource: 'salt' as const, cells, phase: 'outbound' as 'outbound' | 'returning' | 'road',
+        goal: { x: 6.5, y: 4.5 }, approach: { x: 6.5, y: 6.5 } } };
+    for (const phase of ['outbound', 'returning'] as const) {
+      worker.resourceWork.phase = phase;
+      const navigation = unitNavigationState(state, worker), goal = worker.resourceWork.goal;
+      const check = () => {
+        expect(canWalk(navigation, goal.x, goal.y, 0)).toBe(true);
+        expect(canMove(navigation, worker, goal, 0)).toBe(true);
+        expect(findPath(navigation, worker, goal, 0).at(-1)).toEqual(goal);
+        expect(canWalk(navigation, 9.5, 4.5, 0)).toBe(false);
+        expect(canMove(navigation, { x: 8.5, y: 4.5 }, { x: 9.5, y: 4.5 }, 0)).toBe(false);
+        expect(canWalk(state, goal.x, goal.y, 0)).toBe(false);
+      };
+      check(); withSimulationReads(state, check);
+    }
+    worker.resourceWork.phase = 'road';
+    expect(canWalk(unitNavigationState(state, worker), 6.5, 4.5, 0)).toBe(false);
+    const builder = { ...worker, builder: true, resourceWork: undefined };
+    expect(canWalk(unitNavigationState(state, builder), 6.5, 4.5, 0)).toBe(false);
+  });
+
+  it.each([false, true])('rejects purchased and merchant roads over salt pans (developed: %s)', resourceDeveloped => {
+    const state = fixture(); Object.assign(state.world.tiles[13 * 30 + 13], { resource: 'salt', resourceDeveloped });
+    markWorldChanged(state.world, 'appearance');
+    const gold = state.factions[0].gold, buildings = state.buildings.length;
+    expect(validateBuildAt(state, 'road', 13, 13)).toMatchObject({ ok: false, message: 'Salt pans block construction.' });
+    expect(buildAt(state, 'road', 13, 13).ok).toBe(false);
+    expect(canPlaceRoad(state, 13, 13)).toBe(false);
+    expect(recordMerchantRoad(state, { ...state.units[0], id: 3, kind: 'merchant', x: 13.5, y: 13.5, tradeRoute: 1 })).toBe(false);
+    expect(state.factions[0].gold).toBe(gold); expect(state.buildings).toHaveLength(buildings);
+  });
+
+  it.each(['clay', 'olives', 'fish'] as RegionalResource[])('retains ordinary traversal of non-rock resource %s', resource => {
     const state = fixture(); state.world.tiles[4 * 30 + 6].resource = resource;
     expect(canWalk(state, 6.5, 4.5, 0)).toBe(true);
   });

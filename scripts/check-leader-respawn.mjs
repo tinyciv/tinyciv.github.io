@@ -15,7 +15,7 @@ try{
   const renderer=window.__game.renderer,draw=renderer.draw.bind(renderer);window.__respawnFrames=[];let wasWaiting=false,started=false;
   renderer.draw=(...args)=>{const waiting=!!s.factions[0].leaderRespawn;if(wasWaiting&&!waiting)started=true;wasWaiting=waiting;
     if(started&&window.__respawnFrames.length<120)window.__respawnFrames.push({at:performance.now(),camera:{...renderer.camera}});return draw(...args);};
-  l.hp=0;recordLeaderDeath(s,l);return s.factions[0].leaderRespawn.readyAtWallTime;
+  l.hp=0;recordLeaderDeath(s,l,Date.now());return s.factions[0].leaderRespawn.readyAtWallTime;
  });
  await page.locator('#leader-respawn').waitFor({state:'visible'});
  const style=await page.locator('#leader-respawn').evaluate(e=>({filter:getComputedStyle(e).backdropFilter,text:e.textContent,animation:getComputedStyle(e.querySelector('.respawn-dots')).animationName}));

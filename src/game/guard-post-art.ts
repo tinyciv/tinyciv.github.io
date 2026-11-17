@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Shade's native Miniworld Garrison/Bunker, one unscaled 16px source cell. */
 export const GUARD_POST_SPRITE = { width: 16, height: 16 } as const;
 const roofShades = new Map([
@@ -26,7 +27,7 @@ export function recolorGuardPostPixels(pixels: Uint8ClampedArray, color: string)
 export function loadGuardPostArt(): Promise<void> {
   return loading ??= (async () => {
     const image = new Image();
-    image.src = `${import.meta.env.BASE_URL}assets/miniworld/Guard-Post.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/Guard-Post.png`);
     await image.decode();
     if (image.naturalWidth !== 16 || image.naturalHeight !== 16)
       throw new Error('Invalid Miniworld guard-post cell.');

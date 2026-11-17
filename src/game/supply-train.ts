@@ -1,8 +1,9 @@
 import { constructionEdges } from './builders';
 import { entityStore } from './entity-store';
+import { deliverSupplyHealing } from './battle-support-native';
 import { hasStaticPath } from './pathfinding';
 import { researchLevel } from './research';
-import { buildingReady, distance, unitMaxHp, type GameState, type Point, type Unit } from './types';
+import { buildingReady, distance, type GameState, type Point, type Unit } from './types';
 
 export const SUPPLY_DEPOT_COST = 120;
 export const SUPPLY_DEPOT_BUILD_SECONDS = 45;
@@ -27,7 +28,6 @@ export function updateSupplyDepots(state: GameState): void {
   if (!due.length) return;
   // Preparation belongs to an actual dispatch, not each intervening movement step.
   const occupied = new Set(state.units.filter(unit => unit.kind === 'supplyCart' && unit.hp > 0).map(unit => unit.supplyCart?.depot));
-  let nextId: number | undefined;
   for (const depot of due) {
     if (occupied.has(depot.id)) continue;
     const leader = store.units.query('leader').find(unit => unit.faction === depot.faction && unit.hp > 0 && !unit.inside && unit.embarkedOn === undefined);
@@ -35,12 +35,7 @@ export function updateSupplyDepots(state: GameState): void {
     const exit = constructionEdges(state, depot, true).sort((a, b) => distance(a, leader) - distance(b, leader))
       .find(point => hasStaticPath(state, point, leader, depot.faction));
     if (!exit) { depot.supplyDepot!.nextDispatchAt = state.time + 3; continue; }
-    if (nextId === undefined) {
-      nextId = 1;
-      for (const id of store.units.ids()) nextId = Math.max(nextId, id + 1);
-      for (const id of store.buildings.ids()) nextId = Math.max(nextId, id + 1);
-    }
-    store.units.add({ id: nextId++, kind: 'supplyCart', faction: depot.faction, ...exit,
+    store.units.add({ id: entityStore(state).allocateId(), kind: 'supplyCart', faction: depot.faction, ...exit,
       supplyCart: { depot: depot.id, leader: leader.id }, home: depot.id, hp: SUPPLY_CART_HP, maxHp: SUPPLY_CART_HP,
       attack: 0, defense: 0, morale: 100, speed: SUPPLY_CART_SPEED, range: 0, order: 'work',
       cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time });
@@ -48,7 +43,7 @@ export function updateSupplyDepots(state: GameState): void {
   }
 }
 
-/** Delivery consumes the cart once. Healing is faction-wide and cannot revive
+/** Delivery consumes the cart once. Healing is local and cannot revive
  * casualties, overfill maximum health, or affect an enemy beside the Leader. */
 export function updateSupplyCart(state: GameState, cart: Unit, dt: number, move: Move): boolean {
   if (cart.kind !== 'supplyCart') return false;
@@ -62,10 +57,8 @@ export function updateSupplyCart(state: GameState, cart: Unit, dt: number, move:
   if (leader.inside || leader.embarkedOn !== undefined) { cart.moving = false; return true; }
   if (distance(cart, leader) > SUPPLY_CART_DELIVERY_RANGE) move(state, cart, leader, dt);
   if (distance(cart, leader) > SUPPLY_CART_DELIVERY_RANGE) return true;
-  for (const unit of state.units) if (unit.faction === cart.faction && unit.hp > 0 && unit !== cart)
-    unit.hp = Math.min(unitMaxHp(unit), unit.hp + SUPPLY_CART_HEALING);
+  deliverSupplyHealing(state, leader, cart);
   cart.supplyCart!.delivered = true; cart.hp = 0; cart.inside = true; cart.moving = false;
   cart.path = undefined; cart.destination = undefined;
-  state.particles.push({ x: leader.x, y: leader.y, text: '+10 HP supplies', color: '#88d18a', life: 1.6 });
   return true;
 }

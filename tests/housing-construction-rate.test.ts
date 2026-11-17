@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { buildAt, createGame, updateGame } from '../src/game/simulation';
+import { advanceAutomaticDevelopment, buildAt, createGame, updateGame } from '../src/game/simulation';
 import { synchronizeFarms } from '../src/game/farms';
 import { citySummaries } from '../src/game/cities';
 import { planHouseSite } from '../src/game/housing';
@@ -46,6 +46,9 @@ function economy(state: GameState): void {
   // vacant-bed rule as the housing bottleneck.
   for (const farm of state.buildings) if (isFarmKind(farm.kind) && buildingReady(farm)) farm.farmLastVisitedAt = state.time;
   updateGame(state, .05, idle);
+  // Drain the city cohort at the same simulation time; runtime spreads these
+  // bounded turns across frames, preserving the same earned order allowance.
+  for (let turn = 0; turn < 16; turn++) advanceAutomaticDevelopment(state);
 }
 const queued = (state: GameState) => houses(state).filter(home => home.construction);
 function discardOrders(state: GameState): void {

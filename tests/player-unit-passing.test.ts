@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { setVillageRelation } from '../src/game/settlement-bridge';
 import { scenario } from '../dev/navigation-lab/scenarios';
 import { entityStore } from '../src/game/entity-store';
 import { unitObstructs } from '../src/game/collisions';
@@ -20,7 +21,7 @@ function fixture(kind: Unit['kind'] = 'leader') {
   entityStore(state).buildings.add({ id: 3000, kind: 'villageTent', faction: 1, villageId: 1,
     x: 15, y: 14, hp: 100, maxHp: 100, capacity: 0 });
   state.villages = [{ id: 1, faction: 1, campId: 3000, name: 'Passage village', identity: 'growers', relation: 'neutral',
-    x: 9, y: 8, nextGrowthAt: Infinity, nextThinkAt: Infinity, nextRecruitAt: Infinity }];
+    x: 9, y: 8 }];
   state.factions.push({ ...state.factions[0], id: 1, villageId: 1, relation: 'peace' });
   return { state, mover, blocker };
 }
@@ -190,7 +191,7 @@ describe('player company movement priority', () => {
     step(state, mover, blocker, { x: 13.5, y: 8.5 }, true);
     expect(step(state, mover, blocker, { x: 13.5, y: 8.5 }, true)).toBe(true);
     const before = { x: blocker.x, y: blocker.y };
-    if (source === 'village') state.villages![0].relation = 'war';
+    if (source === 'village') setVillageRelation(state, state.villages![0], 0, 'war');
     else state.factions[1].relation = 'war';
     expect(updateFriendlyYield(state, blocker, .1)).toBe(false);
     expect(distance(before, blocker)).toBe(0);

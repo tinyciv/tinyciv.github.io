@@ -1,6 +1,7 @@
 import { isWallKind, type Building } from './types';
 
 type Site = Pick<Building, 'kind' | 'faction' | 'x' | 'y'>;
+export type TowerWallKind = 'wall' | 'palisade';
 
 /** A defensive tower and its owner's wall can occupy one logical tile.
  * They remain independent structures with their own health and construction. */

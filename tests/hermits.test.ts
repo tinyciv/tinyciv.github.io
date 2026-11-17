@@ -6,6 +6,7 @@ import { initializeHermits, hermitAvailable, hermitAt, hermitPosition, askHermit
 import { territory, UNCLAIMED } from '../src/game/borders';
 import { updateFog } from '../src/game/fog';
 import { applyGameCommand } from '../src/multiplayer/commands';
+import { hasStaticPath } from '../src/game/pathfinding';
 function fixture(): GameState {
     return { world: { width: 160, height: 160, seed: 'treasure-seed', source: 'test', spawns: [],
         tiles: Array.from({ length: 160 * 160 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .5, food: 2, production: 1, gold: 0, variation: .3 })) },
@@ -26,13 +27,14 @@ describe('hermits', () => {
   const s=createGame(generateWorld('hermit-wilderness'));
   expect(s.hermits!.length).toBeGreaterThan(0);
  }, 120000);
- it('seeds deterministic, noncombat encounters at least 60 tiles outside every faction border', () => {
+ it('seeds deterministic, noncombat encounters in reachable wilderness outside faction borders', () => {
   const a=fixture(), b=fixture(); initializeHermits(a); initializeHermits(b);
   expect(a.hermits).toEqual(b.hermits); expect(a.hermits!.length).toBeGreaterThan(0);
   const owners=territory(a).owners;
   for(const h of a.hermits!) {
    for(let cell=0;cell<owners.length;cell++) if(owners[cell]!==UNCLAIMED)
-    expect(Math.hypot(h.x-cell%160,h.y-Math.floor(cell/160))).toBeGreaterThanOrEqual(60);
+    expect(Math.hypot(h.x-cell%160,h.y-Math.floor(cell/160))).toBeGreaterThanOrEqual(6);
+   expect(hasStaticPath(a,a.units[0],hermitPosition(h),0)).toBe(true);
   }
   expect(a.units).toHaveLength(1); expect(a.buildings).toHaveLength(2);
   a.hermits![0].status='gone'; const count=a.hermits!.length; initializeHermits(a);

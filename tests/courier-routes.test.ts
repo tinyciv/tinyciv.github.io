@@ -40,25 +40,24 @@ describe('shared courier return routes', () => {
     expect(courierRouteCacheStats(state)).toMatchObject({ hits: 1, searches: 1, fallbacks: 0, doors: 1 });
   });
 
-  it('keeps the requested door separate and preserves incoming-side and queue selection', () => {
+  it('reuses the nearest connected door without crowd-dependent route selection', () => {
     const state = fixture(), first = courier(10);
     entityStore(state).units.add(first);
     updateCollector(state, first, .1, () => {});
-    expect(first.destination).toEqual({ x: 4.5, y: 9.5 }); // Incoming right-side door.
+    expect(first.destination).toEqual(door);
     const chosen = { ...first.destination! }, queued = Array.from({ length: 12 }, (_, i) => ({
       ...courier(100 + i), destination: { ...chosen },
     }));
     const second = courier(20);
     entityStore(state).units.replace([...queued, second]);
     updateCollector(state, second, .1, () => {});
-    expect(second.destination).not.toEqual(chosen);
-    expect(second.destination).not.toEqual({ x: 4.5, y: 8.5 }); // Outgoing-side penalty remains.
+    expect(second.destination).toEqual(chosen);
     expect(second.path!.at(-1)).toEqual(second.destination);
     const third = courier(30);
     entityStore(state).units.replace([third]);
     updateCollector(state, third, .1, () => {});
     expect(third.destination).toEqual(chosen);
-    expect(courierRouteCacheStats(state)).toMatchObject({ hits: 1, searches: 2, doors: 2 });
+    expect(courierRouteCacheStats(state)).toMatchObject({ hits: 2, searches: 1, doors: 1 });
   });
 
   it('checks dynamic blockers and never teaches their temporary detours to the shared cache', () => {

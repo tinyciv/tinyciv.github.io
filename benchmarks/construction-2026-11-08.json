@@ -1,0 +1,175 @@
+{
+  "method": "Headless synchronous route+quote and purchase CPU, alternating engines. Each fresh fixture has 1082 buildings, 320 farms in 4x4 parcels, 301 units and 192x144 tiles. Preview spans 17 cells; changed endpoints span 9–16 cells. Income hover changes all treasury balances on every query while the route stays affordable. Quotes/purchases must preserve costs, layouts, crops and food. No rendering, live FPS or WASM.",
+  "cpu": "Apple M3 Pro",
+  "rounds": 3,
+  "bundles": {
+    "beforeSha256": "e8c9ebafd7612378587055a9858f1d370c2df97e283b5531c2cc274180cbc807",
+    "afterSha256": "a9a192c0691d89dff2e2fab9d4184d407aa3b3641a39914c777c41f150fbe46a"
+  },
+  "timings": {
+    "before": {
+      "road": {
+        "coldPreview": {
+          "samples": 3,
+          "meanMs": 75.53670866666664,
+          "medianMs": 73.6474589999998,
+          "p95Ms": 101.93966699999999
+        },
+        "unchangedPreview": {
+          "samples": 60,
+          "meanMs": 0.34645620000001526,
+          "medianMs": 0.3029159999996409,
+          "p95Ms": 0.5601669999999785
+        },
+        "incomeWhileHovering": {
+          "samples": 60,
+          "meanMs": 56.273540299999986,
+          "medianMs": 48.88799999999992,
+          "p95Ms": 69.44262500000002
+        },
+        "changedEndpoint": {
+          "samples": 24,
+          "meanMs": 43.049265625000025,
+          "medianMs": 41.380207999999584,
+          "p95Ms": 53.14954200000011
+        },
+        "commit": {
+          "samples": 3,
+          "meanMs": 111.96315266666655,
+          "medianMs": 109.6914999999999,
+          "p95Ms": 122.48812499999985
+        }
+      },
+      "irrigation": {
+        "coldPreview": {
+          "samples": 3,
+          "meanMs": 8.037916666666737,
+          "medianMs": 7.836500000000342,
+          "p95Ms": 9.977540999999974
+        },
+        "unchangedPreview": {
+          "samples": 60,
+          "meanMs": 0.3059118500000106,
+          "medianMs": 0.2498749999995198,
+          "p95Ms": 0.6303340000004027
+        },
+        "incomeWhileHovering": {
+          "samples": 60,
+          "meanMs": 3.5817846833333116,
+          "medianMs": 3.3312909999999647,
+          "p95Ms": 4.874166999999943
+        },
+        "changedEndpoint": {
+          "samples": 24,
+          "meanMs": 2.8620971249999627,
+          "medianMs": 2.7507089999999152,
+          "p95Ms": 4.504124999999931
+        },
+        "commit": {
+          "samples": 3,
+          "meanMs": 4.242569333333449,
+          "medianMs": 4.076915999999983,
+          "p95Ms": 4.756542000000081
+        }
+      }
+    },
+    "after": {
+      "road": {
+        "coldPreview": {
+          "samples": 3,
+          "meanMs": 73.44731966666639,
+          "medianMs": 74.2822499999993,
+          "p95Ms": 89.85266699999988
+        },
+        "unchangedPreview": {
+          "samples": 60,
+          "meanMs": 0.33916458333335414,
+          "medianMs": 0.3205000000002656,
+          "p95Ms": 0.548584000000119
+        },
+        "incomeWhileHovering": {
+          "samples": 60,
+          "meanMs": 0.49032006666662936,
+          "medianMs": 0.46291599999995015,
+          "p95Ms": 0.6179590000001554
+        },
+        "changedEndpoint": {
+          "samples": 24,
+          "meanMs": 22.31652779166664,
+          "medianMs": 21.32858299999998,
+          "p95Ms": 27.66687499999989
+        },
+        "commit": {
+          "samples": 3,
+          "meanMs": 50.71356966666675,
+          "medianMs": 36.24354200000016,
+          "p95Ms": 81.4647500000001
+        }
+      },
+      "irrigation": {
+        "coldPreview": {
+          "samples": 3,
+          "meanMs": 5.817652999999912,
+          "medianMs": 4.964625000000069,
+          "p95Ms": 7.562917000000198
+        },
+        "unchangedPreview": {
+          "samples": 60,
+          "meanMs": 0.319611200000016,
+          "medianMs": 0.30016599999999016,
+          "p95Ms": 0.48174999999991996
+        },
+        "incomeWhileHovering": {
+          "samples": 60,
+          "meanMs": 0.4609451666667004,
+          "medianMs": 0.45750000000043656,
+          "p95Ms": 0.5289999999999964
+        },
+        "changedEndpoint": {
+          "samples": 24,
+          "meanMs": 3.0096059583333576,
+          "medianMs": 2.850417000000107,
+          "p95Ms": 4.433584000000337
+        },
+        "commit": {
+          "samples": 3,
+          "meanMs": 4.691514333333392,
+          "medianMs": 4.785249999999905,
+          "p95Ms": 5.196708999999828
+        }
+      }
+    }
+  },
+  "parity": [
+    {
+      "round": 0,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 0,
+      "kind": "irrigation",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 1,
+      "kind": "irrigation",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "road",
+      "equal": true
+    },
+    {
+      "round": 2,
+      "kind": "irrigation",
+      "equal": true
+    }
+  ]
+}

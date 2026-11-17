@@ -5,7 +5,8 @@ import { grantIncome } from '../src/game/resource-income';
 import { researchStatus } from '../src/game/research';
 import { queueConstruction, updateConstruction } from '../src/game/structures';
 import { domesticTradePayout, updateMerchant, updateTradeRoutes } from '../src/game/trade';
-import { refreshVillageBonuses, updateVillages } from '../src/game/villages';
+import { applyVillageBonuses } from '../src/game/settlement-bridge';
+import { settlementStep } from '../src/game/settlement-step';
 import type { GameState, VillageIdentity } from '../src/game/types';
 
 function fixture(identity: VillageIdentity): GameState {
@@ -22,16 +23,16 @@ function fixture(identity: VillageIdentity): GameState {
     factions: [{ id: 0, name: 'Roma', color: '#c44', relation: 'self', affinity: 100, food: 500, gold: 1000, population: 20,
       production: 0, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false,
       research: { focus: 'wall', priorities: ['wall'], allocation: .25, levels: { woodenTower: 1 }, progress: {} } }],
-    villages: [{ id: 1, faction: 1, campId: 3, x: 24, y: 24, identity, name: 'Ally', relation: 'allied', nextGrowthAt: 9999, nextRecruitAt: 9999, nextThinkAt: 9999 }],
+    villages: [{ id: 1, faction: 1, campId: 3, x: 24, y: 24, identity, name: 'Ally', relation: 'allied' }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null, buildMode: null,
     diplomacy: null, gameOver: false, victory: false, seed: 'village-bonuses', rngState: 1,
   };
-  refreshVillageBonuses(state);
+  applyVillageBonuses(state);
   return state;
 }
 function destroyCamp(state: GameState): void {
   state.buildings.find(b => b.kind === 'villageTent')!.hp = 0;
-  updateVillages(state);
+  settlementStep(state);
 }
 
 describe('living village alliances affect the faction economy', () => {

@@ -1,6 +1,6 @@
 /** Original armored stone statue from Shade's CC0 Puny Dungeon atlas.
  * Tile 491 also appears eight times in the creator's sample-map2.tmj. */
-export const MONUMENT_SPRITE = { x: 368, y: 288, width: 16, height: 16 };
+export const MONUMENT_SPRITE = { x: 0, y: 0, width: 16, height: 16 };
 let atlas: HTMLImageElement | undefined;
 let loading: Promise<void> | undefined;
 
@@ -9,7 +9,7 @@ export function loadMonumentArt(): Promise<void> {
         const image = new Image();
         image.onload = () => { atlas = image; resolve(); };
         image.onerror = () => reject(new Error('Puny monument statue could not be loaded.'));
-        image.src = `${import.meta.env.BASE_URL}assets/puny-world/dungeon.png`;
+        image.src = `${import.meta.env.BASE_URL}assets/runtime/game/monument.webp`;
     });
 }
 

@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { RoadLinks } from './road-sprites';
 import { wallConnectionMask } from './wall-sprites';
 
@@ -17,7 +18,7 @@ let loading: Promise<void> | undefined;
 export function loadPalisadeArt(): Promise<void> {
   return loading ??= (async () => {
     const image = new Image();
-    image.src = `${import.meta.env.BASE_URL}assets/puny-medieval/palisades.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/puny-medieval/palisades.png`);
     await image.decode();
     if (image.naturalWidth !== 160 || image.naturalHeight !== 64) throw new Error('Invalid Puny Medieval palisade sheet.');
     sheet = image;

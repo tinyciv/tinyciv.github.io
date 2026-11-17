@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildingOverlapsVillageBorders, buildingWithinBorders } from '../src/game/border-placement';
-import { borderRadius, insideOwnBorders, territory, UNCLAIMED, villageBorderRadius } from '../src/game/borders';
+import { borderRadius, insideOwnBorders, territory, UNCLAIMED } from '../src/game/borders';
 import { entityStore } from '../src/game/entity-store';
 import { planAutomaticFarmSite } from '../src/game/farm-siting';
 import { pointInSight, updateFog } from '../src/game/fog';
@@ -31,7 +31,7 @@ function fixture(): GameState {
       culture: 0, yields: { food: 0, production: 0, gold: 0 }, nextRaid: Infinity, nextRetinueAt: Infinity, defeated: false,
       ...(id ? { villageId: 1 } : {}) })),
     villages: [{ id: 1, faction: 1, campId: 100, name: 'Sabine Grove', identity: 'growers', relation: 'neutral',
-      x: 32, y: 18, nextGrowthAt: 90, nextThinkAt: 0, nextRecruitAt: 90 }],
+      x: 32, y: 18 }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], fields: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'village-borders', rngState: 1,
     raiderCamps: [], marauderPacks: [], roamingMaraudersVersion: 1, fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 1 },
@@ -42,26 +42,15 @@ function fixture(): GameState {
 }
 
 describe('neutral village reservations', () => {
-  it('starts at three tiles, grows with residents and development, and never exceeds six tiles from the clearing', () => {
+  it('claims three tiles around an unplanned clearing, unaffected by culture or residents', () => {
+    // Founded villages claim Rust cells (settlement_claim); see villages.test.ts.
     const state = fixture(), village = state.villages![0], first = territory(state);
-    expect(villageBorderRadius(state, village)).toBe(3);
     expect(insideOwnBorders(state, 1, 35.5, 18.5)).toBe(true);
     expect(insideOwnBorders(state, 1, 36.5, 18.5)).toBe(false);
     expect(territory(state)).toBe(first);
-    state.factions[1].culture = 1e9;
+    state.factions[1].culture = 1e9; state.factions[1].population = 1000;
     expect(territory(state)).toBe(first);
-    state.factions[1].population = 10;
-    expect(villageBorderRadius(state, village)).toBe(3.5);
-    expect(territory(state)).not.toBe(first);
-    for (let i = 0; i < 5; i++) entityStore(state).buildings.add({ ...structure(200 + i, 'house', 29 + i, 22, 1), villageId: 1 });
-    expect(villageBorderRadius(state, village)).toBe(4.5);
-    state.factions[1].population = 1000;
-    expect(villageBorderRadius(state, village)).toBe(6);
-    const borders = territory(state);
-    expect(borders.sourceRadii.get(village.campId)).toBe(6);
-    expect(insideOwnBorders(state, 1, 38.5, 18.5)).toBe(true);
-    for (let cell = 0; cell < borders.owners.length; cell++) if (borders.owners[cell] === 1)
-      expect(Math.hypot(cell % borders.width - village.x, Math.floor(cell / borders.width) - village.y)).toBeLessThanOrEqual(6);
+    expect(first.sourceRadii.get(village.campId)).toBe(3);
   });
 
   it.each(['camp', 'house', 'road', 'wall', 'palisade', 'woodenTower', 'guardPost', 'palace', 'bridge', 'irrigation'] as const)

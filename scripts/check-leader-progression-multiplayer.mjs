@@ -1,4 +1,4 @@
-import { ClientStateReplica, PROTOCOL_VERSION } from './multiplayer-wire.mjs';
+import { ClientStateReplica, PROTOCOL_VERSION, encodeMessage, decodeMessage } from './multiplayer-wire.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -31,14 +31,14 @@ await build({ entryPoints: ['server/server.ts', 'server/match-worker.ts'], outdi
     });
   } }],
 });
-await copyFile('public/wasm/navigation.wasm', `${output}/navigation.wasm`);
+await copyFile('public/wasm/simulation.wasm', `${output}/simulation.wasm`);
 
 class Peer {
   socket; messages = []; state; token = ''; seq = 0;
   async open() {
     this.socket = new WebSocket(`ws://127.0.0.1:${port}/api/ws`);
     this.socket.on('message', data => {
-      const message = JSON.parse(data); this.messages.push(message);
+      const message = decodeMessage(data); this.messages.push(message);
       if (message.type === 'welcome') { this.token = message.token; this.seq = message.commandSequence; }
       if (message.type === 'snapshot') { this.state = message.state; this.replica = new ClientStateReplica(this.state); }
       if (message.type === 'frame' && this.state) {
@@ -51,7 +51,7 @@ class Peer {
     this.send({ type: 'hello', version: PROTOCOL_VERSION, ...(this.token ? { token: this.token } : {}) });
     await this.wait(message => message.type === 'welcome');
   }
-  send(message) { this.socket.send(JSON.stringify(message)); }
+  send(message) { this.socket.send(encodeMessage(message)); }
   async wait(predicate, timeout = 45000) {
     const start = Date.now();
     while (Date.now() - start < timeout) {

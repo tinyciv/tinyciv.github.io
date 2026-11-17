@@ -3,20 +3,33 @@ import { loadSiegeArt, ballistaIconUrl, spearmanIconUrl } from '../game/siege-ar
 import type { ResearchBranchId } from '../game/types';
 import { healerShackIconUrl, loadHealerShackArt } from '../game/healer-art';
 import { characterIconUrl, loadPunyCharacters } from '../game/unit-sprites';
+import { colosseumIconUrl, loadCivicArt } from '../game/civic-art';
+import { loadPikemanArt, pikemanIconUrl } from '../game/pikeman-art';
+import { runtimeArtUrl } from '../game/runtime-art';
 
 const RESEARCH_ICON_BRANCHES: readonly ResearchBranchId[] = [
   'woodenTower', 'wall', 'reinforcedDefenses', 'monument', 'coinage', 'urbanPlanning', 'scoutLodge',
   'blacksmith', 'metalTools', 'archeryRange', 'fletching', 'irrigation', 'grainStorage',
-  'sailing',
+  'sailing', 'whaling', 'militaryScience', 'officerCorps',
 ];
 
 /** Existing forged glyphs plus the native healer artwork for medicine. */
 export function researchIconUrl(branch: ResearchBranchId): string {
-  if (branch === 'engineering') return `${import.meta.env.BASE_URL}assets/ui/research/forged/metalTools.webp`;
+  // Reuse the approved imagegen retinue command artwork.
+  if (branch === 'officerCorps') return `${import.meta.env.BASE_URL}assets/runtime/ui/forged/retinue-actions-pixel.webp`;
+  if (branch === 'drainage') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/irrigation.webp`;
+  if (branch === 'militaryScience') return `${import.meta.env.BASE_URL}assets/runtime/ui/military-academy.webp`;
+  if (branch === 'fieldCannon') return `${import.meta.env.BASE_URL}assets/runtime/ui/field-cannon.webp`;
+  if (branch === 'whaling') return `${import.meta.env.BASE_URL}assets/runtime/ui/whaling.webp`;
+  if (branch === 'lateenSails' || branch === 'navalEngineering') return `${import.meta.env.BASE_URL}assets/runtime/ui/naval/${branch === 'lateenSails' ? 'caravel' : 'frigate'}.webp`;
+  if (branch === 'culturalIdentity') return `${import.meta.env.BASE_URL}assets/runtime/ui/resources/culture.webp`;
+  if (branch === 'gunpowder') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/blacksmith.webp`;
+  if (branch === 'roadBuilding') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/wall.webp`;
+  if (branch === 'engineering') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/metalTools.webp`;
   if (branch === 'compoundBow') return horsemanIconUrl('#df6262', 'horseArcher');
   if (branch === 'stirrups') return horsemanIconUrl('#df6262', 'knight');
   if (branch === 'horsebackRiding') return horsemanIconUrl('#df6262');
-  if (branch === 'sailing') return `${import.meta.env.BASE_URL}assets/pixelhole-overworld/Sailboat.png`;
+  if (branch === 'sailing') return runtimeArtUrl(`${import.meta.env.BASE_URL}assets/pixelhole-overworld/Sailboat.png`);
   if (branch === 'siegeEngines') return ballistaIconUrl();
   if (branch === 'metalCasting') return characterIconUrl('swordsman', '#df6262');
   if (branch === 'militaryTactics') return spearmanIconUrl('#df6262');
@@ -24,14 +37,17 @@ export function researchIconUrl(branch: ResearchBranchId): string {
   if (branch === 'traditionalMedicine') return healerShackIconUrl();
   if (branch === 'supplyTrain') return characterIconUrl('worker', '#df6262', 0);
   if (branch === 'massLevy') return spearmanIconUrl('#df6262');
-  return `${import.meta.env.BASE_URL}assets/ui/research/forged/${branch}.webp`;
+  if (branch === 'urbanMilitia') return pikemanIconUrl('#df6262');
+  if (branch === 'populism') return colosseumIconUrl();
+  return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/${branch}.webp`;
 }
 
 let loading: Promise<void> | undefined;
 export function loadResearchIcons(): Promise<void> {
-  return loading ??= Promise.all([loadPunyCharacters(), loadCavalryArt(), loadHealerShackArt(), loadSiegeArt(), ...RESEARCH_ICON_BRANCHES.map(async branch => {
+  return loading ??= Promise.all([loadCivicArt(), loadPikemanArt(), loadPunyCharacters(), loadCavalryArt(), loadHealerShackArt(), loadSiegeArt(), ...RESEARCH_ICON_BRANCHES.map(async branch => {
     const image = new Image(); image.src = researchIconUrl(branch);
     await image.decode();
-    if (!image.naturalWidth || image.naturalWidth !== image.naturalHeight) throw new Error(`Invalid research icon: ${branch}`);
+    // Icon slots use object-fit: contain, so rectangular artwork is valid.
+    if (!image.naturalWidth || !image.naturalHeight) throw new Error(`Invalid research icon: ${branch}`);
   })]).then(() => undefined);
 }

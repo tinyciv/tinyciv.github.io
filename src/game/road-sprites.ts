@@ -3,6 +3,8 @@ import type { RoadStyle } from './types';
 
 export interface RoadLinks {
   north: boolean; east: boolean; south: boolean; west: boolean;
+  /** Paved roads taper toward connected exits without paving (N,E,S,W,NE,SE,SW,NW). */
+  pavedEnds?: number;
   northeast?: boolean; southeast?: boolean; southwest?: boolean; northwest?: boolean;
 }
 export const ROAD_WIDTH_SCALE = .7;
@@ -11,6 +13,23 @@ export const ROAD_HALF_WIDTH = 6.5 * ROAD_WIDTH_SCALE;
 /** Trails share road exits, with about two thirds of the width. */
 export const TRAIL_HALF_WIDTH = ROAD_HALF_WIDTH * .65;
 export const TRAIL_ART_VARIANTS = 16;
+export const PAVED_ROAD_HALF_WIDTH = 8;
+/** Distance to the nearest unpaved exit on the 32px ground plane. */
+export function pavingEndDistance(ends: number, x: number, y: number): number {
+  let gap = Infinity;
+  if (ends & 1) gap = Math.min(gap, y);
+  if (ends & 2) gap = Math.min(gap, 31 - x);
+  if (ends & 4) gap = Math.min(gap, 31 - y);
+  if (ends & 8) gap = Math.min(gap, x);
+  if (ends & 16) gap = Math.min(gap, Math.hypot(31 - x, y));
+  if (ends & 32) gap = Math.min(gap, Math.hypot(31 - x, 31 - y));
+  if (ends & 64) gap = Math.min(gap, Math.hypot(x, 31 - y));
+  if (ends & 128) gap = Math.min(gap, Math.hypot(x, y));
+  return gap;
+}
+export function pavedRoadHalfWidth(links: RoadLinks, x: number, y: number): number {
+  return ROAD_HALF_WIDTH + (PAVED_ROAD_HALF_WIDTH - ROAD_HALF_WIDTH) * Math.min(1, pavingEndDistance(links.pavedEnds ?? 0, x, y) / 16);
+}
 
 type Point = readonly [number, number];
 const fields = new Map<number, Float32Array>();
@@ -50,7 +69,7 @@ function distance(x: number, y: number, a: Point, b: Point): number {
 }
 
 /** Geometry bends the authored pathway; it never invents scenery colors. */
-function distanceField(mask: number): Float32Array {
+export function roadDistanceField(mask: number): Float32Array {
   const existing = fields.get(mask);
   if (existing) return existing;
   const cardinal: Point[] = [[16, 0], [32, 16], [16, 32], [0, 16]];
@@ -85,10 +104,10 @@ function distanceField(mask: number): Float32Array {
   return field;
 }
 
-export function rasterDirtRoad(links: RoadLinks, atlas: { width: number; data: Uint8ClampedArray }, style: RoadStyle = 'road', variant = 0): Uint8ClampedArray {
+export function rasterDirtRoad(links: RoadLinks, atlas: { width: number; data: Uint8ClampedArray }, style: RoadStyle = 'road', variant = 0, paved = false): Uint8ClampedArray {
     const pixels = new Uint8ClampedArray(32 * 32 * 4);
-    const mask = maskOf(links), field = distanceField(mask);
-    const junction = Object.values(links).filter(Boolean).length > 2;
+    const mask = maskOf(links), field = roadDistanceField(mask);
+    const junction = (mask.toString(2).match(/1/g)?.length ?? 0) > 2;
     variant &= TRAIL_ART_VARIANTS - 1;
     const trail = style === 'trail', flip = variant & 8 ? -1 : 1;
     const horizontalBow = TRAIL_BENDS[variant & 7], verticalBow = TRAIL_BENDS[(variant * 5 + 3) & 7];
@@ -103,7 +122,7 @@ export function rasterDirtRoad(links: RoadLinks, atlas: { width: number; data: U
       const blend = blendX * blendY;
       const gap = interior ? sampleField(field, x + flip * blendX * bow(y, verticalBow),
         y + flip * blendY * bow(x, horizontalBow)) : field[y * 32 + x];
-      const halfWidth = trail ? TRAIL_HALF_WIDTH * (1 + blend * ((variant % 4 - 1.5) * .07
+      const halfWidth = paved ? pavedRoadHalfWidth(links, x, y) : trail ? TRAIL_HALF_WIDTH * (1 + blend * ((variant % 4 - 1.5) * .07
         + .04 * Math.sin((x + y) * Math.PI / 24 + variant))) : ROAD_HALF_WIDTH;
       if (gap > halfWidth) continue;
       // The native straight path (column 3, row 1) supplies its dirt center,

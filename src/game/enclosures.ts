@@ -5,6 +5,7 @@ import { buildingReady, buildingWidth, buildingHeight, isWallKind, type Building
 import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { worldRevisions, worldStructureRevision } from './world-revisions';
+import { reliefFlags } from './relief';
 
 export const ENCLOSED_HOUSE_GROWTH_MULTIPLIER = 1.3;
 export interface PalaceEnclosure { faction: number; palaces: number[]; cells: number[] }
@@ -25,11 +26,10 @@ interface CachedEnclosures extends PalaceEnclosures {
 const caches = new WeakMap<GameState, CachedEnclosures>();
 const validations = new WeakMap<GameState, { geometry: CachedEnclosures; store: EntityStore; key: string }>();
 interface EnclosureTerrain {
-  worldRevision: number; revision: number; ground: Uint8Array; ridges: Float64Array; tiers: Uint8Array; stairs: Uint8Array;
+  worldRevision: number; revision: number; ground: Uint8Array; relief: Uint8Array;
 }
-const stairCode = { north: 1, east: 2, south: 3, west: 4 };
 /** Roads, harvesting and cleared trees change world.revision but not the
- * defensive topology. Retain flood geometry unless ground, ridges or ramps
+ * defensive topology. Retain flood geometry unless ground or relief
  * actually change; bridge/wall/palace changes are checked separately. */
 function enclosureTerrain(world: World, previous?: CachedEnclosures): EnclosureTerrain {
   const count = world.width * world.height, worldRevision = worldRevisions(world).geometry;
@@ -37,15 +37,15 @@ function enclosureTerrain(world: World, previous?: CachedEnclosures): EnclosureT
     && previous.height === world.height ? previous.terrain : undefined;
   if (old?.worldRevision === worldRevision) return old;
   const terrain = old ?? { worldRevision, revision: 0, ground: new Uint8Array(count),
-    ridges: new Float64Array(count), tiers: new Uint8Array(count), stairs: new Uint8Array(count) };
+    relief: new Uint8Array(count) };
   let changed = !old;
   for (let i = 0; i < count; i++) {
     const tile = world.tiles[i];
     const ground = tile.terrain === 'river' ? (tile.overlay === 'ford' ? 3 : 2)
       : WATER.has(tile.terrain) || tile.overlay === 'volcano' || tile.overlay === 'glacier' ? 1 : 0;
-    const ridge = tile.ridge ?? 0, tier = ridge ? tile.ridgeTier ?? 1 : 0, stair = tile.stair ? stairCode[tile.stair] : 0;
-    if (terrain.ground[i] !== ground || terrain.ridges[i] !== ridge || terrain.tiers[i] !== tier || terrain.stairs[i] !== stair) changed = true;
-    terrain.ground[i] = ground; terrain.ridges[i] = ridge; terrain.tiers[i] = tier; terrain.stairs[i] = stair;
+    const relief = reliefFlags(tile);
+    if (terrain.ground[i] !== ground || terrain.relief[i] !== relief) changed = true;
+    terrain.ground[i] = ground; terrain.relief[i] = relief;
   }
   terrain.worldRevision = worldRevision;
   if (changed) terrain.revision++;
@@ -116,7 +116,7 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
   }
   const regions: PalaceEnclosure[] = [], byFaction = new Map<number, Uint8Array>(), highlighted = new Uint8Array(total);
   // The world geometry mask is independent of faction walls and bridges. It
-  // already encodes bounds, diagonal ledges, stair orientation and resources.
+  // already encodes bounds, mountain cores, diagonal corners and resources.
   const movementEdges = terrainNavigationEdges(world);
   const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
   const neighbors = (index: number, visit: (next: number) => void): void => {
@@ -141,6 +141,17 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
     }
     if (!ownWalls.some(Boolean)) continue;
     const components = new Int32Array(total), protectedCells = new Uint8Array(total), accepted = new Map<number, PalaceEnclosure>();
+    const rejected = new Set<number>(), hostileOrigins = new Uint8Array(total);
+    for (const other of palaces) if (!friendlyGateAccess(state, faction, other.faction)) {
+      for (let dy = 0; dy < buildingHeight(other); dy++) for (let dx = 0; dx < buildingWidth(other); dx++) {
+        const x = other.x + dx, y = other.y + dy;
+        if (x >= 0 && y >= 0 && x < width && y < height) hostileOrigins[y * width + x] = 1;
+      }
+    }
+    for (const camp of camps) {
+      const { x, y } = camp.gate;
+      if (x >= 0 && y >= 0 && x < width && y < height) hostileOrigins[y * width + x] = 1;
+    }
     const queue = new Int32Array(total);
     let nextComponent = 0;
     for (const palace of palaces.filter(building => building.faction === faction)) {
@@ -149,18 +160,26 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
       if (components[seed]) { accepted.get(components[seed])?.palaces.push(palace.id); continue; }
       const component = ++nextComponent, cells: number[] = [];
       let head = 0, tail = 1, open = false;
+      let minX = width, minY = height, maxX = 0, maxY = 0;
       queue[0] = seed; components[seed] = component;
       while (head < tail) {
         const index = queue[head++], x = index % width, y = Math.floor(index / width);
         cells.push(index);
-        if (x === 0 || y === 0 || x === width - 1 || y === height - 1) open = true;
+        minX = Math.min(minX, x); minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+        // A single route to wilderness or an enemy origin disproves security.
+        // The visited prefix remains a known rejected component, so another
+        // friendly palace can stop as soon as its search joins that prefix.
+        if (x === 0 || y === 0 || x === width - 1 || y === height - 1 || hostileOrigins[index]) { open = true; break; }
         movementNeighbors(index, next => {
-          if (!defenses[next] && !components[next]) {
-            components[next] = component; queue[tail++] = next;
+          if (!defenses[next]) {
+            if (rejected.has(components[next])) open = true;
+            else if (!components[next]) { components[next] = component; queue[tail++] = next; }
           }
         });
+        if (open) break;
       }
-      if (open) continue;
+      if (open) { rejected.add(component); continue; }
       // A finite island can contain the whole wilderness as well as the city.
       // Enemy settlement exits must be outside the protected component. Ignore
       // ordinary buildings and foreign walls so they cannot supply our defense.
@@ -193,14 +212,20 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
         if (separates) for (const cell of cluster) separatingWalls[cell] = 2;
         return separates;
       };
-      // Walk the complement from the world edge. An isolated wall standing
-      // inside a naturally protected island is an interior obstacle, not its enclosure.
+      // The complement ignores terrain, so every cell outside this component's
+      // bounding rectangle connects to the world edge. Seed its surrounding
+      // ring directly instead of walking the whole world to reach a small town.
+      // Interior holes remain excluded: an isolated wall on a natural island
+      // is an interior obstacle, not an enclosing perimeter.
+      minX--; minY--; maxX++; maxY++;
       const outside = new Uint8Array(total); head = 0; tail = 0;
       const addOutside = (index: number): void => {
-        if (!outside[index] && components[index] !== component) { outside[index] = 1; queue[tail++] = index; }
+        const x = index % width, y = Math.floor(index / width);
+        if (x >= minX && x <= maxX && y >= minY && y <= maxY
+          && !outside[index] && components[index] !== component) { outside[index] = 1; queue[tail++] = index; }
       };
-      for (let x = 0; x < width; x++) { addOutside(x); addOutside((height - 1) * width + x); }
-      for (let y = 1; y < height - 1; y++) { addOutside(y * width); addOutside(y * width + width - 1); }
+      for (let x = minX; x <= maxX; x++) { addOutside(minY * width + x); addOutside(maxY * width + x); }
+      for (let y = minY + 1; y < maxY; y++) { addOutside(y * width + minX); addOutside(y * width + maxX); }
       let ownedBoundary = false;
       while (head < tail && !ownedBoundary) {
         const index = queue[head++];
@@ -245,8 +270,8 @@ export function isHouseEnclosed(state: GameState, house: Building, enclosures = 
 
 /** The existing growth pool measures ordinary birth progress. A protected
  * destination needs 1/1.3 progress; outside destinations still need exactly 1. */
-export function houseBirthProgress(state: GameState, house: Building): number {
-  return isHouseEnclosed(state, house) ? 1 / ENCLOSED_HOUSE_GROWTH_MULTIPLIER : 1;
+export function houseBirthProgress(state: GameState, house: Building, enclosures = palaceEnclosures(state)): number {
+  return isHouseEnclosed(state, house, enclosures) ? 1 / ENCLOSED_HOUSE_GROWTH_MULTIPLIER : 1;
 }
 
 /** Approved Pixel glints preset: Fast (1.5×), 250% intensity. */

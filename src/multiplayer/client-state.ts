@@ -1,3 +1,4 @@
+import { trackArray } from '../game/cell-journal';
 import { entityStore, resetEntities } from '../game/entity-store';
 import { invalidateFog, useReplicatedFog } from '../game/fog';
 import { invalidateFarmFieldIndex } from '../game/farm-index';
@@ -25,7 +26,12 @@ export class ClientStateReplica {
   constructor(readonly state: GameState) {
     resetEntities(state);
     useReplicatedFog(state);
+    this.trackExploration();
     for (const field of state.fields ?? []) this.fields.set(field.id, field);
+  }
+  private trackExploration(): void {
+    if (this.state.fog) trackArray(this.state.fog.explored);
+    for (const control of Object.values(this.state.multiplayer?.controls ?? {})) if (control.fog) trackArray(control.fog.explored);
   }
   apply(delta: StateDelta, units?: UnitChanges): void {
     if (delta.state) {
@@ -36,6 +42,7 @@ export class ClientStateReplica {
       // Root and control fog are independently encoded wire values. Aliasing
       // them here would apply the next sparse array patch twice to one object.
     }
+    this.trackExploration();
     const store = entityStore(this.state);
     if (delta.units) this.entities(delta.units, store.units, () => this.state.units, units);
     if (delta.buildings) {

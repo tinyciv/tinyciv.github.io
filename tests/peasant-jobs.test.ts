@@ -71,15 +71,17 @@ describe('shared peasant jobs', () => {
       hp: 50, maxHp: 50, speed: 2.2, order: 'work', collector: true, collectorCamp: farm.id, home: 1, inside: true, collectPhase: 'idle' }));
     entityStore(state).units.add(...couriers);
     state.fields = [firstFarm, secondFarm].map((farm, index) => ({ id: 100 + index, camp: farm.id, faction: 0,
-      // Urgent crops bypass departure smoothing so this isolates resident capacity.
-      x: farm.x, y: farm.y, planted: true, food: 3, nextHarvest: 1000, expiresAt: .1 }));
+      // A generous deadline isolates resident capacity from spoilage.
+      x: farm.x, y: farm.y, planted: true, food: 3, nextHarvest: 1000, expiresAt: 100 }));
     const work = () => updateBuilder(state, builder, .1, moveUnit);
     const gather = () => couriers.filter(courier => state.units.includes(courier)).forEach(courier => updateCollector(state, courier, .1, moveUnit));
+    if (builderFirst) { work(); gather(); } else { gather(); work(); }
+    state.time += .4; // The city deliberately staggers separate parcel departures.
     if (builderFirst) { work(); gather(); } else { gather(); work(); }
     const outside = state.units.filter(unit => unit.kind === 'worker' && !unit.inside);
     expect(outside).toHaveLength(2);
     expect(state.units.filter(unit => unit.kind === 'worker' && unit.inside)).toHaveLength(1);
-    expect(builder.inside).toBe(!builderFirst);
+    expect(builder.inside).toBe(false); // Staggering leaves a resident available for construction in either order.
     // A removed trip frees a shared slot; idle workers claim it on their next sample.
     entityStore(state).units.replace(state.units.filter(unit => unit !== outside.find(unit => unit.collector)));
     work(); gather();

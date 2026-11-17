@@ -1,41 +1,46 @@
-import type { Faction, Unit } from './types';
-import { equipmentMultiplier } from './equipment';
+import { isRetinueMember, type Faction, type Unit } from './types';
 import { archerDamageMultiplier } from './research-bonuses';
 import { drawRankMarker } from './veterancy-art';
-import { RAIDER_ATTACK_MULTIPLIER } from './raider-pressure';
+import { rustEngine } from './rust-engine';
 
 export type Veterancy = 0 | 1 | 2 | 3 | 4;
-export const VETERANCY_KILLS = [10, 100, 250, 500] as const;
+export const VETERANCY_KILLS = [rustEngine.combat_constant(3), rustEngine.combat_constant(4),
+  rustEngine.combat_constant(5), rustEngine.combat_constant(6)] as const;
 export const VETERANCY_NAMES = ['Untrained', 'Regular', 'Veteran', 'Hardened', 'Elite'] as const;
 export function veterancy(unit: Pick<Unit, 'kills'>): Veterancy {
-  const kills = unit.kills ?? 0;
-  return kills >= 500 ? 4 : kills >= 250 ? 3 : kills >= 100 ? 2 : kills >= 10 ? 1 : 0;
+  return rustEngine.combat_veterancy(unit.kills ?? 0) as Veterancy;
 }
-export const DAMAGE_MULTIPLIER = .7;
-export const ELITE_DAMAGE_MULTIPLIER = 2.3;
-export const ELITE_DAMAGE_TAKEN_MULTIPLIER = .15;
-export const unitDamageDealtMultiplier = (unit: Pick<Unit, 'kills'>): number => veterancy(unit) === 4 ? ELITE_DAMAGE_MULTIPLIER : 1;
-export const unitDamageTakenMultiplier = (unit: Pick<Unit, 'kills'>): number => veterancy(unit) === 4 ? ELITE_DAMAGE_TAKEN_MULTIPLIER : 1;
+export const DAMAGE_MULTIPLIER = rustEngine.combat_constant(0);
+export const ELITE_DAMAGE_MULTIPLIER = rustEngine.combat_constant(1);
+export const ELITE_DAMAGE_TAKEN_MULTIPLIER = rustEngine.combat_constant(2);
+export const unitDamageDealtMultiplier = (unit: Pick<Unit, 'kills'>): number => rustEngine.combat_dealt_multiplier(unit.kills ?? 0);
+export const unitDamageTakenMultiplier = (unit: Pick<Unit, 'kills'>): number => rustEngine.combat_taken_multiplier(unit.kills ?? 0);
 /** Elite's percentage reductions apply to actual damage after ordinary armor. */
-export const incomingUnitDamage = (unit: Pick<Unit, 'kills'>, damage: number): number => Math.max(0, damage) * unitDamageTakenMultiplier(unit);
-// Elite replaces additive rank bonuses with exact multipliers relative to the
-// same untrained unit, preserving its equipment and role. Do not stack both.
-const ATTACK_BONUSES = [0, 3, 7, 12, 0] as const;
-const DEFENSE_BONUSES = [0, 2, 5, 8, 0] as const;
-const rawUnitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'raiderEquipmentMultiplier'>>): number =>
-  unit.kind === 'scout' ? 0 : (unit.attack + ATTACK_BONUSES[veterancy(unit)]) * equipmentMultiplier(unit.weaponLevel) * (unit.raiderEquipmentMultiplier ?? 1);
+export const incomingUnitDamage = (unit: Pick<Unit, 'kills'>, damage: number): number => rustEngine.combat_incoming_damage(unit.kills ?? 0, damage);
 /** Apply the reduction after armor, including the minimum hit, so every hit
  * does exactly 30% less damage rather than making armor disproportionately strong. */
-export const attackDamage = (attack: number, defense: number): number => Math.max(4, attack - defense) * DAMAGE_MULTIPLIER;
-export const unitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, faction?: Pick<Faction, 'research'>): number =>
-  rawUnitAttack(unit) * DAMAGE_MULTIPLIER * unitDamageDealtMultiplier(unit) * ((unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1)
-    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
-export const unitDamage = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & Partial<Pick<Unit, 'kind' | 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier'>>, defense: number, faction?: Pick<Faction, 'research'>): number =>
-  unit.kind === 'scout' ? 0 : attackDamage(rawUnitAttack(unit), defense) * unitDamageDealtMultiplier(unit) * ((unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1)
-    * (unit.faction === -2 ? RAIDER_ATTACK_MULTIPLIER : 1) * (unit.enemyStrengthMultiplier ?? 1);
-export const unitDefense = (unit: Pick<Unit, 'defense' | 'kills' | 'armorLevel'> & Partial<Pick<Unit, 'kind' | 'raiderEquipmentMultiplier' | 'brace'>>): number =>
-  (unit.defense + DEFENSE_BONUSES[veterancy(unit)]) * equipmentMultiplier(unit.armorLevel) * (unit.raiderEquipmentMultiplier ?? 1) + (unit.brace?.defense ?? 0);
-export function recordKill(unit: Unit): void { unit.kills = Math.max(0, unit.kills ?? 0) + 1; }
+export const attackDamage = (attack: number, defense: number): number => rustEngine.combat_attack_damage(attack, defense);
+type CulturalUnit = Partial<Pick<Unit, 'kind' | 'garrison' | 'guardPost' | 'fort'>>;
+type CombatFaction = Pick<Faction, 'research' | 'questBenefits' | 'achievements'>;
+/** Identity flags only; native combat owns cultural eligibility and arithmetic. */
+const cultureContext = (unit: CulturalUnit, home: boolean): number => Number(home)
+  | (unit.kind === 'leader' || unit.kind !== undefined && isRetinueMember({ kind: unit.kind }) ? 2 : 0)
+  | (unit.kind === 'militia' ? 4 : 0) | (unit.garrison || unit.guardPost !== undefined || unit.fort !== undefined ? 8 : 0);
+export const unitAttack = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & CulturalUnit & Partial<Pick<Unit, 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier' | 'technologyBonus' | 'raiderBonus'>>, faction?: CombatFaction, home = false): number =>
+  rustEngine.combat_unit_attack(Number(unit.kind === 'scout'), unit.attack, unit.kills ?? 0, unit.weaponLevel ?? 0,
+    unit.raiderEquipmentMultiplier ?? 1, (unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1,
+    Number(unit.faction === -2), unit.enemyStrengthMultiplier ?? 1, unit.technologyBonus?.attack ?? 0, unit.raiderBonus?.attack ?? 0,
+    faction?.achievements ?? 0, cultureContext(unit, home), faction?.questBenefits ?? 0);
+export const unitDamage = (unit: Pick<Unit, 'attack' | 'kills' | 'weaponLevel'> & CulturalUnit & Partial<Pick<Unit, 'faction' | 'raiderEquipmentMultiplier' | 'enemyStrengthMultiplier' | 'technologyBonus' | 'raiderBonus'>>, defense: number, faction?: CombatFaction, home = false): number =>
+  rustEngine.combat_unit_damage(Number(unit.kind === 'scout'), unit.attack, unit.kills ?? 0, unit.weaponLevel ?? 0,
+    unit.raiderEquipmentMultiplier ?? 1, (unit.kind === 'archer' || unit.kind === 'horseArcher') ? archerDamageMultiplier(faction) : 1,
+    Number(unit.faction === -2), unit.enemyStrengthMultiplier ?? 1, unit.technologyBonus?.attack ?? 0, unit.raiderBonus?.attack ?? 0, defense,
+    faction?.achievements ?? 0, cultureContext(unit, home), faction?.questBenefits ?? 0);
+export const unitDefense = (unit: Pick<Unit, 'defense' | 'kills' | 'armorLevel'> & CulturalUnit & Partial<Pick<Unit, 'raiderEquipmentMultiplier' | 'brace' | 'technologyBonus' | 'raiderBonus'>>, faction?: Pick<Faction, 'achievements'>, home = false): number =>
+  rustEngine.combat_unit_defense(unit.defense, unit.kills ?? 0, unit.armorLevel ?? 0, unit.raiderEquipmentMultiplier ?? 1,
+    unit.brace?.defense ?? 0, unit.technologyBonus?.defense ?? 0, unit.raiderBonus?.defense ?? 0,
+    faction?.achievements ?? 0, cultureContext(unit, home));
+export function recordKill(unit: Unit, experience = 1): void { unit.kills = rustEngine.combat_record_kill_amount(unit.kills ?? 0, experience); }
 
 /** Compact rank emblems sit beside the helmet, clear of the face and health bar. */
 export function drawVeterancy(c: CanvasRenderingContext2D, unit: Unit, x: number, y: number, size: number): void {

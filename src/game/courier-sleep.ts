@@ -6,11 +6,12 @@ import { farmWorkGroups } from './farm-work-groups';
 import { SimulationEvents } from './simulation-events';
 import { unitMaxHp, type GameState, type Unit } from './types';
 
-interface Sleeper { camp: number; home?: number; faction: number; x: number; y: number }
+interface Sleeper { camp: number; parcel: number; home?: number; faction: number; x: number; y: number }
 interface CourierSleep {
   store: EntityStore;
   sleepers: Map<Unit, Sleeper>;
   camps: Map<number, Set<Unit>>;
+  parcels?: ReturnType<typeof farmWorkGroups>;
   events: SimulationEvents<Unit>;
   reconcile: boolean;
   time: number;
@@ -66,8 +67,8 @@ export function wakeCourier(state: GameState, unit: Unit): void {
   const schedule = schedules.get(state), sleeper = schedule?.sleepers.get(unit);
   if (!schedule || !sleeper) return;
   schedule.sleepers.delete(unit); schedule.events.cancel(unit);
-  const camp = schedule.camps.get(sleeper.camp);
-  camp?.delete(unit); if (!camp?.size) schedule.camps.delete(sleeper.camp);
+  const camp = schedule.camps.get(sleeper.parcel);
+  camp?.delete(unit); if (!camp?.size) schedule.camps.delete(sleeper.parcel);
   schedule.store.setUnitSleeping(unit, false);
 }
 
@@ -75,12 +76,14 @@ export function wakeCourier(state: GameState, unit: Unit): void {
 export function wakeFarmCouriers(state: GameState, campId: number): void {
   const schedule = schedules.get(state);
   if (!schedule?.sleepers.size) return;
-  const group = farmWorkGroups(state).byCamp.get(campId);
-  const camps = group ? group.fields.map(field => field.camp) : [campId];
-  for (const camp of camps) {
-    const units = schedule.camps.get(camp);
-    if (units) for (const unit of units) wakeCourier(state, unit);
+  const parcels = farmWorkGroups(state);
+  if (schedule.parcels !== parcels) {
+    for (const unit of schedule.sleepers.keys()) wakeCourier(state, unit);
+    schedule.parcels = parcels;
+    return;
   }
+  const units = schedule.camps.get(parcels.byCamp.get(campId)?.anchor ?? campId);
+  if (units) for (const unit of units) wakeCourier(state, unit);
 }
 
 /** Staffing already visits assignments at 3 Hz. Reconcile those rare edits on
@@ -125,9 +128,14 @@ export function settleCourier(state: GameState, unit: Unit): void {
   const at = farmCourierWakeAt(state, unit);
   if (!(at > state.time)) return;
   const campId = unit.collectorCamp!;
-  schedule.sleepers.set(unit, { camp: campId, home: unit.home, faction: unit.faction, x: unit.x, y: unit.y });
-  let camp = schedule.camps.get(campId);
-  if (!camp) { camp = new Set(); schedule.camps.set(campId, camp); }
+  const parcels = farmWorkGroups(state), parcel = parcels.byCamp.get(campId)?.anchor ?? campId;
+  if (schedule.parcels !== parcels) {
+    for (const other of schedule.sleepers.keys()) wakeCourier(state, other);
+    schedule.parcels = parcels;
+  }
+  schedule.sleepers.set(unit, { camp: campId, parcel, home: unit.home, faction: unit.faction, x: unit.x, y: unit.y });
+  let camp = schedule.camps.get(parcel);
+  if (!camp) { camp = new Set(); schedule.camps.set(parcel, camp); }
   camp.add(unit); schedule.events.schedule(unit, at, unit);
   schedule.store.setUnitSleeping(unit, true);
 }

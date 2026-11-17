@@ -1,0 +1,99 @@
+{
+  "name": "Black-powder shell impact 1C",
+  "selected_by_user": true,
+  "selected_on": "2026-11-17",
+  "selection": "1C supersedes initial 1A choice",
+  "generator": "PixelLab /create-object-pro-flash + /animate-with-text-v3",
+  "frame_size": [
+    32,
+    32
+  ],
+  "frame_count": 9,
+  "frame_duration_ms": 100,
+  "duration_ms": 900,
+  "ground_anchor": [
+    16,
+    16
+  ],
+  "view": "high top-down",
+  "isometric": false,
+  "sheet": "black-powder-1c.png",
+  "sheet_sha256": "43cf4a0598ef2747c1a1c759062efc030762cd47f84860c535a341dd80dadb63",
+  "processing": "Selected sprite sheet copied byte-for-byte; no original generated frame pixels edited. Shared native image frames are centered on the Rust ground-impact event.",
+  "review_source": "scratch/2026-11-17-shell-impact-review/gallery.html",
+  "references": [
+    {
+      "file": "approved-plume-1c.png",
+      "source": "scratch/2026-11-17-cannon-fire-review/1C/03.png"
+    },
+    {
+      "file": "grass-16.png",
+      "source": "scratch/2026-11-16-military-academy/references/grass-16.png"
+    },
+    {
+      "file": "approved-cannon-16.png",
+      "source": "public/assets/units/field-cannon-simple/idle.png"
+    },
+    {
+      "file": "existing-battle-dust-16.png",
+      "source": "public/assets/building-destruction/1x1/destruction.png",
+      "source_rectangle": [
+        224,
+        0,
+        16,
+        16
+      ]
+    }
+  ],
+  "source_variant": {
+    "id": "1C",
+    "name": "Black-powder impact",
+    "size": 32,
+    "origin": [
+      16,
+      16
+    ],
+    "frame_ms": 100,
+    "style": "More natural historical black-powder impact, muted charcoal, warm earth brown, pale gray smoke and one very small ivory ignition core. A low asymmetric but centrally balanced dust-and-smoke burst, slightly richer coarse pixel clusters, no tall mushroom column.",
+    "base_prompt": "ONE SMALL EXPLODING-SHELL GROUND-IMPACT EFFECT ONLY, native 32x32 pixel art with transparent background. The impact ground epicenter is FIXED at canvas CENTER, pixel 16,16. Compact roughly circular burst expands outward in all directions, NOT a directional muzzle flash. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric or side view. This small explosive shell hits ordinary grassy earth in a historical strategy game. First instant only: one small hot white-yellow ignition surrounded by compact earth dust and tiny dark fragments; later animation will become gray-black powder smoke and dissipate. No cannon, gun, barrel, people, buildings, incoming shell or projectile, ground tile, grass background, large fireball, tall flame, mushroom cloud, text or shadows. Use the supplied reference board ONLY for style: left panel approved 1C gray black-powder smoke; second panel existing battle dust/debris colors; third panel game grass palette context; right panel approved cannon for native pixel density and effect scale. Do NOT copy those objects or the board layout. One centered new effect, crisp hard pixel clusters, upper-left highlights, no blur, antialiasing or disconnected noisy dots. Keep the complete burst inside the canvas with transparent outer margin. More natural historical black-powder impact, muted charcoal, warm earth brown, pale gray smoke and one very small ivory ignition core. A low asymmetric but centrally balanced dust-and-smoke burst, slightly richer coarse pixel clusters, no tall mushroom column.",
+    "animation_prompt": "A historical explosive shell detonates ONCE on the ground. First frame: tiny hot ivory core only. Next two frames: compact dirty gray-black powder smoke and warm brown earth dust expand radially around the unchanged CENTER, with a handful of short-lived earth fragments. Middle frames: the gray plume billows outward and thins, every bright flash is already gone. Last three frames: smoke separates, shrinks, fades completely to empty transparency. FINAL FRAME has NO visible pixels. Natural restrained black powder, not a fireball, no persistent crater or flame.",
+    "frame_count_requested": 8,
+    "view": "high top-down",
+    "isometric": false,
+    "generator": "PixelLab API",
+    "reference": "references/style-reference-32.png",
+    "frames": [
+      "1C/00.png",
+      "1C/01.png",
+      "1C/02.png",
+      "1C/03.png",
+      "1C/04.png",
+      "1C/05.png",
+      "1C/06.png",
+      "1C/07.png",
+      "1C/08.png"
+    ],
+    "sheet": "1C-sheet.png",
+    "gif": "1C-preview.gif",
+    "animated_preview_192": "1C-preview-192.webp",
+    "animated_on_grass_192": "1C-on-grass-192.webp",
+    "unique_frames": 9,
+    "opaque_pixels_by_frame": [
+      214,
+      280,
+      257,
+      255,
+      229,
+      132,
+      59,
+      33,
+      0
+    ],
+    "sheet_sha256": "43cf4a0598ef2747c1a1c759062efc030762cd47f84860c535a341dd80dadb63",
+    "animation_prompt_used": "ONE completed small explosive-shell impact centered at the fixed canvas CENTER. Keep the first supplied flash only for the first TWO frames. Then remove EVERY yellow, orange, white-hot or glowing pixel permanently; do NOT reignite. A small muted gray and brown dust puff spreads radially, thins, shrinks and vanishes. The LAST TWO frames must be COMPLETELY EMPTY TRANSPARENCY, exactly like the supplied last frame. No lingering gold fragments, smoke dots, crater decal, flame or embers in either final frame. Native 32x32 pixel art. High top-down camera, NOT isometric. Transparent background. Stable centered ground epicenter, no camera motion, incoming projectile, weapon, people or scenery. Keep compact coarse pixel clusters and the original restrained historical black-powder/earth colors. Animate once, not a repeating fire.",
+    "animation_seed": 261118122,
+    "animation_job": "88130e4b-7021-4d65-80a6-af3662a40375",
+    "refinement": "PixelLab reanimation guided to an empty ending; no output frame edited manually.",
+    "end_reference_source": "1A/08.png \u2014 fully transparent PixelLab-generated end frame"
+  }
+}

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { palaceEnclosures } from '../src/game/enclosures';
 import { findPath } from '../src/game/pathfinding';
 import { paintTerrain } from '../src/game/terrain';
+import { markWorldChanged, worldChangesSince } from '../src/game/world-revisions';
 import { type Building, type GameState, type Tile, type World } from '../src/game/types';
 
 vi.mock('../src/game/puny-world', async () => {
@@ -29,6 +30,28 @@ function raiseSummit(world: World): void {
 }
 
 describe('ridge tier cache invalidation', () => {
+  it('repaints a journaled farm cell without rescanning distant terrain', () => {
+    const state = fixture(), drawImage = vi.fn();
+    let reads = 0;
+    for (const tile of state.world.tiles) {
+      const variation = tile.variation;
+      Object.defineProperty(tile, 'variation', { get() { reads++; return variation; } });
+    }
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({
+      createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+      putImageData: vi.fn(),
+    }) }) });
+    const canvas = { width: 0, height: 0, getContext: () => ({ drawImage, imageSmoothingEnabled: false }) } as unknown as HTMLCanvasElement;
+    paintTerrain(canvas, state.world); const cursor = worldChangesSince(state.world).revision;
+    drawImage.mockClear(); reads = 0;
+    const cell = 3 * state.world.width + 3;
+    state.world.tiles[cell].farm = 0; markWorldChanged(state.world, 'appearance', [cell]);
+    expect(paintTerrain(canvas, state.world, worldChangesSince(state.world, cursor))).toEqual({ x: 2, y: 2, width: 3, height: 3 });
+    expect(reads).toBeLessThan(30);
+    expect(drawImage).toHaveBeenCalledOnce();
+    expect(drawImage.mock.calls[0].slice(1)).toEqual([2 * 32, 2 * 32, 3 * 32, 3 * 32]);
+  });
+
   it.each([true, false])('rebuilds cached paths after a tier-only change (revisioned: %s)', revisioned => {
     const state = fixture(), start = { x: 9.5, y: 12.5 }, target = { x: 15.5, y: 12.5 };
     if (!revisioned) delete state.world.revision;

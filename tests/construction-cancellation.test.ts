@@ -1,7 +1,7 @@
 import { entityStore } from '../src/game/entity-store';
 import { unlockBuildingResearch } from './helpers/research';
 import { describe, expect, it } from 'vitest';
-import { buildAt, cancelConstruction, migrateGame, moveUnit, updateGame, validateBuildAt } from '../src/game/simulation';
+import { BUILD_COSTS, buildAt, cancelConstruction, migrateGame, moveUnit, updateGame, validateBuildAt } from '../src/game/simulation';
 import { cancellationRefund, constructionProgress } from '../src/game/construction-cancellation';
 import { ensureBuilders, updateBuilder } from '../src/game/builders';
 import { CAMP_FIELD_OFFSETS, isPendingCampField, synchronizeFarms } from '../src/game/farms';
@@ -45,12 +45,12 @@ function advanceBuilders(state: GameState, seconds: number): void {
 describe('construction cancellation', () => {
   it('refunds the full paid price of an unstarted order and releases its reservation and selected panel', () => {
     const state = fixture(), house = order(state);
-    expect(house.construction!.paidGold).toBe(65);
-    expect(state.factions[0].gold).toBe(935);
+    expect(house.construction!.paidGold).toBe(42.25);
+    expect(state.factions[0].gold).toBe(957.75);
     expect(validateBuildAt(state, 'house', 11, 8).ok).toBe(false);
     state.selected = house.id; state.selectedType = 'building';
     state.time = 120;
-    expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: 65 });
+    expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: 42.25 });
     expect(state.factions[0].gold).toBe(1000);
     expect(state.buildings.some(building => building.id === house.id)).toBe(false);
     expect(validateBuildAt(state, 'house', 11, 8).ok).toBe(true);
@@ -90,15 +90,15 @@ describe('construction cancellation', () => {
   });
 
   it.each([
-    { phase: 'active', time: 15, pausedAt: undefined, waitingForBuilder: false, expected: 40.63 },
-    { phase: 'paused', time: 100, pausedAt: 17, waitingForBuilder: true, expected: 30.88 },
+    { phase: 'active', time: 15, pausedAt: undefined, waitingForBuilder: false, expected: 26.41 },
+    { phase: 'paused', time: 100, pausedAt: 17, waitingForBuilder: true, expected: 20.07 },
   ])('refunds only remaining work, with fractional gold preserved, for $phase construction', ({ time, pausedAt, waitingForBuilder, expected }) => {
     const state = fixture(), house = order(state);
     Object.assign(house.construction!, { startedAt: 10, pausedAt, waitingForBuilder });
     state.time = time;
     expect(cancellationRefund(state, house)).toBe(expected);
     expect(cancelConstruction(state, house.id)).toEqual({ ok: true, refund: expected });
-    expect(state.factions[0].gold).toBe(935 + expected);
+    expect(state.factions[0].gold).toBe(1000 - BUILD_COSTS.house.gold + expected);
     expect(canWalk(state, house.x + .5, house.y + .5, 0)).toBe(true);
   });
 
@@ -116,13 +116,13 @@ describe('construction cancellation', () => {
 
   it('frees the crop reservation and their traffic reservations without creating crop fields', () => {
     const state = fixture(), farm = order(state, 'camp', 13, 8);
-    expect(farm.construction!.paidGold).toBe(15);
+    expect(farm.construction!.paidGold).toBe(9.75);
     state.traffic = {};
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       expect(isPendingCampField(state, farm.x + dx, farm.y + dy)).toBe(true);
       state.traffic[(farm.y + dy) * state.world.width + farm.x + dx] = [0];
     }
-    expect(cancelConstruction(state, farm.id)).toEqual({ ok: true, refund: 15 });
+    expect(cancelConstruction(state, farm.id)).toEqual({ ok: true, refund: 9.75 });
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       expect(isPendingCampField(state, farm.x + dx, farm.y + dy)).toBe(false);
       expect(state.world.tiles[(farm.y + dy) * state.world.width + farm.x + dx].farm).toBeUndefined();
@@ -189,7 +189,7 @@ describe('construction cancellation', () => {
     expect(canWalk(state, leader.x, leader.y, 0)).toBe(true);
   });
 
-  it.each([['camp', 15, 13, 8], ['house', 65, 11, 8]] as const)('preserves the actual paid price of a new %s through save migration', (kind, paid, x, y) => {
+  it.each([['camp', 9.75, 13, 8], ['house', 42.25, 11, 8]] as const)('preserves the actual paid price of a new %s through save migration', (kind, paid, x, y) => {
     const state = fixture(), site = order(state, kind, x, y);
     const restored = migrateGame(JSON.parse(JSON.stringify(state)) as GameState);
     const loaded = restored.buildings.find(building => building.id === site.id)!;
@@ -226,14 +226,14 @@ describe('construction cancellation', () => {
     site.construction!.waitingForBuilder = false;
     site.construction!.startedAt = 10;
     state.time = 5;
-    expect(constructionProgress(state, site)).toBe(0); expect(cancellationRefund(state, site)).toBe(65);
+    expect(constructionProgress(state, site)).toBe(0); expect(cancellationRefund(state, site)).toBe(42.25);
     state.time = 100;
     expect(constructionProgress(state, site)).toBe(1); expect(cancellationRefund(state, site)).toBe(0);
     site.construction!.paidGold = -10;
     expect(cancellationRefund(state, site)).toBe(0);
   });
 
-  it.each([['camp', 15, 13, 8], ['house', 65, 11, 8]] as const)('still accepts manual %s orders during the automatic expansion pause', (kind, price, x, y) => {
+  it.each([['camp', 9.75, 13, 8], ['house', 42.25, 11, 8]] as const)('still accepts manual %s orders during the automatic expansion pause', (kind, price, x, y) => {
     const state = fixture(), site = order(state, kind, x, y);
     expect(cancelConstruction(state, site.id).ok).toBe(true);
     expect(state.buildings.find(building => building.kind === 'palace')!.governorPauseUntil?.[kind]).toBe(30);

@@ -1,12 +1,14 @@
 import type { Faction, GameState, GoldInputCategory, GoldLedgerEntry, GoldOutlayCategory } from './types';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
 export type { GoldInputCategory, GoldOutlayCategory } from './types';
 
 export const GOLD_FLOW_WINDOW = 60;
 const inputLabels: Readonly<Record<GoldInputCategory, string>> = {
-  taxes: 'Taxes', trade: 'Trade', loot: 'Loot', treasure: 'Treasure', refunds: 'Refunds', transfers: 'Transfers', other: 'Other',
+  taxes: 'Taxes', trade: 'Trade', mining: 'Mining', loot: 'Loot', treasure: 'Treasure', refunds: 'Refunds', transfers: 'Transfers', other: 'Other',
 };
 const outlayLabels: Readonly<Record<GoldOutlayCategory, string>> = {
-  construction: 'Construction', settlements: 'Settlement upkeep', defenses: 'Defenses', army: 'Army', science: 'Science',
+  construction: 'Construction', settlements: 'Town upkeep', defenses: 'Defenses', army: 'Army', science: 'Science',
   upgrades: 'Upgrades', immigration: 'Immigration', diplomacy: 'Diplomacy', raided: 'Raided', transfers: 'Transfers', other: 'Other',
 };
 const inputCategories = Object.keys(inputLabels) as GoldInputCategory[];
@@ -41,6 +43,8 @@ function bucket(state: Clock, faction: Faction): GoldLedgerEntry {
 }
 export function recordGoldInput(state: Clock, faction: Faction, amount: number, category: GoldInputCategory): void {
   if (!positive(amount) || !Number.isFinite(state.time)) return;
+  if ('world' in state && 'rngState' in state)
+    rustEngine.sim_campaign_income(simCore(state as GameState).handle, faction.id, amount, inputCategories.indexOf(category));
   const inputs = bucket(state, faction).inputs; inputs[category] = (inputs[category] ?? 0) + amount;
 }
 export function recordGoldOutlay(state: Clock, faction: Faction, amount: number, category: GoldOutlayCategory): void {
@@ -51,8 +55,9 @@ export function recordGoldOutlay(state: Clock, faction: Faction, amount: number,
  * only available gold, never create debt, and record only the actual payment. */
 export function spendGold(state: Clock, faction: Faction, amount: number, category: GoldOutlayCategory): number {
   if (!positive(amount)) return 0;
-  const paid = Math.min(amount, Math.max(0, faction.gold));
-  faction.gold = Math.max(0, faction.gold - paid);
+  const pointer = rustEngine.progression_charge(faction.gold, amount);
+  const [remaining, paid] = new Float64Array(rustEngine.memory.buffer, pointer, 2);
+  faction.gold = remaining;
   recordGoldOutlay(state, faction, paid, category);
   return paid;
 }

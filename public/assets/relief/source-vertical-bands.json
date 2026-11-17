@@ -1,0 +1,62 @@
+{
+  "provider": "built-in imagegen",
+  "references": [
+    "public/assets/relief/hills-reference.png",
+    "public/assets/relief/rocky-hills-reference.png"
+  ],
+  "layout": {
+    "columns": 4,
+    "rows": 3
+  },
+  "nativeWidths": [
+    32,
+    40,
+    48,
+    56,
+    40,
+    48,
+    56,
+    64,
+    48,
+    56,
+    64,
+    64
+  ],
+  "assets": [
+    {
+      "id": "hills-varied",
+      "source": "/Users/ckrapu/.codex/generated_images/01a1e700-8ffe-7b62-8fdf-b03ddd501147/exec-7458d3dc-bc96-4a37-8811-df887c914850.png",
+      "file": "public/assets/relief/hills-varied.png",
+      "sha256": "ac1e8d67220cf6f4367ccc7bcf05ce9042543857ac175b758acf8ef496b539d3"
+    },
+    {
+      "id": "rocky-hills-varied",
+      "source": "/Users/ckrapu/.codex/generated_images/01a1e700-8ffe-7b62-8fdf-b03ddd501147/exec-49770510-d85e-4265-a885-0bc02cbd999e.png",
+      "file": "public/assets/relief/rocky-hills-varied.png",
+      "sha256": "8e345663b86e605842c8f51e02422c98cbb1a98c534c613edfb7ff3341e71e46"
+    },
+    {
+      "id": "mountains-varied",
+      "source": "/Users/ckrapu/.codex/generated_images/01a1e700-8ffe-7b62-8fdf-b03ddd501147/exec-37dc3dc0-3577-4a8c-af9a-e9c31247dd7f.png",
+      "file": "public/assets/relief/mountains-varied.png",
+      "sha256": "63dd4c97b724428c102a7474fe8a59362e4e8304afb9cc9857aae296814f2982"
+    }
+  ],
+  "prompts": [
+    {
+      "id": "hills-varied",
+      "prompt": "Use case: stylized-concept.\nAsset type: transparent terrain sprite atlas for a16-pixel-tile strategy game.\nReference images: the attached local grassy and rocky hill sheets define the EXACT accepted visual style. Preserve their VERY SIMPLE BLOCKY pixel art: big square stair-step contours, flat solid colors, broad connected color masses. No fine texture, dots, grass flecks, cracks, stipple, little contour threads, gradients, blur or antialiasing. Upper-left light. Upright high top-down strategy-map view with front slopes, not an isometric diamond. No full black perimeter, ground tile, oval base, pedestal or detached shadow.\nLayout: FOUR columns by THREE rows of twelve SEPARATE complete terrain sprites on genuine transparency. Equal square cells, one object per cell, fully contained with12% clear padding all sides. Every object on the same cell-relative baseline at80% height. Row1 small low forms; row2 medium forms; row3 large forms. Native art approximately24\u201364pixels wide with only about12\u201328 BIG square pixel steps across each object. Enlarge those pixels uniformly for the atlas. All body pixels opaque, clean transparent exterior, no stray pixels, haze or colored fringe. No text, numbers, grid, trees, buildings, rivers, people, UI or watermark.\nPrimary request: TWELVE NEW GRASSY HILL VARIANTS with significantly more shape diversity than the supplied grassy sheet, while matching its style exactly. Green only.\nUse exactly three broad solid greens: bright warm yellow-lime crest/upper slope, olive midslope, deep forest-green right/front shadow. The lime band rises along the left slope, curves across the gently rounded/short flat cap, and bends down a shoulder. No extra surface detail.\nVary shape and proportions strongly: narrow short rounded knoll; very broad flattened rise; off-center left cap with long right shoulder; off-center right cap with long left shoulder; broad two-lobed rounded saddle; low crescent-like BENT crest with both feet on ground; blunt uneven double shoulder; compact tall round-topped grass hill; long asymmetric sweeping shoulder; low broad saddle; broad rounded central cap; squat offset cap with a small attached lower shoulder. Keep all grassy summits BLUNT AND ROUNDED, never pointed triangular mountain peaks. Each hill is one coherent connected body, about2.2\u20134.5times wider than tall.\nDo not just repeat the original four shapes. Design visibly new silhouettes while keeping the same three-color simplicity. Full left and right tapered feet.",
+      "provider": "built-in imagegen"
+    },
+    {
+      "id": "mountains-varied",
+      "prompt": "Use case: stylized-concept.\nAsset type: transparent terrain sprite atlas for a16-pixel-tile strategy game.\nReference images: the attached local grassy and rocky hill sheets define the EXACT accepted visual style. Preserve their VERY SIMPLE BLOCKY pixel art: big square stair-step contours, flat solid colors, broad connected color masses. No fine texture, dots, grass flecks, cracks, stipple, little contour threads, gradients, blur or antialiasing. Upper-left light. Upright high top-down strategy-map view with front slopes, not an isometric diamond. No full black perimeter, ground tile, oval base, pedestal or detached shadow.\nLayout: FOUR columns by THREE rows of twelve SEPARATE complete terrain sprites on genuine transparency. Equal square cells, one object per cell, fully contained with12% clear padding all sides. Every object on the same cell-relative baseline at80% height. Row1 small low forms; row2 medium forms; row3 large forms. Native art approximately24\u201364pixels wide with only about12\u201328 BIG square pixel steps across each object. Enlarge those pixels uniformly for the atlas. All body pixels opaque, clean transparent exterior, no stray pixels, haze or colored fringe. No text, numbers, grid, trees, buildings, rivers, people, UI or watermark.\nPrimary request: TWELVE BLOCKY ROCK MOUNTAIN VARIANTS that belong with the accepted hill sheets. Use their cream/gray rock palette and simple grass bands, enlarged into rock-dominated summits.\nRock surfaces only three connected flat colors: warm cream left ridge/face, medium neutral gray central face, dark charcoal-gray right face/gully. A low grassy skirt in the same three greens as the reference. Stone highlights run down the face and are NOT snow.\nDiverse silhouettes: small low worn crag; compact broad rocky shoulder; single off-center peak; blunt double summit; higher asymmetric peak with a long low buttress; broad notched massif; one tall central summit with lower attached shoulder; slanted blocky rock spur; twin unequal summits with a deep saddle; tall off-center summit with broad left skirt; broad broken massif with one dominant peak; three blunt connected rock shoulders. One coherent mountain per cell, not rows of separate little hills.\nSome mountain summits can be angular but avoid needle spires or overcomplicated jagged crags. Their native silhouettes are simple chunky square stair steps and their interior faces are large cream/gray/charcoal regions. Width approximately1.6\u20132.5times height. Maintain the same coarse pixel scale and calm simplified finish as the supplied hill sheets.",
+      "provider": "built-in imagegen"
+    },
+    {
+      "id": "rocky-hills-varied",
+      "prompt": "Use case: precise-object-edit.\nEdit target: first supplied image, the NEW diverse grassyhill atlas. Second image is the accepted rockyhill sheet as rock-style reference only.\nPreserve exactly all twelve new grassy silhouettes, their twelve-cell4column3row layout, blunt rounded caps, broad simple three-green bands, coarse square pixel scale, lighting and full feet.\nChange only: add ONE small exposed cream/gray/charcoal rock patch embedded within the lower front slope of each new hill, like the accepted second sheet. Vary patch location left/center/right to suit each hill and vary width10\u201325% of grassy body. Use exactly three connected flat stone colors, cream lit left, neutral-gray middle, dark charcoal right. About4\u20138 chunky pixel steps per patch. Keep the wide grassy cap and shoulders uninterrupted, with rock never rising above crest or outside the silhouette. No cracks, grit, extra grass marks, scattered stones, gradients or thin detail. Preserve the deliberately SIMPLE BLOCKY reference style.\nTrue transparent background outside each complete hill, fully opaque interiors. No ghosting/fringe, text, objects or ground tiles.",
+      "provider": "built-in imagegen"
+    }
+  ]
+}

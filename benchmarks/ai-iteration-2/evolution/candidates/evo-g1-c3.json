@@ -1,0 +1,59 @@
+{
+  "definition": {
+    "id": "evo-g1-c3",
+    "extends": "expansionist",
+    "parameters": {
+      "retreatHealth": 0.4,
+      "retreatPowerRatio": 1.9,
+      "huntPowerRatio": 0.9,
+      "garrisonFraction": 0.15,
+      "towerGarrisonCount": 2,
+      "hostileTowerPower": 3200,
+      "hostileFortPower": 6400,
+      "friendlyTowerPower": 1600,
+      "campaignSafetyRatio": 1.2,
+      "campaignDangerWeight": 20,
+      "retreatMorale": 40,
+      "recoveryHealth": 0.9,
+      "recoveryMorale": 75,
+      "recoveryPowerRatio": 0.6,
+      "decisionInterval": 1,
+      "formationEnterCount": 8,
+      "formationStayCount": 6,
+      "housingOrdersPerCycle": 6,
+      "developmentInterval": 4,
+      "cityLimit": 6,
+      "populationPerCity": 35,
+      "reserveUpkeepCycles": 1.2,
+      "campaignCooldown": 10,
+      "siegeLimit": 2,
+      "fortsPerCity": 2
+    },
+    "features": {
+      "formations": true,
+      "militaryPurchases": true,
+      "towerGarrison": true,
+      "towerAwareness": true,
+      "interceptEnemies": true,
+      "defensiveLevy": true,
+      "campaignLevy": true,
+      "safeCampaigns": true,
+      "formationApproach": true,
+      "proactiveHousing": true,
+      "foundCities": true,
+      "fortifyCities": true,
+      "offensiveSiege": true,
+      "territorialWars": true
+    },
+    "logic": {
+      "garrison": 0
+    }
+  },
+  "parents": [
+    "hard-assault"
+  ],
+  "lane": "external",
+  "hypothesis": "Concentrate the healthy field army instead of splitting off a standing garrison",
+  "genomeHash": "d4e0ab542d4bcfd52963a13be1dfe652f89916551b5e4910bf4ca831d53b579a",
+  "generation": 1
+}

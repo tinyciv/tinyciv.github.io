@@ -1,0 +1,45 @@
+{
+  "description": "Approved palisade watchtower with horizontal lookout boards, red banner and one-pixel dark side silhouette",
+  "approvedDate": "2026-11-08",
+  "generator": "Built-in imagegen",
+  "review": "scratch/2026-11-08-palisade-watchtower-boards/index.html",
+  "approvedSilhouette": "scratch/2026-11-08-palisade-watchtower-outline/3A-native.png",
+  "source": "scratch/2026-11-08-palisade-watchtower-boards/4A-native.png",
+  "prompts": "scratch/2026-11-08-palisade-watchtower-boards/prompts.json",
+  "preparation": "Generated timber texture fitted to original16x28 geometry and native palisade palette; exact side-only outline; requested three horizontal deck boards confined to inner deck",
+  "nativeSize": [
+    16,
+    28
+  ],
+  "groundAnchor": [
+    8,
+    28
+  ],
+  "worldSize": [
+    32,
+    56
+  ],
+  "worldOffset": [
+    0,
+    -24
+  ],
+  "outlineNativePixels": 1,
+  "outlineColor": "#2e2036",
+  "outlineMask": "First and last opaque pixel of each native row; side-only, inside existing silhouette",
+  "deckRect": [
+    3,
+    5,
+    10,
+    7
+  ],
+  "deckSeamRows": [
+    7,
+    9
+  ],
+  "deckSeamColor": "#79542d",
+  "deckBoardColor": "#a1753f",
+  "paletteSource": "public/assets/puny-medieval/palisades.png",
+  "sha256": "d7abeeaa724e4d5e2bf76595358ed5d7e80621f34c9172e74fca517fb15fa6fe",
+  "usage": "Default woodenTower artwork, standalone or sharing a completed same-owner palisade tile; completed same-owner stone walls use stone-wall-tower.png instead. Preserve approved red banner and exact pixel scale",
+  "licenseNote": "Generated addition; not an original asset from the purchased Puny World Medieval atlas."
+}

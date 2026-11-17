@@ -1,0 +1,26 @@
+.building-activity.is-shipyard { width: 560px; max-width: calc(100vw - 24px); padding: 18px; }
+.activity-shipyard { width: 100%; min-width: 0; font-family: var(--game-font); }
+.activity-shipyard p { margin: 10px 0; font-size: 17px; }
+.activity-shipyard fieldset { margin: 0; padding: 10px; min-width: 0; border: 1px solid #66553a; background: var(--popup-inset); }
+.activity-shipyard legend { padding: 0 6px; color: var(--popup-ink); font-size: 17px; }
+.activity-shipyard button { font: 17px/1.1 var(--game-font); cursor: pointer; }
+.naval-classes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.naval-classes button { display: grid; justify-items: center; gap: 6px; padding: 8px 4px; }
+.naval-classes img { width: 72px; height: 64px; object-fit: contain; }
+.activity-shipyard button[aria-pressed=true] { outline: 2px solid #d6bb7e; outline-offset: -4px; }
+.naval-weapons { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.naval-weapons [hidden] { display: none; }
+.naval-weapon-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
+.naval-weapon-options button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 80px; padding: 5px 2px; font-size: 16px; }
+.naval-weapon-options img { width: 44px; height: 38px; object-fit: contain; }
+.naval-marines { margin-top: 14px !important; }
+.naval-marines > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.naval-marines button { min-height: 36px; padding: 7px; }
+.activity-shipyard .activity-upgrade { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; margin-top: 12px; text-align: left; }
+.naval-status { color: #e7ca8c; }
+.naval-hotbar-icon { width: 42px; height: 42px; object-fit: contain; }
+@media (max-width: 450px) {
+ .building-activity.is-shipyard { padding: 12px; }
+ .naval-weapons { grid-template-columns: 1fr; }
+ .naval-classes img { width: 56px; height: 52px; }
+}

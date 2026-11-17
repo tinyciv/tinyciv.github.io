@@ -1,0 +1,3 @@
+The 60-match hypotheses screen completed on its recorded engine/WASM snapshot. New geothermal initialization code appeared in the workspace before the next engine bundle, while the WASM file still lacked those exports. That search initialization and the first generated-world attempt failed before producing results. No failed trials are counted as draws, wins or losses.
+
+The core was rebuilt before a new frozen-engine search. The exploratory hypotheses screen is not pooled with confirmation results from another engine snapshot. Subsequent confirmation and world checks use `experiments/ai-iteration-2/run-frozen.mjs` against the successful search's durable engine snapshot.

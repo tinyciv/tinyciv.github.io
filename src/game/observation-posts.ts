@@ -1,10 +1,14 @@
+import { territoryValue } from './territory-cells';
+import { recordCampaignPopulation } from './campaign-stats';
 import { territory, UNCLAIMED } from './borders';
 import { cityResidents, invalidateCitySummarySnapshot } from './cities';
 import { cityOwnership } from './city-ownership';
 import { entityStore } from './entity-store';
 import { nearbyUnits } from './spatial';
 import { spendGold } from './gold-ledger';
+import { settlements } from './settlement-bridge';
 import { canWalk, createReachabilityQuery } from './pathfinding';
+import { reliefFootprintAllowed } from './relief';
 import { invalidateSettlementDecisions } from './settlement-decisions';
 import { buildingHeight, buildingReady, buildingWidth, distance, type Building, type GameState, type Point, type Unit } from './types';
 
@@ -29,12 +33,13 @@ export function validateObservationPost(state: GameState, faction: number, point
   let message = '';
   if (!hasObservationLodge(state, faction)) message = 'Complete a Scouts’ Lodge first.';
   else if (!recruitingCity(state, faction, point)) message = 'Need 1 resident to staff the observation post.';
-  else if ((territory(state).owners[Math.floor(point.y) * state.world.width + Math.floor(point.x)] ?? UNCLAIMED) !== UNCLAIMED)
+  else if ((territoryValue(territory(state), Math.floor(point.y) * state.world.width + Math.floor(point.x)) ?? UNCLAIMED) !== UNCLAIMED)
     message = 'Observation posts must be outside all borders.';
+  else if (!reliefFootprintAllowed(state.world, Math.floor(point.x), Math.floor(point.y))) message = 'Hills and mountains cannot be built on.';
   else if (!canWalk(state, point.x, point.y, faction)) message = 'Place the observation post on clear, walkable ground.';
   else if (state.units.some(unit => unit.hp > 0 && unit.observationPost && !unit.observationPost.retreating
     && Math.floor(unit.x) === Math.floor(point.x) && Math.floor(unit.y) === Math.floor(point.y))) message = 'An observation post already occupies this tile.';
-  if (!message && !nearestReturn(state, { ...point, faction }).city) message = 'Observation posts need a walking route to a friendly settlement.';
+  if (!message && !nearestReturn(state, { ...point, faction }).city) message = 'Observation posts need a walking route to a friendly town.';
   return { ok: !message, message };
 }
 function residentsChanged(state: GameState): void {
@@ -45,7 +50,9 @@ export function placeObservationPost(state: GameState, factionId: number, point:
   const validation = validateObservationPost(state, factionId, point);
   if (!validation.ok) return validation;
   const faction = state.factions.find(candidate => candidate.id === factionId), city = recruitingCity(state, factionId, point);
-  if (!city || !faction || faction.gold < OBSERVATION_POST_COST) return { ok: false, message: 'Need 20 gold and 1 resident.' };
+  if (!faction) return { ok: false, message: 'Your realm can no longer staff observation posts.' };
+  if (!city) return { ok: false, message: 'Need 1 resident in a friendly town to staff the observation post.' };
+  if (faction.gold < OBSERVATION_POST_COST) return { ok: false, message: `Need ${OBSERVATION_POST_COST} gold to establish the observation post.` };
   const ownership = cityOwnership(state);
   const house = state.buildings.find(building => building.kind === 'house' && building.faction === factionId && buildingReady(building)
     && (building.residents ?? 0) > 0 && ownership.building(building)?.id === city.id);
@@ -54,7 +61,7 @@ export function placeObservationPost(state: GameState, factionId: number, point:
   faction.population--;
   spendGold(state, faction, OBSERVATION_POST_COST, 'construction');
   const x = Math.floor(point.x) + .5, y = Math.floor(point.y) + .5, store = entityStore(state);
-  store.units.add({ id: Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id)) + 1, kind: 'scout', faction: factionId, x, y,
+  store.units.add({ id: entityStore(state).allocateId(), kind: 'scout', faction: factionId, x, y,
     hp: 100, maxHp: 100, morale: 100, attack: 0, defense: 4, speed: SCOUT_SPEED, range: 0,
     order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60, facing: Math.PI / 2, moving: false, attackTime: 0,
     observationPost: { x, y, city: city.id, discoveredBy: [], nextUpkeepAt: state.time + OBSERVATION_POST_UPKEEP_SECONDS,
@@ -65,7 +72,7 @@ export function placeObservationPost(state: GameState, factionId: number, point:
 
 export function beginObservationPostRetreat(unit: Unit): void {
   const post = unit.observationPost;
-  if (!post || post.retreating || unit.hp <= 0 || !post.discoveredBy.length) return;
+  if (!post || post.questVillage !== undefined || post.retreating || unit.hp <= 0 || !post.discoveredBy.length) return;
   post.retreating = true; unit.order = 'flee'; unit.speed = OBSERVATION_POST_FLEE_SPEED;
   unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0;
 }
@@ -113,7 +120,8 @@ export function updateObservationPost(state: GameState, scout: Unit, dt: number,
     if (state.time >= post.nextUpkeepAt) {
       const faction = state.factions.find(candidate => candidate.id === scout.faction);
       const periods = Math.floor((state.time - post.nextUpkeepAt) / OBSERVATION_POST_UPKEEP_SECONDS) + 1;
-      if (faction) spendGold(state, faction, periods * OBSERVATION_POST_UPKEEP, 'defenses');
+      if(post.questVillage!==undefined)settlements(state).questPostUpkeep(post.questVillage,periods*OBSERVATION_POST_UPKEEP);
+      else if (faction) spendGold(state, faction, periods * OBSERVATION_POST_UPKEEP, 'defenses');
       post.nextUpkeepAt += periods * OBSERVATION_POST_UPKEEP_SECONDS;
     }
     if (state.time >= post.nextSmokeAt) emitSmoke(state, scout);
@@ -134,6 +142,7 @@ export function updateObservationPost(state: GameState, scout: Unit, dt: number,
     if (house) house.residents = (house.residents ?? 0) + 1;
     else city.unhousedResidents = (city.unhousedResidents ?? 0) + 1;
     faction.population++; delete city.depopulated;
+    recordCampaignPopulation(state, faction);
     residentsChanged(state);
   }
   scout.kind = 'worker'; scout.home = plan.city.id; scout.inside = true;

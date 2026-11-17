@@ -42,7 +42,7 @@ try {
     await delay(100);
   }
   check('Built multiplayer server starts and responds to health requests');
-  for (const [path, type] of [['/', 'text/html'], ['/wasm/navigation.wasm', 'application/wasm']]) {
+  for (const [path, type] of [['/', 'text/html'], ['/wasm/simulation.wasm', 'application/wasm']]) {
     const response = await fetch(endpoint + path);
     assert.equal(response.status, 200, path);
     assert.ok(response.headers.get('content-type')?.includes(type), `${path} MIME type`);
@@ -81,11 +81,12 @@ try {
     });
     await page.goto(endpoint, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.assets === 'ready', undefined, { timeout: 60_000 });
-    await page.getByRole('button', { name: 'Single player', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
+    await page.getByRole('button', { name: 'New Game', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Multiplayer', exact: true }).waitFor();
     await page.screenshot({ path: `${output}/menu-${viewport.width}.png` });
-    await page.getByRole('button', { name: 'Single player', exact: true }).click();
-    await page.locator('[name="seed"]').waitFor();
+    await page.getByRole('button', { name: 'New Game', exact: true }).click();
+    await page.locator('[data-form="single"]').waitFor();
     assert.deepEqual(errors, [], 'Browser runtime errors');
     assert.deepEqual(failedAssets, [], 'Missing production assets');
     check(`Production UI loads assets and opens world creation at ${viewport.width}×${viewport.height}`);

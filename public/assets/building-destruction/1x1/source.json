@@ -1,0 +1,53 @@
+{
+  "generator": "PixelLab API /animate-with-text-v3",
+  "variant": "1B",
+  "footprint": [
+    1,
+    1
+  ],
+  "view": "high top-down",
+  "frameSize": [
+    16,
+    16
+  ],
+  "frameCount": 17,
+  "frameDurationsMs": [
+    235,
+    235,
+    235,
+    236,
+    235,
+    235,
+    236,
+    235,
+    235,
+    235,
+    236,
+    235,
+    235,
+    236,
+    235,
+    235,
+    236
+  ],
+  "animationDurationMs": 4000,
+  "rubbleFadeDurationMs": 10000,
+  "groundAnchor": [
+    8.0,
+    16
+  ],
+  "loop": false,
+  "rubble": "rubble.png",
+  "sourceEndpoint": "rubble.png",
+  "sheet": "destruction.png",
+  "processing": "Raw API pixels only; frames placed horizontally without resampling or repainting.",
+  "sha256": {
+    "destruction.png": "e48e53d3e866929dbea91e3842cb3b3b67197621d0b0b63743a7f0fe51928d30",
+    "rubble.png": "cc1f6c22ee82308bc3a2e0163614eaaa5bee566e497a9fcebfa4ddc1c2d195c1"
+  },
+  "approvedVariant": "1B",
+  "approvedOn": "2026-11-14",
+  "sourceReview": "scratch/2026-11-14-building-destruction/index.html",
+  "sourceFrames": "scratch/2026-11-14-building-destruction/1B/animation",
+  "status": "integrated"
+}

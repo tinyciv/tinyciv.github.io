@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { FIELD_HARVEST_SECONDS } from './farms';
 import { type FarmField } from './types';
 import { drawPuny } from './puny-world';
@@ -26,7 +27,7 @@ export function loadFarmArt(): Promise<void> {
       resolve();
     };
     image.onerror = () => reject(new Error('Farm artwork could not be loaded.'));
-    image.src = `${import.meta.env.BASE_URL}assets/pixelhole-overworld/${file}`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/pixelhole-overworld/${file}`);
   });
   return loading ??= Promise.all(['Seedling-Wheat-Joins.png', 'Green-Wheat-Joins.png', 'Wheatfield-Joins.png'].map((file, stage) =>
     load(file, (image, pixels) => {

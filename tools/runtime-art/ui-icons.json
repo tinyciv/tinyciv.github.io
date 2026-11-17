@@ -1,0 +1,240 @@
+[
+  {
+    "source": "assets/ui/resources/food.png",
+    "output": "assets/runtime/ui/resources/food.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/resources/gold.png",
+    "output": "assets/runtime/ui/resources/gold.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/resources/population.png",
+    "output": "assets/runtime/ui/resources/population.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/resources/culture.png",
+    "output": "assets/runtime/ui/resources/culture.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/irrigation.webp",
+    "output": "assets/runtime/ui/research/forged/irrigation.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/scoutLodge.webp",
+    "output": "assets/runtime/ui/research/forged/scoutLodge.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/reinforcedDefenses.webp",
+    "output": "assets/runtime/ui/research/forged/reinforcedDefenses.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/coinage.webp",
+    "output": "assets/runtime/ui/research/forged/coinage.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/woodenTower.webp",
+    "output": "assets/runtime/ui/research/forged/woodenTower.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/blacksmith.webp",
+    "output": "assets/runtime/ui/research/forged/blacksmith.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/monument.webp",
+    "output": "assets/runtime/ui/research/forged/monument.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/archeryRange.webp",
+    "output": "assets/runtime/ui/research/forged/archeryRange.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/wall.webp",
+    "output": "assets/runtime/ui/research/forged/wall.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/grainStorage.webp",
+    "output": "assets/runtime/ui/research/forged/grainStorage.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/metalTools.webp",
+    "output": "assets/runtime/ui/research/forged/metalTools.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/fletching.webp",
+    "output": "assets/runtime/ui/research/forged/fletching.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/research/forged/urbanPlanning.webp",
+    "output": "assets/runtime/ui/research/forged/urbanPlanning.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/foundry.png",
+    "output": "assets/runtime/ui/foundry.webp",
+    "width": 160,
+    "height": 146,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/whaling.png",
+    "output": "assets/runtime/ui/whaling.webp",
+    "width": 160,
+    "height": 146,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/field-cannon.png",
+    "output": "assets/runtime/ui/field-cannon.webp",
+    "width": 160,
+    "height": 146,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/military-academy.png",
+    "output": "assets/runtime/ui/military-academy.webp",
+    "width": 160,
+    "height": 146,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/thermal-bath.png",
+    "output": "assets/runtime/ui/thermal-bath.webp",
+    "width": 240,
+    "height": 219,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/siege-cannon.png",
+    "output": "assets/runtime/ui/siege-cannon.webp",
+    "width": 160,
+    "height": 107,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/galley.png",
+    "output": "assets/runtime/ui/naval/galley.webp",
+    "width": 144,
+    "height": 144,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/caravel.png",
+    "output": "assets/runtime/ui/naval/caravel.webp",
+    "width": 144,
+    "height": 144,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/frigate.png",
+    "output": "assets/runtime/ui/naval/frigate.webp",
+    "width": 144,
+    "height": 144,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/shipyard.png",
+    "output": "assets/runtime/ui/naval/shipyard.webp",
+    "width": 128,
+    "height": 128,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/ballista.png",
+    "output": "assets/runtime/ui/naval/ballista.webp",
+    "width": 96,
+    "height": 96,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/cannon.png",
+    "output": "assets/runtime/ui/naval/cannon.webp",
+    "width": 96,
+    "height": 96,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/land.png",
+    "output": "assets/runtime/ui/naval/land.webp",
+    "width": 96,
+    "height": 96,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/anchor.png",
+    "output": "assets/runtime/ui/naval/anchor.webp",
+    "width": 96,
+    "height": 96,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/naval/reinforce.png",
+    "output": "assets/runtime/ui/naval/reinforce.webp",
+    "width": 96,
+    "height": 96,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/military/actions-simple.png",
+    "output": "assets/runtime/ui/military/actions-simple.webp",
+    "width": 240,
+    "height": 120,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/quest-markers-routing.png",
+    "output": "assets/runtime/ui/quest-markers-routing.webp",
+    "width": 288,
+    "height": 288,
+    "resample": "lanczos"
+  }
+]

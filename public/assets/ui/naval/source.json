@@ -1,0 +1,15 @@
+{
+  "generator": "Built-in imagegen",
+  "processing": "Lossless equal-cell atlas crops only; no pixels painted or synthesized by scripts. Original sheets in scratch/2026-11-15-naval-combat-assets",
+  "icons": [
+    "shipyard",
+    "galley",
+    "caravel",
+    "frigate",
+    "ballista",
+    "cannon",
+    "anchor",
+    "land",
+    "reinforce"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "generator": "PixelLab API /generate-image-v2",
+  "camera": "high top-down",
+  "isometric": false,
+  "source": "scratch/2026-11-15-naval-combat-assets",
+  "selected": {
+    "galley": "galley-v3-0.png",
+    "caravel": "caravel-v3-0.png",
+    "frigate": "frigate-v3-0.png",
+    "shipyard": "shipyard.png",
+    "boarding-plank": "boarding-plank.png"
+  },
+  "nativeTilePixels": 16,
+  "shipCanvas": [
+    48,
+    80
+  ],
+  "physicalHull": [
+    2,
+    5
+  ],
+  "usableDeck": [
+    2,
+    4
+  ],
+  "shipyardCanvas": [
+    48,
+    48
+  ],
+  "processing": "Unmodified native generated PNGs. Runtime faction recolor changes red gunwales; Pixi rotates the retained hull and renders upright existing marine sprites. All boarding plank pixels are PixelLab-generated.",
+  "animations": "motion/source.json"
+}

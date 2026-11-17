@@ -4,12 +4,15 @@ import { constructionEdges } from './builders';
 import { canTraverseEdge, createReachabilityQuery, withNavigationFrame } from './pathfinding';
 import { palaceReachability } from './placement';
 import { replaceableRoad } from './covered-roads';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefFootprintAllowed } from './relief';
 import { palaceEnclosures } from './enclosures';
-import { planFarmRelocation, type FarmRelocationPlan } from './farm-relocation';
+import { planFarmRelocation, withFarmRelocationProbes, type FarmRelocationPlan } from './farm-relocation';
+import TinyQueue from 'tinyqueue';
 
 const NEIGHBORS = [-1, 0, 1].flatMap(dy => [-1, 0, 1].filter(dx => dx || dy).map(dx => [dx, dy] as const));
-export interface HouseSitePlan { point: Point; replaceCampId?: number; farmMove?: FarmRelocationPlan; }
+/** `clearFarm`: the farm on this tile has no replacement plot, so the order
+ * clears it (refunding half its cost) instead of moving it. */
+export interface HouseSitePlan { point: Point; replaceCampId?: number; farmMove?: FarmRelocationPlan; clearFarm?: true; }
 interface Candidate { point: Point; distance: number; camp?: Building; }
 interface PlacementContext { occupied: Set<number>; farms: Map<number, Building>; activeWells: Set<number>; reservedSolid: Set<number>; }
 
@@ -36,7 +39,7 @@ function placementContext(state: GameState, palace: Building, allowRoads = false
 
 function candidateAt(state: GameState, palace: Building, context: PlacementContext, point: Point, allowClearing = false): Candidate | undefined {
   const { x, y } = point, key = y * state.world.width + x;
-  if (isForbidden(state, x, y, palace.faction) || context.occupied.has(key) || !ridgeFootprintAllowed(state.world, x, y)) return;
+  if (isForbidden(state, x, y, palace.faction) || context.occupied.has(key) || !reliefFootprintAllowed(state.world, x, y)) return;
   const tile = tileAt(state.world, x, y), camp = context.farms.get(key);
   if (!tile || WATER.has(tile.terrain) || tile.farm !== undefined && !camp) return;
   if (tile.overlay !== 'none' && !(allowClearing && ['forest', 'jungle', 'swamp'].includes(tile.overlay))) return;
@@ -108,34 +111,80 @@ export function planHouseAt(state: GameState, palace: Building, point: Point): H
     let reachable = cached!.reachable.get(palace.id);
     if (!reachable) { reachable = palaceReachability(state, palace); cached!.reachable.set(palace.id, reachable); }
     const farmMove = planFarmRelocation(state, palace, candidate.camp, candidate.point, reachable);
-    return farmMove ? { point: candidate.point, replaceCampId: candidate.camp.id, farmMove } : undefined;
+    return farmMove ? { point: candidate.point, replaceCampId: candidate.camp.id, farmMove }
+      : { point: candidate.point, replaceCampId: candidate.camp.id, clearFarm: true as const };
   });
   cached.plans.set(key, plan);
   return plan;
 }
 export function canPlaceHouseAt(state: GameState, palace: Building, point: Point): boolean { return !!planHouseAt(state, palace, point); }
 
+/** Enumerate tiles in exact center-distance, row, column order. Every cell has
+ * a cardinal path toward the center with nonincreasing distance, so a small
+ * frontier can yield the nearest candidates without scanning/sorting the map. */
+function* nearestHousingCells(width: number, height: number, palace: Building): Generator<Point> {
+  if (!width || !height) return;
+  const seen = new Set<number>();
+  const queue = new TinyQueue<{ x: number; y: number; distance: number }>([], (a, b) => a.distance - b.distance || a.y - b.y || a.x - b.x);
+  const add = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const cell = y * width + x;
+    if (seen.has(cell)) return;
+    seen.add(cell);
+    queue.push({ x, y, distance: Math.hypot(x + .5 - palace.x - 1, y + .5 - palace.y - 1) });
+  };
+  add(Math.max(0, Math.min(width - 1, Math.ceil(palace.x))), Math.max(0, Math.min(height - 1, Math.ceil(palace.y))));
+  while (queue.length) {
+    const point = queue.pop()!;
+    yield { x: point.x, y: point.y };
+    add(point.x - 1, point.y); add(point.x + 1, point.y); add(point.x, point.y - 1); add(point.x, point.y + 1);
+  }
+}
+
 /** Prefer this city's defended interior, then the nearest suitable cell. No
  * block dimensions or palace-distance cap prevent filling a narrow parcel. */
 export function planHouseSite(state: GameState, palace: Building, canReplaceCamp: (camp: Building) => boolean = () => true,
   allowed: (point: Point) => boolean = () => true): HouseSitePlan | undefined {
   if (palace.kind !== 'palace' || !buildingReady(palace)) return;
-  return withNavigationFrame(state, () => {
+  return withNavigationFrame(state, () => withFarmRelocationProbes(state, () => {
     const { width, height } = state.world, context = placementContext(state, palace), reachable = palaceReachability(state, palace);
-    const candidates: Candidate[] = [];
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const key = y * width + x;
-      if ((!reachable[key] && !context.activeWells.has(key)) || !allowed({ x, y })) continue;
-      const candidate = candidateAt(state, palace, context, { x, y });
-      if (candidate) candidates.push(candidate);
-    }
     const region = palaceEnclosures(state).regions.find(region => region.faction === palace.faction && region.palaces.includes(palace.id));
-    const enclosed = new Set(region?.cells ?? []), inside = (candidate: Candidate): number => Number(enclosed.has(candidate.point.y * width + candidate.point.x));
-    candidates.sort((a, b) => inside(b) - inside(a) || a.distance - b.distance || a.point.y - b.point.y || a.point.x - b.point.x);
-    for (const candidate of candidates) {
+    const enclosed = new Set(region?.cells ?? []);
+    const interior = [...enclosed].map(cell => ({ x: cell % width, y: Math.floor(cell / width) }))
+      .sort((a, b) => Math.hypot(a.x + .5 - palace.x - 1, a.y + .5 - palace.y - 1)
+        - Math.hypot(b.x + .5 - palace.x - 1, b.y + .5 - palace.y - 1) || a.y - b.y || a.x - b.x);
+    const planAt = (point: Point) => {
+      const cell = point.y * width + point.x;
+      if ((!reachable[cell] && !context.activeWells.has(cell)) || !allowed(point)) return;
+      const candidate = candidateAt(state, palace, context, point);
+      return candidate && planCandidate(state, palace, candidate, context, reachable, canReplaceCamp);
+    };
+    for (const point of interior) {
+      const plan = planAt(point);
+      if (plan) return plan;
+    }
+    const checked = new Set<number>();
+    for (const point of nearestHousingCells(width, height, palace)) {
+      // A city with no valid site still falls back to one linear terrain pass;
+      // never pay a heap operation for every distant forest or forbidden tile.
+      if (checked.size >= 1024) break;
+      const cell = point.y * width + point.x; checked.add(cell);
+      if (enclosed.has(cell)) continue;
+      const plan = planAt(point);
+      if (plan) return plan;
+    }
+    const distant: Candidate[] = [];
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const cell = y * width + x;
+      if (checked.has(cell) || enclosed.has(cell) || (!reachable[cell] && !context.activeWells.has(cell)) || !allowed({ x, y })) continue;
+      const candidate = candidateAt(state, palace, context, { x, y });
+      if (candidate) distant.push(candidate);
+    }
+    distant.sort((a, b) => a.distance - b.distance || a.point.y - b.point.y || a.point.x - b.point.x);
+    for (const candidate of distant) {
       const plan = planCandidate(state, palace, candidate, context, reachable, canReplaceCamp);
       if (plan) return plan;
     }
-  });
+  }));
 }
 export function nearestHouseSite(state: GameState, palace: Building): Point | undefined { return planHouseSite(state, palace)?.point; }

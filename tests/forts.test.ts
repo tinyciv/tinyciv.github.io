@@ -4,7 +4,7 @@ import { borderRadius, insideOwnBorders, territory, UNCLAIMED } from '../src/gam
 import { buildingArmor } from '../src/game/defense-equipment';
 import { entityStore } from '../src/game/entity-store';
 import { FORT_BASE_HP, FORT_BUILD_SECONDS, FORT_GOLD, FORT_UPKEEP, SKIRMISHER_SPEED, fortBrigadeCapacity, preserveDestroyedFort,
-  rebuildFort, rebuildFortStatus, updateForts, updateFortSkirmisher, upgradeFortBrigade, upgradeFortBrigadeStatus } from '../src/game/forts';
+  rebuildFort, rebuildFortStatus, updateForts, updateFortSkirmisher, upgradeFort, upgradeFortStatus, upgradeFortBrigade, upgradeFortBrigadeStatus } from '../src/game/forts';
 import { buildAt, updateGame, validateBuildAt } from '../src/game/simulation';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { withPlayerFaction } from '../src/game/player-context';
@@ -12,6 +12,7 @@ import { updateWoodenTowers, WOODEN_TOWER_ATTACK } from '../src/game/tower-comba
 import { buildingHeight, buildingWidth, type Building, type GameState, type Unit } from '../src/game/types';
 import { updateWallStats } from '../src/game/wall-stats';
 import { updateWallOwnership } from '../src/game/wall-ownership';
+import { CHECK_INTERVAL } from '../src/game/work-cadence';
 
 const building = (id: number, kind: Building['kind'], x: number, y: number, faction = 0): Building => ({ id, kind, x, y, faction,
   hp: FORT_BASE_HP, maxHp: FORT_BASE_HP, capacity: 0, armor: 2 });
@@ -32,6 +33,35 @@ function fixture(): GameState {
 const idle = { up: false, down: false, left: false, right: false };
 
 describe('Forts', () => {
+  it('purchases the moat once for 1000 gold, preserves wounds and keeps its 3x3 center', () => {
+    const state = fixture(), fort = state.buildings[1], owner = state.factions[0];
+    owner.gold = 4000; updateWallStats(state); fort.hp /= 2;
+    expect(upgradeFortStatus(state, fort)).toMatchObject({ nextLevel: 2, cost: 1000, healthMultiplier: 3, available: true });
+    expect(upgradeFort(state, fort).ok).toBe(true);
+    expect(fort).toMatchObject({ fortLevel: 2, hp: 3375, maxHp: 6750, x: 20, y: 20 });
+    expect(owner.gold).toBe(3000);
+    updateWallStats(state, true); expect(fort.maxHp).toBe(6750);
+    expect(upgradeFortStatus(state, fort)).toMatchObject({ nextLevel: null, cost: null, available: false });
+    expect(upgradeFort(state, fort).ok).toBe(false); expect(owner.gold).toBe(3000);
+    expect([buildingWidth(fort), buildingHeight(fort)]).toEqual([3, 3]);
+    fort.hp = 0; preserveDestroyedFort(state, fort);
+    expect(rebuildFort(state, fort).ok).toBe(true);
+    expect(fort).toMatchObject({ fortLevel: 2, maxHp: 6750 });
+  });
+
+  it('rejects unaffordable and unauthorized fort levels without charging gold or changing health', () => {
+    const state = fixture(), fort = state.buildings[1], owner = state.factions[0];
+    updateWallStats(state); owner.gold = 999;
+    expect(upgradeFort(state, fort).ok).toBe(false);
+    expect(fort).toMatchObject({ hp: 2250, maxHp: 2250 }); expect(owner.gold).toBe(999);
+    owner.gold = 4000; state.units[0].x = 0; state.units[0].y = 0;
+    expect(upgradeFort(state, fort).ok).toBe(false); expect(owner.gold).toBe(4000);
+    state.units[0].x = 19.5; state.units[0].y = 20.5;
+    expect(applyGameCommand(state, 1, { type: 'fort-upgrade', buildingId: fort.id }).ok).toBe(false);
+    expect(applyGameCommand(state, 0, { type: 'fort-upgrade', buildingId: fort.id }).ok).toBe(true);
+    expect(fort.fortLevel).toBe(2); expect(owner.gold).toBe(3000);
+  });
+
   it('validates, pays for and physically constructs a Fort only on owned land and a researched supply depot', () => {
     const state = fixture(); entityStore(state).buildings.retain(site => site.kind === 'palace');
     state.factions = [state.factions[0]];
@@ -57,16 +87,16 @@ describe('Forts', () => {
     expect(insideOwnBorders(state, 0, 19.5, 8.5)).toBe(true);
     leader.x = 14.5; leader.y = 8.5;
     fort.hp = 0; preserveDestroyedFort(state, fort);
-    for (let y = 8; y <= 9; y++) for (let x = 15; x <= 16; x++)
+    for (let y = 8; y <= 10; y++) for (let x = 15; x <= 17; x++)
       expect(validateBuildAt(state, 'fort', x, y).message).toContain('foundation is permanent');
-    expect(validateBuildAt(state, 'fort', 17, 8).ok).toBe(true);
+    expect(validateBuildAt(state, 'fort', 18, 8).ok).toBe(true);
     expect(rebuildFort(state, fort).ok).toBe(true);
     expect(fort.construction?.duration).toBe(FORT_BUILD_SECONDS);
     for (let i = 0; i < 1400 && fort.construction; i++) updateGame(state, .25, idle);
     expect(fort.construction).toBeUndefined(); expect(fort.hp).toBe(fort.maxHp);
   }, 20000);
 
-  it('checks all four Fort tiles and rejects hostile territory, water, blockers and forbidden reconstruction', () => {
+  it('checks all nine Fort tiles and rejects hostile territory, water, blockers and forbidden reconstruction', () => {
     const state = fixture(); entityStore(state).buildings.retain(site => site.kind === 'palace');
     Object.assign(state.buildings[0], { x: 12, y: 8 });
     const faction = state.factions[0]; faction.research = { focus: 'wall', levels: { wall: 1 }, progress: {} };
@@ -104,10 +134,10 @@ describe('Forts', () => {
     expect(fort.construction?.paidGold).toBe(150);
   });
 
-  it('uses a 2x2 footprint and exactly the health and armor of masonry walls', () => {
+  it('uses a 3x3 footprint and exactly the health and armor of masonry walls', () => {
     const state = fixture(), fort = state.buildings[1], wall = building(3, 'wall', 30, 30);
     entityStore(state).buildings.add(wall); updateWallStats(state);
-    expect([buildingWidth(fort), buildingHeight(fort)]).toEqual([2, 2]);
+    expect([buildingWidth(fort), buildingHeight(fort)]).toEqual([3, 3]);
     expect(fort.maxHp).toBe(2250); expect(fort.maxHp).toBe(wall.maxHp);
     expect(buildingArmor(fort, state.factions[0])).toBe(buildingArmor(wall, state.factions[0]));
     state.factions[0].armorLevel = 3; updateWallStats(state, true);
@@ -118,7 +148,7 @@ describe('Forts', () => {
     const state = fixture(), fort = state.buildings[1], shots: { target: number; damage: number }[] = [];
     entityStore(state).units.add(unit(20, 'warrior', 23, 21, 1), unit(21, 'warrior', 24, 21, 1), unit(22, 'worker', 22.5, 21, 1));
     const orders = { hostile: (a: number, b: number) => a !== b, clearShot: () => true,
-      shoot: (_fort: Building, _from: { x: number; y: number }, target: Unit, damage: number) => { shots.push({ target: target.id, damage }); } };
+      shoot: (_fort: Building, _from: { x: number; y: number }, target: Unit | Building, damage: number) => { shots.push({ target: target.id, damage }); } };
     updateWoodenTowers(state, .1, orders);
     expect(shots).toEqual([{ target: 20, damage: WOODEN_TOWER_ATTACK }, { target: 21, damage: WOODEN_TOWER_ATTACK }]);
     updateWoodenTowers(state, .74, orders); expect(shots).toHaveLength(2);
@@ -133,8 +163,9 @@ describe('Forts', () => {
     updateGame(state, .1, idle);
     expect(state.projectiles?.filter(shot => shot.attacker === fort.id)).toHaveLength(2);
     expect(state.projectiles?.filter(shot => shot.attacker === fort.id).every(shot => shot.kind === 'arrow'
-      && shot.towerArrow && shot.start.x === 21 && shot.start.y === 21)).toBe(true);
-    fort.hp = 0; updateGame(state, .4, idle);
+      && shot.towerArrow && shot.start.x === 21.5 && shot.start.y === 21.5)).toBe(true);
+    // The first recurring follow-up is phased over one additional interval.
+    fort.hp = 0; updateGame(state, 2 * CHECK_INTERVAL + .01, idle);
     expect(state.buildings).toContain(fort); expect(fort.fort?.destroyed).toBe(true);
   });
 
@@ -219,7 +250,7 @@ describe('Forts', () => {
     const state = fixture();
     Object.assign(state.factions[1], { villageId: 1, relation: 'peace' });
     state.villages = [{ id: 1, faction: 1, campId: 100, name: 'Neighbors', identity: 'growers', relation: 'neutral',
-      x: 25, y: 20, nextGrowthAt: 90, nextThinkAt: 0, nextRecruitAt: 90 }];
+      x: 25, y: 20 }];
     entityStore(state).buildings.add({ ...building(100, 'villageTent', 25, 20, 1), villageId: 1 });
     const reserved = territory(state);
     expect(insideOwnBorders(state, 1, 24.5, 20.5, reserved)).toBe(true);

@@ -1,0 +1,234 @@
+{
+  "generator": "PixelLab API",
+  "date": "2026-11-15",
+  "variant": "1C",
+  "source": "scratch/2026-11-15-thermal-bath/1C/base/00.png",
+  "size": [
+    32,
+    32
+  ],
+  "footprint": [
+    2,
+    2
+  ],
+  "groundAnchor": [
+    16,
+    31
+  ],
+  "view": "high top-down",
+  "isometric": false,
+  "references": [
+    {
+      "file": "references/barracks.png",
+      "source": "public/assets/buildings/barracks.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only",
+      "sourceRectangle": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "groundAnchor": [
+        16,
+        32
+      ],
+      "mostCommonOpaqueColors": [
+        {
+          "color": "#a05643",
+          "pixels": 40
+        },
+        {
+          "color": "#6b2f25",
+          "pixels": 31
+        },
+        {
+          "color": "#763125",
+          "pixels": 30
+        },
+        {
+          "color": "#050101",
+          "pixels": 28
+        },
+        {
+          "color": "#7c7363",
+          "pixels": 28
+        },
+        {
+          "color": "#924233",
+          "pixels": 25
+        },
+        {
+          "color": "#746554",
+          "pixels": 24
+        },
+        {
+          "color": "#4b2a1d",
+          "pixels": 23
+        },
+        {
+          "color": "#612c22",
+          "pixels": 23
+        },
+        {
+          "color": "#1d1813",
+          "pixels": 23
+        }
+      ]
+    },
+    {
+      "file": "references/granary.png",
+      "source": "public/assets/buildings/granary.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only",
+      "sourceRectangle": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "groundAnchor": [
+        16,
+        31
+      ],
+      "mostCommonOpaqueColors": [
+        {
+          "color": "#160d11",
+          "pixels": 48
+        },
+        {
+          "color": "#f1cb7c",
+          "pixels": 46
+        },
+        {
+          "color": "#816243",
+          "pixels": 38
+        },
+        {
+          "color": "#745b41",
+          "pixels": 34
+        },
+        {
+          "color": "#1b0d0d",
+          "pixels": 27
+        },
+        {
+          "color": "#e9c885",
+          "pixels": 27
+        },
+        {
+          "color": "#120705",
+          "pixels": 26
+        },
+        {
+          "color": "#f4d38c",
+          "pixels": 26
+        },
+        {
+          "color": "#8b6c4b",
+          "pixels": 21
+        },
+        {
+          "color": "#34261b",
+          "pixels": 21
+        }
+      ]
+    },
+    {
+      "file": "references/forum.png",
+      "source": "public/assets/buildings/forum.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only",
+      "sourceRectangle": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "groundAnchor": [
+        16,
+        31
+      ],
+      "mostCommonOpaqueColors": [
+        {
+          "color": "#e3e2d4",
+          "pixels": 197
+        },
+        {
+          "color": "#b0a795",
+          "pixels": 162
+        },
+        {
+          "color": "#1b0d0d",
+          "pixels": 64
+        },
+        {
+          "color": "#211411",
+          "pixels": 64
+        },
+        {
+          "color": "#a99d89",
+          "pixels": 43
+        },
+        {
+          "color": "#f8f4ed",
+          "pixels": 35
+        },
+        {
+          "color": "#9c9483",
+          "pixels": 32
+        },
+        {
+          "color": "#efebe0",
+          "pixels": 28
+        },
+        {
+          "color": "#bbb29c",
+          "pixels": 17
+        },
+        {
+          "color": "#847b6b",
+          "pixels": 15
+        }
+      ]
+    }
+  ],
+  "prompt": "ONE SMALL THERMAL BATH BUILDING, a compact ancient Roman bathhouse with an OPEN central bathing pool visible from above. Warm pale stone foundation, low cream plaster walls, ochre terracotta roof over a short rear wing, two stout square columns at the entrance. Broad rectangular turquoise bathing water in the open courtyard and one small pale steam curl. Front entrance faces DOWN. Clear simple 2x2-cell square footprint, whole building in the native 32x32 canvas with a transparent outer margin. Roof occupies only the rear third, pool is the identifying focal feature. No people, text, grass, pedestal, large dome or tall chimney. Native 32x32 pixel-art building. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Preserve the existing set\u2019s straight front-aligned walls, vertical columns, crisp outlines and coherent material surfaces. High top-down orthographic camera, NOT isometric, no diamond base. L-shaped roofed rear and left wings, open bathing court on the right, short southern entrance; restrained architectural detail. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas.",
+  "sha256": "bf58293a607696a780eeec56a095a8d809580fb6bd3699c506fae9e2886309e5",
+  "pixelProcessing": "Original PixelLab PNGs unchanged; animation frames concatenated horizontally.",
+  "animation": {
+    "endpoint": "/animate-with-text-v3",
+    "sheet": "thermal-bath-animation.png",
+    "frameCount": 9,
+    "frameSize": [
+      32,
+      32
+    ],
+    "frameDurationMs": 180,
+    "durationMs": 1620,
+    "loop": true,
+    "seed": 261115980,
+    "prompt": "Seamless looping THERMAL BATH animation. Locked high top-down camera, NOT isometric. Keep this exact L-shaped bathhouse architecture absolutely stationary: every terracotta roof tile, cream wall, column, stone step, doorway, footprint, outline, color, scale and canvas position stays fixed. ONLY animate the turquoise WATER inside the open bathing pool with a few broad gentle pale ripples slowly drifting across its surface. Add two compact soft cream STEAM curls that rise gently above the OPEN POOL, expand slightly and fade, then reform. Keep steam sparse so the pool and L-shaped roof remain clearly readable. Native 32x32 pixel art with the same chunky color clusters as the reference building. All effects stay inside the 32x32 canvas. Transparent background. No people, splashes, fire, sparks, moving masonry, flapping roofs, deformation, camera movement, zoom or blur. Return smoothly to the starting pose.",
+    "sourceFrames": [
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/00.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/01.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/02.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/03.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/04.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/05.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/06.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/07.png",
+      "scratch/2026-11-15-thermal-bath-1c-animation/frames/08.png"
+    ],
+    "sha256": "25b9ec01ec616c51ab00df71b225752da4f760c7a92fb8311a532b1ab1b0ed2e"
+  }
+}

@@ -74,7 +74,7 @@ describe('wooden guard tower combat', () => {
     const state = fixture(), victim = unit(20, 'warrior', 18.51, 12.5), fired: number[] = [];
     entityStore(state).units.add(victim);
     const hooks = { hostile: (a: number, b: number) => a !== b, clearShot: () => true,
-      shoot: (_tower: Building, _from: { x: number; y: number }, target: Unit) => { fired.push(target.id); } };
+      shoot: (_tower: Building, _from: { x: number; y: number }, target: Unit | Building) => { fired.push(target.id); } };
     updateWoodenTowers(state, .01, hooks);
     expect(fired).toEqual([]);
     victim.x = 18.5;

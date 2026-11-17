@@ -1,4 +1,5 @@
-import { LOYALTY_START, loyaltyWarning } from './loyalty-model';
+import { drawLoyaltyWreath } from './loyalty-art';
+export { drawLoyaltyWreath } from './loyalty-art';
 import type { CitySummary } from './cities';
 import { drawCityPanelBackground } from './city-panel-art';
 import { gameFont } from './game-font';
@@ -18,7 +19,9 @@ function ellipsis(c: CanvasRenderingContext2D, text: string, width: number): str
 
 /** x/y is the center of a compact ribbon above the palace's roof. Text
  * stays screen-sized as the world zooms; only the attachment point moves. */
-export function drawCityRibbon(c: CanvasRenderingContext2D, city: CitySummary, x: number, y: number, maxWidth = CITY_RIBBON_MAX_WIDTH, faction = 0): void {
+/** `loyalty` comes from the settlement view (Rust affiliation toward the owner). */
+export function drawCityRibbon(c: CanvasRenderingContext2D, city: CitySummary, x: number, y: number, maxWidth = CITY_RIBBON_MAX_WIDTH, faction = 0,
+    loyalty: { value: number; warning: boolean } = { value: 75, warning: false }): void {
     c.save(); c.globalAlpha = 1; c.textAlign = 'left'; c.textBaseline = 'middle';
     const ownCity = city.palace.faction === faction;
     const height = ownCity ? CITY_RIBBON_HEIGHT : CITY_NAME_RIBBON_HEIGHT;
@@ -27,7 +30,7 @@ export function drawCityRibbon(c: CanvasRenderingContext2D, city: CitySummary, x
         { text: `${Math.round(city.population)} / ${Math.round(city.housing)}`, color: '#e8e7df' },
         { text: signed(city.food), color: CITY_FOOD_COLOR },
         { text: signed(city.gold), color: CITY_GOLD_COLOR },
-        { text: String(Math.round(city.palace.loyalty?.value ?? LOYALTY_START)), color: loyaltyWarning(city.palace) ? '#ffae88' : '#c3d58b', wreath: true },
+        { text: String(Math.round(loyalty.value)), color: loyalty.warning ? '#ffae88' : '#c3d58b', wreath: true },
     ] : []).map(column => ({ ...column, width: c.measureText(column.text).width + ('wreath' in column ? 24 : 0) }));
     const numbersWidth = columns.reduce((sum, column) => sum + column.width, 0) + (ownCity ? 36 : 0);
     c.font = gameFont(18, 500);
@@ -42,22 +45,8 @@ export function drawCityRibbon(c: CanvasRenderingContext2D, city: CitySummary, x
     c.font = gameFont(20, 500);
     for (const column of columns) {
         const wreath = 'wreath' in column;
-        if (wreath) drawLoyaltyWreath(c, cursor, top + 30, column.color);
+        if (wreath) drawLoyaltyWreath(c, cursor, top + 30);
         c.fillStyle = column.color; c.fillText(column.text, cursor + (wreath ? 24 : 0), top + 40); cursor += column.width + 12;
-    }
-    c.restore();
-}
-
-/** Small olive branches, drawn on the same pixel grid as the HUD marks. */
-export function drawLoyaltyWreath(c: CanvasRenderingContext2D, x: number, y: number, color = '#c3d58b'): void {
-    c.save(); c.fillStyle = color;
-    for (const side of [-1, 1]) {
-        const center = x + 10;
-        for (const [dx, dy] of [[3, 1], [6, 5], [7, 9], [6, 13], [3, 16]]) {
-            c.fillRect(center + side * dx - 1, y + dy, 3, 2);
-            c.fillRect(center + side * (dx + 1) - 1, y + dy - 2, 2, 3);
-        }
-        c.fillRect(center + (side < 0 ? -3 : 0), y + 18, 4, 2);
     }
     c.restore();
 }

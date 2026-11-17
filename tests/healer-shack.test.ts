@@ -117,7 +117,7 @@ describe('healer shack regeneration', () => {
     expect(validateBuildAt(state, 'healerShack', 10, 10)).toMatchObject({ ok: true });
     expect(buildAt(state, 'healerShack', 10, 10).ok).toBe(true);
     const building = state.buildings.find(building => building.kind === 'healerShack')!;
-    expect(building).toMatchObject({ hp: 160, maxHp: 160, capacity: 0, construction: { duration: 45, paidGold: 200 } });
+    expect(building).toMatchObject({ hp: 1, maxHp: 160, capacity: 0, construction: { duration: 45, paidGold: 200 } });
     expect([buildingWidth(building), buildingHeight(building)]).toEqual([1, 1]);
     expect(faction.gold).toBe(800);
     expect(BUILD_COSTS.healerShack.gold).toBe(HEALER_SHACK_COST);

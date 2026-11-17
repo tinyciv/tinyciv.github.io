@@ -1,9 +1,8 @@
 import { type Building, type GameState, type Point, buildingReady, buildingWidth, buildingHeight, isFarmKind } from './types';
 import { CAMP_FIELD_OFFSETS, expectedFarmDelivery, fieldHarvestFoodForState, harvestFoodPerEconomyCycle, FIELD_SPOIL_SECONDS } from './farms';
-import { farmWalkingDistance, farmCityQuery, palaceWalkingDistances } from './farm-travel';
+import { farmCityQuery, farmCollectionQuery } from './farm-travel';
 import { grainStorageMultiplier } from './research-bonuses';
 import { cityResidents, invalidateCitySummarySnapshot, withCitySummarySnapshot, withLiveCitySummaries, type CityResidents } from './cities';
-import { ORCHARD_YIELD_MULTIPLIER } from './orchards';
 import { palaceFoodProduction } from './city-support';
 import { cityOwnership } from './city-ownership';
 import { saltFoodConsumptionMultiplier } from './resource-development';
@@ -113,14 +112,13 @@ export function cityDevelopmentNeeds(state: GameState, palace: Building): CityDe
       : isFarmKind(building.kind) && farmCity(building)?.id === palace.id));
   const population = city?.population ?? 0;
   const housing = palace.capacity + buildings.filter(building => building.kind === 'house').reduce((sum, house) => sum + house.capacity, 0);
-  const walking = palaceWalkingDistances(state, palace);
+  const collection = farmCollectionQuery(state, palace);
   const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(state.factions.find(faction => faction.id === palace.faction));
   // Budget surviving deliveries, not grain that will spoil around a long bend.
   const foodCapacity = palaceFoodProduction(palace) + population * (1 - saltFoodConsumptionMultiplier(state, palace.faction))
     + buildings.filter(building => isFarmKind(building.kind) && !building.farmSuppressed)
-    .reduce((sum, farm) => sum + harvestFoodPerEconomyCycle(CAMP_FIELD_OFFSETS.reduce((food, [dx, dy]) => food + fieldHarvestFoodForState(state, farm.x + dx, farm.y + dy, farm.faction), 0))
-      * (farm.orchard ? ORCHARD_YIELD_MULTIPLIER : 1)
-      * expectedFarmDelivery(farmWalkingDistance(walking, state.world.width, farm.x, farm.y), farm.orchard ? FIELD_SPOIL_SECONDS : shelfLife), 0) * .9;
+    .reduce((sum, farm) => sum + harvestFoodPerEconomyCycle(CAMP_FIELD_OFFSETS.reduce((food, [dx, dy]) => food + fieldHarvestFoodForState(state, farm.x + dx, farm.y + dy, farm.faction, !!farm.orchard), 0))
+      * expectedFarmDelivery(collection(farm).walkingDistance, farm.orchard ? FIELD_SPOIL_SECONDS : shelfLife), 0) * .9;
   // A four-person palace should begin farmland before its garden alone fills
   // those beds; otherwise its governor orders redundant housing first.
   const foodTarget = Math.max(population * 1.12, population + 4, Math.min(housing + palace.capacity, population + 8));

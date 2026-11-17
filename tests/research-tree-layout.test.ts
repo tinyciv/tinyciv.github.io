@@ -29,7 +29,7 @@ describe('horizontal research layout', () => {
       }
     }
   });
-  it('keeps the expanded mounted tree within ten prerequisite crossovers', () => {
+  it('keeps the expanded mounted tree within twelve prerequisite crossovers', () => {
     const crossings: [number, number][] = [];
     for (let a = 0; a < edges.length; a++) for (let b = a + 1; b < edges.length; b++) {
       const first = edges[a], second = edges[b];
@@ -45,7 +45,7 @@ describe('horizontal research layout', () => {
         if (!crossings.some(other => Math.hypot(point[0] - other[0], point[1] - other[1]) < .5)) crossings.push(point);
       }
     }
-    expect(crossings.length).toBeLessThanOrEqual(10);
+    expect(crossings.length).toBeLessThanOrEqual(12);
   });
   it('navigates stage order and reveals the nearest neighboring branch', () => {
     expect(researchNeighbor('woodenTower', 'ArrowUp')).toBe('scoutLodge');

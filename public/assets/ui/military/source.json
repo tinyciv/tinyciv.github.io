@@ -1,0 +1,27 @@
+{
+  "generator": "built-in imagegen",
+  "approvedVariant": "1A \u00b7 Simple",
+  "approvedDate": "2026-11-16",
+  "source": "scratch/2026-11-16-military-toolbar/1A-simple.png",
+  "asset": "actions-simple.png",
+  "size": [
+    1774,
+    887
+  ],
+  "cells": {
+    "levy": [
+      0,
+      0,
+      887,
+      887
+    ],
+    "garrison": [
+      887,
+      0,
+      887,
+      887
+    ]
+  },
+  "sha256": "6ca71e3b3ef195f8721c13f38c1b09c63caa8135db0bdff2374c4ae21710f069",
+  "prompt": "Use case: stylized-concept. Asset type: original medieval strategy toolbar UI icon pair. A 2:1 horizontal strip with TWO equal square transparent cells, generous clear margins. Left: RECRUIT LEVY: a group of three recognizable steel helmets over red tunics, with a single large gold plus sign at lower right. Right: GARRISON: a compact gray stone gatehouse, three battlements, red banner, dark archway, with a small bold steel shield in front. No text or lettering, no border, no button frame, no background, absolutely not pixel art and not character sprites extracted from a game. Warm brass, steel gray, muted red cloth, dark walnut outlines. Matching scale, each emblem fits within central 75% of own cell, optimized for 40px toolbar display. Genuinely transparent background. Variant 1A: very simple illustrated emblems, low detail, broad flat colors with one highlight and one shadow, thick clean dark outline, bold readable silhouette, friendly but restrained strategy-game style. Crisp smooth curves, no tiny patterns."
+}

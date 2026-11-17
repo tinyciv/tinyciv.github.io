@@ -1,0 +1,64 @@
+{
+  "button": {
+    "source": "scratch/2026-11-16-popup-walnut-implementation/button-source.png",
+    "sourceSize": [
+      2172,
+      724
+    ],
+    "crop": [
+      48,
+      119,
+      2125,
+      598
+    ],
+    "size": [
+      160,
+      40
+    ],
+    "resampling": "nearest",
+    "output": "public/assets/ui/walnut/button.png",
+    "slices": [
+      8,
+      12,
+      8,
+      12
+    ]
+  },
+  "close": {
+    "source": "scratch/2026-11-16-popup-walnut-implementation/close-source.png",
+    "sourceSize": [
+      1254,
+      1254
+    ],
+    "crop": [
+      116,
+      115,
+      1139,
+      1135
+    ],
+    "size": [
+      32,
+      32
+    ],
+    "resampling": "nearest",
+    "output": "public/assets/ui/walnut/close.png"
+  },
+  "generator": "built-in imagegen",
+  "prompts": "scratch/2026-11-16-popup-walnut-implementation/prompts.json",
+  "approvedConcept": "scratch/2026-11-16-popup-walnut-concepts/1A-city-card-match.png",
+  "frame": {
+    "source": "public/assets/ui/city-panel-walnut.png",
+    "slices": [
+      5,
+      6,
+      5,
+      6
+    ],
+    "displayBorder": [
+      10,
+      12,
+      10,
+      12
+    ]
+  }
+}

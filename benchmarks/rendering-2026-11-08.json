@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-08",
+  "scenario": "Captured running game: 881 units, 2503 buildings; 671x1137 CSS pixels, DPR 1.5, zoom 1.21.",
+  "method": "Frozen simulation. Advance animation time by 1/30 sec per draw and perturb moving units by deterministic subpixel offsets. 60 warmup draws and 300 measured draws per mode. Original source served separately. This measures CPU rendering work only, not frame rate. Baseline may include modest concurrent CPU contention; integrated benchmark should determine gameplay frame rate.",
+  "changes": [
+    "Rasterize exact enclosure shimmer spans into one retained viewport texture instead of tessellating thousands of transient vector rectangles.",
+    "Keep scene children when more than 8 atlas pages are all active; detach only before actual texture eviction.",
+    "Retain construction range geometry across camera/Leader movement."
+  ],
+  "results": [
+    {
+      "mode": "idle",
+      "before": {
+        "mean": 6.698999994595845,
+        "p50": 6.099999904632568,
+        "p95": 13.399999618530273,
+        "p99": 14.699999809265137,
+        "max": 15.099999904632568
+      },
+      "after": {
+        "mean": 3.281333328882853,
+        "p50": 3.0999999046325684,
+        "p95": 4.800000190734863,
+        "p99": 5.699999809265137,
+        "max": 7.300000190734863
+      },
+      "meanSpeedup": 2.041548152280084
+    },
+    {
+      "mode": "placement",
+      "before": {
+        "mean": 7.173333328564961,
+        "p50": 7,
+        "p95": 11.599999904632568,
+        "p99": 13.899999618530273,
+        "max": 21.300000190734863
+      },
+      "after": {
+        "mean": 3.4080000003178914,
+        "p50": 3.4000000953674316,
+        "p95": 4.700000286102295,
+        "p99": 5.799999713897705,
+        "max": 7.900000095367432
+      },
+      "meanSpeedup": 2.1048513286079364
+    },
+    {
+      "mode": "damaged-crowd",
+      "before": {
+        "mean": 7.736999998092651,
+        "p50": 7.800000190734863,
+        "p95": 11.900000095367432,
+        "p99": 22.199999809265137,
+        "max": 23
+      },
+      "after": {
+        "mean": 3.3490000057220457,
+        "p50": 3.3000001907348633,
+        "p95": 4.300000190734863,
+        "p99": 5,
+        "max": 8.300000190734863
+      },
+      "meanSpeedup": 2.3102418587259903
+    }
+  ],
+  "validation": {
+    "unitTests": 51,
+    "typecheck": "pass",
+    "browserPixelChecks": [
+      {
+        "dpr": 1,
+        "shimmer": {
+          "spans": 3326,
+          "maxDifference": 0,
+          "rasterDraws": 1,
+          "reusedUploads": 0
+        },
+        "terrainUpdates": true,
+        "fogUpdates": true,
+        "resize": true,
+        "worldReset": true,
+        "atlasEviction": true
+      },
+      {
+        "dpr": 2,
+        "shimmer": {
+          "spans": 3326,
+          "maxDifference": 0,
+          "rasterDraws": 1,
+          "reusedUploads": 0
+        },
+        "terrainUpdates": true,
+        "fogUpdates": true,
+        "resize": true,
+        "worldReset": true,
+        "atlasEviction": true
+      }
+    ]
+  }
+}

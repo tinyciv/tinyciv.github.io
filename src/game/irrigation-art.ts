@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { buildingReady, tileAt, WATER, type Building, type World } from './types';
 import type { RoadLinks } from './road-sprites';
 
@@ -72,7 +73,7 @@ function narrowSheet(image: HTMLImageElement, kind: 'ditch' | 'inlet'): HTMLCanv
 export function loadIrrigationArt(): Promise<void> {
     return loading ??= Promise.all([['ditch', 256, 64], ['inlet', 64, 64], ['bridge', 28, 36]].map(async ([name, width, height]) => {
         const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}assets/irrigation/${name}.png`;
+        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/irrigation/${name}.png`);
         await image.decode();
         if (image.naturalWidth !== width || image.naturalHeight !== height) throw new Error(`Invalid irrigation ${name} sprite.`);
         return image;

@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { drawPerson } from './unit-sprites';
 import type { Unit } from './types';
 
@@ -7,7 +8,7 @@ let campfire: HTMLImageElement | undefined;
 let loading: Promise<void> | undefined;
 export function loadObservationPostArt(): Promise<void> {
   return loading ??= (async () => {
-    const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/medieval/Village-Campfire.png`;
+    const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/medieval/Village-Campfire.png`);
     await image.decode();
     if (image.naturalWidth !== 32 || image.naturalHeight !== 16) throw new Error('Invalid observation campfire artwork.');
     campfire = image;

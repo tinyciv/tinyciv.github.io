@@ -6,8 +6,7 @@ import type { Building, GameState, NeutralVillage } from '../src/game/types';
 
 function fixture(): { state: GameState; camp: Building; village: NeutralVillage } {
   const camp: Building = { id: 10, kind: 'villageTent', villageId: 1, faction: 4, x: 10, y: 10, hp: 350, maxHp: 350, capacity: 0 };
-  const village: NeutralVillage = { id: 1, faction: 4, campId: camp.id, x: 10, y: 10, name: 'Willow tribe', identity: 'growers', relation: 'neutral',
-    nextGrowthAt: 120, nextThinkAt: 0, nextRecruitAt: 120 };
+  const village: NeutralVillage = { id: 1, faction: 4, campId: camp.id, x: 10, y: 10, name: 'Willow tribe', identity: 'growers', relation: 'neutral' };
   const state: GameState = {
     world: { width: 30, height: 30, seed: 'village-presentation', source: 'test', spawns: [], tiles: [] },
     units: [{ id: 1, kind: 'leader', faction: 0, hp: 100, x: 10.5, y: 14, morale: 100, attack: 25, defense: 5,

@@ -1,3 +1,4 @@
+import { encodeMessage, decodeMessage } from '../src/multiplayer/wire';
 import { createServer } from 'node:http';
 import { handleAccountRequest } from './accounts/http';
 import { accountsConfigured, accountsHealthy } from './accounts/database';
@@ -30,7 +31,7 @@ const safeText = (value: unknown, fallback: string, length = 24): string => type
 const color = (value: unknown): string => FACTION_COLORS.includes(value as typeof FACTION_COLORS[number]) ? value as string : FACTION_COLORS[0];
 const getSession = (id: string) => [...sessions.values()].find(session => session.id === id);
 const publicRooms = () => [...rooms.values()].map(room => room.info);
-function send(socket: WebSocket | undefined, message: ServerMessage): void { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message)); }
+function send(socket: WebSocket | undefined, message: ServerMessage): void { if (socket?.readyState === WebSocket.OPEN) socket.send(encodeMessage(message)); }
 function directory(): void { for (const session of sessions.values()) if (!session.roomId) send(session.socket, { type: 'rooms', rooms: publicRooms() }); }
 function roomChanged(room: Room): void {
   for (const player of room.info.players) send(getSession(player.id)?.socket, { type: 'room', room: room.info, faction: player.faction });
@@ -207,11 +208,11 @@ wss.on('connection', socket => {
   const heartbeat = setInterval(() => { if (!alive) { socket.terminate(); return; } alive = false; socket.ping(); }, 10000);
   socket.on('pong', () => { alive = true; });
   socket.on('error', () => {});
-  socket.on('message', bytes => {
+  socket.on('message', (bytes, isBinary) => {
     const now = Date.now();
     if (now - windowAt >= 1000) { windowAt = now; count = 0; }
     if (++count > 80) { socket.close(4008, 'Too many messages'); return; }
-    let message: any; try { message = JSON.parse(bytes.toString()); } catch { socket.close(4002, 'Invalid message'); return; }
+    let message: any; try { if (!isBinary) throw new Error('Expected binary message'); message = decodeMessage(Buffer.isBuffer(bytes) ? bytes : bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : Buffer.concat(bytes)); } catch { socket.close(4002, 'Invalid message'); return; }
     if (!message || typeof message !== 'object' || Array.isArray(message)) return;
     if (!session) {
       if (message.type !== 'hello' || message.version !== PROTOCOL_VERSION) { send(socket, { type: 'error', message: 'Reload the game to update multiplayer.', fatal: true }); socket.close(); return; }

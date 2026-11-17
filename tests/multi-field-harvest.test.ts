@@ -25,7 +25,7 @@ function fixture(points = [[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8]]):
   };
   synchronizeFarms(state);
   state.fields!.forEach((field, i) => Object.assign(field, {
-    food: 1, foodBatches: [{ amount: 1, expiresAt: 40 + i * 2 }], expiresAt: 40 + i * 2, nextHarvest: 1e9,
+    food: 1, foodBatches: [{ amount: 1, expiresAt: 40 }], expiresAt: 40, nextHarvest: 1e9,
   }));
   ensureCollectors(state);
   expect(state.units.filter(unit => unit.collector)).toHaveLength(1);
@@ -33,7 +33,7 @@ function fixture(points = [[8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8]]):
 }
 function arriveAtFirst(state: GameState): Unit {
   const worker = state.units.find(unit => unit.collector)!, first = state.fields![0];
-  Object.assign(worker, { x: first.x + .5, y: first.y + .5, inside: false, field: first.id, collectPhase: 'outbound', collectorPickups: 0 });
+  Object.assign(worker, { x: first.x + .5, y: first.y + .5, inside: false, field: first.id, collectPhase: 'outbound' });
   first.claimedBy = worker.id;
   return worker;
 }
@@ -55,44 +55,44 @@ describe('multi-field harvest trips', () => {
     expect(cityDevelopmentNeeds(state, state.buildings[0]).foodCapacity).toBeCloseTo(4 + 3 * perCycle * .9);
   });
 
-  it('one real walker sweeps all six connected plots and pauses their deadlines during collection', () => {
-    const state = fixture(), worker = arriveAtFirst(state), home = worker.home, assignment = worker.collectorCamp;
+  it('one arrival collects six connected plots as one load and immediately returns home', () => {
+    const state = fixture(), worker = arriveAtFirst(state);
     tick(state, worker);
-    expect(worker.cargo).toBe(1); expect(worker.field).toBe(state.fields![1].id);
-    expect(state.fields![1].claimedBy).toBe(worker.id);
-    ensureCollectors(state); // Staffing must not cancel a same-city incidental pickup.
-    expect(worker.collectorCamp).toBe(assignment); expect(worker.home).toBe(home);
-    expect(worker.cargoBatches).toEqual([{ amount: 1, expiresAt: 40 }]);
-    expect(state.fields![1].claimedBy).toBe(worker.id);
-    for (let i = 0; i < 200 && worker.collectPhase === 'outbound'; i++) tick(state, worker);
-    expect(worker.collectorPickups).toBe(6); expect(worker.collectPhase).toBe('returning');
-    expect(worker.cargoBatches).toHaveLength(6);
-    worker.cargoBatches!.forEach((batch, i) => {
-      expect(batch.amount).toBe(1); expect(batch.expiresAt).toBeGreaterThan(40 + i * 2);
-    });
-    expect(state.fields!.filter(field => field.food > 0)).toHaveLength(0);
+    expect(worker.cargo).toBe(6); expect(worker.field).toBeUndefined();
+    expect(worker.collectPhase).toBe('returning');
+    expect(worker.cargoBatches).toEqual([{ amount: 6, expiresAt: 40 }]);
+    expect(state.fields!.every(field => field.food === 0 && field.claimedBy === undefined)).toBe(true);
     const foodBefore = state.factions[0].food;
     for (let i = 0; i < 200 && !worker.inside; i++) tick(state, worker);
     expect(worker.inside).toBe(true); expect(worker.cargo).toBe(0);
-    expect(state.factions[0].food).toBe(foodBefore + 6); expect(worker.collectorPickups).toBe(0);
+    expect(state.factions[0].food).toBe(foodBefore + 6);
   });
 
-  it('returns its first bag when an extra stop would spoil that older cargo', () => {
+  it('coalesces the load while preserving distinct deadlines after parcels merge', () => {
     const state = fixture([[8, 8], [9, 8]]), worker = arriveAtFirst(state), first = state.fields![0];
     first.expiresAt = 12.6; first.foodBatches = [{ amount: 1, expiresAt: 12.6 }];
     tick(state, worker);
-    expect(worker.collectPhase).toBe('returning'); expect(worker.field).toBeUndefined();
-    expect(state.fields![1].food).toBe(1); expect(state.fields![1].claimedBy).toBeUndefined();
-    for (let i = 0; i < 100 && !worker.inside; i++) tick(state, worker);
-    expect(worker.inside).toBe(true); expect(state.factions[0].food).toBe(21);
+    expect(worker.collectPhase).toBe('returning');
+    expect(worker.cargoBatches).toEqual([{ amount: 1, expiresAt: 12.6 }, { amount: 1, expiresAt: 40 }]);
+    expect(worker.cargoExpiresAt).toBe(12.6);
+    expect(state.fields![1].food).toBe(0);
   });
 
-  it('does not fetch a new bag that would expire before the planned return', () => {
+  it('leaves already expired grain out of the parcel load', () => {
     const state = fixture([[8, 8], [9, 8]]), worker = arriveAtFirst(state), next = state.fields![1];
-    next.expiresAt = 12; next.foodBatches = [{ amount: 1, expiresAt: 12 }];
+    next.expiresAt = 10; next.foodBatches = [{ amount: 1, expiresAt: 10 }];
     tick(state, worker);
     expect(worker.collectPhase).toBe('returning'); expect(next.claimedBy).toBeUndefined();
     expect(worker.cargoBatches).toEqual([{ amount: 1, expiresAt: 40 }]);
+  });
+
+  it.each(['forbidden', 'reserved', 'foreign'] as const)('excludes a %s tile from a parcel pickup', restriction => {
+    const state = fixture([[8, 8], [9, 8]]), worker = arriveAtFirst(state), next = state.fields![1];
+    if (restriction === 'forbidden') setForbiddenRectangle(state, next, next, true);
+    if (restriction === 'reserved') next.claimedBy = 999;
+    if (restriction === 'foreign') { next.faction = 1; state.buildings.find(b => b.id === next.camp)!.faction = 1; }
+    updateCollector(state, worker, .05, moveUnit);
+    expect(worker.cargo).toBe(1); expect(next.food).toBe(1);
   });
 
   it('does not turn a nearby field across water into a long pickup detour', () => {
@@ -117,12 +117,14 @@ describe('multi-field harvest trips', () => {
     expect(next.claimedBy).not.toBe(worker.id);
   });
 
-  it('releases an incidental claim when its farm changes ownership before arrival', () => {
-    const state = fixture([[8, 8], [9, 8]]), worker = arriveAtFirst(state), next = state.fields![1];
-    tick(state, worker); expect(next.claimedBy).toBe(worker.id);
-    next.faction = 1; state.buildings.find(b => b.id === next.camp)!.faction = 1;
+  it('abandons a pickup when its target changes ownership before arrival', () => {
+    const state = fixture([[8, 8], [9, 8]]), worker = state.units.find(unit => unit.collector)!;
+    updateCollector(state, worker, .05, moveUnit);
+    const target = state.fields!.find(field => field.id === worker.field)!;
+    worker.x = 6.5; // Interrupt after the worker has left the settlement door.
+    target.faction = 1; state.buildings.find(b => b.id === target.camp)!.faction = 1;
     tick(state, worker);
-    expect(worker.collectPhase).toBe('returning'); expect(next.claimedBy).toBeUndefined();
-    expect(worker.cargo).toBe(1); expect(next.food).toBe(1);
+    expect(worker.collectPhase).toBe('returning'); expect(target.claimedBy).toBeUndefined();
+    expect(worker.cargo).toBe(0); expect(target.food).toBe(1);
   });
 });

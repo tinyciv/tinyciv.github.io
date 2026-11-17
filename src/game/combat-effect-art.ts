@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Approved subtle hit pulse, 1A forward buckle, and 2A steady skeleton decay. */
 export const DAMAGE_FLASH_DURATION = .16;
 export const DAMAGE_FLASH_PEAK = .22;
@@ -19,7 +20,7 @@ export function loadCombatEffectArt(): Promise<void> {
     return loading ??= (async () => {
         const loadSheet = async (file: string, size: number, count: number): Promise<HTMLImageElement> => {
             const image = new Image();
-            image.src = `${import.meta.env.BASE_URL}assets/combat/${file}`;
+            image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/combat/${file}`);
             await image.decode();
             if (image.naturalWidth !== size * count || image.naturalHeight !== size)
                 throw new Error(`Invalid shared death animation artwork: ${file}`);

@@ -1,3 +1,4 @@
+import { markWorldChanged } from '../src/game/world-revisions';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { citySummaries } from '../src/game/cities';
@@ -35,7 +36,7 @@ function fixture(): GameState {
     wildlife: { herds: [], sequence: 0, nextRespawnAt: Infinity, targetHerds: 0 },
   };
 }
-const garrison = (state: GameState) => state.units.filter(unit => unit.kind === 'militia');
+const garrison = (state: GameState) => state.units.filter(unit => unit.kind === 'militia' && unit.hp > 0);
 
 describe('guard posts in the game simulation', () => {
   it('advances from the post when allies occupy every melee slot around a reachable enemy', () => {
@@ -160,7 +161,7 @@ describe('guard posts in the game simulation', () => {
     expect(state.factions[0].yields.gold).toBe(-8);
     updateGame(state, 29.8, idle);
     expect(state.factions[0].gold).toBe(500);
-    updateGame(state, .2, idle);
+    updateGame(state, .5, idle);
     expect(state.factions[0].gold).toBe(492);
     expect(state.factions[0].yields.gold).toBe(-8);
     updateGame(state, 30, idle);
@@ -172,8 +173,8 @@ describe('guard posts in the game simulation', () => {
     const state = fixture(); updateGame(state, .1, idle);
     expect(state.factions[0].yields.gold).toBe(-8);
     state.buildings[0].x = 25;
-    state.world.revision = (state.world.revision ?? 0) + 1;
-    updateGame(state, .4, idle);
+    markWorldChanged(state.world);
+    updateGame(state, .8, idle);
     expect(garrison(state)).toHaveLength(0);
     expect(citySummaries(state)[0].gold).toBe(7);
     expect(state.factions[0].yields.gold).toBe(7);

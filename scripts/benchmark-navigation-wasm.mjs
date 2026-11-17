@@ -4,7 +4,7 @@ const server = await createServer({ server: { middlewareMode: true, hmr: false, 
 try {
   const nav = await server.ssrLoadModule('/src/game/pathfinding.ts');
   const wasm = await server.ssrLoadModule('/src/game/navigation-wasm.ts');
-  await wasm.installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/navigation.wasm')));
+  await wasm.installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/simulation.wasm')));
   const state = JSON.parse(readFileSync('scratch/2026-10-29-live-performance/optimization/paused-live-state.json', 'utf8'));
   const units = state.units.filter(u => u.hp > 0 && !u.inside);
   const requests = units.filter(u => u.pathGoal || u.destination).slice(0, 250).map(u => ({ from: {x:u.x,y:u.y}, to:u.pathGoal??u.destination, faction:u.faction }));

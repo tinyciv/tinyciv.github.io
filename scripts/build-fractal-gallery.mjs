@@ -29,7 +29,8 @@ for (const sample of sampleSettings()) {
 }
 const files = { world: 'public/assets/puny-world/overworld.png', desert: 'public/assets/puny-world/desert-ledges.png', vegetation: 'public/assets/vegetation/medieval-nature.png' };
 const assets = Object.fromEntries(await Promise.all(Object.entries(files).map(async ([key, file]) => [key, `data:image/png;base64,${(await readFile(file)).toString('base64')}`])));
-const bundle = await build({ entryPoints: ['dev/fractal-gallery/main.ts'], bundle: true, write: false, format: 'esm', target: 'es2022', minify: true, define: { 'import.meta.env.BASE_URL': '"./"' } });
+const embeddedSimulation = JSON.stringify((await readFile('public/wasm/simulation.wasm')).toString('base64'));
+const bundle = await build({ entryPoints: ['dev/fractal-gallery/main.ts'], bundle: true, write: false, format: 'esm', target: 'es2022', minify: true, define: { 'import.meta.env.BASE_URL': '"./"', '__TINYCIV_SIMULATION_BASE64__': embeddedSimulation } });
 const html = (await readFile('dev/fractal-gallery/template.html', 'utf8')).replace('/*DATA*/', () => JSON.stringify(records).replaceAll('</script', '<\\/script')).replace('/*ASSETS*/', () => JSON.stringify(assets)).replace('/*BUNDLE*/', () => bundle.outputFiles[0].text.replaceAll('</script', '<\\/script'));
 await writeFile('output/fractal-generation-gallery.html', html);
 await writeFile(`${scratch}/gallery-samples.json`, JSON.stringify({ seed: records[0].seed, elapsedMs: Math.round(performance.now() - started), samples: metrics }, null, 2));

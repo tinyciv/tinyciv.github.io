@@ -1,0 +1,268 @@
+{
+  "method": "Alternating frozen/current engines on the captured state, with native navigation and warm terrain. Compares exact enclosure cells after four wall breaches/restorations and exact farm-city assignments after cosmetic tile changes.",
+  "before": "/tmp/btv-smooth-2026-11-08/final-budget",
+  "snapshot": "/tmp/btv-smooth-2026-11-08/state.json",
+  "rounds": 3,
+  "timings": {
+    "before": {
+      "enclosureRebuildMs": {
+        "samples": 27,
+        "median": 30.47524999999996,
+        "p95": 45.097290999999586,
+        "mean": 31.89500925925925
+      },
+      "cosmeticFarmRefreshMs": {
+        "samples": 9,
+        "median": 20.264958999999976,
+        "p95": 28.684250000000247,
+        "mean": 21.675750111111103
+      }
+    },
+    "after": {
+      "enclosureRebuildMs": {
+        "samples": 27,
+        "median": 19.402207999999973,
+        "p95": 31.55687500000022,
+        "mean": 21.12845507407406
+      },
+      "cosmeticFarmRefreshMs": {
+        "samples": 9,
+        "median": 0.4576670000001286,
+        "p95": 0.8095829999999751,
+        "mean": 0.4923795555555696
+      }
+    }
+  },
+  "parity": [
+    {
+      "key": "0:enclosure:0",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:1",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:2",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:3",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:4",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:5",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:6",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:7",
+      "equal": true
+    },
+    {
+      "key": "0:enclosure:8",
+      "equal": true
+    },
+    {
+      "key": "0:farm:0",
+      "equal": true
+    },
+    {
+      "key": "0:farm:1",
+      "equal": true
+    },
+    {
+      "key": "0:farm:2",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:0",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:1",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:2",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:3",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:4",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:5",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:6",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:7",
+      "equal": true
+    },
+    {
+      "key": "1:enclosure:8",
+      "equal": true
+    },
+    {
+      "key": "1:farm:0",
+      "equal": true
+    },
+    {
+      "key": "1:farm:1",
+      "equal": true
+    },
+    {
+      "key": "1:farm:2",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:0",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:1",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:2",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:3",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:4",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:5",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:6",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:7",
+      "equal": true
+    },
+    {
+      "key": "2:enclosure:8",
+      "equal": true
+    },
+    {
+      "key": "2:farm:0",
+      "equal": true
+    },
+    {
+      "key": "2:farm:1",
+      "equal": true
+    },
+    {
+      "key": "2:farm:2",
+      "equal": true
+    }
+  ],
+  "samples": {
+    "before": {
+      "enclosureRebuildMs": [
+        55.895667,
+        40.861834000000044,
+        34.303583,
+        30.250374999999963,
+        30.47524999999996,
+        26.23787500000003,
+        26.838250000000016,
+        25.437999999999988,
+        24.993542000000048,
+        45.097290999999586,
+        38.190833999999995,
+        38.153749999999945,
+        31.096457999999984,
+        25.299582999999984,
+        36.78800000000001,
+        24.060667000000194,
+        27.936041999999816,
+        36.660249999999905,
+        41.30545800000027,
+        26.24566700000014,
+        32.08750000000009,
+        32.74254199999996,
+        24.76324999999997,
+        24.107958000000053,
+        32.670208,
+        24.360415999999987,
+        24.304999999999836
+      ],
+      "cosmeticFarmRefreshMs": [
+        20.264958999999976,
+        19.361582999999996,
+        18.933291999999938,
+        28.684250000000247,
+        25.115208000000166,
+        22.48966700000028,
+        19.88187499999958,
+        20.01800000000003,
+        20.332916999999725
+      ]
+    },
+    "after": {
+      "enclosureRebuildMs": [
+        31.55687500000022,
+        20.53770899999995,
+        20.15191700000014,
+        19.402207999999973,
+        25.23149999999987,
+        19.834666999999854,
+        33.91354200000001,
+        25.85395799999992,
+        18.76883299999986,
+        25.650791000000027,
+        18.579291000000012,
+        19.740916000000198,
+        22.052208000000064,
+        16.99995799999988,
+        18.98054100000013,
+        29.906125000000202,
+        19.083041000000094,
+        14.248375000000124,
+        25.66079099999979,
+        17.20541699999967,
+        17.219125000000076,
+        16.26266600000008,
+        16.8611249999999,
+        17.13512499999979,
+        23.432374999999865,
+        19.02491599999985,
+        17.17429200000015
+      ],
+      "cosmeticFarmRefreshMs": [
+        0.8095829999999751,
+        0.5249169999999594,
+        0.37758400000006986,
+        0.49979099999973187,
+        0.3860420000000886,
+        0.3738330000001042,
+        0.544832999999926,
+        0.4576670000001286,
+        0.45716600000014296
+      ]
+    }
+  }
+}

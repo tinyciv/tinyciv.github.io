@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { citySummaries, invalidateCitySummarySnapshot } from '../src/game/cities';
+import { cityResidents, citySummaries, invalidateCitySummarySnapshot } from '../src/game/cities';
 import { cityOwnership } from '../src/game/city-ownership';
 import { entityStore, resetEntities } from '../src/game/entity-store';
 import { cityDevelopmentNeeds, cityPlanningStats, governingPalace, withCityPlanning, withCityPlanningMutation } from '../src/game/governor';
@@ -23,6 +23,35 @@ function realm(): GameState {
 }
 
 describe('city ownership and planning snapshots', () => {
+  it('drops a removed faction resident ledger even when its orphaned homes survive', () => {
+    const state = realm(); state.world.revision = 0;
+    const read = () => withSimulationReads(state, () => cityResidents(state));
+    expect(read()).toHaveLength(2);
+    const faction = state.factions.pop()!;
+    expect(read()).toEqual([]);
+    state.buildings[2].residents = 0;
+    state.factions.push({ ...faction, population: 3 });
+    expect(read()).toEqual(cityResidents(structuredClone(state)));
+  });
+
+  it('retains live economic totals through empty fishing clocks and updates actual income when it changes', () => {
+    const state = realm(); state.world.revision = 0;
+    state.fishing = { seed: state.seed, startedAt: 0, sequence: 0, whales: [], buffs: {}, nextTick: 1, zones: [], fish: [], boats: [], receipts: [], replacements: {} };
+    const read = () => withSimulationReads(state, () => citySummaries(state));
+    const before = read();
+    state.time = 40;
+    expect(read()[0]).toBe(before[0]);
+    state.fishing.receipts.push({ city: state.buildings[0].id, faction: 0, at: 35, food: 8 });
+    const delivered = read();
+    expect(delivered).toEqual(citySummaries(structuredClone(state)));
+    expect(delivered[0]).not.toBe(before[0]);
+    expect(delivered[1]).toBe(before[1]);
+    state.time = 60;
+    expect(read()).toEqual(citySummaries(structuredClone(state)));
+    state.time = 130;
+    expect(read()[0].food).toBe(before[0].food);
+  });
+
   it('observes palace capture, death and completion without advancing time or a terrain revision', () => {
     const state = realm(), [first, second, house] = state.buildings;
     expect(cityOwnership(state).building(house)).toBe(first);

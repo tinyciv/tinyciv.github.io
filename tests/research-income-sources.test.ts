@@ -13,10 +13,10 @@ describe('research receives every positive gold source',()=>{
   const state=fixture(),faction=state.factions[0]; state.units[1].hp=0;
   Object.assign(state.buildings[0],{capacity:20,unhousedResidents:20,governorPermissions:{farms:false,housing:false}});
   entityStore(state).buildings.add({...building(40,'palace',23,15),capacity:4,unhousedResidents:0,governorPermissions:{farms:false,housing:false}});
-  // A second empty city costs37.5, exceeding the twenty-person city's tax receipts.
+  // A second empty city costs25, exceeding the twenty-person city's tax receipts.
   state.time=29.9;updateGame(state,.1,idle);
   const gross=faction.incomeTotals?.gold??0; expect(gross).toBe(14); updateResearch(state,1000);
-  expect(points(state)).toBeCloseTo(3.5); expect(faction.gold).toBeCloseTo(2000+10.5-37.5);
+  expect(points(state)).toBeCloseTo(3.5); expect(faction.gold).toBeCloseTo(2000+10.5-25);
  });
  it('splits a treasure exactly once and leaves its displayed gross value unchanged',()=>{
   const state=fixture(),leader=state.units[0];state.treasures=[{id:1,x:Math.floor(leader.x),y:Math.floor(leader.y),rewardGold:200}];
@@ -41,8 +41,8 @@ describe('research receives every positive gold source',()=>{
   entityStore(state).buildings.add(building(40,'palace',24,16));
   for(const palace of state.buildings.filter(b=>b.kind==='palace')){palace.capacity=60;palace.unhousedResidents=60;}
   faction.population=120;updateTradeRoutes(state); const merchant=state.units.find(u=>u.tradeRoute!==undefined)!;
-  expect(merchant).toBeDefined();updateMerchant(state,merchant,.1,()=>{});const route=state.tradeRoutes![0],quote=route.legValue!.gold;
-  expect(quote).toBeGreaterThan(0);Object.assign(merchant,route.goal);updateMerchant(state,merchant,.1,()=>{});
+  expect(merchant).toBeDefined();updateMerchant(state,merchant,.1,()=>{});const route=state.tradeRoutes![0],quote=route.legValue!.goldPerSecond;
+  expect(quote).toBeGreaterThan(0);updateMerchant(state,merchant,1,(_,u,goal)=>Object.assign(u,goal));
   updateResearch(state,1000);
   expect(route.journeys).toBe(1);expect(faction.incomeTotals?.gold).toBeCloseTo(quote);expect(faction.gold).toBeCloseTo(2000+quote*.75);expect(points(state)).toBeCloseTo(quote*.25);
   expect(researchStatus(state,0).library).toBe(true);

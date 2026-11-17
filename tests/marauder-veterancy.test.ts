@@ -155,7 +155,7 @@ describe('marauder leaders', () => {
     expect(leader.marauderRetreating).toBe(true); expect(distance(leader, state.units.at(-1)!)).toBeGreaterThan(initial);
     entityStore(state).units.replace(state.units.filter(unit => unit.marauderPack === undefined || unit === leader));
     expect(marauderBandDepleted(state, pack)).toBe(true);
-    const before = distance(leader, pack.home); updateGame(state, .4, idle);
+    const before = distance(leader, pack.home); updateGame(state, .7, idle);
     expect(pack.returning).toBe(true); expect(distance(leader, pack.home)).toBeLessThan(before);
   });
   it('flees a firing tower without enemy troops, even when camp lies beyond the tower', () => {

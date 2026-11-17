@@ -1,4 +1,5 @@
 import { entityStore } from './entity-store';
+import { rustEngine } from './rust-engine';
 import { simulationReadsActive } from './simulation-reads';
 import { isRetinueMember, type GameState, type RetinueSquad, type Unit } from './types';
 
@@ -71,7 +72,7 @@ export function joinRetinueSquad(state: GameState, unit: Unit): RetinueSquad | u
 }
 
 /** A kill advances the squad once, and every living member uses that rank. */
-export function recordRetinueKill(state: GameState, unit: Unit): boolean {
+export function recordRetinueKill(state: GameState, unit: Unit, experience = 1): boolean {
     const index = indexes.get(state), trusted = simulationReadsActive(state);
     if (index && !trusted) index.trusted = false;
     if (!eligible(unit)) return false;
@@ -83,7 +84,7 @@ export function recordRetinueKill(state: GameState, unit: Unit): boolean {
     const members = (shared?.members.get(squad.id) ?? roster).filter(member => member.hp > 0 && eligible(member)
         && member.faction === squad.faction && member.retinueSquad === squad.id);
     if (!members.length) return false;
-    squad.kills++;
+    squad.kills = rustEngine.combat_record_kill_amount(squad.kills, experience);
     for (const member of members) member.kills = squad.kills;
     return true;
 }

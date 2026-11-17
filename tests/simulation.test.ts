@@ -4,7 +4,7 @@ import { constructionWorkerAllowance } from '../src/game/civilian-population';
 import { roadsReachPalaces } from './helpers/roads';
 import { entityStore } from '../src/game/entity-store';
 import { unlockBuildingResearch } from './helpers/research';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { type GameState, type InputState, type Overlay, type World, distance, tileAt } from '../src/game/types';
 import { atWar, buildAt, createGame, diplomacyAction, getLeader, housingCapacity, interactAt, MARAUDER_FACTION, migrateGame, recallRetinue, setRetinueOrder, updateGame, updateLeaderRespawns, validateBuildAt } from '../src/game/simulation';
 import { canMove, canWalk, findPath, movementMultiplier } from '../src/game/pathfinding';
@@ -13,6 +13,7 @@ import { FIELD_HARVEST_SECONDS, synchronizeFarms } from '../src/game/farms';
 import { updateFogRaids } from '../src/game/fog-raids';
 import { getFactionStrategy } from '../src/game/faction-strategy';
 import { citySummaries } from '../src/game/cities';
+import { nativeFixture } from './helpers/native-fixture';
 
 const idle: InputState = { up: false, down: false, left: false, right: false };
 function flatWorld(seed = 'test-valley'): World {
@@ -689,19 +690,16 @@ describe('combat, morale and exploration', () => {
     expect(['attack', 'regroup']).toContain(getFactionStrategy(state, 1)?.mode);
     expect(state.units.some(unit => unit.faction === 1 && unit.order === 'raid')).toBe(false);
     const fallen = getLeader(state)!, treasury = state.factions[0].gold;
-    const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
-    try {
-      fallen.hp = 0; updateGame(state, .4, idle);
-      expect(state.buildings.some(building => building.kind === 'palace' && building.faction === 0 && building.hp > 0)).toBe(true);
-      expect(state.factions[0]).toMatchObject({ defeated: false, gold: treasury - 200,
-        leaderRespawn: { readyAtWallTime: 1_010_000 } });
-      expect(getLeader(state)).toBeUndefined();
-      expect(state.gameOver).toBe(false); expect(state.victory).toBe(false);
-      updateLeaderRespawns(state, 1_009_999); expect(getLeader(state)).toBeUndefined();
-      updateLeaderRespawns(state, 1_010_000);
-      expect(getLeader(state)?.hp).toBeGreaterThan(0); expect(getLeader(state)?.id).not.toBe(fallen.id);
-      expect(state.factions[0].leaderRespawn).toBeUndefined(); expect(state.gameOver).toBe(false);
-    } finally { clock.mockRestore(); }
+    fallen.hp = 0; updateGame(state, .4, idle, { wallNow: 1_000_000 });
+    expect(state.buildings.some(building => building.kind === 'palace' && building.faction === 0 && building.hp > 0)).toBe(true);
+    expect(state.factions[0]).toMatchObject({ defeated: false, gold: treasury - 200,
+      leaderRespawn: { readyAtWallTime: 1_010_000 } });
+    expect(getLeader(state)).toBeUndefined();
+    expect(state.gameOver).toBe(false); expect(state.victory).toBe(false);
+    updateLeaderRespawns(state, 1_009_999); expect(getLeader(state)).toBeUndefined();
+    updateLeaderRespawns(state, 1_010_000);
+    expect(getLeader(state)?.hp).toBeGreaterThan(0); expect(getLeader(state)?.id).not.toBe(fallen.id);
+    expect(state.factions[0].leaderRespawn).toBeUndefined(); expect(state.gameOver).toBe(false);
   });
 });
 
@@ -855,7 +853,7 @@ describe('diplomacy', () => {
     const state = game(), leader = getLeader(state)!;
     const palace = state.buildings.find(building => building.faction === 1 && building.kind === 'palace')!;
     leader.x = palace.x - 2; leader.y = palace.y;
-    state.factions[1].affinity = 100; state.rngState = 0;
+    state.factions[1].affinity = 100; nativeFixture(state).seedRandom(0);
     state.factions[0].culture = 40; state.factions[1].culture = 60;
     const totalPopulation = state.factions.reduce((sum, faction) => sum + faction.population, 0);
     const food = state.factions.reduce((sum, faction) => sum + faction.food, 0);

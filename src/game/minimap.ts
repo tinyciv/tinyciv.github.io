@@ -1,5 +1,7 @@
+import { arrayJournal } from './cell-journal';
+import { territoryValue } from './territory-cells';
 import type { Point } from './types';
-import { UNCLAIMED, type Territory } from './borders';
+import { UNCLAIMED, territoryChanges, type Territory } from './borders';
 import type { FogView } from './fog';
 
 export interface MinimapProjection {
@@ -13,16 +15,34 @@ export interface MinimapProjection {
   scale: number;
 }
 
+const explorationBounds = new WeakMap<object, { left: number; top: number; right: number; bottom: number; width: number; height: number; cursor: number; observedRevision?: number }>();
+
 /** Fit the discovered world without revealing the size or location of unknown land.
  * Fixed padding keeps these world bounds monotonic as exploration increases.
  * Letterboxing preserves square tiles instead of distorting an elongated region. */
-export function createMinimapProjection(explored: readonly number[], worldWidth: number, worldHeight: number, width: number, height: number, padding = 2): MinimapProjection {
-  let left = worldWidth, top = worldHeight, right = 0, bottom = 0;
-  for (let y = 0; y < worldHeight; y++) for (let x = 0; x < worldWidth; x++) {
-    if (!explored[y * worldWidth + x]) continue;
-    left = Math.min(left, x); top = Math.min(top, y);
-    right = Math.max(right, x + 1); bottom = Math.max(bottom, y + 1);
+export function createMinimapProjection(explored: readonly number[], worldWidth: number, worldHeight: number, width: number, height: number, padding = 2, explorationRevision?: number): MinimapProjection {
+  const journal = arrayJournal(explored);
+  let bounds = journal ? explorationBounds.get(explored) : undefined;
+  // A public/editor revision without a journal publication is an unknown
+  // edit. Refresh once rather than silently trusting an incomplete journal.
+  if (journal && bounds && explorationRevision !== undefined && bounds.observedRevision !== undefined
+    && explorationRevision !== bounds.observedRevision && journal.revision === bounds.cursor) journal.publish();
+  const changes = journal?.since(bounds?.cursor);
+  const compatible = bounds?.width === worldWidth && bounds.height === worldHeight;
+  let full = !compatible || !changes || changes.full;
+  if (!full && bounds) for (const cell of changes!.cells) {
+    const x = cell % worldWidth, y = Math.floor(cell / worldWidth);
+    if (!explored[cell] && (x === bounds.left || x + 1 === bounds.right || y === bounds.top || y + 1 === bounds.bottom)) { full = true; break; }
   }
+  let { left, top, right, bottom } = full ? { left: worldWidth, top: worldHeight, right: 0, bottom: 0 } : bounds!;
+  const include = (cell: number): void => {
+    if (!explored[cell]) return;
+    const x = cell % worldWidth, y = Math.floor(cell / worldWidth);
+    left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x + 1); bottom = Math.max(bottom, y + 1);
+  };
+  if (full) for (let cell = 0; cell < worldWidth * worldHeight; cell++) include(cell);
+  else for (const cell of changes!.cells) include(cell);
+  if (journal) explorationBounds.set(explored, { left, top, right, bottom, width: worldWidth, height: worldHeight, cursor: journal.revision, observedRevision: explorationRevision });
   if (right <= left || bottom <= top) { left = 0; top = 0; right = worldWidth; bottom = worldHeight; }
   else {
     left = Math.max(0, left - padding); top = Math.max(0, top - padding);
@@ -53,28 +73,47 @@ export class MinimapTerritoryMemory {
   private fog?: FogView;
   private claimRevision = -1;
   private explorationRevision = -1;
+  private explored?: readonly number[];
+  private explorationCursor?: number;
 
   update(borders: Territory, fog: FogView, repaint = false): number[] {
-    const reset = !this.borders || this.borders.width !== borders.width || this.borders.height !== borders.height || this.fog !== fog;
+    const reset = !this.borders || this.borders.width !== borders.width || this.borders.height !== borders.height || this.explored !== fog.explored || this.fog !== fog && !arrayJournal(fog.explored);
     const oldOwners = reset ? this.owners : undefined;
     if (reset) {
-      this.owners = new Int32Array(borders.owners.length).fill(UNCLAIMED);
-      this.boundary = new Uint8Array(borders.owners.length);
+      this.owners = new Int32Array((borders.width * borders.height)).fill(UNCLAIMED);
+      this.boundary = new Uint8Array((borders.width * borders.height));
     }
+    const journal = arrayJournal(fog.explored);
+    if (!reset && journal && this.explorationRevision !== fog.explorationRevision
+      && journal.revision === this.explorationCursor) journal.publish();
     if (!reset && !repaint && this.borders === borders && this.claimRevision === borders.revision
-      && this.explorationRevision === fog.explorationRevision) return [];
+      && this.explorationRevision === fog.explorationRevision && (!journal || journal.revision === this.explorationCursor)) return [];
+    const claims = this.claimRevision === borders.revision && this.borders === borders
+      ? { full: false, cells: [] } : territoryChanges(borders, this.borders);
+    const exploration = journal?.since(reset ? undefined : this.explorationCursor)
+      ?? { full: reset || this.explorationRevision !== fog.explorationRevision, cells: [] };
+    const full = reset || repaint || claims.full || exploration.full;
+    const dirty = new Set<number>(exploration?.cells);
     const changed: number[] = [], width = borders.width, height = borders.height;
-    for (let cell = 0; cell < this.owners.length; cell++) {
-      const claimed = borders.owners[cell], owner = !fog.explored[cell] ? UNCLAIMED : claimed;
+    for (const cell of claims.cells) {
+      dirty.add(cell); const x = cell % width, y = Math.floor(cell / width);
+      if (x) dirty.add(cell - 1); if (x + 1 < width) dirty.add(cell + 1);
+      if (y) dirty.add(cell - width); if (y + 1 < height) dirty.add(cell + width);
+    }
+    const refresh = (cell: number): void => {
+      const claimed = territoryValue(borders, cell), owner = !fog.explored[cell] ? UNCLAIMED : claimed;
       const x = cell % width, y = Math.floor(cell / width);
       const edge = Number(owner !== UNCLAIMED && (x === 0 || y === 0 || x === width - 1 || y === height - 1
-        || borders.owners[cell - 1] !== owner || borders.owners[cell + 1] !== owner
-        || borders.owners[cell - width] !== owner || borders.owners[cell + width] !== owner));
+        || territoryValue(borders, cell - 1) !== owner || territoryValue(borders, cell + 1) !== owner
+        || territoryValue(borders, cell - width) !== owner || territoryValue(borders, cell + width) !== owner));
       if (owner !== this.owners[cell] || edge !== this.boundary[cell] || repaint && owner !== UNCLAIMED
         || oldOwners && cell < oldOwners.length && oldOwners[cell] !== UNCLAIMED) {
         this.owners[cell] = owner; this.boundary[cell] = edge; changed.push(cell);
       }
-    }
+    };
+    if (full) for (let cell = 0; cell < this.owners.length; cell++) refresh(cell);
+    else for (const cell of [...dirty].sort((a, b) => a - b)) refresh(cell);
+    this.explored = fog.explored; this.explorationCursor = journal?.revision;
     this.borders = borders; this.fog = fog; this.claimRevision = borders.revision;
     this.explorationRevision = fog.explorationRevision;
     return changed;

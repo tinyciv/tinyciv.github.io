@@ -1,4 +1,5 @@
 import type { GameState } from './types';
+import { rustEngine } from './rust-engine';
 
 export const RAIDER_EQUIPMENT_RAMP_SECONDS = 15 * 60;
 export const RAIDER_MAX_EQUIPMENT_MULTIPLIER = 1.6;
@@ -6,7 +7,7 @@ export const RAIDER_OPENING_WAVE_INTERVAL = 26;
 export const RAIDER_MIN_WAVE_INTERVAL = 14;
 /** One offensive reduction for every raider source; population and cadence
  * remain independent. Applied after armor so minimum hits also fall by 15%. */
-export const RAIDER_ATTACK_MULTIPLIER = .85;
+export const RAIDER_ATTACK_MULTIPLIER = rustEngine.combat_constant(15);
 export const EARLY_RAID_SIZE_MULTIPLIER = .6;
 export const EARLY_RAID_SECONDS = 5 * 60;
 export const FULL_RAID_SIZE_SECONDS = 15 * 60;
@@ -46,6 +47,6 @@ export function raiderWaveInterval(elapsedSeconds: number): number {
  * the same date-based equipment and repeated updates cannot compound it. */
 export function updateRaiderEquipment(state: Pick<GameState, 'time' | 'units'>): void {
   const multiplier = raiderEquipmentMultiplier(state.time);
-  for (const unit of state.units) if (unit.faction === -2 && unit.hp > 0)
+  for (const unit of state.units) if (unit.faction === -2 && unit.hp > 0 && unit.seaInvasion === undefined)
     unit.raiderEquipmentMultiplier = multiplier;
 }

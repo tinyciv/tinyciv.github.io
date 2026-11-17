@@ -1,7 +1,9 @@
 import { entityStore } from './entity-store';
+import { birdSteering, marshBirdSpeed } from './bird-flocks-native';
+import { rustEngine } from './rust-engine';
 import { pointInSight, updateFog } from './fog';
 import { buildingBlockerView, canTraverseEdge, type CellBlockers } from './pathfinding';
-import { ridgeGroundWalkable } from './ridges';
+import { reliefGroundWalkable } from './relief';
 import { unitCollisionRadius, unitObstructs } from './collisions';
 import { nearbyUnits } from './spatial';
 import { buildingHeight, buildingWidth, distance, tileAt, WATER, type GameState, type Point, type Unit, type WildlifeHerd, type World } from './types';
@@ -21,7 +23,7 @@ export function marshBirdHabitat(world: World, x: number, y: number, delta?: num
   x = Math.floor(x); y = Math.floor(y);
   const tile = tileAt(world, x, y);
   if (!tile || tile.delta === undefined || delta !== undefined && tile.delta !== delta || tile.farm !== undefined
-    || tile.ridge || tile.stair || tile.relief || tile.canyon === 'wall' || tile.overlay === 'volcano' || tile.overlay === 'glacier') return false;
+    || tile.relief || tile.overlay === 'volcano' || tile.overlay === 'glacier') return false;
   if (!WATER.has(tile.terrain)) return !!tile.marsh;
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
     if (Math.abs(dx) + Math.abs(dy) > 3) continue;
@@ -34,7 +36,7 @@ export function marshBirdHabitat(world: World, x: number, y: number, delta?: num
 function birdCellOpen(state: GameState, point: Point, blockers: CellBlockers): boolean {
   const tile = tileAt(state.world, point.x, point.y);
   return !!tile && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
-    && (!(tile.ridge || tile.stair) || ridgeGroundWalkable(state.world, Math.floor(point.x), Math.floor(point.y)))
+    && reliefGroundWalkable(state.world, Math.floor(point.x), Math.floor(point.y))
     && !blockers.has(cellAt(state.world, point));
 }
 
@@ -124,9 +126,8 @@ export function spawnMarshBirdFlock(state: GameState, random: () => number): Wil
     const flock: WildlifeHerd = { id: Math.max(0, ...state.wildlife.herds.map(herd => herd.id)) + 1,
       species: 'marshBird', delta, waypoint: home, nextWanderAt: state.time + 5 + random() * 9 };
     state.wildlife.herds.push(flock);
-    let id = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
-    for (const point of cells) entityStore(state).units.add({ ...point, id: ++id, kind: 'marshBird', faction: FACTION,
-      herdId: flock.id, hp: 8, maxHp: 8, attack: 0, defense: 0, morale: 100, speed: .75, range: 0, order: 'wander',
+    for (const point of cells) entityStore(state).units.add({ ...point, id: entityStore(state).allocateId(), kind: 'marshBird', faction: FACTION,
+      herdId: flock.id, hp: 8, maxHp: 8, attack: 0, defense: 0, morale: 100, speed: marshBirdSpeed(), range: 0, order: 'wander',
       cooldown: 0, lastCombat: -60, moving: false, facing: random() * Math.PI * 2, attackTime: 0, bornAt: state.time });
     return flock;
   }
@@ -148,7 +149,8 @@ export function marshFlockGoal(state: GameState, anchor: Unit, center: Point, th
  * Clear stretches are direct; blocked stretches use a bounded local path search. */
 export function moveMarshBird(state: GameState, bird: Unit, flock: WildlifeHerd, dt: number): void {
   const fleeing = (flock.fleeUntil ?? 0) > state.time, blockers = buildingBlockerView(state, FACTION);
-  bird.order = 'wander'; bird.target = undefined; bird.moving = false; bird.speed = fleeing ? 2.6 : .75;
+  const steering = birdSteering(state, bird);
+  bird.order = 'wander'; bird.target = undefined; bird.moving = false; bird.speed = steering?.speed ?? marshBirdSpeed(fleeing);
   if (!birdCellOpen(state, bird, blockers)) {
     bird.path = undefined; bird.pathGoal = undefined;
     const refuge = marshBirdEscape(state, bird);
@@ -156,16 +158,16 @@ export function moveMarshBird(state: GameState, bird: Unit, flock: WildlifeHerd,
       // Habitat loss is emigration, never a free hunt or a combat casualty.
       bird.hp = 0; bird.huntRewarded = true; entityStore(state).units.updateRoles(bird); return;
     }
-    const d = distance(bird, refuge), step = Math.min(Math.max(0, dt) * 2.6, d);
+    const d = distance(bird, refuge), step = Math.min(Math.max(0, dt) * marshBirdSpeed(true), d);
     const to = { x: bird.x + (refuge.x - bird.x) * step / d, y: bird.y + (refuge.y - bird.y) * step / d };
     if (step > 0 && birdSegmentOpen(state, bird, to, blockers, true)) {
-      bird.facing = Math.atan2(to.y - bird.y, to.x - bird.x); bird.x = to.x; bird.y = to.y; bird.moving = true;
+      bird.facing = rustEngine.marsh_bird_turn(bird.facing, Math.atan2(to.y - bird.y, to.x - bird.x), dt, 1);
+      bird.x = to.x; bird.y = to.y; bird.moving = true;
     }
     return;
   }
-  if (!fleeing && state.time >= (flock.wanderUntil ?? 0)) { bird.path = undefined; bird.pathGoal = undefined; return; }
-  const angle = bird.id * 2.399963229728653;
-  let goal = { x: Math.floor(flock.waypoint.x + Math.cos(angle) * 1.4) + .5, y: Math.floor(flock.waypoint.y + Math.sin(angle) * 1.4) + .5 };
+  if (!steering?.active) { bird.path = undefined; bird.pathGoal = undefined; return; }
+  let goal = steering.goal;
   if (!birdCellOpen(state, goal, blockers)) goal = flock.waypoint;
   if (!bird.pathGoal || distance(bird.pathGoal, goal) > .1 || !bird.path?.length && distance(bird, goal) > .3 && state.time >= (bird.repathAt ?? 0)) {
     if (distance(bird, goal) <= 12 && birdSegmentOpen(state, bird, goal, blockers)) bird.path = [{ ...goal }];
@@ -187,7 +189,8 @@ export function moveMarshBird(state: GameState, bird: Unit, flock: WildlifeHerd,
     if (!canMarshBirdMove(state, bird, to, blockers)) { bird.path = undefined; bird.pathGoal = undefined; break; }
     if (nearbyUnits(state, to, 1).some(other => unitObstructs(bird, other) && distance(to, other) < unitCollisionRadius(bird) + unitCollisionRadius(other)
       && distance(to, other) < distance(bird, other) - .001)) break;
-    bird.facing = Math.atan2(to.y - bird.y, to.x - bird.x); bird.x = to.x; bird.y = to.y; bird.moving = true;
+    bird.facing = rustEngine.marsh_bird_turn(bird.facing, Math.atan2(to.y - bird.y, to.x - bird.x), step / bird.speed, Number(fleeing));
+    bird.x = to.x; bird.y = to.y; bird.moving = true;
     remaining -= step;
     if (d <= step + .001) bird.path.shift();
   }

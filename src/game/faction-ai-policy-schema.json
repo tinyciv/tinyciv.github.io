@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "builtins": [
+    "legacy",
+    "aggressive",
+    "coordinated",
+    "expansionist"
+  ],
+  "default": "expansionist",
+  "features": [
+    "formations",
+    "militaryPurchases",
+    "towerGarrison",
+    "towerAwareness",
+    "interceptEnemies",
+    "defensiveLevy",
+    "campaignLevy",
+    "safeCampaigns",
+    "formationApproach",
+    "proactiveHousing",
+    "foundCities",
+    "fortifyCities",
+    "offensiveSiege",
+    "territorialWars"
+  ],
+  "parameters": [
+    "retreatHealth",
+    "retreatPowerRatio",
+    "huntPowerRatio",
+    "garrisonFraction",
+    "towerGarrisonCount",
+    "hostileTowerPower",
+    "hostileFortPower",
+    "friendlyTowerPower",
+    "campaignSafetyRatio",
+    "campaignDangerWeight",
+    "retreatMorale",
+    "recoveryHealth",
+    "recoveryMorale",
+    "recoveryPowerRatio",
+    "decisionInterval",
+    "formationEnterCount",
+    "formationStayCount",
+    "housingOrdersPerCycle",
+    "developmentInterval",
+    "cityLimit",
+    "populationPerCity",
+    "reserveUpkeepCycles",
+    "campaignCooldown",
+    "siegeLimit",
+    "fortsPerCity"
+  ]
+}

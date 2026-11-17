@@ -10,10 +10,10 @@ const browser = await chromium.launch({ headless: true, executablePath: process.
 const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
 const errors = [];
 page.on('pageerror', error => errors.push(String(error)));
-await page.addInitScript(() => { requestAnimationFrame = () => 0; });
 try {
   await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.documentElement.dataset.assets === 'ready', null, { polling: 50, timeout: 60000 });
+  await page.evaluate(() => { window.requestAnimationFrame = () => 0; window.__game.state.paused = true; });
   const results = await page.evaluate(async () => {
     const { PixiScene } = await import('/src/game/pixi-scene.ts');
     const results = [];
@@ -41,6 +41,31 @@ try {
         scene.beginFrame(); scene.updateFog(fog); scene.drawFog(0, 0, 16, 16); scene.finishFrame();
         result[color] = pixel(8, 8);
       }
+      // The raster shimmer retains the exact sample geometry and composited
+      // color while replacing thousands of transient vector rectangles.
+      const { forEachEnclosureShimmerSpan } = await import('/src/game/enclosures.ts');
+      const cells = Array.from({ length: 64 }, (_, index) => index);
+      const enclosed = { width: 8, height: 8, cells, regions: [{ faction: 0, palaces: [1], cells }], byFaction: new Map() };
+      const spans = [];
+      forEachEnclosureShimmerSpan({}, { width: 8, height: 8, visible: new Uint8Array(64).fill(1) },
+        0, 0, 32, 6, { width: 320, height: 240 }, (...args) => spans.push(args), enclosed);
+      scene.beginFrame(); const shimmer = scene.graphics();
+      for (const [x, y, width, height, alpha] of spans) shimmer.rect(x, y, width, height).fill({ color: '#aaffce', alpha });
+      scene.finishFrame();
+      const vectorPixels = scene.snapshot().getContext('2d').getImageData(0, 0, 320 * dpr, 240 * dpr).data;
+      let rasterDraws = 0;
+      const rasterFrame = () => {
+        scene.beginFrame(); scene.rasterLayer('shimmer-test', [6], 320, 240, context => {
+          rasterDraws++; context.fillStyle = '#aaffce';
+          for (const [x, y, width, height, alpha] of spans) { context.globalAlpha = alpha; context.fillRect(x, y, width, height); }
+        }); scene.finishFrame();
+      };
+      rasterFrame();
+      const rasterPixels = scene.snapshot().getContext('2d').getImageData(0, 0, 320 * dpr, 240 * dpr).data;
+      let maxDifference = 0;
+      for (let i = 0; i < vectorPixels.length; i++) maxDifference = Math.max(maxDifference, Math.abs(vectorPixels[i] - rasterPixels[i]));
+      rasterFrame();
+      result.shimmer = { spans: spans.length, maxDifference, rasterDraws, reusedUploads: scene.stats.textureUploads };
       // Keep a clean chunk resident while an edited offscreen chunk waits to upload.
       const terrain = document.createElement('canvas'); terrain.width = 2048; terrain.height = 256;
       const ground = terrain.getContext('2d');
@@ -94,6 +119,10 @@ try {
     assert.deepEqual(result.terrainChanged, { uploads: 1, pixel: [230, 160, 46, 255] });
     assert.deepEqual(result.terrainReused, { uploads: 0, pixel: [230, 160, 46, 255] });
     assert.deepEqual(result.resized, [400 * result.dpr, 280 * result.dpr]);
+    assert.ok(result.shimmer.spans > 100);
+    assert.ok(result.shimmer.maxDifference <= 1, `Shimmer color changed by ${result.shimmer.maxDifference}`);
+    assert.equal(result.shimmer.rasterDraws, 1);
+    assert.equal(result.shimmer.reusedUploads, 0);
     assert.equal(result.cached.rasterized, 0);
     assert.equal(result.cached.textureUploads, 0);
     assert.equal(result.cached.rasterCacheHits, 2);

@@ -1,4 +1,4 @@
-import { ClientStateReplica } from './multiplayer-wire.mjs';
+import { ClientStateReplica, encodeMessage, decodeMessage } from './multiplayer-wire.mjs';
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {writeFile,mkdir} from 'node:fs/promises';
@@ -21,9 +21,9 @@ try{
   page.on('console',message=>{if(message.type()==='error'||message.text().includes('[vite]'))diagnostics.push({peer,console:message.text()});});
   page.on('websocket',socket=>{if(!socket.url().includes('/api/ws'))return;socket.on('framereceived',event=>{
     let message;
-    try{message=JSON.parse(String(event.payload));}catch(error){errors.push(`${peer} wire parse: ${error}`);return;}
+    try{message=decodeMessage(event.payload);}catch(error){errors.push(`${peer} wire parse: ${error}`);return;}
     try{
-      if(message.type==='snapshot'){counts.snapshot++;states.set(page,message.state);replicas.set(page,new ClientStateReplica(message.state));sequences.set(page,message.sequence);resyncing.delete(page);sequences.set(page,message.sequence);diagnostics.push({peer,type:'snapshot',sequence:message.sequence,time:message.state.time,bytes:String(event.payload).length});}
+      if(message.type==='snapshot'){counts.snapshot++;states.set(page,message.state);replicas.set(page,new ClientStateReplica(message.state));sequences.set(page,message.sequence);resyncing.delete(page);sequences.set(page,message.sequence);diagnostics.push({peer,type:'snapshot',sequence:message.sequence,time:message.state.time,bytes:event.payload.length});}
       else if(message.type==='frame'&&states.has(page)){counts.frame++;if(message.sequence<=sequences.get(page)){counts.stale++;return;}if(message.sequence!==sequences.get(page)+1){counts.gaps++;return;}const state=states.get(page);for(const [index,tile]of message.tiles||[])state.world.tiles[index]=tile;if(message.worldRevision!==undefined)state.world.revision=message.worldRevision;replicas.get(page).apply(message.delta);sequences.set(page,message.sequence);}
       else if(message.type==='error'||message.type==='room')diagnostics.push({peer,type:message.type,message:message.message,phase:message.room?.phase});
     }catch(error){errors.push(`${peer} ${message.type} ${message.sequence}: ${String(error.stack||error).replace(/data:text\/javascript;base64,[A-Za-z0-9+/=]+/g,'[wire-bundle]')}`);}
@@ -51,5 +51,5 @@ try{
  await a.keyboard.press('Escape');await a.locator('[data-frontend-action="leave"]').click();await a.locator('[data-form="server"]').waitFor();await b.locator('#leave-match').waitFor();check('Opponent departure shows Victory',await b.locator('#dialog-title').innerText()==='Victory');await b.locator('#leave-match').click();await b.locator('[data-form="server"]').waitFor();
  check('Both players can leave to browser',await a.locator('[data-form="server"]').isVisible()&&await b.locator('[data-form="server"]').isVisible());
  check('No browser runtime errors',errors.length===0,errors);
-}catch(error){checks.push({name:'fatal',pass:false,detail:String(error)});await Promise.allSettled([a.screenshot({path:`${out}/production-failure-a.png`,timeout:10000}),b.screenshot({path:`${out}/production-failure-b.png`,timeout:10000})]);throw error;}finally{await Promise.allSettled([a,b].map(page=>page.evaluate(()=>{for(const socket of window.__qaSockets||[])if(socket.url.includes('/api/ws')&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:'leave'}));})));await writeFile(`${out}/production-browser-report.json`,JSON.stringify({checks,errors,wireCounts:Object.fromEntries(wireCounts),diagnostics},null,2));await browser.close();console.log(JSON.stringify({checks:checks.length,errors},null,2));}
+}catch(error){checks.push({name:'fatal',pass:false,detail:String(error)});await Promise.allSettled([a.screenshot({path:`${out}/production-failure-a.png`,timeout:10000}),b.screenshot({path:`${out}/production-failure-b.png`,timeout:10000})]);throw error;}finally{await Promise.allSettled([a,b].map(page=>page.evaluate(leave=>{for(const socket of window.__qaSockets||[])if(socket.url.includes('/api/ws')&&socket.readyState===WebSocket.OPEN)socket.send(new Uint8Array(leave));},Array.from(encodeMessage({type:'leave'})))));await writeFile(`${out}/production-browser-report.json`,JSON.stringify({checks,errors,wireCounts:Object.fromEntries(wireCounts),diagnostics},null,2));await browser.close();console.log(JSON.stringify({checks:checks.length,errors},null,2));}
 

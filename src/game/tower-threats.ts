@@ -6,9 +6,10 @@ const threats = new WeakMap<Unit, Map<Building, number>>();
 
 /** A fired shot alerts its victim and nearby allies who can observe the same
  * engagement. Unseen towers elsewhere never become global attack targets. */
-export function recordTowerShot(state: GameState, tower: Building, victim: Unit): void {
-  for (const ally of nearbyUnits(state, victim, 4)) {
-    if (ally.faction !== victim.faction || ally.hp <= 0 || ally.inside || distance(ally, victim) > 4
+export function recordTowerShot(state: GameState, tower: Building, victim: Unit | Building): void {
+  const point = 'capacity' in victim ? { x: victim.x + buildingWidth(victim) / 2, y: victim.y + buildingHeight(victim) / 2 } : victim;
+  for (const ally of nearbyUnits(state, point, 4)) {
+    if (ally.faction !== victim.faction || ally.hp <= 0 || ally.inside || distance(ally, point) > 4
       || distance(ally, { x: tower.x + buildingWidth(tower) / 2, y: tower.y + buildingHeight(tower) / 2 }) > 8) continue;
     let known = threats.get(ally);
     if (!known) { known = new Map(); threats.set(ally, known); }

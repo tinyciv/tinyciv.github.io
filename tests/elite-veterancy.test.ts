@@ -23,7 +23,7 @@ function fixture(): GameState {
       production: 0, population: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, nextRetinueAt: Infinity, defeated: false }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'elite', rngState: 1,
-    fields: [], marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1,
+    fields: [], marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1, raiderTechnologyAt: Infinity,
     fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 2 },
   };
 }

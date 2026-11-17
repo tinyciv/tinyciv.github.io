@@ -1,0 +1,26 @@
+{
+  "generator": "PixelLab API",
+  "source": "scratch/2026-11-16-loading-spinner",
+  "grounding": [
+    "public/assets/ui/forged/approved-reference.png",
+    "public/assets/ui/world-generation/backdrop.webp"
+  ],
+  "camera": "high top-down",
+  "isometric": false,
+  "selected": "1A \u2013 brass compass",
+  "baseJob": "ff47fc8f-af5a-4baa-b120-f705b2e11b54",
+  "animationJob": "96f2a715-a482-430c-bd76-a7375427e482",
+  "frameSize": [
+    32,
+    32
+  ],
+  "frameCount": 16,
+  "frameSeconds": 0.1,
+  "sheetSize": [
+    512,
+    32
+  ],
+  "sha256": "97d1e55bd5242b0135c67e3593627ae12617b4f010ea95fdf51f8814cee63d2a",
+  "processing": "Unmodified PixelLab animation frames assembled losslessly in one horizontal sheet. No painted or synthesized pixels.",
+  "review": "scratch/2026-11-16-loading-spinner/review.html"
+}

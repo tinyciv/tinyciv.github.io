@@ -1,0 +1,22 @@
+{
+  "group_id": "6ef3427b-870e-4dca-a723-5004ac365762",
+  "objects": [
+    {
+      "id": "437847d4-e2d2-4be7-9ae5-fc6a7cdc3ffb",
+      "name": "base",
+      "prompt": "Open-air forum with marble columns, front view, not isometric, front above and front, clean",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/Open-air_forum_with_marble_col.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-11-11T15:14:16.116065"
+}

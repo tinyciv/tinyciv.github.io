@@ -1,0 +1,538 @@
+{
+  "checks": {
+    "clientTypecheck": "passed",
+    "serverTypecheck": "passed",
+    "productionBundle": "passed (temporary output, public asset copying disabled)",
+    "playtest": "not run"
+  },
+  "testCommand": "vitest run --exclude '**/scratch/**' --maxWorkers=4 --testTimeout=15000",
+  "current": {
+    "passed": 4246,
+    "failed": 112,
+    "total": 4358
+  },
+  "frozenBaseline": {
+    "passed": 4172,
+    "failed": 170,
+    "total": 4342
+  },
+  "newFailures": [],
+  "streamingRegressions": [
+    {
+      "test": "allocates IDs with one import scan and reserves explicit IDs across both collections",
+      "status": "passed"
+    },
+    {
+      "test": "inserts casualties without revisiting old events and expires their spatial buckets exactly",
+      "status": "passed"
+    },
+    {
+      "test": "keeps a local territory edit bounded, publishes dirty cells and preserves older snapshots",
+      "status": "passed"
+    },
+    {
+      "test": "reveals hidden third claimants after capture/removal and preserves protected fort ordering",
+      "status": "passed"
+    },
+    {
+      "test": "skips unchanged economy inputs and keeps same-step and faction-local mutations fresh",
+      "status": "passed"
+    },
+    {
+      "test": "keeps captured farms coupled to fields awaiting reassignment during partial refreshes",
+      "status": "passed"
+    },
+    {
+      "test": "handles irrigation overlap, duplicate tiles, completion, movement and removal across times",
+      "status": "passed"
+    },
+    {
+      "test": "reuses specialty searches across cosmetic/remote edits but detects local deposits and access",
+      "status": "passed"
+    },
+    {
+      "test": "updates minimap bounds and memory from one explored cell without scanning the map",
+      "status": "passed"
+    },
+    {
+      "test": "encodes independently aliased exploration baselines sparsely, including expiry of journal history",
+      "status": "passed"
+    },
+    {
+      "test": "maintains rolling fishing totals by city/owner with exact expiry, append, rewind and replacement",
+      "status": "passed"
+    },
+    {
+      "test": "lets independent cell-journal readers catch up or fall back without retaining unbounded history",
+      "status": "passed"
+    }
+  ],
+  "placementFrameBudget": [
+    {
+      "test": "queues staffing and yields after an approved placement; paused frames finish the work",
+      "status": "passed"
+    },
+    {
+      "test": "makes bridge tiles on fords free while ordinary water still costs gold",
+      "status": "passed"
+    },
+    {
+      "test": "keeps AI guard posts funded at zero gold and charges no tower upkeep",
+      "status": "passed"
+    },
+    {
+      "test": "keeps dense-city placement and each follow-up phase inside the frame budget",
+      "status": "passed"
+    }
+  ],
+  "remainingBaselineFailures": [
+    {
+      "file": "tests/ai-defense-panic.test.ts",
+      "test": "settlement defense and shared raider pressure queues a paid tower and its palisade gate for NPC builders, respecting authoritative placement validation"
+    },
+    {
+      "file": "tests/border-placement.test.ts",
+      "test": "automatic construction territory rules keeps automatic houses inside claims while allowing farms to use unclaimed land"
+    },
+    {
+      "file": "tests/building-on-roads.test.ts",
+      "test": "building over roads rejects road overlap and plants one crop cell beside the existing road"
+    },
+    {
+      "file": "tests/buildings-on-farms.test.ts",
+      "test": "solid buildings relocating farm footprints previews and orders a library over four farms without losing crops, cargo or gold"
+    },
+    {
+      "file": "tests/cities.test.ts",
+      "test": "palace cities assigns local housing, residents, harvests and upkeep once rather than duplicating realm totals"
+    },
+    {
+      "file": "tests/cities.test.ts",
+      "test": "palace cities charges a soldier to its surviving home city even when the soldier travels away"
+    },
+    {
+      "file": "tests/cities.test.ts",
+      "test": "palace cities assigns settlement, tower and funded post-tier charges once to each local city"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks lets both cities fund eight pending farm tiles without sharing a pending-farm cap"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks shares gold and preserves the maintenance reserve when both city clocks are due (shortfall: 0)"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks shares gold and preserves the maintenance reserve when both city clocks are due (shortfall: 1)"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks cancel of a camp pauses only its own city and leaves the other city expanding"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks demolish of a camp pauses only its own city and leaves the other city expanding"
+    },
+    {
+      "file": "tests/city-development-timers.test.ts",
+      "test": "independent city construction clocks keeps rival six-second clocks and productive-work limits independent too"
+    },
+    {
+      "file": "tests/coastal-palms.test.ts",
+      "test": "native coastal palms clears a palm through the existing four-second peasant chopping order without changing sand yields"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation refunds the full paid price of an unstarted order and releases its reservation and selected panel"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation clears the assigned peasant journey and hostile targets, then returns that peasant to the palace"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation lets the released worker return and take the next waiting order without adding a peasant"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation refunds only remaining work, with fractional gold preserved, for 'active' construction"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation refunds only remaining work, with fractional gold preserved, for 'paused' construction"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation frees the crop reservation and their traffic reservations without creating crop fields"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation leaves the completed road in place when cancelling an active gate wall"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation preserves the actual paid price of a new camp through save migration"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation preserves the actual paid price of a new house through save migration"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation clamps progress and never refunds more than the recorded payment or a negative amount"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation still accepts manual camp orders during the automatic expansion pause"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation still accepts manual house orders during the automatic expansion pause"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation skips the next house economy tick after cancellation, then resumes building with a food surplus"
+    },
+    {
+      "file": "tests/construction-cancellation.test.ts",
+      "test": "construction cancellation skips a needed farm expansion during its cancellation pause and resumes at the next eligible economy tick"
+    },
+    {
+      "file": "tests/construction-clearance.test.ts",
+      "test": "construction around existing units does not start builder work while no free exit exists, then starts its full duration after clearance"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits applies gate layout exemptions when adding road then wall, charging only new segments"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits applies gate layout exemptions when adding wall then road, charging only new segments"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits skips the occupied hostile crossing while spacing gates through friendly walls"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits builds walls on both sides of a rejected tile without charging for the gap"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits marks existing segments valid and free while skipping occupied cells in the same stroke"
+    },
+    {
+      "file": "tests/construction.test.ts",
+      "test": "drag construction commits allows wall strokes throughout owned territory even beyond the leader sight radius"
+    },
+    {
+      "file": "tests/death-effects.test.ts",
+      "test": "unit death snapshots records projectile death at impact, with no hit flash on launch"
+    },
+    {
+      "file": "tests/defense-equipment.test.ts",
+      "test": "faction equipment on defensive buildings purchases update existing/new/captured towers immediately and match the selection display"
+    },
+    {
+      "file": "tests/defense-equipment.test.ts",
+      "test": "faction equipment on defensive buildings applies building armor to actual leader attacks"
+    },
+    {
+      "file": "tests/defense-rebuilding.test.ts",
+      "test": "automatic defense rebuilding rebuilds a combat-destroyed wall with paid builder work while the Leader is away"
+    },
+    {
+      "file": "tests/defense-rebuilding.test.ts",
+      "test": "automatic defense rebuilding rebuilds a combat-destroyed palisade with paid builder work while the Leader is away"
+    },
+    {
+      "file": "tests/defense-rebuilding.test.ts",
+      "test": "automatic defense rebuilding rebuilds a combat-destroyed woodenTower with paid builder work while the Leader is away"
+    },
+    {
+      "file": "tests/desert-farm-economy.test.ts",
+      "test": "desert yield in settlement planning sends later farm expansion to a farther fertile site over a closer desert site"
+    },
+    {
+      "file": "tests/economy-work-indexes.test.ts",
+      "test": "retained economic work coalesces event and periodic staffing requests into one production scan per interval"
+    },
+    {
+      "file": "tests/faction-ai-upgrade.test.ts",
+      "test": "fortified, coordinated faction AI spends earned skill points and buys equipment only with treasury and physical access"
+    },
+    {
+      "file": "tests/faction-development.test.ts",
+      "test": "rival city development builds one researched healer per city while preserving shared upkeep reserves"
+    },
+    {
+      "file": "tests/farm-block-placement.test.ts",
+      "test": "manual farm block limits keeps one-cell farm placement and ordinary per-cell pricing"
+    },
+    {
+      "file": "tests/farm-reservation.test.ts",
+      "test": "future camp fields reserves one crop tile throughout construction without growing food early"
+    },
+    {
+      "file": "tests/field-roads.test.ts",
+      "test": "single crop tiles and displaced roads charges a rounded fifteen-gold farm price and one quarter of the former build time for a single reserved tile"
+    },
+    {
+      "file": "tests/fishing-art.test.ts",
+      "test": "native Miniworld fishing artwork keeps fishing sailboats distinct from the Leader galley and redraws a boarding passenger"
+    },
+    {
+      "file": "tests/gold-prices.test.ts",
+      "test": "round gold purchase prices uses multiples of five except the explicitly discounted palisade"
+    },
+    {
+      "file": "tests/gold-simulation-ledger.test.ts",
+      "test": "construction receipts in the live gold ledger records only successful payments and returns unused gold without funding Science"
+    },
+    {
+      "file": "tests/gold-transactions.test.ts",
+      "test": "gold ledger records actual gameplay transactions categorizes successful purchases at rounded prices and ignores rejected purchases"
+    },
+    {
+      "file": "tests/gold-transactions.test.ts",
+      "test": "gold ledger records actual gameplay transactions records a village agreement only once and both parties\u2019 delivered trade income, never partial travel"
+    },
+    {
+      "file": "tests/governor-city-boundaries.test.ts",
+      "test": "per-city governor boundaries does not let an enabled governor build farms in a neighboring city with farms disabled"
+    },
+    {
+      "file": "tests/hermits.test.ts",
+      "test": "hermits populates a generated world"
+    },
+    {
+      "file": "tests/house-well-placement.test.ts",
+      "test": "houses and wells sharing a tile orders house first and independently completes both buildings on one tile"
+    },
+    {
+      "file": "tests/house-well-placement.test.ts",
+      "test": "houses and wells sharing a tile orders well first and independently completes both buildings on one tile"
+    },
+    {
+      "file": "tests/house-well-placement.test.ts",
+      "test": "houses and wells sharing a tile keeps housing upgrades when the shared well dies, and permits replacing just the well"
+    },
+    {
+      "file": "tests/housing-economy.test.ts",
+      "test": "automatic residential housing orders two two-person houses with a surplus and completes them using palace builders"
+    },
+    {
+      "file": "tests/housing-economy.test.ts",
+      "test": "automatic residential housing orders only one house when gold cannot pay for the second"
+    },
+    {
+      "file": "tests/housing-economy.test.ts",
+      "test": "automatic residential housing stops new orders when the surplus ends and resumes when it returns"
+    },
+    {
+      "file": "tests/housing-economy.test.ts",
+      "test": "automatic residential housing prioritizes new farmland over housing before the current food surplus runs out"
+    },
+    {
+      "file": "tests/housing-economy.test.ts",
+      "test": "automatic residential housing orders needed farms each economy cycle and counts pending plots toward demand"
+    },
+    {
+      "file": "tests/housing-placement.test.ts",
+      "test": "construction beside housing chooses the short walking route while keeping farm plots out of the house lane"
+    },
+    {
+      "file": "tests/housing-redevelopment.test.ts",
+      "test": "farm-to-house redevelopment still publishes explicit manual redevelopment immediately"
+    },
+    {
+      "file": "tests/hunting.test.ts",
+      "test": "hunting in the live simulation automatically kills nearby game with the Leader\u2019s javelin and awards food instead of gold or a military kill"
+    },
+    {
+      "file": "tests/infantry-drill-combat.test.ts",
+      "test": "Infantry Drill combat integration adds 25% to a formed warrior\u2019s actual frontal hit without leaving its slot"
+    },
+    {
+      "file": "tests/infantry-drill-combat.test.ts",
+      "test": "Infantry Drill combat integration adds 25% to a formed archer\u2019s actual frontal hit without leaving its slot"
+    },
+    {
+      "file": "tests/leader-construction.test.ts",
+      "test": "Leader construction charges gold and queues four seconds of work for a wall"
+    },
+    {
+      "file": "tests/leader-construction.test.ts",
+      "test": "Leader construction fills adjoining and sealed parcels while rejecting occupied sites"
+    },
+    {
+      "file": "tests/linear-purchase.test.ts",
+      "test": "incremental irrigation purchases grows a reverse stroke from water, preserves farm/road layers and matches the synchronous purchase"
+    },
+    {
+      "file": "tests/linear-purchase.test.ts",
+      "test": "incremental irrigation purchases cancels the remainder without refunding accepted cells and finishes cleanup while paused"
+    },
+    {
+      "file": "tests/marsh-gameplay.test.ts",
+      "test": "delta marsh gameplay uses the Clear tool and a worker to remove reeds while retaining walkable wetland without a stump"
+    },
+    {
+      "file": "tests/mediterranean-waterfalls.test.ts",
+      "test": "Alpine waterfall headwaters adds complete downhill Alpine tributaries while retaining mapped rivers, mountain geometry and distant vegetation"
+    },
+    {
+      "file": "tests/mediterranean-world.test.ts",
+      "test": "Mediterranean geographic world has connected starts, abundant native relief, rivers and varied vegetation for MED-200BC"
+    },
+    {
+      "file": "tests/mediterranean-world.test.ts",
+      "test": "Mediterranean geographic world has connected starts, abundant native relief, rivers and varied vegetation for CROWN"
+    },
+    {
+      "file": "tests/mediterranean-world.test.ts",
+      "test": "Mediterranean geographic world has connected starts, abundant native relief, rivers and varied vegetation for 42"
+    },
+    {
+      "file": "tests/monument-construction.test.ts",
+      "test": "monument construction requires exactly 200 gold and reserves a single 20-second site for a palace builder"
+    },
+    {
+      "file": "tests/palace-capture.test.ts",
+      "test": "conquered palace decisions annexes civilian buildings, residents and workers while preserving the rival\u2019s other city"
+    },
+    {
+      "file": "tests/palace-capture.test.ts",
+      "test": "conquered palace decisions immediately replaces cached borders and permits building beside annexed civilian buildings"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades retains existing adjacent gates and their faction passage rules through upgrades"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades finishes through real builder movement, retaining an attached tower and removing only the old palisade"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades keeps a completed defensive ring and its enclosure bonus throughout construction"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades canceling work in progress refunds only the unused fraction of the discounted price"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades can replace an unfinished palisade and releases its obsolete builder when finished"
+    },
+    {
+      "file": "tests/palisade-upgrades.test.ts",
+      "test": "stone walls replacing palisades does not resurrect a palisade destroyed during the upgrade (cancel: false)"
+    },
+    {
+      "file": "tests/research-economy-bonuses.test.ts",
+      "test": "coinage research adds twenty percent to actual caravan deliveries and stacks with regional specialties"
+    },
+    {
+      "file": "tests/research-graph.test.ts",
+      "test": "six-stage science dependency graph has only three roots, no missing dependencies or cycles, six stages and at most five technologies per earliest stage"
+    },
+    {
+      "file": "tests/research-military-bonuses.test.ts",
+      "test": "Fletching uses the bonus in the actual arrow projectile damage"
+    },
+    {
+      "file": "tests/resource-effects.test.ts",
+      "test": "developed resource effects requires iron for ballista orders and both smith upgrades without revoking issued equipment"
+    },
+    {
+      "file": "tests/retinue-purchases.test.ts",
+      "test": "purchased faction retinue capacity fills paid slots one at a time on the existing recruitment clock and inherits squad experience"
+    },
+    {
+      "file": "tests/retinue-purchases.test.ts",
+      "test": "purchased faction retinue capacity reserves the next capacity bill before automatic farm orders (gold shortfall: 0)"
+    },
+    {
+      "file": "tests/retinue-purchases.test.ts",
+      "test": "purchased faction retinue capacity adds capacity fees to ordinary soldier wages and attributes them once to the oldest completed city"
+    },
+    {
+      "file": "tests/retinue-squads.test.ts",
+      "test": "retinue squads discards shared experience when combat kills the final survivor before later recruitment"
+    },
+    {
+      "file": "tests/revised-mechanics.test.ts",
+      "test": "civilian traffic, bridges and palace clearances expands productive farmland when needed"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads enforces construction radius, resources and occupied tiles without charging failed builds"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds a friendly gate with road followed by wall, charging only each new layer"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds a friendly gate with wall followed by road, charging only each new layer"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds bridges over river, crosses them, and connects roads across water"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds bridges over lake, crosses them, and connects roads across water"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds bridges over coast, crosses them, and connects roads across water"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "movement, construction and roads builds bridges over ocean, crosses them, and connects roads across water"
+    },
+    {
+      "file": "tests/simulation.test.ts",
+      "test": "combat, morale and exploration rehouses house residents into spare capacity and loses only unhoused population"
+    },
+    {
+      "file": "tests/supply-levy.test.ts",
+      "test": "mass levy the live simulation keeps reduced morale and demobilizes on the next insolvency sample"
+    },
+    {
+      "file": "tests/supply-levy.test.ts",
+      "test": "mass levy demobilizes on the next check when ordinary upkeep exhausts the treasury between levy paydays"
+    },
+    {
+      "file": "tests/victory-continuation.test.ts",
+      "test": "continuing a victorious world still allows true defeat after the last settlement is lost in a continued world"
+    },
+    {
+      "file": "tests/village-bonuses.test.ts",
+      "test": "living village alliances affect the faction economy adds the merchant tribe bonus only to completed ordinary caravan journeys"
+    },
+    {
+      "file": "tests/village-development.test.ts",
+      "test": "trade-funded village development spends actual village gold on gradual clumps, higher-quality housing and bounded defenses"
+    },
+    {
+      "file": "tests/village-development.test.ts",
+      "test": "trade-funded village development retains purchased housing quality through ordinary city well and enclosure updates"
+    },
+    {
+      "file": "tests/war-declaration.test.ts",
+      "test": "village agreements through the building diplomacy popup does not treat village agreements as ordinary civilization confederation"
+    },
+    {
+      "file": "tests/wells-and-trees.test.ts",
+      "test": "tree clearing peasants walks from the palace, spends four seconds chopping, then returns home"
+    },
+    {
+      "file": "tests/wells-and-trees.test.ts",
+      "test": "tree clearing peasants resumes an assigned tree and its chopping progress after reloading a save"
+    }
+  ]
+}

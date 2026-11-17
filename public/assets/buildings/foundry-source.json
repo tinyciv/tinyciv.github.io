@@ -1,0 +1,15 @@
+{
+  "file": "public/assets/buildings/foundry.png",
+  "generator": "PixelLab create-object-pro-flash",
+  "object_id": "72d6b46d-b137-44d7-871f-c27267a1d737",
+  "resolution": [
+    32,
+    32
+  ],
+  "footprint": [
+    2,
+    2
+  ],
+  "prompt": "ONE medieval FOUNDRY building, high top-down overhead strategy-game camera, NOT isometric. Native 32x32 pixel art for a 2x2 grid-cell footprint. A squat ochre brick furnace chimney at the rear-left, a short terracotta roof over the rear workshop, an OPEN casting yard in the front-right with a tiny grey cannon barrel mold and one orange furnace opening. Clearly a metal-casting workshop, no people, machines, lettering or terrain. Match the existing barracks reference for exact pixel size, warm ochre wood and brick, brown outlines, broad connected clusters and restrained shading. Roof covers at most half the footprint so the furnace and casting yard remain readable. Transparent background, all features fully inside the 32x32 canvas. No isometric diamond base, perspective convergence, antialiasing or blurry detail.",
+  "grounding": "public/assets/buildings/barracks.png"
+}

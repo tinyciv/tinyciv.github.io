@@ -1,0 +1,23 @@
+.offensive-placement {
+  position: absolute;
+  z-index: 12;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 12px;
+  border: 1px solid #b69b58;
+  border-radius: 6px;
+  background: #211c15ed;
+  color: #fff1c1;
+  font-family: var(--game-font);
+}
+.offensive-placement[hidden] { display: none; }
+img[data-research="officerCorps"] { object-fit: cover; object-position: right; }
+.offensive-placement button { min-height: 32px; }
+.offensive-placement strong { white-space: nowrap; }
+.hotbar-offensive { background-image: url('/assets/runtime/ui/forged/retinue-actions-pixel.webp'); background-size: 200% 100%; background-position: 100% 0; }
+.game-area.placing-offensive #world { cursor: crosshair; }
+.action-slot[data-hotbar-action="offensive"][aria-pressed="true"] { box-shadow: inset 0 0 15px #b99c4055, inset 0 0 0 2px #e8cb7e; }

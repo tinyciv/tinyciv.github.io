@@ -9,7 +9,7 @@ try {
  const bundle=path.join(temp,'game.mjs');
  await build({stdin:{contents:`export { createGame, updateGame, buildAt, validateBuildAt, getLeader } from './src/game/simulation'; export { researchStatus, researchCost, RESEARCH_BRANCHES } from './src/game/research'; export { grantIncome } from './src/game/resource-income'; export { entityStore } from './src/game/entity-store'; export { installNavigationWasm } from './src/game/navigation-wasm';`,resolveDir:root},bundle:true,platform:'node',format:'esm',outfile:bundle});
  const {createGame,updateGame,buildAt,validateBuildAt,getLeader,researchStatus,researchCost,RESEARCH_BRANCHES,grantIncome,entityStore,installNavigationWasm}=await import(pathToFileURL(bundle));
- await installNavigationWasm(await readFile(path.join(root,'public/wasm/navigation.wasm')));
+ await installNavigationWasm(await readFile(path.join(root,'public/wasm/simulation.wasm')));
  const args=process.argv.slice(2), scenarioArg=args.find(a=>a.startsWith('--kills='));
  const seconds=Number(args.find(a=>a.startsWith('--seconds='))?.split('=')[1]??3600);
  const scenarios=scenarioArg?[Number(scenarioArg.split('=')[1])]:[0,2,4]; const rows=[];

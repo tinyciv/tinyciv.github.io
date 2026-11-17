@@ -5,6 +5,6 @@ await build({ entryPoints: ['server/server.ts', 'server/match-worker.ts', 'serve
   bundle: true, platform: 'node', target: 'node22', format: 'esm', sourcemap: false,
   banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" },
   define: { 'import.meta.env.BASE_URL': '"/"', 'import.meta.env.DEV': 'false' }, });
-await copyFile('public/wasm/navigation.wasm', 'server-dist/navigation.wasm');
+await copyFile('public/wasm/simulation.wasm', 'server-dist/simulation.wasm');
 await copyFile('server/rds-ca.pem', 'server-dist/rds-ca.pem');
 console.log('Built standalone multiplayer server and match worker.');

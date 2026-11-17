@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { Unit } from './types';
 
 type WildlifeKind = 'boar' | 'marshBird';
@@ -26,7 +27,7 @@ export function loadWildlifeArt(): Promise<void> {
   return loading ??= (async () => {
     const [boar, chicken] = await Promise.all(['Boar', 'Chicken'].map(async name => {
       const image = new Image();
-      image.src = `${import.meta.env.BASE_URL}assets/miniworld/${name}.png`;
+      image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/${name}.png`);
       await image.decode();
       if (image.naturalWidth !== 64 || image.naturalHeight !== (name === 'Boar' ? 128 : 64)) throw new Error(`Invalid Miniworld ${name} sheet.`);
       return image;

@@ -1,3 +1,4 @@
+import { territoryValue } from './territory-cells';
 import { territory, type Territory } from './borders';
 import { invalidateDecisions } from './decision-schedule';
 import { releaseAttackSpot } from './engagement';
@@ -23,7 +24,7 @@ function nearestCity(list: readonly Building[], point: Point): Building | undefi
 }
 export function garrisonCityAt(state: GameState, point: Point, faction = playerFaction(state)): Building | undefined {
   const borders = territory(state);
-  return borders.owners[cellAt(state, point)] === faction ? nearestCity(cities(state, faction), point) : undefined;
+  return territoryValue(borders, cellAt(state, point)) === faction ? nearestCity(cities(state, faction), point) : undefined;
 }
 function perimeter(cells: ReadonlySet<number>, width: number, height: number): Set<number> {
   const result = new Set<number>();
@@ -41,7 +42,7 @@ function cityArea(state: GameState, city: Building): CityArea {
   const borders = territory(state), previous = cache.get(city.id);
   if (previous?.territory === borders && previous.city === city) return previous;
   const { width, height } = state.world, list = cities(state, city.faction), cells = new Set<number>(), points: Point[] = [];
-  for (let i = 0; i < borders.owners.length; i++) if (borders.owners[i] === city.faction) {
+  for (let i = 0; i < (borders.width * borders.height); i++) if (territoryValue(borders, i) === city.faction) {
     const point = { x: i % width + .5, y: Math.floor(i / width) + .5 };
     if (nearestCity(list, point)?.id === city.id) { cells.add(i); points.push(point); }
   }
@@ -110,7 +111,7 @@ export function toggleGarrison(state: GameState): { ok: boolean; message: string
     unit.recallIssuedAt = undefined; unit.recallReturnOrder = undefined; unit.order = 'follow';
   }
   invalidateDecisions(state);
-  return { ok: true, message: `Retinue defending ${city.cityName ?? 'the settlement'}.` };
+  return { ok: true, message: `Retinue defending ${city.cityName ?? 'the town'}.` };
 }
 /** Enforce the same perimeter in path searches, direct moves, and crowd yielding.
  * Recruits outside the city may first walk home; only an active chase opens the

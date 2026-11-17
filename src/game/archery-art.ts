@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Native two-cell Miniworld archery range, without resampling source pixels. */
 let range: HTMLImageElement | undefined;
 let arrow: HTMLImageElement | undefined;
@@ -5,12 +6,12 @@ let loading: Promise<void> | undefined;
 export function loadArcheryArt(): Promise<void> {
   return loading ??= (async () => {
     const image = new Image();
-    image.src = `${import.meta.env.BASE_URL}assets/miniworld/Archery-Range.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/Archery-Range.png`);
     await image.decode();
     if (image.naturalWidth !== 32 || image.naturalHeight !== 16) throw new Error('Invalid archery range artwork.');
     range = image;
     const projectile = new Image();
-    projectile.src = `${import.meta.env.BASE_URL}assets/puny-world/Arrow.png`;
+    projectile.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/puny-world/Arrow.png`);
     await projectile.decode();
     arrow = projectile;
   })();

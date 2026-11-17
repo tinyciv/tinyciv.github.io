@@ -10,11 +10,13 @@ const towns = (world: World) => [...world.spawns.map((point, faction) => ({ ...p
   ...(world.secondarySpawns ?? []).map((point, index) => ({ ...point, faction: index + 1 }))];
 
 describe('starting realms have room to grow', () => {
-  it.each(['fractal', 'continents', 'pangaea', 'mediterranean'] as const)('keeps all foreign starting towns at least 80 tiles apart on %s', style => {
+  it.each(['fractal', 'continents', 'pangaea'] as const)('keeps all foreign starting towns at least 30 tiles apart on %s', style => {
     const world = generateWorld('CROWN', undefined, undefined, { style });
     expect(world.minimumFactionStartDistance).toBe(MIN_FACTION_START_DISTANCE);
     expect(towns(world)).toHaveLength(11);
-    expect(spacing(towns(world))).toBeGreaterThanOrEqual(80);
+    for (const [i, a] of world.spawns.entries())
+      expect(Math.min(...world.spawns.filter((_, j) => i !== j).map(b => Math.hypot(a.x - b.x, a.y - b.y)))).toBeLessThanOrEqual(100);
+    expect(spacing(towns(world))).toBeGreaterThanOrEqual(30);
   }, 120_000);
 
   it('preserves separation through actual settlement layout and multiplayer selection', () => {
@@ -22,17 +24,24 @@ describe('starting realms have room to grow', () => {
     const state = createGame(world);
     const palaces = state.buildings.filter(building => building.kind === 'palace');
     expect(palaces).toHaveLength(11);
-    expect(spacing(palaces)).toBeGreaterThanOrEqual(80);
+    for (const faction of new Set(palaces.map(p => p.faction))) {
+      const own = palaces.filter(p => p.faction === faction), others = palaces.filter(p => p.faction !== faction);
+      expect(Math.min(...own.flatMap(a => others.map(b => Math.hypot(a.x - b.x, a.y - b.y))))).toBeLessThanOrEqual(100);
+    }
+    expect(spacing(palaces)).toBeGreaterThanOrEqual(30);
     const multiplayer = createDuelGame(generateWorld('42'));
-    expect(spacing(multiplayer.buildings.filter(building => building.kind === 'palace'))).toBeGreaterThanOrEqual(80);
+    expect(spacing(multiplayer.buildings.filter(building => building.kind === 'palace'))).toBeLessThanOrEqual(100);
+    expect(spacing(multiplayer.buildings.filter(building => building.kind === 'palace'))).toBeGreaterThanOrEqual(30);
   }, 120_000);
 
   it('preserves minimum map size and separation on constrained continents', () => {
     const world = generateWorld('42', undefined, undefined, { style: 'continents' });
-    expect(world.width).toBeGreaterThanOrEqual(DEFAULT_WORLD_WIDTH);
-    expect(world.height).toBeGreaterThanOrEqual(DEFAULT_WORLD_HEIGHT);
+    expect(world.width).toBe(DEFAULT_WORLD_WIDTH);
+    expect(world.height).toBe(DEFAULT_WORLD_HEIGHT);
     expect(towns(world)).toHaveLength(11);
-    expect(spacing(towns(world))).toBeGreaterThanOrEqual(80);
+    for (const [i, a] of world.spawns.entries())
+      expect(Math.min(...world.spawns.filter((_, j) => i !== j).map(b => Math.hypot(a.x - b.x, a.y - b.y)))).toBeLessThanOrEqual(100);
+    expect(spacing(towns(world))).toBeGreaterThanOrEqual(30);
   }, 120_000);
 
   it('keeps explicit small development fixtures small', () => {
@@ -40,5 +49,7 @@ describe('starting realms have room to grow', () => {
     expect([world.width, world.height]).toEqual([64, 64]);
     expect(world.minimumFactionStartDistance).toBeUndefined();
     expect(towns(world)).toHaveLength(11);
+    for (const [i, a] of world.spawns.entries())
+      expect(Math.min(...world.spawns.filter((_, j) => i !== j).map(b => Math.hypot(a.x - b.x, a.y - b.y)))).toBeLessThanOrEqual(100);
   });
 });

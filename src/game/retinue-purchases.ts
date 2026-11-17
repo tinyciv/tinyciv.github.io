@@ -24,9 +24,9 @@ export function retinueSlotPurchaseStatus(state: GameState, settlement: Building
   const faction = state.factions.find(candidate => candidate.id === settlement.faction);
   let reason = '';
   if (state.gameOver || faction?.defeated) reason = 'Your realm can no longer expand its retinue.';
-  else if (settlement.kind !== 'palace' || settlement.faction !== playerFaction(state) || !faction || !state.buildings.includes(settlement)) reason = 'Choose your own settlement.';
-  else if (!buildingReady(settlement)) reason = 'Complete the settlement first.';
-  else if (!buildingActivityAvailable(state, settlement)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the settlement.`;
+  else if (settlement.kind !== 'palace' || settlement.faction !== playerFaction(state) || !faction || !state.buildings.includes(settlement)) reason = 'Choose your own town.';
+  else if (!buildingReady(settlement)) reason = 'Complete the town first.';
+  else if (!buildingActivityAvailable(state, settlement)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the town.`;
   else if (faction.gold < RETINUE_SLOT_COST) reason = `Need ${RETINUE_SLOT_COST} gold.`;
   return { available: !reason, reason, slots: faction ? purchasedRetinueSlots(faction) : 0,
     upkeep: faction ? retinueSlotUpkeep(faction) : 0 };

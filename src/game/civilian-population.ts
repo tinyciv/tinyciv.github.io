@@ -10,8 +10,9 @@ export function civilianCityPopulations(state: GameState): Map<number, number> {
 }
 /** Levied residents keep their homes, but cannot also staff civilian jobs. */
 export function civilianWorkforcePopulations(state: GameState): Map<number, number> {
-  const populations = civilianCityPopulations(state);
-  for (const city of cityResidents(state)) if (state.factions.find(f => f.id === city.palace.faction)?.villageId !== undefined) populations.delete(city.palace.id);
+  const cities = cityResidents(state);
+  const populations = new Map(cities.map(city => [city.palace.id, Math.max(0, Math.floor(city.population))]));
+  for (const city of cities) if (state.factions.find(f => f.id === city.palace.faction)?.villageId !== undefined) populations.delete(city.palace.id);
   for (const unit of state.units) if (unit.hp > 0 && (unit.kind === 'levyInfantry' || unit.kind === 'slinger') && unit.levy) {
     const city = unit.levy.city !== undefined && populations.has(unit.levy.city) ? unit.levy.city : workerHomeCity(state, unit)?.id;
     if (city !== undefined) populations.set(city, Math.max(0, (populations.get(city) ?? 0) - 1));

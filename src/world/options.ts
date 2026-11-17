@@ -1,8 +1,8 @@
-export const WORLD_GENERATION_STYLES = ['continents', 'pangaea', 'fractal', 'mediterranean'] as const;
+export const WORLD_GENERATION_STYLES = ['continents', 'pangaea', 'fractal'] as const;
 export type WorldGenerationStyle = typeof WORLD_GENERATION_STYLES[number];
 export const DEFAULT_WORLD_STYLE: WorldGenerationStyle = 'fractal';
 export const WORLD_STYLE_NAMES: Record<WorldGenerationStyle, string> = {
-  continents: 'Continents', pangaea: 'Pangaea', fractal: 'Fractal', mediterranean: 'Mediterreanean',
+  continents: 'Continents', pangaea: 'Pangaea', fractal: 'Fractal',
 };
 export const LANDFORM_KINDS = ['river-basin', 'folded-range', 'dissected-plateau', 'rift-lakes', 'glacial-coast', 'rolling-uplands'] as const;
 export type LandformKind = typeof LANDFORM_KINDS[number];
@@ -17,6 +17,10 @@ export const LANDFORM_NAMES: Record<LandformFamily, string> = {
  * Public controls for every landscape stage. Distances are game-grid scales,
  * not calibrated physical units. Geometry/access safety limits stay internal. */
 export const LANDSCAPE_CONTROLS = {
+  seaLevel: { group: 'World', label: 'Sea level (% water target)', default: 70, min: 60, max: 80 },
+  age: { group: 'World', label: 'World age (billion years)', default: 4, min: 3, max: 5 },
+  climate: { group: 'World', label: 'Climate (0 arid / 1 normal / 2 wet)', default: 1, min: 0, max: 2 },
+  temperature: { group: 'World', label: 'Temperature (0 warm / 1 temperate / 2 cool)', default: 1, min: 0, max: 2 },
   landScale: { group: 'Coasts', label: 'Landmass size', default: 1.021, min: .85, max: 1.15 },
   coastRoughness: { group: 'Coasts', label: 'Coast roughness', default: 0.7815, min: .6, max: 1.5 },
   islandDensity: { group: 'Coasts', label: 'Island density', default: 0.955, min: .3, max: 1.8 },
@@ -53,13 +57,18 @@ export const LANDSCAPE_CONTROLS = {
   beachFraction: { group: 'Coasts', label: 'Sandy coastline share', default: 0.4255, min: .25, max: .7 },
   beachWidth: { group: 'Coasts', label: 'Beach width', default: 0.8142, min: .65, max: 1.3 },
   palmDensity: { group: 'Coasts', label: 'Beach palm density', default: 1.1131, min: .4, max: 1.6 },
-  startSpacing: { group: 'Settlements', label: 'Faction spacing strength', default: 0.795, min: .7, max: 1.3 },
-  startRelaxations: { group: 'Settlements', label: 'Faction spacing passes', default: 3, min: 1, max: 6 },
+  startSpacing: { group: 'Towns', label: 'Faction spacing strength', default: 0.795, min: .7, max: 1.3 },
+  startRelaxations: { group: 'Towns', label: 'Faction spacing passes', default: 3, min: 1, max: 6 },
 } as const;
 export type LandscapeParameter = keyof typeof LANDSCAPE_CONTROLS;
 export type LandscapeParameters = { [K in LandscapeParameter]: number };
 export const DEFAULT_LANDSCAPE_PARAMETERS = Object.fromEntries(Object.entries(LANDSCAPE_CONTROLS)
   .map(([key, control]) => [key, control.default])) as LandscapeParameters;
+/** World settings configure the existing terrain stages here, rather than in
+ * the menu. Non-neutral settings own their related low-level controls; neutral
+ * settings leave custom low-level values intact. Deriving from fixed defaults
+ * makes resolution idempotent, including when regenerating a stored world.
+ * Intermediate values interpolate between presets for the landscape editor. */
 export function resolveLandscapeParameters(overrides: Partial<LandscapeParameters> = {}): LandscapeParameters {
   const parameters = { ...DEFAULT_LANDSCAPE_PARAMETERS };
   for (const [key, value] of Object.entries(overrides)) {
@@ -69,6 +78,21 @@ export function resolveLandscapeParameters(overrides: Partial<LandscapeParameter
       throw new RangeError(`${key} must be between ${control.min} and ${control.max}.`);
     parameters[name] = value;
   }
+  const preset = (position: number, values: Partial<Record<LandscapeParameter, readonly [number, number]>>): void => {
+    if (position === 0) return;
+    for (const key of Object.keys(values) as LandscapeParameter[]) {
+      const normal = DEFAULT_LANDSCAPE_PARAMETERS[key], [lower, upper] = values[key]!;
+      parameters[key] = normal + Math.abs(position) * ((position < 0 ? lower : upper) - normal);
+    }
+  };
+  // Sea level changes the continental coast envelope, preserving seeded shape
+  // variation. Water coverage is a target, not a post-generation tile quota.
+  preset((parameters.seaLevel - 70) / 10, { landScale: [1.15, .85] });
+  // Young geology has more raised land and mountains; old geology is worn down.
+  preset(parameters.age - 4, { reliefCoverage: [.14, .04], mountainShare: [.65, .25], hillClustering: [.95, .4] });
+  // Moisture feeds rainfall, drainage, biomes, vegetation and soil downstream.
+  preset(parameters.climate - 1, { moisture: [.44, .62], desertThreshold: [.57, .43], forestThreshold: [.61, .48] });
+  preset(parameters.temperature - 1, { equatorWidth: [.45, .2], latitudeInfluence: [.16, .4] });
   return parameters;
 }
 export interface WorldGenerationOptions {
@@ -77,11 +101,14 @@ export interface WorldGenerationOptions {
   landformFamily?: LandformFamily;
   /** Disable only for comparison studies of the underlying coastline. */
   riverDeltas?: boolean;
+  /** Scenarios supply their own founding sites after generating natural terrain. */
+  settlements?: boolean;
+  /** A native meandering strait is cut before normal climate and ecology. */
+  oceanChannelWidth?: number;
 }
 
 export const WORLD_STYLE_DESCRIPTIONS: Record<WorldGenerationStyle, string> = {
   continents: 'Broad continents separated by ocean channels.',
   pangaea: 'One great connected landmass with a varied inland frontier.',
   fractal: 'Branching coasts, deep inlets, and scattered islands.',
-  mediterranean: 'Mediterranean geography circa 200 BC with reconstructed and inferred vegetation. Geography stays fixed; the seed varies local detail and starting positions.',
 };

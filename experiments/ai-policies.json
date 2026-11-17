@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "id": "cautious",
+      "extends": "coordinated",
+      "parameters": {
+        "retreatHealth": 0.8
+      }
+    },
+    {
+      "id": "even-odds",
+      "extends": "coordinated",
+      "parameters": {
+        "retreatPowerRatio": 1.0
+      }
+    },
+    {
+      "id": "smaller-garrison",
+      "extends": "coordinated",
+      "parameters": {
+        "garrisonFraction": 0.15
+      }
+    },
+    {
+      "id": "no-formations",
+      "extends": "coordinated",
+      "features": {
+        "formations": false
+      }
+    },
+    {
+      "id": "expansion-no-siege",
+      "extends": "expansionist",
+      "features": {
+        "offensiveSiege": false
+      }
+    },
+    {
+      "id": "expansion-cautious",
+      "extends": "expansionist",
+      "parameters": {
+        "reserveUpkeepCycles": 2,
+        "campaignSafetyRatio": 0.85,
+        "retreatHealth": 0.65
+      }
+    }
+  ]
+}

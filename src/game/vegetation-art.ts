@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { WATER, type Tile, type TreeClass } from './types';
 
 type Sheet = 'medieval' | 'marsh-2A' | 'marsh-2B' | 'marsh-2C' | 'marsh-2D';
@@ -15,7 +16,7 @@ let loading: Promise<void> | undefined;
 
 export function loadVegetationArt(): Promise<void> {
   return loading ??= Promise.all(Object.entries(files).map(async ([key, file]) => {
-    const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/vegetation/${file}`;
+    const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/vegetation/${file}`);
     await image.decode(); sheets.set(key as Sheet, image);
   })).then(() => undefined);
 }
@@ -35,8 +36,9 @@ export const TREE_FAMILIES: Readonly<Record<TreeClass, readonly VegetationSprite
   snowy: [sprite('medieval', 0, 144), sprite('medieval', 32, 144), sprite('medieval', 0, 160, 32), sprite('medieval', 32, 160, 32)],
 };
 const COASTAL_PALMS = TREE_FAMILIES.tropical.slice(0, 2);
-export const MARSH_HEIGHT_TILES = 2.45;
-export const MARSH_WIDTH_TILES = 2;
+/** Twice the 19.6px standard infantry height at the default tile size. */
+export const MARSH_HEIGHT_TILES = (19.6 * 2) / 32;
+export const MARSH_WIDTH_TILES = MARSH_HEIGHT_TILES * (2 / 2.45);
 export const MARSH_PLANTS: readonly VegetationSprite[] = ['marsh-2A', 'marsh-2B', 'marsh-2C', 'marsh-2D']
   .map(sheet => ({ sheet: sheet as Sheet, x: 0, y: 0, width: 32, height: 48 }));
 

@@ -1,6 +1,6 @@
 interface ReplicationSocket {
   readonly bufferedAmount: number;
-  send(payload: string, callback?: (error?: Error) => void): void;
+  send(payload: string | Uint8Array, callback?: (error?: Error) => void): void;
 }
 
 /** A large initial world may itself exceed the ordinary frame budget. Keep
@@ -12,8 +12,8 @@ export class ReplicationFlow {
   private snapshots = new WeakMap<ReplicationSocket, { limit: number }>();
   constructor(private readonly frameBudget = 2 * 1024 * 1024, private readonly drainedAt = 512 * 1024) {}
 
-  send(socket: ReplicationSocket, type: 'frame' | 'snapshot', payload: string, requestSync: () => void): 'sent' | 'skipped' | 'sync' {
-    const snapshot = this.snapshots.get(socket), bytes = Buffer.byteLength(payload);
+  send(socket: ReplicationSocket, type: 'frame' | 'snapshot', payload: string | Uint8Array, requestSync: () => void): 'sent' | 'skipped' | 'sync' {
+    const snapshot = this.snapshots.get(socket), bytes = typeof payload === 'string' ? Buffer.byteLength(payload) : payload.byteLength;
     // At most one world transfer is queued per socket. A later snapshot will
     // supersede skipped messages once the current transfer has drained.
     if (type === 'snapshot' && snapshot || socket.bufferedAmount > (snapshot?.limit ?? this.frameBudget)

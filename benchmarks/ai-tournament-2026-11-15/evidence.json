@@ -1,0 +1,51 @@
+{
+  "validated_match_count": 192,
+  "same_engine_and_wasm_across_stages": true,
+  "screening_and_validation_seeds_disjoint": true,
+  "heldout_vs_baseline": [
+    {
+      "policy": "hard-assault",
+      "scenario": "field-battle",
+      "wins": 5,
+      "draws": 7,
+      "losses": 4,
+      "seed_pairs_won": 1,
+      "seed_pairs_tied": 7,
+      "seed_pairs_lost": 0
+    },
+    {
+      "policy": "hard-assault",
+      "scenario": "siege-war",
+      "wins": 0,
+      "draws": 16,
+      "losses": 0,
+      "seed_pairs_won": 0,
+      "seed_pairs_tied": 8,
+      "seed_pairs_lost": 0
+    },
+    {
+      "policy": "disciplined",
+      "scenario": "field-battle",
+      "wins": 4,
+      "draws": 7,
+      "losses": 5,
+      "seed_pairs_won": 1,
+      "seed_pairs_tied": 5,
+      "seed_pairs_lost": 2
+    },
+    {
+      "policy": "disciplined",
+      "scenario": "siege-war",
+      "wins": 0,
+      "draws": 16,
+      "losses": 0,
+      "seed_pairs_won": 0,
+      "seed_pairs_tied": 8,
+      "seed_pairs_lost": 0
+    }
+  ],
+  "fortified_matches": 96,
+  "fortified_draws": 96,
+  "fortified_final_siege_engine_count": 0,
+  "fortified_starting_city_damage_cases": 0
+}

@@ -23,6 +23,8 @@ export interface VillageTradeQuote {
 interface TravelQuote {
   originId: number;
   outboundDistance: number;
+  outboundSeconds: number;
+  returnSeconds: number;
   returnDistance: number;
   roundTripSeconds: number;
 }
@@ -65,7 +67,7 @@ function planTravel(state: GameState, camp: Building, faction: number, cities: B
       if (!outbound) continue;
       const returning = travelLeg(state, outbound.end, city, faction);
       if (!returning) continue;
-      return { originId: city.id, outboundDistance: outbound.distance, returnDistance: returning.distance,
+      return { originId: city.id, outboundSeconds: outbound.seconds, returnSeconds: returning.seconds, outboundDistance: outbound.distance, returnDistance: returning.distance,
         roundTripSeconds: outbound.seconds + returning.seconds + TURNAROUND_SECONDS * 2 };
     }
   });
@@ -96,8 +98,8 @@ export function villageTradeQuote(state: GameState, village: NeutralVillage, fac
     cache.set(slot, { world: state.world, tiles: state.world.tiles, key, travel });
   }
   if (!travel) return quote;
-  const rate = (supplied: boolean) => (villageTradePayout(state, village, faction, travel.outboundDistance, supplied)
-    + villageTradePayout(state, village, faction, travel.returnDistance, supplied)) * 30 / travel.roundTripSeconds;
+  const rate = (supplied: boolean) => (villageTradePayout(state, village, faction, travel.outboundSeconds, supplied)
+    + villageTradePayout(state, village, faction, travel.returnSeconds, supplied)) * 30 / travel.roundTripSeconds;
   return { ...quote, routeAvailable: true, originId: travel.originId, distance: (travel.outboundDistance + travel.returnDistance) / 2,
     roundTripSeconds: travel.roundTripSeconds, withoutResourceGoldPer30: rate(false), withResourceGoldPer30: rate(true) };
 }

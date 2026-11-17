@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, updateGame } from '../src/game/simulation';
 import { desiredRetinueSize } from '../src/game/archery';
-import { ADVANCED_START_POPULATION, ADVANCED_START_RETINUE, ADVANCED_START_FOOD, ADVANCED_START_GOLD } from '../src/game/advanced-start';
+import { ADVANCED_START_POPULATION, ADVANCED_START_RETINUE, ADVANCED_START_FOOD, ADVANCED_START_GOLD, ADVANCED_START_MIDPOINT_DEPTH, ADVANCED_HOUSE_BLOCK } from '../src/game/advanced-start';
+import { sharedHouseForWell } from '../src/game/house-wells';
+import { WELL_RADIUS, houseLevel } from '../src/game/wells';
 import { serializeGameSave, parseGameSave } from '../src/game/game-save';
-import { buildingResearchRequirement, isBuildingUnlocked, isInfantryDrillUnlocked } from '../src/game/research';
+import { buildingResearchRequirement, isBuildingUnlocked, isInfantryDrillUnlocked, researchDepth, researchLevel, RESEARCH_BRANCHES } from '../src/game/research';
 import { bridgeSpanAt } from '../src/game/bridge-spans';
 import { constructionEdges } from '../src/game/builders';
 import { hasStaticPath } from '../src/game/pathfinding';
@@ -25,7 +27,7 @@ function world(water = false, raised = false): World {
 
 describe('advanced starting cities', () => {
   it.each([[false, false], [true, false], [false, true]])('starts with a populated, accessible city and every buildable structure (river=%s, plateau=%s)', (water, raised) => {
-    const state = createGame(world(water, raised), undefined, { advancedStart: true });
+    const state = createGame(world(water, raised), undefined, { advancedStart: 'complete' });
     const faction = state.factions[0], buildings = state.buildings.filter(b => b.faction === 0 && buildingReady(b));
     expect(faction.population).toBe(ADVANCED_START_POPULATION);
     expect(desiredRetinueSize(faction)).toBe(ADVANCED_START_RETINUE);
@@ -56,6 +58,8 @@ describe('advanced starting cities', () => {
     }
     const occupied = new Set<number>();
     for (const building of buildings) {
+      // A well may share its house's tile; every other cell has one building.
+      if (building.kind === 'well' && sharedHouseForWell(building, buildings)) continue;
       for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++) {
         const cell = (building.y + dy) * state.world.width + building.x + dx;
         expect(occupied.has(cell), `Overlapping ${building.kind} at ${cell}`).toBe(false); occupied.add(cell);
@@ -83,8 +87,43 @@ describe('advanced starting cities', () => {
     expect(desiredRetinueSize({ ...faction, population: ADVANCED_START_POPULATION - 1 })).toBe(11);
   });
 
+  it('midpoint grants the first half of the research tree; houses stand in well-served blocks of 8-12', () => {
+    const state = createGame(generateWorld('advanced-infantry-drill'), undefined, { advancedStart: 'midpoint', banditIntensity: 0 });
+    const faction = state.factions[0];
+    for (const branch of RESEARCH_BRANCHES)
+      expect(researchLevel(faction, branch.id) > 0, branch.id).toBe(researchDepth(branch.id) <= ADVANCED_START_MIDPOINT_DEPTH);
+    expect(isInfantryDrillUnlocked(faction)).toBe(false);
+    expect(state.buildings.some(building => building.faction === 0 && building.kind === 'ballista')).toBe(false);
+    const houses = state.buildings.filter(building => building.faction === 0 && building.kind === 'house');
+    const wells = state.buildings.filter(building => building.faction === 0 && building.kind === 'well');
+    expect(wells.every(well => sharedHouseForWell(well, houses))).toBe(true);
+    // Group houses into 4-connected blocks.
+    const key = (x: number, y: number) => `${x},${y}`, byCell = new Map(houses.map(house => [key(house.x, house.y), house])), seen = new Set<string>();
+    const blocks: typeof houses[] = [];
+    for (const house of houses) {
+      if (seen.has(key(house.x, house.y))) continue;
+      const block = [house], queue = [house]; seen.add(key(house.x, house.y));
+      while (queue.length) { const next = queue.pop()!;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const neighbor = byCell.get(key(next.x + dx, next.y + dy));
+          if (neighbor && !seen.has(key(neighbor.x, neighbor.y))) { seen.add(key(neighbor.x, neighbor.y)); block.push(neighbor); queue.push(neighbor); } } }
+      blocks.push(block);
+    }
+    const served = blocks.filter(block => block.length >= ADVANCED_HOUSE_BLOCK.min);
+    expect(served.length).toBeGreaterThan(0);
+    for (const block of served) {
+      expect(block.length).toBeLessThanOrEqual(ADVANCED_HOUSE_BLOCK.max);
+      expect(block.some(house => wells.some(well => well.x === house.x && well.y === house.y))).toBe(true);
+      for (const house of block) {
+        expect(houseLevel(house)).toBe(2);
+        expect(wells.some(well => Math.hypot(well.x - house.x, well.y - house.y) <= WELL_RADIUS)).toBe(true);
+      }
+    }
+    expect(houses.reduce((sum, house) => sum + house.capacity, 0) + state.buildings.find(b => b.kind === 'palace' && b.faction === 0)!.capacity)
+      .toBeGreaterThanOrEqual(ADVANCED_START_POPULATION);
+  });
+
   it('requires copper to replace a spearman after the pre-equipped starting escort is granted', () => {
-    const state = createGame(world(), undefined, { advancedStart: true, banditIntensity: 0 });
+    const state = createGame(world(), undefined, { advancedStart: 'complete', banditIntensity: 0 });
     const faction = state.factions[0], spearman = state.units.find(unit => unit.faction === 0 && unit.kind === 'spearman')!;
     expect(spearman).toBeDefined();
     expect(factionHasDevelopedResource(state, 0, 'copper')).toBe(false);
@@ -99,7 +138,7 @@ describe('advanced starting cities', () => {
   });
 
   it('houses the advanced population on a generated landscape and retains city assignment through an economy tick', () => {
-    const state = createGame(generateWorld('advanced-infantry-drill'), undefined, { advancedStart: true, banditIntensity: 0 });
+    const state = createGame(generateWorld('advanced-infantry-drill'), undefined, { advancedStart: 'complete', banditIntensity: 0 });
     // Isolate housing and the first economy cycle from rival armies.
     entityStore(state).units.retain(unit => unit.faction === 0);
     entityStore(state).buildings.replace(state.buildings.filter(building => building.faction === 0));

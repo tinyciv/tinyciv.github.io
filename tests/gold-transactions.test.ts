@@ -13,7 +13,9 @@ import { purchaseKeepHousing } from '../src/game/settlement-upgrades';
 import { updateMerchant } from '../src/game/trade';
 import { updateTreasureChests } from '../src/game/treasure';
 import { buildingHeight, type Building, type GameState, type MarauderPack } from '../src/game/types';
-import { performVillageAction, updateVillages, VILLAGE_DEVELOPMENT_COSTS } from '../src/game/villages';
+import { performVillageAction } from '../src/game/villages';
+import { settlementStep } from '../src/game/settlement-step';
+import { villageTreasury } from '../src/game/settlement-bridge';
 import { building, fixture as researchFixture, person } from './helpers/research-income';
 
 function fixture(): GameState {
@@ -30,8 +32,7 @@ function villageFixture(): GameState {
   entityStore(state).buildings.add(camp);
   state.factions.push({ id: 1, villageId: 1, name: 'Sabines', color: '#fff', affinity: 50, relation: 'peace', population: 0,
     food: 0, gold: 0, production: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false });
-  state.villages = [{ id: 1, faction: 1, campId: 3, name: 'Sabines', identity: 'growers', relation: 'neutral', x: 24, y: 10,
-    nextGrowthAt: Infinity, nextRecruitAt: Infinity, nextThinkAt: 0 }];
+  state.villages = [{ id: 1, faction: 1, campId: 3, name: 'Sabines', identity: 'growers', relation: 'neutral', x: 24, y: 10 }];
   nearby(state, camp);
   return state;
 }
@@ -94,27 +95,24 @@ describe('gold ledger records actual gameplay transactions', () => {
     const merchant = state.units.find(unit => unit.id === route.merchantId)!;
     state.time = .1; updateMerchant(state, merchant, .1, () => {});
     expect(goldFlowSummary(state, faction).totalInputs).toBe(0);
-    route.distance = 100; route.goal = { x: merchant.x, y: merchant.y };
+    route.transitSeconds = 100; route.goal = { x: merchant.x, y: merchant.y };
     updateMerchant(state, merchant, .1, () => {}); updateMerchant(state, merchant, .1, () => {});
     expect(route.journeys).toBe(1);
-    expect(goldFlowSummary(state, faction).inputs).toMatchObject([{ category: 'trade', amount: 60 }]);
-    expect(goldFlowSummary(state, village)).toMatchObject({ inputs: [{ category: 'trade', amount: 60 }], outlays: [], net: 60 });
-    expect(faction.gold - 10000).toBe(-190); expect(village.gold).toBe(60);
+    const paid = goldFlowSummary(state, faction).inputs;
+    expect(paid).toMatchObject([{ category: 'trade', amount: expect.any(Number) }]);
+    expect(faction.gold - 10000).toBeCloseTo(paid[0].amount - 250);
+    // The village's share is credited to its Rust treasury, not a faction ledger.
+    expect(goldFlowSummary(state, village)).toMatchObject({ inputs: [], outlays: [] });
   });
 
-  it('records actual village construction and guard purchases from its treasury', () => {
+  it('keeps village construction and recruits in the Rust treasury, off the faction gold ledger', () => {
     const state = villageFixture(), village = state.villages![0], faction = state.factions[1];
-    faction.gold = 500; village.nextGrowthAt = 0; village.nextRecruitAt = 0;
-    updateVillages(state);
-    const houses = state.buildings.filter(item => item.villageId === village.id && item.kind === 'house');
-    expect(houses.length).toBeGreaterThan(0);
-    expect(state.units.filter(unit => unit.villageId === village.id && unit.kind === 'warrior')).toHaveLength(1);
-    const summary = goldFlowSummary(state, faction);
-    expect(summary.outlays.map(row => [row.category, row.amount])).toEqual([
-      ['construction', houses.length * VILLAGE_DEVELOPMENT_COSTS.house], ['army', VILLAGE_DEVELOPMENT_COSTS.guard],
-    ]);
-    expect(faction.gold - 500).toBe(summary.net);
-    updateVillages(state); expect(goldFlowSummary(state, faction)).toEqual(summary);
+    faction.gold = 500;
+    for (let time = 1; time <= 200; time++) { state.time = time; settlementStep(state); }
+    expect(faction.gold).toBe(500);
+    expect(goldFlowSummary(state, faction).outlays).toEqual([]);
+    expect(goldFlowSummary(state, state.factions[0]).outlays).toEqual([]);
+    expect(villageTreasury(state, village)).toBeGreaterThan(0);
   });
 
   it('records guard service only when paid and does not record suspended service as an expense', () => {

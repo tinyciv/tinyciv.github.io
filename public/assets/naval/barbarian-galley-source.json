@@ -1,0 +1,16 @@
+{
+  "generator": "PixelLab API /generate-image-v2",
+  "reference": "warships/galley.png",
+  "nativePixels": [
+    16,
+    32
+  ],
+  "physicalHull": [
+    1,
+    2
+  ],
+  "passengerCapacity": 1,
+  "selected": "1B",
+  "source": "scratch/2026-11-16-barbarian-galley",
+  "processing": "Unmodified native PixelLab PNG; runtime rotates hull and draws a separate archer."
+}

@@ -3,18 +3,20 @@ import type { ResearchBranchId } from '../game/research';
 /** Agriculture above, military below. Prerequisite order minimizes crossings. */
 export const RESEARCH_COLUMNS: readonly (readonly ResearchBranchId[])[] = [
   ['irrigation', 'scoutLodge', 'woodenTower'],
-  ['grainStorage', 'sailing', 'archeryRange', 'wall'],
-  ['monument', 'traditionalMedicine', 'engineering', 'blacksmith'],
-  ['coinage', 'supplyTrain', 'metalTools', 'militaryTactics'],
+  ['grainStorage', 'sailing', 'archeryRange', 'wall', 'drainage'],
+  ['monument', 'traditionalMedicine', 'engineering', 'blacksmith', 'whaling'],
+  ['coinage', 'culturalIdentity', 'metalTools', 'militaryTactics', 'roadBuilding', 'lateenSails'],
   ['urbanPlanning', 'reinforcedDefenses', 'fletching', 'infantryDrill'],
-  ['metalCasting', 'siegeEngines', 'massLevy', 'horsebackRiding'],
-  ['stirrups', 'compoundBow'],
+  ['metalCasting', 'siegeEngines', 'massLevy', 'horsebackRiding', 'officerCorps'],
+  ['stirrups', 'supplyTrain', 'compoundBow', 'urbanMilitia', 'navalEngineering'],
+  ['populism', 'gunpowder'],
+  ['fieldCannon', 'militaryScience'],
 ];
 export const RESEARCH_CARD_WIDTH = 220;
 export const RESEARCH_COLUMN_PITCH = 292;
-export const RESEARCH_BOARD_WIDTH = 1992;
-export const RESEARCH_BOARD_HEIGHT = 400;
-const rows = [[0, 1.5, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3], [0, 2]];
+export const RESEARCH_BOARD_WIDTH = 2576;
+export const RESEARCH_BOARD_HEIGHT = 650;
+const rows = [[0, 1.5, 3], [0, 1, 2, 3, 5], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [.5, 3], [3, 4]];
 export const RESEARCH_POSITIONS = new Map<ResearchBranchId, { x: number; y: number }>(
   RESEARCH_COLUMNS.flatMap((column, x) => column.map((id, i) => [id, { x, y: rows[x][i] }] as const)),
 );
@@ -23,11 +25,14 @@ type Point = [number, number];
 type Command = { kind: 'line'; to: Point } | { kind: 'curve'; a: Point; b: Point; to: Point };
 const channels: Partial<Record<ResearchBranchId, Partial<Record<ResearchBranchId, number[]>>>> = {
   scoutLodge: { traditionalMedicine: [100], horsebackRiding: [397, 397, 397, 397] },
-  traditionalMedicine: { supplyTrain: [] },
+  traditionalMedicine: { supplyTrain: [0, 0, 0] },
   horsebackRiding: { compoundBow: [], stirrups: [] },
+  metalCasting: { gunpowder: [100] },
   fletching: { compoundBow: [300] },
   militaryTactics: { massLevy: [300] },
+  infantryDrill: { militaryScience: [450, 450, 450] },
   sailing: { coinage: [200] },
+  wall: { roadBuilding: [400] },
   archeryRange: { fletching: [300, 300], militaryTactics: [300] },
 };
 
@@ -37,7 +42,7 @@ function edgeCommands(from: ResearchBranchId, to: ResearchBranchId): { start: Po
   const start = current, commands: Command[] = [];
   const intermediate = channels[from]?.[to] ?? [];
   for (let column = a.x + 1; column <= b.x; column++) {
-    const end: Point = [10 + column * RESEARCH_COLUMN_PITCH, column === b.x ? b.y * 100 + 50 : intermediate[column - a.x - 1]];
+    const end: Point = [10 + column * RESEARCH_COLUMN_PITCH, column === b.x ? b.y * 100 + 50 : intermediate[column - a.x - 1] ?? (Math.max(a.y, b.y) * 100 + 50)];
     // Both Archery links share one trunk through the busy Bronze/Metal gutter.
     // Branch after the sole crossing, so it reads as one bridge, not two knots.
     if (from === 'archeryRange' && to === 'militaryTactics' && column === b.x) {

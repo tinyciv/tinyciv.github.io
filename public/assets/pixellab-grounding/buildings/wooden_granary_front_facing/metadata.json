@@ -1,0 +1,22 @@
+{
+  "group_id": "2978232e-3e16-4f3c-8de8-c84905697380",
+  "objects": [
+    {
+      "id": "433a5a21-2925-481c-be71-712443311350",
+      "name": "base",
+      "prompt": "wooden granary, front facing (NOT isometric) viewed from slightly above",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/wooden_granary_front_facing.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-11-11T15:15:05.406427"
+}

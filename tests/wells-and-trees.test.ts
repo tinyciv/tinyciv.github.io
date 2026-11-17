@@ -11,6 +11,14 @@ import { tilesInRectangle } from '../src/game/area-tools';
 import { updateWellUpgrades } from '../src/game/wells';
 import { fellTree, TREE_CLEAR_SECONDS, TREE_STUMP_SECONDS, updateTreeStumps } from '../src/game/tree-clearing';
 
+/** These tests isolate eligibility/geometry; the fifteen-second countdown has
+ * dedicated coverage in upgrade-economy-aura.test.ts. Pre-age eligible orders. */
+function settleHousingRequirements(state: GameState): void {
+  updateWellUpgrades(state);
+  for (const house of state.buildings) if (house.houseUpgradeAt !== undefined) house.houseUpgradeAt = state.time;
+  updateWellUpgrades(state);
+}
+
 function fixture(): GameState {
   const state: GameState = {
     world: { width: 24, height: 18, seed: 'wells-trees', source: 'test', spawns: [], tiles: Array.from({ length: 24 * 18 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 2, production: 1, gold: 0, variation: .2 })) },
@@ -45,21 +53,21 @@ describe('wells', () => {
     state.factions[0].gold = 50; expect(buildAt(state, 'well', 10, 8).ok).toBe(true);
     expect(state.factions[0].gold).toBe(0);
     const well = state.buildings.find(building => building.kind === 'well')!;
-    updateWellUpgrades(state); expect(near.houseLevel).toBe(1);
+    settleHousingRequirements(state); expect(near.houseLevel).toBe(1);
     state.factions[0].population = 29; // The unlock applies when ordering, not after construction.
     advance(state, 35); expect(well.construction).toBeUndefined();
     const unfinished = house(state, 1000, 12, 10); unfinished.construction = { startedAt: 0, duration: 1000, waitingForBuilder: true };
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(near).toMatchObject({ houseLevel: 2, houseStyle: 'hovel', hp: 200, maxHp: 200, capacity: 3 });
     expect(outside.houseLevel).toBe(1); expect(enemy.houseLevel).toBe(1); expect(unfinished.houseLevel).toBeUndefined();
-    delete unfinished.construction; updateWellUpgrades(state); expect(unfinished.houseLevel).toBe(2);
+    delete unfinished.construction; settleHousingRequirements(state); expect(unfinished.houseLevel).toBe(2);
     synchronizeFarms(state); expect(near.capacity).toBe(3); expect(housingCapacity(state)).toBe(8);
   });
 
   it('upgrades once to level two despite overlapping wells or repeated updates', () => {
     const state = fixture(), home = house(state, 3, 8, 8);
     for (let i = 0; i < 5; i++) entityStore(state).buildings.add({ id: i + 10, kind: 'well', x: 8 + i, y: 10, faction: 0, hp: 100, maxHp: 100, capacity: 0 });
-    updateWellUpgrades(state); updateWellUpgrades(state);
+    settleHousingRequirements(state); settleHousingRequirements(state);
     expect(home).toMatchObject({ houseLevel: 2, houseStyle: 'hovel', hp: 170, maxHp: 200, capacity: 3 });
   });
 
@@ -68,17 +76,17 @@ describe('wells', () => {
     const offsets = [[8, 0], [-8, 0], [0, 8], [0, -8], [5, 6], [6, 6], [9, 0]];
     const homes = offsets.map(([x, y], index) => house(state, index + 3, 10 + x, 8 + y));
     entityStore(state).buildings.add({ id: 20, kind: 'well', x: 10, y: 8, faction: 0, hp: 100, maxHp: 100, capacity: 0 });
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(homes.map(home => home.houseLevel)).toEqual([2, 2, 2, 2, 2, 1, 1]);
   });
 
   it('keeps improvements after a well is destroyed and does not stack a replacement', () => {
     const state = fixture(), home = house(state, 3, 8, 8);
     const well: Building = { id: 10, kind: 'well', x: 8, y: 10, faction: 0, hp: 100, maxHp: 100, capacity: 0 };
-    entityStore(state).buildings.add(well); updateWellUpgrades(state);
-    well.hp = 0; updateWellUpgrades(state);
+    entityStore(state).buildings.add(well); settleHousingRequirements(state);
+    well.hp = 0; settleHousingRequirements(state);
     expect(home).toMatchObject({ houseLevel: 2, hp: 170, maxHp: 200, capacity: 3 });
-    entityStore(state).buildings.add({ ...well, id: 11, hp: 100 }); updateWellUpgrades(state);
+    entityStore(state).buildings.add({ ...well, id: 11, hp: 100 }); settleHousingRequirements(state);
     expect(home).toMatchObject({ houseLevel: 2, hp: 170, maxHp: 200, capacity: 3 });
   });
 
@@ -90,7 +98,7 @@ describe('wells', () => {
       { ...well, id: 11, hp: 0 },
       { ...well, id: 12, faction: 1 },
     );
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(home).toMatchObject({ houseLevel: 1, hp: 130, maxHp: 160, capacity: 2 });
   });
 
@@ -99,7 +107,7 @@ describe('wells', () => {
     Object.assign(cottage, { houseLevel: 3, houseStyle: 'cottage', hp: 210, maxHp: 240, capacity: 8 });
     Object.assign(villa, { houseLevel: 4, houseStyle: 'villa', hp: 250, maxHp: 280, capacity: 5 });
     entityStore(state).buildings.add({ id: 10, kind: 'well', x: 8, y: 10, faction: 0, hp: 100, maxHp: 100, capacity: 0 });
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(cottage).toMatchObject({ houseLevel: 3, houseStyle: 'cottage', hp: 210, maxHp: 240, capacity: 4 });
     expect(villa).toMatchObject({ houseLevel: 4, houseStyle: 'villa', hp: 250, maxHp: 280, capacity: 5 });
   });

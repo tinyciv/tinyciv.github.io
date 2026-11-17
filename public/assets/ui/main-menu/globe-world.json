@@ -1,0 +1,70 @@
+{
+  "seed": "Globe-4",
+  "style": "fractal",
+  "tiles": [
+    128,
+    128
+  ],
+  "texelsPerTile": 16,
+  "simulatedSeconds": 150.7,
+  "focus": {
+    "x": 64.08,
+    "y": 68.66
+  },
+  "landRadius": 60.57,
+  "oceanBlock": {
+    "x": 0,
+    "y": 124,
+    "tiles": 4
+  },
+  "battle": {
+    "x": 70.5,
+    "y": 50.5
+  },
+  "cities": [
+    {
+      "name": "Roma",
+      "faction": 0,
+      "x": 29,
+      "y": 46
+    },
+    {
+      "name": "Thebes",
+      "faction": 1,
+      "x": 103,
+      "y": 85
+    },
+    {
+      "name": "Memphis",
+      "faction": 1,
+      "x": 87,
+      "y": 85
+    },
+    {
+      "name": "Athens",
+      "faction": 2,
+      "x": 51,
+      "y": 92
+    },
+    {
+      "name": "Sparta",
+      "faction": 2,
+      "x": 51,
+      "y": 108
+    },
+    {
+      "name": "Persepolis",
+      "faction": 3,
+      "x": 92,
+      "y": 58
+    },
+    {
+      "name": "Pasargadae",
+      "faction": 3,
+      "x": 76,
+      "y": 58
+    }
+  ],
+  "story": "menu-globe-bake--whole-world",
+  "bakedAt": "2026-11-14"
+}

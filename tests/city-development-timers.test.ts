@@ -5,7 +5,7 @@ import { demolishBuildingsInArea } from '../src/game/area-tools';
 import { factionDevelopmentReserve, updateFactionDevelopment } from '../src/game/faction-development';
 import { governingPalace } from '../src/game/governor';
 import { factionBuildingMaintenance, TAX_INCOME_MULTIPLIER } from '../src/game/maintenance';
-import { BUILD_COSTS, cancelConstruction, updateGame } from '../src/game/simulation';
+import { advanceAutomaticDevelopment, BUILD_COSTS, cancelConstruction, updateGame } from '../src/game/simulation';
 import { buildingReady, isFarmKind, type Building, type GameState } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
@@ -52,6 +52,9 @@ function stepTo(state: GameState, time: number): void {
   // clocks and housing demand from courier travel and farm abandonment.
   for (const farm of state.buildings) if (isFarmKind(farm.kind) && buildingReady(farm)) farm.farmLastVisitedAt = state.time;
   updateGame(state, .05, idle);
+  // Drain the city cohort at the same simulation time; runtime spreads these
+  // bounded turns across frames, preserving the same earned order allowance.
+  for (let turn = 0; turn < 16; turn++) advanceAutomaticDevelopment(state);
 }
 function ordersByCity(state: GameState, kind: 'house' | 'camp'): number[] {
   return state.buildings.filter(building => building.kind === 'palace').map(palace => state.buildings.filter(building =>

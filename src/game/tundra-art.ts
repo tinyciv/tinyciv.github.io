@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { PunyPixels } from './puny-world';
 let pixels: PunyPixels | undefined;
 let loading: Promise<void> | undefined;
@@ -12,6 +13,6 @@ export function loadTundraArt(): Promise<void> {
       pixels = c.getImageData(0, 0, 48, 48); resolve();
     };
     image.onerror = () => reject(new Error('Could not load tundra artwork'));
-    image.src = `${import.meta.env.BASE_URL}assets/tundra/ground-1c.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/tundra/ground-1c.png`);
   });
 }

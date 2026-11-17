@@ -1,0 +1,29 @@
+{
+  "grassland": {
+    "name": "Original green",
+    "ground": "#a5b743",
+    "gameGround": "#85a643",
+    "original": true
+  },
+  "plains": {
+    "name": "Plains",
+    "ground": "#c4b253",
+    "surface": ["#555632", "#76733d", "#96934b", "#b4a653", "#d3bf68", "#e9d78b"],
+    "rock": ["#464a42", "#646a5e", "#858c7a", "#a9ae97", "#cbd0b4", "#eee7ca"],
+    "study": "assets/palette-studies/plains.png"
+  },
+  "desert": {
+    "name": "Desert",
+    "ground": "#c9b266",
+    "surface": ["#71513a", "#936841", "#b1854d", "#c9a360", "#e0bd78", "#f1d89b"],
+    "rock": ["#624836", "#80583e", "#a1734a", "#bd9560", "#d9b681", "#f1d8aa"],
+    "study": "assets/palette-studies/desert.png"
+  },
+  "tundra": {
+    "name": "Tundra",
+    "ground": "#94a99d",
+    "surface": ["#4b6260", "#657d76", "#83958a", "#a5b5a4", "#c9d2be", "#e4e7d3"],
+    "rock": ["#414e58", "#5c6d76", "#7d8e95", "#a0afb2", "#c6d0cb", "#eef0e2"],
+    "study": "assets/palette-studies/tundra.png"
+  }
+}

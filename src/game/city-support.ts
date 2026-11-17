@@ -1,3 +1,4 @@
+import { buildingWithId } from './entity-store';
 import { buildingReady, buildingWidth, buildingHeight, type Building, type GameState, type Point, type Unit } from './types';
 
 /** Palace gardens and quarters let a city establish itself before its first
@@ -24,7 +25,7 @@ export function recordRetinuePopulationLoss(state: GameState, unit: Unit): void 
   const faction = state.factions.find(candidate => candidate.id === unit.faction);
   if (!faction || faction.population <= 0) return;
   const palaces = state.buildings.filter(building => building.kind === 'palace' && building.faction === unit.faction && buildingReady(building));
-  const home = state.buildings.find(building => building.id === unit.home && building.faction === unit.faction && buildingReady(building));
+  const home = buildingWithId(state, unit.home, building => building.faction === unit.faction && buildingReady(building));
   // Retinue recruits leave the founding palace; a home-less escort also belongs
   // there, rather than to the new city it happens to be passing or defending.
   const city = home ? nearest(palaces, { x: home.x + buildingWidth(home) / 2, y: home.y + buildingHeight(home) / 2 })

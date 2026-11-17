@@ -1,0 +1,21 @@
+{
+  "generator": "Built-in imagegen",
+  "reference": "User-supplied Fortuna ship nameplate screenshot, 2026-11-16",
+  "asset": "public/assets/ui/naval/ship-nameplate.png",
+  "generated_original": "scratch/2026-11-16-ship-nameplates/generated-nameplate.png",
+  "processing": {
+    "crop": [
+      72,
+      128,
+      2100,
+      594
+    ],
+    "resize": [
+      168,
+      40
+    ],
+    "resampling": "nearest",
+    "note": "Generated pixels only; no manually painted artwork."
+  },
+  "prompt": "Use case: ui-mockup. Asset type: production ship nameplate background for a small pixel-art strategy game. The user-provided image is the approved exact style reference. Recreate ONLY its compact horizontal dark brown rectangular nameplate with pale warm gray double-bevel thin pixel border, black exterior outline and tiny red hanging swallowtail bookmark banner inset at left, with a tiny cream highlight at the top of the red ribbon. Remove the word Fortuna entirely: ALL of the large right-hand area inside the dark plaque must be EMPTY, clean and dark brown for live game text. Match the reference's plain sparse pixel style very faithfully, squared corners, thin ivory-gray edges and dark shadow bottom and right. Nameplate proportions approximately 168 wide by 44 high. Small red ribbon at the left occupies approximately 20x32 in those proportions and descends from the top interior border. Center a SINGLE isolated nameplate in the image, fill most of image width with transparent margin. True transparent background, no turquoise sea, no boats or scenery, no letters or numbers, no watermark, no extra ornaments. Pixel art constructed on roughly 84x22 logical grid, large uniform square pixels, no antialiasing or smooth gradients. Important: keep the middle right background uniform dark brown, straight rails horizontally tileable for different ship names. This is a faithful recreation of the supplied approved design, not a redesign."
+}

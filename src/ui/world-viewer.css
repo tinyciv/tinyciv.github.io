@@ -1,0 +1,45 @@
+html,body,#app{width:100%;height:100%;margin:0;overflow:hidden}
+*{box-sizing:border-box}
+body{background:#14282a;color:#eee2be;font:20px/1.15 var(--game-font)}
+button,input,select,summary{font:inherit;color:inherit}
+button,input,select{min-width:0}
+button{border:0;background:url('/assets/runtime/ui/main-menu/button.png') center/100% 100% no-repeat;padding:12px 18px;cursor:pointer;font-weight:700;text-shadow:1px 1px #17130b}
+button:hover,button:focus-visible{background-image:url('/assets/runtime/ui/main-menu/button-active.png')}
+button:disabled{opacity:.5;cursor:wait}
+:is(button,input,select,summary):focus-visible{outline:2px solid #f4d68e;outline-offset:2px}
+input,select{width:100%;border:1px solid #776a49;background:#161d1c;padding:7px 9px;border-radius:3px}
+input[type=checkbox]{width:18px;accent-color:#d8b76b}
+label{display:grid;gap:5px;color:#d3c9ab;font-size:18px}
+label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px;cursor:pointer}
+.viewer{height:100%;display:grid;grid-template-columns:292px minmax(0,1fr);grid-template-rows:56px minmax(0,1fr)}
+.viewer-header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:8px 20px;background:#242722;border-bottom:1px solid #786a43}
+.viewer-header h1{font-size:26px;margin:0;color:#f4d68e}
+.viewer-header output{color:#b9c6b1;font-size:18px}
+.viewer-settings{padding:18px 18px 28px;background:#242722;border-right:1px solid #786a43;overflow:auto;scrollbar-width:thin;scrollbar-color:#8e815a #242722}
+.viewer-settings form{display:grid;gap:14px}
+.viewer-settings h2{margin:8px 0 0;font-size:21px;color:#f4d68e}
+.viewer-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.viewer-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.viewer-settings details{border-top:1px solid #514d3b;padding-top:12px}
+.viewer-settings summary{cursor:pointer;color:#d9c891;font-size:20px}
+.viewer-settings details>div{display:grid;gap:12px;margin-top:12px}
+.viewer-settings details details summary{font-size:18px}
+.viewer-settings label>span{display:flex;justify-content:space-between;gap:6px}
+.viewer-stage{position:relative;min-width:0;min-height:0;background:#102c32;overflow:hidden}
+#world-view{position:absolute;top:60px;left:0;display:block;width:100%;height:calc(100% - 60px);outline:0;cursor:grab;touch-action:none}
+#world-view.is-dragging{cursor:grabbing}
+.viewer-tools{position:absolute;top:14px;left:16px;display:flex;gap:8px}
+.viewer-tools button{min-width:46px}
+.viewer-tools output{align-self:center;padding:6px 10px;background:#172320e8;color:#e8d9ac;font-size:18px}
+.viewer-inspection{position:absolute;bottom:14px;left:16px;right:16px;pointer-events:none;color:#e1e5c9;font-size:18px;text-shadow:1px 1px #061413;background:#132521e8;padding:8px 12px;width:fit-content;max-width:calc(100% - 32px)}
+.viewer-inspection:empty{display:none}
+.viewer-minimap{display:block;width:100%;height:150px;margin-top:18px;border:1px solid #8f8056;background:#1c2723;image-rendering:pixelated;cursor:crosshair}
+.viewer-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:16px;background:#13231ee8;font-size:32px;z-index:2}
+.viewer-loading[hidden]{display:none}
+.viewer-spinner{width:64px;height:64px;background:url('/assets/runtime/ui/loading/spinner.webp') 0 0/1024px 64px no-repeat;image-rendering:pixelated;animation:viewer-spin 1s steps(16) infinite}
+@keyframes viewer-spin{to{background-position-x:-1024px}}
+@media(prefers-reduced-motion:reduce){.viewer-spinner{animation:none}}
+.viewer-error{position:absolute;inset:auto 20px 20px;padding:16px;background:#402722;color:#f3d5a5;border:1px solid #be8053;z-index:3}
+.viewer-error[hidden]{display:none}
+@media(max-width:760px){.viewer{grid-template-columns:220px minmax(0,1fr)}.viewer-settings{padding:12px}.viewer-header{padding:8px 12px;gap:8px}.viewer-header h1{font-size:23px}.viewer-header output{font-size:16px}.viewer-minimap{height:120px}.viewer-tools{left:8px;top:8px;gap:2px}.viewer-tools button{padding:10px 12px}.viewer-tools output{padding:6px}.viewer-inspection{left:8px}}
+@media(max-width:480px){.viewer{grid-template-columns:166px minmax(0,1fr)}.viewer-header output{display:none}.viewer-settings{padding:10px}.viewer-settings form{gap:11px}.viewer-pair,.viewer-actions{grid-template-columns:1fr;gap:10px}.viewer-tools{flex-wrap:wrap;right:6px}.viewer-tools output{font-size:16px}}

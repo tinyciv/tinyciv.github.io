@@ -2,6 +2,10 @@
   "seed": "FRACTAL-STUDY-2026",
   "style": "fractal",
   "parameters": {
+    "seaLevel": 70,
+    "age": 4,
+    "climate": 1,
+    "temperature": 1,
     "landScale": 1.021,
     "coastRoughness": 0.7815,
     "islandDensity": 0.955,

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { invalidateDecisions } from '../src/game/decision-schedule';
 import { entityStore, resetEntities } from '../src/game/entity-store';
-import { FARM_TRAVEL_EDIT_BATCH, FARM_TRAVEL_MAX_DELAY, farmCityQuery, farmTravelRevision, palaceWalkingDistances } from '../src/game/farm-travel';
+import { FARM_TRAVEL_EDIT_BATCH, FARM_TRAVEL_MAX_DELAY, farmCityQuery, farmTravelRevision, palaceWalkingDistances, forkFarmTravelPlanning } from '../src/game/farm-travel';
 import { canWalk } from '../src/game/pathfinding';
 import { updateGame } from '../src/game/simulation';
 import type { Building, GameState } from '../src/game/types';
+import { markWorldChanged } from '../src/game/world-revisions';
 
 const idle = { up: false, down: false, left: false, right: false };
 function fixture(): GameState {
@@ -34,6 +35,62 @@ function add(state: GameState, kind: Building['kind'], x: number, y = 6): Buildi
 }
 
 describe('coalesced farming travel maps', () => {
+  it('retains maps for cosmetic tile changes while detecting trail and cover travel costs', () => {
+    const state = fixture(), palace = state.buildings[0], before = palaceWalkingDistances(state, palace);
+    const cell = 6 * state.world.width + 12, tile = state.world.tiles[cell];
+    tile.farm = 99;
+    markWorldChanged(state.world, 'appearance', [cell]);
+    expect(palaceWalkingDistances(state, palace)).toBe(before);
+    tile.villageTrail = true;
+    markWorldChanged(state.world, 'appearance', [cell]);
+    const trail = palaceWalkingDistances(state, palace);
+    expect(trail).not.toBe(before);
+    expect(trail[cell]).toBeLessThan(before[cell]);
+    tile.overlay = 'forest';
+    markWorldChanged(state.world, 'sight', [cell]);
+    const forest = palaceWalkingDistances(state, palace);
+    expect(forest).not.toBe(trail);
+    expect(forest[cell]).toBeGreaterThan(trail[cell]);
+  });
+
+  it('retains maps when an already solid building finishes but refreshes a new palace origin', () => {
+    const state = fixture(), palace = state.buildings[0], house = add(state, 'house', 12);
+    house.construction = { startedAt: 0, duration: 10, waitingForBuilder: false };
+    const before = palaceWalkingDistances(state, palace);
+    delete house.construction; entityStore(state).buildings.updateRoles(house);
+    markWorldChanged(state.world);
+    expect(palaceWalkingDistances(state, palace)).toBe(before);
+    const next = add(state, 'palace', 30);
+    next.construction = { startedAt: 0, duration: 10, waitingForBuilder: false };
+    const unfinished = palaceWalkingDistances(state, palace);
+    delete next.construction; entityStore(state).buildings.updateRoles(next);
+    markWorldChanged(state.world);
+    expect(palaceWalkingDistances(state, palace)).not.toBe(unfinished);
+  });
+
+  it('borrows current planning maps for a preview and detaches on access changes', () => {
+    const state = fixture(), preview = structuredClone(state);
+    forkFarmTravelPlanning(state, preview);
+    const borrowed = palaceWalkingDistances(preview, preview.buildings[0]);
+    expect(borrowed).toBe(palaceWalkingDistances(state, state.buildings[0]));
+    add(preview, 'house', 12);
+    const changed = palaceWalkingDistances(preview, preview.buildings[0]);
+    expect(changed).not.toBe(borrowed);
+    expect(changed[6 * 40 + 12]).toBe(Infinity);
+    expect(palaceWalkingDistances(state, state.buildings[0])).toBe(borrowed);
+    expect(borrowed[6 * 40 + 12]).toBeLessThan(Infinity);
+  });
+
+  it('does not lend deferred source distances to a fresh preview', () => {
+    const state = fixture(), before = palaceWalkingDistances(state, state.buildings[0]);
+    add(state, 'road', 12);
+    const preview = structuredClone(state);
+    forkFarmTravelPlanning(state, preview);
+    const fresh = palaceWalkingDistances(preview, preview.buildings[0]);
+    expect(fresh).not.toBe(before);
+    expect(fresh).toEqual(palaceWalkingDistances(structuredClone(preview), preview.buildings[0]));
+  });
+
   it('assigns a lone city without exploring terrain, including unreachable fields', () => {
     const state = fixture(), palace = state.buildings[0];
     // A single eligible city wins both the reachable and fallback cases. No

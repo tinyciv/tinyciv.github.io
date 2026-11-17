@@ -1,0 +1,41 @@
+{
+  "group_id": "4081766e-ca3e-47fe-9e5c-fcbb75a38651",
+  "objects": [
+    {
+      "id": "3426375a-3c33-457d-af2b-0423e448cdf9",
+      "name": "base",
+      "prompt": "Water fountain, front facing, NOT isometric",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/Water_fountain_front_facing.png"
+      },
+      "animations": {
+        "The_water_flows_from_the_fountain": {
+          "directions": {
+            "unknown": {
+              "frames": [
+                "animations/The_water_flows_from_the_fountain/unknown/frame_000.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_001.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_002.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_003.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_004.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_005.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_006.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_007.png",
+                "animations/The_water_flows_from_the_fountain/unknown/frame_008.png"
+              ],
+              "frame_count": 9
+            }
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-11-11T15:15:25.101859"
+}

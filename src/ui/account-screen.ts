@@ -22,7 +22,7 @@ export class AccountScreen {
     const creating = view === 'create-account', recovering = view === 'forgot-password';
     const email = `<label for="account-email">Email address</label><input id="account-email" name="account-email" type="email" autocomplete="${creating ? 'email' : 'username'}" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" value="${escape(this.email)}" required>`;
     const password = recovering ? '' : `<label for="account-password">Password</label><input id="account-password" name="account-password" type="password" maxlength="1024" autocomplete="${creating ? 'new-password' : 'current-password'}" ${creating ? 'minlength="10" aria-describedby="account-password-hint"' : ''} required>${creating ? '<p class="frontend-hint" id="account-password-hint">Use at least 10 characters.</p><label for="account-confirm">Confirm password</label><input id="account-confirm" name="account-confirm" type="password" autocomplete="new-password" minlength="10" maxlength="1024" required>' : ''}`;
-    return `<p class="account-intro">${creating ? 'A new commander. A new civilization.' : recovering ? 'Enter your account email to request a password reset link.' : 'Welcome back, Commander.'}</p>
+    return `${creating || recovering ? `<p class="account-intro">${creating ? 'A new commander. A new civilization.' : 'Enter your account email to request a password reset link.'}</p>` : ''}
       ${recovering ? '' : '<button class="menu-button account-plate" type="button" data-account-action="google"><span>Continue with Google</span></button><div class="account-divider"><span>or use your email</span></div>'}
       <form class="account-form" method="post" data-form="account" data-account-view="${view}">
         ${email}${password}

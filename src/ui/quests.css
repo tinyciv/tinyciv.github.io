@@ -1,0 +1,5 @@
+.quest-dialog { font-family: 'Pixel Operator', monospace; }
+.quest-dialogue { line-height: 1.4; }
+.quest-progress { color: #f2d675; }
+.quest-reward { color: #ffe7a0; font-weight: 700; }
+.quest-benefit { color: var(--popup-muted); }

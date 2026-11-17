@@ -1,0 +1,5770 @@
+{
+  "version": 2,
+  "sourceBytes": 53539510,
+  "outputBytes": 10201734,
+  "files": [
+    {
+      "source": "assets/bridges/stone-2b/lr-end-e.png",
+      "output": "assets/runtime/bridges/stone-2b/lr-end-e.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 467,
+      "bytes": 248,
+      "fingerprint": "d29ef0e9a83daa431a6b281f6425c8bb45d16cb0aef0b1c1c1d98984611e92da",
+      "sha256": "c54a7681b40e95096527394b43a4402a1cb56ce9557dea48bf2776e3b51e6328"
+    },
+    {
+      "source": "assets/bridges/stone-2b/lr-end-w.png",
+      "output": "assets/runtime/bridges/stone-2b/lr-end-w.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 476,
+      "bytes": 230,
+      "fingerprint": "18b46c6b2568357e652c45a6c59aebe4d6909bbcb7ec2de0ff0a424232e235e2",
+      "sha256": "baedb5e57d2979d36633d02aa62d98727f6c04900f638320fbf7f7e5fd89b239"
+    },
+    {
+      "source": "assets/bridges/stone-2b/lr-interior.png",
+      "output": "assets/runtime/bridges/stone-2b/lr-interior.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 389,
+      "bytes": 196,
+      "fingerprint": "bd7179f34ad9930191a6471651927a3329240113c93c8ce1caf0a938be7b45a0",
+      "sha256": "285ebf127c962805f2d0d849142e07f519df72efb49631af46c2c2f0019f92cc"
+    },
+    {
+      "source": "assets/bridges/stone-2b/ud-end-n.png",
+      "output": "assets/runtime/bridges/stone-2b/ud-end-n.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 340,
+      "bytes": 204,
+      "fingerprint": "c0cff90ff54fdff7929ccb476f3bffd170e00c7a3ab44b17ad3b5c6efdcc4e40",
+      "sha256": "3235e725e3fc64553f230c6fd8558ca4d1f32c3cbc796c0dbe74bb23b035d4b4"
+    },
+    {
+      "source": "assets/bridges/stone-2b/ud-end-s.png",
+      "output": "assets/runtime/bridges/stone-2b/ud-end-s.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 351,
+      "bytes": 192,
+      "fingerprint": "9c92fb2e58574214cb3b7030c3e45399ba1c6495eba57026e114a0cc349cd050",
+      "sha256": "c98b2a27cc70d203c3d3f66ce9831d62a582ed51f73905ad5453dcdbf49d60ec"
+    },
+    {
+      "source": "assets/bridges/stone-2b/ud-interior.png",
+      "output": "assets/runtime/bridges/stone-2b/ud-interior.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 370,
+      "bytes": 210,
+      "fingerprint": "cf6a0fcce479d71fd3ba16eebf92a6d2d9b23a0c150b78d371505169d35246d0",
+      "sha256": "1fcbaac274640b1d315974df9218b668a99ab43c77b2d1b7a42fae08308a806e"
+    },
+    {
+      "source": "assets/building-destruction/1x1/destruction.png",
+      "output": "assets/runtime/building-destruction/1x1/destruction.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 5321,
+      "bytes": 2056,
+      "fingerprint": "0016171fffb7b31eb72fd03c5b71b8e235d4ec7e10b625239a4c459593a1ea49",
+      "sha256": "d3e3ca0d1a68d70d95cc632851eabdf533bc9f5a5207aa0f5bd08ce0619ff3e4"
+    },
+    {
+      "source": "assets/building-destruction/1x1/rubble.png",
+      "output": "assets/runtime/building-destruction/1x1/rubble.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 496,
+      "bytes": 234,
+      "fingerprint": "f8f23ebb0a416e91d802fc56fb0a6fb3a6140914fe35acff92cc7fcefc36ba4e",
+      "sha256": "22379b0e5fc339851395cd99f76286f2808273953a1050f4627aa988217a3786"
+    },
+    {
+      "source": "assets/building-destruction/2x2/destruction.png",
+      "output": "assets/runtime/building-destruction/2x2/destruction.webp",
+      "alias": true,
+      "sourceSize": [
+        512,
+        32
+      ],
+      "size": [
+        512,
+        32
+      ],
+      "sourceBytes": 6651,
+      "bytes": 2532,
+      "fingerprint": "5dc9aa6768e47e528c35654bc6185e60d22fa747137aa613f1093179a956c859",
+      "sha256": "044ff7208decd9514545922434996107ab3702be506bb0168f8043b6ad5dfe8b"
+    },
+    {
+      "source": "assets/building-destruction/2x2/rubble.png",
+      "output": "assets/runtime/building-destruction/2x2/rubble.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 726,
+      "bytes": 254,
+      "fingerprint": "9b48db90efef21b137793e170a6c5b3de85815abb1484ee1090d1ddd3f863f48",
+      "sha256": "1a7e38183e5e536c1643bf102e0fbba5a0b5f74d18e360e467e77db81447bfde"
+    },
+    {
+      "source": "assets/buildings/barracks.png",
+      "output": "assets/runtime/buildings/barracks.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1789,
+      "bytes": 706,
+      "fingerprint": "54a0a8f040d68c37b4114706e5f5b7c06b80fbde432dfebd98f5a916f03c335e",
+      "sha256": "77579b9b25e07f99bad7474b721e3510bda83c3c2f0abc7bcf38a1f73847c33d"
+    },
+    {
+      "source": "assets/buildings/colosseum.png",
+      "output": "assets/runtime/buildings/colosseum.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2071,
+      "bytes": 752,
+      "fingerprint": "bc087c874a4b48cd62efd9d529260002b9bea02430fbec6d14b74f769a49878d",
+      "sha256": "4c694ae31adb42a59519984f1101ee0f4a72f39e75a3611f8c82107cd0b5c294"
+    },
+    {
+      "source": "assets/buildings/fort-level-1.png",
+      "output": "assets/runtime/buildings/fort-level-1.png",
+      "alias": true,
+      "sourceSize": [
+        48,
+        48
+      ],
+      "size": [
+        48,
+        48
+      ],
+      "sourceBytes": 3042,
+      "bytes": 3004,
+      "fingerprint": "2bb1fed4682d15a6ce18fbde6012dda5f1eb82df11285155192cf4f2c1f7886f",
+      "sha256": "e9aa6460e12b2117a1299e761ec241d41d03c064fe51581ae80baa05a1f26107"
+    },
+    {
+      "source": "assets/buildings/fort-level-2.png",
+      "output": "assets/runtime/buildings/fort-level-2.png",
+      "alias": true,
+      "sourceSize": [
+        48,
+        48
+      ],
+      "size": [
+        48,
+        48
+      ],
+      "sourceBytes": 4005,
+      "bytes": 3897,
+      "fingerprint": "bcbceaa809c669a3d780c0b2e29ec533370e413e124d39fa0800fa791ea74bda",
+      "sha256": "617af5e57a68faa3b3b896f31dea8f68e3f5c3f4877eb086ecfbcd48b82da3d9"
+    },
+    {
+      "source": "assets/buildings/fort.png",
+      "output": "assets/runtime/buildings/fort.png",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 941876,
+      "bytes": 648697,
+      "fingerprint": "0a9706237689d6aea777391089f8918a1ed59b348d4f239a54b6e9ce1ad8b009",
+      "sha256": "fe0de5282703f8de2879ba830277df08e32941b07cccfdcbc21e114256b30be7"
+    },
+    {
+      "source": "assets/buildings/forum.png",
+      "output": "assets/runtime/buildings/forum.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 937,
+      "bytes": 410,
+      "fingerprint": "ca425442534b72bdb55b80732fd6ac2bde24d41ace9d1293edbbda7fe923a692",
+      "sha256": "8b7c47f0541d182b204062f6fb965c7ef45f510d42322bbd831e977e9a656692"
+    },
+    {
+      "source": "assets/buildings/foundry.png",
+      "output": "assets/runtime/buildings/foundry.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1274,
+      "bytes": 476,
+      "fingerprint": "1ec3409b3654434a17581792ffc2e5bb793859cefc4252470d1f40dc4e76583c",
+      "sha256": "c4f7e40bc4ae19b9e1663d14482dfa335d25ee9ff345b5e0de907ee9334d7e60"
+    },
+    {
+      "source": "assets/buildings/granary.png",
+      "output": "assets/runtime/buildings/granary.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1637,
+      "bytes": 656,
+      "fingerprint": "a7db22cfda7db8b3a486ec25214f8949f6108f931dc36ca6b0813279ad41c539",
+      "sha256": "132e5e4de1c5f4bf1a2165fb3f00295eb2e9409bf03839c42112998d7fd4dc5c"
+    },
+    {
+      "source": "assets/buildings/house-variants/flat-roof-a.png",
+      "output": "assets/runtime/buildings/house-variants/flat-roof-a.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 377,
+      "bytes": 208,
+      "fingerprint": "af12d91d20e548da6c5c5c8ed2bfc49e166b0310674d96a05da0b20c31357f90",
+      "sha256": "beaf71a3aa0b43b0eee7defee59d667b872d7f9d4f4d40db9bb5074f471c7b75"
+    },
+    {
+      "source": "assets/buildings/house-variants/flat-roof-b.png",
+      "output": "assets/runtime/buildings/house-variants/flat-roof-b.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 374,
+      "bytes": 212,
+      "fingerprint": "598ac0e7e79f56b3a07e99d889835f87994d8a6e7bea80224b156d4cae8d00bf",
+      "sha256": "3f159005d4aef0ecff6ca93677855cabbab388f607bfc1154884c95f8a3fe210"
+    },
+    {
+      "source": "assets/buildings/house-variants/gabled-roof-a.png",
+      "output": "assets/runtime/buildings/house-variants/gabled-roof-a.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 440,
+      "bytes": 226,
+      "fingerprint": "e3b75944cd4793011ae5c56be57be2f3b2f505a3602262089d057460f8adacd6",
+      "sha256": "670adc00fbfa05b3f7219154c6320234481302d6b7106783793b2893d41417e9"
+    },
+    {
+      "source": "assets/buildings/house-variants/gabled-roof-b.png",
+      "output": "assets/runtime/buildings/house-variants/gabled-roof-b.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 867,
+      "bytes": 230,
+      "fingerprint": "39fdfc985c33916702ae722f95678bf9465488f8f1a68f5ba7a9a42106bcfced",
+      "sha256": "e555f384080271cd53bc16232053e1d592ed39a874a0de232bc50b4d6a7c1520"
+    },
+    {
+      "source": "assets/buildings/military-academy.png",
+      "output": "assets/runtime/buildings/military-academy.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 874,
+      "bytes": 360,
+      "fingerprint": "45b703571343e2f133dcc1bf1d8eea8a576b5d613a639c0c29f17d86511ce779",
+      "sha256": "95fa03b10aab1d5e3f459663de2bd31598e26ee6bd022cd6a35e87ccfd2696d6"
+    },
+    {
+      "source": "assets/buildings/palisade-tower.png",
+      "output": "assets/runtime/buildings/palisade-tower.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        28
+      ],
+      "size": [
+        16,
+        28
+      ],
+      "sourceBytes": 534,
+      "bytes": 212,
+      "fingerprint": "168ba903c186cf2e1f9bd4c77ad82f4f37d4a0f7a7f95d7a4d2f85b564acc417",
+      "sha256": "75d768a6bf4511045f03c01afb5001c65fe4fa9fa1bba9d255c42d37ed71f30a"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/east.png",
+      "output": "assets/runtime/buildings/siege-cannon/east.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 428,
+      "bytes": 208,
+      "fingerprint": "2bf4c2f62ca6e58566edd1367f64f32c178a203344374e1937dda32634022bea",
+      "sha256": "a4fb78776f365e781ecc4d943626c692c2c3efacf6af4f12a8b39aac7ac535ea"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/north-east.png",
+      "output": "assets/runtime/buildings/siege-cannon/north-east.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 373,
+      "bytes": 204,
+      "fingerprint": "d8b072b6b6e1b9617a7534d075c7ca0e3ab93ee24b46b5bcf3a2611f72889686",
+      "sha256": "6b27ab9301a5ab04aaec13d3fb17cffe70e4c3d31388f5fda2cb5d77755b74d5"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/north-west.png",
+      "output": "assets/runtime/buildings/siege-cannon/north-west.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 395,
+      "bytes": 208,
+      "fingerprint": "9256f6e00e58289492ee0af6574ca80b09dbfb0a310bb1ce3752bc48d983353c",
+      "sha256": "e497677563070d6a4312f6eef8adce8030120d1cb37aa12deef72d213099265e"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/north.png",
+      "output": "assets/runtime/buildings/siege-cannon/north.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 376,
+      "bytes": 200,
+      "fingerprint": "8df5998b996e6e693376e408fa72750ea001b61eb400de57e70990058f7b3741",
+      "sha256": "5027c1efa37ce37ec49ab460fa3d518f3f158ddb16e37eaad3ec391ee931f01b"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/south-east.png",
+      "output": "assets/runtime/buildings/siege-cannon/south-east.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 433,
+      "bytes": 218,
+      "fingerprint": "9b0cb3ae2d5df10a8e5a8e3b224082827b8bc3a27fdf94df20b2411a4ba74a38",
+      "sha256": "456c858800d71d91df3a108dbe7a40def19040394e95537cc2df77e6e1ca91e6"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/south-west.png",
+      "output": "assets/runtime/buildings/siege-cannon/south-west.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 425,
+      "bytes": 216,
+      "fingerprint": "f5814a8ad5fe42a68772513e2523f5a34730dd6955070099b2b06bcb93928214",
+      "sha256": "397685802626bf0d8b9f2eca6df62f0c771af8b4bb56f443694056128c935970"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/south.png",
+      "output": "assets/runtime/buildings/siege-cannon/south.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 542,
+      "bytes": 262,
+      "fingerprint": "9c678418c248838dc3f74784543fc394ff5a07be568f6705a0b6351e5fa76303",
+      "sha256": "0802c98e83253323bf2adfe55e6b1ec91adbe3a21f6e7530985130aa46b0458d"
+    },
+    {
+      "source": "assets/buildings/siege-cannon/west.png",
+      "output": "assets/runtime/buildings/siege-cannon/west.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 371,
+      "bytes": 200,
+      "fingerprint": "1fe902a27e0ed6f2edb9073bb62c66f68d64f4df233ea9f975428a65573daed2",
+      "sha256": "eeb79477299870baf15f4a050644394c78519dd97b22bc33f2abded362e02233"
+    },
+    {
+      "source": "assets/buildings/stone-wall-tower.png",
+      "output": "assets/runtime/buildings/stone-wall-tower.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        28
+      ],
+      "size": [
+        16,
+        28
+      ],
+      "sourceBytes": 431,
+      "bytes": 194,
+      "fingerprint": "157425a7f1bfc6a1f2f56c83ffaf0a06469dcb23621bd0f9a9bf3f34ece994e4",
+      "sha256": "518050a29ccf1284329892450df3b12553914a481fd2cfd0027189edf3c99c44"
+    },
+    {
+      "source": "assets/buildings/thermal-bath-animation.png",
+      "output": "assets/runtime/buildings/thermal-bath-animation.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1535,
+      "bytes": 580,
+      "fingerprint": "a4336db4e6474d7ac206abbbe3ee20bead497897830d9b887e487e2e88acf4fa",
+      "sha256": "ce51482466f1f1713a0fa5fadeaccb6ead585d56b2ddb8d66b2b7366ff3462c3"
+    },
+    {
+      "source": "assets/buildings/thermal-bath.png",
+      "output": "assets/runtime/buildings/thermal-bath.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 901,
+      "bytes": 370,
+      "fingerprint": "85f301d26141ea6a8ede61283ebb5d58cc27bb6d1a923ab3fad360ea4d657d63",
+      "sha256": "ee7ffd72e61e7edda877a8f18c3dbb983887e6a30dfedf570896ced7ca226719"
+    },
+    {
+      "source": "assets/buildings/timber-palace.png",
+      "output": "assets/runtime/buildings/timber-palace.png",
+      "alias": true,
+      "sourceSize": [
+        1268,
+        1241
+      ],
+      "size": [
+        1268,
+        1241
+      ],
+      "sourceBytes": 1064803,
+      "bytes": 1008209,
+      "fingerprint": "9e11ce5abecb18c0ec4dcec6d30b81a2b9aa6ee84ad5e3251b679c45d8728f68",
+      "sha256": "47aab48a066fdb7154a892af82d29963409fcc5c92f9e8d77b467ff938314424"
+    },
+    {
+      "source": "assets/buildings/wooden-set/covered-well.png",
+      "output": "assets/runtime/buildings/wooden-set/covered-well.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        64
+      ],
+      "size": [
+        384,
+        64
+      ],
+      "sourceBytes": 7774,
+      "bytes": 5100,
+      "fingerprint": "96bd83daddb75fcc505e106cd35d133226f580ad771be312b659e2de692a88fd",
+      "sha256": "39943d121b4a6c18b224f7dfbdf2f2016e2085706cd79f914fd53d5be404771b"
+    },
+    {
+      "source": "assets/buildings/wooden-set/gate-ew.png",
+      "output": "assets/runtime/buildings/wooden-set/gate-ew.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 4105,
+      "bytes": 2588,
+      "fingerprint": "c630686cc0c79ea51548881b05370bb2e37828855ced1115b89f30c9c18534db",
+      "sha256": "eba83270845476c717c87a4bfda1c5869fa0f39e51428a5bd465a514074a6294"
+    },
+    {
+      "source": "assets/buildings/wooden-set/gate-ns.png",
+      "output": "assets/runtime/buildings/wooden-set/gate-ns.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 3129,
+      "bytes": 2086,
+      "fingerprint": "433d6fd02cf95114db936fed92a29a95424b739bb1f09b1c0362f7b18e2a556e",
+      "sha256": "74e876470005eb46d86ea948d494e7d1ac8d6f59dcbe4ef8cdf453f9ed5b86dd"
+    },
+    {
+      "source": "assets/buildings/wooden-set/house-cottage.png",
+      "output": "assets/runtime/buildings/wooden-set/house-cottage.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 946,
+      "bytes": 312,
+      "fingerprint": "340522fc7e96fb08ab9b47e7427fc7c851bc85317f4d8f807bf3635ab13da873",
+      "sha256": "2d9efa832e0c4925f3b48d6fb263e8e547f83cf635d16be55db225bb06c65c2f"
+    },
+    {
+      "source": "assets/buildings/wooden-set/house-hovel.png",
+      "output": "assets/runtime/buildings/wooden-set/house-hovel.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 790,
+      "bytes": 252,
+      "fingerprint": "06a5071e909084e2d00880b68050ea1fe90cf68de1b58e04ce79cf7fd5336487",
+      "sha256": "82f2b6f3e730fc58f12d5319bdbb5c85aa844a019bc30a1577457c89c96d07a1"
+    },
+    {
+      "source": "assets/buildings/wooden-set/house-shack.png",
+      "output": "assets/runtime/buildings/wooden-set/house-shack.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 726,
+      "bytes": 266,
+      "fingerprint": "5be724d8e835bd17e531c0cff145e5665dd36d9a0b9483c94e70fea52734a758",
+      "sha256": "1d02782bd2cb4f8d16f462c09b5caa1cb429a107c5d10f99d8779daa4a50835b"
+    },
+    {
+      "source": "assets/buildings/wooden-set/house-villa.png",
+      "output": "assets/runtime/buildings/wooden-set/house-villa.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 936,
+      "bytes": 314,
+      "fingerprint": "405bce8cf6dbe80a3f6422040e07323249f1d20272fe6018a92782841028f703",
+      "sha256": "4f06648653efcec5f13143380ce70a508a1f6ab18cc2c7d78bf78c8c42bb3a4b"
+    },
+    {
+      "source": "assets/buildings/wooden-set/wooden-tower.png",
+      "output": "assets/runtime/buildings/wooden-set/wooden-tower.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        112
+      ],
+      "size": [
+        64,
+        112
+      ],
+      "sourceBytes": 10762,
+      "bytes": 7432,
+      "fingerprint": "36b1c8772c16aff36ba584456443660744ba9629f36d7aa260aea5cc6206cd95",
+      "sha256": "b7ee77f33903c1cdd7b1c2b945934098c9de3e32e435c789a4fc24c79b9cd1bd"
+    },
+    {
+      "source": "assets/buildings/wooden-settlement.png",
+      "output": "assets/runtime/buildings/wooden-settlement.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1469,
+      "bytes": 468,
+      "fingerprint": "70b673d543c72fc28cbf802c97a5c5906167a0159d331714d0519f96009e8aa9",
+      "sha256": "60e3b9c60d39091fe5e10f16895d4c48e55ba2a4c9ffa96233a24b866f49411b"
+    },
+    {
+      "source": "assets/combat/forward-buckle.png",
+      "output": "assets/runtime/combat/forward-buckle.png",
+      "alias": true,
+      "sourceSize": [
+        240,
+        40
+      ],
+      "size": [
+        240,
+        40
+      ],
+      "sourceBytes": 12999,
+      "bytes": 11130,
+      "fingerprint": "c34fdcac81a2de38c935cf541fb69f4c004ee8b221629c0b8fa381d366567387",
+      "sha256": "e6252e005a6d560b8a3ee192d18031ebff868e7f762ba000b57cd2b61a0da90f"
+    },
+    {
+      "source": "assets/combat/steady-sink.png",
+      "output": "assets/runtime/combat/steady-sink.png",
+      "alias": true,
+      "sourceSize": [
+        288,
+        48
+      ],
+      "size": [
+        288,
+        48
+      ],
+      "sourceBytes": 12137,
+      "bytes": 10293,
+      "fingerprint": "c267971ba4ee81cb800b744c4dae06adeb742c908d4165054cdd8a46f29fcc42",
+      "sha256": "8b04490d3fd23bbb9f8aeab3d17c6b9e7078836afc562e3b92feaead2c534743"
+    },
+    {
+      "source": "assets/construction/1x1.png",
+      "output": "assets/runtime/construction/1x1.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 449,
+      "bytes": 204,
+      "fingerprint": "a6730b55ba7f67840674cbbebfc8d3fa92184fa538eefe16b1a22896bdb6dde2",
+      "sha256": "927d909df81535b52afc677504449341f232cc44db9fb6b706198c3f218f1b75"
+    },
+    {
+      "source": "assets/construction/2x2.png",
+      "output": "assets/runtime/construction/2x2.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 775,
+      "bytes": 332,
+      "fingerprint": "6fac8081f115cc445d8a0079cb733ffc6f61561c98f288867cc45fbd3ea8abea",
+      "sha256": "05d6694e48f2643520acbdb9256286353512b851724958edc6752fc6eff79c06"
+    },
+    {
+      "source": "assets/cozy-farm-lite/fence-h.png",
+      "output": "assets/runtime/cozy-farm-lite/fence-h.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 100,
+      "bytes": 68,
+      "fingerprint": "188b41677992f7170d0fc57d5a5c4d2de2ebe513398d9590ecd036264388cfa7",
+      "sha256": "4e6ea4952ca8548aaa482509d0ffecd5ff4a8e5647c7d6adab004849312fdd00"
+    },
+    {
+      "source": "assets/cozy-farm-lite/fence-post.png",
+      "output": "assets/runtime/cozy-farm-lite/fence-post.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 110,
+      "bytes": 84,
+      "fingerprint": "329e2b30f546af47afb345fb5803f92df9c419610740cb4d5cc439fa27b8b1fe",
+      "sha256": "11f9821ccc053da12e680aa4e80044ac6a93c0742e61202e6dce9a44ad33914f"
+    },
+    {
+      "source": "assets/cozy-farm-lite/fence-v.png",
+      "output": "assets/runtime/cozy-farm-lite/fence-v.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 95,
+      "bytes": 62,
+      "fingerprint": "34595b27dec44d2a8fb4372fa83f8daa1fdc365fc330f7da056c94e1612ee893",
+      "sha256": "7f2f46e1005c7a609a3712a2a660c31705bac4d789f2418022cb3a2f8ea98877"
+    },
+    {
+      "source": "assets/desert-stones/ochre.png",
+      "output": "assets/runtime/desert-stones/ochre.png",
+      "alias": true,
+      "sourceSize": [
+        384,
+        16
+      ],
+      "size": [
+        384,
+        16
+      ],
+      "sourceBytes": 1227,
+      "bytes": 1202,
+      "fingerprint": "1ceecbd3390f3e940c158f370b4c6d5b0ed5344e42dd547f6d94d32d07aceac1",
+      "sha256": "262e53d780d60655e2537aa0c84a11b9c0c0e24c8cc7f51512a28251b7b975b7"
+    },
+    {
+      "source": "assets/effects/cannon-fire/black-powder.png",
+      "output": "assets/runtime/effects/cannon-fire/black-powder.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1966,
+      "bytes": 770,
+      "fingerprint": "808933e87e2c678723f50decb21fabbc89cb7fa86cb6e8b00dbd6e5cb3b2bd32",
+      "sha256": "0fc88bc6dab5e71fdc8c8b5f53c4e32597298b72ba4691e1018103a020b47476"
+    },
+    {
+      "source": "assets/effects/shell-impact/black-powder-1c.png",
+      "output": "assets/runtime/effects/shell-impact/black-powder-1c.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 2833,
+      "bytes": 1058,
+      "fingerprint": "0c4b43f07b7f56537c87010d91848a92ba4832b5671de5dbeb44f0357129c9f6",
+      "sha256": "e56faee413ea38f295ce02434bcd01054b3ad98db9ba462bf1bdb437b2b50ee8"
+    },
+    {
+      "source": "assets/exploration/hut-a.png",
+      "output": "assets/runtime/exploration/hut-a.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 714,
+      "bytes": 466,
+      "fingerprint": "c210dea312b2a9af998f7912f6aa8151cf197cdd17d19aa0fc367fa054089bf2",
+      "sha256": "753cba7b9fc2462dba0c62f6353f8505583dc89c88f3a165cfd276375ee189aa"
+    },
+    {
+      "source": "assets/exploration/hut-b.png",
+      "output": "assets/runtime/exploration/hut-b.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 617,
+      "bytes": 392,
+      "fingerprint": "ae5cb68902b431edeeaedd7640c79e5782a2c25ef6707402c8792a42932c8a20",
+      "sha256": "b3c01627011ccbd10aa8bad514a1986eb799bded66bbcfb34d5fbf732bf0afd0"
+    },
+    {
+      "source": "assets/exploration/hut-c.png",
+      "output": "assets/runtime/exploration/hut-c.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 785,
+      "bytes": 512,
+      "fingerprint": "a8f01573761378b36c4450ff57580c6ae65e6cac0d572c5b7ebcf6588a19705e",
+      "sha256": "9150143dee535b4dc3518ab229fd8aadf4d16799bc087ae395bf747b29ffe8bd"
+    },
+    {
+      "source": "assets/exploration/ruins-a.png",
+      "output": "assets/runtime/exploration/ruins-a.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2471,
+      "bytes": 1520,
+      "fingerprint": "ea5c171d3a13c26d28c8e7e49a085806b1feff50e7c6eaa9adf477115f910863",
+      "sha256": "a3c8cf182a93bd59791bf49ca46052fdc397a54bb6649c126ac72af6742b5322"
+    },
+    {
+      "source": "assets/exploration/ruins-b.png",
+      "output": "assets/runtime/exploration/ruins-b.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2324,
+      "bytes": 1380,
+      "fingerprint": "c6d00946d349bfc40f19874f1d5a7a45ccc24f5379dbe71b5c6e13285fbe939f",
+      "sha256": "026cca8c2cc603f61bb76a5abb0404019ad6aa1fd096a3882121466c8c299815"
+    },
+    {
+      "source": "assets/exploration/ruins-c.png",
+      "output": "assets/runtime/exploration/ruins-c.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2218,
+      "bytes": 1328,
+      "fingerprint": "98b2f5ca2cfe7b2ce6f01719ee71ef2f6ab70836a27ad8d0f28ef823d60d93c1",
+      "sha256": "1707fdc5343894f80c3a57ce01f748e29accd3909b0ff6331892f5e725f3ce35"
+    },
+    {
+      "source": "assets/farms/fence-horizontal.png",
+      "output": "assets/runtime/farms/fence-horizontal.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        6
+      ],
+      "size": [
+        32,
+        6
+      ],
+      "sourceBytes": 658,
+      "bytes": 348,
+      "fingerprint": "60a20e982abfb325ea7a33b0ae70d69396ee1e491d740596be937b6e7eeff91f",
+      "sha256": "9fe4631f097d7381bd8aa1186770378afec4acc092f0a87508e323f8f2b82754"
+    },
+    {
+      "source": "assets/farms/fence-post.png",
+      "output": "assets/runtime/farms/fence-post.webp",
+      "alias": true,
+      "sourceSize": [
+        6,
+        10
+      ],
+      "size": [
+        6,
+        10
+      ],
+      "sourceBytes": 284,
+      "bytes": 196,
+      "fingerprint": "161ec03633245ff5940dd84854039c45c3b7c81fdfd6c99658393b5e6e6c8862",
+      "sha256": "3c036c628376a9b2df83c9d4cdefd46d9659c06924ddad11d5ad202962182ed1"
+    },
+    {
+      "source": "assets/farms/fence-vertical.png",
+      "output": "assets/runtime/farms/fence-vertical.webp",
+      "alias": true,
+      "sourceSize": [
+        6,
+        32
+      ],
+      "size": [
+        6,
+        32
+      ],
+      "sourceBytes": 589,
+      "bytes": 430,
+      "fingerprint": "dc77674493b56e3b1b8f78d002e98c7cc9b44763b8e15176c2d762e8d1aa202b",
+      "sha256": "03bfc05a073940838cae1b86c4b125d8049b7a1f5894402f2217cee82f3d58cd"
+    },
+    {
+      "source": "assets/farms/furrows.png",
+      "output": "assets/runtime/farms/furrows.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1195,
+      "bytes": 462,
+      "fingerprint": "8cc3d9f72bf19016bfacda7dd1d8c1c0c8d3ad93e11ebe5fbc32d13dd3410c49",
+      "sha256": "b37c59c1a670f3b9de4a0b69461eec041c3c81f6efc3efa9fd63852333fe1113"
+    },
+    {
+      "source": "assets/farms/green-grain.png",
+      "output": "assets/runtime/farms/green-grain.png",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 262280,
+      "bytes": 251538,
+      "fingerprint": "ab32f8a33e7b3961e096f25e150248c7e9104c62a8d00f28eccc6220d1c33ffa",
+      "sha256": "368a530ce6c2a0de70b6bf32bf1238a5381314a4c7cef336acd25e707eb72023"
+    },
+    {
+      "source": "assets/farms/ripe-grain.png",
+      "output": "assets/runtime/farms/ripe-grain.png",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 302443,
+      "bytes": 297636,
+      "fingerprint": "cc8802226e7e5ca73db62a9a39964c6dcaeccdd4aab1bc7b53409ff49f9dbbb9",
+      "sha256": "d1c1d880df6c9e659ee9d3d93c2e3a32d3f8f15f8bf0032e58e452c86650a3ce"
+    },
+    {
+      "source": "assets/fishing/fish-breach.png",
+      "output": "assets/runtime/fishing/fish-breach.webp",
+      "alias": true,
+      "sourceSize": [
+        176,
+        16
+      ],
+      "size": [
+        176,
+        16
+      ],
+      "sourceBytes": 983,
+      "bytes": 576,
+      "fingerprint": "176e6c868fea5d1675c6fdefe8f4fe64541ef1dc9961a50ea8bf95412632140f",
+      "sha256": "4dfd121c763d84e0b98818d05f5d5b377629b67522f08d270da291c94b142deb"
+    },
+    {
+      "source": "assets/fishing/fishing-load.png",
+      "output": "assets/runtime/fishing/fishing-load.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        32
+      ],
+      "size": [
+        144,
+        32
+      ],
+      "sourceBytes": 2461,
+      "bytes": 1046,
+      "fingerprint": "ca62b9c06a688ebdd4a97d26b5323792222e4cac5d4a45ce70b513d3a5ef0eeb",
+      "sha256": "0760d85a2e755b72947aa7c941038315cb916179fd4d1a0bb32f95397ebc9ca7"
+    },
+    {
+      "source": "assets/fishing/fishing-move.png",
+      "output": "assets/runtime/fishing/fishing-move.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        32
+      ],
+      "size": [
+        144,
+        32
+      ],
+      "sourceBytes": 1704,
+      "bytes": 692,
+      "fingerprint": "3e77dda0ff7b4c36dec1303d73176e0a51a96a9ba2fd3acf0df80462a01862b7",
+      "sha256": "11f52a8ff20df42c4201dce532e465c839e637e7ee42d02562933a40f6a7a1e6"
+    },
+    {
+      "source": "assets/fishing/fishing-unload.png",
+      "output": "assets/runtime/fishing/fishing-unload.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        32
+      ],
+      "size": [
+        144,
+        32
+      ],
+      "sourceBytes": 1419,
+      "bytes": 524,
+      "fingerprint": "db8064dcae852cd67a3a21bea76ddec73f78354a06bbec99ebb5f4e68f48c21e",
+      "sha256": "b257d1019affad2d4ead11c91110a4a9911dddc24a1eac6ca1e62e3feab5069d"
+    },
+    {
+      "source": "assets/fishing/whale.png",
+      "output": "assets/runtime/fishing/whale.webp",
+      "alias": true,
+      "sourceSize": [
+        416,
+        32
+      ],
+      "size": [
+        416,
+        32
+      ],
+      "sourceBytes": 5173,
+      "bytes": 1980,
+      "fingerprint": "f262ae8e24db2061be6490115eb4003ea0b189ac8e71613a56349b6fc8b2fa4b",
+      "sha256": "b2503f471f46c8d3d610f3e4870075f868a6b76de7a902d300d04709dd792cb3"
+    },
+    {
+      "source": "assets/fishing/whaling-harvest.png",
+      "output": "assets/runtime/fishing/whaling-harvest.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        48
+      ],
+      "size": [
+        144,
+        48
+      ],
+      "sourceBytes": 3473,
+      "bytes": 1424,
+      "fingerprint": "4f90cba05ea6004e1f84077602a53043fc098cc22886955a567877de0b1d2bd3",
+      "sha256": "c0939a613411e95fd6e8bf3a58e566c684ec034c8860fe8ba287c24e77c96442"
+    },
+    {
+      "source": "assets/fishing/whaling-move.png",
+      "output": "assets/runtime/fishing/whaling-move.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        48
+      ],
+      "size": [
+        144,
+        48
+      ],
+      "sourceBytes": 4655,
+      "bytes": 1690,
+      "fingerprint": "19f2bc036cded05a09a91e0e08158f47b7d4362e8a7b7f8ea376d499f3e670dd",
+      "sha256": "50837aa013dd388a98e79c39ecedd4b40de1e161f2efad37ece47fb189e417dd"
+    },
+    {
+      "source": "assets/fishing/whaling-post.png",
+      "output": "assets/runtime/fishing/whaling-post.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 928,
+      "bytes": 358,
+      "fingerprint": "cf88a1c707484456277e97b9b6b31f2f4975ee11adf21c32fa78e45555c10b00",
+      "sha256": "30ba932691e429ca418668525ad0ff30acff405cad9bfeacc9e180e611ef9d37"
+    },
+    {
+      "source": "assets/food/grain-sack.png",
+      "output": "assets/runtime/food/grain-sack.webp",
+      "alias": true,
+      "sourceSize": [
+        12,
+        11
+      ],
+      "size": [
+        12,
+        11
+      ],
+      "sourceBytes": 291,
+      "bytes": 112,
+      "fingerprint": "b43ac9b343c5f9ebda7d047517982e14058128a2e9c23fcc1159070eaa337d21",
+      "sha256": "7f4ee731853890358dece467a638ef56983dd96c90081dc72741ba7a869c62f1"
+    },
+    {
+      "source": "assets/puny-world/dungeon.png",
+      "output": "assets/runtime/game/monument.webp",
+      "alias": false,
+      "sourceSize": [
+        416,
+        320
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 25855,
+      "bytes": 140,
+      "fingerprint": "f9f3c30d100faa9351ef7c86781ae75b8a5a3eb0a7b5ab2908446cc042f571fe",
+      "sha256": "c0959f8a7aca2ccf724ffff7878c181e1e383572b8bf9a22ae63d861f7cbb37a"
+    },
+    {
+      "source": "assets/resources/mountain-ore/ore-1.png",
+      "output": "assets/runtime/game/ore-1.webp",
+      "alias": false,
+      "sourceSize": [
+        1536,
+        1024
+      ],
+      "size": [
+        48,
+        32
+      ],
+      "sourceBytes": 1317685,
+      "bytes": 1226,
+      "fingerprint": "516062fd3ab06604741bde859b2f1f7d3c2a88204567d9b8af9c1b85e81b4109",
+      "sha256": "10623920c12870484e238e1bb2c965b8f07d875469a3cb145726f18145ac8f58"
+    },
+    {
+      "source": "assets/resources/mountain-ore/ore-2.png",
+      "output": "assets/runtime/game/ore-2.webp",
+      "alias": false,
+      "sourceSize": [
+        1536,
+        1024
+      ],
+      "size": [
+        96,
+        64
+      ],
+      "sourceBytes": 1300209,
+      "bytes": 3776,
+      "fingerprint": "1e9a53b63f46928b67e6215d0559957c6fa702c295ac774b538efba8021f69a7",
+      "sha256": "bfb61199bd637606bd61a75b98e48feacc0f89752213d3920f1563c2483e972f"
+    },
+    {
+      "source": "assets/resources/mountain-ore/ore-3.png",
+      "output": "assets/runtime/game/ore-3.webp",
+      "alias": false,
+      "sourceSize": [
+        1536,
+        1024
+      ],
+      "size": [
+        144,
+        64
+      ],
+      "sourceBytes": 1321992,
+      "bytes": 6666,
+      "fingerprint": "9a685afe40b5292d948df7c7406bf07bc13cbf240a6947306c08875a5688623b",
+      "sha256": "fdfbf9ca4b8b818b80041d4fe286b1f8d2f213792dbde58ca32d670e615b10fa"
+    },
+    {
+      "source": "assets/geothermal/mud-pool-a.png",
+      "output": "assets/runtime/geothermal/mud-pool-a.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 3244,
+      "bytes": 1434,
+      "fingerprint": "4d593add13d21ec78c305e85a2727a11a0df2a31c0c1c67a30e69447dee01b79",
+      "sha256": "e58d8c5349fc61f801878e7b754870226cdf72bb644efc409d761ff419625f71"
+    },
+    {
+      "source": "assets/geothermal/mud-pool-b.png",
+      "output": "assets/runtime/geothermal/mud-pool-b.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1859,
+      "bytes": 744,
+      "fingerprint": "042223ef5cd76357b593eecbd228783e6dee46e33628351dde3619911e3aa455",
+      "sha256": "aea72e0a0de940b10817be13f327838cf963b230fc113a86d322d27ce107c74e"
+    },
+    {
+      "source": "assets/geothermal/mud-pool-c.png",
+      "output": "assets/runtime/geothermal/mud-pool-c.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 2136,
+      "bytes": 918,
+      "fingerprint": "7dc85a9a288833f123b7ba39e02681e50176d96a35550f2f1b3106feb85f4170",
+      "sha256": "16099da0e4ec021607dc279e6c8f2c99129989f8dd0058de51d1e66b5674ce86"
+    },
+    {
+      "source": "assets/geothermal/volcano-a.png",
+      "output": "assets/runtime/geothermal/volcano-a.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 2344,
+      "bytes": 862,
+      "fingerprint": "53c1931c4754405dc023bb4c54de5daf6e6abbe5362b1314e2e373d756e6e6cc",
+      "sha256": "17e719ba2c4a8d1e0382c5ada99ed00fcd03d2f62b71d29855473e94cc88c754"
+    },
+    {
+      "source": "assets/geothermal/volcano-b.png",
+      "output": "assets/runtime/geothermal/volcano-b.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1984,
+      "bytes": 758,
+      "fingerprint": "aa4a1a5c171b72a7ffb18065d2968681437ac35c5253861f6028767bb66825a6",
+      "sha256": "d3271febd65124eea6f14c8199f77f18d206251a84baf0a0fb849e6bad0e6b57"
+    },
+    {
+      "source": "assets/geothermal/volcano-c.png",
+      "output": "assets/runtime/geothermal/volcano-c.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 2240,
+      "bytes": 832,
+      "fingerprint": "c909086d584900bf89ea6c5feb8c91cdb0ddcc3aa2fea5c8db091946e062a38d",
+      "sha256": "f70b4c8fc1c8900e735da15b90aa679fc9b8e5b6faa1507f26b448f0e59d98cd"
+    },
+    {
+      "source": "assets/hermit/cabin.png",
+      "output": "assets/runtime/hermit/cabin.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 822,
+      "bytes": 220,
+      "fingerprint": "0497eda9a5ee58eb9070db196df560c8319228bad6d1f9a600b5a2a25e00ac9b",
+      "sha256": "07583d97d6531782e0a6d8a5897af2399d0a2f6ad2091959a23321ebbba041e8"
+    },
+    {
+      "source": "assets/hermit/fire.png",
+      "output": "assets/runtime/hermit/fire.png",
+      "alias": true,
+      "sourceSize": [
+        24,
+        4
+      ],
+      "size": [
+        24,
+        4
+      ],
+      "sourceBytes": 263,
+      "bytes": 257,
+      "fingerprint": "80198298e39972e94f08c79e1543a02bbb1a574e50d32afb21863766bb3e25b2",
+      "sha256": "8319e4fd502d347253e8117e16b902f0d614678ec4a4eae90606b9ac17a09a99"
+    },
+    {
+      "source": "assets/hermit/hermit.png",
+      "output": "assets/runtime/hermit/hermit.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 655,
+      "bytes": 126,
+      "fingerprint": "3224f000067eb37d188fd11385e6fa8a0538682c2a81e2a1bd25ad0c9f908db6",
+      "sha256": "ff61a0474b16fd56359c6de1ee425b36ac7177d72c37266827388cd9c65eb57a"
+    },
+    {
+      "source": "assets/irrigation/bridge.png",
+      "output": "assets/runtime/irrigation/bridge.png",
+      "alias": true,
+      "sourceSize": [
+        28,
+        36
+      ],
+      "size": [
+        28,
+        36
+      ],
+      "sourceBytes": 431,
+      "bytes": 302,
+      "fingerprint": "a461ac6cfc011e81b6d4c549e499818c350098f36aaf502b70ebe7791eec08a9",
+      "sha256": "dc38049e4d28c645df65463c994a94330510896eb3776a721ace98836d6efc6c"
+    },
+    {
+      "source": "assets/irrigation/ditch.png",
+      "output": "assets/runtime/irrigation/ditch.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        64
+      ],
+      "size": [
+        256,
+        64
+      ],
+      "sourceBytes": 3745,
+      "bytes": 850,
+      "fingerprint": "f5f8044dc9a57fc6d5ffc6cd39b78b4c927d9658cbeac01d13ff5c3acfa86d32",
+      "sha256": "c5d9e556735eb7c2814f44adf0096ca9f82ed3c05951ab72ad89faf8aa9e5ac8"
+    },
+    {
+      "source": "assets/irrigation/inlet.png",
+      "output": "assets/runtime/irrigation/inlet.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 1426,
+      "bytes": 352,
+      "fingerprint": "0843ff22daaa0c71a759198f2543ab27396fa20f82ca1c2c54c121b93539f13a",
+      "sha256": "f9911cab1a6fa5245d097aecea334db9b32789e4284b0c9f2ad843ac9c52e60b"
+    },
+    {
+      "source": "assets/medieval/Library-blue.png",
+      "output": "assets/runtime/medieval/Library-blue.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 602,
+      "bytes": 406,
+      "fingerprint": "f587411b9600c61edb9552132e61bfc43999ea0336b5a03677a14c77184e9be7",
+      "sha256": "4ac4f7d90418d5792c2460991e1673a74958d9b77b7a0d89379b159b876d8be8"
+    },
+    {
+      "source": "assets/medieval/Library-red.png",
+      "output": "assets/runtime/medieval/Library-red.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 603,
+      "bytes": 412,
+      "fingerprint": "12095efee05dbfcb6d118f1d5f4992d14afa475d7a8d15ddd882e0af52a80e3d",
+      "sha256": "9a0b3748f2ba357d020a370328c328f79673080e00217ca0a551e5fad1756cf6"
+    },
+    {
+      "source": "assets/medieval/Library.png",
+      "output": "assets/runtime/medieval/Library.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 608,
+      "bytes": 414,
+      "fingerprint": "090e2cad2acd8e95b474653ccc716ad176e51bff631e816e9248a6c4846623b3",
+      "sha256": "379652a4b0332b3aac321d2ab7efac0e9eebe8a8827206326ea7e693e8394ddb"
+    },
+    {
+      "source": "assets/medieval/Scouts-Lodge-blue.png",
+      "output": "assets/runtime/medieval/Scouts-Lodge-blue.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 301,
+      "bytes": 216,
+      "fingerprint": "0aa21440e7dbd38c57a0afc161c82cfe9f34e29e817a2f3ce323a5623c36dba3",
+      "sha256": "4ea485b62c5a0c8a69e40a2797f53ac2a1138ca920a616471b1f1a2a9ce0364d"
+    },
+    {
+      "source": "assets/medieval/Scouts-Lodge-red.png",
+      "output": "assets/runtime/medieval/Scouts-Lodge-red.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 301,
+      "bytes": 218,
+      "fingerprint": "b9a21e8e88c5927851769c3545161d2658ae087c003f76ac0fefedefb7876c87",
+      "sha256": "cdaa95183eec250fa3748b7509a8665ffd50fc84630ee22d5346088c936a5086"
+    },
+    {
+      "source": "assets/medieval/Scouts-Lodge.png",
+      "output": "assets/runtime/medieval/Scouts-Lodge.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 287,
+      "bytes": 214,
+      "fingerprint": "65c64bf7cad48e9195c9ce72072c52992abe7cf08f2cd235019ff4774bdc61dc",
+      "sha256": "7c62adbc6796f3d5087d1075c5aead2c172713f501201051220b3d72f18fd86e"
+    },
+    {
+      "source": "assets/medieval/Supply-Depot.png",
+      "output": "assets/runtime/medieval/Supply-Depot.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 987,
+      "bytes": 236,
+      "fingerprint": "86559daf6e272421b8e9cd94f32a9294aeae6c81fb936b159199c883afc879f8",
+      "sha256": "5b8bbb804124a18d245e8c570f8aed4bd7f576a1bd30d8487bc96b27a91df7fd"
+    },
+    {
+      "source": "assets/medieval/Village-Campfire.png",
+      "output": "assets/runtime/medieval/Village-Campfire.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 753,
+      "bytes": 180,
+      "fingerprint": "365c2df6d66c9006cacef8c9903eb9c8389dc9fe0ebb3c5f2ef465bddb99bec0",
+      "sha256": "aced8496145aaacdda64e7fe3d792046e3150e94354611b784621d2cf6c8a138"
+    },
+    {
+      "source": "assets/miniworld/Archery-Range.png",
+      "output": "assets/runtime/miniworld/Archery-Range.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 821,
+      "bytes": 204,
+      "fingerprint": "e269080a029ca000f10737f7eff813e79b6fa4a72b613ee874a2cc08b07c2985",
+      "sha256": "00dad6487744e96595b57d8c202405e04a8d0dd041b3c40040cbd715a659d8f6"
+    },
+    {
+      "source": "assets/miniworld/Ballista.png",
+      "output": "assets/runtime/miniworld/Ballista.webp",
+      "alias": true,
+      "sourceSize": [
+        112,
+        64
+      ],
+      "size": [
+        112,
+        64
+      ],
+      "sourceBytes": 3186,
+      "bytes": 1020,
+      "fingerprint": "a4b94bf2bd21f9b2fe45140aec236954527448164000fec8b712e408445c30c0",
+      "sha256": "045e04c876c55945af5b1737cf5c9cfdf70e3af37dae2a9d0cc626b5003a8982"
+    },
+    {
+      "source": "assets/miniworld/BallistaBolt.png",
+      "output": "assets/runtime/miniworld/BallistaBolt.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 795,
+      "bytes": 136,
+      "fingerprint": "be6c40efdc423637183883fd01b69859cc4e67068d86defca18659a76f3171c1",
+      "sha256": "654e8d9b3a00116252b871e3de9f7278db438816e5feb537fe9565c7cff9292f"
+    },
+    {
+      "source": "assets/miniworld/Blacksmith.png",
+      "output": "assets/runtime/miniworld/Blacksmith.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 774,
+      "bytes": 180,
+      "fingerprint": "ca84378c3cc243d80233c159735fc116bff22f8e2ab81733272f162772f354e5",
+      "sha256": "0bc8a94ffd82724452ac9920687c498e0fadc8d8085596b3016dda214abe3cef"
+    },
+    {
+      "source": "assets/miniworld/Boar.png",
+      "output": "assets/runtime/miniworld/Boar.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        128
+      ],
+      "size": [
+        64,
+        128
+      ],
+      "sourceBytes": 2291,
+      "bytes": 718,
+      "fingerprint": "56b5a0ae61af9487880399edc558fa3cf45e834783113eb7c4f315b889ab660a",
+      "sha256": "fdaf010ba8032d0c01fec10f6d0ede350093ca1fa94324436c9e89ae5e556d24"
+    },
+    {
+      "source": "assets/miniworld/Chicken.png",
+      "output": "assets/runtime/miniworld/Chicken.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 1332,
+      "bytes": 364,
+      "fingerprint": "ef1fa4c96f019c23118ad8f6d3d6bf88ced64fc393fb484b300cdad1f08ef7cf",
+      "sha256": "2b24cb17fa4ee364c67f2efb6233b927a82081af30a5c375f2e78f94ad41f2e2"
+    },
+    {
+      "source": "assets/miniworld/Fish-Sheet.png",
+      "output": "assets/runtime/miniworld/Fish-Sheet.webp",
+      "alias": true,
+      "sourceSize": [
+        80,
+        64
+      ],
+      "size": [
+        80,
+        64
+      ],
+      "sourceBytes": 2455,
+      "bytes": 816,
+      "fingerprint": "eab373a47847ffa53fbbfb49026475c417dda566d25be969c410de1c15302a97",
+      "sha256": "ee5e62ed0828a13af7e0b6d8bd0bcab03b97cb1483ec9e3bd91498dab90426e3"
+    },
+    {
+      "source": "assets/miniworld/Fishing-Boat.png",
+      "output": "assets/runtime/miniworld/Fishing-Boat.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 940,
+      "bytes": 196,
+      "fingerprint": "519466644321742b3cb5873ff747a59b0cce2abedf2f365feb8efe325266a968",
+      "sha256": "32d8606659a8e3a589c634873d0a47f9579ac73941d48a1e05c838add17be028"
+    },
+    {
+      "source": "assets/miniworld/Guard-Post.png",
+      "output": "assets/runtime/miniworld/Guard-Post.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 699,
+      "bytes": 146,
+      "fingerprint": "48d7174e422bb8fe11548d717307047dc9d442103af8125d7b582ca6df54340a",
+      "sha256": "8bbd004c0ff3cd2ee52d4fcee6043cdf7296b1344ef5200b066f95a67b6c9b4b"
+    },
+    {
+      "source": "assets/miniworld/Healers-Shack.png",
+      "output": "assets/runtime/miniworld/Healers-Shack.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 721,
+      "bytes": 184,
+      "fingerprint": "62557b8d1acaa010717cb6e95c54d8ab7e97f3763458471d237d1d1ac815fa74",
+      "sha256": "be5a7125648b0d68545faf4b049530be8554a6c0117c9fd8f2647a74e4aea6a1"
+    },
+    {
+      "source": "assets/miniworld/Horse-Archer.png",
+      "output": "assets/runtime/miniworld/Horse-Archer.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        384
+      ],
+      "size": [
+        128,
+        384
+      ],
+      "sourceBytes": 11980,
+      "bytes": 3982,
+      "fingerprint": "edaa841e6737c594ab01a7d499d46bddec6090ae68f499055f7617309a32f092",
+      "sha256": "ad772c41095d3485e6dddbe98e59e4cbd62bac8ab4bba15138b6c2d0a0a3b880"
+    },
+    {
+      "source": "assets/miniworld/Horseman-Cyan.png",
+      "output": "assets/runtime/miniworld/Horseman-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        384
+      ],
+      "size": [
+        128,
+        384
+      ],
+      "sourceBytes": 12205,
+      "bytes": 4630,
+      "fingerprint": "df5744c27778f9e918f40bc134d245d055d0a9b529b568b1ddccf9e18d2af460",
+      "sha256": "8689a31820b4e5f65195128959e769cf829e8ccebb5bf2d19570b4226eb562a8"
+    },
+    {
+      "source": "assets/miniworld/Horseman-Red.png",
+      "output": "assets/runtime/miniworld/Horseman-Red.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        384
+      ],
+      "size": [
+        128,
+        384
+      ],
+      "sourceBytes": 12003,
+      "bytes": 4642,
+      "fingerprint": "6d8e98f26f41dca7111f64959cefbe134e2bb0559ad7c4dcb7128499a67c3bf4",
+      "sha256": "8d78600911f20fdb806c3ad1ea1dbc3f49c3fa319a56661ea86710f01cd1ac05"
+    },
+    {
+      "source": "assets/miniworld/Merchant-Rider.png",
+      "output": "assets/runtime/miniworld/Merchant-Rider.png",
+      "alias": true,
+      "sourceSize": [
+        128,
+        256
+      ],
+      "size": [
+        128,
+        256
+      ],
+      "sourceBytes": 8303,
+      "bytes": 4979,
+      "fingerprint": "edecad1b65ceea7e77edbefe9568e0c05350dafc479241d249c823a6d7069a19",
+      "sha256": "fe89a907e5985aa7799cf9f36db5267b6127daa379d994e66c98a999e1725dba"
+    },
+    {
+      "source": "assets/miniworld/Spear-Rider.png",
+      "output": "assets/runtime/miniworld/Spear-Rider.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        384
+      ],
+      "size": [
+        128,
+        384
+      ],
+      "sourceBytes": 13197,
+      "bytes": 4274,
+      "fingerprint": "39716ca1c200ea7c0bf363b16f05ebca1662740112f83e10e15af9e831178698",
+      "sha256": "9fe27371624b45be02044e9f5167003fcb2a3b9e420f1348f1c6de87effb0c8d"
+    },
+    {
+      "source": "assets/miniworld/SpearWall.png",
+      "output": "assets/runtime/miniworld/SpearWall.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        32
+      ],
+      "size": [
+        48,
+        32
+      ],
+      "sourceBytes": 1394,
+      "bytes": 406,
+      "fingerprint": "46f45bf0878ffeaf53285585e11815d00d4d750e35b723bebb3f92356b13dcf5",
+      "sha256": "34dca52d66bfd3f8eb5e66eea87977941c0d96243bf4301e9827f2317bd1e194"
+    },
+    {
+      "source": "assets/miniworld/Spearman-Cyan.png",
+      "output": "assets/runtime/miniworld/Spearman-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        80,
+        224
+      ],
+      "size": [
+        80,
+        224
+      ],
+      "sourceBytes": 18426,
+      "bytes": 1798,
+      "fingerprint": "a8b412f3e2bc6c1a4b31e6c6481872251e281574b76d8890004d52c7d6505a90",
+      "sha256": "2e3985c385f2b0537f630cbf9bd3699d556bd36908c859fff145ef6c065437e6"
+    },
+    {
+      "source": "assets/miniworld/Spearman-Red.png",
+      "output": "assets/runtime/miniworld/Spearman-Red.webp",
+      "alias": true,
+      "sourceSize": [
+        80,
+        224
+      ],
+      "size": [
+        80,
+        224
+      ],
+      "sourceBytes": 18066,
+      "bytes": 1798,
+      "fingerprint": "280449f78ec84da68ea632639fcfd72d356910838640a237289b80f7900d490e",
+      "sha256": "a51850aea52c57e17e444862096d9600e562ed8e9f3d5a7b71e9d2a709c8ffdd"
+    },
+    {
+      "source": "assets/miniworld/Stable-Cyan.png",
+      "output": "assets/runtime/miniworld/Stable-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 665,
+      "bytes": 148,
+      "fingerprint": "49a0247e1bbf53d6996e432baa5ee3637f082c720924d2ca2d0b11700da82801",
+      "sha256": "96b7a1b20074cb176b9c38772622cec97d59bc098a73346b89d6135370673457"
+    },
+    {
+      "source": "assets/miniworld/Stable-Red.png",
+      "output": "assets/runtime/miniworld/Stable-Red.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 667,
+      "bytes": 148,
+      "fingerprint": "d9152edc3558d0dec1e82940a265186b57137085e670463331111986597eca74",
+      "sha256": "dcce25d3df9ba58bd66e7b82b8094eb97e1978a665ae5782a7b8d0616ac4290c"
+    },
+    {
+      "source": "assets/miniworld/Wheatfield-DryStraw.png",
+      "output": "assets/runtime/miniworld/Wheatfield-DryStraw.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 581,
+      "bytes": 234,
+      "fingerprint": "0527c8667ba93ff4715029ea6a1ff827bae5042e550e01ee590b46948f5850ef",
+      "sha256": "3f9988bf7423e4682a9147476de792c907a394db74f3bca40d18b8a90e221dbe"
+    },
+    {
+      "source": "assets/miniworld/Wheatfield.png",
+      "output": "assets/runtime/miniworld/Wheatfield.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 1079,
+      "bytes": 312,
+      "fingerprint": "93290b76d803520c266b0f3a9c1a4d97890eac2d35f7bde5c503f5386f40cab3",
+      "sha256": "882b52482894a5e2d4794a3159c3ff33e4631995b6fbc7739d256e9b6e72762a"
+    },
+    {
+      "source": "assets/naval/barbarian-galley.png",
+      "output": "assets/runtime/naval/barbarian-galley.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        32
+      ],
+      "size": [
+        16,
+        32
+      ],
+      "sourceBytes": 991,
+      "bytes": 468,
+      "fingerprint": "c8fd970945697010e1117f98fa4d0d061f7eba4ae4dd14ec36be369dbec5a9cd",
+      "sha256": "bfb768e96372fcdd5f9ca1a1658505ae2b5c9c45895a8a3d5dab246888eaf7dd"
+    },
+    {
+      "source": "assets/naval/galley-hulls.png",
+      "output": "assets/runtime/naval/galley-hulls.webp",
+      "alias": true,
+      "sourceSize": [
+        192,
+        128
+      ],
+      "size": [
+        192,
+        128
+      ],
+      "sourceBytes": 3232,
+      "bytes": 1228,
+      "fingerprint": "78e05012eea2bfceb561fde425ef84a59e2a367af5fc5f6bec2a1a6794b2d0e9",
+      "sha256": "41e23361e51c07dd386ce7c1932d719f1d8dee96c51c4e8a74fd76ae09c2b3e8"
+    },
+    {
+      "source": "assets/naval/galley-rigs.png",
+      "output": "assets/runtime/naval/galley-rigs.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        128
+      ],
+      "size": [
+        32,
+        128
+      ],
+      "sourceBytes": 639,
+      "bytes": 292,
+      "fingerprint": "f9ff172a6176d3ba5c0448e72de5827a6099299efe7919299145978fa94fedf1",
+      "sha256": "51cc61ecdd175d67a9b818b449d0762ab96255aca4170d9a45ccfc8a0210d42e"
+    },
+    {
+      "source": "assets/naval/galley.png",
+      "output": "assets/runtime/naval/galley.webp",
+      "alias": true,
+      "sourceSize": [
+        192,
+        128
+      ],
+      "size": [
+        192,
+        128
+      ],
+      "sourceBytes": 3883,
+      "bytes": 1530,
+      "fingerprint": "5bba9475121954dafd0245b89facd4b8d0349562490bf7b7dde7c08a7ded38cb",
+      "sha256": "110b93395ae176b75d9a49addf5c9f1d016a65df3712af3ffde866d2bd988467"
+    },
+    {
+      "source": "assets/naval/leader-galley-rowing.png",
+      "output": "assets/runtime/naval/leader-galley-rowing.webp",
+      "alias": true,
+      "sourceSize": [
+        192,
+        128
+      ],
+      "size": [
+        192,
+        128
+      ],
+      "sourceBytes": 5102,
+      "bytes": 2018,
+      "fingerprint": "f69f77f97d92c8a564bc3e49c7adf581cbfe7b78687b671fcdc8e5b7cb93a45f",
+      "sha256": "21b8e02aae7b0d4c2bce0ddc61d7b9f174d94f211484c5c6c2676ef2edfe1781"
+    },
+    {
+      "source": "assets/naval/merchant-ship-move.png",
+      "output": "assets/runtime/naval/merchant-ship-move.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        32
+      ],
+      "size": [
+        144,
+        32
+      ],
+      "sourceBytes": 1300,
+      "bytes": 582,
+      "fingerprint": "b5619de28f14c43fc331f8868618bcf44147411e6fa0f3fbcbe3cdc01f73c082",
+      "sha256": "c08f4742f680d02a470a40ccaf4b48d3b7e3d9562b4ab7c2e06351d7ae6d6f24"
+    },
+    {
+      "source": "assets/naval/warships/boarding-plank.png",
+      "output": "assets/runtime/naval/warships/boarding-plank.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 507,
+      "bytes": 272,
+      "fingerprint": "a6c9d25e8e64647683f35086d9408cf653c8b0365d977803ac1a47d2dd758892",
+      "sha256": "20e8e9f5b807d83ab8b2957173da2372273f55db1e8c1ae14dbab41742a00602"
+    },
+    {
+      "source": "assets/naval/warships/caravel.png",
+      "output": "assets/runtime/naval/warships/caravel.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        80
+      ],
+      "size": [
+        48,
+        80
+      ],
+      "sourceBytes": 2732,
+      "bytes": 1022,
+      "fingerprint": "6e497aa02c4ef3513ac14804a889cc2bb9db8960638d91fa0248fba81bd79f0e",
+      "sha256": "53d585c2823591d2287cdfc19c7142f2622262ea1138f8b28ab56c4462e556d5"
+    },
+    {
+      "source": "assets/naval/warships/frigate.png",
+      "output": "assets/runtime/naval/warships/frigate.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        80
+      ],
+      "size": [
+        48,
+        80
+      ],
+      "sourceBytes": 4076,
+      "bytes": 1462,
+      "fingerprint": "bd60ddcfa68927dd32f0293965ccd77a952f78e4ce4cdf76d32be5d6cf577df7",
+      "sha256": "5e6ca4f906968c9364f4d82a606626b18874bf56c655eb5d411a8513440ca414"
+    },
+    {
+      "source": "assets/naval/warships/galley.png",
+      "output": "assets/runtime/naval/warships/galley.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        80
+      ],
+      "size": [
+        48,
+        80
+      ],
+      "sourceBytes": 3212,
+      "bytes": 1172,
+      "fingerprint": "6d96790902d5268df3e9e23feab805839f86e54e29f840c65d39c22a18a9827f",
+      "sha256": "3833f134177dba9e37ff84ddc082f5854f580dac9084bbea21e23e8a3b5e46d2"
+    },
+    {
+      "source": "assets/naval/warships/motion/caravel-sinking.png",
+      "output": "assets/runtime/naval/warships/motion/caravel-sinking.webp",
+      "alias": true,
+      "sourceSize": [
+        432,
+        80
+      ],
+      "size": [
+        432,
+        80
+      ],
+      "sourceBytes": 13410,
+      "bytes": 4800,
+      "fingerprint": "3b66e7772aef864aada83aa3ab1bce9cbf6287d8b9b479cce907dd33f241c42d",
+      "sha256": "5d7e8f3b7a8842a5803296a1275028974148a4922e3552daa132e97008703071"
+    },
+    {
+      "source": "assets/naval/warships/motion/frigate-sinking.png",
+      "output": "assets/runtime/naval/warships/motion/frigate-sinking.webp",
+      "alias": true,
+      "sourceSize": [
+        432,
+        80
+      ],
+      "size": [
+        432,
+        80
+      ],
+      "sourceBytes": 17496,
+      "bytes": 6038,
+      "fingerprint": "440274bec35cd57042e2e0ac5287434de41ad14d95f8481dda9d74cfcc9031f0",
+      "sha256": "2e3368cbf49591f4602cd2ee8a69ee15a5ed9af0b3a15b88a2d2b441eaae6471"
+    },
+    {
+      "source": "assets/naval/warships/motion/galley-rowing.png",
+      "output": "assets/runtime/naval/warships/motion/galley-rowing.webp",
+      "alias": true,
+      "sourceSize": [
+        336,
+        80
+      ],
+      "size": [
+        336,
+        80
+      ],
+      "sourceBytes": 12411,
+      "bytes": 4148,
+      "fingerprint": "743f48a6c8823caa4188e410417c95312c15b02cf1dba2368a99f2775981ab65",
+      "sha256": "23318c6d1b7ceed25e5356c8470830727fdd51532420273ce50b97002dd93764"
+    },
+    {
+      "source": "assets/naval/warships/motion/galley-sinking.png",
+      "output": "assets/runtime/naval/warships/motion/galley-sinking.webp",
+      "alias": true,
+      "sourceSize": [
+        432,
+        80
+      ],
+      "size": [
+        432,
+        80
+      ],
+      "sourceBytes": 14593,
+      "bytes": 5266,
+      "fingerprint": "08be7dcce5adb3821b2d5f68215aea290d7d87fb6a5d4d59da0fa98d1e068486",
+      "sha256": "1d042bc0c26d1afa9b9b459ec48a8c054f71a7188dffae4538710e38d717ac86"
+    },
+    {
+      "source": "assets/naval/warships/shipyard.png",
+      "output": "assets/runtime/naval/warships/shipyard.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        48
+      ],
+      "size": [
+        48,
+        48
+      ],
+      "sourceBytes": 2519,
+      "bytes": 894,
+      "fingerprint": "065fa1ef10ce2000fd7023acc9ef509dd460e22c25a3d16e2a7d4d811698d943",
+      "sha256": "0c0e99d02ce1722f53298a05d58da97446c2f1e462a3be2288dfb41dffedc4a4"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Dock-House.png",
+      "output": "assets/runtime/pixelhole-overworld/Dock-House.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 382,
+      "bytes": 194,
+      "fingerprint": "6321b16335370c86b2c58161fe5f8e192616fb440b81b29c5d8ebc891fc9338b",
+      "sha256": "d89f334514bd7c5c4323089fc081ce1b88a0da8157ae2fb6b37040d5f311b032"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Dock-Jetty.png",
+      "output": "assets/runtime/pixelhole-overworld/Dock-Jetty.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        20
+      ],
+      "size": [
+        16,
+        20
+      ],
+      "sourceBytes": 347,
+      "bytes": 216,
+      "fingerprint": "9e97d460663f93a6f1fa54818b324096232d37309f779b78076eefd24a6e3ec7",
+      "sha256": "8e15cb99504968214a55223ec32775ee0d81300ffebb8370d84ec5140d3dc683"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Farm-Fence-Vertical.png",
+      "output": "assets/runtime/pixelhole-overworld/Farm-Fence-Vertical.webp",
+      "alias": true,
+      "sourceSize": [
+        3,
+        16
+      ],
+      "size": [
+        3,
+        16
+      ],
+      "sourceBytes": 96,
+      "bytes": 60,
+      "fingerprint": "1903e27517b3a60c81cb77e59b5adcbafe49704435f05c21b3f5a11da34d518b",
+      "sha256": "aac64a58e6c41ad01ee5a8dab34541b1c398e5089ab24e3cf647dff4fd89dc4f"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Farm-Fence.png",
+      "output": "assets/runtime/pixelhole-overworld/Farm-Fence.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 328,
+      "bytes": 156,
+      "fingerprint": "61e58968e383f92470dcffe0063b1402cec18ca0e8d6d35234f3fe32cbcae3ab",
+      "sha256": "5ea4563b0202780d23deb86068b50756102ccddf91c80465198ca90c9287ccb1"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Grain-Crate.png",
+      "output": "assets/runtime/pixelhole-overworld/Grain-Crate.webp",
+      "alias": true,
+      "sourceSize": [
+        12,
+        10
+      ],
+      "size": [
+        12,
+        10
+      ],
+      "sourceBytes": 172,
+      "bytes": 96,
+      "fingerprint": "bb07686e3de85f5ba6e8a7f48c483505166d3245319d9ccbd963d046bdd08f2f",
+      "sha256": "20b9abc63bb0811c07b6d2d54483a015236268fc76a5b2ca9309416ed5f01b70"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Green-Wheat-Joins.png",
+      "output": "assets/runtime/pixelhole-overworld/Green-Wheat-Joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sourceBytes": 7647,
+      "bytes": 690,
+      "fingerprint": "5bda2d0803528ee798a0d8550bdca206b831762e57a2b94f185df129848457c7",
+      "sha256": "1672a9e2255189f5892198440daf4125f9d9226a1e8c53e0d230875c30eea918"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Sailboat.png",
+      "output": "assets/runtime/pixelhole-overworld/Sailboat.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 462,
+      "bytes": 266,
+      "fingerprint": "d90e98fe0ae4d03486bed6a5b777f67126377b72d25856c52649230103a06fbf",
+      "sha256": "b635d56d2f96ca32e9d193f73dbe4e644452bb7273bbad38e34309ea6c4833c3"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Seedling-Wheat-Joins.png",
+      "output": "assets/runtime/pixelhole-overworld/Seedling-Wheat-Joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sourceBytes": 7248,
+      "bytes": 674,
+      "fingerprint": "2fb92fd279ad4fea8cd572277dee39a5e401c0845a47d9a91011bf768f2da1fe",
+      "sha256": "fbc460ef8c7951015383a36654e0d6732794997ec71bd23ee99c81ac0b54a8bb"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Soil-Joins.png",
+      "output": "assets/runtime/pixelhole-overworld/Soil-Joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        1024
+      ],
+      "size": [
+        256,
+        1024
+      ],
+      "sourceBytes": 8570,
+      "bytes": 654,
+      "fingerprint": "196e8d4e4fec5b61c60249c48dfd1f513349b86f070585f07925e9e4cfb23050",
+      "sha256": "69a9b827ad7ef5145c6b4859c772f6177712f368e0da779d98cbede56ea5e7de"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Wheatfield-Borderless.png",
+      "output": "assets/runtime/pixelhole-overworld/Wheatfield-Borderless.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 427,
+      "bytes": 218,
+      "fingerprint": "3b25bccdc5896f11cfc2829d015f7db2251c9615af4f88af4a1891e2de63c2ff",
+      "sha256": "04770dff6f08f53d3d61de75cac88f925a174298dee8dfcc013e6ed9fc4660d0"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Wheatfield-EarlyGrowth.png",
+      "output": "assets/runtime/pixelhole-overworld/Wheatfield-EarlyGrowth.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        16
+      ],
+      "size": [
+        48,
+        16
+      ],
+      "sourceBytes": 273,
+      "bytes": 138,
+      "fingerprint": "f89c4fd343c68c9b908d7de1f857f216fe744372815a26d915370748d2702552",
+      "sha256": "d6a0280e955964412d35b2f0a31f119307d39aae5ce58a0e2c70f356a712681e"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Wheatfield-Joins.png",
+      "output": "assets/runtime/pixelhole-overworld/Wheatfield-Joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sourceBytes": 8262,
+      "bytes": 886,
+      "fingerprint": "c60d2af2eee50778e71dd5cae07b6791d759ebd28d7a0e872dd63483af598320",
+      "sha256": "b7f723e308c66b7a20a77ae49f1f6b307e5285667899293d90ed5c1335703e84"
+    },
+    {
+      "source": "assets/pixelhole-overworld/Wheatfield-Stages.png",
+      "output": "assets/runtime/pixelhole-overworld/Wheatfield-Stages.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 509,
+      "bytes": 282,
+      "fingerprint": "42ad64e5b521dc9576eef92aeed5191baf6f643a0a17621e1de80d111911ea16",
+      "sha256": "5fb26c6f2c2bcd494092dd781371b8555a8695e19259a621fa0f49c40ac11369"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Medieval_blacksmith/Medieval_blacksmith/rotations/Medieval_blacksmith.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Medieval_blacksmith/Medieval_blacksmith/rotations/Medieval_blacksmith.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1563,
+      "bytes": 576,
+      "fingerprint": "f52ef6e41f071d46f9264c3abb78a68b6eaffb3ff2084db9f2a0e85ef055bbb7",
+      "sha256": "baaa5c34799e753a72af4681684970801c8ce2ae18ba6b41144864786c99bded"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Open-air_forum_with_marble_col (1)/Open-air_forum_with_marble_col/rotations/Open-air_forum_with_marble_col.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Open-air_forum_with_marble_col (1)/Open-air_forum_with_marble_col/rotations/Open-air_forum_with_marble_col.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 937,
+      "bytes": 410,
+      "fingerprint": "13549fed401cbcbc250cc61059cc9030c7a603f6115d6fc84067bad8434685af",
+      "sha256": "8b7c47f0541d182b204062f6fb965c7ef45f510d42322bbd831e977e9a656692"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Open-air_forum_with_marble_col/Open-air_forum_with_marble_col/rotations/Open-air_forum_with_marble_col.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Open-air_forum_with_marble_col/Open-air_forum_with_marble_col/rotations/Open-air_forum_with_marble_col.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 937,
+      "bytes": 410,
+      "fingerprint": "380ccf10fd673be73fbdb406a5a10a8d211249ee88313669b56b2c8975141fdf",
+      "sha256": "8b7c47f0541d182b204062f6fb965c7ef45f510d42322bbd831e977e9a656692"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_000.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_000.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1270,
+      "bytes": 580,
+      "fingerprint": "343c6faadff4c09fba00a7992c2ac0719a5ca7ae0a512b0b124d2077fe4a4d26",
+      "sha256": "c09075a1781575b70a1ad460d0a293792eceda0e38570b813b857cc4b3b797b5"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_001.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_001.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1244,
+      "bytes": 552,
+      "fingerprint": "52730c2e914f76dd3bdce71168ceb37003094aeb78c78a727c16fb693873c081",
+      "sha256": "fe33ce199aa4c92a7a8723a74c70efe8bc355a0e5afb851be27d400e1e65affa"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_002.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_002.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1258,
+      "bytes": 556,
+      "fingerprint": "f8aa98db79b8423412f186029b7d5beb996636d2476056e96cd6253fe51df9f5",
+      "sha256": "655c147dddb475c5fc7955d7ef7bff09eb992da9f50699516872c53986856b80"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_003.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_003.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1256,
+      "bytes": 572,
+      "fingerprint": "222684b5e4f3892671d35128f84a450b39a75ae483966607d1dbf46bc631ceac",
+      "sha256": "078bb5f5468af9f0a89eb53128849680c05b19f0cba48e72afe1015e13f2ea3f"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_004.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_004.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1245,
+      "bytes": 558,
+      "fingerprint": "3001f4edd9b17990211ddbb881562f668a0a53b1a3950802bd5e471d0be7f60a",
+      "sha256": "359995a25216e69ec51e8a7140dd70bf7977377723aa4afd9327260cef8f850c"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_005.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_005.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1222,
+      "bytes": 568,
+      "fingerprint": "69d58ffa23434dfd3a0b9272559055cc8be7f8d5a54119db32efa99583626083",
+      "sha256": "1a859a163c11915e188aa658944023ab01eec2f55829f8730417e7b2fe8a7ca0"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_006.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_006.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1230,
+      "bytes": 570,
+      "fingerprint": "48ba1e7e0793a4009957f12378c6891f3f1261f5074436f0221d56f6e591770a",
+      "sha256": "9df8ed62be7c36977db0590b5d377dc49e985a32e2a5cd4e317727017a30f608"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_007.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_007.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1189,
+      "bytes": 542,
+      "fingerprint": "2d28a65182ca9489193488c4335634b375bc48c22c866c21f42159534f860287",
+      "sha256": "d6b99824866e0428bcb9b1da6ec97f45655096876ef3d5187d6da1a712f2d5c2"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_008.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_008.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1231,
+      "bytes": 542,
+      "fingerprint": "e3a9524b0722d1e3127329b83febc1d76985782c4e97f4ed9a88f784dda3502d",
+      "sha256": "a057fe003166e46399bd5fadfa51e8e4a13224e5ccf8f7be2491286e640c19ea"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/rotations/Water_fountain_front_facing.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/rotations/Water_fountain_front_facing.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1270,
+      "bytes": 586,
+      "fingerprint": "efa259647f13576218eb48b8755c1c932ded7235f440b15f515bc5071e5c9e29",
+      "sha256": "02d45ea4d699c65c3d821ca0cc5bcaa461e2e270567c2bae45e9745d333d7328"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/wooden-walled_barracks_with_t/wooden-walled_barracks_with_t/rotations/wooden-walled_barracks_with_t.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/wooden-walled_barracks_with_t/wooden-walled_barracks_with_t/rotations/wooden-walled_barracks_with_t.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1316,
+      "bytes": 514,
+      "fingerprint": "3cb57e33a6d6bd27a5aab78fa171f68af29f585f32b9fe231d270b27e1880727",
+      "sha256": "21acdc84f82444a4850100a6047386ad4e304ba11e77345f283a31d17f3fdd8b"
+    },
+    {
+      "source": "assets/pixellab-grounding/buildings/wooden_granary_front_facing/wooden_granary_front_facing/rotations/wooden_granary_front_facing.png",
+      "output": "assets/runtime/pixellab-grounding/buildings/wooden_granary_front_facing/wooden_granary_front_facing/rotations/wooden_granary_front_facing.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1637,
+      "bytes": 656,
+      "fingerprint": "34103333ddb35f348096ed4d815dcf98556c5ea3fba9a155b1dffbd0af95b26d",
+      "sha256": "132e5e4de1c5f4bf1a2165fb3f00295eb2e9409bf03839c42112998d7fd4dc5c"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Archer-Green.png",
+      "output": "assets/runtime/pixellab-grounding/units/Archer-Green.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 26723,
+      "bytes": 9220,
+      "fingerprint": "287be6097919f82756e32811ba98fdbd42adcc6dbb2cda83213d2aabad114ac6",
+      "sha256": "4fa0c343640a710f717752fc0dcba41fec8b4de8e82b6288ba1ecd627a6e2bc5"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Club-Warrior.png",
+      "output": "assets/runtime/pixellab-grounding/units/Club-Warrior.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 11516,
+      "bytes": 3866,
+      "fingerprint": "20f8f02d96913b37f30c8d2ba8d5c37b5548755fc5a43649c8912cc8734a57ed",
+      "sha256": "de9103d4e6f09b1844c3b35062be413f6f39c3b41825ee9973eefcb5703d0960"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Crowned-Leader.png",
+      "output": "assets/runtime/pixellab-grounding/units/Crowned-Leader.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 10928,
+      "bytes": 3666,
+      "fingerprint": "4660f9e4a62fc2a5ac0a22339ac6818eaacd1d6cda8c174278e8a18ad4daddaa",
+      "sha256": "2297c0c89d31bffe0a7fd36a119717945babef82f4cceb2d1c29e6a276281d5d"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Human-Soldier-Cyan.png",
+      "output": "assets/runtime/pixellab-grounding/units/Human-Soldier-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 36854,
+      "bytes": 7962,
+      "fingerprint": "3aa3182008c1ca354dff048ee16fb89240e2f70ca64284c9b7d98ee65adefb3e",
+      "sha256": "1d6ec7080b9820eb980131c37b42c5fdb9044538a9ba07f832d66e50862a1ef8"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Human-Worker-Cyan.png",
+      "output": "assets/runtime/pixellab-grounding/units/Human-Worker-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 32022,
+      "bytes": 6450,
+      "fingerprint": "bf2a0fb19fc98dcb7e3ac32b39f901401bd4886739152fa4f4b3e1e156707b5f",
+      "sha256": "941f0b863aa99a9e15f7b454aa44a9a0e2e58e08016c294edb85c6c405aa1b5d"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Militia.png",
+      "output": "assets/runtime/pixellab-grounding/units/Militia.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 13801,
+      "bytes": 4096,
+      "fingerprint": "6165bf762ede4789ba4d98dec5ec120c6c1dac0da6080f1e58b9d344313db02f",
+      "sha256": "ec0150f84fadf7ce4f3148170770b754ad84a5feabc1d14c1e43a392788f6c1e"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Orc-Grunt.png",
+      "output": "assets/runtime/pixellab-grounding/units/Orc-Grunt.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 34011,
+      "bytes": 7078,
+      "fingerprint": "d7630d00b37db9d4d9cb43d9ad4281f4e5784374d8f8cd97ead91d9f2ad1757a",
+      "sha256": "c01931a1855e6e1e343b9008d0cb8365beb5b26c97a1b76fe05ce14daaca5ec1"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Scout.png",
+      "output": "assets/runtime/pixellab-grounding/units/Scout.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        256
+      ],
+      "size": [
+        128,
+        256
+      ],
+      "sourceBytes": 6166,
+      "bytes": 1876,
+      "fingerprint": "37b8b0c9481f56557aa72b24d819068a617d627d6b4056d43b721bb6eb8d4eb7",
+      "sha256": "6f90abeb04a3f094eda7fa6078bd4fe48b31769d9166de94e559aed7e8d376ab"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Skirmisher.png",
+      "output": "assets/runtime/pixellab-grounding/units/Skirmisher.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 12966,
+      "bytes": 4054,
+      "fingerprint": "d117ead77675f75d6a31c962677d9967986b7ef8a64ebf7f3517911289de8b08",
+      "sha256": "ccad7196ce32ef643bc04cf4c6ce919a7091929ac1d73d398eabc34fbc500fdb"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Slinger.png",
+      "output": "assets/runtime/pixellab-grounding/units/Slinger.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 10454,
+      "bytes": 3348,
+      "fingerprint": "eb296cbf1b80e06971bb25809c986457e3fa6f582d2dfe1113477d7ac90598a5",
+      "sha256": "b7a24e9bd9732e2a085feb8c1fad63013d41a6a806258f96c835a7db9460475f"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Supply-Handcart.png",
+      "output": "assets/runtime/pixellab-grounding/units/Supply-Handcart.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        192
+      ],
+      "size": [
+        384,
+        192
+      ],
+      "sourceBytes": 8398,
+      "bytes": 3206,
+      "fingerprint": "9d6beae57655c7c68b82eb647e226da17691536843801a3798aee3261f4bf5bf",
+      "sha256": "42e43d86aa6faf1f8260c2435efdf096c779753b9b82396ba18667da69b152be"
+    },
+    {
+      "source": "assets/pixellab-grounding/units/Warrior-Blue.png",
+      "output": "assets/runtime/pixellab-grounding/units/Warrior-Blue.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 24494,
+      "bytes": 7914,
+      "fingerprint": "0f7f662b6e3198b5589b797b6ed988dc475478ff2517d4752e7ca70ab74de0fd",
+      "sha256": "d26a4ddf5305e83ae07785cc5acb58ec0fdce8bf97c2db010b1ed7eb9c20c1f6"
+    },
+    {
+      "source": "assets/puny-medieval/palisades.png",
+      "output": "assets/runtime/puny-medieval/palisades.webp",
+      "alias": true,
+      "sourceSize": [
+        160,
+        64
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "sourceBytes": 2215,
+      "bytes": 776,
+      "fingerprint": "f6d70dedcef6aafa5a6fc94b2d0045a499f8a953d5fc112cb580e05c69aa5a24",
+      "sha256": "654a813d5c80bbaab5ba92d45c66db7faa5e193ee2922578a906b8f7e30db65a"
+    },
+    {
+      "source": "assets/puny-world/Arrow.png",
+      "output": "assets/runtime/puny-world/Arrow.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 549,
+      "bytes": 96,
+      "fingerprint": "a71579a7dc37cf831ad115bac19bd65d4e3c3bd6327d486dbdfce8f0befdcb89",
+      "sha256": "702aa9d8aebe09566a32bf6f249e8e32f9ae31b964177de0df3a6a51b9dbf13a"
+    },
+    {
+      "source": "assets/puny-world/characters/Archer-Green.png",
+      "output": "assets/runtime/puny-world/characters/Archer-Green.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 26723,
+      "bytes": 9220,
+      "fingerprint": "f08f8ecedaf6f9f9b0ca6b16d69277f45c716b32f81189f3874bc9ea43eb5d3a",
+      "sha256": "4fa0c343640a710f717752fc0dcba41fec8b4de8e82b6288ba1ecd627a6e2bc5"
+    },
+    {
+      "source": "assets/puny-world/characters/Club-Warrior.png",
+      "output": "assets/runtime/puny-world/characters/Club-Warrior.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 11516,
+      "bytes": 3866,
+      "fingerprint": "2782c21f817cbc78dd58b6d31fc3b0c65546937ada58e2d685fcb56e0e8b2912",
+      "sha256": "de9103d4e6f09b1844c3b35062be413f6f39c3b41825ee9973eefcb5703d0960"
+    },
+    {
+      "source": "assets/puny-world/characters/Crowned-Leader-Firearm.png",
+      "output": "assets/runtime/puny-world/characters/Crowned-Leader-Firearm.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 20532,
+      "bytes": 7496,
+      "fingerprint": "1b1de16754c89abfc8d1453824c00990e99a36e9dbe2ace4cdbd3f7e033835ca",
+      "sha256": "74ffa2dc2d11d1f2706fd1e6c5fa9896c4c4c6cfb496c64e246dbef535eefe9f"
+    },
+    {
+      "source": "assets/puny-world/characters/Crowned-Leader.png",
+      "output": "assets/runtime/puny-world/characters/Crowned-Leader.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 10928,
+      "bytes": 3666,
+      "fingerprint": "ef1b2286f7f960cdd5bce21abae641358589a76eea64cf32397a1c2ff5761399",
+      "sha256": "2297c0c89d31bffe0a7fd36a119717945babef82f4cceb2d1c29e6a276281d5d"
+    },
+    {
+      "source": "assets/puny-world/characters/Human-Soldier-Cyan.png",
+      "output": "assets/runtime/puny-world/characters/Human-Soldier-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 36854,
+      "bytes": 7962,
+      "fingerprint": "1761c22f1a34192a5bcf2b96bc20e994c84a7aa4abe593cbcbb8f47c93a21ff5",
+      "sha256": "1d6ec7080b9820eb980131c37b42c5fdb9044538a9ba07f832d66e50862a1ef8"
+    },
+    {
+      "source": "assets/puny-world/characters/Human-Worker-Cyan.png",
+      "output": "assets/runtime/puny-world/characters/Human-Worker-Cyan.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 32022,
+      "bytes": 6450,
+      "fingerprint": "2ad2fa48fc50222c7de24f50d69439185080fe375f88f6f449cb7d95e4106768",
+      "sha256": "941f0b863aa99a9e15f7b454aa44a9a0e2e58e08016c294edb85c6c405aa1b5d"
+    },
+    {
+      "source": "assets/puny-world/characters/Militia.png",
+      "output": "assets/runtime/puny-world/characters/Militia.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 13801,
+      "bytes": 4096,
+      "fingerprint": "dec6b35ff7cf4dce0e5063c0e0a3134a2aeec58a0b08a158a98a966f3fbbfe08",
+      "sha256": "ec0150f84fadf7ce4f3148170770b754ad84a5feabc1d14c1e43a392788f6c1e"
+    },
+    {
+      "source": "assets/puny-world/characters/Orc-Grunt.png",
+      "output": "assets/runtime/puny-world/characters/Orc-Grunt.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 34011,
+      "bytes": 7078,
+      "fingerprint": "20ad365721a2d64392cecc0d155f55a72df3c62bc7989a10d3133d758d8a757e",
+      "sha256": "c01931a1855e6e1e343b9008d0cb8365beb5b26c97a1b76fe05ce14daaca5ec1"
+    },
+    {
+      "source": "assets/puny-world/characters/Scout.png",
+      "output": "assets/runtime/puny-world/characters/Scout.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        256
+      ],
+      "size": [
+        128,
+        256
+      ],
+      "sourceBytes": 6166,
+      "bytes": 1876,
+      "fingerprint": "e51a5babaf64885eb5835d512f0d151a50b62d31c7c4e5301af45cd7a4b5c362",
+      "sha256": "6f90abeb04a3f094eda7fa6078bd4fe48b31769d9166de94e559aed7e8d376ab"
+    },
+    {
+      "source": "assets/puny-world/characters/Skirmisher.png",
+      "output": "assets/runtime/puny-world/characters/Skirmisher.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 12966,
+      "bytes": 4054,
+      "fingerprint": "fd17f2a34f924a2bdaccb43452715d803e47f821b5fb4491f24e80cc616638dd",
+      "sha256": "ccad7196ce32ef643bc04cf4c6ce919a7091929ac1d73d398eabc34fbc500fdb"
+    },
+    {
+      "source": "assets/puny-world/characters/Slinger.png",
+      "output": "assets/runtime/puny-world/characters/Slinger.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        256
+      ],
+      "size": [
+        288,
+        256
+      ],
+      "sourceBytes": 10454,
+      "bytes": 3348,
+      "fingerprint": "adadad5e0d80beeacb5b0ab2d92058bb8a5721afac2ca1199740034ba227256f",
+      "sha256": "b7a24e9bd9732e2a085feb8c1fad63013d41a6a806258f96c835a7db9460475f"
+    },
+    {
+      "source": "assets/puny-world/characters/Supply-Handcart.png",
+      "output": "assets/runtime/puny-world/characters/Supply-Handcart.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        192
+      ],
+      "size": [
+        384,
+        192
+      ],
+      "sourceBytes": 8398,
+      "bytes": 3206,
+      "fingerprint": "181bed2d1a845392c0734d7bebe478d8539b5b4752a535766700831015422919",
+      "sha256": "42e43d86aa6faf1f8260c2435efdf096c779753b9b82396ba18667da69b152be"
+    },
+    {
+      "source": "assets/puny-world/characters/Warrior-Blue.png",
+      "output": "assets/runtime/puny-world/characters/Warrior-Blue.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        256
+      ],
+      "size": [
+        768,
+        256
+      ],
+      "sourceBytes": 24494,
+      "bytes": 7914,
+      "fingerprint": "600879d34a7b00688761f4025ec226683ab171d34ff1f55ffc48f5ac47311e92",
+      "sha256": "d26a4ddf5305e83ae07785cc5acb58ec0fdce8bf97c2db010b1ed7eb9c20c1f6"
+    },
+    {
+      "source": "assets/puny-world/desert-ledges.png",
+      "output": "assets/runtime/puny-world/desert-ledges.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        48
+      ],
+      "size": [
+        128,
+        48
+      ],
+      "sourceBytes": 2105,
+      "bytes": 1400,
+      "fingerprint": "dd2403c3768988944e330aae0faa627ff9337de3b1c1b7dd2df02cfd79d87c09",
+      "sha256": "1cbade6555c8329e0c482bf6c76dd06c8910bbce01d98bd3364d6129e05d222e"
+    },
+    {
+      "source": "assets/puny-world/overworld.png",
+      "output": "assets/runtime/puny-world/overworld.png",
+      "alias": true,
+      "sourceSize": [
+        432,
+        1040
+      ],
+      "size": [
+        432,
+        1040
+      ],
+      "sourceBytes": 100044,
+      "bytes": 93916,
+      "fingerprint": "ccb5b55e7bdbfb456ee43b22b4c634e05e77f9aac6dc15b7a76a95af3d454e11",
+      "sha256": "5d7fd885bba4afd0d30dffca637d2b1bdab6d03055b6a5a36c175dbd9e408101"
+    },
+    {
+      "source": "assets/relief/atlas-A.png",
+      "output": "assets/runtime/relief/atlas-A.webp",
+      "alias": false,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        32,
+        198
+      ],
+      "sourceBytes": 802842,
+      "bytes": 8850,
+      "fingerprint": "61ef223095e20166df945b9f294feba4847d46a72c405a76b8483993fc777041",
+      "sha256": "95a2c30bee0f2edc0348c8196801352403762e704595ee7c29c827b351f803fd"
+    },
+    {
+      "source": "assets/relief/atlas-B.png",
+      "output": "assets/runtime/relief/atlas-B.webp",
+      "alias": false,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        48,
+        258
+      ],
+      "sourceBytes": 906541,
+      "bytes": 14736,
+      "fingerprint": "c7b6083eec09543d8273e64ee037900cdb0e612e34fe1e0cb492fd61bf8a3ae6",
+      "sha256": "df927322ef0308a5d2a0b31917ef920c6c2990c1848375edb48c11f6ba46a4a2"
+    },
+    {
+      "source": "assets/relief/atlas-C.png",
+      "output": "assets/runtime/relief/atlas-C.webp",
+      "alias": false,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        64,
+        354
+      ],
+      "sourceBytes": 847669,
+      "bytes": 23862,
+      "fingerprint": "6fc6706c0d59fa1a68ed9d0fb881890b1c17e20d4c20ec68e8258f0cd694ed0c",
+      "sha256": "8172979173a21552f7fcf700d4a1e84b4d58be918a859ea06342efbbb4a25ab1"
+    },
+    {
+      "source": "assets/relief/hills-reference.png",
+      "output": "assets/runtime/relief/hills-reference.webp",
+      "alias": false,
+      "sourceSize": [
+        1448,
+        1086
+      ],
+      "size": [
+        64,
+        213
+      ],
+      "sourceBytes": 597841,
+      "bytes": 10008,
+      "fingerprint": "b60885fdf3058e5c260ea917d920f784af8991166e16f6e74fff17511a700cd4",
+      "sha256": "59f9cbb13a564a575f2543d93c016b0c419d5a81e9089c69ff9e13f94deaf07a"
+    },
+    {
+      "source": "assets/relief/hills-varied.png",
+      "output": "assets/runtime/relief/hills-varied.webp",
+      "alias": false,
+      "sourceSize": [
+        1448,
+        1086
+      ],
+      "size": [
+        64,
+        202
+      ],
+      "sourceBytes": 703666,
+      "bytes": 10642,
+      "fingerprint": "12503a44a30fd2c93243f180b9dba36c98e5100660fe2df62d16a027a099b5dd",
+      "sha256": "696bb2e966720dbd3839493bc6f867c564568b0117ee7c274d7052b005be2024"
+    },
+    {
+      "source": "assets/relief/mountains-varied.png",
+      "output": "assets/runtime/relief/mountains-varied.webp",
+      "alias": false,
+      "sourceSize": [
+        1448,
+        1086
+      ],
+      "size": [
+        64,
+        243
+      ],
+      "sourceBytes": 608594,
+      "bytes": 13784,
+      "fingerprint": "287c38ecc9b001f8c56976ce112928f17d8bc02a53a82f2d1d1382991bc0d110",
+      "sha256": "32174c7c20e85afa21309da3820ac8f35a1948f10a5f84d0940094df3744d0a8"
+    },
+    {
+      "source": "assets/relief/rocky-hills-reference.png",
+      "output": "assets/runtime/relief/rocky-hills-reference.webp",
+      "alias": false,
+      "sourceSize": [
+        1448,
+        1086
+      ],
+      "size": [
+        64,
+        214
+      ],
+      "sourceBytes": 617259,
+      "bytes": 11846,
+      "fingerprint": "97a8c29c060637cde9a7a2178906e97cc021c444e9af46bda9b25fd4fbcea23f",
+      "sha256": "2e062c37fcb8a3e6793a34d68fb049da33bd908056dc78c16c72c5efeb4e1df4"
+    },
+    {
+      "source": "assets/relief/rocky-hills-varied.png",
+      "output": "assets/runtime/relief/rocky-hills-varied.webp",
+      "alias": false,
+      "sourceSize": [
+        1448,
+        1086
+      ],
+      "size": [
+        64,
+        209
+      ],
+      "sourceBytes": 495601,
+      "bytes": 12216,
+      "fingerprint": "49351c5a4042e92b143eba2bf3cfe15d2113bf2956cae7737db5f45713670d67",
+      "sha256": "2792733199b7a12075caad290e7b217e3b8b7269078f6c984fb2f94138909d56"
+    },
+    {
+      "source": "assets/resources/outcrops/copper-overlay.png",
+      "output": "assets/runtime/resources/outcrops/copper-overlay.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 879,
+      "bytes": 316,
+      "fingerprint": "c8a736ed8cd734c8712dd620455d31a2d06e7adc84292529bbcfa82861d352be",
+      "sha256": "87505e2addab5ce5d4252636684ce6ac92cd1a5e562c8269b98ff2e656681791"
+    },
+    {
+      "source": "assets/resources/outcrops/iron-overlay.png",
+      "output": "assets/runtime/resources/outcrops/iron-overlay.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 623,
+      "bytes": 212,
+      "fingerprint": "1466cf8e56db48699f98dc3012169245a50f16829e9853d91a0b8e8b68007355",
+      "sha256": "dbf43a301937d392532863cb79a02549d0055c1a053cee8b459d19633c501e10"
+    },
+    {
+      "source": "assets/resources/outcrops/loose-rocks.png",
+      "output": "assets/runtime/resources/outcrops/loose-rocks.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        32
+      ],
+      "size": [
+        64,
+        32
+      ],
+      "sourceBytes": 717,
+      "bytes": 258,
+      "fingerprint": "c5c65c251f0d1e9457641ed41c2600038767ddceca108d9ccb20891bf46e750e",
+      "sha256": "90aa909669b5381851cf6f66f59ff69c2bc230a9e9d273e2bfc6a6c8019160a4"
+    },
+    {
+      "source": "assets/resources/outcrops/stone.png",
+      "output": "assets/runtime/resources/outcrops/stone.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 2667,
+      "bytes": 1100,
+      "fingerprint": "e7716cf0e5cc17f462e5e2b260d4458aef3287cdc1a3db1c39fbba99c8f7d985",
+      "sha256": "42b70b6a7fb0a9e3e418a6a2ec443681e97662bacb692a795836ecb7b0c11a3a"
+    },
+    {
+      "source": "assets/resources/resource-objects.png",
+      "output": "assets/runtime/resources/resource-objects.webp",
+      "alias": true,
+      "sourceSize": [
+        96,
+        32
+      ],
+      "size": [
+        96,
+        32
+      ],
+      "sourceBytes": 2213,
+      "bytes": 934,
+      "fingerprint": "95da562b2ba59d15fd3b7f34e93744964cea6de126b9983fc0d30c6a1ba4c57e",
+      "sha256": "7c880ffa4d86a41c1cd113ca0e627b8e7eb446fa11fc25dfdcf48859db888943"
+    },
+    {
+      "source": "assets/resources/salt-pan-joins.png",
+      "output": "assets/runtime/resources/salt-pan-joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sourceBytes": 4946,
+      "bytes": 828,
+      "fingerprint": "45376b972aa9e93e04c63a63849e4c0a67f77208f3175b468e6edf5fc7212117",
+      "sha256": "34e52eabbc0bc51a1a2403b2121c79e7870ef97a6bad9f7135cc01b3321253f2"
+    },
+    {
+      "source": "assets/roads/paved/tile-00.png",
+      "output": "assets/runtime/roads/paved/tile-00.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 341,
+      "bytes": 142,
+      "fingerprint": "5e50a94623e902534e98ae290af60bd9270d7e32eb41a9ac1e5dc31312c0c87f",
+      "sha256": "4eb8b4ea854621f629c7bde5bcc585a8e9ec135d78693e2d7f1e678a0097a620"
+    },
+    {
+      "source": "assets/roads/paved/tile-01.png",
+      "output": "assets/runtime/roads/paved/tile-01.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 360,
+      "bytes": 162,
+      "fingerprint": "9dae177a0d1cded2f2df92d5e5ebe86ca4729c64e0719b12c859ea5a9fbca1c2",
+      "sha256": "1f67ddef98bbad910dda9af94963132cc104bdd55d4b67852ba1c6e50b944606"
+    },
+    {
+      "source": "assets/roads/paved/tile-02.png",
+      "output": "assets/runtime/roads/paved/tile-02.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 349,
+      "bytes": 158,
+      "fingerprint": "0a472e4c1a6038c43fdeb2df148cd4c9298f305af5eec2c184ae2a416f425f59",
+      "sha256": "240eedfaa362a45bb2b22c189b990bba55d7180bfc731108def8a13ea828103a"
+    },
+    {
+      "source": "assets/roads/paved/tile-03.png",
+      "output": "assets/runtime/roads/paved/tile-03.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 349,
+      "bytes": 140,
+      "fingerprint": "0a3d865035aa61ea0d4981a0c83f50683a920c703d846b3579a722cad3a3e56d",
+      "sha256": "1369b85731ca00d08802c23e152f773bc906ff8dabc03d53cebadba809c92511"
+    },
+    {
+      "source": "assets/roads/paved/tile-04.png",
+      "output": "assets/runtime/roads/paved/tile-04.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 375,
+      "bytes": 164,
+      "fingerprint": "fdc5dff41ae02e93ea9dccbf5fd7287035beaa5bfb4513929d03e384db81cc59",
+      "sha256": "0737a71c5fb4a02d208b4c112fcdc79c6baf89b72680e5845aba75759344365f"
+    },
+    {
+      "source": "assets/roads/paved/tile-05.png",
+      "output": "assets/runtime/roads/paved/tile-05.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 316,
+      "bytes": 144,
+      "fingerprint": "6566906aebd36b23cceb7784a6f43bdc6be54ac438ecf8aefff1017ccd3be52d",
+      "sha256": "7d71ebe672754ecb040dc5865b2bf8345e9b9aeee39cc75cad5055574db67707"
+    },
+    {
+      "source": "assets/roads/paved/tile-06.png",
+      "output": "assets/runtime/roads/paved/tile-06.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 244,
+      "bytes": 106,
+      "fingerprint": "3f8deb607697b0098c22f51c32466eb5953089fb711f1c0d3dfcb8997800e515",
+      "sha256": "d27e8c1156c8fff73c78533c6bbeac70b47caf853da7619bb4425c60c2c094d0"
+    },
+    {
+      "source": "assets/roads/paved/tile-07.png",
+      "output": "assets/runtime/roads/paved/tile-07.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 312,
+      "bytes": 152,
+      "fingerprint": "8ede33fe9005d9143a5a284fa61c4fec665440389166d7ab98feed6ef280033a",
+      "sha256": "0460102ca9e6da06cbab7fdbffe4ee33031f4683f0700eab49c4c6510b48ef88"
+    },
+    {
+      "source": "assets/roads/paved/tile-08.png",
+      "output": "assets/runtime/roads/paved/tile-08.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 334,
+      "bytes": 146,
+      "fingerprint": "0c1ae9a2a2014ca27f8399d4324f03552b100e8043361e842ad7f1dd960f849d",
+      "sha256": "e1aa311c3c827ad68c6a78022d30c9f328ac26744a3b1e5e71d57cdf42b3bb33"
+    },
+    {
+      "source": "assets/roads/paved/tile-09.png",
+      "output": "assets/runtime/roads/paved/tile-09.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 349,
+      "bytes": 158,
+      "fingerprint": "22a3a4e5da7b271026dfa518b89b8d713d3eec56e07536d2e3d20584bd6b6738",
+      "sha256": "58be710bf20cc837415da9f8a274718815f066d32fb38b8c2f799bb335c0a986"
+    },
+    {
+      "source": "assets/roads/paved/tile-10.png",
+      "output": "assets/runtime/roads/paved/tile-10.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 324,
+      "bytes": 152,
+      "fingerprint": "9af03cce0756a3c0c3f8feccde0ce513b08b4f847c7379dce4b229e15b773399",
+      "sha256": "eec13094220202b4ac947bb40b8666167047022d059bbe516c39cf1358df01a5"
+    },
+    {
+      "source": "assets/roads/paved/tile-11.png",
+      "output": "assets/runtime/roads/paved/tile-11.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 386,
+      "bytes": 166,
+      "fingerprint": "6700a031bffeafa92d9f8fb668faecf0c1200eb0ab5203f2981e5ba6d226f516",
+      "sha256": "6590c3cf8bac7c24022f4140d159a2f2fc780f3b34034315fde716b072dc1f28"
+    },
+    {
+      "source": "assets/roads/paved/tile-12.png",
+      "output": "assets/runtime/roads/paved/tile-12.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 305,
+      "bytes": 120,
+      "fingerprint": "84fa7c114b4cfdef650611c234f6374a5423f5fb70294cae547c6c9b18fc8542",
+      "sha256": "cc85be109ed6450a7421f1a0c28c846fd68c1fd9f933a3e8418ae658f2f2758d"
+    },
+    {
+      "source": "assets/roads/paved/tile-13.png",
+      "output": "assets/runtime/roads/paved/tile-13.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 347,
+      "bytes": 146,
+      "fingerprint": "6be8d2e88cc3dddd768a14daad1ca610307527e592900d95f86747396154b586",
+      "sha256": "3129ecd4c9412070e86170d3a8b5c2959b6faaa1ca41224e7337d151a586e1de"
+    },
+    {
+      "source": "assets/roads/paved/tile-14.png",
+      "output": "assets/runtime/roads/paved/tile-14.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 384,
+      "bytes": 158,
+      "fingerprint": "554623eb237552321c7a4e2292ff10eb6901c815e34363708543c43c55ba88bd",
+      "sha256": "e6d8be18003db0f9e742af90229fc63daa485b2bf023df1eb5724e1d920b070d"
+    },
+    {
+      "source": "assets/roads/paved/tile-15.png",
+      "output": "assets/runtime/roads/paved/tile-15.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 340,
+      "bytes": 156,
+      "fingerprint": "b215a2355b68bc6d37c1fd4ee0f75e011dc93fbd6154ca8165f874ba57d28981",
+      "sha256": "cec8683d9a6c5e5fa1bceffe58f3580913fee6b237282b302e15bfad939cf07d"
+    },
+    {
+      "source": "scenarios/age-of-exploration-map.png",
+      "output": "assets/runtime/scenarios/age-of-exploration-map.webp",
+      "alias": true,
+      "sourceSize": [
+        960,
+        840
+      ],
+      "size": [
+        960,
+        840
+      ],
+      "sourceBytes": 56007,
+      "bytes": 23936,
+      "fingerprint": "d94b6ac32d3b0f35d18964d232588218292d4fc591ac4e0b627ae7f87ad7faf1",
+      "sha256": "33242054516ee6e3e92171fd96123c1b0ec12b5d06b1d77a0288a32b10b68c9d"
+    },
+    {
+      "source": "scenarios/island-deathmatch-map.png",
+      "output": "assets/runtime/scenarios/island-deathmatch-map.webp",
+      "alias": true,
+      "sourceSize": [
+        1100,
+        500
+      ],
+      "size": [
+        1100,
+        500
+      ],
+      "sourceBytes": 6827,
+      "bytes": 1928,
+      "fingerprint": "2fce678fe1cd24e6655eda948b2b561344aa4f04e140a98949909df2d18cf673",
+      "sha256": "ae74c9015bca6eb7d66392d5d0e97e12468e29e04e61014344a598d1f2c229fd"
+    },
+    {
+      "source": "scenarios/musketry-deathmatch-map.png",
+      "output": "assets/runtime/scenarios/musketry-deathmatch-map.webp",
+      "alias": true,
+      "sourceSize": [
+        1120,
+        273
+      ],
+      "size": [
+        1120,
+        273
+      ],
+      "sourceBytes": 6556,
+      "bytes": 2504,
+      "fingerprint": "61d1397ef563f7b8504a135d0de7236e4ffc9847cd98ba4a599463d427e66741",
+      "sha256": "cd6e72831db82a1c8478b41d8711238e5250c37cf6c70a7e027570ccce5eeca4"
+    },
+    {
+      "source": "scenarios/no-mans-land-map.png",
+      "output": "assets/runtime/scenarios/no-mans-land-map.webp",
+      "alias": true,
+      "sourceSize": [
+        1200,
+        720
+      ],
+      "size": [
+        1200,
+        720
+      ],
+      "sourceBytes": 28336,
+      "bytes": 9274,
+      "fingerprint": "b7a90f167bfa3c8b254de7c15275aea453a7f74210ffa8005687999ec359c00d",
+      "sha256": "ff3db0d70708f43cb1c0d5006c1e34c79889a09c96a92067d16e587e39f99970"
+    },
+    {
+      "source": "scenarios/sandbox-map.png",
+      "output": "assets/runtime/scenarios/sandbox-map.webp",
+      "alias": true,
+      "sourceSize": [
+        800,
+        600
+      ],
+      "size": [
+        800,
+        600
+      ],
+      "sourceBytes": 7002,
+      "bytes": 1864,
+      "fingerprint": "98feb41638adc635646d5299a4b8c40a114c2fe99c8688bb53764fec32c7e6b1",
+      "sha256": "c1612171e6741e33aafff818e365f3a5cb522f3084bd9363498adb6dec8a0aa6"
+    },
+    {
+      "source": "scenarios/tutorial-map.png",
+      "output": "assets/runtime/scenarios/tutorial-map.webp",
+      "alias": true,
+      "sourceSize": [
+        800,
+        300
+      ],
+      "size": [
+        800,
+        300
+      ],
+      "sourceBytes": 3390,
+      "bytes": 1026,
+      "fingerprint": "8966c634c29af417eb1dc217133a34f57b90a002da5bce362e42a46f8643d9b1",
+      "sha256": "d5bed0f76eba4a55f6c3feb497236104b9031bbe7614b45ee7f7c9a8163dcb1e"
+    },
+    {
+      "source": "assets/tiny-overworld/overworld.png",
+      "output": "assets/runtime/tiny-overworld/overworld.webp",
+      "alias": true,
+      "sourceSize": [
+        576,
+        542
+      ],
+      "size": [
+        576,
+        542
+      ],
+      "sourceBytes": 47212,
+      "bytes": 13840,
+      "fingerprint": "c7320a71d0e7e3709238184ba3f57f0851840053a3774a61ceb15bf04345ca60",
+      "sha256": "9654b85c3c4b5ec57bd6bd05a0c73353c66e3124ded3c5396dcafba0514cfa3f"
+    },
+    {
+      "source": "assets/tinyworld/BaseSet (1).png",
+      "output": "assets/runtime/tinyworld/BaseSet (1).png",
+      "alias": true,
+      "sourceSize": [
+        640,
+        640
+      ],
+      "size": [
+        640,
+        640
+      ],
+      "sourceBytes": 103231,
+      "bytes": 96993,
+      "fingerprint": "f01a316ad8dc806b336385c25d437737b948d68be20bb5a7c92098fe10e88567",
+      "sha256": "ceb2c20ff13f7587cab41665768922eb1952f11fc3b645148a6802340b89750f"
+    },
+    {
+      "source": "assets/tundra/ground-1c.png",
+      "output": "assets/runtime/tundra/ground-1c.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        48
+      ],
+      "size": [
+        48,
+        48
+      ],
+      "sourceBytes": 1739,
+      "bytes": 688,
+      "fingerprint": "039f925979837f2cd550ad90789f0be8e0263897b460ca8818583e67165cc1b8",
+      "sha256": "880dcc37d6f90541a64f08689814d7dbed396a4398a4e8b5cd224d978d064d18"
+    },
+    {
+      "source": "assets/ui/city-panel-walnut.png",
+      "output": "assets/runtime/ui/city-panel-walnut.png",
+      "alias": true,
+      "sourceSize": [
+        103,
+        20
+      ],
+      "size": [
+        103,
+        20
+      ],
+      "sourceBytes": 2970,
+      "bytes": 2760,
+      "fingerprint": "8386c51219ee8afd7ab10bd0a59de4374df410f4ab161f52a638ede197887294",
+      "sha256": "6d87002d5e35d7820ebd9b3390aee5420aa28c6ae0ad4d35065a7a790e21055f"
+    },
+    {
+      "source": "assets/ui/field-cannon.png",
+      "output": "assets/runtime/ui/field-cannon.webp",
+      "alias": true,
+      "sourceSize": [
+        1312,
+        1199
+      ],
+      "size": [
+        160,
+        146
+      ],
+      "sourceBytes": 1282925,
+      "bytes": 20434,
+      "fingerprint": "bce56ac5719763cb99083d284ba30d79ea5316e651171e50941d92ec8a8d6612",
+      "sha256": "1a65da9c8d55dc70c263a108afe8c3e1693b6e1784d7587470d1fea38fbaaf84"
+    },
+    {
+      "source": "assets/ui/forged/action-symbols-pixel.png",
+      "output": "assets/runtime/ui/forged/action-symbols-pixel.webp",
+      "alias": true,
+      "sourceSize": [
+        2172,
+        724
+      ],
+      "size": [
+        276,
+        92
+      ],
+      "sourceBytes": 624433,
+      "bytes": 15572,
+      "fingerprint": "5db29539ca62d460189ba8beb8cc46f04439c9477731000b144cbcec43560d6a",
+      "sha256": "ea9ec05964f7ec8f33e3cff56e078cad22d6457dd7ba1501d9a4b4cc3da06c7d"
+    },
+    {
+      "source": "assets/ui/forged/action-symbols.png",
+      "output": "assets/runtime/ui/forged/action-symbols.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        192,
+        192
+      ],
+      "sourceBytes": 1017486,
+      "bytes": 25978,
+      "fingerprint": "8427bf3a71eb7b1d14ffe08ce6216b7bb75371b09b4e062946fad687761593bb",
+      "sha256": "895b26b80c7e08f82f21526df9f4f66adf47bc8a9678a1642fc4de9837b9ed29"
+    },
+    {
+      "source": "assets/ui/forged/approved-reference.png",
+      "output": "assets/runtime/ui/forged/approved-reference.webp",
+      "alias": true,
+      "sourceSize": [
+        1584,
+        993
+      ],
+      "size": [
+        1584,
+        993
+      ],
+      "sourceBytes": 2126934,
+      "bytes": 1589186,
+      "fingerprint": "e36c781be318fcff0bcc60ed68fe0b5116bb028d61bdbe679fd3e1986ff2b714",
+      "sha256": "fcf42147b6a6da11d25767bf2a0e80d8ecdf8a8ab9915c070ba7c8a843925768"
+    },
+    {
+      "source": "assets/ui/forged/hotbar-frame.png",
+      "output": "assets/runtime/ui/forged/hotbar-frame.png",
+      "alias": true,
+      "sourceSize": [
+        2126,
+        740
+      ],
+      "size": [
+        2126,
+        740
+      ],
+      "sourceBytes": 523020,
+      "bytes": 490886,
+      "fingerprint": "780b8289bcc0bb0a1525c0cca876cfc59964eb0476e97e9625e693332a823ba4",
+      "sha256": "cb3d27aac84e9004b9d87784ddc0d66f1e498d54e77e589249e210b5970c9b84"
+    },
+    {
+      "source": "assets/ui/forged/minimap-frame.png",
+      "output": "assets/runtime/ui/forged/minimap-frame.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        548,
+        548
+      ],
+      "sourceBytes": 1181064,
+      "bytes": 178634,
+      "fingerprint": "1cc0d8721e6365d153145e7c5fab37d8318768f4e042f4b4d5a81618401738b5",
+      "sha256": "66b15f6b11132692dccf0abaacc4a81889e1fe610eea9aae841272df1c9ad321"
+    },
+    {
+      "source": "assets/ui/forged/panel-frame.png",
+      "output": "assets/runtime/ui/forged/panel-frame-hud.webp",
+      "alias": false,
+      "sourceSize": [
+        1586,
+        992
+      ],
+      "size": [
+        793,
+        496
+      ],
+      "sourceBytes": 2284745,
+      "bytes": 332164,
+      "fingerprint": "66af31c99c99d1858f70b9143b950758b41f534f6ffb4fa11bbbc33d2aa46013",
+      "sha256": "59b5a568b913d8d03479394ce63ccf8ca6a1c273f3b7db259307c800c632c367"
+    },
+    {
+      "source": "assets/ui/forged/panel-frame.png",
+      "output": "assets/runtime/ui/forged/panel-frame.png",
+      "alias": true,
+      "sourceSize": [
+        1586,
+        992
+      ],
+      "size": [
+        1586,
+        992
+      ],
+      "sourceBytes": 2284745,
+      "bytes": 1909283,
+      "fingerprint": "20e29a5e3a4a1034d9a516a960f14a6e222fda390a7a3489e02aa0fc869f4de9",
+      "sha256": "fe59373684e9d91f84b7f3592e115725d2f776e79e4e1896d6f8ef476d4a46ba"
+    },
+    {
+      "source": "assets/ui/forged/retinue-actions-pixel.png",
+      "output": "assets/runtime/ui/forged/retinue-actions-pixel.webp",
+      "alias": true,
+      "sourceSize": [
+        1774,
+        887
+      ],
+      "size": [
+        240,
+        120
+      ],
+      "sourceBytes": 646068,
+      "bytes": 17370,
+      "fingerprint": "6f02f64970a925b6585bcf65cd4a1987912e834d42fde6af64096e0ba21db7bc",
+      "sha256": "28b9e559808fde80e17824e47108820a9af66772786026b0b91382b88d41c722"
+    },
+    {
+      "source": "assets/ui/foundry.png",
+      "output": "assets/runtime/ui/foundry.webp",
+      "alias": true,
+      "sourceSize": [
+        1312,
+        1199
+      ],
+      "size": [
+        160,
+        146
+      ],
+      "sourceBytes": 2082963,
+      "bytes": 32504,
+      "fingerprint": "5bc5f9463a644c0d4a6e2bee12dcc4166e3601feede5fc2e595c9bf27c6e457d",
+      "sha256": "bccdcf5a29e93c10a8237bb2b833851623eebe496e75990fec1e3aa663e6aeeb"
+    },
+    {
+      "source": "assets/ui/loading/spinner.png",
+      "output": "assets/runtime/ui/loading/spinner.webp",
+      "alias": true,
+      "sourceSize": [
+        512,
+        32
+      ],
+      "size": [
+        512,
+        32
+      ],
+      "sourceBytes": 12198,
+      "bytes": 4300,
+      "fingerprint": "a42f580fb9d274e444c048029c31ce4e1f3f3e27229dbcd7e1bd1310c283f8a8",
+      "sha256": "dab6bf6517aceaa8560ab8ea65efe9fa44b81e208ba77f1577f7f4ea162dca1f"
+    },
+    {
+      "source": "assets/ui/loyalty-olive-wreath.png",
+      "output": "assets/runtime/ui/loyalty-olive-wreath.webp",
+      "alias": true,
+      "sourceSize": [
+        20,
+        20
+      ],
+      "size": [
+        20,
+        20
+      ],
+      "sourceBytes": 609,
+      "bytes": 294,
+      "fingerprint": "aa70577b2c21dc911337379fb31c26000b637cb49d8af5149102d52a7b7f87e0",
+      "sha256": "d18cab9dc724e319845c151bdbbe6071b9b4684d2773329ad38c2f7fc8022a90"
+    },
+    {
+      "source": "assets/ui/main-menu/backdrop-no-world.png",
+      "output": "assets/runtime/ui/main-menu/backdrop-no-world.webp",
+      "alias": true,
+      "sourceSize": [
+        1672,
+        941
+      ],
+      "size": [
+        1672,
+        941
+      ],
+      "sourceBytes": 1783502,
+      "bytes": 1229064,
+      "fingerprint": "15ab13583086881be9c82d89ae6dd746cf9902b6bee30788874c67c4d6469356",
+      "sha256": "5104bab5a237bc52ccca9738478593c195fd89b1fa8f3168dc374bad93f4d6e4"
+    },
+    {
+      "source": "assets/ui/main-menu/button-active.png",
+      "output": "assets/runtime/ui/main-menu/button-active.png",
+      "alias": true,
+      "sourceSize": [
+        384,
+        85
+      ],
+      "size": [
+        384,
+        85
+      ],
+      "sourceBytes": 47764,
+      "bytes": 47764,
+      "fingerprint": "ea1ee21f63e69d1cba81be9a5a1bb8f0e0dc86ead9edd1af529b500eb2dbb8ba",
+      "sha256": "36b14be08f7b87eaa4b76df9623ab68175d8d91ad11d3aaf12718027c043b27b"
+    },
+    {
+      "source": "assets/ui/main-menu/button.png",
+      "output": "assets/runtime/ui/main-menu/button.png",
+      "alias": true,
+      "sourceSize": [
+        384,
+        85
+      ],
+      "size": [
+        384,
+        85
+      ],
+      "sourceBytes": 41026,
+      "bytes": 41026,
+      "fingerprint": "9bb9afa2ec38df5adf6932ce0fd4a03dcd1e9055af5b901d15308cd5bafd3a6d",
+      "sha256": "5def0ed38c322e4dfab70ad970caf6f80da1f42f44a89ce741d79e82bf4a12a4"
+    },
+    {
+      "source": "assets/ui/main-menu/globe-world.webp",
+      "output": "assets/runtime/ui/main-menu/favicon.webp",
+      "alias": false,
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 433448,
+      "bytes": 8778,
+      "fingerprint": "bcbff4dccb46a4463bc696a4ce42db8340382fe6639f321ac1da7cae4c6da7e0",
+      "sha256": "fef18f63b8a057f106e51defc2081330dfb81908658ea66d295a52df77409048"
+    },
+    {
+      "source": "assets/ui/main-menu/title.webp",
+      "output": "assets/runtime/ui/main-menu/title.webp",
+      "alias": true,
+      "sourceSize": [
+        1040,
+        286
+      ],
+      "size": [
+        1040,
+        286
+      ],
+      "sourceBytes": 40726,
+      "bytes": 40726,
+      "fingerprint": "bcd3c3f63f1618d150f44edc6e4b09434d3f2c5bdd85b80aa0f409f99fa19036",
+      "sha256": "22c6bb43b70530901c213e97c5fa7f51fdfe2e2cd38df87cef5a4e488f260ea9"
+    },
+    {
+      "source": "assets/ui/military-academy.png",
+      "output": "assets/runtime/ui/military-academy.webp",
+      "alias": true,
+      "sourceSize": [
+        1312,
+        1199
+      ],
+      "size": [
+        160,
+        146
+      ],
+      "sourceBytes": 2151014,
+      "bytes": 33254,
+      "fingerprint": "b3f5d49d6fd3bf26e2cf2a75297de494ace70a4f8f439e838794752b4a635054",
+      "sha256": "31831ebfb8f9ade55b7926e39d17d89a0d62f95015407d3cdc2a7d57fdcea754"
+    },
+    {
+      "source": "assets/ui/military/actions-simple.png",
+      "output": "assets/runtime/ui/military/actions-simple.webp",
+      "alias": true,
+      "sourceSize": [
+        1774,
+        887
+      ],
+      "size": [
+        240,
+        120
+      ],
+      "sourceBytes": 974373,
+      "bytes": 24084,
+      "fingerprint": "2f1e8a9140f23ee1bca9c9c4d92b17fcc5d0d795ecbb072b34d7109fc1657b39",
+      "sha256": "12877099126a8a513a2c5682b852ff50902c1ba7e98b9f661d31a969c49c4a5d"
+    },
+    {
+      "source": "assets/ui/naval/anchor.png",
+      "output": "assets/runtime/ui/naval/anchor.webp",
+      "alias": true,
+      "sourceSize": [
+        724,
+        724
+      ],
+      "size": [
+        96,
+        96
+      ],
+      "sourceBytes": 384147,
+      "bytes": 8212,
+      "fingerprint": "b046b0d3114de4103add935870c24980ed31e743700a6d20e92a449f04a8848d",
+      "sha256": "7de8cff89384ea9a92cdb8da3579816e1b9ae16b883b718e6a65d7c62c7fae58"
+    },
+    {
+      "source": "assets/ui/naval/ballista.png",
+      "output": "assets/runtime/ui/naval/ballista.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        96,
+        96
+      ],
+      "sourceBytes": 187454,
+      "bytes": 9600,
+      "fingerprint": "2846c80c1fb7d0a04d2b2e577cc65db4e6091a443d7c6dcde5e080b159e32d0d",
+      "sha256": "1dc2689eb608c3dd036733f819b1800df4d9a9bec0f70a3fd3a925d038f125a8"
+    },
+    {
+      "source": "assets/ui/naval/cannon.png",
+      "output": "assets/runtime/ui/naval/cannon.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        96,
+        96
+      ],
+      "sourceBytes": 193691,
+      "bytes": 8780,
+      "fingerprint": "a74475f680627bad7838599dc6ed0abcee4ae093a494d89485d72ccf6258a74c",
+      "sha256": "c262dd370c6563340fe203129d23e9b33065eec896eadd133a5ea1c4d1fc8e79"
+    },
+    {
+      "source": "assets/ui/naval/caravel.png",
+      "output": "assets/runtime/ui/naval/caravel.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        144,
+        144
+      ],
+      "sourceBytes": 208468,
+      "bytes": 19486,
+      "fingerprint": "86ad00bf3fb2d8d0c360c462c10885de6d3bf484edb1043842ce113774705034",
+      "sha256": "3f4ad6fca606c3191562ecfb71924d33c175247f068cbfd642baff814d629899"
+    },
+    {
+      "source": "assets/ui/naval/frigate.png",
+      "output": "assets/runtime/ui/naval/frigate.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        144,
+        144
+      ],
+      "sourceBytes": 257895,
+      "bytes": 24556,
+      "fingerprint": "4afa9e6ae97f17853c7cb4fbca896551a0bf3235857b5d4722216fc10b54820b",
+      "sha256": "e40c79cc0c236a3489b0cf8b5a4da00346aabcfc6a89796a73d8f62502160870"
+    },
+    {
+      "source": "assets/ui/naval/galley.png",
+      "output": "assets/runtime/ui/naval/galley.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        144,
+        144
+      ],
+      "sourceBytes": 242893,
+      "bytes": 24172,
+      "fingerprint": "95bd8c654ebbb75b06ed4818bcc9c09995976b5a2df3742fd56a3a992a078036",
+      "sha256": "728e5bb52049cdec35e2dda4310abf4d67dace1f0d97ab6b5b8f8843305af124"
+    },
+    {
+      "source": "assets/ui/naval/land.png",
+      "output": "assets/runtime/ui/naval/land.webp",
+      "alias": true,
+      "sourceSize": [
+        724,
+        724
+      ],
+      "size": [
+        96,
+        96
+      ],
+      "sourceBytes": 528723,
+      "bytes": 10332,
+      "fingerprint": "2d9677860502b10ce59f224ccdebb3b3f73183b623d788caca5f139d409931c2",
+      "sha256": "9d080731cf9d728357d3911c7c181cc2dc94ac663567f014a21850c8b05f3aed"
+    },
+    {
+      "source": "assets/ui/naval/reinforce.png",
+      "output": "assets/runtime/ui/naval/reinforce.webp",
+      "alias": true,
+      "sourceSize": [
+        724,
+        724
+      ],
+      "size": [
+        96,
+        96
+      ],
+      "sourceBytes": 471495,
+      "bytes": 9844,
+      "fingerprint": "9e072fe4299a961b6d6b85c1446f0bfe048fc61a415d821db5c9775e057e9c56",
+      "sha256": "4729a61ac5d8822f9c72aa2d12cc1a0c70b33224a7c066233603cb8d1ebce419"
+    },
+    {
+      "source": "assets/ui/naval/ship-nameplate.png",
+      "output": "assets/runtime/ui/naval/ship-nameplate.png",
+      "alias": true,
+      "sourceSize": [
+        168,
+        40
+      ],
+      "size": [
+        168,
+        40
+      ],
+      "sourceBytes": 8997,
+      "bytes": 8637,
+      "fingerprint": "fe090645be55fde106545dcb2c6d67d90691c216ecafc710bfe37540e3d1902d",
+      "sha256": "e8183a89a46abed448e44fb2b60715fde0695b34c55dc935464419c06df2dc61"
+    },
+    {
+      "source": "assets/ui/naval/shipyard.png",
+      "output": "assets/runtime/ui/naval/shipyard.webp",
+      "alias": true,
+      "sourceSize": [
+        443,
+        443
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 284926,
+      "bytes": 21774,
+      "fingerprint": "2c1c3fb306d4cb67728f6b2738063e256a63ba5f53866878c5a61e4b8589e1da",
+      "sha256": "a9d01f23650e17dda19ee4892cbbceba9ff041512ac295a915d8cb7f16c41226"
+    },
+    {
+      "source": "assets/ui/quest-markers-routing.png",
+      "output": "assets/runtime/ui/quest-markers-routing.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        288,
+        288
+      ],
+      "sourceBytes": 430540,
+      "bytes": 22812,
+      "fingerprint": "a798c404da681c906a92123930657ef4caa386475c67962b240a3191af296e05",
+      "sha256": "94f8b946da4db5d8f71e78c54e20e2fff945ebc848c6e003e7a296afd60f5233"
+    },
+    {
+      "source": "assets/ui/quest-markers.png",
+      "output": "assets/runtime/ui/quest-markers.png",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 640273,
+      "bytes": 606376,
+      "fingerprint": "9f1a3dd0e79c62d37889de49a2bcdad17f56f66d5cf7f0704f90a511acb59a86",
+      "sha256": "be4b6e7cd7b974a08684d733776fc22af269fbf56ccdf1e897d493042ec24b41"
+    },
+    {
+      "source": "assets/ui/reference-buttons/compact.png",
+      "output": "assets/runtime/ui/reference-buttons/compact.png",
+      "alias": true,
+      "sourceSize": [
+        270,
+        97
+      ],
+      "size": [
+        270,
+        97
+      ],
+      "sourceBytes": 23303,
+      "bytes": 21541,
+      "fingerprint": "b65fc7fe0cd942413cd1624ae9c0a69829813fa40931109d437dbb0eeeef5890",
+      "sha256": "605ba899170bda646dd0bd67578a4dc9640ba841ca8c2762966a195caab00929"
+    },
+    {
+      "source": "assets/ui/reference-buttons/primary.png",
+      "output": "assets/runtime/ui/reference-buttons/primary.png",
+      "alias": true,
+      "sourceSize": [
+        240,
+        112
+      ],
+      "size": [
+        240,
+        112
+      ],
+      "sourceBytes": 27731,
+      "bytes": 25939,
+      "fingerprint": "e91b70687783cda96b88ee5ef5650079f437b77ad9eb45b4c33e7c8c53135ec3",
+      "sha256": "e184683461cbe7f8e79ad8ffc662bcf84df5f81318363174d77012d2d25895e7"
+    },
+    {
+      "source": "assets/ui/research/archeryRange.png",
+      "output": "assets/runtime/ui/research/archeryRange.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2310,
+      "bytes": 1580,
+      "fingerprint": "538b5113709fa0b71c49a89da83570890868edb5153d1a72ce248e1f305b221a",
+      "sha256": "7823bec98ed76742e2a81c63c2fb76efb2de0fe9dab022e22a5957e6e4990388"
+    },
+    {
+      "source": "assets/ui/research/blacksmith.png",
+      "output": "assets/runtime/ui/research/blacksmith.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2400,
+      "bytes": 1634,
+      "fingerprint": "83d8ce4e3cfe542ab8b5b5e170eca0b4fac8ef08b6a7df7831160b37acaf27ed",
+      "sha256": "33568ed931853eb1c5624a74030ea53978c13664b66cc5df12d1fb3515577159"
+    },
+    {
+      "source": "assets/ui/research/coinage.png",
+      "output": "assets/runtime/ui/research/coinage.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2176,
+      "bytes": 1602,
+      "fingerprint": "787ee0d0ac868eafca4947c0d8be25aeacfccf2b338898c5b08a304c92d0c62d",
+      "sha256": "3ab113873b7b260889bd7c63f3618c22f66e6533fd436a886bd71dd469e46dad"
+    },
+    {
+      "source": "assets/ui/research/fletching.png",
+      "output": "assets/runtime/ui/research/fletching.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2205,
+      "bytes": 1512,
+      "fingerprint": "690479d6acf0408d756f658ba2c20bc9b901f23016fcfd971ed2c557def31eab",
+      "sha256": "b6c5cb578c25b9cac5f48c278d4ab3a448925b69edd4cebca3356c4d41feb7b2"
+    },
+    {
+      "source": "assets/ui/research/forged/archeryRange.webp",
+      "output": "assets/runtime/ui/research/forged/archeryRange.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 278958,
+      "bytes": 10730,
+      "fingerprint": "eeb27a6717809f9578b9983f9cab50fef93d6d604b38f03b7a18c3cb62d2ec86",
+      "sha256": "6e1a0d93dc88f1ad0c01edbcc41e77196ad5cc284baef2adc27ef2b9dc1d6918"
+    },
+    {
+      "source": "assets/ui/research/forged/blacksmith.webp",
+      "output": "assets/runtime/ui/research/forged/blacksmith.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 369312,
+      "bytes": 12240,
+      "fingerprint": "1ebbd9d4ba136a658ba1a5ab3131cd5a889fbe864b50bd8a11eaacb317e4a732",
+      "sha256": "3b118558bebe2776067782c95a82b2dc57616a57f8f885e8080d89cd245a0df7"
+    },
+    {
+      "source": "assets/ui/research/forged/coinage.webp",
+      "output": "assets/runtime/ui/research/forged/coinage.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 511550,
+      "bytes": 17276,
+      "fingerprint": "77ed3f2a0f303d1581f632e6b65c42fd8c7e86307c98f192ffc03559ad420c7a",
+      "sha256": "84faf288cb81f6b130750ce909f210cfdc2bd1d9534f882ead1a9fc57e4bdbde"
+    },
+    {
+      "source": "assets/ui/research/forged/fletching.webp",
+      "output": "assets/runtime/ui/research/forged/fletching.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 344214,
+      "bytes": 12354,
+      "fingerprint": "f0aea5d5f7267bd8ce5cd0e6ee9e81e6065a48d4de404322cfc3f41a05ca254d",
+      "sha256": "f6c029a520694e766fbcf67310fbcc3fa5ba4f5b34407660220151a707c1a079"
+    },
+    {
+      "source": "assets/ui/research/forged/grainStorage.webp",
+      "output": "assets/runtime/ui/research/forged/grainStorage.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 649694,
+      "bytes": 20276,
+      "fingerprint": "4f09b4f53b8de5bd07b4e398be54faab46246d9b601af3d2d5b6220eb63aa6d3",
+      "sha256": "91d222e037b9e362d3562b6443303b8890e2e5972f073858647b0d2b46e6c736"
+    },
+    {
+      "source": "assets/ui/research/forged/irrigation.webp",
+      "output": "assets/runtime/ui/research/forged/irrigation.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 697880,
+      "bytes": 23580,
+      "fingerprint": "9524524429e3dae7407410252f55e5e2d2ccde91e8e6deaca1e3daeaacb2547f",
+      "sha256": "c9c2e1453e6d4701ae5e421622dc5027332471e51e5fc51a98d07ef02491d832"
+    },
+    {
+      "source": "assets/ui/research/forged/metalTools.webp",
+      "output": "assets/runtime/ui/research/forged/metalTools.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 440320,
+      "bytes": 14402,
+      "fingerprint": "27d7b208314822dd053a291f9383cb3d7afc3954ac410a4755b35d6094fccc43",
+      "sha256": "a287af9d7c08bc5dbf5e6deb76443d3e3cb160530f85453648cf234ea4b6424f"
+    },
+    {
+      "source": "assets/ui/research/forged/monument.webp",
+      "output": "assets/runtime/ui/research/forged/monument.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 261276,
+      "bytes": 7972,
+      "fingerprint": "d87fd0d2d0de52d1bb5623aef150e7653feb8322907499a0c54f67775a0d64ee",
+      "sha256": "6af519bc2e5fe5778a9a5c721f01f148a09107134052d27d451062e10e9f0c62"
+    },
+    {
+      "source": "assets/ui/research/forged/reinforcedDefenses.webp",
+      "output": "assets/runtime/ui/research/forged/reinforcedDefenses.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 609728,
+      "bytes": 17976,
+      "fingerprint": "d1d36d2d2e9abf18d07c32ddc804d7b01f01b6c5f7738a78c97f49bb08f22eeb",
+      "sha256": "73855b827312501990d565f2165a85385d2cdf6c5335336b53a54aa0b4bcf046"
+    },
+    {
+      "source": "assets/ui/research/forged/scoutLodge.webp",
+      "output": "assets/runtime/ui/research/forged/scoutLodge.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 420698,
+      "bytes": 13722,
+      "fingerprint": "021a37324ce87845004d9fcd7a1fe56d0d332fbbb7214a9947bbb5f9a76a95db",
+      "sha256": "c711fab2bf86ea24dd993915c553be30d1ae2767a9e487a18d1c956b690cfe66"
+    },
+    {
+      "source": "assets/ui/research/forged/urbanPlanning.webp",
+      "output": "assets/runtime/ui/research/forged/urbanPlanning.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 549460,
+      "bytes": 17700,
+      "fingerprint": "cdbdbc1e0c318ea58c0c3784a061ec00a7139bb14c13955c690a0e283caa8fee",
+      "sha256": "86ad73a4a83a64487ccef97b58f0a0d37f1e021e7d3d68b34b39bd58cac64ddc"
+    },
+    {
+      "source": "assets/ui/research/forged/wall.webp",
+      "output": "assets/runtime/ui/research/forged/wall.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 451046,
+      "bytes": 11944,
+      "fingerprint": "b8b0a3bff5896099f1acde9e1c81268b72710bee407929ae9bc479d4f7df81c4",
+      "sha256": "d5a4b8f7eba73effb9c702472480c253369e4b32a57b4203e22f61b4fcbb1395"
+    },
+    {
+      "source": "assets/ui/research/forged/woodenTower.webp",
+      "output": "assets/runtime/ui/research/forged/woodenTower.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 395056,
+      "bytes": 12518,
+      "fingerprint": "d0be1193c9646b2eb820426ec1d486307fd337cf3418fb95f6ab6db806d44136",
+      "sha256": "d394166301566a88d90e18530ec543b01d37f190a24d56402f834170e500409a"
+    },
+    {
+      "source": "assets/ui/research/grainStorage.png",
+      "output": "assets/runtime/ui/research/grainStorage.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2416,
+      "bytes": 1494,
+      "fingerprint": "d791bf0ac14d088b7253ff163cb7c1eb77432f8c68ebe6cffd1c996be971b692",
+      "sha256": "3d50d3e82e48681176972aa46c8e8c0bfce252946a1efc4096125cb3619fea52"
+    },
+    {
+      "source": "assets/ui/research/irrigation.png",
+      "output": "assets/runtime/ui/research/irrigation.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2352,
+      "bytes": 1808,
+      "fingerprint": "bb6ba36bea496c589737d16758b902c7d788cfd0b66c3387f2e205b33f94d80b",
+      "sha256": "4199f1501a7d562552c5ca0ac93c1358a02131b5d7acc322238fe6d1b7b9e4e4"
+    },
+    {
+      "source": "assets/ui/research/metalTools.png",
+      "output": "assets/runtime/ui/research/metalTools.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2471,
+      "bytes": 1794,
+      "fingerprint": "dba1ebe637bfe1fc129d088cbfc33369b898f15da0866f4e94a8c7b97b5c2178",
+      "sha256": "f334c33b46d24cd6fe9619857b8e539bac72bac5c04aa4292f4010cb73f052ef"
+    },
+    {
+      "source": "assets/ui/research/monument.png",
+      "output": "assets/runtime/ui/research/monument.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1873,
+      "bytes": 1144,
+      "fingerprint": "c1e858c853848dfa3c498040d8a45a5d56b3e31f0a419cc37805de17d6b40be4",
+      "sha256": "43fe7ffa1a3d6c732757e0cf54b998489e6f30c92feb8214275b6f0350fb6a45"
+    },
+    {
+      "source": "assets/ui/research/reinforcedDefenses.png",
+      "output": "assets/runtime/ui/research/reinforcedDefenses.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2645,
+      "bytes": 1672,
+      "fingerprint": "8ffde2bcc1cc944fc2c45b83586ad70156996ce0235abf32475a100382493b44",
+      "sha256": "332a0e3c49765f03e288be2bd712860de73eef67ed3aaffc0154d0ec09e9ba7b"
+    },
+    {
+      "source": "assets/ui/research/urbanPlanning.png",
+      "output": "assets/runtime/ui/research/urbanPlanning.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2356,
+      "bytes": 1696,
+      "fingerprint": "b6997ef7ef765b07bcd969006152de7d36594f0328890d4ddc7448fecb5a664b",
+      "sha256": "9325a4c18c41cea5169afdf48852424d368433e4c14185d2c0bce0ef4a01c1ce"
+    },
+    {
+      "source": "assets/ui/research/wall.png",
+      "output": "assets/runtime/ui/research/wall.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 2344,
+      "bytes": 1228,
+      "fingerprint": "7a1ffec368e2fcfd088729b5f9e5f793aa697d28078f1fd9ab23b0071117ab3d",
+      "sha256": "281e1db3676fd880acbc7662fd4202a40f77e885c9220d725ec6473df0f3303f"
+    },
+    {
+      "source": "assets/ui/research/woodenTower.png",
+      "output": "assets/runtime/ui/research/woodenTower.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1813,
+      "bytes": 1222,
+      "fingerprint": "e85e830229d89127260f8a47da223a21dc8b15cc3435f214738ac790085083d9",
+      "sha256": "bd31286e84d3705bec98642fa9806cc2a80423b59dca7162606c79d0033fc70f"
+    },
+    {
+      "source": "assets/ui/resources/culture.png",
+      "output": "assets/runtime/ui/resources/culture.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 1194358,
+      "bytes": 12148,
+      "fingerprint": "b65de4415cf0b3703740c72e15db63d98a385e14e8255c4c5c87a732edfd756a",
+      "sha256": "811a2a0fb41fd2b3ef29bcacf7403e5d1b20ca1258c8d3247f279066e86a3341"
+    },
+    {
+      "source": "assets/ui/resources/food.png",
+      "output": "assets/runtime/ui/resources/food.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 992694,
+      "bytes": 14454,
+      "fingerprint": "d5d3e34181b8fa6ada88d259cb0d43edc5a45508c22d473e71076aef09222d22",
+      "sha256": "c8ce4b85f408bc9e70119092ed50ca56853ece24626a8fbd51f2035f050fa5de"
+    },
+    {
+      "source": "assets/ui/resources/gold.png",
+      "output": "assets/runtime/ui/resources/gold.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 1036393,
+      "bytes": 11438,
+      "fingerprint": "60fde008735fe6e811826c224b0667edaa8839cc05f5d2201041321c4c93193c",
+      "sha256": "6ee45e85a77d0eff830bfca5f30d03973a5f20d7d95422f0d6cb68009b1fd59a"
+    },
+    {
+      "source": "assets/ui/resources/population.png",
+      "output": "assets/runtime/ui/resources/population.webp",
+      "alias": true,
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "size": [
+        128,
+        128
+      ],
+      "sourceBytes": 1127511,
+      "bytes": 14022,
+      "fingerprint": "cd6acd5463712dd5bdb6204b58c6f8ff0a36b77751400fd5c9b910a8bc05ddbb",
+      "sha256": "c074b1e3beaf8068fdfc92dd09ffe124b4cfeefb8be1a25bdb72ae745265f096"
+    },
+    {
+      "source": "assets/ui/panels-reference.png",
+      "output": "assets/runtime/ui/retinue-icon.webp",
+      "alias": false,
+      "sourceSize": [
+        1900,
+        828
+      ],
+      "size": [
+        40,
+        40
+      ],
+      "sourceBytes": 1331489,
+      "bytes": 2432,
+      "fingerprint": "1b2a741e42f43fdae2304b1cc708f59952548d7d4aead530f7274b975e43ae94",
+      "sha256": "3e3e9d0c06e0ad6eecf6f40ae7f28729b6281c9af62a591157ab1911a09fee41"
+    },
+    {
+      "source": "assets/ui/siege-cannon.png",
+      "output": "assets/runtime/ui/siege-cannon.webp",
+      "alias": true,
+      "sourceSize": [
+        1536,
+        1024
+      ],
+      "size": [
+        160,
+        107
+      ],
+      "sourceBytes": 1640297,
+      "bytes": 12704,
+      "fingerprint": "dafd575ce505fa8d493234b71bd555ef763cac2e7d1018921a4546df6846b993",
+      "sha256": "28c5a64daf465b9b86a52c81560c3ca97146063431e6d7c9aacdef5df919e0b6"
+    },
+    {
+      "source": "assets/ui/resources-reference.png",
+      "output": "assets/runtime/ui/slate.webp",
+      "alias": false,
+      "sourceSize": [
+        2170,
+        725
+      ],
+      "size": [
+        500,
+        90
+      ],
+      "sourceBytes": 762500,
+      "bytes": 43104,
+      "fingerprint": "20771aace272ca580a78f1e95fa0969ceca59039c1f71e4f6817b07129d4606a",
+      "sha256": "f40563490e4fad62cf9bb2ee10b06ef2601bd661f3c833432c7e14e21f25baf3"
+    },
+    {
+      "source": "assets/ui/thermal-bath.png",
+      "output": "assets/runtime/ui/thermal-bath.webp",
+      "alias": true,
+      "sourceSize": [
+        1312,
+        1199
+      ],
+      "size": [
+        240,
+        219
+      ],
+      "sourceBytes": 1240340,
+      "bytes": 39970,
+      "fingerprint": "9ad6b94ab818800e33105c2b90bef15489fe4795b0674deec7efde3a99f2150c",
+      "sha256": "9ab02bba4d257c000ab74c0ee8633b4fe84bf1f7eff709dd89e65bb5798a2512"
+    },
+    {
+      "source": "assets/ui/village-alliance.png",
+      "output": "assets/runtime/ui/village-alliance.png",
+      "alias": true,
+      "sourceSize": [
+        28,
+        18
+      ],
+      "size": [
+        28,
+        18
+      ],
+      "sourceBytes": 717,
+      "bytes": 713,
+      "fingerprint": "6d6b5fb6f0b442261befa07d115a0228a58b03075ddf3f21231b1e1c7b7f66bc",
+      "sha256": "0b3d9865228a44cbd29d0f2c9cfd7fb9ed6c84482397a50c88f0c7b8fa0fde62"
+    },
+    {
+      "source": "assets/ui/walnut/button.png",
+      "output": "assets/runtime/ui/walnut/button.png",
+      "alias": true,
+      "sourceSize": [
+        160,
+        40
+      ],
+      "size": [
+        160,
+        40
+      ],
+      "sourceBytes": 7948,
+      "bytes": 7552,
+      "fingerprint": "16eef0b74166759633711e5e0ace149f1f0585cc7d29154c08ad5beacfe2798a",
+      "sha256": "a4c65f91489c43801ebe2db5cd62eb12c1a7968d338388559b9ad8f68f72cc4c"
+    },
+    {
+      "source": "assets/ui/walnut/close.png",
+      "output": "assets/runtime/ui/walnut/close.png",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1708,
+      "bytes": 1644,
+      "fingerprint": "b53c79a50a37b6837de44658a1135c91c3c3e937ea95ce684aba18118a7659c4",
+      "sha256": "2e19fde5589db5380093e0cf8be1828c3181f2ddf7023212fc8be9f96a8f619f"
+    },
+    {
+      "source": "assets/ui/whaling.png",
+      "output": "assets/runtime/ui/whaling.webp",
+      "alias": true,
+      "sourceSize": [
+        1312,
+        1199
+      ],
+      "size": [
+        160,
+        146
+      ],
+      "sourceBytes": 1175539,
+      "bytes": 18600,
+      "fingerprint": "ba8b3d41f22242ca5ad9c9ce50960519df63831bbfe739c3eb55f2ef8ca40561",
+      "sha256": "d51ad7ae99a68ac9049eff8f8078d80e96602b9339afe8f81461ffbefedb20bb"
+    },
+    {
+      "source": "assets/units/brigand/attack.png",
+      "output": "assets/runtime/units/brigand/attack.webp",
+      "alias": true,
+      "sourceSize": [
+        336,
+        384
+      ],
+      "size": [
+        336,
+        384
+      ],
+      "sourceBytes": 13609,
+      "bytes": 4954,
+      "fingerprint": "ff08c554c85e160e713bfff00fba2292617d562f347788e4ec23de3455c36a50",
+      "sha256": "b3520311f7872a2a67fab782fcd0145217ab720e23cabc205388acac9facc6bc"
+    },
+    {
+      "source": "assets/units/brigand/crown-source.png",
+      "output": "assets/runtime/units/brigand/crown-source.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 565,
+      "bytes": 270,
+      "fingerprint": "1e83dc63e882512c3d05145345e935dfa237be2bc2ffd77bf3425c1b817d943d",
+      "sha256": "e1b6f49457503e4dc98138c91d3fed6bacdc7a6984c338d43eac393ad1cf19f6"
+    },
+    {
+      "source": "assets/units/brigand/death.png",
+      "output": "assets/runtime/units/brigand/death.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 15947,
+      "bytes": 5594,
+      "fingerprint": "73f25e17c7ae2544e1f8bff79810192c93923b683d1225c878640fb6b00a80c3",
+      "sha256": "f5b7c47412db38d129e17d2e5aae7a2bfb4bbd451ea797139abf758eb011b167"
+    },
+    {
+      "source": "assets/units/brigand/idle.png",
+      "output": "assets/runtime/units/brigand/idle.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        48
+      ],
+      "size": [
+        384,
+        48
+      ],
+      "sourceBytes": 2940,
+      "bytes": 1014,
+      "fingerprint": "eede1449f143041d80738538cdc7c9a2654187ed52c9866dff393ae5a43c3899",
+      "sha256": "b423d2714782b9a890b8f59366ab710e46a1931f0a1b4f3f07759ac21090dac6"
+    },
+    {
+      "source": "assets/units/brigand/walk.png",
+      "output": "assets/runtime/units/brigand/walk.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 12534,
+      "bytes": 4448,
+      "fingerprint": "c16f9a4f178f5caa81e5f6b466901602e71f3972f19c06dd2d43c9977719b3b7",
+      "sha256": "715382fec67cd4e79f14da0361a776ca6a188c569e1a674c79964f19c61ae5e9"
+    },
+    {
+      "source": "assets/units/field-cannon-simple/idle.png",
+      "output": "assets/runtime/units/field-cannon-simple/idle.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        16
+      ],
+      "size": [
+        16,
+        16
+      ],
+      "sourceBytes": 366,
+      "bytes": 180,
+      "fingerprint": "032e3c8d81b43709be93c58ac7fba2f1e42caad4dd1493514ca3187f5255c0ea",
+      "sha256": "0c0b1e596317c69bc8d8318fa7686d24696bd329d2672aa2d21916a180a043e7"
+    },
+    {
+      "source": "assets/units/field-cannon-simple/move.png",
+      "output": "assets/runtime/units/field-cannon-simple/move.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        16
+      ],
+      "size": [
+        144,
+        16
+      ],
+      "sourceBytes": 791,
+      "bytes": 346,
+      "fingerprint": "6ae0a41556aaec984bf2b39d5b3993360dc8c2939d249fa6ff7057297f95a0b7",
+      "sha256": "f0d2fb89d2080817a815bb2b1af170cf7058603d7a120b31801816b28dd6de2b"
+    },
+    {
+      "source": "assets/units/field-cannon/fire.png",
+      "output": "assets/runtime/units/field-cannon/fire.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1612,
+      "bytes": 664,
+      "fingerprint": "2ba9ba9a883efdf964ac9888b5ef6425a4a8fe1d0b71ff25c2584c06489b7414",
+      "sha256": "946227455ad20e7e41d95739071aa07310c96b077c3649dfdc5e728146619ece"
+    },
+    {
+      "source": "assets/units/field-cannon/idle.png",
+      "output": "assets/runtime/units/field-cannon/idle.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 756,
+      "bytes": 320,
+      "fingerprint": "c8d3b64ce14c2299b1a97e10bc3421fb29e555bad201c8d819b823c4d4ab79c2",
+      "sha256": "953364efb367ba3db83682ad0e23d76b10c8d04c6aa0426b59e97af1198ef436"
+    },
+    {
+      "source": "assets/units/field-cannon/move.png",
+      "output": "assets/runtime/units/field-cannon/move.webp",
+      "alias": true,
+      "sourceSize": [
+        288,
+        32
+      ],
+      "size": [
+        288,
+        32
+      ],
+      "sourceBytes": 1884,
+      "bytes": 776,
+      "fingerprint": "80f246f70f20823c5952712fa5eedbd776f0e2a4e1dce0ef315d2fc69221e3a7",
+      "sha256": "fe581424f04e879ea4ff08245c28be33fe1b46918458dcf89512edca500c9443"
+    },
+    {
+      "source": "assets/units/musketman/attack.png",
+      "output": "assets/runtime/units/musketman/attack.webp",
+      "alias": true,
+      "sourceSize": [
+        336,
+        384
+      ],
+      "size": [
+        336,
+        384
+      ],
+      "sourceBytes": 16820,
+      "bytes": 6048,
+      "fingerprint": "7da0df10eff8b058dcb7206fd3c848f7aa501875d78c8311d14a7c1c018ed354",
+      "sha256": "deb070959f769e760e47dd1d369257747862d9ba5ba4ead322e48b3f6533fb1e"
+    },
+    {
+      "source": "assets/units/musketman/death.png",
+      "output": "assets/runtime/units/musketman/death.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 19508,
+      "bytes": 6902,
+      "fingerprint": "c442256038f45ab78efff230d2a0bd6c659a2e2c53ab0374f9e03c0e6951f5a8",
+      "sha256": "272142523ce92e033ccaea8157ecdb5ae0a222b60ef1cc2dfa1b8a850b82d51e"
+    },
+    {
+      "source": "assets/units/musketman/idle.png",
+      "output": "assets/runtime/units/musketman/idle.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        48
+      ],
+      "size": [
+        384,
+        48
+      ],
+      "sourceBytes": 3497,
+      "bytes": 1210,
+      "fingerprint": "83318ca094d0b74ce60432b970aaa5efb2bf391b243f98a5c0915dab4a616850",
+      "sha256": "6312f55d5399897a60d492aef67f492ae1a701be8f44df8446fe3a3870ca9021"
+    },
+    {
+      "source": "assets/units/musketman/walk.png",
+      "output": "assets/runtime/units/musketman/walk.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 14223,
+      "bytes": 5044,
+      "fingerprint": "192f7d5cc497e7f1c29874269cd3ae5629a53dc9d6990210ab281eae5894c3de",
+      "sha256": "e6f04d0e75ce15c2dd3209466b4d9127931ab23417a9de3783ed158407443b43"
+    },
+    {
+      "source": "assets/units/pikeman/attack.png",
+      "output": "assets/runtime/units/pikeman/attack.webp",
+      "alias": true,
+      "sourceSize": [
+        336,
+        384
+      ],
+      "size": [
+        336,
+        384
+      ],
+      "sourceBytes": 18736,
+      "bytes": 6316,
+      "fingerprint": "c4fd6245aa0cf2237ff3a2c9ff773c32a2ab8e838ed815c1add632854acc311c",
+      "sha256": "e19e41b6aa53cb9ad79600098d13c9538d3cac4da351d2789209a607cd1e11e7"
+    },
+    {
+      "source": "assets/units/pikeman/death.png",
+      "output": "assets/runtime/units/pikeman/death.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 21040,
+      "bytes": 7094,
+      "fingerprint": "9542207496c3e94265cce6aa8b85e9b7b4b5cca2cf19f83bd1d8fe10b897e6d3",
+      "sha256": "bd1c587e98191558ea33e33d73cbacbf6588aa852cd1ed196593e2b8b69f0892"
+    },
+    {
+      "source": "assets/units/pikeman/idle.png",
+      "output": "assets/runtime/units/pikeman/idle.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        48
+      ],
+      "size": [
+        384,
+        48
+      ],
+      "sourceBytes": 3890,
+      "bytes": 1326,
+      "fingerprint": "7aa40f9c288f0c9402ad92a04213d27a6bdebad49bbccd49d0103cede6cce863",
+      "sha256": "afcb11f0dcdfe37d5b7a7d03f5d55f2a9f2dcd17fa8e88890efb24c6380c88bb"
+    },
+    {
+      "source": "assets/units/pikeman/walk.png",
+      "output": "assets/runtime/units/pikeman/walk.webp",
+      "alias": true,
+      "sourceSize": [
+        384,
+        384
+      ],
+      "size": [
+        384,
+        384
+      ],
+      "sourceBytes": 15662,
+      "bytes": 5514,
+      "fingerprint": "d50a832a6928ef20904f5c45cbe5f6c1d3aeecc9e6ee392b1dd3ef865c3224d7",
+      "sha256": "5932e5b894dd1ca1391ff19b8fce58bd16ce2fb3e1ac6a7c8ee9bbb093f22a7a"
+    },
+    {
+      "source": "assets/vegetation/marsh/2A.png",
+      "output": "assets/runtime/vegetation/marsh/2A.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        48
+      ],
+      "size": [
+        32,
+        48
+      ],
+      "sourceBytes": 948,
+      "bytes": 374,
+      "fingerprint": "884977fef3bff17ec9246d441b58a2b105b08a07c7eb7f122b4dac440b39bf08",
+      "sha256": "473d0789fad8ac05ffe4bcdc066c3674cc8353fc3d48b37d238e1f5d867dc6ef"
+    },
+    {
+      "source": "assets/vegetation/marsh/2B.png",
+      "output": "assets/runtime/vegetation/marsh/2B.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        48
+      ],
+      "size": [
+        32,
+        48
+      ],
+      "sourceBytes": 613,
+      "bytes": 252,
+      "fingerprint": "8889a79d1b68380752e4e03089fa5fa56160b7663f7b4ceabf357987fe35174b",
+      "sha256": "18e454fec188961d6be1e8dff6f8c8eff983958d2b2c27e32168453322385584"
+    },
+    {
+      "source": "assets/vegetation/marsh/2C.png",
+      "output": "assets/runtime/vegetation/marsh/2C.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        48
+      ],
+      "size": [
+        32,
+        48
+      ],
+      "sourceBytes": 861,
+      "bytes": 344,
+      "fingerprint": "1e884b8a22566afed16df720fb6fd75972377036138cac52ec6ca5e603de8d0a",
+      "sha256": "ea9d98070a68dc0abeb53756a7087ff10b5eec8cce638e71154c9504bdf5bc64"
+    },
+    {
+      "source": "assets/vegetation/marsh/2D.png",
+      "output": "assets/runtime/vegetation/marsh/2D.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        48
+      ],
+      "size": [
+        32,
+        48
+      ],
+      "sourceBytes": 839,
+      "bytes": 332,
+      "fingerprint": "812f825571503e5515b604658f7ee8a881b8d0a7299df68e2c57a250e90afaae",
+      "sha256": "742c3096ac0db071b896fd418fedb1af33691f46a0c6fb2fd0230c2652eebc89"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/medium.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/medium.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 947,
+      "bytes": 378,
+      "fingerprint": "5a910d8aa8b823628a7f6d5f1cd0638c3b1cd9118068555b7f6e3a95829db684",
+      "sha256": "d358693d099960e29ebb3989401cf43367dbcba14adca4d80841ecb808bedd09"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/short.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/short.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 835,
+      "bytes": 328,
+      "fingerprint": "d8e72d0aec79eb7ca3a8dcf1bd628fd5a5455fb93b9f44a494a4b455274231bd",
+      "sha256": "abeac2a282443a00be985b27a11a95ddf5a369eb03981b60e016e7b3465be0b7"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/tall.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/tall.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 1020,
+      "bytes": 378,
+      "fingerprint": "ccd474bec627e9705ac54cfe1161a82cf0df4a5edd7122e6b5431faad89e85e6",
+      "sha256": "f2228a14379b5804d29f0396ce24b8b303aa51b57f112b9b02f3d129b188b3b2"
+    },
+    {
+      "source": "assets/vegetation/medieval-nature.png",
+      "output": "assets/runtime/vegetation/medieval-nature.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        208
+      ],
+      "size": [
+        128,
+        208
+      ],
+      "sourceBytes": 15586,
+      "bytes": 5180,
+      "fingerprint": "0e5a93caddcdcbb813ef424770023fff8c4d57fc97c796cbfed87ce86e1d5740",
+      "sha256": "0ee05847c078ab4b69076a5d829ec76616074ed446b3a5a8e9e68847f7a98365"
+    },
+    {
+      "source": "assets/vegetation/miniworld-Cactus.png",
+      "output": "assets/runtime/vegetation/miniworld-Cactus.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        32
+      ],
+      "size": [
+        64,
+        32
+      ],
+      "sourceBytes": 1689,
+      "bytes": 498,
+      "fingerprint": "22fe49adcfd9735a28abd7e0acde568f92a9fbd3974283011a9ae7edb2fc861d",
+      "sha256": "2c806e03f00eeb31b1bf126661a95c270421e5542d6a844b10b1195913e7e974"
+    },
+    {
+      "source": "assets/vegetation/miniworld-CoconutTrees.png",
+      "output": "assets/runtime/vegetation/miniworld-CoconutTrees.webp",
+      "alias": true,
+      "sourceSize": [
+        96,
+        16
+      ],
+      "size": [
+        96,
+        16
+      ],
+      "sourceBytes": 1324,
+      "bytes": 468,
+      "fingerprint": "1b68b733349e1ad1ddb2df778be161776206efd100101ca82d8e034d912a219b",
+      "sha256": "d09bf639f4fa6265d1d5b7d579f000b49d98c523300978fefd2daac3cdcaea70"
+    },
+    {
+      "source": "assets/vegetation/miniworld-DeadTrees.png",
+      "output": "assets/runtime/vegetation/miniworld-DeadTrees.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 1034,
+      "bytes": 276,
+      "fingerprint": "cf4883bb9fa1546eed3f360b6e7a220908bb4e64adfb97e330d9e6812243f198",
+      "sha256": "c4e6fcffb1fe12ac9b81e04bf78fcf6cdaffda658cef3a222845cf69db2d66ba"
+    },
+    {
+      "source": "assets/vegetation/miniworld-PineTrees.png",
+      "output": "assets/runtime/vegetation/miniworld-PineTrees.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        16
+      ],
+      "size": [
+        48,
+        16
+      ],
+      "sourceBytes": 1131,
+      "bytes": 286,
+      "fingerprint": "3bd8483c908cd8306b008d33471ddc6ed408ee046f857cea98fe685f3e5f68f6",
+      "sha256": "d9daba30007b2ad92b1378492546a09efe8b67b7d994595ebf2006c54b0c9345"
+    },
+    {
+      "source": "assets/vegetation/miniworld-Trees.png",
+      "output": "assets/runtime/vegetation/miniworld-Trees.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        16
+      ],
+      "size": [
+        64,
+        16
+      ],
+      "sourceBytes": 1435,
+      "bytes": 394,
+      "fingerprint": "bb31e4f74146877e8dcf8e6a39be22c260591cb04deddc2a32260b8bd5b208c6",
+      "sha256": "ae1c67db0a09726ef0266980b77112b664f810dbbf6373bb85d7fd674d8f9e90"
+    },
+    {
+      "source": "assets/vegetation/miniworld-Tumbleweed.png",
+      "output": "assets/runtime/vegetation/miniworld-Tumbleweed.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        16
+      ],
+      "size": [
+        32,
+        16
+      ],
+      "sourceBytes": 851,
+      "bytes": 152,
+      "fingerprint": "cde2d198e2a113d7a2e2f69f7c2e74f75f114ad9180079c43206f877fa6e6e3b",
+      "sha256": "ab90835592fb2c750001b54dbef9a7a91aefc1e6fcc73abf26062617cd313c50"
+    },
+    {
+      "source": "assets/water-motion/coast-1a.png",
+      "output": "assets/runtime/water-motion/coast-1a.webp",
+      "alias": true,
+      "sourceSize": [
+        512,
+        32
+      ],
+      "size": [
+        512,
+        32
+      ],
+      "sourceBytes": 1740,
+      "bytes": 818,
+      "fingerprint": "4a0fd483646e641dac8b2ecc92f0487b089a202ef2926f2b3d4f35576ad5b2d1",
+      "sha256": "580ffc3fdd695754676686f5a16df477c981514014f2530c25b266c27b4ed08e"
+    },
+    {
+      "source": "assets/water-motion/ocean-2b.png",
+      "output": "assets/runtime/water-motion/ocean-2b.webp",
+      "alias": true,
+      "sourceSize": [
+        768,
+        48
+      ],
+      "size": [
+        768,
+        48
+      ],
+      "sourceBytes": 1910,
+      "bytes": 722,
+      "fingerprint": "d95cf09524a1f3c6fef999029ece1d01f97cc15bf624c68db2c4c4c7b6fd2386",
+      "sha256": "9e2e19ebe8ea7bcd9d4d5c63ec6030efccc6ce6694a2d073705ec1becf3f563a"
+    },
+    {
+      "source": "assets/water-motion/river-3c.png",
+      "output": "assets/runtime/water-motion/river-3c.webp",
+      "alias": true,
+      "sourceSize": [
+        144,
+        16
+      ],
+      "size": [
+        144,
+        16
+      ],
+      "sourceBytes": 654,
+      "bytes": 294,
+      "fingerprint": "6851d2befcac6941bc3c75dd3d0f27975dd27865d63702a1d52a3ec41bd2028c",
+      "sha256": "3b07d78fd231ea09f1cd94394c94cded679cf03282f3489e2a1b3961faa9f746"
+    }
+  ]
+}

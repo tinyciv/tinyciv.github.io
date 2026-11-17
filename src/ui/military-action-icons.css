@@ -1,0 +1,7 @@
+.icon.military-action-icon {
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  image-rendering: auto;
+}
+.levy-action-icon { background-position: 0 0; }
+.garrison-action-icon { background-position: 100% 0; }

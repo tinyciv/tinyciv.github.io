@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { atWar, updateGame } from '../src/game/simulation';
 import { isRaidObjective, selectRaidTarget } from '../src/game/raid-targeting';
 import { updateRaiderGroupMotivation, updateRaiderMotivation } from '../src/game/raider-motivations';
-import { updateVillageUnit, villageHostility } from '../src/game/villages';
+import { updateVillageUnit } from '../src/game/villages';
+import { hostileView, setVillageRelation } from '../src/game/settlement-bridge';
 import { type Building, type GameState, type MarauderPack, type NeutralVillage, type Unit } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
@@ -29,8 +30,7 @@ function fixture(relation: NeutralVillage['relation'] = 'neutral') {
     factions: [0, 1].map(id => ({ id, villageId: id ? 1 : undefined, name: `Faction ${id}`, color: '#fff', affinity: 50,
       relation: id ? 'peace' : 'self', food: 500, gold: 0, production: 0, population: 0, culture: 0,
       yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, nextRetinueAt: Infinity, defeated: false })),
-    villages: [{ id: 1, faction: 1, campId: 20, name: 'Camp', identity: 'growers', relation, x: 13, y: 12,
-      nextGrowthAt: Infinity, nextThinkAt: Infinity, nextRecruitAt: Infinity }],
+    villages: [{ id: 1, faction: 1, campId: 20, name: 'Camp', identity: 'growers', relation, x: 13, y: 12 }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], fields: [], projectiles: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'neutral-raiders', rngState: 731,
     marauderPacks: [pack], raiderCamps: [], roamingMaraudersVersion: 1, fogRaids: { nextAt: Infinity, waves: 0 },
@@ -65,12 +65,15 @@ describe('raiders and independent villages', () => {
 
   it('prevents independent villagers from provoking raiders, but preserves allied local defense', () => {
     const { state, guard, raider } = fixture();
-    const orders = { hostile: (a: number, b: number) => villageHostility(state, a, b) ?? false,
+    const orders = { hostile: (a: number, b: number) => hostileView(state, a, b) ?? false,
       visible: () => true, move: vi.fn(), engage: vi.fn() };
     updateVillageUnit(state, guard, .1, orders);
     expect(orders.engage).not.toHaveBeenCalled();
-    state.villages![0].relation = 'allied'; state.time = 1;
+    setVillageRelation(state, state.villages![0], 0, 'allied');
     expect(atWar(state, 1, -2)).toBe(true); expect(atWar(state, -2, 1)).toBe(true);
+    // Nearby hostiles come from the Rust 1 Hz census sample, so let one sense pass run.
+    for (let step = 0; step < 12; step++) updateGame(state, .1, idle);
+    guard.villageNextThinkAt = 0;
     updateVillageUnit(state, guard, .1, orders);
     expect(orders.engage).toHaveBeenCalledWith(guard, raider, .1);
   });

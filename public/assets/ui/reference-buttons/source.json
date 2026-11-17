@@ -1,0 +1,63 @@
+{
+  "generator": "built-in imagegen",
+  "date": "2026-11-17",
+  "reference": "User supplied narrow 314x378 screenshot: dark charcoal teal faces and restrained warm gold borders.",
+  "prompts": {
+    "primary": "Use case: ui-mockup\nAsset type: one blank reusable medieval strategy game action button.\nPrimary request: reproduce the exact restrained style of the small Build / Fortify / Clear / Forbid buttons in the user's narrow 314x378 reference. A single horizontally rectangular blank button, aspect ratio 1.5:1. Deep near-black charcoal teal slate face (#141f20), extremely quiet subtle surface. Warm antique gold thin double bevel frame, with a fine inner gold line, tiny chamfered corners and tiny warm top-left edge highlights. At final 80x54 px the entire frame is only 3px thick. Outer very dark shadow below, small and close.\nComposition: straight-on orthographic flat UI texture. Entire rectangle visible, centered, almost fills canvas with a small even transparent margin. All exterior around button genuinely transparent. Center inside button opaque.\nNo text, letters, icons, symbols, runes, ornament, flourishes, finials, bolts, illustrations, map, wood, bright yellow glow, or scene. No perspective. No labels. Do not make large decorative corner pieces. Thin restrained antique brass geometry, dark teal face. Sharp corners with only tiny diagonal chamfers.",
+    "compact": "Use case: ui-mockup\nAsset type: one blank compact building-selection button texture for a medieval strategy game.\nPrimary request: a compact blank horizontally rectangular button, aspect ratio 2.5:1. Extremely dark near-black charcoal teal opaque face (#141f20), very subtle quiet slate surface. Just ONE hairline muted antique gold border tracing the perimeter with tiny chamfered corners. Border at final 90x36px is only 1px thick, absolutely no thick or broad gold frame. A small fine light gold highlight on top-left edge, darker bronze bottom-right edge, slim charcoal outer shadow.\nComposition: straight-on orthographic flat UI texture. Entire rectangle visible centered and filling almost all canvas with very small transparent margin. Center inside button opaque. Exterior must be truly transparent alpha, NO backdrop, NO painted halo or vignette surrounding button.\nNo text, letters, numbers, icons, symbols, runes, ornament, finials, bolts, illustrations, map, wood, luminous glow, decorative corner pieces, perspective, or other UI elements. Restraint: one extremely thin muted gold stroke around dark teal face, not a thick bevel or multiple borders."
+  },
+  "assets": {
+    "primary": {
+      "source": "scratch/2026-11-17-reference-buttons/art/primary-source.png",
+      "sourceSize": [
+        1536,
+        1024
+      ],
+      "crop": [
+        36,
+        171,
+        1500,
+        847
+      ],
+      "output": "public/assets/ui/reference-buttons/primary.png",
+      "size": [
+        240,
+        112
+      ],
+      "resampling": "lanczos",
+      "recommendedSlices": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "displayBorder": 5
+    },
+    "compact": {
+      "source": "scratch/2026-11-17-reference-buttons/art/compact-source.png",
+      "sourceSize": [
+        1983,
+        793
+      ],
+      "crop": [
+        41,
+        56,
+        1941,
+        737
+      ],
+      "output": "public/assets/ui/reference-buttons/compact.png",
+      "size": [
+        270,
+        97
+      ],
+      "resampling": "lanczos",
+      "recommendedSlices": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "displayBorder": 3
+    }
+  }
+}

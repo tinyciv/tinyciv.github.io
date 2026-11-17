@@ -1,0 +1,22 @@
+{
+  "group_id": "3b98999f-374e-47db-b824-78cdbd82828c",
+  "objects": [
+    {
+      "id": "53440902-91d5-4676-94f1-9cf123fd2159",
+      "name": "base",
+      "prompt": "\u201cwooden-walled barracks with training ground enclosed in palisade, view is front-facing, from slightly above, pixel art style very granular\u201d\n\n",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/wooden-walled_barracks_with_t.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-11-11T15:15:31.437845"
+}

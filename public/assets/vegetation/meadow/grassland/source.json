@@ -1,0 +1,66 @@
+{
+  "generator": "PixelLab API",
+  "approvedOn": "2026-11-17",
+  "terrain": "grassland",
+  "selection": "Balanced height mix, medium dominant; user approved review and requested integration.",
+  "processing": "Byte-identical PNG sprite-sheet copies; generated pixels unchanged.",
+  "variants": [
+    {
+      "id": "1B",
+      "file": "short.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 15,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-grassland-breeze/1B/sheet.png",
+      "sha256": "8c58a716ff78311a906da70559bf58a5b457fc4c3f00e142f541922113333d5f",
+      "prompt": "ONE SHORT GRASS TUFT, native 16x16 pixel art with transparent background. A shallow but clearly visible FAN of green grass blades about TWELVE PIXELS WIDE and EIGHT PIXELS HIGH, lower in the canvas with empty air in the upper third. Use reference image 1A only to MATCH THE SIZE AND HEIGHT AND CANVAS POSITION of this low grass fan. Make a new balanced strategy-game tuft of 7 to 9 curved tapering blades with olive roots and subtle yellow green tips. Moderate connected pixel detail. Roots at bottom row14, highest tips around row7. Short, shallow and WIDE, not tall, but each curved blade should be individually visible. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Existing game vegetation style image grounds pixel scale, muted colors, shading and lighting ONLY, never shrub shape. True transparent background and transparent air between blades. No ground tile, soil, cast shadow, flowers, white root pixels, seeds, mound, black outline, blur or antialiasing. Avoid reducing the grass to scattered specks: draw actual rooted green blades about 5 to 8 pixels long.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation."
+    },
+    {
+      "id": "2B",
+      "file": "medium.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 16,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-grassland-breeze/2B/sheet.png",
+      "sha256": "2766548d72762e4828a9252cd231853f222bee167f71335e85f09c63e00c2073",
+      "prompt": "ONE SMALL TRANSPARENT GRASSLAND GRASS SPRITE for a high top-down strategy game. Camera HIGH TOP-DOWN, orthographic overhead, NOT isometric. Only soft flexible meadow grass blades growing from several tiny separated roots; clearly GRASS, not shrubs, trees, flowers, tropical leaves, reeds, crops or a potted plant. Medium-length meadow grass: visible blades 8 to 10 pixels tall, blade tips around row 5, roots at row 14. Softly splayed fan, not a bush. Balanced strategy-game pixel art matching the current vegetation. A loose group of 7 to 10 slender tapering blades, soft olive mids, subtle pale yellow-green tips and dark green root accents. Restrained medium detail. Native 16x16 crisp pixel art. Entire tuft inside the canvas with a transparent margin. Grass is irregular and softly spreading, slightly leaning right in a very light breeze. Do not make a dense radial spiky star or dark mound. Use the supplied EXISTING GAME VEGETATION as grounding for muted olive/sage greens, upper-left light, hard pixel clusters and restrained shading ONLY; do not copy rounded bush masses or tree shape. These sprites will repeat across huge meadows on #85a643 ground: moderate contrast, dark green only at small roots, no black outlines and no intense neon greens. Actual transparent background including the gaps between blades, NO soil tile, solid grass slab, ground patch, cast shadow, pedestal, border, scenery, lettering, blur, antialiasing, gradients or detached noise.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation."
+    },
+    {
+      "id": "3B",
+      "file": "tall.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 17,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-grassland-breeze/3B/sheet.png",
+      "sha256": "38e43a6438d86654d0041f883cd429fc6f5009a79c802351137ab2e606d3d619",
+      "prompt": "ONE SMALL TRANSPARENT GRASSLAND GRASS SPRITE for a high top-down strategy game. Camera HIGH TOP-DOWN, orthographic overhead, NOT isometric. Only soft flexible meadow grass blades growing from several tiny separated roots; clearly GRASS, not shrubs, trees, flowers, tropical leaves, reeds, crops or a potted plant. Taller meadow grass: visible blades 11 to 13 pixels tall, tips around row 2, roots at row 14. Long slender flexible blades with a few fine seed stems, not reeds. Balanced strategy-game pixel art matching the current vegetation. A loose group of 7 to 10 slender tapering blades, soft olive mids, subtle pale yellow-green tips and dark green root accents. Restrained medium detail. Native 16x16 crisp pixel art. Entire tuft inside the canvas with a transparent margin. Grass is irregular and softly spreading, slightly leaning right in a very light breeze. Do not make a dense radial spiky star or dark mound. Use the supplied EXISTING GAME VEGETATION as grounding for muted olive/sage greens, upper-left light, hard pixel clusters and restrained shading ONLY; do not copy rounded bush masses or tree shape. These sprites will repeat across huge meadows on #85a643 ground: moderate contrast, dark green only at small roots, no black outlines and no intense neon greens. Actual transparent background including the gaps between blades, NO soil tile, solid grass slab, ground patch, cast shadow, pedestal, border, scenery, lettering, blur, antialiasing, gradients or detached noise.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation."
+    }
+  ]
+}

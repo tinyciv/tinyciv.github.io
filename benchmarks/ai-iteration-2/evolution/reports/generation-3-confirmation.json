@@ -1,0 +1,5283 @@
+{
+  "harness": "tools/simulation-harness/cli.mjs",
+  "version": 3,
+  "mode": "match",
+  "dt": 0.1,
+  "seconds": 240,
+  "checkpoints": [
+    30,
+    120,
+    240
+  ],
+  "perturbed": 0,
+  "configuration": {
+    "mode": "match",
+    "seconds": 240,
+    "dt": 0.1,
+    "seeds": 12,
+    "seed": "iteration-2-evolution:confirmation:g3",
+    "scenarios": [
+      "field-battle"
+    ],
+    "policies": [
+      "hard-assault",
+      "evo-g2-c3"
+    ],
+    "baseline": null,
+    "policyDefinitions": [
+      {
+        "id": "hard-assault",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "campaignSafetyRatio": 1.2,
+          "campaignCooldown": 10,
+          "reserveUpkeepCycles": 1.2
+        }
+      },
+      {
+        "id": "field-concentration",
+        "extends": "hard-assault",
+        "logic": {
+          "garrison": 0
+        }
+      },
+      {
+        "id": "small-formations",
+        "extends": "field-concentration",
+        "parameters": {
+          "formationEnterCount": 4,
+          "formationStayCount": 2
+        }
+      },
+      {
+        "id": "steady-pressure",
+        "extends": "field-concentration",
+        "parameters": {
+          "retreatHealth": 0.3,
+          "retreatPowerRatio": 2.6,
+          "retreatMorale": 20,
+          "recoveryHealth": 0.7,
+          "recoveryMorale": 50,
+          "recoveryPowerRatio": 1.1
+        },
+        "logic": {
+          "retreat": {
+            "op": "or",
+            "args": [
+              {
+                "op": "lt",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.3
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "gt",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          2
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "op": "gt",
+                    "args": [
+                      {
+                        "fact": "distanceHome"
+                      },
+                      5
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "patient-pressure",
+        "extends": "field-concentration",
+        "parameters": {
+          "retreatHealth": 0.6,
+          "retreatPowerRatio": 1.7,
+          "recoveryHealth": 0.8,
+          "recoveryMorale": 60,
+          "recoveryPowerRatio": 0.9,
+          "formationEnterCount": 6,
+          "formationStayCount": 3
+        }
+      },
+      {
+        "id": "evo-g2-c3",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        },
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "policySource": {
+      "searchPlanHash": "a194f8e09a4e100b9949fcddb948c3439742be5f112b3e0f1991117eb542ceca"
+    },
+    "checkpoints": [
+      30,
+      120,
+      240
+    ],
+    "gameOver": "stop",
+    "jobs": 4,
+    "perturb": 0,
+    "out": "/Users/ckrapu/strongman/btv/benchmarks/ai-iteration-2/evolution/reports/generation-3-confirmation.json"
+  },
+  "environment": {
+    "node": "v25.9.0",
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin arm64"
+  },
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "timing": {
+    "buildSeconds": 0.00000712500000372529,
+    "elapsedSeconds": 36.078762208,
+    "simulatedSeconds": 3617.1
+  },
+  "matchRules": {
+    "victory": "Authoritative faction-defeated flag",
+    "negotiations": "Disabled for the contestant pair; neutral human observer isolated",
+    "sides": "Every pair plays both starting sides"
+  },
+  "standings": {
+    "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+    "table": [
+      {
+        "policy": "evo-g2-c3",
+        "matches": 24,
+        "wins": 10,
+        "draws": 8,
+        "losses": 6,
+        "points": 38,
+        "winRate": 0.416667,
+        "meanSurvivingArmyHP": 340.562271
+      },
+      {
+        "policy": "hard-assault",
+        "matches": 24,
+        "wins": 6,
+        "draws": 8,
+        "losses": 10,
+        "points": 26,
+        "winRate": 0.25,
+        "meanSurvivingArmyHP": 306.035153
+      }
+    ],
+    "uniqueLeader": "evo-g2-c3",
+    "byScenario": {
+      "field-battle": [
+        {
+          "policy": "hard-assault",
+          "wins": 6,
+          "draws": 8,
+          "losses": 10
+        },
+        {
+          "policy": "evo-g2-c3",
+          "wins": 10,
+          "draws": 8,
+          "losses": 6
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "id": "field-battle:1:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-evolution:confirmation:g3-1",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "80ff52ef855d1457bff801710f5b2cd66fef667982c7ab44760b128796b0785e",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 124,
+      "steps": 1240,
+      "setupSeconds": 4.412309,
+      "wallSeconds": 1.096634,
+      "speedup": 113.073251,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 117.17199999999703,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 16.799999999999997,
+          "food": 980
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 560.7719999999997,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 138.4,
+          "food": 964
+        }
+      ]
+    },
+    {
+      "id": "field-battle:1:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-evolution:confirmation:g3-1",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "80ff52ef855d1457bff801710f5b2cd66fef667982c7ab44760b128796b0785e",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 130.6,
+      "steps": 1306,
+      "setupSeconds": 4.457983,
+      "wallSeconds": 1.161981,
+      "speedup": 112.394277,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 980
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 559.1599999999995,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 338.40000000000003,
+          "food": 964
+        }
+      ]
+    },
+    {
+      "id": "field-battle:2:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-evolution:confirmation:g3-2",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "e9b5f0006a32ef78d13652394a167c5c451bbdc7dbd34627130ed6a661352e5c",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.594037,
+      "wallSeconds": 1.817161,
+      "speedup": 132.07415,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 2,
+          "survivingArmyHP": 360,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 10,
+          "gold": 296.99999999999994,
+          "food": 932
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 3,
+          "survivingArmyHP": 432.6783333333277,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 11,
+          "gold": 100.6,
+          "food": 929
+        }
+      ]
+    },
+    {
+      "id": "field-battle:2:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-evolution:confirmation:g3-2",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "e9b5f0006a32ef78d13652394a167c5c451bbdc7dbd34627130ed6a661352e5c",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 49,
+      "steps": 490,
+      "setupSeconds": 5.282608,
+      "wallSeconds": 0.784157,
+      "speedup": 62.487503,
+      "winnerFaction": 1,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 9,
+          "survivingArmyHP": 723.7088333333334,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 17,
+          "gold": 323.9,
+          "food": 987
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 991
+        }
+      ]
+    },
+    {
+      "id": "field-battle:3:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-evolution:confirmation:g3-3",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "8cbf3398961a74fb814c802a33a80951c60b105c2da861c047be6f260616dddf",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 102.8,
+      "steps": 1028,
+      "setupSeconds": 5.248935,
+      "wallSeconds": 0.882731,
+      "speedup": 116.456758,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 983
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 4,
+          "survivingArmyHP": 248.2270000000014,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 12,
+          "gold": 133.70000000000005,
+          "food": 971
+        }
+      ]
+    },
+    {
+      "id": "field-battle:3:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-evolution:confirmation:g3-3",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "8cbf3398961a74fb814c802a33a80951c60b105c2da861c047be6f260616dddf",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.723137,
+      "wallSeconds": 1.184181,
+      "speedup": 202.671713,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 1,
+          "survivingArmyHP": 250,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 9,
+          "gold": 110.8,
+          "food": 948
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 1,
+          "survivingArmyHP": 250,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 9,
+          "gold": 111.99999999999999,
+          "food": 947
+        }
+      ]
+    },
+    {
+      "id": "field-battle:4:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 4,
+      "seed": "iteration-2-evolution:confirmation:g3-4",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "5c0cae50410d855b9982da5cc9e6f4fd8e68f6dc3c5e23eb6df4e378b9dc5e07",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 104.1,
+      "steps": 1041,
+      "setupSeconds": 3.68099,
+      "wallSeconds": 0.715997,
+      "speedup": 145.391755,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 2,
+          "survivingArmyHP": 337.148,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 56.10000000000001,
+          "food": 979
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 559.9159999999995,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 117.3,
+          "food": 973
+        }
+      ]
+    },
+    {
+      "id": "field-battle:4:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 4,
+      "seed": "iteration-2-evolution:confirmation:g3-4",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "5c0cae50410d855b9982da5cc9e6f4fd8e68f6dc3c5e23eb6df4e378b9dc5e07",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 186.2,
+      "steps": 1862,
+      "setupSeconds": 3.547392,
+      "wallSeconds": 0.943297,
+      "speedup": 197.392788,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 68.61199999999793,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 80.89999999999999,
+          "food": 967
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 4,
+          "survivingArmyHP": 432.34399999999783,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 12,
+          "gold": 149.8,
+          "food": 950
+        }
+      ]
+    },
+    {
+      "id": "field-battle:5:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 5,
+      "seed": "iteration-2-evolution:confirmation:g3-5",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "af09076ce2d9b71953deccba40118413b2e745845a16c67075ad23c9e0d6a5f8",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 55.8,
+      "steps": 558,
+      "setupSeconds": 4.605662,
+      "wallSeconds": 0.74715,
+      "speedup": 74.683836,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 991
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 526.7320000000003,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 523.1,
+          "food": 991
+        }
+      ]
+    },
+    {
+      "id": "field-battle:5:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 5,
+      "seed": "iteration-2-evolution:confirmation:g3-5",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "af09076ce2d9b71953deccba40118413b2e745845a16c67075ad23c9e0d6a5f8",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 77.1,
+      "steps": 771,
+      "setupSeconds": 4.219608,
+      "wallSeconds": 0.78885,
+      "speedup": 97.737274,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 987
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 464.3720000000005,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 128.20000000000005,
+          "food": 982
+        }
+      ]
+    },
+    {
+      "id": "field-battle:6:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 6,
+      "seed": "iteration-2-evolution:confirmation:g3-6",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "0e98a84abbfe391b25b7c67d3e6e4fb6e6c235b30639239f4b28c21419af85d3",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 110.9,
+      "steps": 1109,
+      "setupSeconds": 4.414628,
+      "wallSeconds": 0.911549,
+      "speedup": 121.66098,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 985
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 4,
+          "survivingArmyHP": 349.87199999999837,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 12,
+          "gold": 133.89999999999998,
+          "food": 975
+        }
+      ]
+    },
+    {
+      "id": "field-battle:6:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 6,
+      "seed": "iteration-2-evolution:confirmation:g3-6",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "0e98a84abbfe391b25b7c67d3e6e4fb6e6c235b30639239f4b28c21419af85d3",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 188.3,
+      "steps": 1883,
+      "setupSeconds": 4.024319,
+      "wallSeconds": 1.101464,
+      "speedup": 170.954339,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 973
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 4,
+          "survivingArmyHP": 459.6199999999996,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 12,
+          "gold": 347.59999999999997,
+          "food": 951
+        }
+      ]
+    },
+    {
+      "id": "field-battle:7:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 7,
+      "seed": "iteration-2-evolution:confirmation:g3-7",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "847b972cc579660fadbe8b6593e885a0237ff885e8ca871c098b8257c1bc9203",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.383211,
+      "wallSeconds": 1.193383,
+      "speedup": 201.108906,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 150,
+          "cities": 1,
+          "cityHP": 123.92900000000058,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 8,
+          "gold": 53.2,
+          "food": 966
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 3,
+          "survivingArmyHP": 402.0113333333323,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 11,
+          "gold": 118.50000000000004,
+          "food": 937
+        }
+      ]
+    },
+    {
+      "id": "field-battle:7:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 7,
+      "seed": "iteration-2-evolution:confirmation:g3-7",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "847b972cc579660fadbe8b6593e885a0237ff885e8ca871c098b8257c1bc9203",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 98.6,
+      "steps": 986,
+      "setupSeconds": 4.544992,
+      "wallSeconds": 0.822769,
+      "speedup": 119.839293,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 982
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 525.0109999999984,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 333.29999999999995,
+          "food": 973
+        }
+      ]
+    },
+    {
+      "id": "field-battle:8:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 8,
+      "seed": "iteration-2-evolution:confirmation:g3-8",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "07b7834078a6a30d116f05c10ca721a5220a5f7baecf725d2b41cfe2270c0744",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 54.1,
+      "steps": 541,
+      "setupSeconds": 4.90571,
+      "wallSeconds": 0.665544,
+      "speedup": 81.286882,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 992
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 525.3320000000003,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 123.10000000000002,
+          "food": 991
+        }
+      ]
+    },
+    {
+      "id": "field-battle:8:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 8,
+      "seed": "iteration-2-evolution:confirmation:g3-8",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "07b7834078a6a30d116f05c10ca721a5220a5f7baecf725d2b41cfe2270c0744",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.691366,
+      "wallSeconds": 1.19489,
+      "speedup": 200.855267,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 150,
+          "cities": 1,
+          "cityHP": 291.8870000000004,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 8,
+          "gold": 33.6,
+          "food": 963
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 5,
+          "survivingArmyHP": 660,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 13,
+          "gold": 118.80000000000001,
+          "food": 928
+        }
+      ]
+    },
+    {
+      "id": "field-battle:9:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 9,
+      "seed": "iteration-2-evolution:confirmation:g3-9",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "082f26fec53e7f6dcc1c40c7b47db4f6933280384092f171283115c9c140f7f8",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 53.1,
+      "steps": 531,
+      "setupSeconds": 4.814497,
+      "wallSeconds": 0.677629,
+      "speedup": 78.361458,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 993
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 3,
+          "survivingArmyHP": 372.885,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 11,
+          "gold": 322.7,
+          "food": 993
+        }
+      ]
+    },
+    {
+      "id": "field-battle:9:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 9,
+      "seed": "iteration-2-evolution:confirmation:g3-9",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "082f26fec53e7f6dcc1c40c7b47db4f6933280384092f171283115c9c140f7f8",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 219,
+      "steps": 2190,
+      "setupSeconds": 4.884224,
+      "wallSeconds": 1.664101,
+      "speedup": 131.602553,
+      "winnerFaction": 1,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 3,
+          "survivingArmyHP": 297.0053333333316,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 11,
+          "gold": 156.10000000000002,
+          "food": 945
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 5.6,
+          "food": 963
+        }
+      ]
+    },
+    {
+      "id": "field-battle:10:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 10,
+      "seed": "iteration-2-evolution:confirmation:g3-10",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "5914511ccd7692c2b18e7631f8b319bb670690d2aabc9dd35891f902461dfc76",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.455398,
+      "wallSeconds": 1.704309,
+      "speedup": 140.819528,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 3,
+          "survivingArmyHP": 384.539999999994,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 11,
+          "gold": 108.80000000000001,
+          "food": 938
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 1,
+          "survivingArmyHP": 204.8019999999916,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 9,
+          "gold": 94.79999999999998,
+          "food": 948
+        }
+      ]
+    },
+    {
+      "id": "field-battle:10:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 10,
+      "seed": "iteration-2-evolution:confirmation:g3-10",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "5914511ccd7692c2b18e7631f8b319bb670690d2aabc9dd35891f902461dfc76",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.6928,
+      "wallSeconds": 1.337976,
+      "speedup": 179.375426,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 1,
+          "survivingArmyHP": 260,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 9,
+          "gold": 318.2,
+          "food": 941
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 150,
+          "cities": 1,
+          "cityHP": 373.7240000000005,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 8,
+          "gold": 32.800000000000004,
+          "food": 953
+        }
+      ]
+    },
+    {
+      "id": "field-battle:11:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 11,
+      "seed": "iteration-2-evolution:confirmation:g3-11",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "3644aaa997473723a3ca68d24edda8beb71ee3617372d1828bcc68eb57328f07",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 50.2,
+      "steps": 502,
+      "setupSeconds": 4.019446,
+      "wallSeconds": 0.9123,
+      "speedup": 55.025757,
+      "winnerFaction": 2,
+      "winner": "evo-g2-c3",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 992
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 9,
+          "survivingArmyHP": 540.9406666666666,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 17,
+          "gold": 124.30000000000001,
+          "food": 985
+        }
+      ]
+    },
+    {
+      "id": "field-battle:11:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 11,
+      "seed": "iteration-2-evolution:confirmation:g3-11",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "3644aaa997473723a3ca68d24edda8beb71ee3617372d1828bcc68eb57328f07",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 93.3,
+      "steps": 933,
+      "setupSeconds": 3.735167,
+      "wallSeconds": 0.824255,
+      "speedup": 113.193172,
+      "winnerFaction": 2,
+      "winner": "hard-assault",
+      "stopReason": "faction-defeated",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": true,
+          "leaderAlive": false,
+          "initialRetinueSurvivors": 0,
+          "survivingArmyHP": 0,
+          "cities": 0,
+          "cityHP": 0,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 0,
+          "gold": 0,
+          "food": 984
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 9,
+          "survivingArmyHP": 795.4766666666665,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 17,
+          "gold": 337.1,
+          "food": 959
+        }
+      ]
+    },
+    {
+      "id": "field-battle:12:hard-assault-vs-evo-g2-c3:0",
+      "scenario": "field-battle",
+      "seedIndex": 12,
+      "seed": "iteration-2-evolution:confirmation:g3-12",
+      "left": "hard-assault",
+      "right": "evo-g2-c3",
+      "leg": 0,
+      "initialStateHash": "3a9590d5cad93651f8fe75099d39d646b7dcd427a52b5f9c1a70e06029555f86",
+      "policyDefinitions": [
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "hard-assault": 0,
+        "evo-g2-c3": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.452419,
+      "wallSeconds": 2.187601,
+      "speedup": 109.709218,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 7,
+          "survivingArmyHP": 850,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 15,
+          "gold": 74,
+          "food": 912
+        },
+        {
+          "faction": 2,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 7,
+          "survivingArmyHP": 850,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 15,
+          "gold": 74,
+          "food": 912
+        }
+      ]
+    },
+    {
+      "id": "field-battle:12:evo-g2-c3-vs-hard-assault:1",
+      "scenario": "field-battle",
+      "seedIndex": 12,
+      "seed": "iteration-2-evolution:confirmation:g3-12",
+      "left": "evo-g2-c3",
+      "right": "hard-assault",
+      "leg": 1,
+      "initialStateHash": "3a9590d5cad93651f8fe75099d39d646b7dcd427a52b5f9c1a70e06029555f86",
+      "policyDefinitions": [
+        {
+          "logic": {
+            "garrison": 0,
+            "recovered": {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "hp"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "maxHp"
+                        },
+                        0.7
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "ge",
+                      "args": [
+                        {
+                          "fact": "morale"
+                        },
+                        60
+                      ]
+                    },
+                    {
+                      "op": "le",
+                      "args": [
+                        {
+                          "fact": "enemyPower"
+                        },
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "fact": "friendlyPower"
+                            },
+                            1.1
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "code": 9,
+          "id": "evo-g2-c3",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        },
+        {
+          "logic": {},
+          "code": 4,
+          "id": "hard-assault",
+          "features": {
+            "formations": true,
+            "militaryPurchases": true,
+            "towerGarrison": true,
+            "towerAwareness": true,
+            "interceptEnemies": true,
+            "defensiveLevy": true,
+            "campaignLevy": true,
+            "safeCampaigns": true,
+            "formationApproach": true,
+            "proactiveHousing": true,
+            "foundCities": true,
+            "fortifyCities": true,
+            "offensiveSiege": true,
+            "territorialWars": true
+          },
+          "parameters": {
+            "retreatHealth": 0.4,
+            "retreatPowerRatio": 1.9,
+            "huntPowerRatio": 0.9,
+            "garrisonFraction": 0.15,
+            "towerGarrisonCount": 2,
+            "hostileTowerPower": 3200,
+            "hostileFortPower": 6400,
+            "friendlyTowerPower": 1600,
+            "campaignSafetyRatio": 1.2,
+            "campaignDangerWeight": 20,
+            "retreatMorale": 40,
+            "recoveryHealth": 0.9,
+            "recoveryMorale": 75,
+            "recoveryPowerRatio": 0.6,
+            "decisionInterval": 1,
+            "formationEnterCount": 8,
+            "formationStayCount": 6,
+            "housingOrdersPerCycle": 6,
+            "developmentInterval": 4,
+            "cityLimit": 6,
+            "populationPerCity": 35,
+            "reserveUpkeepCycles": 1.2,
+            "campaignCooldown": 10,
+            "siegeLimit": 2,
+            "fortsPerCity": 2
+          }
+        }
+      ],
+      "logicFaults": {
+        "evo-g2-c3": 0,
+        "hard-assault": 0
+      },
+      "simulatedSeconds": 240,
+      "steps": 2400,
+      "setupSeconds": 4.372425,
+      "wallSeconds": 2.125843,
+      "speedup": 112.896368,
+      "winnerFaction": null,
+      "winner": null,
+      "stopReason": "duration",
+      "factions": [
+        {
+          "faction": 1,
+          "policy": "evo-g2-c3",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 7,
+          "survivingArmyHP": 850,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 15,
+          "gold": 74,
+          "food": 912
+        },
+        {
+          "faction": 2,
+          "policy": "hard-assault",
+          "defeated": false,
+          "leaderAlive": true,
+          "initialRetinueSurvivors": 7,
+          "survivingArmyHP": 850,
+          "cities": 1,
+          "cityHP": 650,
+          "forts": 0,
+          "siegeEngines": 0,
+          "population": 15,
+          "gold": 74,
+          "food": 912
+        }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,13 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { buildStroke, constructionLine, planConstruction } from '../src/game/construction';
-import { buildAt, validateBuildAt } from '../src/game/simulation';
+import { buildAt, moveUnit, validateBuildAt } from '../src/game/simulation';
 import { hasGateWall, validateNetworkPlacement } from '../src/game/network-placement';
-import { canWalk } from '../src/game/pathfinding';
-import type { Building, GameState } from '../src/game/types';
+import { canMove, canWalk, findPath } from '../src/game/pathfinding';
+import { buildingTerritoryOwner } from '../src/game/property-territory';
+import { updateWallOwnership } from '../src/game/wall-ownership';
+import { markWorldChanged } from '../src/game/world-revisions';
+import type { Building, GameState, Unit } from '../src/game/types';
 
 function fixture(): GameState {
   return {
@@ -103,5 +106,58 @@ describe('roads opening existing walls', () => {
     expect(validateBuildAt(state, 'road', 16, 12).ok).toBe(false);
     add(state, 'wall', 15, 12); add(state, 'road', 15, 12); add(state, 'road');
     expect(validateNetworkPlacement(state, 'wall', 16, 12).ok).toBe(false);
+  });
+});
+
+describe.each(['wall', 'palisade'] as const)('outlying player-built %s gates', kind => {
+  it.each([false, true])('requires enemies to breach the gate in either build order (road first: %s)', roadFirst => {
+    const state = fixture(), start = { x: 14.5, y: 12.5 }, goal = { x: 18.5, y: 12.5 };
+    state.factions[0].research = { focus: 'wall', levels: { wall: 1 }, progress: {} };
+    // The gate is the only crossing of a water barrier, well beyond the city.
+    for (let y = 0; y < state.world.height; y++) if (y !== 12)
+      state.world.tiles[y * state.world.width + 16].terrain = 'lake';
+    markWorldChanged(state.world, 'geometry');
+    if (roadFirst) add(state, 'road', 15, 12);
+    const complete = (building: Building): void => {
+      delete building.construction;
+      markWorldChanged(state.world, 'structure', [12 * state.world.width + 16]);
+      updateWallOwnership(state);
+    };
+    let wall!: Building, road!: Building;
+    for (const layer of roadFirst ? ['road', kind] as const : [kind, 'road'] as const) {
+      expect(buildAt(state, layer, 16, 12).ok).toBe(true);
+      const building = state.buildings.find(candidate => candidate.kind === layer && candidate.x === 16 && candidate.y === 12)!;
+      if (layer === 'road') road = building; else wall = building;
+      // A queued road already opens a completed wall for its owner only.
+      if (layer === 'road' && !roadFirst) {
+        updateWallOwnership(state);
+        expect(canWalk(state, 16.5, 12.5, 0)).toBe(true);
+        for (const faction of [-2, 1]) expect(canWalk(state, 16.5, 12.5, faction)).toBe(false);
+      }
+      complete(building);
+      expect(building.faction).toBe(0);
+    }
+    expect(buildingTerritoryOwner(state, wall)).toBeUndefined();
+    expect(road.faction).toBe(0);
+    expect(findPath(state, start, goal, 0).at(-1)).toEqual(goal);
+    for (const faction of [-2, 1]) {
+      expect(findPath(state, start, goal, faction)).toEqual([]);
+      expect(canMove(state, start, goal, faction)).toBe(false);
+      for (const direct of [false, true]) {
+        const enemy: Unit = { ...state.units[0], id: 1000, kind: 'warrior', faction, ...start,
+          order: 'raid', path: [16.5, 17.5, 18.5].map(x => ({ x, y: 12.5 })), pathGoal: goal, repathAt: Infinity };
+        for (let step = 0; step < 20; step++) { state.time += .1; moveUnit(state, enemy, goal, .1, direct); }
+        expect(enemy.x).toBeLessThan(16);
+      }
+    }
+    expect(wall.hp).toBe(wall.maxHp);
+    wall.hp = 0;
+    for (const faction of [-2, 1]) {
+      expect(canMove(state, start, goal, faction)).toBe(true);
+      expect(findPath(state, start, goal, faction).at(-1)).toEqual(goal);
+      const enemy: Unit = { ...state.units[0], id: 1000, kind: 'warrior', faction, ...start, order: 'raid' };
+      for (let step = 0; step < 20; step++) { state.time += .1; moveUnit(state, enemy, goal, .1, true); }
+      expect(enemy.x).toBeGreaterThan(16);
+    }
   });
 });

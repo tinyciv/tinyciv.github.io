@@ -1,5 +1,5 @@
 import { createNoise2D } from 'simplex-noise';
-import { narrowHillPassage, ridgeEdgeAllowed, ridgeGroundWalkable, ridgeLevel, STAIR_UP } from '../game/ridges';
+import { reliefEdgeAllowed, reliefGroundWalkable, reliefLevel, reliefAllowsTrees } from '../game/relief';
 import { WATER, type Tile, type World } from '../game/types';
 import { terrainYields } from './generator';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
@@ -66,7 +66,7 @@ export function createTerrainEnvironment(tiles: Tile[], width: number, height: n
     const concavity = Math.max(-1, Math.min(1, (surrounding - tile.elevation) * 3));
     const riparian = Math.exp(-water[cell] / 5.5);
     moisture[cell] = clamp(tile.moisture * .82 + .09 + riparian * parameters.riparianBoost + concavity * .075
-      + noise(wx * .026 + 31, wy * .026 - 97) * .055 - ridgeLevel(tile) * .008);
+      + noise(wx * .026 + 31, wy * .026 - 97) * .055 - reliefLevel(tile) * .008);
     // Three patch scales give extensive stands, nested groves, and a rough
     // margin. This defines woodland regions; individual trees leave openings
     // throughout those regions in applyTerrainEcology.
@@ -83,9 +83,9 @@ export function createTerrainEnvironment(tiles: Tile[], width: number, height: n
   return { ruggedness, moisture, woodland, orientation };
 }
 
-/** Forest regions contain a mesh of trees and open ground, including usable
- * upper floors. Every tree touches a traversable opening, and no 2×2 square is
- * solid canopy. Cliff faces and their actual access lanes remain clear. */
+/** Forest regions contain a mesh of trees and open ground, including grassy
+ * hills. Every tree touches a traversable opening, and no 2×2 square is
+ * solid canopy. Rocky mountain cores remain clear. */
 export function applyTerrainEcology(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): void {
   const { width, height, tiles } = world, fields = createTerrainEnvironment(tiles, width, height, world.seed, parameters);
   const clear = new Uint8Array(tiles.length), spawns = [...world.spawns, ...(world.secondarySpawns ?? [])];
@@ -101,23 +101,18 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
       if (x >= 0 && y >= 0 && x < width && y < height) clear[y * width + x] = 1;
     }
   }
-  for (let cell = 0; cell < tiles.length; cell++) if (tiles[cell].stair) {
-    const up = STAIR_UP[tiles[cell].stair!], offset = up.y * width + up.x;
-    for (const step of [-1, 0, 1]) clear[cell + offset * step] = 1;
-  }
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const cell = y * width + x, tile = tiles[cell];
     if (tile.marsh) { tile.biome = 'wetland'; tile.moisture = Math.max(.9, tile.moisture); continue; }
     if (WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
-    ground[cell] = Number(ridgeGroundWalkable(world, x, y));
-    const eligible = ground[cell] && !clear[cell] && !tile.beach && !tile.palm && !tile.mountainPass && !narrowHillPassage(world, x, y);
+    ground[cell] = Number(reliefGroundWalkable(world, x, y));
+    const eligible = ground[cell] && reliefAllowsTrees(tile) && !clear[cell] && !tile.beach && !tile.palm;
     const dry = tile.terrain === 'desert';
     // Sandy regions retain open desert, with a few groves along wetter pockets.
     const threshold = parameters.forestThreshold + (dry ? .14 : 0);
-    const hillWoodland = tile.hillBiome === 'forest-hills';
-    const suitability = hillWoodland ? Math.max(.04, fields.woodland[cell] - threshold) : fields.woodland[cell] - threshold;
+    const suitability = fields.woodland[cell] - threshold;
     // Wet, sheltered woodland has more trees, but even its core is perforated.
-    const occupancy = hillWoodland ? .24 + fields.woodland[cell] * .16 : .58 + Math.min(.10, Math.max(0, suitability) * .4);
+    const occupancy = .58 + Math.min(.10, Math.max(0, suitability) * .4);
     trees[cell] = Number(eligible && suitability > 0 && (!dry || fields.moisture[cell] > .43) && rank[cell] < occupancy);
   }
   for (let y = 0; y < height - 1; y++) for (let x = 0; x < width - 1; x++) {
@@ -135,7 +130,7 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
     const hasOpening = CARDINAL.some(([dx, dy]) => {
       const nx = x + dx, ny = y + dy, next = ny * width + nx;
       return nx >= 0 && ny >= 0 && nx < width && ny < height && ground[next] && !trees[next]
-        && ridgeEdgeAllowed(world, { x, y }, { x: nx, y: ny });
+        && reliefEdgeAllowed(world, { x, y }, { x: nx, y: ny });
     });
     if (!hasOpening) trees[cell] = 0;
   }

@@ -6,6 +6,8 @@ describe('construction keyboard controls', () => {
     expect(buildOptionsForMenu('fortifications').map(option => option.kind)).toEqual(['palisade', 'wall', 'woodenTower', 'observationPost', 'guardPost', 'fort', 'ballista']);
     const buildings = buildOptionsForMenu('build');
     expect(buildings).toHaveLength(16);
+    expect(buildings.map(option => option.kind)).not.toContain('watermill');
+    expect(buildings.map(option => option.kind)).not.toContain('church');
     expect(buildings.some(option => ['wall', 'woodenTower', 'guardPost', 'clearTrees'].includes(option.kind))).toBe(false);
     expect(buildSelectionForKey('g', 'build')).toBe('camp');
     expect(buildSelectionForKey('t', 'build')).toBe('dock');

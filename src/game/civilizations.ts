@@ -13,7 +13,8 @@ export const CIVILIZATIONS = [
   { name: 'Nubians', color: '#b7a7f0', cities: ['Napata', 'Kerma', 'Meroe', 'Kawa', 'Faras', 'Musawwarat'] },
 ] as const;
 
-export const STARTING_FACTION_COUNT = 6;
+/** The player plus three rival civilizations. */
+export const STARTING_FACTION_COUNT = 4;
 export const OPPOSING_FACTION_COUNT = STARTING_FACTION_COUNT - 1;
 export const RIVAL_STARTING_GOLD = 1600;
 

@@ -38,7 +38,7 @@ it('keeps joined wheat golden for 21 seconds before producing its scheduled harv
   expect(state.fields!.every(field => field.food > 0 && field.wheatRipe && field.nextHarvest === 140)).toBe(true);
 });
 
-it('shares growth, ripe and regrowth while preserving every pickup and original expiry', () => {
+it('shares growth and regrowth with one parcel pickup and the original expiry', () => {
   const state = fixture(); ensureCollectors(state);
   state.fields!.forEach((field, i) => field.nextHarvest = 60 + 10 * i);
   synchronizeWheatFields(state);
@@ -63,9 +63,9 @@ it('shares growth, ripe and regrowth while preserving every pickup and original 
     expect(worker.cargoExpiresAt).toBe(80 + FIELD_SPOIL_SECONDS);
     expect(field.food).toBe(0);
     expect(state.factions[0].food).toBe(100);
-    if (collected.size < state.fields!.length) expect(state.fields!.every(plot => fieldStage(plot, state.time) === 2)).toBe(true);
+    expect(state.fields!.every(plot => fieldStage(plot, state.time) === 0)).toBe(true);
   }
-  expect(collected.size).toBe(state.fields!.length);
+  expect(collected.size).toBe(1);
   expect(worker.cargo).toBeCloseTo(total);
   expect(worker.cargoBatches!.every(batch => batch.expiresAt === 80 + FIELD_SPOIL_SECONDS)).toBe(true);
   expect(state.fields!.every(field => field.nextHarvest === 140 && fieldStage(field, 81) === 0)).toBe(true);

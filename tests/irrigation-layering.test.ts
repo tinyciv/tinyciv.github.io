@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as construction from '../src/game/construction';
 import * as irrigationArt from '../src/game/irrigation-art';
 import { entityStore } from '../src/game/entity-store';
 import type { FogView } from '../src/game/fog';
@@ -60,10 +59,11 @@ describe('irrigation below trees', () => {
 
     it('paints a valid irrigation ghost once below trees and applies the preview channel to wheat', () => {
         const { state, fog, tile } = fixture(); entityStore(state).buildings.replace([]); fog.buildings = []; state.buildMode = 'irrigation'; tile.overlay = 'forest';
-        vi.spyOn(construction, 'planConstruction').mockReturnValue({ ok: true, message: '', tiles: [{ x: 6, y: 6 }],
+        const points = [{ x: 6, y: 6 }], plan = { ok: true, message: '', tiles: points,
             cells: [{ x: 6, y: 6, ok: true, existing: false, message: '' }], skipped: 0, cost: 50,
-            costs: { gold: 50, production: 0, food: 0 } });
-        const options = { fog, buildPreview: [{ x: 6, y: 6 }], paintFieldMasks: true };
+            costs: { gold: 50, production: 0, food: 0 } };
+        const options = { fog, buildPreview: points, paintFieldMasks: true,
+            constructionGesture: { state, world: state.world, kind: 'irrigation' as const, points, plan } };
         let frame = recordNativeFrame(state, options);
         expect(frame.sprites.filter(sprite => sprite.key === 'building')).toHaveLength(1);
         expect(frame.sprites.find(sprite => sprite.key === 'building')!.alpha).toBe(.55);

@@ -3,20 +3,17 @@ import { FACTION_CITY_TOWERS, factionCityTowers, nextFactionTowerEnclosure } fro
 import { findPath, hasStaticPath, invalidateNavigation, travelTimeMapFrom } from './pathfinding';
 import { constructionEdges } from './builders';
 
-type InitialDefenseKind = 'palisade' | 'road' | 'woodenTower';
+type InitialDefenseKind = 'road' | 'woodenTower';
 type Create = (kind: InitialDefenseKind, point: Point) => Building;
 const key = (point: Point): string => `${point.x},${point.y}`;
 
-/** Rival starting grants are individual gated tower enclosures. The city and
- * its fields stay open between forts, rather than inside one long perimeter. */
+/** Rival starting grants keep the existing spaced tower sites, with open
+ * approaches around every tower rather than palisade enclosures. */
 export function establishFactionStartingDefenses(state: GameState, palace: Building, create: Create): void {
   for (let index = factionCityTowers(state, palace).length; index < FACTION_CITY_TOWERS; index++) {
     const enclosure = nextFactionTowerEnclosure(state, palace);
     if (!enclosure) break;
     create('woodenTower', enclosure.tower);
-    for (const wall of enclosure.walls) create('palisade', wall);
-    if (!state.buildings.some(building => building.hp > 0 && building.kind === 'road' && building.faction === palace.faction
-      && building.x === enclosure.gate.x && building.y === enclosure.gate.y)) create('road', enclosure.gate);
     invalidateNavigation(state);
   }
 }
@@ -24,9 +21,9 @@ export function establishFactionStartingDefenses(state: GameState, palace: Build
 /** Finalize once after every city and tower for this faction has been placed.
  * Deferring avoids repeating full-map reachability for earlier capitals. */
 export function ensureFactionStartingExits(state: GameState, faction: number, create: Create): void {
-  // A second nearby enclosure can cut the first city's former gate approach.
-  // Validate a real outward route for every owned town after the final towers,
-  // opening owned gate layers wherever that route crosses friendly palisades.
+  // Authored scenario walls can still cut a city's outward approach. Validate
+  // every owned town after the final buildings, opening owned gate layers
+  // wherever that route crosses friendly walls.
   for (const city of state.buildings.filter(building => building.kind === 'palace' && building.faction === faction))
     ensureStartingCityExit(state, city, create);
 }

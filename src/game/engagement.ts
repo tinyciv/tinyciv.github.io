@@ -1,6 +1,7 @@
 import { CHECK_INTERVAL } from './work-cadence';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { simulationReadsActive } from './simulation-reads';
+import { entityStore } from './entity-store';
 import { maximumUnitRange, unitAttackRange } from './combat-range';
 import TinyQueue from 'tinyqueue';
 import { civilianFootprint, unitObstructs, unitBlocksNavigationCell } from './collisions';
@@ -152,7 +153,9 @@ export function releaseAttackSpot(state: GameState, unit: Unit): void { claims.g
  * lanes. Friendly plans are costs, never permanent obstacles: choke points still
  * work and a lower-priority worker can wait for an occupied corridor to clear.
  * The optional read-only visitor builds route blocker classes in this same
- * original-order scan instead of making a second pass over the entire army. */
+ * original-order scan instead of making a second pass over the entire army.
+ * Keep distant traffic: dropping it changes lane choices in narrow corridors
+ * and crowded destinations. The caller bounds new route requests per update. */
 export function movementCongestion(state: GameState, unit: Unit, visitObstruction?: (other: Unit, cell: number) => void,
   result = new Map<number, number>()): Map<number, number> {
   result.clear();
@@ -160,8 +163,15 @@ export function movementCongestion(state: GameState, unit: Unit, visitObstructio
   // units. Their route queries need neither army scans nor reservation costs.
   if (civilianFootprint(unit)) return result;
   const add = (index: number, cost: number) => { result.set(index, (result.get(index) ?? 0) + cost); };
-  for (const other of state.units) {
-    if (!unitBlocksNavigationCell(unit, other)) continue;
+  // The maintained role excludes ordinary civilians once, instead of testing
+  // every sleeping worker for each military route. Engineers, wildlife and all
+  // distant troops remain in original order; their mutable state stays live.
+  // Unscoped editor callers still see direct kind/engineer scalar changes.
+  const candidates = simulationReadsActive(state) ? entityStore(state).units.query('collision') : state.units;
+  for (const other of candidates) {
+    // Dead and indoor units never obstruct (the native rule's first two
+    // conditions); skip them before crossing into the collision policy.
+    if (!(other.hp > 0) || other.inside || !unitBlocksNavigationCell(unit, other)) continue;
     const index = cell(state, other);
     visitObstruction?.(other, index);
     if (other.faction !== unit.faction) continue;

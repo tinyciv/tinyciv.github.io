@@ -6,8 +6,9 @@ const files = { world: 'public/assets/puny-world/overworld.png', desert: 'public
   vegetation: 'public/assets/vegetation/medieval-nature.png' };
 const assets = Object.fromEntries(await Promise.all(Object.entries(files).map(async ([key, file]) => [key,
   `data:image/png;base64,${(await readFile(file)).toString('base64')}`])));
+const embeddedSimulation = JSON.stringify((await readFile('public/wasm/simulation.wasm')).toString('base64'));
 const bundle = await build({ entryPoints: ['dev/world-generation-lab/main.ts'], bundle: true, write: false,
-  format: 'esm', target: 'es2022', minify: true, define: { 'import.meta.env.BASE_URL': '"./"' } });
+  format: 'esm', target: 'es2022', minify: true, define: { 'import.meta.env.BASE_URL': '"./"', '__TINYCIV_SIMULATION_BASE64__': embeddedSimulation } });
 const html = (await readFile('dev/world-generation-lab/template.html', 'utf8'))
   .replace('/*ASSETS*/', () => JSON.stringify(assets))
   .replace('/*BUNDLE*/', () => bundle.outputFiles[0].text.replaceAll('</script', '<\\/script'));

@@ -4,22 +4,27 @@ import { playerFaction } from './player-context';
 import { indexedLeader } from './spatial';
 import { isRetinueMember, unitMaxHp, type GameState, type LeaderProgression, type LeaderSkillId, type Unit } from './types';
 import { unitAttack, unitDefense } from './veterancy';
+import { culturalHomeGround } from './cultural-territory';
+import { rustEngine } from './rust-engine';
 
 export type { LeaderSkillId } from './types';
-export const LEADER_XP_PER_KILL = 20;
-/** Fixed bounty: commander kills no longer bypass the increasing XP curve. */
-export const LEADER_VICTORY_XP = 6400;
-export const LEADER_XP_PER_LEVEL = 19200;
-export const RETINUE_LEADER_XP_SHARE = .1;
-export const LEADER_LEVEL_HP_BONUS = 10;
-export const LEADER_LEVEL_ATTACK_BONUS = 1;
-export const LEADER_SKILL_MAX_RANK = 10;
+export const LEADER_XP_PER_KILL = rustEngine.progression_constant(1);
+export const LEADER_XP_PER_LEVEL = rustEngine.progression_constant(0);
+/** A commander is worth one initial level, not the old 6,400-XP threshold.
+ * Keep this fixed as later levels become more expensive. */
+export const LEADER_VICTORY_XP = rustEngine.progression_constant(2);
+export const RETINUE_LEADER_XP_SHARE = rustEngine.progression_constant(3);
+export const LEADER_LEVEL_HP_BONUS = rustEngine.progression_constant(4);
+export const LEADER_LEVEL_ATTACK_BONUS = rustEngine.progression_constant(5);
+export const LEADER_SKILL_MAX_RANK = rustEngine.progression_constant(6);
+const POWER_ATTACK_BONUS = rustEngine.progression_constant(11);
+const GUARD_DEFENSE_BONUS = rustEngine.progression_constant(12);
 export const LEADER_SKILL_IDS: readonly LeaderSkillId[] = ['power', 'guard', 'command', 'engineer', 'brace', 'discretion'];
 export const LEADER_SKILL_TECH: Partial<Record<LeaderSkillId, ResearchBranchId>> = { engineer: 'metalTools', brace: 'militaryTactics', discretion: 'scoutLodge' };
-export const leaderSkillMaxRank = (skill: LeaderSkillId): number => LEADER_SKILL_TECH[skill] ? 1 : LEADER_SKILL_MAX_RANK;
+export const leaderSkillMaxRank = (skill: LeaderSkillId): number => rustEngine.progression_skill_cap(LEADER_SKILL_IDS.indexOf(skill));
 export const leaderSkillUnlocked = (faction: Faction | undefined, skill: LeaderSkillId): boolean => !LEADER_SKILL_TECH[skill] || researchLevel(faction, LEADER_SKILL_TECH[skill]!) > 0;
 
-export const leaderXpRequired = (level: number): number => Math.max(1, Math.floor(level)) * LEADER_XP_PER_LEVEL;
+export const leaderXpRequired = (level: number): number => rustEngine.progression_xp_required(level);
 export const initialLeaderProgression = (): LeaderProgression => ({ level: 1, xp: 0, skillPoints: 0,
   skills: { power: 0, guard: 0, command: 0, engineer: 0, brace: 0, discretion: 0 } });
 
@@ -51,27 +56,24 @@ export function awardLeaderXp(state: GameState, amount: number, factionId = play
   const leader = indexedLeader(state, factionId), faction = state.factions.find(candidate => candidate.id === factionId);
   if (!leader || !faction || faction.defeated || state.gameOver || !Number.isFinite(amount) || amount <= 0) return 0;
   const progress = leader.leaderProgression ??= initialLeaderProgression();
-  progress.xp += amount;
-  let levels = 0;
-  while (progress.xp >= leaderXpRequired(progress.level)) {
-    progress.xp -= leaderXpRequired(progress.level);
-    progress.level++; progress.skillPoints++; levels++;
-  }
+  const pointer = rustEngine.progression_award(progress.level, progress.xp, progress.skillPoints, amount,
+    leader.hp, unitMaxHp(leader), leader.attack, leader.enemyStrengthMultiplier ?? 1);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 7);
+  progress.level = result[0]; progress.xp = result[1]; progress.skillPoints = result[2];
+  const levels = result[6];
   if (levels) {
-    const health = LEADER_LEVEL_HP_BONUS * levels * (leader.enemyStrengthMultiplier ?? 1);
-    leader.maxHp = unitMaxHp(leader) + health;
-    leader.hp = Math.min(leader.maxHp, leader.hp + health);
-    leader.attack += LEADER_LEVEL_ATTACK_BONUS * levels;
+    leader.hp = result[3]; leader.maxHp = result[4]; leader.attack = result[5];
   }
   return levels;
 }
 
 export const skillName: Record<LeaderSkillId, string> = { power: 'Power', guard: 'Guard', command: 'Command', engineer: 'Engineer', brace: 'Brace', discretion: 'Discretion' };
-export const skillEffect: Record<LeaderSkillId, string> = { power: '+2 base Attack', guard: '+1 base Defense', command: '+1 retinue slot', engineer: 'Companion builds roads and bridges at half cost', brace: 'Stand still 10s; gain up to +6 Defense', discretion: 'Flee 50% faster and recover health immediately' };
+export const skillEffect: Record<LeaderSkillId, string> = { power: '+1 base Attack per 2 ranks', guard: '+1 base Defense', command: '+1 retinue slot', engineer: 'Companion builds roads and bridges at half cost', brace: 'Stand still 10s; gain up to +6 Defense', discretion: 'Flee 50% faster and recover health immediately' };
 const validSkill = (skill: unknown): skill is LeaderSkillId => LEADER_SKILL_IDS.includes(skill as LeaderSkillId);
 function unavailableReason(state: GameState, leader: Unit | undefined, factionId: number): string {
   if (factionId !== playerFaction(state)) return 'Choose your own Leader.';
-  if (state.gameOver || state.factions.find(faction => faction.id === factionId)?.defeated) return 'The match has ended.';
+  if (state.gameOver) return 'The match has ended.';
+  if (state.factions.find(faction => faction.id === factionId)?.defeated) return 'Your faction has been defeated.';
   if (!leader) return 'A living Leader is required.';
   return '';
 }
@@ -88,7 +90,8 @@ export function leaderProgressionView(state: GameState, factionId = playerFactio
   const leader = indexedLeader(state, factionId);
   if (!leader) return;
   const progress = readLeaderProgression(leader), faction = state.factions.find(candidate => candidate.id === factionId);
-  const attack = unitAttack(leader, faction), defense = unitDefense(leader), retinueBonus = leaderRetinueBonus(leader);
+  const home = culturalHomeGround(state, faction, leader);
+  const attack = unitAttack(leader, faction, home), defense = unitDefense(leader, faction, home), retinueBonus = leaderRetinueBonus(leader);
   const available = !unavailableReason(state, leader, factionId) && progress.skillPoints > 0;
   return { leader, level: progress.level, xp: progress.xp, xpRequired: leaderXpRequired(progress.level),
     skillPoints: progress.skillPoints, hp: leader.hp, maxHp: unitMaxHp(leader), attack, defense, retinueBonus,
@@ -96,8 +99,8 @@ export function leaderProgressionView(state: GameState, factionId = playerFactio
       const rank = progress.skills[id] ?? 0, maxRank = leaderSkillMaxRank(id), canIncrease = rank < maxRank;
       const branch = LEADER_SKILL_TECH[id], unlocked = leaderSkillUnlocked(faction, id);
       return { id, name: skillName[id], rank, maxRank, effect: skillEffect[id], unlocked, requiredTech: branch && RESEARCH_BRANCHES.find(tech => tech.id === branch)?.label, canLearn: available && canIncrease && unlocked,
-        nextAttack: id === 'power' && canIncrease ? unitAttack({ ...leader, attack: leader.attack + 2 }, faction) : attack,
-        nextDefense: id === 'guard' && canIncrease ? unitDefense({ ...leader, defense: leader.defense + 1 }) : defense,
+        nextAttack: id === 'power' && canIncrease ? unitAttack({ ...leader, attack: leader.attack + POWER_ATTACK_BONUS }, faction, home) : attack,
+        nextDefense: id === 'guard' && canIncrease ? unitDefense({ ...leader, defense: leader.defense + GUARD_DEFENSE_BONUS }, faction, home) : defense,
         nextMaxHp: unitMaxHp(leader), nextRetinueBonus: retinueBonus + (id === 'command' && canIncrease ? 1 : 0) };
     }) };
 }
@@ -108,12 +111,17 @@ export function learnLeaderSkill(state: GameState, skill: LeaderSkillId, faction
   const leader = indexedLeader(state, factionId), reason = unavailableReason(state, leader, factionId);
   if (reason || !leader) return { ok: false, message: reason };
   const current = readLeaderProgression(leader);
-  if (!leaderSkillUnlocked(state.factions.find(faction => faction.id === factionId), skill)) return { ok: false, message: 'Research the required technology first.' };
-  if ((current.skills[skill] ?? 0) >= leaderSkillMaxRank(skill)) return { ok: false, message: 'Skill is at maximum rank.' };
-  if (current.skillPoints < 1) return { ok: false, message: 'No skill points available.' };
+  const pointer = rustEngine.progression_learn(LEADER_SKILL_IDS.indexOf(skill), current.skills[skill] ?? 0,
+    current.skillPoints, leader.attack, leader.defense,
+    Number(leaderSkillUnlocked(state.factions.find(faction => faction.id === factionId), skill)));
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 5);
+  if (result[0]) {
+    const branch = LEADER_SKILL_TECH[skill], technology = RESEARCH_BRANCHES.find(tech => tech.id === branch)?.label;
+    return { ok: false, message: ['',`Research ${technology ?? 'this skill’s prerequisite technology'} first.`, `${skillName[skill]} is at maximum rank.`,
+      'Earn another Leader level to gain a skill point.', 'Choose a valid Leader skill.'][result[0]] ?? 'The skill could not be learned. Reopen the Leader panel and try again.' };
+  }
   const progress = leader.leaderProgression ??= initialLeaderProgression();
-  progress.skillPoints--; progress.skills[skill] = (progress.skills[skill] ?? 0) + 1;
-  if (skill === 'power') leader.attack += 2;
-  if (skill === 'guard') leader.defense += 1;
+  progress.skills[skill] = result[1]; progress.skillPoints = result[2];
+  leader.attack = result[3]; leader.defense = result[4];
   return { ok: true, message: `${skillName[skill]} rank ${progress.skills[skill]} learned.` };
 }

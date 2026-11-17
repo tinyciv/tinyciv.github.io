@@ -1,3 +1,4 @@
+import { buildingWithId } from './entity-store';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { simulationReadsActive } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
@@ -9,6 +10,7 @@ import { indexedBuilding, nearbyBuildings, nearbyUnits } from './spatial';
 import { sightDistance } from './sight';
 import { WOODEN_TOWER_RANGE } from './tower-combat';
 import { isRaidObjective, isRaiderEnemyFaction } from './raid-targeting';
+import { raiderMayAttack } from './raider-aggression';
 import { isKeep } from './settlement-upgrades';
 import { buildingReady, buildingWidth, buildingHeight, distance, isFarmKind, isSoldier, isWallKind, type Building, type GameState, type MarauderPack, type Point, type Unit } from './types';
 
@@ -42,9 +44,9 @@ export function raiderMotivationSize(motivation: RaiderMotivation, ordinary: num
 
 /** Theft uses real weighted travel times without deleting walls from planning.
  * A fully closed city is never selected as a supposedly open theft route. */
-export function selectTheftPalace(state: GameState, from: Point, faction?: number): { palace: Building; entrance: Point } | undefined {
+export function selectTheftPalace(state: GameState, from: Point, faction?: number, camp?: number): { palace: Building; entrance: Point } | undefined {
   const palaces = state.buildings.filter(building => building.kind === 'palace' && !isKeep(building) && isRaiderEnemyFaction(state, building.faction) && buildingReady(building)
-    && (faction === undefined || building.faction === faction)
+    && raiderMayAttack(state, building.faction, camp) && (faction === undefined || building.faction === faction)
     && !state.factions.find(candidate => candidate.id === building.faction)?.defeated);
   if (!palaces.length) return;
   const travel = travelTimeMap(state, from, RAIDER_FACTION, 2.35, Infinity);
@@ -142,6 +144,7 @@ export function updateRaiderGroupMotivation(state: GameState, pack: MarauderPack
   rememberGroup(state, pack, members);
   if (!members.length) return true;
   const origin = members.find(unit => unit.id === pack.leaderId) ?? members[0];
+  if (!pack.returning && !raiderMayAttack(state, pack.targetFaction, pack.raiderCamp)) returnHome(pack, members);
   if (!pack.returning && members.length <= Math.floor(((pack.startingTroops ?? members.length - 1) + 1) * .3)) returnHome(pack, members);
   if (pack.returning || pack.phase === 'escape') { returnHome(pack, members); finishLootReturn(state, pack, members); return true; }
   if (state.time < (nextGroupPlans.get(pack) ?? -Infinity)) return true;
@@ -149,7 +152,7 @@ export function updateRaiderGroupMotivation(state: GameState, pack: MarauderPack
   if (pack.motivation === 'harass') {
     if (seenMilitary(state, members)) returnHome(pack, members);
     else {
-      const target = state.buildings.find(building => building.id === pack.targetBuilding && buildingReady(building) && building.faction === pack.targetFaction && isRaidObjective(state, building));
+      const target = buildingWithId(state, pack.targetBuilding, building => buildingReady(building) && building.faction === pack.targetFaction && isRaidObjective(state, building));
       if (target) pack.waypoint = center(target); else returnHome(pack, members);
     }
     return true;
@@ -160,14 +163,14 @@ export function updateRaiderGroupMotivation(state: GameState, pack: MarauderPack
     pack.nextMotivationAt = state.time + 3;
     // An entrance may remain walkable while a newly completed wall cuts its
     // route off. Recheck real reachability, not just the destination tile.
-    const choice = selectTheftPalace(state, origin, pack.targetFaction) ?? selectTheftPalace(state, origin);
+    const choice = selectTheftPalace(state, origin, pack.targetFaction, pack.raiderCamp) ?? selectTheftPalace(state, origin, undefined, pack.raiderCamp);
     if (!choice) { returnHome(pack, members); return true; }
     if (pack.targetBuilding !== choice.palace.id || !pack.raidGoal || distance(pack.raidGoal, choice.entrance) > .1)
       for (const member of members) clearJourney(member);
     pack.targetBuilding = choice.palace.id; pack.targetFaction = choice.palace.faction; pack.raidGoal = choice.entrance;
     pack.waypoint = { ...pack.raidGoal! }; return true;
   }
-  const target = state.buildings.find(building => building.id === pack.targetBuilding && buildingReady(building) && building.faction === pack.targetFaction && isRaidObjective(state, building));
+  const target = buildingWithId(state, pack.targetBuilding, building => buildingReady(building) && building.faction === pack.targetFaction && isRaidObjective(state, building));
   if (!target) { returnHome(pack, members); return true; }
   if (!pack.rally || pack.phase !== 'attack' && (!canWalk(state, pack.rally.x, pack.rally.y, RAIDER_FACTION) || !safeSpot(pack.rally, dangerousDefenses(state, target.faction)))) {
     pack.rally = siegeRallyPoint(state, origin, target);

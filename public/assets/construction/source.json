@@ -1,0 +1,35 @@
+{
+  "generator": "PixelLab API /create-object-pro-flash",
+  "approvedOn": "2026-11-16",
+  "sourceReview": "scratch/2026-11-16-construction-site/index.html",
+  "status": "integrated",
+  "view": "high top-down",
+  "processing": "Unchanged native PixelLab PNGs. No repainting, cropping, resampling or palette changes.",
+  "placement": "Center the largest approved square fitting the reserved footprint, capped at 2x2; 3x3 buildings use the native 2x2 sprite centered without stretching.",
+  "variants": [
+    {
+      "file": "1x1.png",
+      "approvedVariant": "1C",
+      "size": [
+        16,
+        16
+      ],
+      "source": "scratch/2026-11-16-construction-site/1C.png",
+      "reference": "references/granary-native16-crop.png",
+      "prompt": "ONE FLAT CONSTRUCTION SITE GROUND DECAL, a low irregular blob of TAN COMPACTED EARTH with a few short wooden boards and small stacked materials scattered across it. The tan ground patch is the SUBJECT and MUST remain fully opaque; only the space OUTSIDE the irregular earth blob is transparent. Earth covers about 80 percent of the visible object; small material piles occupy only the edges, never dominate the center. Native 16x16 pixel art for a one by one tile building footprint, broad nearly square blob with gently stepped irregular corners. Camera setting HIGH TOP-DOWN, overhead orthographic with straight screen-aligned axes, NOT isometric; the ground is flat, with no raised slab, diamond base, beveled rim or excavation. Ground-only work area before building starts: no building, foundation walls, upright posts, scaffold, roof, tower, people, machinery, fence, tools, flames, rubble heap, grass, text or cast shadow. Use the existing game building reference ONLY for coarse pixel density, warm ochre timber, muted cream highlights, dark brown outlines on the materials, and upper-left light. Do not copy architecture. Keep the complete blob inside the canvas with a one-pixel transparent outer margin; use a subtle tan contour on the earth instead of a heavy black border. No antialiasing, blur, gradients, dithering or disconnected single-pixel noise. More natural irregular rounded soil contour, muted sand and ochre ground with two broad compacted dirt regions. Scattered short uneven timber planks, one small untidy lumber pile and a low stack of pale blocks by the edge. Sparse weathering, clear connected pixel clusters, ten to fourteen colors. Ground dominates, mostly empty center.",
+      "sha256": "c40a7d5ca814b3e98350e38acecbcd3db7d47a51fedf9bfd3ae36c0ba5e5464a"
+    },
+    {
+      "file": "2x2.png",
+      "approvedVariant": "2B",
+      "size": [
+        32,
+        32
+      ],
+      "source": "scratch/2026-11-16-construction-site/2B.png",
+      "reference": "references/granary.png",
+      "prompt": "ONE FLAT CONSTRUCTION SITE GROUND DECAL, a low irregular blob of TAN COMPACTED EARTH with a few short wooden boards and small stacked materials scattered across it. The tan ground patch is the SUBJECT and MUST remain fully opaque; only the space OUTSIDE the irregular earth blob is transparent. Earth covers about 80 percent of the visible object; small material piles occupy only the edges, never dominate the center. Native 32x32 pixel art for a two by two tile building footprint, broad nearly square blob with gently stepped irregular corners. Camera setting HIGH TOP-DOWN, overhead orthographic with straight screen-aligned axes, NOT isometric; the ground is flat, with no raised slab, diamond base, beveled rim or excavation. Ground-only work area before building starts: no building, foundation walls, upright posts, scaffold, roof, tower, people, machinery, fence, tools, flames, rubble heap, grass, text or cast shadow. Use the existing game building reference ONLY for coarse pixel density, warm ochre timber, muted cream highlights, dark brown outlines on the materials, and upper-left light. Do not copy architecture. Keep the complete blob inside the canvas with a one-pixel transparent outer margin; use a subtle tan contour on the earth instead of a heavy black border. No antialiasing, blur, gradients, dithering or disconnected single-pixel noise. Restrained strategy-game proportions matching the reference. Broad lightly uneven tan soil patch dominates. One short neat lumber stack at upper left, three separate boards scattered at different angles, and two small square stacks of supplies along the right edge. Medium-low detail, eight to twelve colors; empty center.",
+      "sha256": "b53a048f0a6a390b1c416c79fe4eabb1aa044afa06b264ee322e97c9fca96bc1"
+    }
+  ]
+}

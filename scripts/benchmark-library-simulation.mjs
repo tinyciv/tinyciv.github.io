@@ -27,7 +27,7 @@ for (const name of names) {
   });
   modules[name] = await import(pathToFileURL(outfile).href);
 }
-const wasm = await readFile(path.join(root, 'public/wasm/navigation.wasm'));
+const wasm = await readFile(path.join(root, 'public/wasm/simulation.wasm'));
 for (const name of names) await modules[name].installNavigationWasm(wasm);
 const rawState = await readFile(statePath, 'utf8');
 const initial = JSON.parse(rawState);

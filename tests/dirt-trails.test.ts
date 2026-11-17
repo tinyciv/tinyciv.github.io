@@ -24,7 +24,7 @@ function fixture(width = 32, height = 24): GameState {
 }
 function villages(state: GameState, points = [{ x: 4, y: 12 }, { x: 27, y: 12 }]): void {
   state.villages = points.map((point, index): NeutralVillage => ({ ...point, id: index + 1, faction: index + 1, campId: 100 + index,
-    name: `Village ${index}`, identity: 'growers', relation: 'neutral', nextGrowthAt: 90, nextThinkAt: 0, nextRecruitAt: 90 }));
+    name: `Village ${index}`, identity: 'growers', relation: 'neutral' }));
 }
 function divide(state: GameState, terrain: Terrain, width = 3): void {
   for (let y = 0; y < state.world.height; y++) for (let x = 14; x < 14 + width; x++) state.world.tiles[y * state.world.width + x].terrain = terrain;

@@ -8,13 +8,13 @@ export function scatterDesertStones(world: World): void {
   for (const tile of tiles) delete tile.desertStone;
   for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
     const tile = tiles[y * width + x];
-    if (tile.terrain !== 'desert' || tile.overlay !== 'none' || tile.resource || tile.ridge || tile.stair
+    if (tile.terrain !== 'desert' || tile.overlay !== 'none' || tile.resource || tile.relief
       || tile.creek || tile.channel || tile.beach || tile.marsh || tile.palm || tile.villageTrail || tile.farm !== undefined) continue;
     if (random() >= .085) continue;
     let nearby = false;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const neighbor = tiles[(y + dy) * width + x + dx];
-      if (neighbor.desertStone !== undefined || neighbor.terrain !== 'desert' || neighbor.ridge) nearby = true;
+      if (neighbor.desertStone !== undefined || neighbor.terrain !== 'desert' || neighbor.relief) nearby = true;
     }
     if (!nearby) tile.desertStone = Math.floor(random() * 24);
   }

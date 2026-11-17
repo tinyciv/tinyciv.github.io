@@ -1,0 +1,47 @@
+{
+  "generator": "PixelLab transfer-outfit-v2",
+  "approved": "1B \u2014 Long musket, selected by user 2026-11-16",
+  "dimensions": [
+    288,
+    256
+  ],
+  "cell": [
+    32,
+    32
+  ],
+  "rows": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "columns": [
+    "idle",
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4",
+    "attack1",
+    "attack2",
+    "attack3",
+    "attack4"
+  ],
+  "reference": "public/assets/puny-world/characters/Crowned-Leader.png",
+  "approvedStyleReference": "scratch/2026-11-16-leader-firearm/1B.png",
+  "processing": "Unchanged generated 32x32 frames packed into the existing 9-column by 8-direction layout. Faction tinting occurs at render time.",
+  "sha256": "2097ed0678faabac28dde64be17eb29f37f10460e89afddf1388b11d911fd592",
+  "prompts": [
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face S. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face SE. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face E. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face NE. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face N. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face NW. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face W. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order.",
+    "Transfer ONLY the reference leader's held flintlock MUSKET onto these exact nine original crowned leader frames. Keep the gold three-point crown, original turquoise robe and exact native faction colors, hair, face, compact 16-pixel body height, foot position, pose and direction. Use high top-down orthographic camera, NOT isometric. Native transparent 32x32 cells, crisp sparse Puny pixel style, no enlargement or ground. All nine frames face SW. Frame0 standing ready, frames1-4 walking with the musket held steadily; frames5-8 aim forward, fire a compact muzzle flash, brief recoil then ready. Replace the old throwing/spear gesture with musket firing. Barrel points toward this exact direction; do not turn toward the viewer. No spear, shield, helmet, new outfit, oversized head, outlines around the canvas, smoke cloud, text or scenery. Preserve the exact original character and animation order."
+  ]
+}

@@ -24,10 +24,9 @@
   .special-actions .command-art { width: 23px; height: 23px; flex-basis: 23px; }
   .special-actions .action-label { font-size: 18px; padding: 0; }
   .special-actions kbd { display: none; }
-  .build-panel, .build-panel.is-building-menu { transform: scale(.7); transform-origin: bottom right; right: 5px; bottom: 88px; width: min(354px,calc(100vw - 10px)); max-height: calc(100dvh - 164px); padding: 38px 8px 14px; }
-  .build-actions { gap: 3px; max-height: calc(100dvh - 216px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
-  .build-actions button { height: 56px; padding-top: 9px; }
-  .build-actions .action-label { font-size: 20px; }
+  .build-panel, .build-panel.is-building-menu { transform: scale(.7); transform-origin: bottom right; right: 5px; bottom: 88px; width: min(354px,calc((100vw - 10px) / .7)); max-height: calc((100dvh - 144px) / .7); padding: 38px 8px 14px; }
+  .build-actions { gap: 3px; }
+  .build-actions button { min-height: 68px; padding-top: 19px; }
   #close-build { min-width: 44px; min-height: 36px; top: 1px; }
   .game-area:has(.build-panel:not([hidden])) .selection-panel { visibility: hidden; }
   .minimap-panel { width: 112px; height: 112px; left: 2px; top: 48px; bottom: auto; }
@@ -51,7 +50,8 @@
   #food-yield, #gold-yield, #culture-rate { font-size: 12px; }
   .time-controls { top: 0; right: max(4px,env(safe-area-inset-right)); height: 44px; transform: none; gap: 2px; }
   .time-controls button, .time-controls button#speed { min-width: 44px; width: 44px; height: 44px; }
-  .time-controls button#menu { width: 48px; min-width: 48px; gap: 0; font-size: 16px; }
+  .time-controls button#menu { width: 88px; min-width: 88px; gap: 6px; font-size: 16px; }
+  .time-controls button#diplomacy-menu { width: 128px; padding: 0 6px; font-size: 17px; }
   #menu .text-icon { display: none; }
   .selection-panel { top: 49px; right: 4px; width: 194px; height: 88px; padding: 9px; transform: none; gap: 6px; }
   .portrait { width: 40px; flex-basis: 40px; height: 60px; }
@@ -79,13 +79,17 @@
   .mobile-stick-knob { left: 26px; top: 26px; }
   .mobile-stick-cross::before, .mobile-stick-cross::after { left: 16px; top: 47px; }
 }
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 920px) {
+  .research-toolbar { left: 124px; top: 50px; width: 210px; }
+}
 @media (pointer: coarse) and (orientation: portrait) {
   .mobile-rotate-hint { display: block; position: absolute; top: 100px; left: 50%; width: 180px; transform: translateX(-50%); padding: 7px; text-align: center; background: #101e24c9; border-radius: 6px; color: #ead8ad; font: 17px/1.1 var(--game-font); }
   .resource.culture { display: none; }
-  .research-toolbar { left: 116px; top: 47px; width: calc(100% - 274px); }
+  .research-toolbar { left: 116px; top: 94px; width: calc(100% - 122px); max-width: none; }
+  .research-toolbar-icon { display: block; }
   .time-controls { top: 45px; }
   .leader-xp { left: 144px; right: 15px; bottom: 138px; }
-  .selection-panel { top: 92px; }
+  .selection-panel { top: 139px; }
   .hotbar { left: auto; right: 110px; width: calc(100% - 156px); }
   .hotbar-label { display: none; }
 }

@@ -1,0 +1,11 @@
+{
+  "generator": "PixelLab API edit-image-pixen",
+  "reference": "scratch/2026-11-08-loyalty-wreath/existing-wreath.png",
+  "request": "scratch/2026-11-08-loyalty-wreath/wreath-a-request.json",
+  "selected": "A \u2014 light sage",
+  "dimensions": [
+    20,
+    20
+  ],
+  "sha256": "4d6c4a74927bbbd4da06148f52bf60133559efef3eb844b3b2ec5cef3f9cbdc4"
+}

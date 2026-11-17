@@ -6,6 +6,7 @@ import { invalidateNavigation } from './pathfinding';
 import { releaseAttackSpot } from './engagement';
 import { clearBuildingFootprint } from './construction-clearance';
 import { updateWallStats } from './wall-stats';
+import { forgetNativeConstruction, nativeConstructionProgress, nativeConstructionRefund } from './construction-native';
 
 /** A canceled road can turn an occupied gate into a solid wall. Clear its
  * occupants first, or leave the order and its gateway intact if they cannot exit. */
@@ -19,23 +20,19 @@ export function prepareConstructionCancellation(state: GameState, building: Buil
 }
 
 export function constructionProgress(state: GameState, building: Building): number {
-  const site = building.construction;
-  if (!site) return 1;
-  if (site.waitingForBuilder && site.pausedAt === undefined) return 0;
-  const elapsed = (site.pausedAt ?? state.time) - site.startedAt;
-  return site.duration > 0 ? Math.max(0, Math.min(1, elapsed / site.duration)) : 1;
+  return building.construction ? nativeConstructionProgress(state.time, building.construction) : 1;
 }
 
 /** Refund only the work not yet performed, using the price actually paid. */
 export function cancellationRefund(state: GameState, building: Building): number {
-  const paid = building.construction?.paidGold ?? 0;
-  return Math.round(Math.max(0, paid) * (1 - constructionProgress(state, building)) * 100) / 100;
+  return building.construction ? nativeConstructionRefund(state.time, building.construction) : 0;
 }
 
 /** Shared by cancellation and road replacement; no completed building is
  * removed by the public cancel command. Workers must relinquish obsolete jobs. */
 export function removeBuildings(state: GameState, ids: Set<number>): void {
   if (!state.buildings.some(building => ids.has(building.id))) return;
+  for (const id of ids) forgetNativeConstruction(state, id);
   entityStore(state).buildings.retain(building => !ids.has(building.id));
   state.projectiles = state.projectiles?.filter(projectile => !ids.has(projectile.target));
   for (const unit of state.units) {

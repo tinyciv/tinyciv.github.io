@@ -27,7 +27,7 @@ const advance = (state: GameState, unit: Unit, goal: Point, ticks = 100, direct 
   return positions;
 };
 
-beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/navigation.wasm'))); });
+beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/simulation.wasm'))); });
 describe('forbidden navigation and unit activity', () => {
   it('keeps both A* backends out of a marked rectangle while leaving physical access intact', () => {
     const state = fixture(), from = { x: 2.5, y: 6.5 }, to = { x: 14.5, y: 6.5 };

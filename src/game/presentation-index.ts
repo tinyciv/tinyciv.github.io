@@ -25,6 +25,9 @@ export class PresentationIndex {
     buildings = new Map<string, Building[]>();
     roads = new Set<number>();
     fields = new Map<string, FarmFieldMemory>();
+    /** Numeric-cell views of `buildings` and `fields` for per-tile drawing loops. */
+    cellBuildings: (Building[] | undefined)[] = [];
+    cellFields: (FarmFieldMemory | undefined)[] = [];
     private buildingSnapshot?: readonly Building[];
     private fieldSnapshot?: readonly FarmFieldMemory[];
     private width = 0;
@@ -36,6 +39,15 @@ export class PresentationIndex {
         if (this.buildingSnapshot !== fog.buildings || this.width !== fog.width) {
             this.buildingSnapshot = fog.buildings; this.width = fog.width;
             this.buildings = indexBuildings(fog.buildings);
+            this.cellBuildings = new Array(fog.width * fog.height);
+            for (const building of fog.buildings) {
+                if (building.hp <= 0) continue;
+                for (let y = building.y; y < building.y + buildingHeight(building); y++)
+                    for (let x = building.x; x < building.x + buildingWidth(building); x++) {
+                        if (x < 0 || y < 0 || x >= fog.width || y >= fog.height) continue;
+                        (this.cellBuildings[y * fog.width + x] ??= []).push(building);
+                    }
+            }
             this.roads.clear(); this.buckets.clear(); this.order.clear(); this.viewport = undefined;
             for (let i = 0; i < fog.buildings.length; i++) {
                 const building = fog.buildings[i];
@@ -47,10 +59,13 @@ export class PresentationIndex {
                 if (bucket) bucket.push(building); else this.buckets.set(key, [building]);
             }
         }
-        if (this.fieldSnapshot !== fog.fields) {
+        if (this.fieldSnapshot !== fog.fields || this.cellFields.length !== fog.width * fog.height) {
             this.fieldSnapshot = fog.fields;
-            this.fields.clear();
-            for (const field of fog.fields) this.fields.set(cellKey(field.x, field.y), field);
+            this.fields.clear(); this.cellFields = new Array(fog.width * fog.height);
+            for (const field of fog.fields) {
+                this.fields.set(cellKey(field.x, field.y), field);
+                if (field.x >= 0 && field.y >= 0 && field.x < fog.width && field.y < fog.height) this.cellFields[field.y * fog.width + field.x] = field;
+            }
         }
     }
 

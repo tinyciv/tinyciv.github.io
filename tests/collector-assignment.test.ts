@@ -65,7 +65,7 @@ describe('farm courier assignment', () => {
     expect(state.units.map(unit => unit.id)).toEqual([10, 11]);
   });
 
-  it('observes food and claim changes made during the shared collector frame', () => {
+  it('retains its parcel claim during travel and observes changed food at arrival', () => {
     const state = fixture(); synchronizeFarms(state); ensureCollectors(state);
     const worker = state.units.find(unit => unit.collectorCamp === 3)!;
     const field = state.fields!.find(plot => plot.camp === 3)!;
@@ -78,9 +78,14 @@ describe('farm courier assignment', () => {
       expect(worker.inside).toBe(false);
       field.food = 0;
       updateCollector(state, worker, .1, () => {});
+      expect(worker.field).toBe(field.id);
+      expect(field.claimedBy).toBe(worker.id);
+      Object.assign(worker, { x: field.x + .5, y: field.y + .5 });
+      updateCollector(state, worker, .1, () => {});
       expect(worker.field).toBeUndefined();
       expect(field.claimedBy).toBeUndefined();
-      expect(worker.collectPhase).toBe('idle');
+      expect(worker.collectPhase).toBe('returning');
+      expect(worker.cargo).toBe(0);
     } finally { endCollectorFrame(state); }
   });
 

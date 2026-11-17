@@ -1,0 +1,13 @@
+{
+  "purpose": "World Generation panel: src/ui/frontend.ts, src/ui/world-generation.css, src/ui/world-generation.ts",
+  "tool": "Built-in image_gen.imagegen",
+  "reference": "World Generation design supplied by the user on 2026-11-13. The user requested this exact design implemented.",
+  "generatedSource": "/Users/ckrapu/.codex/generated_images/01a1d824-f6f9-7fc3-b8fd-50fa3123c013/exec-3bc0421c-cf6f-4aaa-b78a-96700565689d.png",
+  "files": {
+    "backdrop.webp": "1672 x 941 generated artwork, encoded as WebP quality 92. No labels or selection states baked in. Radio rivets, thumbnails, previews and footer plates are CSS crops of this generated artwork."
+  },
+  "prompt": "Use case: ui-mockup. Asset type: production backdrop for the TinyCiv World Generation setup screen. The attached image is the exact approved layout and visual reference. Reproduce its 1672 x 941 composition as closely as possible, keeping all brass and gold bevels, black-brown patterned inset panels, pipes along the left and right edges, map illustrations, thumbnails, rivets, and precise panel positions. CRITICAL: remove ALL text everywhere, leaving clean blank surfaces where all labels were. Remove all radio buttons in world size (left top), barbarians (right top), and random rows (middle bottom and bottom) leaving clean dark patterned surfaces; the application will render functional controls on top. Remove ALL yellow selected glows from thumbnails. Keep the top left tiny title plate but empty, top title banner empty, the middle centered subtitle plaque empty, the three landmass bottom caption plaques empty, all three bottom section headings and labels empty, and the two footer button faces empty. Keep all nine map thumbnails for the landmass strip, all nine bottom thumbnails, the three large bottom landscape images and large central world map exactly as in reference, without any text or selection indicators. This is a faithful recreation, not a redesign. Rich crisp gold/brass steampunk strategy game UI, antique relief map art turquoise seas, cream yellow green land, no pixel art sprites. No new text, no watermarks. Output wide 1672:941 aspect ratio.",
+  "review": "scratch/2026-11-13-world-generation/review.html",
+  "story": "menu-main-menu--world-generation",
+  "controls": "Native radios and checkbox; live Pixel Operator labels; shared menu-button hover/press transitions. Water percentages are generation targets mapped to the existing landScale parameter. No new simulation logic."
+}

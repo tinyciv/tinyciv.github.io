@@ -35,6 +35,11 @@ for(let round=0;round<rounds;round++) {
       at=performance.now();engine.constructionRoute(state,kind,start,end);engine.planConstruction(state,kind,route);
       add(name,kind,'unchangedPreview').push(performance.now()-at);
     }
+    for(let i=0;i<20;i++) {
+      state.factions[0].gold+=.1;state.factions[0].food+=.01;state.factions[0].production+=.02;
+      at=performance.now();engine.constructionRoute(state,kind,start,end);engine.planConstruction(state,kind,route);
+      add(name,kind,'incomeWhileHovering').push(performance.now()-at);
+    }
     for(let x=91;x<=98;x++) {
       at=performance.now();const route=engine.constructionRoute(state,kind,start,{x,y:start.y});engine.planConstruction(state,kind,route);
       add(name,kind,'changedEndpoint').push(performance.now()-at);
@@ -48,7 +53,7 @@ for(let round=0;round<rounds;round++) {
   }
 }
 const stats=values=>{const sorted=[...values].sort((a,b)=>a-b);return {samples:values.length,meanMs:values.reduce((a,b)=>a+b,0)/values.length,medianMs:sorted[Math.floor(values.length/2)],p95Ms:sorted[Math.floor(values.length*.95)]};};
-const report={method:'Headless synchronous route+quote and purchase CPU, alternating engines. Each fresh fixture has 1082 buildings, 320 farms in 4x4 parcels, 301 units and 192x144 tiles. Preview spans 17 cells; changed endpoints span 9–16 cells. Quotes/purchases must preserve costs, layouts, crops and food. No rendering, live FPS or WASM.',cpu:os.cpus()[0].model,rounds,
+const report={method:'Headless synchronous route+quote and purchase CPU, alternating engines. Each fresh fixture has 1082 buildings, 320 farms in 4x4 parcels, 301 units and 192x144 tiles. Preview spans 17 cells; changed endpoints span 9–16 cells. Income hover changes all treasury balances on every query while the route stays affordable. Quotes/purchases must preserve costs, layouts, crops and food. No rendering, live FPS or WASM.',cpu:os.cpus()[0].model,rounds,
  bundles:{...(beforeFile&&{beforeSha256:createHash('sha256').update(await readFile(beforeFile)).digest('hex')}),afterSha256:createHash('sha256').update(await readFile(afterFile)).digest('hex')},
  timings:Object.fromEntries(Object.entries(samples).map(([engine,kinds])=>[engine,Object.fromEntries(Object.entries(kinds).map(([kind,phases])=>[kind,Object.fromEntries(Object.entries(phases).map(([phase,values])=>[phase,stats(values)]))]))])),parity};
 await writeFile(path.join(directory,'comparison.json'),JSON.stringify(report,null,2)+'\n');

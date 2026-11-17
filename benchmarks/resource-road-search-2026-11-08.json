@@ -1,0 +1,416 @@
+{
+  "method": "Alternating exact resource-road route, endpoint and home comparisons, public and trusted gameplay queries, on all captured resource sites. Cold terrain preparation is included in the first public query.",
+  "rounds": 3,
+  "timings": {
+    "before": {
+      "public:3": {
+        "meanMs": 202.36333299999993,
+        "medianMs": 194.45045800000003,
+        "maxMs": 230.72233299999994
+      },
+      "public:1": {
+        "meanMs": 15.818971999999917,
+        "medianMs": 9.37908299999981,
+        "maxMs": 29.63920799999994
+      },
+      "public:5": {
+        "meanMs": 1.4641109999999646,
+        "medianMs": 1.453457999999955,
+        "maxMs": 1.7708340000000362
+      },
+      "public:6": {
+        "meanMs": 1.3430556666665627,
+        "medianMs": 1.3945839999998952,
+        "maxMs": 1.5992499999999836
+      },
+      "public:4": {
+        "meanMs": 9.098041666666708,
+        "medianMs": 9.30516700000021,
+        "maxMs": 10.015374999999949
+      },
+      "public:7": {
+        "meanMs": 1.173597333333343,
+        "medianMs": 1.134999999999991,
+        "maxMs": 1.3109580000000278
+      },
+      "public:9": {
+        "meanMs": 8.340417000000002,
+        "medianMs": 8.111791999999923,
+        "maxMs": 9.124417000000108
+      },
+      "public:8": {
+        "meanMs": 26.206416666666655,
+        "medianMs": 27.690458000000035,
+        "maxMs": 29.534167000000025
+      },
+      "public:2": {
+        "meanMs": 8.060263999999885,
+        "medianMs": 8.011082999999871,
+        "maxMs": 8.320124999999962
+      },
+      "gameplay:3": {
+        "meanMs": 1.2516250000000657,
+        "medianMs": 1.1585000000000036,
+        "maxMs": 1.455332999999996
+      },
+      "gameplay:1": {
+        "meanMs": 0.8995833333333773,
+        "medianMs": 0.8591250000001764,
+        "maxMs": 0.9920000000000755
+      },
+      "gameplay:5": {
+        "meanMs": 0.7817636666666582,
+        "medianMs": 0.784874999999829,
+        "maxMs": 0.8120000000000118
+      },
+      "gameplay:6": {
+        "meanMs": 0.7597640000000183,
+        "medianMs": 0.7717079999999896,
+        "maxMs": 0.772583999999938
+      },
+      "gameplay:4": {
+        "meanMs": 0.7709163333332375,
+        "medianMs": 0.7597499999997126,
+        "maxMs": 0.7987080000000333
+      },
+      "gameplay:7": {
+        "meanMs": 0.7601806666666183,
+        "medianMs": 0.7598329999999578,
+        "maxMs": 0.7898749999999382
+      },
+      "gameplay:9": {
+        "meanMs": 0.902471999999951,
+        "medianMs": 0.7670410000000629,
+        "maxMs": 1.2026250000000118
+      },
+      "gameplay:8": {
+        "meanMs": 22.314639333333314,
+        "medianMs": 21.710833999999977,
+        "maxMs": 24.25412499999993
+      },
+      "gameplay:2": {
+        "meanMs": 0.9889163333333121,
+        "medianMs": 0.9512079999999514,
+        "maxMs": 1.0737500000000182
+      }
+    },
+    "after": {
+      "public:3": {
+        "meanMs": 195.26495866666656,
+        "medianMs": 199.7574169999998,
+        "maxMs": 201.72983399999998
+      },
+      "public:1": {
+        "meanMs": 10.8561530000001,
+        "medianMs": 8.76370900000029,
+        "maxMs": 15.270792000000029
+      },
+      "public:5": {
+        "meanMs": 1.440291666666629,
+        "medianMs": 1.3754579999999805,
+        "maxMs": 1.7134169999999358
+      },
+      "public:6": {
+        "meanMs": 1.2733886666666951,
+        "medianMs": 1.2078750000000582,
+        "maxMs": 1.5374579999999014
+      },
+      "public:4": {
+        "meanMs": 9.459569666666804,
+        "medianMs": 9.864167000000066,
+        "maxMs": 10.179875000000266
+      },
+      "public:7": {
+        "meanMs": 1.253152666666627,
+        "medianMs": 1.3172079999999369,
+        "maxMs": 1.3504580000000033
+      },
+      "public:9": {
+        "meanMs": 8.838402666666676,
+        "medianMs": 8.676625000000058,
+        "maxMs": 9.547583000000031
+      },
+      "public:8": {
+        "meanMs": 17.799111333333297,
+        "medianMs": 17.660750000000007,
+        "maxMs": 19.791292
+      },
+      "public:2": {
+        "meanMs": 8.759611333333359,
+        "medianMs": 8.919167000000016,
+        "maxMs": 9.353250000000003
+      },
+      "gameplay:3": {
+        "meanMs": 1.2622639999998835,
+        "medianMs": 1.385958999999957,
+        "maxMs": 1.4441249999999854
+      },
+      "gameplay:1": {
+        "meanMs": 0.9340833333332436,
+        "medianMs": 0.9485409999999774,
+        "maxMs": 1.0742499999998927
+      },
+      "gameplay:5": {
+        "meanMs": 0.8436666666666875,
+        "medianMs": 0.844791999999984,
+        "maxMs": 0.9797499999999673
+      },
+      "gameplay:6": {
+        "meanMs": 0.8341663333333145,
+        "medianMs": 0.816915999999992,
+        "maxMs": 1.0111249999999927
+      },
+      "gameplay:4": {
+        "meanMs": 0.9828469999999925,
+        "medianMs": 0.9678749999998217,
+        "maxMs": 1.271833000000015
+      },
+      "gameplay:7": {
+        "meanMs": 0.8448609999998477,
+        "medianMs": 0.87662499999999,
+        "maxMs": 0.96287499999994
+      },
+      "gameplay:9": {
+        "meanMs": 0.8158336666667007,
+        "medianMs": 0.8170829999999114,
+        "maxMs": 0.9617090000001554
+      },
+      "gameplay:8": {
+        "meanMs": 10.173554999999928,
+        "medianMs": 10.298083000000133,
+        "maxMs": 13.470665999999937
+      },
+      "gameplay:2": {
+        "meanMs": 1.0017639999999421,
+        "medianMs": 1.0199169999998503,
+        "maxMs": 1.2106660000001739
+      }
+    }
+  },
+  "parity": [
+    {
+      "query": "0:public:3",
+      "equal": true
+    },
+    {
+      "query": "0:public:1",
+      "equal": true
+    },
+    {
+      "query": "0:public:5",
+      "equal": true
+    },
+    {
+      "query": "0:public:6",
+      "equal": true
+    },
+    {
+      "query": "0:public:4",
+      "equal": true
+    },
+    {
+      "query": "0:public:7",
+      "equal": true
+    },
+    {
+      "query": "0:public:9",
+      "equal": true
+    },
+    {
+      "query": "0:public:8",
+      "equal": true
+    },
+    {
+      "query": "0:public:2",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:3",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:1",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:5",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:6",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:4",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:7",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:9",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:8",
+      "equal": true
+    },
+    {
+      "query": "0:gameplay:2",
+      "equal": true
+    },
+    {
+      "query": "1:public:3",
+      "equal": true
+    },
+    {
+      "query": "1:public:1",
+      "equal": true
+    },
+    {
+      "query": "1:public:5",
+      "equal": true
+    },
+    {
+      "query": "1:public:6",
+      "equal": true
+    },
+    {
+      "query": "1:public:4",
+      "equal": true
+    },
+    {
+      "query": "1:public:7",
+      "equal": true
+    },
+    {
+      "query": "1:public:9",
+      "equal": true
+    },
+    {
+      "query": "1:public:8",
+      "equal": true
+    },
+    {
+      "query": "1:public:2",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:3",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:1",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:5",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:6",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:4",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:7",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:9",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:8",
+      "equal": true
+    },
+    {
+      "query": "1:gameplay:2",
+      "equal": true
+    },
+    {
+      "query": "2:public:3",
+      "equal": true
+    },
+    {
+      "query": "2:public:1",
+      "equal": true
+    },
+    {
+      "query": "2:public:5",
+      "equal": true
+    },
+    {
+      "query": "2:public:6",
+      "equal": true
+    },
+    {
+      "query": "2:public:4",
+      "equal": true
+    },
+    {
+      "query": "2:public:7",
+      "equal": true
+    },
+    {
+      "query": "2:public:9",
+      "equal": true
+    },
+    {
+      "query": "2:public:8",
+      "equal": true
+    },
+    {
+      "query": "2:public:2",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:3",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:1",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:5",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:6",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:4",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:7",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:9",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:8",
+      "equal": true
+    },
+    {
+      "query": "2:gameplay:2",
+      "equal": true
+    }
+  ],
+  "summary": {
+    "exactComparisons": 54,
+    "allEqual": true,
+    "slowRetrySite": 8,
+    "beforeGameplayMedianMs": 21.710833999999977,
+    "afterGameplayMedianMs": 10.298083000000133
+  },
+  "reproduction": "node benchmarks/resource-road-search.mjs --before=/path/to/before-checkout --state=/path/to/captured-state.json"
+}

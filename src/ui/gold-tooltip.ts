@@ -3,6 +3,8 @@ import type { Faction, GameState } from '../game/types';
 import './gold-tooltip.css';
 
 let sequence = 0;
+const TOOLTIP_EXCLUDED_INPUTS: ReadonlySet<string> = new Set(['loot']);
+const TOOLTIP_EXCLUDED_OUTLAYS: ReadonlySet<string> = new Set(['construction']);
 const signed = (value: number): string => {
   const rounded = Math.round(Math.abs(value));
   return rounded ? `${value < 0 ? '−' : '+'}${rounded.toLocaleString('en-US')}` : '0';
@@ -66,7 +68,13 @@ export class GoldTooltip {
 
   private render(): void {
     if (!this.state || !this.faction) return;
-    const summary = goldFlowSummary(this.state, this.faction), signature = JSON.stringify(summary);
+    // Recurring income and spending only: one-off loot and building purchases
+    // swamp the regular economy, so the tooltip leaves them out.
+    const full = goldFlowSummary(this.state, this.faction);
+    const inputs = full.inputs.filter(row => !TOOLTIP_EXCLUDED_INPUTS.has(row.category));
+    const outlays = full.outlays.filter(row => !TOOLTIP_EXCLUDED_OUTLAYS.has(row.category));
+    const totalInputs = inputs.reduce((sum, row) => sum + row.amount, 0), totalOutlays = outlays.reduce((sum, row) => sum + row.amount, 0);
+    const summary = { inputs, outlays, totalInputs, totalOutlays, net: totalInputs - totalOutlays }, signature = JSON.stringify(summary);
     if (signature !== this.signature) {
       this.signature = signature;
       for (const kind of ['inputs', 'outlays'] as const) {

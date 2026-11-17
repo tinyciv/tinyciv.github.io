@@ -16,14 +16,14 @@ function realm() {
   return { state, faction, smithy };
 }
 describe('Metal Casting swordsmen', () => {
-  it('requires late research and an owned, finished, nearby blacksmith, including multiplayer', () => {
+  it('requires late research and owned, finished, nearby army controls, including multiplayer', () => {
     const {state,faction,smithy}=realm();
     expect(areSwordsmenUnlocked(faction)).toBe(false);
     expect(setSwordsmanFraction(state,smithy,.5)).toBe(false);
     expect(applyGameCommand(state,0,{type:'swordsmen',buildingId:smithy.id,fraction:.5}).ok).toBe(false);
     faction.research!.levels.metalCasting=1;
     expect(RESEARCH_BRANCHES.find(b=>b.id==='metalCasting')!.prerequisites).toEqual(['reinforcedDefenses','infantryDrill']);
-    expect(setSwordsmanFraction(state,state.buildings[0],.5)).toBe(false);
+    expect(setSwordsmanFraction(state,state.buildings[1],.5)).toBe(false);
     expect(setSwordsmanFraction(state,smithy,NaN)).toBe(false);
     smithy.construction={startedAt:0,duration:20}; expect(setSwordsmanFraction(state,smithy,.5)).toBe(false);delete smithy.construction;
     expect(applyGameCommand(state,1,{type:'swordsmen',buildingId:smithy.id,fraction:.5}).ok).toBe(false);
@@ -49,10 +49,10 @@ describe('Metal Casting swordsmen', () => {
     setArcherFraction(state,state.buildings[0],.75);setSwordsmanFraction(state,smithy,.5);
     expect(retinueComposition(state,0)).toMatchObject({total:4,swordsmen:2,archers:2,warriors:0});
     expect(state.units.filter(isRetinueMember)).toHaveLength(4);
-    setArcherFraction(state,state.buildings[0],1);expect(faction.archerFraction).toBe(.5);
+    setArcherFraction(state,state.buildings[0],1);expect(faction.archerFraction).toBe(1);
     const stable={...smithy,id:103,kind:'stable' as const};entityStore(state).buildings.add(stable);faction.research!.levels.horsebackRiding=1;
     setHorsemanFraction(state,stable,.75);
-    expect(retinueComposition(state,0)).toMatchObject({horsemen:3,swordsmen:1,archers:0,warriors:0});
+    expect(retinueComposition(state,0)).toMatchObject({horsemen:3,swordsmen:0,archers:1,warriors:0});
   });
   it('requires a living smithy for replacements and safely exits lost training buildings', () => {
     const {state,faction,smithy}=realm();faction.research!.levels.metalCasting=1;setSwordsmanFraction(state,smithy,1);

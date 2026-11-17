@@ -3,7 +3,8 @@ import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './option
 
 export interface StartingSite extends Point { quality: number; scenic: number; tie: number }
 /** Minimum separation between starting cities belonging to different realms. */
-export const MIN_FACTION_START_DISTANCE = 80;
+export const MIN_FACTION_START_DISTANCE = 30;
+export const MAX_FACTION_NEIGHBOR_DISTANCE = 100;
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Farthest-point seeding followed by constrained Lloyd relaxation spreads
@@ -18,8 +19,8 @@ export function spreadFactionStarts(candidates: StartingSite[], count: number, m
     for (const candidate of candidates) {
       let nearest = Infinity;
       for (const point of chosen) nearest = Math.min(nearest, distance(point, candidate));
-      if (nearest < minimumGap) continue;
-      // No upper cap: the old 38-tile cap made distant empty regions invisible.
+      if (nearest < minimumGap || nearest > MAX_FACTION_NEIGHBOR_DISTANCE) continue;
+      // Spread across usable land while keeping every realm within contact range.
       const score = nearest * parameters.startSpacing + candidate.quality * .8 + candidate.tie * .3;
       if (score > bestScore) { best = candidate; bestScore = score; }
     }
@@ -46,7 +47,10 @@ export function spreadFactionStarts(candidates: StartingSite[], count: number, m
       for (const candidate of region.cells) {
         let nearest = Infinity;
         for (let i = 0; i < chosen.length; i++) if (i !== n) nearest = Math.min(nearest, distance(candidate, chosen[i]));
-        if (nearest < allowedGap) continue;
+        if (nearest < allowedGap || nearest > MAX_FACTION_NEIGHBOR_DISTANCE) continue;
+        // Moving one capital must not strand its only neighboring realm.
+        if (chosen.some((other, i) => i !== n && distance(other, candidate) > MAX_FACTION_NEIGHBOR_DISTANCE
+          && !chosen.some((neighbor, j) => j !== n && j !== i && distance(other, neighbor) <= MAX_FACTION_NEIGHBOR_DISTANCE))) continue;
         const score = -distance(candidate, centroid) + Math.min(nearest, oldGap) * .12 * parameters.startSpacing
           + candidate.quality * .15 + candidate.tie * .02;
         if (score > bestScore) { best = candidate; bestScore = score; }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildStroke, constructionLine } from '../src/game/construction';
-import { buildAt, withConstructionBatch } from '../src/game/simulation';
+import { advanceConstructionReconciliation, buildAt, withConstructionBatch } from '../src/game/simulation';
 import * as builders from '../src/game/builders';
 import * as archery from '../src/game/archery';
 import type { GameState } from '../src/game/types';
@@ -20,20 +20,23 @@ function fixture(): GameState {
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'batch', rngState: 1,
   };
 }
+const drain = (state: GameState) => { while (advanceConstructionReconciliation(state)) { /* queued staffing */ } };
 afterEach(() => vi.restoreAllMocks());
 
 describe('construction stroke bookkeeping', () => {
   it('staffs a whole road stroke once while retaining per-cell payment and final city rates', () => {
     const state = fixture(), control = fixture(), line = constructionLine({ x: 6, y: 6 }, { x: 14, y: 6 });
     for (const p of line) expect(buildAt(control, 'road', p.x, p.y).ok).toBe(true);
+    drain(control);
     const staffing = vi.spyOn(builders, 'ensureBuilders'), training = vi.spyOn(archery, 'scheduleArcheryTraining');
     expect(buildStroke(state, 'road', line)).toMatchObject({ ok: true, placed: 9, skipped: 0 });
-    expect(staffing).toHaveBeenCalledTimes(1); expect(training).toHaveBeenCalledTimes(1);
+    expect(staffing).not.toHaveBeenCalled(); drain(state);
+    expect(staffing).toHaveBeenCalledTimes(1); expect(training).not.toHaveBeenCalled();
     expect(state.factions[0].gold).toBe(110);
     expect(state.factions[0].yields).toEqual(control.factions[0].yields);
     expect(state.units.filter(u => u.builder)).toHaveLength(control.units.filter(u => u.builder).length);
     expect(state.buildings.filter(b => b.construction)).toHaveLength(9);
-    expect(buildAt(state, 'road', 15, 6).ok).toBe(true);
+    expect(buildAt(state, 'road', 15, 6).ok).toBe(true); drain(state);
     expect(staffing).toHaveBeenCalledTimes(2); // No leaked batch on the next command.
   });
 
@@ -42,7 +45,7 @@ describe('construction stroke bookkeeping', () => {
     const staffing = vi.spyOn(builders, 'ensureBuilders');
     expect(buildStroke(state, 'road', constructionLine({ x: 6, y: 6 }, { x: 10, y: 6 })))
       .toMatchObject({ ok: true, placed: 2, skipped: 3 });
-    expect(state.factions[0].gold).toBe(5); expect(staffing).toHaveBeenCalledTimes(1);
+    drain(state); expect(state.factions[0].gold).toBe(5); expect(staffing).toHaveBeenCalledTimes(1);
     expect(buildStroke(state, 'road', [{ x: 8, y: 6 }]).placed).toBe(0);
     expect(staffing).toHaveBeenCalledTimes(1);
   });
@@ -55,7 +58,7 @@ describe('construction stroke bookkeeping', () => {
       throw new Error('interrupted');
     })).toThrow('interrupted');
     expect(staffing).toHaveBeenCalledTimes(1);
-    expect(buildAt(state, 'road', 7, 6).ok).toBe(true);
+    expect(buildAt(state, 'road', 7, 6).ok).toBe(true); drain(state);
     expect(staffing).toHaveBeenCalledTimes(2);
   });
 });

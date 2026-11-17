@@ -1,14 +1,18 @@
 import { expect, it } from 'vitest';
+import { tundraStartAllowed } from '../src/game/tundra-starts';
+import { planStartingSettlement } from '../src/game/settlement-layout';
+import { DEFAULT_LANDSCAPE_PARAMETERS } from '../src/world/options';
 import { applyTundra } from '../src/world/tundra';
 import { climateTreeClass } from '../src/world/tree-climate';
 import { vegetationVariant, TREE_FAMILIES } from '../src/game/vegetation-art';
 import { generateWorld, normalizePunyWorld } from '../src/world/generator';
-import type { World } from '../src/game/types';
+import type { World, GameState } from '../src/game/types';
 it('creates reproducible polar tundra while preserving water and restricting snow trees', () => {
  const w: World = { width: 80, height: 100, seed: 'polar', source: 'test', spawns: [], tiles: Array.from({length:8000}, () => ({terrain:'grassland',overlay:'forest',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4,treeClass:'snowy'})) };
  w.tiles[0].terrain='lake'; const b=structuredClone(w);applyTundra(w);applyTundra(b);expect(w).toEqual(b);
  expect(w.tiles[0].terrain).toBe('lake');
- expect(w.tiles.slice(80,800).every(t=>t.terrain==='tundra')).toBe(true);
+ expect(w.tiles.slice(80,560).every(t=>t.terrain==='tundra')).toBe(true);
+ expect(w.tiles.slice(7440).every(t=>t.terrain==='tundra')).toBe(true);
  expect(w.tiles.slice(4800,6400).every(t=>t.terrain==='grassland')).toBe(true);
  for(const t of w.tiles) expect(t.treeClass==='snowy').toBe(t.terrain==='tundra');
  expect(climateTreeClass(0,{...w.tiles[80],temperature:.9})).toBe('snowy');
@@ -31,4 +35,26 @@ it('keeps entire overlapping ledge aprons on one terrain and refreshes tundra fe
  const terrain=w.tiles[3*40+10].terrain;
  for(let y=1;y<=24;y++)for(let x=8;x<=17;x++) expect(w.tiles[y*40+x].terrain).toBe(terrain);
  for(const t of w.tiles) if(t.terrain==='tundra') {expect(t.fertility).toBe(.25);expect(t.treeClass).toBe('snowy');}
+});
+
+it('keeps both polar caps narrow even when the equator is shifted', () => {
+ const w:World={width:80,height:100,seed:'two-poles',source:'test',spawns:[],tiles:Array.from({length:8000},()=>({terrain:'grassland',overlay:'none',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4}))};
+ applyTundra(w,{...DEFAULT_LANDSCAPE_PARAMETERS,equatorPosition:.85,equatorWidth:.1});
+ expect(w.tiles.slice(0,80*7).every(t=>t.terrain==='tundra')).toBe(true);
+ expect(w.tiles.slice(80*93).every(t=>t.terrain==='tundra')).toBe(true);
+ expect(w.tiles.slice(80*16,80*84).every(t=>t.terrain!=='tundra')).toBe(true);
+});
+it('allows frontier starts but moves a proposed town out of deep tundra', () => {
+ const w:World={width:60,height:60,seed:'polar-starts',source:'test',spawns:[{x:30,y:10}],tiles:Array.from({length:3600},(_,i)=>({terrain:Math.floor(i/60)<20?'tundra':'grassland',overlay:'none',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4}))};
+ expect(tundraStartAllowed(w,30,10)).toBe(false);
+ expect(tundraStartAllowed(w,30,17)).toBe(false);
+ expect(tundraStartAllowed(w,30,18)).toBe(true);
+ const state={world:w,buildings:[],units:[],fields:[],factions:[],time:0,tick:0} as unknown as GameState;
+ const layout=planStartingSettlement(state,w.spawns[0]);
+ expect(layout.palace.y).toBeGreaterThanOrEqual(18);
+ expect(tundraStartAllowed(w,layout.palace.x,layout.palace.y)).toBe(true);
+});
+it.each(['polar-frontier-a','polar-frontier-b','polar-frontier-c'])('keeps every generated starting town out of deep tundra on %s', seed => {
+ const w=generateWorld(seed,194,153);
+ for(const spawn of [...w.spawns,...w.secondarySpawns??[]]) expect(tundraStartAllowed(w,spawn.x,spawn.y)).toBe(true);
 });

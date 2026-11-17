@@ -1,5 +1,8 @@
 import { playerFaction } from './player-context';
 import { type Building, type BuildingKind, type GameState, isWallKind } from './types';
+import { entityStore, type EntityStore } from './entity-store';
+import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
+import { worldStructureRevision } from './world-revisions';
 
 const cardinal = [[0, -1], [-1, 0], [1, 0], [0, 1]] as const;
 const isRoute = (kind: BuildingKind): boolean => kind === 'road' || kind === 'bridge';
@@ -7,6 +10,8 @@ export const MIN_GATE_SPACING = 2;
 export const MIN_ROAD_JUNCTION_SPACING = 2;
 export interface NetworkPlacement { ok: boolean; message: string }
 const allowed: NetworkPlacement = { ok: true, message: '' };
+const cachedQueries = new WeakMap<GameState, { store: EntityStore; membership: number; structure: number;
+  world: GameState['world']; revision: number; query: ReturnType<typeof createNetworkPlacementQuery> }>();
 
 /** A road may open an existing friendly or unclaimed wall without first
  * connecting to a road network. Orders reserve this gateway immediately. */
@@ -111,5 +116,12 @@ export function createNetworkPlacementQuery(state: GameState) {
 /** All living orders reserve network spacing, including paused construction. */
 export function validateNetworkPlacement(state: GameState, kind: BuildingKind, x: number, y: number, faction = playerFaction(state)): NetworkPlacement {
   if (!isRoute(kind) && !isWallKind(kind)) return allowed;
-  return createNetworkPlacementQuery(state)(kind, x, y, faction);
+  if (!simulationReadsActive(state)) return createNetworkPlacementQuery(state)(kind, x, y, faction);
+  const store = entityStore(state), membership = store.buildings.revision, structure = structureChangeRevision(state);
+  const revision = worldStructureRevision(state.world), previous = cachedQueries.get(state);
+  if (previous?.store === store && previous.membership === membership && previous.structure === structure
+    && previous.world === state.world && previous.revision === revision) return previous.query(kind, x, y, faction);
+  const query = createNetworkPlacementQuery(state);
+  cachedQueries.set(state, { store, membership, structure, world: state.world, revision, query });
+  return query(kind, x, y, faction);
 }

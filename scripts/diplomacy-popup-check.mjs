@@ -58,9 +58,8 @@ const fixture = async (paused = true) => {
 const openHouse = async point => {
     await clickWorld(point);
     await page.locator('#dialog:not([hidden])').waitFor();
-    assert.equal(await page.locator('#dialog-title').textContent(), 'Declare war?');
+    assert.equal(await page.locator('#dialog-title').textContent(), 'Redwater');
     assert.equal(await page.locator('#declare-war').textContent(), 'Declare War');
-    assert.equal(await page.locator('#dialog-body strong').textContent(), 'Redwater');
     assert.equal((await status()).paused, true);
 };
 

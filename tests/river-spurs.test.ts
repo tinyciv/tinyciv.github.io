@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { WATER, type Tile, type World } from '../src/game/types';
-import { generateMediterraneanWorld } from '../src/world/mediterranean';
 import { pruneShortRiverSpurs } from '../src/world/river-spurs';
 
 function fixture() {
@@ -78,39 +77,4 @@ describe('short river side branches', () => {
     expect(world.tiles).toEqual(before);
   });
 
-  it('generates no interior one- or two-cell terminal spurs and keeps all downstream links valid', () => {
-    const world = generateMediterraneanWorld('MED-200BC');
-    const boundary = (cell: number) => cell % world.width === 0 || cell % world.width === world.width - 1
-      || cell < world.width || cell >= world.tiles.length - world.width;
-    const spurs: number[][] = [];
-    world.tiles.forEach((tile, start) => {
-      if (tile.terrain !== 'river') return;
-      const next = tile.channelNext;
-      expect(next).toBeDefined();
-      if (next! >= 0) {
-        expect(waterNeighbors(world, start)).toContain(next);
-        expect(WATER.has(world.tiles[next!].terrain)).toBe(true);
-      }
-      if (waterNeighbors(world, start).length !== 1) return;
-      const path: number[] = []; let previous = -1, cell = start;
-      while (path.length <= 2 && world.tiles[cell].terrain === 'river' && !boundary(cell)) {
-        const adjacent = waterNeighbors(world, cell);
-        if (adjacent.length >= 3) { spurs.push(path); break; }
-        if (adjacent.length !== (previous < 0 ? 1 : 2)) break;
-        path.push(cell); const nextCell = adjacent.find(next => next !== previous)!;
-        previous = cell; cell = nextCell;
-      }
-    });
-    expect(spurs).toEqual([]);
-    const finished = new Set<number>();
-    world.tiles.forEach((tile, start) => {
-      if (tile.terrain !== 'river') return;
-      const path = new Set<number>(); let cell = start;
-      while (cell >= 0 && world.tiles[cell].terrain === 'river' && !finished.has(cell)) {
-        expect(path.has(cell), `acyclic flow at ${cell}`).toBe(false);
-        path.add(cell); cell = world.tiles[cell].channelNext!;
-      }
-      for (const visited of path) finished.add(visited);
-    });
-  }, 20000);
 });

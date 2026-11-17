@@ -1,0 +1,22 @@
+{
+  "group_id": "b9563b2a-6f88-4717-9dba-49cdb03de8a7",
+  "objects": [
+    {
+      "id": "8c386f9a-d8d8-4231-b53f-fe5b2ebb4fff",
+      "name": "base",
+      "prompt": "Medieval blacksmith",
+      "size": {
+        "width": 32,
+        "height": 32
+      },
+      "directions": 1,
+      "view": "low top-down",
+      "rotations": {
+        "unknown": "rotations/Medieval_blacksmith.png"
+      },
+      "animations": {}
+    }
+  ],
+  "export_version": "1.1",
+  "export_date": "2026-11-11T15:15:09.771455"
+}

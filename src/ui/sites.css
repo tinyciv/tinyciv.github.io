@@ -1,0 +1,5 @@
+.site-dialog { font-family: var(--game-font); }
+.site-dialog .site-portrait { display: block; width: 120px; height: 110px; object-fit: contain; margin: 8px auto 14px; }
+.site-dialog .site-costs { color: var(--popup-muted); }
+.site-dialog #site-error:empty { display: none; }
+.site-dialog #site-error { color: #e89d8e; }

@@ -1,0 +1,80 @@
+{
+  "generator": "PixelLab /edit-animation-v2",
+  "variant": "2C",
+  "basedOn": "user-selected1B",
+  "status": "integrated",
+  "view": "high top-down",
+  "footprint": [
+    2,
+    2
+  ],
+  "frameSize": [
+    32,
+    32
+  ],
+  "frameCount": 16,
+  "groundAnchor": [
+    16,
+    25
+  ],
+  "rubbleBounds": [
+    6,
+    7,
+    26,
+    25
+  ],
+  "footprintAnchor": [
+    16,
+    32
+  ],
+  "loop": false,
+  "frameDurationsMs": [
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250,
+    250
+  ],
+  "animationDurationMs": 4000,
+  "rubbleFadeDurationMs": 10000,
+  "sheet": "destruction.png",
+  "rubble": "rubble.png",
+  "sourceFrameIndices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    16
+  ],
+  "prompt": "These are consecutive frames of the APPROVED 1B building destruction animation, in playback order. Re-render the SAME animation at native32x32 for a TWO BY TWO square building footprint. Use exactly the same yellow cores, orange flames, brown edges, charcoal smoke and warm gray rubble palette, sparse connected pixel clusters and restrained style. Keep the high top-down orthographic camera, NOT isometric, fixed center and flat square ground footprint; no rotation, drift, ground tile or actual building. Do NOT simply double each source pixel. Use the larger native canvas for a WIDER fire front made of several separate uneven tongues spreading across the whole square footprint, not one tall torch or a wall. Preserve chronological beats: frames0-2 small newly ignited flames; frames3-8 many flames spreading until the entire footprint is engulfed; frames9-11 fire covered by a LARGE soft-edged billowing CHARCOAL-GRAY SMOKE CLOUD; frames12-13 cloud puffs dispersing and revealing a low rubble heap; frames14-15 ONLY the stationary flat scattered gray masonry and short charred brown timber rubble. Smoke must read as dark soft puff masses, NOT stone, a boulder, a sphere, a gray rectangle or an explosion. Keep rubble FLAT and broad, spread nearly edge-to-edge across the square with several separate chunks, not one round rock. Visible content at full fire and smoke should fill most of32x32canvas with a small transparent margin; final rubble should occupy about28x20pixels near the lower center. The first frame is small fire, the last frame is ONLY rubble: NEVER reset to flames. Transparent background in every frame. No antialiasing, dithering, scattered sparks, grass, standing walls, roof, flags, text, ground shadow or backdrop.",
+  "processing": "Unchanged native API frames packed horizontally; stationary rubble is the final API frame.",
+  "sha256": {
+    "destruction.png": "efea054e91cd945c3fc5ce79774bdc81199817697ba916e68f916278c6d51d33",
+    "rubble.png": "abe85043b945236ea1f658c8a6aa9ad7f340e816d7834cca3939b07900ee2388"
+  },
+  "approvedVariant": "2C",
+  "approvedOn": "2026-11-14",
+  "sourceReview": "scratch/2026-11-14-building-destruction-1b-refinement/index.html"
+}

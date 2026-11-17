@@ -17,7 +17,7 @@ async function createGame(advanced, seed) {
   if (!(await page.locator('[data-view="single"]').isVisible())) { await page.locator('#world').focus(); await page.keyboard.press('Escape'); }
   await page.locator('[data-view="single"]').click();
   await page.locator('[data-form="single"] [name="seed"]').fill(seed);
-  await page.locator('[name="advanced-start"]').setChecked(advanced);
+  await page.locator('[name="advanced-start"]').fill(advanced ? '2' : '0');
   if (advanced) await page.screenshot({ path: `${output}/advanced-start-menu.png` });
   await page.locator('[data-form="single"] button[type="submit"]').click();
   await page.waitForFunction(seed => window.__game?.state.seed === seed && document.querySelector('#frontend').hidden, seed, { timeout: 120000 });

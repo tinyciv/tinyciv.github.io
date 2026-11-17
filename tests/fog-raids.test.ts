@@ -10,6 +10,7 @@ import { distance, isWallKind, type Building, type GameState, type Unit, type Wo
 import { generateWorld } from '../src/world/generator';
 import { updateFog } from '../src/game/fog';
 import { recordNativeFrame } from './helpers/native-renderer';
+import { isRaidObjective } from '../src/game/raid-targeting';
 
 function unit(id: number, x: number, y: number, kind: Unit['kind'] = 'warrior', faction = 0): Unit {
   return { id, x, y, kind, faction, hp: 100, morale: 100, attack: 17, defense: 4, speed: 3.6,
@@ -355,14 +356,18 @@ describe('destructible raider camps and ramped waves', () => {
     due(state); const count = raiders(state).length; initializeFogRaids(state); expect(raiders(state)).toHaveLength(count);
   });
 
-  it.each(['queued', 'paused', 'evacuating'])('keeps %s sites and farms out of raid objectives', phase => {
+  it.each(['queued', 'paused', 'evacuating'])('allows %s sites as raid objectives while excluding farms and destroyed sites', phase => {
     const state = fixture(); initializeFogRaids(state);
     entityStore(state).buildings.replace(state.buildings.filter(b => b.faction !== 0));
     const pending = building(20000, 39, 35, 'house');
     pending.construction = { startedAt: 0, duration: 20, waitingForBuilder: phase === 'queued',
       pausedAt: phase === 'paused' ? 0 : undefined, evacuating: phase === 'evacuating' };
-    entityStore(state).buildings.add(pending, building(20001, 44, 35, 'camp'));
-    due(state); expect(raiders(state)).toEqual([]);
+    const farm = building(20001, 44, 35, 'camp');
+    entityStore(state).buildings.add(pending, farm);
+    expect(isRaidObjective(state, pending)).toBe(true);
+    expect(isRaidObjective(state, farm)).toBe(false);
+    pending.hp = 0;
+    expect(isRaidObjective(state, pending)).toBe(false);
   });
 
   it('does not put camps on disconnected land or force them into water', () => {

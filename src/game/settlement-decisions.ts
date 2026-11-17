@@ -1,6 +1,7 @@
 import { decisionDue, decisionRevision, type DecisionClock } from './decision-schedule';
 import { entityStore, type EntityStore } from './entity-store';
 import type { GameState, Unit } from './types';
+import { traceOrchestration } from './orchestration-trace';
 import { structureChangeRevision } from './simulation-reads';
 import { worldRevisions, worldStructureRevision } from './world-revisions';
 
@@ -69,15 +70,16 @@ function remember(state: GameState, clock: SettlementClock, invalidation: number
   clock.factions = state.factions.map(({ id, population, defeated, relation }) => ({ id, population, defeated, relation }));
 }
 
-/** Run independent maintenance scans at no more than 3 Hz. Revisions are read
- * only when the deadline permits work; mutations never bypass that minimum
- * spacing. Remember after the
+/** Run independent maintenance scans at an average of at most 3 Hz. Revisions
+ * are read only when the phased deadline permits work; mutations never bypass
+ * that deadline. Remember after the
  * callback so its own staffing/topology edits do not schedule a redundant pass. */
 export function runSettlementDecision(state: GameState, task: SettlementDecision, run: () => void): boolean {
   const scheduling = stateClocks(state), clock = scheduling.tasks[task] ??= {};
   if (clock.sampledAt !== undefined && state.time >= clock.sampledAt
     && state.time + 1e-9 < clock.nextAt!) return false;
   if (!decisionDue(clock, state.time, keys[task], false, changed(state, task, clock, scheduling.invalidation))) return false;
+  traceOrchestration(state, 'decision', task);
   run();
   remember(state, clock, scheduling.invalidation);
   return true;

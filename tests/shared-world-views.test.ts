@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { territory } from '../src/game/borders';
 import { entityStore, resetEntities } from '../src/game/entity-store';
 import { palaceEnclosures } from '../src/game/enclosures';
-import { canWalk, invalidateNavigation } from '../src/game/pathfinding';
+import { canWalk, invalidateNavigation, wallBreachingNavigation, workNavigationState } from '../src/game/pathfinding';
 import { withSimulationReads } from '../src/game/simulation-reads';
 import { markWorldChanged } from '../src/game/world-revisions';
 import { type Building, type GameState } from '../src/game/types';
@@ -38,6 +38,35 @@ describe('maintained simulation world views', () => {
       territory(state); canWalk(state, 2, 2, 0); palaceEnclosures(state, true);
       expect(reads).toBe(before);
     });
+  });
+
+  it('shares authoritative validation with civilian and wall-breaching navigation views', () => {
+    const state = fixture(), building = { ...house(1, 12), kind: 'library' as const };
+    entityStore(state).buildings.add(building);
+    let reads = 0;
+    Object.defineProperty(building, 'x', { enumerable: true, get: () => { reads++; return 12; } });
+    withSimulationReads(state, () => {
+      const worker = workNavigationState(state, true), raider = wallBreachingNavigation(state, { kind: 'raider' });
+      expect(canWalk(worker, 12, 15, 0)).toBe(false);
+      expect(canWalk(raider, 12, 15, -2)).toBe(false);
+      const before = reads;
+      for (let i = 0; i < 100; i++) {
+        state.time += 1 / 30;
+        expect(workNavigationState(state, true)).toBe(worker);
+        canWalk(worker, 2, 2, 0); canWalk(raider, 2, 2, -2);
+      }
+      expect(reads).toBe(before);
+      building.hp = 0; invalidateNavigation(state);
+      expect(canWalk(workNavigationState(state, true), 12, 15, 0)).toBe(true);
+      expect(canWalk(wallBreachingNavigation(state, { kind: 'raider' }), 12, 15, -2)).toBe(true);
+      const replacement = { ...house(2, 25), kind: 'library' as const };
+      entityStore(state).buildings.add(replacement);
+      expect(canWalk(workNavigationState(state, true), 25, 15, 0)).toBe(false);
+      entityStore(state).buildings.retain(value => value !== replacement);
+      expect(canWalk(workNavigationState(state, true), 25, 15, 0)).toBe(true);
+    });
+    building.hp = 100;
+    expect(canWalk(workNavigationState(state, true), 12, 15, 0)).toBe(false);
   });
 
   it('sees deaths, completion, membership and culture thresholds immediately', () => {

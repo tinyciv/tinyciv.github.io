@@ -10,6 +10,7 @@ import { releaseAttackSpot } from './engagement';
 import { canWalk, findPath, hasStaticPath, invalidateNavigation } from './pathfinding';
 import { buildingReady, buildingWidth, buildingHeight, distance, type Building, type GameState, type Point, type Unit } from './types';
 import { civilianThreat } from './morale-perception';
+import { unitNavigationState } from './unit-navigation';
 
 const escapeClocks = new WeakMap<Unit, DecisionClock>();
 
@@ -138,7 +139,7 @@ export function updateCivilianPanic(state: GameState, unit: Unit, dt: number, mo
     const fleeingFrom = threat ?? panic.threat;
     const home = edges.find(edge => (!threat || distance(unit, threat) >= 4 ||
       (edge.x - unit.x) * (unit.x - threat.x) + (edge.y - unit.y) * (unit.y - threat.y) >= 0)
-      && (distance(unit, edge) < .25 || findPath(state, unit, edge, unit.faction, false, undefined, undefined, undefined, false, true).length > 0));
+      && (distance(unit, edge) < .25 || findPath(unitNavigationState(state, unit), unit, edge, unit.faction, false, undefined, undefined, undefined, false, true).length > 0));
     if (home) {
       unit.destination = { x: home.x, y: home.y }; panic.destinationShelter = home.palace.id;
       if (distance(unit, home) <= .25) { enterShelter(state, unit, home.palace); return true; }

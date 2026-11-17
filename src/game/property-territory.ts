@@ -1,3 +1,4 @@
+import { territoryValue } from './territory-cells';
 import { territory, territoryClaimWithoutSource, UNCLAIMED, type Territory } from './borders';
 import { buildingHeight, buildingWidth, buildingReady, isFarmKind, type Building, type GameState } from './types';
 
@@ -49,6 +50,6 @@ function footprintOwners(building: Building, borders: Territory): number[] {
     const owners: number[] = [];
     for (let y = building.y; y < building.y + buildingHeight(building); y++)
         for (let x = building.x; x < building.x + buildingWidth(building); x++)
-            owners.push(x < 0 || y < 0 || x >= borders.width || y >= borders.height ? UNCLAIMED : borders.owners[y * borders.width + x]);
+            owners.push(x < 0 || y < 0 || x >= borders.width || y >= borders.height ? UNCLAIMED : territoryValue(borders, y * borders.width + x));
     return owners;
 }

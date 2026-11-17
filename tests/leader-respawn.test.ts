@@ -6,6 +6,7 @@ import { canWalk } from '../src/game/pathfinding';
 import { canRespawnLeader, getLeader, respawnLeader, updateGame } from '../src/game/simulation';
 import { veterancy } from '../src/game/veterancy';
 import type { Building, GameState, Unit } from '../src/game/types';
+import { nativeFixture } from './helpers/native-fixture';
 
 const idle = { up: false, down: false, left: false, right: false };
 const building = (id: number, kind: Building['kind'], x: number, y: number, faction = 0): Building => ({
@@ -110,7 +111,7 @@ describe('defeat Leader respawn', () => {
   it('chooses different safe tiles using the game RNG, without randomizing availability checks', () => {
     const positions = new Set<string>();
     for (let seed = 1; seed <= 30; seed++) {
-      const state = fixture(); state.rngState = seed;
+      const state = fixture(); nativeFixture(state).seedRandom(seed);
       expect(canRespawnLeader(state)).toBe(true);
       expect(canRespawnLeader(state)).toBe(true);
       expect(state.rngState).toBe(seed);
@@ -123,7 +124,7 @@ describe('defeat Leader respawn', () => {
 
   it('never chooses a tile immediately beside an enemy, including diagonal neighbors', () => {
     for (let seed = 1; seed <= 40; seed++) {
-      const state = fixture(); state.rngState = seed;
+      const state = fixture(); nativeFixture(state).seedRandom(seed);
       const enemies = [{ ...unit(100, 'warrior', 2.5, 3.5), faction: -2 },
         { ...unit(101, 'warrior', 7.5, 6.5), faction: -2 }];
       entityStore(state).units.add(...enemies);

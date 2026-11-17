@@ -1,3 +1,4 @@
+import { cannonRearGoals } from './field-cannon-formation';
 import { simulationReadsActive } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
 import { unitAttackRange } from './combat-range';
@@ -47,12 +48,13 @@ function formationRoster(state: GameState): readonly Unit[] {
 }
 const centered = (point: Point): Point => ({ x: Math.floor(point.x) + .5, y: Math.floor(point.y) + .5 });
 const angleDifference = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+const CARDINAL_OFFSETS = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const;
 
 /** Reassign the same reachable cells, keeping levies on both outside wings. */
 function levyWingGoals(leader: Unit, members: Unit[], goals: Map<number, Point>, heading: number): Map<number, Point> {
   const levies = members.filter(unit => unit.kind === 'levyInfantry' && goals.has(unit.id));
   if (!levies.length && !members.some(unit => unit.kind === 'slinger')) return goals;
-  const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : (unit.kind === 'archer' || unit.kind === 'horseArcher') || unit.range > 1.5 ? 'ranged' : 'melee';
+  const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : (unit.kind === 'musketman' || unit.kind === 'archer' || unit.kind === 'horseArcher') || unit.range > 1.5 ? 'ranged' : 'melee';
   const side = { x: -Math.sin(heading), y: Math.cos(heading) }, front = { x: Math.cos(heading), y: Math.sin(heading) };
   const projection = (point: Point, axis: Point) => (point.x - leader.x) * axis.x + (point.y - leader.y) * axis.y;
   const entries = [...goals.entries()].map(([id, point]) => ({ id, point }));
@@ -94,7 +96,8 @@ function mobOffset(slot: number): Point {
 
 /** A stopped column must fill the ground that is actually available around
  * its Leader. One obstructed ideal slot cannot hold every escort in line. */
-function rallyGoals(state: GameState, leader: Unit, members: Unit[], previous: Map<number, Point>, blockers: CellBlockers): Map<number, Point> {
+function rallyGoals(state: GameState, leader: Unit, members: Unit[], previous: Map<number, Point>, blockers: CellBlockers,
+  reserved: ReadonlySet<number> = new Set()): Map<number, Point> {
   if (!members.length) return new Map();
   const { width, height } = state.world, key = (point: Point) => Math.floor(point.y) * width + Math.floor(point.x);
   interface Cell { point: Point; index: number; distance: number; open: boolean }
@@ -102,8 +105,8 @@ function rallyGoals(state: GameState, leader: Unit, members: Unit[], previous: M
     open: canWalk(state, origin.x, origin.y, leader.faction, blockers) };
   const queue = [first], seen = new Set([first.index]), cells: Cell[] = [], known = new Map<number, Cell>([[first.index, first]]);
   const memberIds = new Set(members.map(member => member.id));
-  const occupied = new Set<number>();
-  const radius = Math.min(12, Math.max(4, Math.ceil(Math.sqrt(members.length + 1)) + 2));
+  const occupied = new Set(reserved);
+  const radius = Math.min(12, Math.max(4, Math.ceil(Math.sqrt(members.length + reserved.size + 1)) + 2));
   for (const unit of nearbyUnits(state, leader, radius + 1)) if (unit.hp > 0 && !unit.inside && unit !== leader && !memberIds.has(unit.id)) occupied.add(key(unit));
   for (let head = 0; head < queue.length; head++) {
     const current = queue[head], point = current.point;
@@ -128,9 +131,23 @@ function rallyGoals(state: GameState, leader: Unit, members: Unit[], previous: M
     }
   }
   cells.sort((a, b) => a.distance - b.distance || a.point.y - b.point.y || a.point.x - b.point.x);
+  // Park in the room beyond a gate instead of filling its one-cell approach.
+  // Keep narrow cells when there is no room elsewhere (a true corridor), but
+  // do not make late arrivals negotiate through already settled front ranks.
+  const roomy = cells.filter(cell => {
+    let exits = 0;
+    for (const [dx, dy] of CARDINAL_OFFSETS) {
+      const x = Math.floor(cell.point.x) + dx, y = Math.floor(cell.point.y) + dy;
+      if (x < 0 || y < 0 || x >= width || y >= height) continue;
+      const neighbor = known.get(y * width + x);
+      if (neighbor?.open && canTraverseEdge(state.world, cell.point, neighbor.point)) exits++;
+    }
+    return exits > 2;
+  });
+  const rallyCells = roomy.length >= members.length ? roomy : cells;
   // Leave a little choice around obstacles, without assigning rear soldiers
   // distant empty posts merely because they arrived later.
-  const available = new Map(cells.slice(0, members.length + 2).map(cell => [cell.index, cell]));
+  const available = new Map(rallyCells.slice(0, members.length + 2).map(cell => [cell.index, cell]));
   const goals = new Map<number, Point>();
   for (const member of members) {
     const old = previous.get(member.id), cell = old && available.get(key(old));
@@ -273,15 +290,15 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     // fill and assignment of stationary rally cells use the slower clock.
     if (urgent && !simulationReadsActive(state)) formation.rally = {};
     if (decisionDue(formation.rally, state.time, leader.id, active, urgent)) {
-      formation.goals = levyWingGoals(leader, members, rallyGoals(state, leader, members, formation.goals, blockers), formation.heading);
+      formation.goals = cannonRearGoals(state, members, levyWingGoals(leader, members, rallyGoals(state, leader, members, formation.goals, blockers), formation.heading), leader, formation.heading);
       formation.rallyCell = cell; formation.rallyTopology = blockers; formation.rallyRevision = state.world.revision;
       formation.rallyCommands = decisionRevision(state);
     }
     formation.mode = 'mob'; formation.clearSince = undefined;
     return formation;
   }
-  const melee = members.filter(member => member.kind !== 'archer' && member.kind !== 'horseArcher' && member.kind !== 'slinger').sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
-  const ranged = members.filter(member => ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')).sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+  const melee = members.filter(member => member.kind !== 'musketman' && member.kind !== 'archer' && member.kind !== 'horseArcher' && member.kind !== 'slinger').sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+  const ranged = members.filter(member => ((member.kind === 'musketman' || member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')).sort((a, b) => formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
   const mixed = melee.length > 0 && ranged.length > 0;
   const roleSlots = new Map([...melee.map((member, index) => [member.id, index] as const), ...ranged.map((member, index) => [member.id, index] as const)]);
   const line = new Map<number, Point>(), reserved = new Set<number>();
@@ -294,7 +311,7 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     // next vacancy without making every other escort cross through the mob.
     const rankSlot = mixed ? roleSlots.get(member.id)! : slot;
     const lateral = (rankSlot % 2 ? -1 : 1) * (Math.floor((rankSlot % 6) / 2) + 1) * 1.15;
-    const behind = .65 + (Math.floor(rankSlot / 6) + (mixed && ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger') ? Math.ceil(melee.length / 6) : 0)) * 1.2;
+    const behind = .65 + (Math.floor(rankSlot / 6) + (mixed && ((member.kind === 'musketman' || member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger') ? Math.ceil(melee.length / 6) : 0)) * 1.2;
     const offset = mobOffset(slot);
     const desired = marching ? { x: leader.x + offset.x, y: leader.y + offset.y }
       : { x: leader.x + side.x * lateral - forward.x * behind, y: leader.y + side.y * lateral - forward.y * behind };
@@ -316,12 +333,12 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     }
     reserved.add(key(point)); line.set(member.id, point);
   }
-  if (fits && members.some(member => ((member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')) && members.some(member => member.kind === 'warrior' || member.kind === 'swordsman' || member.kind === 'spearman' || (member.kind === 'horseman' || member.kind === 'knight'))) {
+  if (fits && members.some(member => ((member.kind === 'musketman' || member.kind === 'archer' || member.kind === 'horseArcher') || member.kind === 'slinger')) && members.some(member => member.kind === 'warrior' || member.kind === 'swordsman' || member.kind === 'spearman' || member.kind === 'pikeman' || (member.kind === 'horseman' || member.kind === 'knight'))) {
     // Reassign the same reachable cells, putting the ranged rank behind the
     // melee rank in the Leader's actual direction of travel.
     const points = [...line.values()].sort((a, b) => (b.x - a.x) * forward.x + (b.y - a.y) * forward.y
       || (a.x - b.x) * side.x + (a.y - b.y) * side.y);
-    const ranked = members.slice().sort((a, b) => Number(((a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger'))
+    const ranked = members.slice().sort((a, b) => Number(((a.kind === 'musketman' || a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'musketman' || b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger'))
       || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
     ranked.forEach((member, index) => line.set(member.id, points[index]));
   }
@@ -333,9 +350,10 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     if (state.time - formation.clearSince >= 1) formation.mode = marching ? 'mob' : 'line';
   }
   else formation.mode = marching ? 'mob' : 'line';
+  const previousGoals = formation.goals;
   formation.goals = formation.mode !== 'column' ? levyWingGoals(leader, members, line, formation.heading) : new Map();
   if (formation.mode === 'column') {
-    const ordered = members.slice().sort((a, b) => Number(((a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger')) || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
+    const ordered = members.slice().sort((a, b) => Number(((a.kind === 'musketman' || a.kind === 'archer' || a.kind === 'horseArcher') || a.kind === 'slinger')) - Number(((b.kind === 'musketman' || b.kind === 'archer' || b.kind === 'horseArcher') || b.kind === 'slinger')) || formation!.slots.get(a.id)! - formation!.slots.get(b.id)!);
     const trail = [{ x: leader.x, y: leader.y }, ...formation.trail];
     // Column gaps only increase, including duplicate-cell spacing retries.
     // Walk each breadcrumb segment once instead of starting at the Leader for
@@ -363,16 +381,25 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
       }
       return centered(point);
     };
-    const queued = new Set([key(leader)]); let gap = 0;
+    const queued = new Set([key(leader)]), waiting: Unit[] = []; let gap = 0;
     for (const member of ordered) {
       gap += 1.15;
       let goal = trailPoint(gap);
       // Diagonal breadcrumbs may round into the preceding soldier's cell.
       // Extend spacing along the same trail instead of competing for that cell.
       for (let attempt = 0; attempt < 8 && queued.has(key(goal)); attempt++) { gap += .25; goal = trailPoint(gap); }
-      if (queued.has(key(goal)) || !canWalk(state, goal.x, goal.y, leader.faction, blockers)) goal = centered(member);
+      // Breadcrumb history is runtime-only and may be shorter than the army,
+      // especially after loading or when a bend prevents straight extension.
+      // A self goal strands those soldiers until the Leader stops. Give the
+      // remainder reachable rendezvous cells using one shared local flood.
+      if (queued.has(key(goal)) || !canWalk(state, goal.x, goal.y, leader.faction, blockers)) { waiting.push(member); continue; }
       queued.add(key(goal)); formation.goals.set(member.id, goal);
     }
+    if (waiting.length) {
+      const fallback = rallyGoals(state, leader, waiting, previousGoals, blockers, queued);
+      for (const member of waiting) formation.goals.set(member.id, fallback.get(member.id)!);
+    }
   }
+  formation.goals = cannonRearGoals(state, members, formation.goals, leader, formation.heading);
   return formation;
 }

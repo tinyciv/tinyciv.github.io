@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as docks from '../src/game/dock';
 import { entityStore } from '../src/game/entity-store';
 import { territory } from '../src/game/borders';
 import { findRiverTradeConnection, riverTradingPosts } from '../src/game/river-trade';
@@ -36,10 +37,23 @@ function threeCities(): GameState {
   for (let y = 18; y <= 20; y++) entityStore(state).buildings.add({ id: 100 + y, kind: 'bridge', faction: 0, x: 1, y, hp: 100, maxHp: 100, capacity: 0 });
   state.factions[0].population = 300; return state;
 }
+// Verify each actual delivery against independently observed active movement,
+// including the river-time premium and excluding stationary frames.
+function checkedStep(state: GameState, merchant: Unit, dt: number): void {
+  const route = state.tradeRoutes!.find(r => r.id === merchant.tradeRoute)!;
+  const before = { x: merchant.x, y: merchant.y }, facing = merchant.facing, water = !!merchant.aboardRiverTrade;
+  const seconds = route.transitSeconds ?? 0, rate = route.legValue?.goldPerSecond;
+  const gold = state.factions[0].gold, journeys = route.journeys;
+  updateMerchant(state, merchant, dt, moveUnit);
+  if (route.journeys > journeys && rate !== undefined) {
+    const active = distance(before, merchant) > 1e-7 || water && Math.abs(facing - merchant.facing) > 1e-7;
+    expect(state.factions[0].gold - gold).toBeCloseTo(rate * (seconds + (active ? dt * (water ? 2.5 : 1) : 0)), 9);
+  }
+}
 function travelUntil(state: GameState, merchant: Unit, done: () => boolean): void {
   for (let frame = 0; frame < 4000 && !done(); frame++) {
     const before = { x: merchant.x, y: merchant.y }; state.time += .1;
-    updateMerchant(state, merchant, .1, moveUnit);
+    checkedStep(state, merchant, .1);
     expect(distance(before, merchant)).toBeLessThanOrEqual(MERCHANT_SPEED * .1 * 2);
   }
   expect(done()).toBe(true);
@@ -47,13 +61,32 @@ function travelUntil(state: GameState, merchant: Unit, done: () => boolean): voi
 function advance(state: GameState, merchant: Unit, done: () => boolean, seconds = 120): void {
   for (let frame = 0; frame < seconds * 20 && !done(); frame++) {
     const before = { x: merchant.x, y: merchant.y };
-    state.time += .05; updateMerchant(state, merchant, .05, moveUnit);
+    state.time += .05; checkedStep(state, merchant, .05);
     expect(distance(before, merchant)).toBeLessThanOrEqual(MERCHANT_SPEED * .05 * 1.01);
   }
   expect(done(), JSON.stringify({ x:merchant.x, y:merchant.y, phase: state.tradeRoutes?.[0].riverLeg?.phase, source:state.tradeRoutes?.[0].riverLeg?.connection.origin, path:merchant.path, goal:merchant.pathGoal })).toBe(true);
 }
 
 describe('river trade eligibility', () => {
+  it('chooses identical river connections with batched and direct shore occupancy checks', () => {
+    const obstructed = () => {
+      const state = fixture();
+      entityStore(state).buildings.add(
+        { id: 500, kind: 'house', x: 11, y: 17, faction: 0, hp: 100, maxHp: 100, capacity: 0 },
+        { id: 501, kind: 'dock', x: 17, y: 17, dockFacing: 2, faction: 0, hp: 100, maxHp: 100, capacity: 0 });
+      return state;
+    };
+    const measure = () => [fixture, threeCities, obstructed].map(make => {
+      const state = make(), cities = state.buildings.filter(building => building.kind === 'palace');
+      return cities.flatMap((origin, index) => cities.slice(index + 1).map(partner => findRiverTradeConnection(state, origin, partner)));
+    });
+    const batched = measure();
+    const original = vi.spyOn(docks, 'createDockShoreCrossingQuery').mockImplementation(state =>
+      (water, shore, proposed) => docks.dockShoreCrossingClear(state, water, shore, proposed));
+    try { expect(measure()).toEqual(batched); }
+    finally { original.mockRestore(); }
+  });
+
   it('prefers the eligible river partner over a farther land-only third city', () => {
     const state = threeCities(); updateTradeRoutes(state);
     expect(state.tradeRoutes!.some(route => route.river && route.origin === 1 && route.partner === 2)).toBe(true);
@@ -71,20 +104,20 @@ describe('river trade eligibility', () => {
     expect(route.pendingRiverPartner).toBe(2); expect(route.partner).toBe(3); expect(route.legValue).toBe(outgoing); expect(merchant).toMatchObject(position);
     travelUntil(state, merchant, () => route.journeys === 1);
     expect(route.partner).toBe(3); expect(route.target).toBe(1);
-    state.time += 1.5; updateMerchant(state, merchant, .1, moveUnit); const returning = route.legValue!;
+    state.time += 1.5; checkedStep(state, merchant, .1); const returning = route.legValue!;
     expect(returning).toBeDefined(); travelUntil(state, merchant, () => route.journeys === 2);
     const atHome = { x: merchant.x, y: merchant.y }, earned = state.factions[0].gold;
-    expect(earned).toBeCloseTo(outgoing.gold + returning.gold);
-    state.time += 2; updateMerchant(state, merchant, .1, moveUnit);
+    expect(earned).toBeGreaterThan(outgoing.goldPerSecond + returning.goldPerSecond);
+    state.time += 2; checkedStep(state, merchant, .1);
     expect(merchant).toMatchObject(atHome); expect(route.legValue).toBeUndefined(); // waits for the planner
     const cooldown = state.time + 240; state.tradeCooldowns = { '1:2': cooldown };
     updateTradeRoutes(state);
     expect(route.partner).toBe(2); expect(route.merchantId).toBe(identity); expect(route.river).toBeDefined();
     expect(merchant).toMatchObject(atHome); expect(merchant.hp).toBeGreaterThan(0); expect(state.factions[0].gold).toBe(earned);
     expect(route.nextPlanAt).toBe(cooldown);
-    state.time = cooldown - .1; updateMerchant(state, merchant, .1, moveUnit);
+    state.time = cooldown - .1; checkedStep(state, merchant, .1);
     expect(merchant).toMatchObject(atHome); expect(route.legValue).toBeUndefined();
-    state.time = cooldown; updateMerchant(state, merchant, .1, moveUnit);
+    state.time = cooldown; checkedStep(state, merchant, .1);
     expect(route.riverLeg).toBeDefined();
   });
 
@@ -92,7 +125,7 @@ describe('river trade eligibility', () => {
     const state = threeCities(), second = state.buildings.find(b => b.id === 2)!;
     entityStore(state).buildings.retain(b => b.id !== second.id); updateTradeRoutes(state);
     const route = state.tradeRoutes![0], merchant = state.units.find(u => u.id === route.merchantId)!;
-    updateMerchant(state, merchant, .1, moveUnit); const outgoing = route.legValue!;
+    checkedStep(state, merchant, .1); const outgoing = route.legValue!;
     entityStore(state).buildings.add(second); updateTradeRoutes(state);
     expect(route.pendingRiverPartner).toBe(2); expect(route.legValue).toBe(outgoing); expect(merchant.hp).toBeGreaterThan(0);
     expect(state.tradeRoutes!.filter(r => r.river && [r.origin, r.partner].sort().join(':') === '1:2')).toHaveLength(1);
@@ -149,19 +182,19 @@ describe('river trade eligibility', () => {
 });
 
 describe('continuous river caravan journeys', () => {
-  it('walks, boards, sails at merchant speed, disembarks, and pays one fixed weighted quote at the city', () => {
+  it('walks, boards, sails at merchant speed, disembarks, and pays weighted active transit time at the city', () => {
     const state = fixture(), { route, merchant } = start(state);
     updateMerchant(state, merchant, .05, () => {});
     const quote = { ...route.legValue! }, connection = route.river!;
-    expect(quote.distance).toBeGreaterThan(connection.waterDistance * 2.5);
-    expect(quote.gold).toBeCloseTo(domesticTradePayout(quote.distance, 100, 100));
+    expect(quote.distance).toBeGreaterThan(connection.waterDistance);
+    expect(quote.goldPerSecond).toBeCloseTo(domesticTradePayout(1, 100, 100));
     advance(state, merchant, () => route.riverLeg?.phase === 'river');
     expect(merchant.aboardRiverTrade).toBe(true); const before = { x: merchant.x, y: merchant.y };
-    state.time += .1; updateMerchant(state, merchant, .1, moveUnit);
+    state.time += .1; checkedStep(state, merchant, .1);
     expect(distance(before, merchant)).toBeCloseTo(MERCHANT_SPEED * .1);
-    route.distance = 999; // Avoidance and backtracking cannot inflate the quote.
+    route.distance = 999; // A corrupted distance counter cannot affect the time-based receipt.
     advance(state, merchant, () => route.journeys === 1);
-    expect(state.factions[0].gold).toBeCloseTo(quote.gold);
+    expect(state.factions[0].gold).toBeGreaterThan(quote.goldPerSecond);
     expect(merchant.aboardRiverTrade).toBe(false); expect(route.legValue).toBeUndefined();
     advance(state, merchant, () => route.journeys === 2);
     expect(state.units).toHaveLength(1); expect(route.target).toBe(route.partner);
@@ -173,9 +206,9 @@ describe('continuous river caravan journeys', () => {
     const next = route.riverLeg!.waterPath.find(p => distance(p, merchant) > .1)!;
     const blocker: Unit = { ...merchant, id: 999, kind: 'sailboat', tradeRoute: undefined, aboardRiverTrade: undefined, ...next };
     entityStore(state).units.add(blocker);
-    const before = { x: merchant.x, y: merchant.y }, quote = route.legValue!.gold;
-    state.time += .05; updateMerchant(state, merchant, .05, moveUnit);
-    expect(distance(before, merchant)).toBe(0); expect(route.journeys).toBe(0); expect(route.legValue!.gold).toBe(quote);
+    const before = { x: merchant.x, y: merchant.y }, quote = route.legValue!.goldPerSecond;
+    state.time += .05; checkedStep(state, merchant, .05);
+    expect(distance(before, merchant)).toBe(0); expect(route.journeys).toBe(0); expect(route.legValue!.goldPerSecond).toBe(quote);
     entityStore(state).units.retain(u => u.id !== blocker.id);
     advance(state, merchant, () => route.journeys === 1);
   });
@@ -193,40 +226,40 @@ describe('continuous river caravan journeys', () => {
 
   it('responds to a route becoming eligible without replacing or teleporting the existing caravan', () => {
     const state = fixture(); state.factions[0].research!.levels.sailing = 0; updateTradeRoutes(state);
-    const route = state.tradeRoutes![0], merchant = state.units[0]; updateMerchant(state, merchant, .1, moveUnit);
+    const route = state.tradeRoutes![0], merchant = state.units[0]; checkedStep(state, merchant, .1);
     const quote = route.legValue, position = { x: merchant.x, y: merchant.y };
     state.factions[0].research!.levels.sailing = 1; updateTradeRoutes(state);
     expect(route.river).toBeDefined(); expect(route.legValue).toBe(quote); expect(merchant).toMatchObject(position); expect(route.riverLeg).toBeUndefined();
-    advance(state, merchant, () => route.journeys === 1); state.time += 1.5; updateMerchant(state, merchant, .1, moveUnit);
+    advance(state, merchant, () => route.journeys === 1); state.time += 1.5; checkedStep(state, merchant, .1);
     expect(route.riverLeg).toBeDefined(); expect(state.units).toHaveLength(1);
   });
 
-  it('replans a river detour around a new obstruction without increasing the departure reward', () => {
+  it('replans a river detour around a new obstruction while retaining the departure rate', () => {
     const state = fixture(), { route, merchant } = start(state);
     advance(state, merchant, () => route.riverLeg?.phase === 'river');
-    const quote = route.legValue!.gold, middle = route.riverLeg!.waterPath[Math.floor(route.riverLeg!.waterPath.length / 2)];
+    const quote = route.legValue!.goldPerSecond, middle = route.riverLeg!.waterPath[Math.floor(route.riverLeg!.waterPath.length / 2)];
     entityStore(state).buildings.add({ id: 999, kind: 'bridge', faction: 0, x: Math.floor(middle.x), y: Math.floor(middle.y), hp: 100, maxHp: 100, capacity: 0 });
     markWorldChanged(state.world);
     advance(state, merchant, () => route.journeys === 1);
-    expect(state.factions[0].gold).toBeCloseTo(quote);
+    expect(state.factions[0].gold).toBeGreaterThan(quote);
   });
 
   it.each(['river', 'disembark'] as const)('moves its destination post when construction blocks the landing during %s', phase => {
     const state = fixture(), { route, merchant } = start(state);
     advance(state, merchant, () => route.riverLeg?.phase === phase);
-    if (phase === 'disembark') { state.time += .1; updateMerchant(state, merchant, .1, moveUnit); }
-    const quote = route.legValue!.gold, old = { ...route.riverLeg!.connection.partner.shore };
+    if (phase === 'disembark') { state.time += .1; checkedStep(state, merchant, .1); }
+    const quote = route.legValue!.goldPerSecond, old = { ...route.riverLeg!.connection.partner.shore };
     entityStore(state).buildings.add({ id: 999, kind: 'house', faction: 0, x: Math.floor(old.x), y: Math.floor(old.y), hp: 100, maxHp: 100, capacity: 0 });
     markWorldChanged(state.world);
     advance(state, merchant, () => route.journeys === 1);
-    expect(route.river!.partner.shore).not.toEqual(old); expect(state.factions[0].gold).toBeCloseTo(quote);
+    expect(route.river!.partner.shore).not.toEqual(old); expect(state.factions[0].gold).toBeGreaterThan(quote);
   });
 
   it.each([false, true])('does not strand a caravan when its source bank is built on (already boarding: %s)', boarding => {
     const state = fixture(), { route, merchant } = start(state);
     advance(state, merchant, () => route.riverLeg?.phase === 'board');
-    if (boarding) { state.time += .1; updateMerchant(state, merchant, .1, moveUnit); expect(merchant.aboardRiverTrade).toBe(true); }
-    const quote = route.legValue!.gold, source = { ...route.riverLeg!.connection.origin.shore };
+    if (boarding) { state.time += .1; checkedStep(state, merchant, .1); expect(merchant.aboardRiverTrade).toBe(true); }
+    const quote = route.legValue!.goldPerSecond, source = { ...route.riverLeg!.connection.origin.shore };
     entityStore(state).buildings.add({ id: 999, kind: 'house', faction: 0, x: Math.floor(source.x), y: Math.floor(source.y),
       hp: 100, maxHp: 100, capacity: 0,
       // An order cannot finish through a land occupant; queued footprints are
@@ -234,7 +267,7 @@ describe('continuous river caravan journeys', () => {
       construction: boarding ? undefined : { startedAt: state.time, duration: 20, waitingForBuilder: true } });
     markWorldChanged(state.world);
     advance(state, merchant, () => route.journeys === 1);
-    expect(merchant.aboardRiverTrade).toBe(false); expect(state.factions[0].gold).toBeCloseTo(quote);
+    expect(merchant.aboardRiverTrade).toBe(false); expect(state.factions[0].gold).toBeGreaterThan(quote);
   });
 
   it('remains damageable while sailing and pays the normal merchant bounty exactly once', () => {

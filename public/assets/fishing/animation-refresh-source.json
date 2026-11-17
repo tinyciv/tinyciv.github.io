@@ -1,0 +1,39 @@
+{
+  "generator": "PixelLab API",
+  "grounding": "scratch/2026-11-15-fisheries-whaling/fishing-B.png",
+  "camera": "high top-down",
+  "isometric": false,
+  "pixelsPerCell": 16,
+  "nativeFrame": [
+    16,
+    32
+  ],
+  "source": "scratch/2026-11-16-fishing-animation-refresh",
+  "files": [
+    {
+      "file": "fishing-move.png",
+      "variant": "1C",
+      "frameCount": 9,
+      "frameSeconds": 0.18,
+      "job": "41de12e0-c09a-4fd9-8a35-8cb18b58f319",
+      "sha256": "805fc82bd2363e7da775a9dda262eb26d72df7b154d0e21719749a4b4d8f4f7c"
+    },
+    {
+      "file": "fishing-load.png",
+      "variant": "1A",
+      "frameCount": 9,
+      "frameSeconds": 0.18,
+      "job": "3352cc1f-0687-4c79-b8d7-196aaaaa4b63",
+      "sha256": "b1cc2605e10e58aa78d096da0f2411dc6a3d711dbb69f1300c4613c5ae214cae"
+    },
+    {
+      "file": "fishing-unload.png",
+      "variant": "1D",
+      "frameCount": 9,
+      "frameSeconds": 0.18,
+      "job": "da12413b-84c7-4aaa-941e-77fe09a6840a",
+      "sha256": "1d59e66800c15714f7beca572949291e978a6bf7ff2806f4298c6b4215a5a64b"
+    }
+  ],
+  "processing": "Unmodified PixelLab output frames, assembled losslessly without painting or resampling."
+}

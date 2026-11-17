@@ -34,7 +34,7 @@ for room in rooms:
 verify_empty_rooms
 target=/opt/btv/releases/$release
 install -d -m 0755 "$target/server-dist"
-for name in server.mjs match-worker.mjs navigation.wasm accounts-admin.mjs rds-ca.pem; do
+for name in server.mjs match-worker.mjs simulation.wasm accounts-admin.mjs rds-ca.pem; do
   test -s "$source_dir/server-dist/$name"
   install -m 0644 "$source_dir/server-dist/$name" "$target/server-dist/$name"
 done

@@ -1,10 +1,13 @@
+import { diplomaticRelationship } from './diplomacy-view';
 import { isHumanFaction } from './player-context';
-import { villageHostility } from './villages';
+import { hostileView } from './settlement-bridge';
 import type { GameState } from './types';
 
 export function atWar(state: GameState, a: number, b: number): boolean {
   if (state.multiplayer && isHumanFaction(state, a) && isHumanFaction(state, b)) return a !== b;
-  const villageWar = villageHostility(state, a, b);
+  const diplomatic = diplomaticRelationship(state, a, b);
+  if (diplomatic) return diplomatic.war;
+  const villageWar = hostileView(state, a, b);
   if (villageWar !== undefined) return villageWar;
   if (a === -2 || b === -2) return a !== b && (a >= 0 || b >= 0);
   if (a < 0 || b < 0 || a === b) return false;

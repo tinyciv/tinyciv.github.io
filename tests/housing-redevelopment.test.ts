@@ -1,9 +1,10 @@
 import { entityStore } from '../src/game/entity-store';
 import { PALACE_FOOD_PER_CYCLE } from '../src/game/city-support';
 import { describe, expect, it } from 'vitest';
-import { createGame, updateGame } from '../src/game/simulation';
+import { advanceAutomaticDevelopment, BUILD_COSTS, buildAt, createGame, updateGame } from '../src/game/simulation';
 import { ensureCollectors, synchronizeFarms } from '../src/game/farms';
 import { planHouseSite } from '../src/game/housing';
+import { recurringWorkInterval } from '../src/game/work-cadence';
 import { type Building, type GameState, type World, tileAt } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
@@ -44,6 +45,8 @@ function realm(campCount = 3): GameState {
 function economy(state: GameState): void {
   state.time = (state.tick + 1) * 30 - .05;
   updateGame(state, .05, idle);
+  // Finish the bounded city turn without advancing deliveries or births.
+  for (let turn = 0; turn < 16; turn++) advanceAutomaticDevelopment(state);
 }
 const houses = (state: GameState) => state.buildings.filter(building => building.kind === 'house');
 const physicalFood = (state: GameState) => (state.fields ?? []).reduce((sum, field) => sum + field.food, 0)
@@ -51,6 +54,36 @@ const physicalFood = (state: GameState) => (state.fields ?? []).reduce((sum, fie
   + state.units.reduce((sum, unit) => sum + (unit.cargo ?? 0), 0);
 
 describe('farm-to-house redevelopment', () => {
+  it('publishes automatic relocation yields on a separate turn without repeating the purchase', () => {
+    const state = realm(), faction = state.factions[0], palace = state.buildings[0];
+    state.time = 30; palace.governorNextPlanAt = 30;
+    const gold = faction.gold, plan = planHouseSite(state, palace)!;
+    expect(plan.farmMove).toBeDefined();
+    faction.yields = { food: -999, production: 0, gold: -999 };
+    advanceAutomaticDevelopment(state);
+    expect(houses(state)).toHaveLength(1);
+    expect(faction.gold).toBe(gold - BUILD_COSTS.house.gold);
+    expect(faction.yields.food).toBe(-999);
+    // No later plan is due, yet the pending derived publication must finish.
+    palace.governorNextPlanAt = Infinity;
+    const paid = faction.gold, geometry = JSON.stringify({ buildings: state.buildings, fields: state.fields, tiles: state.world.tiles });
+    advanceAutomaticDevelopment(state);
+    expect(faction.yields.food).toBeGreaterThan(0);
+    expect(faction.gold).toBe(paid);
+    expect(JSON.stringify({ buildings: state.buildings, fields: state.fields, tiles: state.world.tiles })).toBe(geometry);
+    for (let turn = 0; turn < 3; turn++) advanceAutomaticDevelopment(state);
+    expect(houses(state)).toHaveLength(1);
+    expect(faction.gold).toBe(paid);
+  });
+
+  it('still publishes explicit manual redevelopment immediately', () => {
+    const state = realm(), faction = state.factions[0], plan = planHouseSite(state, state.buildings[0])!;
+    expect(plan.farmMove).toBeDefined();
+    faction.yields.food = -999;
+    expect(buildAt(state, 'house', plan.point.x, plan.point.y).ok).toBe(true);
+    expect(faction.yields.food).toBeGreaterThan(0);
+  });
+
   it('moves the intact farm and preserves physical food, crop deadlines, population and its courier', () => {
     const state = realm(), palace = state.buildings[0], oldCamp = state.buildings.find(building => building.id === 100)!;
     const oldPosition = { x: oldCamp.x, y: oldCamp.y }, oldDistance = Math.hypot(oldCamp.x - palace.x, oldCamp.y - palace.y);
@@ -100,8 +133,8 @@ describe('farm-to-house redevelopment', () => {
     const replacement = houses(state).find(house => house.redevelopedFarm)!;
     expect(houses(state)).toHaveLength(2);
     expect(state.buildings.filter(building => building.kind === 'camp')).toHaveLength(4);
-    // Construction staffing observes the new order on its bounded sample.
-    updateGame(state, 2 / 3, idle);
+    // The first staffing follow-up retains its phase within two periods.
+    updateGame(state, 2 * recurringWorkInterval('builders:staff'), idle);
     const builder = state.units.find(unit => unit.builder && unit.buildSite === replacement.id);
     expect(builder?.home).toBe(state.buildings[0].id);
     expect(builder?.inside).toBe(false);
@@ -111,7 +144,7 @@ describe('farm-to-house redevelopment', () => {
     expect(houses(state).every(house => !house.construction)).toBe(true);
     expect(replacement.capacity).toBe(3);
     entityStore(state).buildings.add({ id: 9000, kind: 'well', faction: 0, x: replacement.x + 2, y: replacement.y, hp: 100, maxHp: 100, capacity: 0 });
-    synchronizeFarms(state); synchronizeFarms(state);
+    synchronizeFarms(state); state.time += 15; synchronizeFarms(state);
     expect(replacement).toMatchObject({ houseLevel: 2, capacity: 4, redevelopedFarm: true });
   });
 

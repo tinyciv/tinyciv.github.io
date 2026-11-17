@@ -1,0 +1,29 @@
+{
+  "description": "Approved stone-wall watchtower with wooden lookout deck and red banner",
+  "approvedDate": "2026-11-08",
+  "generator": "Built-in imagegen",
+  "review": "scratch/2026-11-08-watchtower-ingame-review/index.html",
+  "sourceConcept": "scratch/2026-11-08-watchtower-reference-edit/1B-watchtower-overhead.png",
+  "prompts": "scratch/2026-11-08-watchtower-reference-edit/prompts.json",
+  "processing": "Nearest-neighbor native-cell sampling, palette matched to existing Puny World atlas, grass background removed",
+  "nativeSize": [
+    16,
+    28
+  ],
+  "groundAnchor": [
+    8,
+    28
+  ],
+  "worldSize": [
+    32,
+    56
+  ],
+  "worldOffset": [
+    0,
+    -24
+  ],
+  "paletteSource": "public/assets/puny-world/overworld.png",
+  "sha256": "585d89053eb4d9eee321350e14ec41dc8da90fe3176bdaf7cfe843a265edc930",
+  "usage": "woodenTower sharing a completed same-owner stone wall tile; preserve approved red banner",
+  "licenseNote": "Generated addition; not part of the original Puny World CC0 atlas."
+}

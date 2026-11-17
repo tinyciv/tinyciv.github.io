@@ -1,3 +1,5 @@
+import { lifetimeCulture } from './achievement-effects';
+import { recordCampaignPopulation } from './campaign-stats';
 import { raiderCampActive } from './raider-camps';
 import { invalidateScheduledHarvests } from './farms';
 import { invalidateFog } from './fog';
@@ -8,6 +10,7 @@ import { clearBuildingFootprint } from './construction-clearance';
 import { territory, type Territory } from './borders';
 import { buildingTerritoryOwner } from './property-territory';
 import { applyDefenseResearch } from './defense-research';
+import { questPropertyReserved } from './quest-permissions';
 import { buildingReady, buildingWidth, buildingHeight, isFarmKind, isWallKind, tileAt, type Building, type GameState, type World } from './types';
 
 /** Match a local city neighborhood without letting distant settlements claim walls. */
@@ -57,9 +60,10 @@ function supportsProperty(building: Building): boolean {
 /** Territory claims civilian property, roads and walls; defensive posts/towers
  * keep their allegiance. Outside borders, walls and farms retain their owner
  * while a local supporting building survives.
- * A unique local building-count leader can claim unsupported property. Walls
- * become neutral without a winner; outlying farms keep their owner without a
- * local claimant so distant farmland can resume after a fallow period. Ties remain neutral.
+ * A unique local building-count leader can claim unsupported property. With
+ * no local claimant, outlying walls keep their active faction's allegiance and
+ * farms keep their owner so distant farmland can resume after a fallow period.
+ * Unsupported walls of defeated factions and tied claims become neutral.
  * Defeated owners retain supported property but cannot make a new claim.
  *
  * Unchanged frames compare scalars only. After a change, spatial buckets bound
@@ -96,10 +100,10 @@ export function updateWallOwnership(state: GameState): boolean {
             : building.kind === 'palace' ? building.unhousedResidents ?? 0 : 0) : 0;
         const moved = former ? Math.min(Math.max(0, former.population), residents) : residents;
         if (former) former.population -= moved;
-        if (winner) winner.population += moved;
+        if (winner) { winner.population += moved; recordCampaignPopulation(state, winner); }
         if (building.kind === 'palace') {
             changedPalaces.set(building.id, owner); formerPalaceOwners.add(building.faction);
-            building.cultureAtFounding = winner?.culture ?? 0;
+            building.cultureAtFounding = lifetimeCulture(winner);
         }
         building.faction = owner;
         applyDefenseResearch(building, winner);
@@ -119,7 +123,7 @@ export function updateWallOwnership(state: GameState): boolean {
         if (!isFarmKind(building.kind)) invalidateNavigation(state);
     };
     for (const wall of state.buildings) {
-        if (wall.hp <= 0 || wall.villageId !== undefined || ['fort', 'guardPost', 'woodenTower', 'tower', 'ballista'].includes(wall.kind)) continue;
+        if (wall.hp <= 0 || wall.villageId !== undefined || questPropertyReserved(state,wall) || ['fort', 'guardPost', 'woodenTower', 'tower', 'ballista', 'siegeCannon'].includes(wall.kind)) continue;
         // A road underneath a wall follows the gate's evacuation/claim result.
         if (wall.kind === 'road' && wallCells.has(key(wall.x, wall.y))) continue;
         const farm = isFarmKind(wall.kind);
@@ -145,10 +149,10 @@ export function updateWallOwnership(state: GameState): boolean {
         }
         if (tied) owner = NEUTRAL_WALL_FACTION;
         if (borderOwner !== undefined) owner = borderOwner;
-        // Farms may intentionally lie far beyond a city. Mere distance or a
-        // fallow period must not prevent the owner from returning to tend them.
-        // A rival still claims an unsupported farm when it has local influence.
-        if (farm && !best && borderOwner === undefined) continue;
+        // Outlying construction is allowed. Distance alone must not turn an
+        // active faction's gate into a public crossing or abandon its farms.
+        // Local rival influence and foreign borders can still claim them.
+        if (!best && borderOwner === undefined && (farm || isWallKind(wall.kind) && claimants.has(wall.faction))) continue;
         if (owner === wall.faction) continue;
         const gateRoads = isWallKind(wall.kind) ? roads.get(key(wall.x, wall.y)) : undefined;
         if (owner >= 0 && gateRoads) {
@@ -176,6 +180,7 @@ export function updateWallOwnership(state: GameState): boolean {
     }
     const changed = changedOwners.size > 0;
     if (changed) {
+        const changedCells: number[] = [];
         if (changedFarmOwners.size) {
             invalidateScheduledHarvests(state);
             // Fields retain their crops, harvest deadlines and fallow state.
@@ -187,7 +192,7 @@ export function updateWallOwnership(state: GameState): boolean {
                 field.faction = owner;
                 delete field.claimedBy;
                 const tile = tileAt(state.world, field.x, field.y);
-                if (tile) tile.farm = owner;
+                if (tile) { tile.farm = owner; changedCells.push(field.y * state.world.width + field.x); }
             }
             state.farmVersion = (state.farmVersion ?? 0) + 1;
         }
@@ -236,7 +241,7 @@ export function updateWallOwnership(state: GameState): boolean {
             if (faction && !state.buildings.some(building => building.kind === 'palace' && building.faction === id && buildingReady(building)))
                 faction.defeated = true;
         }
-        markWorldChanged(state.world);
+        markWorldChanged(state.world, 'structure', changedCells);
         invalidateNavigation(state);
         invalidateFog(state);
     }

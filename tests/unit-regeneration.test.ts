@@ -170,3 +170,35 @@ it('does no recurring health work for an initialized healthy roster', () => {
     expect(reads).toBe(0);
   });
 });
+
+it('keeps batched health inputs correct as the wounded roster grows, shrinks and is damaged again', () => {
+  const state = fixture(), store = entityStore(state), leader = state.units[0];
+  state.time = 20; leader.hp = 40;
+  regenerateUnits(state, .5);
+  expect(leader.hp).toBeCloseTo(41.2);
+  const reinforcements = Array.from({ length: 12 }, (_, index) => ({ ...person(200 + index, 'warrior', 3.5, 3.5), hp: 50 }));
+  store.units.add(...reinforcements);
+  regenerateUnits(state, .5);
+  expect(leader.hp).toBeCloseTo(42.4);
+  expect(reinforcements.every(unit => Math.abs(unit.hp - 51.2) < 1e-9)).toBe(true);
+  store.units.retain(unit => unit === leader);
+  leader.hp = 20; leader.lastDamagedAt = state.time;
+  regenerateUnits(state, .5);
+  expect(leader.hp).toBe(20);
+  leader.lastDamagedAt = 0;
+  regenerateUnits(state, .5);
+  expect(leader.hp).toBeCloseTo(21.2);
+});
+
+it('keeps separate state batches and the full external entity ID range distinct', () => {
+  const first = fixture(), second = fixture();
+  first.time = second.time = 20;
+  first.units[0].hp = 40; second.units[0].hp = 70;
+  const preview = { ...person(-1, 'warrior', 3.5, 3.5), hp: 20 };
+  const large = { ...person(Number.MAX_SAFE_INTEGER, 'warrior', 3.5, 3.5), hp: 30 };
+  entityStore(first).units.add(preview, large);
+  regenerateUnits(first, .5); regenerateUnits(second, .5); regenerateUnits(first, .5);
+  expect(first.units[0].hp).toBeCloseTo(42.4);
+  expect(second.units[0].hp).toBeCloseTo(71.2);
+  expect(preview.hp).toBeCloseTo(22.4); expect(large.hp).toBeCloseTo(32.4);
+});

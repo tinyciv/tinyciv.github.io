@@ -2,10 +2,11 @@ import { entityStore } from '../src/game/entity-store';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { installNavigationWasm, navigationWasmStatus, setNavigationWasmEnabled } from '../src/game/navigation-wasm';
-import { canWalk, findPath, withNavigationFrame } from '../src/game/pathfinding';
+import { canWalk, findPath, nearestOriginMap, travelTimeMapFrom, withNavigationFrame } from '../src/game/pathfinding';
+import { setForbiddenRectangle } from '../src/game/forbidden-zones';
 import type { GameState, Point } from '../src/game/types';
 
-beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/navigation.wasm'))); });
+beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/simulation.wasm'))); });
 function world(seed: number): GameState {
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 2 ** 32; };
   const state = { world: { width: 28, height: 22, seed: 'native-paths', source: 'test', revision: 1, spawns: [],
@@ -25,6 +26,78 @@ function compare(state: GameState, from: Point, to: Point, partial: boolean, car
 }
 
 describe('WebAssembly navigation', () => {
+  it('labels nearest sources in one flood, matching JS and independent single-source distances', () => {
+    const before = navigationWasmStatus().nearestMaps;
+    const sources = [{ point: { x: 2.5, y: 10.5 }, id: 12 }, { point: { x: 2.5, y: 10.5 }, id: 7 },
+      { point: { x: 20.5, y: 10.5 }, id: 4 }, { point: { x: 3.5, y: 18.5 }, id: 9 },
+      { point: { x: -3, y: 2 }, id: 1 }];
+    for (let seed = 1; seed <= 12; seed++) {
+      const state = world(seed);
+      setForbiddenRectangle(state, { x: 6, y: 4 }, { x: 10, y: 7 }, true);
+      withNavigationFrame(state, () => {
+        for (const avoidForbidden of [false, true]) {
+          setNavigationWasmEnabled(false);
+          const expected = nearestOriginMap(state, sources, 0, avoidForbidden);
+          const independent = new Map(sources.map(({ point, id }) => [id, travelTimeMapFrom(state, [point], 0, 1, Infinity, avoidForbidden)]));
+          setNavigationWasmEnabled(true);
+          const actual = nearestOriginMap(state, sources, 0, avoidForbidden);
+          expect(actual).toEqual(expected);
+          for (let cell = 0; cell < actual.length; cell++) {
+            const minimum = Math.min(...[...independent.values()].map(field => field[cell]));
+            if (!Number.isFinite(minimum)) expect(actual[cell]).toBe(-1);
+            else expect(independent.get(actual[cell])![cell]).toBeCloseTo(minimum, 4);
+          }
+          // Routes, travel maps and ownership fields share native scratch.
+          // Every published map must remain independent of subsequent queries.
+          findPath(state, sources[0].point, sources[2].point, 0);
+          travelTimeMapFrom(state, [sources[2].point], 0, 1, Infinity);
+          expect(nearestOriginMap(state, [], 0)).toEqual(new Int32Array(actual.length).fill(-1));
+          expect(actual).toEqual(expected);
+        }
+      });
+    }
+    expect(navigationWasmStatus().nearestMaps - before).toBe(48);
+  });
+
+  it('resolves exact distance and overlapping source ties by ID in either backend', () => {
+    for (const native of [false, true]) {
+      const state = world(1);
+      entityStore(state).buildings.replace([]);
+      for (const tile of state.world.tiles) { tile.terrain = 'grassland'; tile.overlay = 'none'; }
+      setNavigationWasmEnabled(native);
+      const sources = [{ point: { x: 10, y: 10 }, id: 7 }, { point: { x: 14, y: 10 }, id: 2 },
+        { point: { x: 14, y: 10 }, id: 9 }];
+      const map = nearestOriginMap(state, sources, 0);
+      expect(map[10 * 28 + 12]).toBe(2);
+      expect(map[10 * 28 + 14]).toBe(2);
+      expect(map[10 * 28 + 10]).toBe(7);
+      expect(nearestOriginMap(state, sources.reverse(), 0)).toEqual(map);
+    }
+  });
+
+  it('matches every float32 multi-origin travel distance, bounded floods and forbidden cells', () => {
+    const before = navigationWasmStatus().travelMaps;
+    for (let seed = 1; seed <= 12; seed++) {
+      const state = world(seed);
+      setForbiddenRectangle(state, { x: 6, y: 4 }, { x: 10, y: 7 }, true);
+      withNavigationFrame(state, () => {
+        for (const speed of [.7, 1, 2.2]) for (const limit of [0, 6, Infinity]) for (const avoidForbidden of [false, true]) {
+          const origins = [{ x: 2.5, y: 10.5 }, { x: 2.5, y: 10.5 }, { x: 20.5, y: 10.5 }, { x: -3, y: 2 }];
+          setNavigationWasmEnabled(false);
+          const expected = travelTimeMapFrom(state, origins, 0, speed, limit, avoidForbidden);
+          setNavigationWasmEnabled(true);
+          const actual = travelTimeMapFrom(state, origins, 0, speed, limit, avoidForbidden);
+          expect(actual).toEqual(expected);
+          // Subsequent A* and map searches share scratch but cannot mutate a returned field.
+          findPath(state, origins[0], origins[2], 0);
+          travelTimeMapFrom(state, [], 0, 1, Infinity);
+          expect(actual).toEqual(expected);
+        }
+      });
+    }
+    expect(navigationWasmStatus().travelMaps - before).toBe(432);
+  });
+
   it('matches weighted JS paths, stable heap ties, partial goals, and cardinal fallback', () => {
     for (let seed = 1; seed <= 8; seed++) {
       const state = world(seed), blockers = new Set([34, 109, 311, 351]), soft = new Set([190, 283, 400]);

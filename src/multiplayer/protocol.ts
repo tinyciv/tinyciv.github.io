@@ -1,18 +1,32 @@
+import type { AdvancedStartPhase } from '../game/advanced-start';
 import type { BuildSelection, GameState, InputState, Point, ResearchBranchId, RetinueStance, Tile } from '../game/types';
 import type { LeaderSkillId } from '../game/leader-progression';
 import type { LandformFamily, WorldGenerationStyle } from '../world/options';
 import type { StateDelta } from './state-delta';
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 4;
 export const FACTION_COLORS = ['#4f9ee8', '#df6262', '#e5b94e', '#8abb69', '#b08ae3', '#ef9d62'] as const;
-export interface MatchOptions { seed: string; style: WorldGenerationStyle; landformFamily: LandformFamily; advancedStart?: boolean; }
+export interface MatchOptions { seed: string; style: WorldGenerationStyle; landformFamily: LandformFamily; advancedStart?: AdvancedStartPhase; }
 export interface LobbyPlayer { id: string; name: string; color: string; faction: number; ready: boolean; connected: boolean; }
 export interface LobbyRoom {
   id: string; name: string; location: string; players: LobbyPlayer[];
   phase: 'waiting' | 'loading' | 'playing' | 'finished'; hostId: string; options: MatchOptions;
 }
 export type GameCommand =
+  | { type: 'offensive'; rally: Point; objective: Point }
+  | { type: 'cancel-offensive' }
+  | { type: 'military-formation'; buildingId: number; formation: import('../game/types').MilitaryFormationType }
+  | { type: 'foundry-convert'; buildingId: number; unitId: number }
+  | { type: 'field-cannon-move'; unitId: number; x: number; y: number }
+  | { type: 'warship-move'; shipId: number; x: number; y: number }
+  | { type: 'warship-attack'; shipId: number; targetId: number }
+  | { type: 'shipyard'; buildingId: number; loadout: import('../game/warships-native').NavalLoadout; refit: boolean }
+  | { type: 'warship'; shipId: number; action: 'anchor' | 'land' | 'reinforce' }
+  | { type: 'exploration-choice'; siteId: number; accept: boolean }
+  | { type: 'build-site'; siteId: number }
+  | { type: 'placement-intent'; active: boolean }
   | { type: 'hermit'; hermitId: number }
+  | { type: 'quest'; kind: import('../game/quest-types').QuestKind; action: 'accept' | 'complete' }
   | { type: 'move' | 'attack' | 'interact'; x: number; y: number }
   | { type: 'garrison' | 'levy' | 'dismiss-levy' | 'recall' | 'movement' | 'respawn' | 'infantry-formation' }
   | { type: 'stance'; stance: RetinueStance }
@@ -22,18 +36,20 @@ export type GameCommand =
   | { type: 'develop-resource'; x: number; y: number }
   | { type: 'clear'; start: Point; end: Point }
   | { type: 'forbid'; start: Point; end: Point; enabled: boolean }
-  | { type: 'diplomacy'; faction: number; action: 'war' | 'confederate' | 'trade' | 'ally'; buildingId?: number }
+  | { type: 'diplomacy'; faction: number; action: 'war' | 'confederate' | 'trade' | 'ally' | 'petition'; buildingId?: number }
   | { type: 'capture'; buildingId: number; capture: boolean }
+  | { type: 'achievement'; buildingId: number; achievement: import('../game/achievements').AchievementId }
   | { type: 'research-priority' | 'research-remove-priority'; buildingId: number; branch: ResearchBranchId }
   | { type: 'research-allocation'; buildingId: number; allocation: number }
   | { type: 'guard-walls'; buildingId: number; enabled: boolean }
-  | { type: 'fort-brigade' | 'fort-rebuild' | 'immigrant' | 'retinue-slot' | 'guard-upgrade' | 'keep' | 'keep-housing'; buildingId: number }
+  | { type: 'guard-forbidden'; buildingId: number; enabled: boolean }
+  | { type: 'fort-upgrade' | 'fort-brigade' | 'fort-rebuild' | 'immigrant' | 'retinue-slot' | 'guard-upgrade' | 'keep' | 'keep-housing'; buildingId: number }
   | { type: 'orchard'; buildingId: number; count: 1 | 10 }
   | { type: 'blacksmith'; buildingId: number; track: 'armor' | 'weapon' }
-  | { type: 'levy-composition' | 'archers' | 'spearmen' | 'swordsmen' | 'horsemen' | 'horse-archers' | 'knights'; buildingId: number; fraction: number }
+  | { type: 'levy-composition' | 'field-cannons' | 'warriors' | 'archers' | 'spearmen' | 'pikemen' | 'musketmen' | 'swordsmen' | 'horsemen' | 'horse-archers' | 'knights'; buildingId: number; fraction: number }
   | { type: 'governor'; buildingId: number; permission: 'farms' | 'housing'; enabled: boolean }
-  | { type: 'village'; buildingId: number; action: 'trade' | 'ally' | 'war' };
-export interface CommandResult { ok: boolean; message?: string; hermitRumor?: string; }
+  | { type: 'village'; buildingId: number; action: 'trade' | 'ally' | 'confederate' | 'petition' | 'war' };
+export interface CommandResult { ok: boolean; message?: string; hermitRumor?: string; questAction?: import('../game/quest-types').QuestKind; siteId?: number; }
 export type ClientMessage =
   | { type: 'hello'; version: number; token?: string }
   | { type: 'list' | 'leave' | 'start' | 'sync' }

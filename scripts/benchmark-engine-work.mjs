@@ -21,7 +21,7 @@ const afterPath = candidate ? path.resolve(candidate) : path.join(directory, 'af
 if (!candidate) await build({ stdin: { contents: `export {updateGame} from './src/game/simulation.ts'; export {installNavigationWasm} from './src/game/navigation-wasm.ts';`, resolveDir: process.cwd() },
   bundle: true, platform: 'node', format: 'esm', outfile: afterPath, sourcemap: 'external' });
 const engines = { before: await import(pathToFileURL(path.resolve(beforePath)).href), after: await import(pathToFileURL(afterPath).href) };
-const wasm = await readFile('public/wasm/navigation.wasm');
+const wasm = await readFile('public/wasm/simulation.wasm');
 for (const engine of Object.values(engines)) await engine.installNavigationWasm(wasm);
 const raw = await readFile(snapshot, 'utf8'), input = { up: false, down: false, left: false, right: false };
 const initial = () => { const state = JSON.parse(raw); state.paused = false; return state; };

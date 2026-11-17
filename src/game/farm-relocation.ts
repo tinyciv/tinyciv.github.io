@@ -6,13 +6,16 @@ import { markWorldChanged, recordWorldTileChanges } from './world-revisions';
 import { constructionEdges } from './builders';
 import { createReachabilityQuery, invalidateNavigation, traversable, withNavigationFrame } from './pathfinding';
 import { palaceReachability } from './placement';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefFootprintAllowed, reliefBuildable } from './relief';
 import { farmCityQuery, farmWalkingDistance, palaceWalkingDistances } from './farm-travel';
 import { buildingWithinBorders } from './border-placement';
 import { territory } from './borders';
-import { farmCompactnessQuery, FARM_CLUSTER_WALKING_BIAS } from './farm-clusters';
-import { farmBlockPlacementQuery } from './farm-blocks';
+import { farmCompactnessExclusions, farmCompactnessQuery, FARM_CLUSTER_WALKING_BIAS } from './farm-clusters';
+import { farmBlockPlacementQuery, farmBlockRemovalQueries, type FarmBlockQuery } from './farm-blocks';
 import TinyQueue from 'tinyqueue';
+import { entityStore } from './entity-store';
+import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
+import { orderedDistanceCells } from './ordered-distance-cells';
 
 export interface FarmRelocationPlan { camp: number; palace: number; from: Point; to: Point; }
 export interface FarmRelocationOptions {
@@ -35,16 +38,94 @@ export interface FarmRelocationOptions {
 }
 const CLEARABLE = new Set(['none', 'forest', 'jungle', 'swamp']);
 const distanceSquared = (a: Point, b: Point): number => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
-const orderedWalkingCells = new WeakMap<Float32Array, number[]>();
-function walkingCells(distances: Float32Array): number[] {
-  let cells = orderedWalkingCells.get(distances);
-  if (!cells) {
-    cells = Array.from({ length: distances.length }, (_, i) => i).sort((a, b) => distances[a] - distances[b] || a - b);
-    orderedWalkingCells.set(distances, cells);
-  }
-  return cells;
-}
 interface RelocationCandidate { point: Point; distance: number; walking: number; score: number }
+
+interface RelocationSetup {
+  occupied: (cell: number) => boolean; farmCity: ReturnType<typeof farmCityQuery>; walking: ReturnType<typeof palaceWalkingDistances>;
+  compactness: (x: number, y: number) => number; geometry: FarmBlockQuery; borders: ReturnType<typeof territory> | undefined;
+  /** Solid pending construction, excluding the house cell supplied per probe. */
+  reserved: (cell: number) => boolean; gates: ReadonlySet<number>;
+}
+interface SharedRelocation {
+  occupied: Set<number>; farmCity: ReturnType<typeof farmCityQuery>; walking: ReturnType<typeof palaceWalkingDistances>;
+  compactness: ReturnType<typeof farmCompactnessExclusions>; geometry: ReturnType<typeof farmBlockRemovalQueries>;
+  borders: ReturnType<typeof territory> | undefined; reserved: Set<number>; gates: Set<number>;
+}
+const relocationProbes = new WeakMap<GameState, Map<string, SharedRelocation>>();
+
+/** A read-only pass that probes many farms for one city (house siting) shares
+ * the occupancy, crop-block, compactness and ownership indexes instead of
+ * rebuilding them from every building and field per probe. The state must not
+ * change inside `run`; plans are identical to unbatched calls. */
+export function withFarmRelocationProbes<T>(state: GameState, run: () => T): T {
+  if (relocationProbes.has(state)) return run();
+  relocationProbes.set(state, new Map());
+  try { return run(); } finally { relocationProbes.delete(state); }
+}
+
+function constructionReservations(state: GameState, faction: number, gates: ReadonlySet<number>, reserved: Set<number>): void {
+  const { width } = state.world;
+  for (const building of state.buildings) if (building.hp > 0 && building.construction && !isFarmKind(building.kind)
+    && !['road', 'bridge', 'irrigation', 'ruin'].includes(building.kind)) {
+    for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++) {
+      const cell = (building.y + dy) * width + building.x + dx;
+      if (!(isWallKind(building.kind) && building.faction === faction && gates.has(cell))) reserved.add(cell);
+    }
+  }
+}
+function friendlyGates(state: GameState, faction: number): Set<number> {
+  const { width } = state.world;
+  return new Set(state.buildings.filter(building => building.hp > 0 && building.kind === 'road'
+    && (building.faction === faction || building.faction === -1)).map(building => building.y * width + building.x));
+}
+function occupiedCells(state: GameState, faction: number): Set<number> {
+  const { width } = state.world, occupied = new Set<number>();
+  for (const building of state.buildings) if (building.hp > 0 && !(building.kind === 'irrigation' && building.faction === faction)) {
+    for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++)
+      occupied.add((building.y + dy) * width + building.x + dx);
+  }
+  for (const field of state.fields ?? []) occupied.add(field.y * width + field.x);
+  return occupied;
+}
+const defaultOptions = (options: FarmRelocationOptions): boolean => Object.values(options).every(value => value === undefined);
+
+function relocationSetup(state: GameState, palace: Building, camp: Building, house: Point, options: FarmRelocationOptions): RelocationSetup {
+  const { width } = state.world, houseCell = house.y * width + house.x, campCell = camp.y * width + camp.x;
+  const batch = defaultOptions(options) ? relocationProbes.get(state) : undefined;
+  if (batch) {
+    const key = `${palace.id}:${camp.faction}`;
+    let shared = batch.get(key);
+    if (!shared) {
+      const gates = friendlyGates(state, camp.faction), reserved = new Set<number>();
+      constructionReservations(state, camp.faction, gates, reserved);
+      shared = { occupied: occupiedCells(state, camp.faction), farmCity: farmCityQuery(state, camp.faction),
+        walking: palaceWalkingDistances(state, palace), compactness: farmCompactnessExclusions(state, camp.faction),
+        geometry: farmBlockRemovalQueries(state), borders: state.villages?.length ? territory(state) : undefined, reserved, gates };
+      batch.set(key, shared);
+    }
+    const { occupied, reserved } = shared;
+    return { occupied: cell => cell === houseCell || occupied.has(cell), farmCity: shared.farmCity, walking: shared.walking,
+      compactness: shared.compactness(camp), geometry: shared.geometry(campCell), borders: shared.borders,
+      reserved: cell => cell === houseCell || reserved.has(cell), gates: shared.gates };
+  }
+  const occupied = occupiedCells(state, camp.faction);
+  // Moving a whole farm to a disjoint footprint keeps all former cells free.
+  occupied.add(houseCell);
+  for (const cell of options.reservedTiles ?? []) occupied.add(cell);
+  for (const cell of options.reservedPlots ?? []) occupied.add(cell);
+  const removedCells = new Set(options.removedFarmCells); removedCells.add(campCell);
+  const gates = friendlyGates(state, camp.faction);
+  const reserved = new Set(options.road ? [] : options.reservedTiles ?? []);
+  if (!options.road) reserved.add(houseCell);
+  // Pending solid footprints must remain passable after construction, too.
+  // A friendly road under a wall is a gate and preserves farmer access.
+  if (options.wall) for (const cell of gates) reserved.delete(cell);
+  constructionReservations(state, camp.faction, gates, reserved);
+  return { occupied: cell => occupied.has(cell), farmCity: farmCityQuery(state, camp.faction), walking: palaceWalkingDistances(state, palace),
+    compactness: farmCompactnessQuery(state, camp.faction, { excludeCamp: camp.id, vacatedCells: options.reservedTiles, plannedCells: options.reservedPlots }),
+    geometry: farmBlockPlacementQuery(state, { removedCells, addedCells: options.reservedPlots }),
+    borders: state.villages?.length ? territory(state) : undefined, reserved: cell => reserved.has(cell), gates };
+}
 
 /** Find a replacement crop tile before touching the existing farm. Farms
  * may move outside borders, but stay with this city and cannot cover roads. */
@@ -52,23 +133,8 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
   reachable = palaceReachability(state, palace), options: FarmRelocationOptions = {}): FarmRelocationPlan | undefined {
   if (!buildingReady(palace) || camp.hp <= 0 || !buildingReady(camp) && !options.road && !options.unfinished
     || !isFarmKind(camp.kind) || camp.faction !== palace.faction || camp.farmSuppressed) return;
-  const { width, height } = state.world, occupied = new Set<number>();
-  for (const building of state.buildings) if (building.hp > 0 && !(building.kind === 'irrigation' && building.faction === camp.faction)) {
-    for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++)
-      occupied.add((building.y + dy) * width + building.x + dx);
-  }
-  for (const field of state.fields ?? []) occupied.add(field.y * width + field.x);
-  // Moving a whole farm to a disjoint footprint keeps all former cells free.
-  occupied.add(house.y * width + house.x);
-  for (const cell of options.reservedTiles ?? []) occupied.add(cell);
-  for (const cell of options.reservedPlots ?? []) occupied.add(cell);
-  const farmCity = farmCityQuery(state, camp.faction);
-  const walking = palaceWalkingDistances(state, palace);
-  const compactness = farmCompactnessQuery(state, camp.faction,
-    { excludeCamp: camp.id, vacatedCells: options.reservedTiles, plannedCells: options.reservedPlots });
-  const removedCells = new Set(options.removedFarmCells); removedCells.add(camp.y * width + camp.x);
-  const geometry = farmBlockPlacementQuery(state, { removedCells, addedCells: options.reservedPlots });
-  const borders = state.villages?.length ? territory(state) : undefined;
+  const { width } = state.world;
+  const { occupied, farmCity, walking, compactness, geometry, borders, reserved } = relocationSetup(state, palace, camp, house, options);
   const oldDistance = distanceSquared(camp, palace);
   const target = options.destination;
   function* candidates(): Generator<RelocationCandidate> {
@@ -77,10 +143,10 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
     // Compactness can improve a score by at most 1.5 walking tiles. Stream
     // candidates in exactly the previous order, stopping as soon as one fits;
     // a distant cell cannot outrank a nearer queued candidate beyond that band.
-    const cells = target ? [target.y * width + target.x] : walkingCells(walking);
+    const cells = target ? [target.y * width + target.x] : orderedDistanceCells(walking);
     for (const cell of cells) {
       while (queue.length && walking[cell] - FARM_CLUSTER_WALKING_BIAS > queue.peek()!.score) yield queue.pop()!;
-      if (!reachable[cell] || occupied.has(cell)) continue;
+      if (!reachable[cell] || occupied(cell)) continue;
       const point = { x: cell % width, y: Math.floor(cell / width) }, d = distanceSquared(point, palace);
       if (!options.wall && !options.nearby && d <= oldDistance) continue;
       const travel = farmWalkingDistance(walking, width, point.x, point.y);
@@ -89,34 +155,23 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
     while (queue.length) yield queue.pop()!;
   }
   return withNavigationFrame(state, () => {
-    const reserved = new Set(options.road ? [] : options.reservedTiles ?? []);
-    if (!options.road) reserved.add(house.y * width + house.x);
-    // Pending solid footprints must remain passable after construction, too.
-    // A friendly road under a wall is a gate and preserves farmer access.
-    const gates = new Set(state.buildings.filter(building => building.hp > 0 && building.kind === 'road'
-      && (building.faction === camp.faction || building.faction === -1)).map(building => building.y * width + building.x));
-    if (options.wall) for (const cell of gates) reserved.delete(cell);
-    for (const building of state.buildings) if (building.hp > 0 && building.construction && !isFarmKind(building.kind)
-      && !['road', 'bridge', 'irrigation', 'ruin'].includes(building.kind)) {
-      for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++) {
-        const cell = (building.y + dy) * width + building.x + dx;
-        if (!(isWallKind(building.kind) && building.faction === camp.faction && gates.has(cell))) reserved.add(cell);
-      }
-    }
-    const blocked = { has: (cell: number) => reserved.has(cell) };
-    const access = constructionEdges(state, palace, true).filter(exit => !blocked.has(Math.floor(exit.y) * width + Math.floor(exit.x)))
-      .map(exit => createReachabilityQuery(state, exit, palace.faction, blocked, true));
+    const blocked = { has: reserved };
+    // Flood fills from each construction exit are only needed by a candidate
+    // that passes every cheaper test, so build them on first use.
+    let access: ((point: Point) => boolean)[] | undefined;
+    const reachableFromCity = (point: Point): boolean => (access ??= constructionEdges(state, palace, true)
+      .filter(exit => !blocked.has(Math.floor(exit.y) * width + Math.floor(exit.x)))
+      .map(exit => createReachabilityQuery(state, exit, palace.faction, blocked, true))).some(query => query(point));
     for (const { point } of candidates()) {
       // Test detailed ledge geometry after ordering nearby candidates. Scanning
       // every distant ledge apron dominated large-map drag previews.
-      if (!geometry.canAdd(point).ok || farmCity(point)?.id !== palace.id
-        || !buildingWithinBorders(state, camp.kind, point.x, point.y, camp.faction, borders)) continue;
-      if (!CAMP_FIELD_OFFSETS.every(([dx, dy]) => {
+      if (farmCity(point)?.id !== palace.id || !CAMP_FIELD_OFFSETS.every(([dx, dy]) => {
         const px = point.x + dx, py = point.y + dy, tile = tileAt(state.world, px, py);
-        return !isForbidden(state, px, py, camp.faction) && !occupied.has(py * width + px) && !!tile && tile.farm === undefined && CLEARABLE.has(tile.overlay)
+        return !isForbidden(state, px, py, camp.faction) && !occupied(py * width + px) && !!tile && reliefBuildable(tile) && tile.farm === undefined && CLEARABLE.has(tile.overlay)
           && traversable(state.world, px, py) && !!reachable[py * width + px];
-      }) || !ridgeFootprintAllowed(state.world, point.x, point.y, 1)) continue;
-      if (!CAMP_FIELD_OFFSETS.every(([dx, dy]) => access.some(reachableFromExit => reachableFromExit({ x: point.x + dx + .5, y: point.y + dy + .5 })))) continue;
+      }) || !buildingWithinBorders(state, camp.kind, point.x, point.y, camp.faction, borders)
+        || !reliefFootprintAllowed(state.world, point.x, point.y, 1) || !geometry.canAdd(point).ok) continue;
+      if (!CAMP_FIELD_OFFSETS.every(([dx, dy]) => reachableFromCity({ x: point.x + dx + .5, y: point.y + dy + .5 }))) continue;
       return { camp: camp.id, palace: palace.id, from: { x: camp.x, y: camp.y }, to: point };
     }
   });
@@ -147,6 +202,10 @@ function buildingFootprint(state: GameState, kind: BuildingKind, point: Point): 
 function farmsInFootprint(state: GameState, footprint: ReadonlySet<number>, faction: number): Building[] {
   return state.buildings.filter(building => building.hp > 0 && isFarmKind(building.kind) && building.faction === faction
     && footprint.has(building.y * state.world.width + building.x)).sort((a, b) => a.id - b.id);
+}
+/** Farms under a proposed building's footprint. */
+export function farmsUnderBuilding(state: GameState, kind: BuildingKind, point: Point, faction: number): Building[] {
+  return farmsInFootprint(state, buildingFootprint(state, kind, point), faction);
 }
 interface BuildingPlans { world: GameState['world']; tiles: GameState['world']['tiles']; signature: string; plans: Map<string, BuildingFarmRelocations | undefined>; }
 const buildingPlans = new WeakMap<GameState, BuildingPlans>();
@@ -204,6 +263,10 @@ export function relocateBuildingFarms(state: GameState, batch: BuildingFarmReloc
 }
 
 function farmRelocationSignature(state: GameState): string {
+  // Construction previews own their writes and publish every moved farm or
+  // added reservation. Repeated validation of the same cell needs no second
+  // serialization of the entire settlement. Public/editor calls stay exact.
+  if (simulationReadsActive(state)) return `${forbiddenRevision(state)}|${state.world.revision ?? 0}|${territory(state).revision}|${entityStore(state).buildings.revision}|${structureChangeRevision(state)}|${state.farmVersion}|${state.factions.map(f => `${f.id},${f.relation},${f.defeated},${f.population}`).join(';')}`;
   return `${forbiddenRevision(state)}|${state.world.revision ?? 0}|${territory(state).revision}|${state.buildings.map(b => `${b.id},${b.kind},${b.faction},${b.x},${b.y},${b.hp > 0},${buildingReady(b)},${buildingPresent(b)},${!!b.farmSuppressed}`).join(';')}|${(state.fields ?? []).map(f => `${f.camp},${f.faction},${f.x},${f.y}`).join(';')}|${state.factions.map(f => `${f.id},${f.relation},${f.defeated},${f.population}`).join(';')}|${state.villages?.map(v => `${v.id},${v.faction},${v.campId},${v.destroyed}`).join(';')}`;
 }
 
@@ -251,12 +314,13 @@ export function previewFarmRelocation(state: GameState, plan: FarmRelocationPlan
   const changed: number[] = [];
   const dx = plan.to.x - farm.x, dy = plan.to.y - farm.y;
   for (const field of state.fields ?? []) if (field.camp === farm.id) {
-    const old = tileAt(state.world, field.x, field.y);
-    changed.push(field.y * state.world.width + field.x);
+    const oldCell = field.y * state.world.width + field.x;
+    const old = tileAt(state.world, field.x, field.y) && (state.world.tiles[oldCell] = { ...state.world.tiles[oldCell] });
+    changed.push(oldCell);
     if (old?.farm === farm.faction) delete old.farm;
     field.x += dx; field.y += dy; field.id = field.y * state.world.width + field.x + 1;
     changed.push(field.id - 1);
-    const tile = tileAt(state.world, field.x, field.y);
+    const tile = tileAt(state.world, field.x, field.y) && (state.world.tiles[field.id - 1] = { ...state.world.tiles[field.id - 1] });
     if (tile) {
       tile.farm = farm.faction;
       if (['forest', 'jungle', 'swamp'].includes(tile.overlay)) {
@@ -323,6 +387,20 @@ function applyFarmRelocation(state: GameState, plan: FarmRelocationPlan): void {
   }
 }
 
+const relocationBatches = new WeakMap<GameState, { changed: boolean }>();
+
+/** A road stroke moves crop records immediately but reconciles their city and
+ * parcel economy once, after all accepted cells have finished. */
+export function withFarmRelocationBatch<T>(state: GameState, run: () => T): T {
+  if (relocationBatches.has(state)) return run();
+  const batch = { changed: false }; relocationBatches.set(state, batch);
+  try { return run(); }
+  finally {
+    relocationBatches.delete(state);
+    if (batch.changed) synchronizeFarms(state);
+  }
+}
+
 function finishFarmRelocations(state: GameState): void {
   markWorldChanged(state.world, 'appearance', []);
   state.farmVersion = (state.farmVersion ?? 0) + 1;
@@ -330,5 +408,7 @@ function finishFarmRelocations(state: GameState): void {
   // the previous lookup even when the next global staffing pass is not due.
   invalidateScheduledHarvests(state);
   invalidateNavigation(state);
-  synchronizeFarms(state);
+  const batch = relocationBatches.get(state);
+  if (batch) batch.changed = true;
+  else synchronizeFarms(state);
 }

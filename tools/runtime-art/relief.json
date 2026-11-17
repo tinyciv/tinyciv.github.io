@@ -1,0 +1,10 @@
+[
+  {"source":"assets/relief/atlas-A.png","output":"assets/runtime/relief/atlas-A.webp","transform":"relief-atlas","style":0,"alias":false},
+  {"source":"assets/relief/atlas-B.png","output":"assets/runtime/relief/atlas-B.webp","transform":"relief-atlas","style":1,"alias":false},
+  {"source":"assets/relief/atlas-C.png","output":"assets/runtime/relief/atlas-C.webp","transform":"relief-atlas","style":2,"alias":false},
+  {"source":"assets/relief/hills-reference.png","output":"assets/runtime/relief/hills-reference.webp","transform":"relief-atlas","style":3,"alias":false},
+  {"source":"assets/relief/rocky-hills-reference.png","output":"assets/runtime/relief/rocky-hills-reference.webp","transform":"relief-atlas","style":4,"alias":false},
+  {"source":"assets/relief/hills-varied.png","output":"assets/runtime/relief/hills-varied.webp","transform":"relief-atlas","style":5,"alias":false},
+  {"source":"assets/relief/rocky-hills-varied.png","output":"assets/runtime/relief/rocky-hills-varied.webp","transform":"relief-atlas","style":6,"alias":false},
+  {"source":"assets/relief/mountains-varied.png","output":"assets/runtime/relief/mountains-varied.webp","transform":"relief-atlas","style":7,"alias":false}
+]

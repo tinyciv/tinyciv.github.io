@@ -1,4 +1,5 @@
 import { entityStore } from '../src/game/entity-store';
+import { registerFactionAIPolicies, setFactionAIProfile } from '../src/game/faction-ai-profile';
 import { describe, expect, it, vi } from 'vitest';
 import { getFactionStrategy, updateFactionStrategies, type FactionStrategyQueries } from '../src/game/faction-strategy';
 import { insideOwnBorders } from '../src/game/borders';
@@ -45,7 +46,58 @@ function band(state: GameState): Unit[] {
 
 function plan(state: GameState) { updateFactionStrategies(state, queries(state)); return getFactionStrategy(state, 1)!; }
 
+function forwardPatrol(state: GameState): Unit {
+  for (const member of state.units.filter(unit => unit.faction === 1)) member.x += 15;
+  const intruder = unit(80, 'warrior', 0, 45.5, 21.5);
+  entityStore(state).units.add(intruder);
+  return intruder;
+}
+
 describe('rival faction bounty strategy', () => {
+  it('replans immediately when a selected experimental policy changes retreat eligibility', () => {
+    const state = fixture(), leader = state.units.find(unit => unit.id === 10)!;
+    leader.hp = 75;
+    expect(plan(state).mode).toBe('patrol');
+    registerFactionAIPolicies(state, [{ id: 'cautious', parameters: { retreatHealth: .8 } }]);
+    setFactionAIProfile(state, 1, 'cautious');
+    state.time = .01;
+    expect(plan(state).mode).toBe('recover');
+  });
+  it('intercepts an unprovoked visible human enemy near its patrol outside the home defense radius', () => {
+    const state = fixture(), intruder = forwardPatrol(state);
+    const mission = plan(state);
+    expect(distance(intruder, { x: 21, y: 21 })).toBeGreaterThan(11);
+    expect(mission.mode).toBe('attack');
+    expect(mission.targetId).toBe(intruder.id);
+    expect(mission.goal).toEqual({ x: intruder.x, y: intruder.y });
+    expect(intruder.lastCombat).toBe(-60);
+    expect(state.factions[1].nextRaid).toBe(1e9);
+  });
+
+  it('does not let a nearby unreachable contact conceal a reachable enemy from the patrol', () => {
+    const state = fixture(), unreachable = forwardPatrol(state);
+    unreachable.x = 42.5;
+    for (let y = 20; y <= 22; y++) for (let x = 41; x <= 43; x++)
+      if (x !== 42 || y !== 21) state.world.tiles[y * state.world.width + x].terrain = 'river';
+    const reachable = unit(81, 'warrior', 0, 39.5, 27.5);
+    entityStore(state).units.add(reachable); state.world.revision!++;
+    expect(plan(state).targetId).toBe(reachable.id);
+  });
+
+  it('does not intercept hidden, friendly, civilian, or unreachable contacts', () => {
+    for (const variant of ['hidden', 'friendly', 'civilian', 'unreachable']) {
+      const state = fixture(), intruder = forwardPatrol(state);
+      if (variant === 'friendly') intruder.faction = 1;
+      if (variant === 'civilian') { intruder.kind = 'worker'; intruder.attack = 0; }
+      if (variant === 'unreachable') {
+        for (let y = 0; y < state.world.height; y++) state.world.tiles[y * state.world.width + 43].terrain = 'river';
+        state.world.revision!++;
+      }
+      updateFactionStrategies(state, variant === 'hidden' ? { ...queries(state), visible: () => false } : queries(state));
+      expect(getFactionStrategy(state, 1)?.targetId, variant).toBeUndefined();
+    }
+  });
+
   it('starts a Leader-led attack on a hostile city without detaching raiders', () => {
     const state = fixture(); state.factions[1].nextRaid = 0;
     const mission = plan(state);
@@ -55,7 +107,7 @@ describe('rival faction bounty strategy', () => {
     expect(mission.targetId).toBeUndefined();
     expect(mission.escortIds).toHaveLength(3);
     expect(state.units.every(unit => unit.order === 'follow' && unit.marauderPack === undefined)).toBe(true);
-    expect(state.factions[1].nextRaid).toBe(40);
+    expect(state.factions[1].nextRaid).toBe(20);
   });
 
   it('regroups its campaigning army and abandons the attack when the Leader needs to recover', () => {

@@ -45,21 +45,21 @@ function advance(state: GameState, seconds: number): void {
 }
 
 describe('stone walls replacing palisades', () => {
-  it.each([0, -1])('credits the full palisade price and permits a 25-gold order (owner %s)', owner => {
+  it.each([0, -1])('credits the full palisade price and permits a discounted order (owner %s)', owner => {
     const state = fixture(), palisade = add(state, 'palisade', 12, 10, owner);
-    state.factions[0].gold = 24;
-    expect(validateBuildAt(state, 'wall', 12, 10)).toEqual({ ok: false, message: 'Need 25 gold.' });
-    state.factions[0].gold = 25;
+    state.factions[0].gold = 11;
+    expect(validateBuildAt(state, 'wall', 12, 10)).toEqual({ ok: false, message: 'Need 12 gold.' });
+    state.factions[0].gold = 11.25;
     const before = JSON.stringify(state);
-    expect(buildCostAt(state, 'wall', 12.5, 10.5).gold).toBe(25);
-    expect(minimumBuildGold('wall')).toBe(25);
-    expect(planConstruction(state, 'wall', [{ x: 12, y: 10 }])).toMatchObject({ ok: true, cost: 25, skipped: 0 });
+    expect(buildCostAt(state, 'wall', 12.5, 10.5).gold).toBe(11.25);
+    expect(minimumBuildGold('wall')).toBe(11.25);
+    expect(planConstruction(state, 'wall', [{ x: 12, y: 10 }])).toMatchObject({ ok: true, cost: 11.25, skipped: 0 });
     expect(JSON.stringify(state)).toBe(before);
     const wall = upgrade(state);
     expect(state.factions[0].gold).toBe(0);
-    expect(wall).toMatchObject({ maxHp: 2250, construction: { duration: 4, paidGold: 25, replacesPalisade: palisade.id } });
+    expect(wall).toMatchObject({ maxHp: 2250, construction: { duration: 4, paidGold: 11.25, replacesPalisade: palisade.id } });
     expect(state.buildings).toContain(palisade);
-    expect(validateBuildAt(state, 'wall', 13, 10).message).toBe('Need 30 gold.');
+    expect(validateBuildAt(state, 'wall', 13, 10).message).toBe('Need 15 gold.');
   });
 
   it('does not bypass Masonry or allow replacing another faction’s wall', () => {
@@ -68,24 +68,24 @@ describe('stone walls replacing palisades', () => {
     expect(validateBuildAt(state, 'wall', 12, 10).message).toContain('Masonry');
     state.factions[0].research!.levels.wall = 1;
     palisade.faction = 1;
-    expect(buildCostAt(state, 'wall', 12, 10).gold).toBe(30);
+    expect(buildCostAt(state, 'wall', 12, 10).gold).toBe(15);
     expect(validateBuildAt(state, 'wall', 12, 10)).toEqual({ ok: false, message: 'Tile occupied.' });
   });
 
   it('counts a dead palisade as empty ground at the normal stone-wall price', () => {
     const state = fixture(); add(state, 'palisade').hp = 0;
-    expect(buildCostAt(state, 'wall', 12, 10).gold).toBe(30);
-    expect(upgrade(state).construction?.paidGold).toBe(30);
-    expect(state.factions[0].gold).toBe(70);
+    expect(buildCostAt(state, 'wall', 12, 10).gold).toBe(15);
+    expect(upgrade(state).construction?.paidGold).toBe(15);
+    expect(state.factions[0].gold).toBe(85);
   });
 
   it('previews and purchases mixed new, upgraded and existing wall cells once at their actual prices', () => {
     const state = fixture(); add(state, 'palisade'); add(state, 'wall', 14, 10);
     const points = [12, 13, 14].map(x => ({ x, y: 10 }));
-    state.factions[0].gold = 55;
+    state.factions[0].gold = 26.25;
     const before = JSON.stringify(state);
     const plan = planConstruction(state, 'wall', [...points, points[0]]);
-    expect(plan).toMatchObject({ ok: true, cost: 55, skipped: 0 });
+    expect(plan).toMatchObject({ ok: true, cost: 26.25, skipped: 0 });
     expect(plan.cells.map(cell => [cell.ok, cell.existing])).toEqual([[true, false], [true, false], [true, true]]);
     expect(JSON.stringify(state)).toBe(before);
     expect(buildStroke(state, 'wall', points)).toMatchObject({ ok: true, placed: 2, skipped: 0 });
@@ -96,7 +96,7 @@ describe('stone walls replacing palisades', () => {
 
   it('skips unaffordable new wall cells while accepting later affordable replacements', () => {
     const state = fixture(); add(state, 'palisade'); add(state, 'palisade', 14, 10);
-    state.factions[0].gold = 50;
+    state.factions[0].gold = 22.5;
     const points = [12, 13, 14].map(x => ({ x, y: 10 }));
     expect(planConstruction(state, 'wall', points).cells.map(cell => cell.ok)).toEqual([true, false, true]);
     expect(buildStroke(state, 'wall', points)).toMatchObject({ ok: true, placed: 2, skipped: 1 });
@@ -148,9 +148,9 @@ describe('stone walls replacing palisades', () => {
     expect(palaceEnclosures(state).regions).toHaveLength(1);
   });
 
-  it('canceling a queued upgrade refunds only the 25-gold order and preserves the palisade', () => {
+  it('canceling a queued upgrade refunds only the discounted order and preserves the palisade', () => {
     const state = fixture(), palisade = add(state, 'palisade'), wall = upgrade(state);
-    expect(cancelConstruction(state, wall.id)).toEqual({ ok: true, refund: 25 });
+    expect(cancelConstruction(state, wall.id)).toEqual({ ok: true, refund: 11.25 });
     expect(state.factions[0].gold).toBe(100);
     expect(state.buildings).toContain(palisade);
     expect(state.buildings).not.toContain(wall);
@@ -163,8 +163,8 @@ describe('stone walls replacing palisades', () => {
     expect(wall.construction?.waitingForBuilder).toBe(false);
     advance(state, 2);
     const result = cancelConstruction(state, wall.id);
-    expect(result).toEqual({ ok: true, refund: 12.5 });
-    expect(state.factions[0].gold).toBe(87.5);
+    expect(result).toEqual({ ok: true, refund: 5.62 });
+    expect(state.factions[0].gold).toBeCloseTo(94.37);
     expect(state.buildings).toContain(palisade);
   });
 
@@ -182,8 +182,8 @@ describe('stone walls replacing palisades', () => {
     const state = fixture();
     expect(buildAt(state, 'palisade', 12, 10).ok).toBe(true);
     const palisade = state.buildings.find(b => b.kind === 'palisade')!, wall = upgrade(state);
-    expect(state.factions[0].gold).toBe(70);
-    expect(cancelConstruction(state, palisade.id)).toEqual({ ok: true, refund: 30 });
+    expect(state.factions[0].gold).toBe(85);
+    expect(cancelConstruction(state, palisade.id)).toEqual({ ok: true, refund: 15 });
     expect(state.factions[0].gold).toBe(100);
     expect(state.buildings).not.toContain(palisade);
     expect(state.buildings).not.toContain(wall);
@@ -192,7 +192,7 @@ describe('stone walls replacing palisades', () => {
   it.each([false, true])('does not resurrect a palisade destroyed during the upgrade (cancel: %s)', cancel => {
     const state = fixture(), palisade = add(state, 'palisade'), wall = upgrade(state);
     removeBuildings(state, new Set([palisade.id]));
-    if (cancel) expect(cancelConstruction(state, wall.id)).toEqual({ ok: true, refund: 25 });
+    if (cancel) expect(cancelConstruction(state, wall.id)).toEqual({ ok: true, refund: 11.25 });
     else { advance(state, 25); expect(buildingReady(wall)).toBe(true); }
     expect(state.buildings.some(b => b.kind === 'palisade')).toBe(false);
   });

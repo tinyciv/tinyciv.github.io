@@ -7,6 +7,7 @@ import type { GameState } from '../src/game/types';
 import { createGame } from '../src/game/simulation';
 import { generateWorld } from '../src/world/generator';
 import { ridgeFootprintAllowed, ridgeGroundWalkable, ridgeIsLedge } from '../src/game/ridges';
+import { nativeFixture } from './helpers/native-fixture';
 
 function fixture(): GameState {
     return { world: { width: 64, height: 48, seed: 'treasure-seed', source: 'test', spawns: [],
@@ -23,6 +24,15 @@ function fixture(): GameState {
 }
 
 describe('wilderness treasure', () => {
+    it('doubles the chest target on open maps with enough valid wilderness', () => {
+        const state = fixture(), tile = state.world.tiles[0];
+        state.world.width = 96; state.world.height = 96;
+        state.world.tiles = Array.from({length:96*96}, () => ({...tile}));
+        entityStore(state).buildings.replace([state.buildings[0]]); state.raiderCamps = [];
+        initializeTreasureChests(state);
+        expect(state.treasures).toHaveLength(28); // Former target: 14.
+    });
+
     it('recognizes existing groves, passes and lake shores without inventing landmarks on empty plains', () => {
         const { world } = fixture(), x = 30, y = 30;
         expect(geographicDiscoveryAt(world, x, y)).toBeUndefined();
@@ -77,7 +87,7 @@ describe('wilderness treasure', () => {
         state.world.revision = 1;
         initializeTreasureChests(state);
         expect(state.rngState).toBe(rng);
-        expect(state.treasures!.length).toBeGreaterThan(0); expect(state.treasures!.length).toBeLessThanOrEqual(5);
+        expect(state.treasures!.length).toBeGreaterThan(0); expect(state.treasures!.length).toBeLessThanOrEqual(10);
         const reachable = travelTimeMap(state, state.units[0], 0, 1, Infinity);
         for (const chest of state.treasures!) {
             const cell = chest.y * 64 + chest.x;
@@ -86,7 +96,7 @@ describe('wilderness treasure', () => {
             expect(Math.hypot(chest.x + .5 - 25.5, chest.y + .5 - 29.5)).toBeGreaterThanOrEqual(12);
             for (const other of state.treasures!) if (other !== chest) expect(Math.hypot(chest.x - other.x, chest.y - other.y)).toBeGreaterThanOrEqual(8);
         }
-        const repeat = fixture(); repeat.world = structuredClone(state.world); repeat.rngState = 999;
+        const repeat = fixture(); repeat.world = structuredClone(state.world); nativeFixture(repeat).seedRandom(999);
         initializeTreasureChests(repeat); expect(repeat.treasures).toEqual(state.treasures);
     });
 

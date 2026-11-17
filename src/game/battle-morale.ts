@@ -1,112 +1,182 @@
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { simulationReadsActive } from './simulation-reads';
 import { forEachNearbyUnit } from './spatial';
-import { distance, isRetinueMember, isSoldier, type BattleCasualty, type GameState, type Unit } from './types';
+import { entityStore, type EntityObserver, type EntityStore } from './entity-store';
+import { isRetinueMember, isSoldier, type BattleCasualty, type GameState, type Unit, type UnitOrder } from './types';
+import { rustEngine } from './rust-engine';
+import { SIM_ENGINE, SimSlot, simCore, type SimCore } from './sim-handle';
+import { culturalHomeGround } from './cultural-territory';
 
-export const CASUALTY_RADIUS = 8;
-export const CASUALTY_WINDOW = 20;
-export const CASUALTY_LOSS_RATIO = 5;
-export const CASUALTY_FLOOR = 6;
-export const CASUALTY_MORALE_DRAIN = 50;
-export const CASUALTY_SHOCK_SECONDS = 4;
-export const MARAUDER_LEADER_LOSS_RADIUS = 6;
-export const MARAUDER_LEADER_LOSS_MORALE = 40;
-export const ROUT_CONTAGION_MORALE_DRAIN = 18;
-export const MARAUDER_MIN_ROUT_SECONDS = 15;
-const HISTORY_LIMIT = 2048;
-interface CasualtyIndex { events: BattleCasualty[]; count: number; prunedAt: number; buckets: Map<number, Map<number, BattleCasualty[]>>; }
-const indexes = new WeakMap<GameState, CasualtyIndex>();
+export const CASUALTY_RADIUS = rustEngine.morale_constant(0);
+export const CASUALTY_WINDOW = rustEngine.morale_constant(1);
+export const CASUALTY_LOSS_RATIO = rustEngine.morale_constant(2);
+export const CASUALTY_FLOOR = rustEngine.morale_constant(3);
+export const CASUALTY_MORALE_DRAIN = rustEngine.morale_constant(4);
+export const CASUALTY_SHOCK_SECONDS = rustEngine.morale_constant(5);
+export const MARAUDER_LEADER_LOSS_RADIUS = rustEngine.morale_constant(6);
+export const MARAUDER_LEADER_LOSS_MORALE = rustEngine.morale_constant(7);
+export const ROUT_CONTAGION_MORALE_DRAIN = rustEngine.morale_constant(8);
+export const MARAUDER_MIN_ROUT_SECONDS = rustEngine.morale_constant(9);
+const ORDERS: readonly UnitOrder[] = ['follow', 'hold', 'work', 'raid', 'wander', 'flee'];
+const CASUALTY_KINDS = new Set<Unit['kind']>(['leader', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker']);
+const unitFlags = (unit: Unit): number => (CASUALTY_KINDS.has(unit.kind) ? 1 : 0)
+  | (isSoldier(unit) || unit.kind === 'leader' || unit.kind === 'militia' ? 2 : 0)
+  | (isRetinueMember(unit) ? 4 : 0) | (unit.kind === 'leader' ? 8 : 0)
+  | (unit.garrison ? 16 : 0) | (unit.guardPost !== undefined ? 32 : 0) | (unit.villageId !== undefined ? 64 : 0)
+  | (unit.marauderPack !== undefined ? 128 : 0) | (unit.inside ? 256 : 0);
+const orderCode = (order: UnitOrder | undefined): number => order === undefined ? -1 : ORDERS.indexOf(order);
+const booleanTag = (value: boolean | undefined): number => value === undefined ? 0 : value ? 2 : 1;
+
+/** Native Bevy resources own casualty history, spatial buckets and expiry.
+ * This class keeps only serialization identity and reusable transfer buffers. */
+class MoraleRuntime implements EntityObserver<Unit> {
+  readonly handle: number;
+  events?: BattleCasualty[];
+  private factionList?: GameState['factions'];
+  private factionIndex = new Map<number, GameState['factions'][number]>();
+  achievementMask(state: GameState, faction: number): number {
+    if (this.factionList !== state.factions || this.factionIndex.size !== state.factions.length) {
+      this.factionList = state.factions; this.factionIndex = new Map(state.factions.map(item => [item.id, item]));
+    }
+    return this.factionIndex.get(faction)?.achievements ?? 0;
+  }
+  count = 0;
+  prunedAt = -Infinity;
+  values = new Float64Array(0);
+  relations = new Float64Array(0);
+  candidates: Unit[] = [];
+  private capacity = 0;
+  private pointer = 0;
+  private view?: Float64Array;
+  constructor(readonly store: EntityStore, readonly world: GameState['world'], readonly core: SimCore) {
+    this.handle = core.engine(this, SIM_ENGINE.morale); store.units.observe(this);
+  }
+  added(_unit: Unit): void {}
+  removed(unit: Unit): void { rustEngine.morale_remove_actor(this.handle, unit.id); }
+  reserve(count: number): void {
+    if (count <= this.capacity) return;
+    this.capacity = Math.max(16, 2 ** Math.ceil(Math.log2(count)));
+    this.values = new Float64Array(this.capacity);
+    this.pointer = rustEngine.morale_input(this.handle, this.capacity);
+  }
+  write(count: number): void {
+    if (!this.view || this.view.buffer !== rustEngine.memory.buffer || this.view.byteOffset !== this.pointer || this.view.length !== this.values.length)
+      this.view = new Float64Array(rustEngine.memory.buffer, this.pointer, this.values.length);
+    this.view.set(this.values.subarray(0, count));
+  }
+  history(state: GameState): void {
+    let events = state.casualties ??= [];
+    if (this.events !== events || this.count !== events.length || state.time < this.prunedAt) {
+      this.reserve(events.length * 5);
+      // Numeric indexing preserves streaming histories with instrumented iterators.
+      for (let row = 0; row < events.length; row++) {
+        const event = events[row], index = row * 5;
+        this.values[index] = event.unit; this.values[index + 1] = event.faction;
+        this.values[index + 2] = event.x; this.values[index + 3] = event.y; this.values[index + 4] = event.time;
+      }
+      this.write(events.length * 5); rustEngine.morale_reset(this.handle, events.length);
+      this.events = events; this.count = events.length;
+    }
+    const pointer = rustEngine.morale_prune(this.handle, state.time);
+    const compacted = new Float64Array(rustEngine.memory.buffer, pointer, 3)[0];
+    if (compacted) { events = state.casualties = events.slice(compacted); this.events = events; this.count = events.length; }
+    this.prunedAt = state.time;
+  }
+}
+const runtimes = new SimSlot<MoraleRuntime>();
+function runtime(state: GameState): MoraleRuntime {
+  const store = entityStore(state);
+  let value = runtimes.get(state);
+  if (!value || value.store !== store || value.world !== state.world) value = runtimes.set(state, new MoraleRuntime(store, state.world, simCore(state)));
+  return value;
+}
 const routClocks = new WeakMap<Unit, DecisionClock>();
 const recordedDeaths = new WeakMap<GameState, WeakSet<Unit>>();
 
-/** Start one rout episode. Repeated updates cannot move its rally deadline. */
+/** The native policy starts one episode; repeated notifications retain its deadline. */
 export function beginBattleRout(state: Pick<GameState, 'time' | 'units'>, unit: Unit): void {
-  if (unit.order !== 'flee') {
+  const pointer = rustEngine.morale_begin_rout(state.time, unit.faction, orderCode(unit.order), unit.routUntil ?? -Infinity);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 2), started = result[0], until = result[1];
+  if (started) {
     unit.routOrder = unit.order; unit.order = 'flee'; unit.routed = true;
-    if (unit.faction === -2) unit.routUntil = state.time + MARAUDER_MIN_ROUT_SECONDS;
+    if (unit.faction === -2) unit.routUntil = until;
     unit.target = undefined; unit.destination = undefined; unit.path = undefined;
     unit.pathGoal = undefined; unit.repathAt = 0;
     unit.forcedAttack = undefined; unit.attackReturn = undefined; unit.recallIssuedAt = undefined;
     unit.infantryDrillLeader = undefined;
+    if (unit.kind === 'leader') leaderRoutEpisodes.set(unit, (leaderRoutEpisodes.get(unit) ?? 0) + 1);
   }
   if (unit.kind === 'leader') routLeaderRetinue(state, unit);
 }
 
-/** A faction commander's retreat is an immediate army-wide order, even for
- * distant escorts holding position. Guards, villagers and independent scouts
- * are not members of that commander's retinue. Marauder bands retain their
- * separate pack retreat system. */
+/** Native eligibility keeps guards, scouts and marauder bands independent.
+ * The trusted command roster is indexed; public fixture/import calls remain live. */
+/** A Leader's rout shakes his retinue (50 morale, once per rout) instead of
+ * breaking every soldier outright: only those already shaken flee with him.
+ * The all-at-once rout added on 11-08 doubled routed time in the 2026-11-13
+ * battle experiments and emptied whole battle lines at once. */
+export const LEADER_ROUT_MORALE_LOSS = 50;
+export const LEADER_ROUT_BREAK_MORALE = 25;
+const leaderRoutEpisodes = new WeakMap<Unit, number>();
+const shakenByRout = new WeakMap<Unit, { leader: Unit; episode: number }>();
 export function routLeaderRetinue(state: Pick<GameState, 'time' | 'units'>, leader: Unit): void {
-  if (leader.kind !== 'leader' || leader.faction < 0 || leader.hp <= 0 || leader.order !== 'flee') return;
+  if (!rustEngine.morale_leader_rout(unitFlags(leader), leader.faction, leader.hp, orderCode(leader.order))) return;
   if (leader.infantryFormation) leader.infantryFormation.active = false;
-  if ('world' in state && simulationReadsActive(state as GameState)) {
+  const trusted = 'world' in state && simulationReadsActive(state as GameState);
+  if (trusted) {
     let clock = routClocks.get(leader);
     if (!clock) { clock = {}; routClocks.set(leader, clock); }
     if (!decisionDue(clock, state.time, leader.id)) return;
   }
-  for (const member of state.units) {
-    if (member.faction !== leader.faction || member.hp <= 0 || !isRetinueMember(member)
-      || member.garrison || member.guardPost !== undefined || member.villageId !== undefined || member.marauderPack !== undefined) continue;
-    if (member.order !== 'flee') { member.morale = 0; beginBattleRout(state, member); }
-    member.infantryDrillLeader = undefined;
-  }
-}
-
-export const canRallyFromRout = (state: Pick<GameState, 'time'>, unit: Unit): boolean =>
-  unit.faction !== -2 || state.time >= (unit.routUntil ?? -Infinity);
-
-/** A few fugitives cannot dissolve a healthy formation. A collapsing line can
- * spread panic quickly; a commander who still stands halves that pressure. */
-export function routContagionDrain(routingAllies: number, standingAllies: number, nearLeader: boolean): number {
-  return ROUT_CONTAGION_MORALE_DRAIN * Math.min(1, routingAllies / Math.max(1, standingAllies)) * (nearLeader ? .5 : 1);
-}
-
-function history(state: GameState): CasualtyIndex {
-  let events = state.casualties ??= [];
-  let index = indexes.get(state);
-  if (index?.prunedAt !== state.time && (events.length > HISTORY_LIMIT || events[0]?.time < state.time - CASUALTY_WINDOW)) {
-    events = state.casualties = events.filter(event => event.time >= state.time - CASUALTY_WINDOW).slice(-HISTORY_LIMIT);
-  }
-  if (!index || index.events !== events || index.count !== events.length) {
-    const buckets = new Map<number, Map<number, BattleCasualty[]>>();
-    for (const event of events) {
-      const x = Math.floor(event.x / CASUALTY_RADIUS), y = Math.floor(event.y / CASUALTY_RADIUS);
-      let row = buckets.get(y);
-      if (!row) { row = new Map(); buckets.set(y, row); }
-      const group = row.get(x);
-      if (group) group.push(event); else row.set(x, [event]);
+  const members = trusted ? entityStore(state as GameState).units.query('retinue') : state.units;
+  for (const member of members) {
+    const actions = rustEngine.morale_retinue_member(unitFlags(member), member.faction, member.hp, orderCode(member.order), leader.faction);
+    if (actions & 2) {
+      const episode = leaderRoutEpisodes.get(leader) ?? 0, previous = shakenByRout.get(member);
+      if (previous?.leader !== leader || previous.episode !== episode) {
+        shakenByRout.set(member, { leader, episode });
+        member.morale = Math.max(0, member.morale - LEADER_ROUT_MORALE_LOSS);
+        if (member.morale < LEADER_ROUT_BREAK_MORALE) beginBattleRout(state, member);
+      }
     }
-    index = { events, count: events.length, prunedAt: state.time, buckets };
-    indexes.set(state, index);
+    if (actions & 1) member.infantryDrillLeader = undefined;
   }
-  index.prunedAt = state.time;
-  return index;
 }
+export const canRallyFromRout = (state: Pick<GameState, 'time'>, unit: Unit): boolean =>
+  !!rustEngine.morale_can_rally(state.time, unit.faction, unit.routUntil ?? -Infinity);
+export const routContagionDrain = (routingAllies: number, standingAllies: number, nearLeader: boolean): number =>
+  rustEngine.morale_contagion(routingAllies, standingAllies, Number(nearLeader));
 
-/** Called at the damage site, before dead units are removed. Each unit object
- * contributes once; numeric IDs can be reused after a dead unit is removed. */
+/** Object identity is a host-boundary concern: distinct dead objects may reuse
+ * an ID. The actual casualty record/index/lifetime lives in the native world. */
 export function recordBattleDeath(state: GameState, unit: Unit): void {
-  if (unit.hp > 0 || !['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker'].includes(unit.kind)) return;
+  if (!rustEngine.morale_casualty_allowed(unit.hp, unitFlags(unit))) return;
   let recorded = recordedDeaths.get(state);
   if (!recorded) { recorded = new WeakSet(); recordedDeaths.set(state, recorded); }
   if (recorded.has(unit)) return;
   recorded.add(unit);
-  history(state).events.push({ unit: unit.id, faction: unit.faction, x: unit.x, y: unit.y, time: state.time });
-  // A commander's death is one immediate local shock, in addition to counting
-  // as one ordinary casualty. Neither player fog nor band membership limits it.
-  if (unit.faction === -2 && unit.marauderLeader) forEachNearbyUnit(state, unit, MARAUDER_LEADER_LOSS_RADIUS, ally => {
-    if (ally.faction !== -2 || ally.hp <= 0 || ally.inside
-      || !(isSoldier(ally) || ally.kind === 'leader' || ally.kind === 'militia')
-      || distance(unit, ally) > MARAUDER_LEADER_LOSS_RADIUS) return;
-    ally.morale = Math.max(0, ally.morale - MARAUDER_LEADER_LOSS_MORALE);
-    // Route immediately at zero; the next normal morale integration must not
-    // recover a fraction of a point before noticing this collapse.
-    if (ally.morale === 0) beginBattleRout(state, ally);
-  });
+  const value = runtime(state); value.history(state);
+  rustEngine.morale_record(value.handle, unit.id, unit.faction, unit.x, unit.y, state.time);
+  value.events!.push({ unit: unit.id, faction: unit.faction, x: unit.x, y: unit.y, time: state.time }); value.count++;
+  if (unit.faction !== -2 || !unit.marauderLeader) return;
+  const candidates = value.candidates; candidates.length = 0;
+  forEachNearbyUnit(state, unit, MARAUDER_LEADER_LOSS_RADIUS, ally => { candidates.push(ally); });
+  value.reserve(candidates.length * 7);
+  for (let row = 0; row < candidates.length; row++) {
+    const ally = candidates[row], index = row * 7;
+    value.values[index] = ally.faction; value.values[index + 1] = ally.hp; value.values[index + 2] = unitFlags(ally);
+    value.values[index + 3] = ally.morale; value.values[index + 4] = ally.x; value.values[index + 5] = ally.y; value.values[index + 6] = orderCode(ally.order);
+  }
+  value.write(candidates.length * 7);
+  const pointer = rustEngine.morale_commander_shock(value.handle, unit.x, unit.y, candidates.length);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, candidates.length * 2).slice();
+  for (let row = 0; row < candidates.length; row++) {
+    const actions = result[row * 2], ally = candidates[row];
+    if (actions & 1) ally.morale = result[row * 2 + 1];
+    if (actions & 2) beginBattleRout(state, ally);
+  }
 }
 
-/** Count the local cohort before its recent losses, so losing allies does not
- * continually lower the proportional threshold. Other battles are irrelevant. */
 type CasualtyPressure = { losses: number; threshold: number; recentEnemyKill: boolean; enemyLosses: number; unfavorableExchange: boolean; collapsing: boolean };
 interface PressureObservation extends DecisionClock { value?: CasualtyPressure }
 const pressureObservations = new WeakMap<GameState, WeakMap<Unit, PressureObservation>>();
@@ -120,35 +190,63 @@ export function casualtyPressure(state: GameState, unit: Unit, hostile: (a: numb
   return observation.value!;
 }
 function sampleCasualtyPressure(state: GameState, unit: Unit, hostile: (a: number, b: number) => boolean): CasualtyPressure {
-  const index = history(state);
-  if (!index.events.length) return { losses: 0, threshold: CASUALTY_FLOOR, recentEnemyKill: false,
-    enemyLosses: 0, unfavorableExchange: true, collapsing: false };
-  let losses = 0, totalLosses = 0, enemyLosses = 0;
-  const bx = Math.floor(unit.x / CASUALTY_RADIUS), by = Math.floor(unit.y / CASUALTY_RADIUS);
-  for (let y = by - 1; y <= by + 1; y++) {
-    const row = index.buckets.get(y);
-    if (!row) continue;
-    for (let x = bx - 1; x <= bx + 1; x++) {
-      const deaths = row.get(x);
-      if (!deaths) continue;
-      for (const death of deaths) {
-        if (death.time < state.time - CASUALTY_WINDOW || distance(unit, death) > CASUALTY_RADIUS) continue;
-        // Losses during an earlier shock cannot keep restarting it. Keep the
-        // deadline after recovery, including in saves and when leaving the area.
-        if (death.faction === unit.faction) {
-          totalLosses++;
-          if (death.time > (unit.casualtyShock?.until ?? -Infinity)) losses++;
-        } else if (hostile(unit.faction, death.faction)) enemyLosses++;
-      }
-    }
-  }
+  const value = runtime(state); value.history(state);
+  const pressurePointer = rustEngine.morale_pressure(value.handle, state.time, unit.x, unit.y, unit.faction, unit.casualtyShock?.until ?? -Infinity);
+  const needsLiving = new Float64Array(rustEngine.memory.buffer, pressurePointer, 2)[1];
+  const count = rustEngine.morale_faction_count(value.handle), foreignPointer = rustEngine.morale_factions(value.handle);
+  const foreign = new Float64Array(rustEngine.memory.buffer, foreignPointer, count).slice();
+  if (value.relations.length < count) value.relations = new Float64Array(Math.max(16, 2 ** Math.ceil(Math.log2(count))));
+  for (let row = 0; row < count; row++) value.relations[row] = Number(hostile(unit.faction, foreign[row]));
   let living = 0;
-  if (losses >= CASUALTY_FLOOR) forEachNearbyUnit(state, unit, CASUALTY_RADIUS, ally => {
-    if (ally.faction === unit.faction && ally.hp > 0 && !ally.inside && ['leader', 'warrior', 'swordsman', 'spearman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker'].includes(ally.kind)
-      && distance(unit, ally) <= CASUALTY_RADIUS) living++;
-  });
-  const threshold = Math.max(CASUALTY_FLOOR, Math.ceil((living + losses) / 2));
-  const unfavorableExchange = totalLosses >= CASUALTY_LOSS_RATIO * enemyLosses;
-  return { losses, threshold, enemyLosses, recentEnemyKill: enemyLosses > 0, unfavorableExchange,
-    collapsing: losses >= threshold && unfavorableExchange };
+  if (needsLiving) {
+    const candidates = value.candidates; candidates.length = 0;
+    forEachNearbyUnit(state, unit, CASUALTY_RADIUS, ally => { candidates.push(ally); });
+    value.reserve(candidates.length * 5);
+    for (let row = 0; row < candidates.length; row++) {
+      const ally = candidates[row], index = row * 5;
+      value.values[index] = ally.faction; value.values[index + 1] = ally.hp; value.values[index + 2] = unitFlags(ally);
+      value.values[index + 3] = ally.x; value.values[index + 4] = ally.y;
+    }
+    value.write(candidates.length * 5);
+    living = rustEngine.morale_living(value.handle, unit.faction, unit.x, unit.y, candidates.length);
+  }
+  value.reserve(count); value.values.set(value.relations.subarray(0, count)); value.write(count);
+  const pointer = rustEngine.morale_pressure_finish(value.handle, living);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 6);
+  return { losses: result[0], threshold: result[1], recentEnemyKill: !!result[2], enemyLosses: result[3],
+    unfavorableExchange: !!result[4], collapsing: !!result[5] };
+}
+
+export interface BattleMoraleInput {
+  enemies: number; allies: number; routingAllies: number; fightingUntil: number; shelter: boolean;
+  hostileSide: boolean; nearLeader: boolean; collapsing: boolean; unfavorableExchange: boolean;
+  maximumMorale: number; defeated: boolean; leaderFleeing: boolean;
+}
+/** Integrate one persistent native actor after its bounded perception sample.
+ * Return a new-rout event for the caller's existing rally/log publications. */
+export function integrateBattleMorale(state: GameState, unit: Unit, dt: number, input: BattleMoraleInput): boolean {
+  const value = runtime(state); value.reserve(16);
+  const home = culturalHomeGround(state, { id: unit.faction, achievements: value.achievementMask(state, unit.faction) }, unit);
+  value.values.set([unit.morale, unit.hp, input.maximumMorale, input.enemies, input.allies, input.routingAllies, input.fightingUntil,
+    (input.hostileSide ? 1 : 0) | (input.nearLeader ? 2 : 0) | (input.shelter ? 4 : 0) | (input.collapsing ? 8 : 0)
+      | (input.unfavorableExchange ? 16 : 0) | (unit.kind === 'leader' ? 32 : 0) | (input.defeated ? 64 : 0)
+      | (isRetinueMember(unit) ? 128 : 0) | (unit.garrison ? 256 : 0) | (input.leaderFleeing ? 512 : 0) | (unit.marauderPack !== undefined ? 1024 : 0)
+      | (value.achievementMask(state, unit.faction) << 11) | (home ? 1 << 30 : 0),
+    unit.casualtyShock?.until ?? -Infinity, unit.casualtyShock ? 1 : 0, booleanTag(unit.casualtyShock?.routed),
+    unit.faction, unit.routUntil ?? -Infinity, orderCode(unit.order), orderCode(unit.routOrder), booleanTag(unit.routed)]);
+  value.write(16);
+  const pointer = rustEngine.morale_integrate(value.handle, unit.id, state.time, dt);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 8).slice(), actions = result[4];
+  unit.morale = result[0];
+  if (actions & 4) unit.casualtyShock = { until: result[2] };
+  if (unit.casualtyShock && result[3] !== booleanTag(unit.casualtyShock.routed)) {
+    if (result[3]) unit.casualtyShock.routed = result[3] === 2;
+    else delete unit.casualtyShock.routed;
+  }
+  if (actions & 1) beginBattleRout(state, unit);
+  if (actions & 2) {
+    unit.order = ORDERS[result[5]]; unit.routOrder = undefined; unit.routed = result[7] === 2;
+    unit.routUntil = undefined; unit.destination = undefined; unit.path = undefined;
+  }
+  return !!(actions & 1);
 }

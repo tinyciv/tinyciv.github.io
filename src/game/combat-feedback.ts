@@ -1,3 +1,4 @@
+import { villageAllyView } from './settlement-bridge';
 import { nearbyUnits } from './spatial';
 import { distance, type GameState, type Unit, type Particle } from './types';
 import { playerFaction } from './player-context';
@@ -33,7 +34,7 @@ export function damageNumberPose(life: number, direction = 1): { rise: number; o
 function friendlyDamage(state: GameState, particle: Particle): boolean {
   const viewer = playerFaction(state), owner = particle.faction;
   return owner === viewer || viewer === 0 && (state.factions.some(faction => faction.id === owner && faction.relation === 'confederated')
-    || !!state.villages?.some(village => village.faction === owner && village.relation === 'allied' && !village.destroyed));
+    || !!state.villages?.some(village => village.faction === owner && villageAllyView(state, village) === 0 && !village.destroyed));
 }
 /** Resolve per viewer: the victim's owner still sees friendly damage in multiplayer. */
 export function damageNumberVisible(state: GameState, particle: Particle): boolean {

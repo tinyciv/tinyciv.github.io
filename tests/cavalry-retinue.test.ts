@@ -49,13 +49,13 @@ describe('mounted retinue and stable', () => {
     expect(counts).toMatchObject({ total: 4, horsemen: 2, archers: 2, warriors: 0, spearmen: 0 });
     expect(state.units.filter(isRetinueMember)).toHaveLength(4);
     expect(setArcherFraction(state, range, 1)).toBe(true);
-    expect(state.factions[0].archerFraction).toBe(.5);
-    expect(state.units.filter(u => u.training?.role === 'horseman')).toHaveLength(2);
+    expect(state.factions[0].archerFraction).toBe(1);
+    expect(state.units.filter(u => u.training?.role === 'horseman')).toHaveLength(0);
   });
 
-  it('requires an owned completed nearby stable and rejects non-finite allocation', () => {
+  it('requires owned completed nearby army controls and rejects non-finite allocation', () => {
     const { state, stable } = realm();
-    expect(setHorsemanFraction(state, state.buildings[0], .5)).toBe(false);
+    expect(setHorsemanFraction(state, state.buildings[1], .5)).toBe(false);
     expect(setHorsemanFraction(state, stable, NaN)).toBe(false);
     stable.construction = { startedAt: 0, duration: 60 };
     expect(setHorsemanFraction(state, stable, .5)).toBe(false);

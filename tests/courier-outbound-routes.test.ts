@@ -8,7 +8,7 @@ import { installNavigationWasm, navigationWasmStatus } from '../src/game/navigat
 import { canMove, findPath } from '../src/game/pathfinding';
 import type { Building, GameState, Point } from '../src/game/types';
 
-beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/navigation.wasm'))); });
+beforeAll(async () => { await installNavigationWasm(Uint8Array.from(readFileSync('public/wasm/simulation.wasm'))); });
 
 function fixture(width = 32, height = 18): GameState {
   return {

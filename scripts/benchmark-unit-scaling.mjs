@@ -142,7 +142,7 @@ if (process.argv.includes('--prepare')) {
 const names = ['baseline', 'current'], modules = {};
 modules.baseline = await import(pathToFileURL(baselinePath).href);
 modules.current = await import(pathToFileURL(currentPath).href);
-const wasm = await readFile(path.join(root, 'public/wasm/navigation.wasm'));
+const wasm = await readFile(path.join(root, 'public/wasm/simulation.wasm'));
 for (const name of names) await modules[name].installNavigationWasm(wasm);
 const reportPath = path.join(directory, 'unit-scaling-benchmark.json');
 const report = {

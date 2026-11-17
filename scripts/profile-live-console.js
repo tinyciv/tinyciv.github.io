@@ -11,7 +11,7 @@ export async function profileLive(seconds = 60, { delay = 5, captureUrl, movemen
   const state = game.state, renderer = game.renderer;
   let modules;
   try {
-    modules = await Promise.all(['navigation-wasm', 'courier-routes', 'farm-pickup-routes', 'movement-profile', 'city-ownership', 'governor'].map(async name => {
+    modules = await Promise.all(['navigation-wasm', 'courier-routes', 'farm-dispatch', 'movement-profile', 'city-ownership', 'governor'].map(async name => {
       const url = performance.getEntriesByType('resource').filter(entry => entry.name.includes(`/src/game/${name}.ts`)).at(-1)?.name;
       return url ? import(url) : {};
     }));
@@ -21,7 +21,7 @@ export async function profileLive(seconds = 60, { delay = 5, captureUrl, movemen
   const counters = () => ({ activeUnits: game.entities(state).units.query('active').length,
     sleepingUnits: state.units.length - game.entities(state).units.query('active').length,
     navigation: modules[0].navigationWasmStatus?.(),
-    routes: modules[1].courierRouteCacheStats?.(state), pickups: modules[2].farmPickupRouteStats?.(state),
+    routes: modules[1].courierRouteCacheStats?.(state), farmDispatch: modules[2].farmDispatchStats?.(state),
     cityOwnership: modules[4].cityOwnershipStats?.(state), cityPlanning: modules[5].cityPlanningStats?.(state) });
   const originalRAF = window.requestAnimationFrame;
   const originalMethods = new Map();

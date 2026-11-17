@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { Unit } from './types';
 
 /** Approved 1B cloth-hat merchant on the unchanged Miniworld horse.
@@ -9,7 +10,7 @@ export const merchantImage = (): HTMLImageElement | undefined => rider;
 export function loadMerchantArt(): Promise<void> {
   return loading ??= (async () => {
     const image = new Image();
-    image.src = `${import.meta.env.BASE_URL}assets/miniworld/Merchant-Rider.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/Merchant-Rider.png`);
     await image.decode();
     if (image.naturalWidth !== 128 || image.naturalHeight !== 256) throw new Error('Invalid merchant rider sheet.');
     rider = image;

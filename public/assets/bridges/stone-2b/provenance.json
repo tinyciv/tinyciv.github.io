@@ -1,0 +1,65 @@
+{
+ "source_jobs": [
+  "bridge-obj-stone-2B-16",
+  "bridge-obj-stone-2B-final-p1"
+ ],
+ "hand_painting": "none",
+ "pieces": {
+  "lr-interior": {
+   "label": "LR interior",
+   "claimed": "E+W",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-16/00.png"
+   ]
+  },
+  "ud-interior": {
+   "label": "UD interior",
+   "claimed": "N+S",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-16/01.png"
+   ]
+  },
+  "lr-end-w": {
+   "label": "W end",
+   "claimed": "E+W",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-final-p1/00.png",
+    "splice E edge: 3 line(s) from raw/bridge-obj-stone-2B-16/00.png",
+    "extend deck to W (bank) edge on lines 5-8: 8 px replicated",
+    "palette lock to the 70 colours of 2B frames 0-7: 79 px moved, max L1 shift 20"
+   ]
+  },
+  "lr-end-e": {
+   "label": "E end",
+   "claimed": "E+W",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-final-p1/01.png",
+    "splice W edge: 3 line(s) from raw/bridge-obj-stone-2B-16/00.png",
+    "extend deck to E (bank) edge on lines 5-8: 8 px replicated",
+    "palette lock to the 70 colours of 2B frames 0-7: 72 px moved, max L1 shift 28"
+   ]
+  },
+  "ud-end-n": {
+   "label": "N end",
+   "claimed": "N+S",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-final-p1/02.png",
+    "splice S edge: 1 line(s) from raw/bridge-obj-stone-2B-16/01.png",
+    "extend deck to N (bank) edge on lines 5-10: 6 px replicated",
+    "palette lock to the 70 colours of 2B frames 0-7: 115 px moved, max L1 shift 20"
+   ]
+  },
+  "ud-end-s": {
+   "label": "S end",
+   "claimed": "N+S",
+   "ops": [
+    "pick raw/bridge-obj-stone-2B-final-p1/03.png",
+    "splice N edge: 1 line(s) from raw/bridge-obj-stone-2B-16/01.png",
+    "extend deck to S (bank) edge on lines 5-10: 6 px replicated",
+    "palette lock to the 70 colours of 2B frames 0-7: 115 px moved, max L1 shift 15"
+   ]
+  }
+ },
+ "composites": "ends sit on the bank (grass) cells, interiors on water cells; approach roads = A2 asphalt tileset, 32->16 mode reduction, own grass keyed out (as review/comp-*); game cells overworld.png (0,0) grass, (8,11) water",
+ "ops_defined_in": "scripts/final_stone_2B.py"
+}

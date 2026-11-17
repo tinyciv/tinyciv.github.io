@@ -1,13 +1,14 @@
 import { farmTravelRevision } from './farm-travel';
-import { buildingBlockerView, canMove, canTraverseEdge, canWalk, findPath, navigationRouteStamp, navigationRouteUnchanged, ReversePathQuery, withNavigationFrame, type NavigationRouteStamp, type CellBlockers } from './pathfinding';
+import { buildingBlockerView, canMove, canTraverseEdge, canWalk, findPath, navigationRouteStamp, navigationRouteUnchanged, ReversePathQuery, preferCivilianPath, withNavigationFrame, type NavigationRouteStamp, type CellBlockers } from './pathfinding';
 import type { GameState, Point } from './types';
+import { workNavigationState } from './pathfinding';
 
 // Cache routes that have actually been requested, rather than filling a whole
 // world-sized distance map for every palace entrance. Immutable tails can be
 // shared by other couriers starting anywhere along a previous return journey.
 interface RouteNode { readonly cell: number; readonly next?: RouteNode }
 interface DestinationRoutes {
-  nodes: Map<number, RouteNode>; allocated: number; stamp: NavigationRouteStamp; generation: object; refreshedAt: number;
+  nodes: Map<number, RouteNode>; preferred: WeakSet<RouteNode>; allocated: number; stamp: NavigationRouteStamp; generation: object; refreshedAt: number;
 }
 interface SharedReturnField { query: ReversePathQuery; createdAt: number; }
 interface RouteCache {
@@ -62,7 +63,7 @@ function remember(state: GameState, faction: number, cache: RouteCache, key: str
     if (oldest === undefined) break;
     cache.allocated -= cache.doors.get(oldest)!.allocated; cache.doors.delete(oldest);
   }
-  const door = cache.doors.get(key) ?? { nodes: new Map<number, RouteNode>(), allocated: 0,
+  const door = cache.doors.get(key) ?? { nodes: new Map<number, RouteNode>(), preferred: new WeakSet<RouteNode>(), allocated: 0,
     stamp: navigationRouteStamp(state, faction, cells), generation: cache.generation, refreshedAt: state.time };
   let next: RouteNode | undefined;
   for (let i = cells.length - 1; i >= 0; i--) {
@@ -73,6 +74,8 @@ function remember(state: GameState, faction: number, cache: RouteCache, key: str
       door.allocated++; cache.allocated++;
     }
   }
+  const selected = door.nodes.get(cells[0]);
+  if (selected) door.preferred.add(selected);
   door.stamp = navigationRouteStamp(state, faction, door.nodes.keys());
   cache.doors.delete(key); cache.doors.set(key, door);
 }
@@ -111,8 +114,16 @@ function sharedStaticPath(state: GameState, from: Point, goalPoint: Point, facti
   if (destination) destination.generation = cache.generation;
   const first = destination?.nodes.get(start);
   if (first && start !== goal) {
-    const path = cachedPath(state, from, faction, first, blockers);
+    let path = cachedPath(state, from, faction, first, blockers);
     if (path) {
+      if (!destination!.preferred.has(first)) {
+        path = preferCivilianPath(state, from, path, faction);
+        const cells = [start];
+        for (const point of path) if (cell(point) !== cells[cells.length - 1]) cells.push(cell(point));
+        remember(state, faction, cache, key, cells, maxTargets, maxNodes);
+        destination = cache.doors.get(key) ?? destination;
+        if (path.some(point => cell(point) !== start && blockers?.has(cell(point)))) return;
+      }
       cache.hits++; cache.doors.delete(key); cache.doors.set(key, destination!);
       return path;
     }
@@ -162,6 +173,7 @@ function sharedStaticPath(state: GameState, from: Point, goalPoint: Point, facti
  * A separate target budget accommodates hundreds of farms without evicting
  * frequently shared return doors. Dispatch never accepts a partial route. */
 export function courierOutboundPath(state: GameState, from: Point, goal: Point, faction: number): Point[] {
+  state = workNavigationState(state, false, -1, undefined, true);
   return withNavigationFrame(state, () => sharedStaticPath(state, from, goal, faction,
     cacheFor(state, outboundCaches), COURIER_OUTBOUND_TARGET_LIMIT, COURIER_OUTBOUND_NODE_LIMIT) ?? []);
 }
@@ -170,6 +182,7 @@ export function courierOutboundPath(state: GameState, from: Point, goal: Point, 
  * Static suffixes never learn transient occupancy detours or partial routes.
  * Movement still performs its usual swept collision checks on every update. */
 export function courierReturnPath(state: GameState, from: Point, entrance: Point, faction: number, blockers?: CellBlockers): Point[] {
+  state = workNavigationState(state, false, -1, undefined, true);
   return withNavigationFrame(state, () => {
     const cache = cacheFor(state), path = sharedStaticPath(state, from, entrance, faction, cache, MAX_DOORS, MAX_NODES, blockers, true);
     if (path) return path;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
+import { FARM_CITY_MIN_TRIP_LIMIT } from '../src/game/farm-dispatch';
 import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FIELD_SPOIL_SECONDS,
   synchronizeFarms, updateCollector, updateHarvests } from '../src/game/farms';
 import { beginNavigationFrame, endNavigationFrame } from '../src/game/pathfinding';
@@ -97,10 +98,9 @@ describe('staggered, coordinated harvest dispatch', () => {
     expect(state.units.filter(unit => unit.collector)).toHaveLength(1);
     expect(frame(state)).toBe(1);
     const worker = state.units.find(unit => unit.collector && !unit.inside)!;
-    expect(worker.collectorStops).toHaveLength(3);
-    expect(state.fields!.every(field => field.claimedBy === worker.id)).toBe(true);
+    expect(state.fields!.filter(field => field.claimedBy === worker.id)).toHaveLength(1);
     ensureCollectors(state); updateHarvests(state);
-    expect(state.fields!.every(field => field.claimedBy === worker.id)).toBe(true);
+    expect(state.fields!.filter(field => field.claimedBy === worker.id)).toHaveLength(1);
     let largestLoad = 0;
     for (let i = 0; i < 200; i++) { frame(state); largestLoad = Math.max(largestLoad, worker.cargo ?? 0); }
     expect(largestLoad).toBe(4);
@@ -134,40 +134,75 @@ describe('staggered, coordinated harvest dispatch', () => {
     expect(homes).toEqual(new Set([1, 2]));
   });
 
-  it('preserves an in-flight sweep and its original spoilage deadlines through save/reload', () => {
+  it('preserves an in-flight parcel pickup and its fixed deadline through save/reload', () => {
     const state = fixture(block(19, 16)); frame(state);
     const first = state.units.find(unit => unit.collector && !unit.inside)!;
-    const savedStops = [...first.collectorStops!], savedDeadline = state.fields![0].expiresAt;
+    const savedField = first.field, savedDeadline = state.fields![0].expiresAt;
     const restored = parseGameSave(serializeGameSave(state));
-    expect(restored.units.find(unit => unit.id === first.id)!.collectorStops).toEqual(savedStops);
+    expect(restored.units.find(unit => unit.id === first.id)!.field).toBe(savedField);
     for (let i = 0; i < 200; i++) frame(restored);
     expect(restored.buildings[0].foodDelivered).toBe(4);
     expect(restored.fields!.every(field => field.claimedBy === undefined)).toBe(true);
     expect(savedDeadline).toBe(10 + FIELD_SPOIL_SECONDS);
   });
 
-  it('does not delay a separate urgent crop past its last viable departure', () => {
+  it('prioritizes an urgent crop while preserving staggered city departures', () => {
     // Two ripe parcels dispatch; the third unripe parcel remains idle.
     const state = fixture([{ x: 19, y: 16 }, { x: 13, y: 16 }, ...block(3, 3).slice(0, 3)]);
     for (const field of state.fields!.slice(2)) { field.food = 0; field.foodBatches = []; field.expiresAt = undefined; }
     const urgent = state.fields![1]; urgent.expiresAt = state.time + 2.1;
     urgent.foodBatches = [{ amount: 1, expiresAt: urgent.expiresAt }];
     frame(state);
-    expect(state.units.filter(unit => unit.collector && !unit.inside)).toHaveLength(2);
+    expect(state.units.filter(unit => unit.collector && !unit.inside)).toHaveLength(1);
+    expect(state.units.find(unit => unit.collector && !unit.inside)?.field).toBe(urgent.id);
     for (let i = 0; i < 50; i++) frame(state);
     expect(state.buildings[0].foodDelivered).toBe(2);
   });
 
-  it.each(['death', 'panic', 'stalled'] as const)('frees reserved bags when their courier is %s', reason => {
+  it.each(['death', 'panic'] as const)('releases the pickup claim when its courier suffers %s', reason => {
     const state = fixture(block(19, 16)); frame(state);
-    const worker = state.units.find(unit => unit.collector && !unit.inside)!, stops = [...worker.collectorStops!];
+    const worker = state.units.find(unit => unit.collector && !unit.inside)!, target = worker.field!;
     if (reason === 'death') worker.hp = 0;
-    if (reason === 'panic') panicCivilian(state, worker, { x: 20, y: 16 });
-    if (reason === 'stalled') {
-      updateCollector(state, worker, .05, () => {});
-      state.time += 2.1; updateCollector(state, worker, .05, () => {});
-    } else { updateHarvests(state); ensureCollectors(state); }
-    expect(stops.every(id => state.fields!.find(field => field.id === id)?.claimedBy !== worker.id)).toBe(true);
+    else panicCivilian(state, worker, { x: 20, y: 16 });
+    updateHarvests(state); ensureCollectors(state);
+    expect(state.fields!.find(field => field.id === target)?.claimedBy).toBeUndefined();
+  });
+
+  it('caps simultaneous city trips, drains its queue fairly, and avoids duplicate departures', () => {
+    const points = [block(19, 16), block(13, 16), block(16, 19), block(16, 13),
+      block(21, 21), block(10, 10), block(21, 10), block(10, 21)].flat();
+    const state = fixture(points);
+    let departures = 0, peak = 0;
+    const served = new Set<number>();
+    for (let step = 0; step < 600; step++) {
+      departures += frame(state);
+      peak = Math.max(peak, state.units.filter(unit => unit.collector && !unit.inside).length);
+      for (const unit of state.units) if (unit.collector && (unit.cargo ?? 0) > 0) served.add(unit.collectorCamp!);
+    }
+    expect(peak).toBe(FARM_CITY_MIN_TRIP_LIMIT);
+    expect(departures).toBe(8); expect(served.size).toBe(8);
+    expect(state.buildings[0].foodDelivered).toBe(32);
+  });
+
+  it('scales large-city capacity while keeping most gatherers offscreen', () => {
+    const state = fixture(Array.from({ length: 20 }, (_, i) => ({ x: 4 + i % 5 * 3, y: 4 + Math.floor(i / 5) * 3 })));
+    let peak = 0;
+    for (let step = 0; step < 300; step++) {
+      frame(state);
+      peak = Math.max(peak, state.units.filter(unit => unit.collector && !unit.inside).length);
+    }
+    expect(peak).toBe(5);
+    expect(state.units.filter(unit => unit.collector)).toHaveLength(20);
+  });
+
+  it('lets reachable jobs pass an inaccessible field at the head of the queue', () => {
+    const state = fixture([{ x: 6, y: 5 }, { x: 19, y: 16 }]);
+    for (let y = 0; y < state.world.height; y++) state.world.tiles[y * state.world.width + 10].terrain = 'lake';
+    state.world.revision!++;
+    for (let step = 0; step < 200; step++) frame(state);
+    expect(state.buildings[0].foodDelivered).toBe(1);
+    expect(state.fields![0].food).toBe(1);
+    expect(state.units.every(unit => unit.inside)).toBe(true);
   });
 
   it('delivers a 64-plot simultaneous harvest with fewer trips and a bounded departure peak', () => {

@@ -1,0 +1,30 @@
+{
+  "generator": "PixelLab",
+  "source": "scratch/2026-11-11-military-units/review/musketman",
+  "manifest": "scratch/2026-11-11-military-units/manifest.json",
+  "approval": "First land batch approved 2026-11-12; original native scale retained.",
+  "frameSize": [
+    48,
+    48
+  ],
+  "directions": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "groundAnchor": [
+    24,
+    31
+  ],
+  "files": {
+    "attack.png": "654ff491e37887de823da0905d6b0bbf5ba58581c06f7e25bb93fe9536585cd0",
+    "death.png": "2f3b07a32ff383ba0f9a303994ee00be7652d5c9ec96c4128656108216e01b5f",
+    "idle.png": "2006bf271aed3e15844be0b6b9d57528e237f764fdc303cadaa5ab76d17fc5ac",
+    "walk.png": "5aa6b1246946c287bc8bba318318eb7c032a019744a556108ec75185b15670dc"
+  }
+}

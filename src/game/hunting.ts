@@ -1,3 +1,4 @@
+import { achievementEffect } from './achievement-effects';
 import { maximumUnitRange } from './combat-range';
 import { isHumanFaction } from './player-context';
 import { grantIncome } from './resource-income';
@@ -10,6 +11,7 @@ import { buildingBlockers, canMove, canWalk } from './pathfinding';
 import { forEachNearbyUnit, indexedLeader, nearbyUnits } from './spatial';
 import { buildingReady, buildingWidth, buildingHeight, distance, tileAt, WATER, type Building, type GameState, type Point, type Unit, type WildlifeHerd, type World } from './types';
 import { MARSH_BIRD_FOOD_REWARD, marshBirdFlockTarget, marshFlockGoal, moveMarshBird, spawnMarshBirdFlock } from './marsh-birds';
+import { observeBirdFlock } from './bird-flocks-native';
 
 export const WILDLIFE_FACTION = -3;
 export const HUNT_FOOD_REWARD = 5;
@@ -151,8 +153,7 @@ export function spawnWildlifeHerd(state: GameState): WildlifeHerd | undefined {
     const herd: WildlifeHerd = { id: Math.max(0, ...state.wildlife.herds.map(candidate => candidate.id)) + 1,
       waypoint: home, nextWanderAt: state.time + grazingDuration(random) };
     state.wildlife.herds.push(herd);
-    let id = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
-    for (const point of cells) entityStore(state).units.add({ ...point, id: ++id, kind: 'boar', faction: WILDLIFE_FACTION,
+    for (const point of cells) entityStore(state).units.add({ ...point, id: entityStore(state).allocateId(), kind: 'boar', faction: WILDLIFE_FACTION,
       herdId: herd.id, hp: 14, maxHp: 14, attack: 0, defense: 0, morale: 100,
       speed: HERD_STROLL_SPEED, range: 0, order: 'wander', cooldown: 0, lastCombat: -60, moving: false,
       facing: random() * Math.PI * 2, attackTime: 0, bornAt: state.time });
@@ -227,6 +228,7 @@ export function updateWildlife(state: GameState): void {
         herd.waypoint = herdGoal(state, center, anchor, herd.lastThreat, randomFor(state));
         herd.nextWanderAt = state.time + 2;
       }
+      if (herd.species === 'marshBird') observeBirdFlock(state, members, herd);
       continue;
     }
     if (herd.fleeUntil !== undefined || herd.wanderUntil !== undefined && state.time >= herd.wanderUntil) {
@@ -239,6 +241,7 @@ export function updateWildlife(state: GameState): void {
       herd.waypoint = herdGoal(state, center, anchor, undefined, randomFor(state));
       herd.wanderUntil = state.time + HERD_STROLL_SECONDS;
     }
+    if (herd.species === 'marshBird') observeBirdFlock(state, members, herd);
   }
   if (state.time >= wildlife.nextRespawnAt) {
     wildlife.targetHerds = wildlifeHerdTarget(state);
@@ -322,7 +325,7 @@ export function rewardHunt(state: GameState, hunter: Pick<Unit, 'faction'>, anim
   const faction = state.factions.find(candidate => candidate.id === hunter.faction && !candidate.defeated);
   if (!faction || animal.huntRewarded) return true;
   animal.huntRewarded = true;
-  const reward = animal.kind === 'marshBird' ? MARSH_BIRD_FOOD_REWARD : HUNT_FOOD_REWARD;
+  const reward = achievementEffect(faction, 0, animal.kind === 'marshBird' ? MARSH_BIRD_FOOD_REWARD : HUNT_FOOD_REWARD);
   grantIncome(faction, { food: reward }, state);
   const palace = animal.kind === 'boar' ? nearestPalace(state, hunter.faction, animal) : undefined;
   if (palace) (palace.huntingBonuses ??= []).push({ startedAt: state.time, expiresAt: state.time + HUNT_GROWTH_SECONDS });

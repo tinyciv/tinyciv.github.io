@@ -105,7 +105,7 @@ describe('faction equipment on defensive buildings', () => {
     state.factions[0].weaponLevel = 3;
     entityStore(state).units.add({ ...unit(20, 'warrior', 14.5, 12.5, 1), attack: 0 });
     const combat = { hostile: (a: number, b: number) => a !== b, clearShot: () => true,
-      shoot: (_tower: Building, _from: unknown, _target: Unit, attack: number) => { shots.push(attack); } };
+      shoot: (_tower: Building, _from: unknown, _target: Unit | Building, attack: number) => { shots.push(attack); } };
     updateWoodenTowers(state, .1, combat);
     state.factions.push({ ...state.factions[0], id: 1, weaponLevel: 1 });
     tower.faction = 1; state.units[1].faction = 0; tower.attackCooldown = 0;

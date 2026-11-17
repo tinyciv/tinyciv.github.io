@@ -1,0 +1,610 @@
+{
+  "method": "Captured world, native navigation, initial query warmed.24 successive simulation times and4 exact housing capacity edits; live and explicit read-scope queries compared against frozen source. All numeric city outputs must match exactly.",
+  "baseline": "/tmp/btv-pop800-2026-11-08/release",
+  "snapshot": "/tmp/btv-pop800-2026-11-08/state.json",
+  "comparisons": 48,
+  "timings": {
+    "live": {
+      "before": {
+        "meanMs": 2.6859880416666564,
+        "medianMs": 2.555584000000067,
+        "p95Ms": 3.7682499999999663
+      },
+      "after": {
+        "meanMs": 1.709048749999975,
+        "medianMs": 1.5545419999999694,
+        "p95Ms": 2.3952920000000404
+      }
+    },
+    "scoped": {
+      "before": {
+        "meanMs": 2.8741372500000275,
+        "medianMs": 2.7504170000001977,
+        "p95Ms": 3.43100000000004
+      },
+      "after": {
+        "meanMs": 2.2014288333333525,
+        "medianMs": 2.218208000000004,
+        "p95Ms": 2.788084000000026
+      }
+    }
+  },
+  "samples": [
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 0,
+      "milliseconds": 4.208541999999966
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 1,
+      "milliseconds": 3.3440839999999525
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 2,
+      "milliseconds": 2.555584000000067
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 3,
+      "milliseconds": 2.57325000000003
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 4,
+      "milliseconds": 2.4173749999999927
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 5,
+      "milliseconds": 2.756167000000005
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 6,
+      "milliseconds": 3.0563339999999926
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 7,
+      "milliseconds": 3.1247090000000526
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 8,
+      "milliseconds": 2.7234999999999445
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 9,
+      "milliseconds": 2.4726670000000013
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 10,
+      "milliseconds": 2.4975829999999632
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 11,
+      "milliseconds": 2.719791999999984
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 12,
+      "milliseconds": 2.597458999999958
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 13,
+      "milliseconds": 2.459124999999972
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 14,
+      "milliseconds": 3.7682499999999663
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 15,
+      "milliseconds": 2.598792000000003
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 16,
+      "milliseconds": 2.449583000000075
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 17,
+      "milliseconds": 2.3236670000000004
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 18,
+      "milliseconds": 2.5271249999999554
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 19,
+      "milliseconds": 2.5476659999999356
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 20,
+      "milliseconds": 2.470542000000023
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 21,
+      "milliseconds": 2.373666999999955
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 22,
+      "milliseconds": 2.0160829999999805
+    },
+    {
+      "mode": "live",
+      "name": "before",
+      "step": 23,
+      "milliseconds": 1.8821669999999813
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 0,
+      "milliseconds": 3.169167000000016
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 1,
+      "milliseconds": 2.3952920000000404
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 2,
+      "milliseconds": 2.2737919999999576
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 3,
+      "milliseconds": 1.651583999999957
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 4,
+      "milliseconds": 1.6362920000000258
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 5,
+      "milliseconds": 1.5430000000000064
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 6,
+      "milliseconds": 1.7250830000000406
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 7,
+      "milliseconds": 1.5219579999999269
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 8,
+      "milliseconds": 1.5156670000000076
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 9,
+      "milliseconds": 1.5025839999999562
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 10,
+      "milliseconds": 1.54262499999993
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 11,
+      "milliseconds": 1.4900840000000244
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 12,
+      "milliseconds": 1.6622079999999642
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 13,
+      "milliseconds": 1.5251659999998992
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 14,
+      "milliseconds": 1.5545419999999694
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 15,
+      "milliseconds": 1.5193329999999605
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 16,
+      "milliseconds": 1.7648339999999507
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 17,
+      "milliseconds": 1.5832909999999174
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 18,
+      "milliseconds": 1.7919580000000224
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 19,
+      "milliseconds": 1.4822090000000117
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 20,
+      "milliseconds": 1.5198329999999487
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 21,
+      "milliseconds": 1.5533339999999498
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 22,
+      "milliseconds": 1.5381669999999303
+    },
+    {
+      "mode": "live",
+      "name": "after",
+      "step": 23,
+      "milliseconds": 1.555166999999983
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 0,
+      "milliseconds": 4.145584000000099
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 1,
+      "milliseconds": 3.43100000000004
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 2,
+      "milliseconds": 3.0190829999999096
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 3,
+      "milliseconds": 2.7348749999998745
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 4,
+      "milliseconds": 2.6940839999999753
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 5,
+      "milliseconds": 2.7132080000001224
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 6,
+      "milliseconds": 2.713709000000108
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 7,
+      "milliseconds": 2.9697919999998703
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 8,
+      "milliseconds": 2.889499999999998
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 9,
+      "milliseconds": 2.7504170000001977
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 10,
+      "milliseconds": 2.662375000000111
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 11,
+      "milliseconds": 2.709333000000015
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 12,
+      "milliseconds": 2.733541999999943
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 13,
+      "milliseconds": 2.8321249999999054
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 14,
+      "milliseconds": 2.822708000000148
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 15,
+      "milliseconds": 2.7156669999999394
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 16,
+      "milliseconds": 2.724124999999958
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 17,
+      "milliseconds": 2.7115000000001146
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 18,
+      "milliseconds": 3.3196250000000873
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 19,
+      "milliseconds": 2.76299999999992
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 20,
+      "milliseconds": 2.7639580000000024
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 21,
+      "milliseconds": 2.798667000000023
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 22,
+      "milliseconds": 2.661792000000105
+    },
+    {
+      "mode": "scoped",
+      "name": "before",
+      "step": 23,
+      "milliseconds": 2.6996250000001965
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 0,
+      "milliseconds": 2.6315830000000915
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 1,
+      "milliseconds": 4.752292000000125
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 2,
+      "milliseconds": 2.2993750000000546
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 3,
+      "milliseconds": 2.3591659999999592
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 4,
+      "milliseconds": 2.2667089999999916
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 5,
+      "milliseconds": 2.2304579999999987
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 6,
+      "milliseconds": 2.438000000000102
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 7,
+      "milliseconds": 2.218208000000004
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 8,
+      "milliseconds": 2.218208000000004
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 9,
+      "milliseconds": 2.1767500000000837
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 10,
+      "milliseconds": 2.1923750000000837
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 11,
+      "milliseconds": 2.1705420000000686
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 12,
+      "milliseconds": 2.3303339999999935
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 13,
+      "milliseconds": 2.214625000000069
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 14,
+      "milliseconds": 2.788084000000026
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 15,
+      "milliseconds": 2.2725420000001577
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 16,
+      "milliseconds": 1.7492499999998472
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 17,
+      "milliseconds": 1.62175000000002
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 18,
+      "milliseconds": 1.823041000000103
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 19,
+      "milliseconds": 1.7537499999998545
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 20,
+      "milliseconds": 1.6032920000000104
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 21,
+      "milliseconds": 1.5770410000000084
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 22,
+      "milliseconds": 1.597582999999986
+    },
+    {
+      "mode": "scoped",
+      "name": "after",
+      "step": 23,
+      "milliseconds": 1.549333999999817
+    }
+  ]
+}

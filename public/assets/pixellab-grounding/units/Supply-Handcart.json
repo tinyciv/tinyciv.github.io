@@ -1,0 +1,23 @@
+{
+  "generator": "PixelLab API Pixen + Animate v3",
+  "approvedBase": "handcart 1B",
+  "cell": [
+    48,
+    48
+  ],
+  "rows": [
+    "S",
+    "E",
+    "W",
+    "N"
+  ],
+  "frames": 8,
+  "fps": 8,
+  "visualFootprint": [
+    1,
+    2
+  ],
+  "west": "mirrored east",
+  "processing": "Transparent padding, hard alpha and exact native faction cloth palette; preserve native pixels.",
+  "sha256": "48a97fd7108728ffa523b56a026feeb8fe08b233406c2e5c8d713d4f61229d8c"
+}

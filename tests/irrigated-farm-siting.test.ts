@@ -3,11 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { planAutomaticFarmSite } from '../src/game/farm-siting';
 import { CAMP_FIELD_OFFSETS, FIELD_HARVEST_FOOD, fieldHarvestFoodForState, synchronizeFarms } from '../src/game/farms';
 import { cityDevelopmentNeeds } from '../src/game/governor';
-import { updateGame } from '../src/game/simulation';
+import { advanceAutomaticDevelopment, updateGame } from '../src/game/simulation';
+import { CHECK_INTERVAL } from '../src/game/work-cadence';
 import { type Building, type GameState, type Point, tileAt } from '../src/game/types';
 
 const near = { x: 15, y: 18 }, far = { x: 25, y: 18 };
 const idle = { up: false, down: false, left: false, right: false };
+function finishFirstFarmSearch(state: GameState): void {
+  for (let turn = 0; turn < 64 && !state.buildings.some(building => building.kind === 'camp' && building.construction); turn++)
+    advanceAutomaticDevelopment(state);
+}
 function fixture(): GameState {
   const state: GameState = {
     world: { width: 60, height: 40, seed: 'irrigated-farm-sites', source: 'test', spawns: [], revision: 0,
@@ -128,8 +133,10 @@ describe('irrigated automatic farm placement', () => {
     // Leave the one-cell approach clear of the resting military unit.
     Object.assign(state.units[0], { x: 6.5, y: 19.5 });
     state.time = 29.95; updateGame(state, .05, idle);
+    finishFirstFarmSearch(state);
     const farm = state.buildings.find(building => building.kind === 'camp')!;
     expect(farm).toMatchObject({ ...near, construction: { waitingForBuilder: true } });
+    expect(state.fields!.filter(field => field.camp === farm.id)).toHaveLength(0);
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const tile = tileAt(state.world, near.x + dx, near.y + dy)!;
       expect(tile.overlay).toBe('none'); expect(tile.palm).toBeUndefined();
@@ -137,6 +144,9 @@ describe('irrigated automatic farm placement', () => {
     state.buildings[0].governorPermissions!.farms = false;
     for (let i = 0; i < 600 && farm.construction; i++) updateGame(state, .1, idle);
     expect(farm.construction).toBeUndefined();
+    // Construction and farm publication have independent maintenance phases.
+    // A finished crop must enter the field ledger within one bounded interval.
+    updateGame(state, CHECK_INTERVAL, idle);
     expect(state.fields!.filter(field => field.camp === farm.id)).toHaveLength(1);
   });
 
@@ -184,6 +194,7 @@ describe('irrigated automatic farm placement', () => {
     const state = fixture(); transport(state);
     const ditch = add(state, 'irrigation', far), road = state.buildings.find(b => b.kind === 'road' && b.x === far.x + 1 && b.y === far.y)!;
     state.time = 29.95; updateGame(state, .05, idle);
+    finishFirstFarmSearch(state);
     const farm = state.buildings.find(building => building.kind === 'camp')!;
     expect(farm).toMatchObject({ ...far, construction: { waitingForBuilder: true } });
     expect(state.buildings).toContain(ditch); expect(state.buildings).toContain(road);

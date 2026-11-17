@@ -1,11 +1,19 @@
-import { canTraverseEdge, canWalk, traversable, withNavigationFrame } from './pathfinding';
+import { worldChangesSince, worldRevisions, worldStructureRevision } from './world-revisions';
+import { entityStore } from './entity-store';
+import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
+import { canTraverseEdge, canWalk, traversable, withNavigationFrame, navigationRouteStamp, navigationRouteUnchanged, type NavigationRouteStamp } from './pathfinding';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, type GameState, type Point, type RegionalResource, type World } from './types';
 
 export const SPECIALTY_RADIUS = 8;
 export const SPECIALTY_TRADE_BONUS = .05;
 const RESOURCES: RegionalResource[] = ['clay', 'iron', 'stone', 'salt', 'fish'];
 const CARDINAL = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
-const caches = new WeakMap<World, { tiles: World['tiles']; revision: number | undefined; access: string; cities: Map<string, RegionalResource[]> }>();
+interface SpecialtyEntry {
+  result: RegionalResource[]; dependencies: string; cursor: number;
+  resources: Map<number, RegionalResource | undefined>; stamp?: NavigationRouteStamp;
+  palace?: GameState['buildings'][number]; ready: boolean;
+}
+const caches = new WeakMap<object, { world: World; tiles: World['tiles']; width: number; height: number; cities: Map<string, SpecialtyEntry> }>();
 
 /** Three accessible deposit cells establish a local trade specialty. Deposits
  * may be worked from the next land cell (quarries and shore fisheries), but a
@@ -18,16 +26,31 @@ export function citySpecialties(world: World, city: Point & { faction?: number }
 function collectSpecialties(world: World, city: Point & { faction?: number }, state?: GameState): readonly RegionalResource[] {
   const cx = Math.floor(city.x), cy = Math.floor(city.y), start = cy * world.width + cx;
   const faction = city.faction ?? 0, key = `${start}:${faction}`;
-  const access = state ? state.buildings.map(b => `${b.kind}:${b.x}:${b.y}:${b.faction}:${Number(buildingPresent(b))}:${Number(buildingReady(b))}`).join('|')
-    + state.factions.map(f => `${f.id}:${f.relation}`).join('|') : '';
-  let cache = caches.get(world);
-  if (!cache || cache.tiles !== world.tiles || cache.revision !== world.revision || cache.access !== access) {
-    cache = { tiles: world.tiles, revision: world.revision, access, cities: new Map() }; caches.set(world, cache);
+  const owner = state ?? world;
+  let cache = caches.get(owner);
+  if (!cache || cache.world !== world || cache.tiles !== world.tiles || cache.width !== world.width || cache.height !== world.height) {
+    cache = { world, tiles: world.tiles, width: world.width, height: world.height, cities: new Map() }; caches.set(owner, cache);
   }
-  if (world.revision !== undefined && cache.cities.has(key)) return cache.cities.get(key)!;
+  const dependencies = `${worldRevisions(world).geometry}|${worldStructureRevision(world)}|${state ? `${entityStore(state).buildings.revision}:${structureChangeRevision(state)}:`
+    + state.factions.map(f => `${f.id}:${f.relation}`).join('|') : ''}`;
+  const palace = state && entityStore(state).buildings.query('palace').find(b => b.kind === 'palace' && b.x === cx && b.y === cy && buildingReady(b));
+  const old = cache.cities.get(key), changes = worldChangesSince(world, old?.cursor);
+  let resourcesChanged = !old;
+  if (old) {
+    const inspect = (cell: number) => {
+      if (old.resources.has(cell) && old.resources.get(cell) !== world.tiles[cell]?.resource) resourcesChanged = true;
+    };
+    if (changes.full) for (const cell of old.resources.keys()) inspect(cell);
+    else for (const cell of changes.cells) inspect(cell);
+    const topologyUnchanged = old.dependencies === dependencies && (!state || simulationReadsActive(state))
+      || !!state && !!old.stamp && navigationRouteUnchanged(state, faction, old.stamp, false);
+    if (!resourcesChanged && topologyUnchanged && old.palace === palace) {
+      old.dependencies = dependencies; old.cursor = changes.revision;
+      return old.result;
+    }
+  }
   const queue: number[] = [], seen = new Set<number>(), deposits = new Set<number>();
   const open = (x: number, y: number) => state ? canWalk(state, x, y, faction) : traversable(world, x, y);
-  const palace = state?.buildings.find(b => b.kind === 'palace' && b.x === cx && b.y === cy && buildingReady(b));
   if (palace) {
     // Start at actual palace exits, since its own footprint is solid.
     const width = buildingWidth(palace), height = buildingHeight(palace);
@@ -54,7 +77,13 @@ function collectSpecialties(world: World, city: Point & { faction?: number }, st
     }
   }
   const result = RESOURCES.filter(resource => (counts.get(resource) ?? 0) >= 3);
-  cache.cities.set(key, result);
+  const resources = new Map<number, RegionalResource | undefined>();
+  for (let y = Math.max(0, cy - SPECIALTY_RADIUS); y <= Math.min(world.height - 1, cy + SPECIALTY_RADIUS); y++)
+    for (let x = Math.max(0, cx - SPECIALTY_RADIUS); x <= Math.min(world.width - 1, cx + SPECIALTY_RADIUS); x++) {
+      const cell = y * world.width + x; resources.set(cell, world.tiles[cell]?.resource);
+    }
+  cache.cities.set(key, { result, dependencies, cursor: changes.revision, resources, palace, ready: !!palace,
+    stamp: state ? navigationRouteStamp(state, faction, resources.keys()) : undefined });
   return result;
 }
 

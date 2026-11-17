@@ -14,7 +14,7 @@ function fixture() {
   return state;
 }
 
-describe('production bitECS entity membership', () => {
+describe('production bevy_ecs entity membership', () => {
   it('advances decision revisions only when membership or roles change', () => {
     const state = fixture(), units = entityStore(state).units;
     let revision = units.revision;

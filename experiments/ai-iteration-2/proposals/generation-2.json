@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "proposals": [
+    {
+      "hypothesis": "Keep the larger field army, resume combat after recovering enough health and morale even before reaching home",
+      "logic": {
+        "garrison": 0,
+        "recovered": {
+          "op": "and",
+          "args": [
+            {
+              "op": "ge",
+              "args": [
+                {
+                  "fact": "hp"
+                },
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "fact": "maxHp"
+                    },
+                    0.7
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "ge",
+                  "args": [
+                    {
+                      "fact": "morale"
+                    },
+                    60
+                  ]
+                },
+                {
+                  "op": "le",
+                  "args": [
+                    {
+                      "fact": "enemyPower"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "friendlyPower"
+                        },
+                        1.1
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

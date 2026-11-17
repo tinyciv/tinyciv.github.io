@@ -1,7 +1,9 @@
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 await mkdir('output/navigation-lab', { recursive: true });
-const bundle = await build({ entryPoints: ['dev/navigation-lab/main.ts'], bundle: true, write: false, format: 'esm', target: 'es2022', minify: true });
+const embeddedSimulation = JSON.stringify((await readFile('public/wasm/simulation.wasm')).toString('base64'));
+const bundle = await build({ entryPoints: ['dev/navigation-lab/main.ts'], bundle: true, write: false, format: 'esm', target: 'es2022', minify: true,
+  define: { '__TINYCIV_SIMULATION_BASE64__': embeddedSimulation, 'import.meta.env.BASE_URL': '"./"' } });
 const template = await readFile('dev/navigation-lab/template.html', 'utf8');
 await writeFile('output/navigation-lab.html', template.replace('/*BUNDLE*/', () => bundle.outputFiles[0].text.replaceAll('</script', '<\\/script')));
 const benchmark = await build({ stdin: { contents: `import * as before from './dev/navigation-lab/baseline-simulation'; import * as after from './src/game/simulation'; import { run, SCENARIOS } from './dev/navigation-lab/scenarios'; export default SCENARIOS.map(scenario => ({ scenario, baseline: run(scenario, before), current: run(scenario, after) }));`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'esm', write: false });

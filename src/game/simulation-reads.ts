@@ -14,6 +14,18 @@ export function withSimulationReads<T>(state: GameState, run: () => T): T {
 }
 
 export function simulationReadsActive(state: GameState): boolean { return readers.has(state); }
+
+/** A host that owns a live, simulation-maintained state (the browser game)
+ * holds this boundary across an input event's handlers, which have no single
+ * call to wrap. Outside it every hit test, popup and HUD read rebuilt fog,
+ * territory and navigation from scratch: one click cost hundreds of ms. The
+ * returned release is idempotent and never ends a scope it did not open. */
+export function holdSimulationReads(state: GameState): () => void {
+  if (readers.has(state)) return () => {};
+  readers.add(state);
+  let held = true;
+  return () => { if (held) { held = false; readers.delete(state); } };
+}
 export function structureChangeRevision(state: GameState): number { return structures.get(state) ?? 0; }
 export function recordStructureChange(state: GameState): void {
   structures.set(state, structureChangeRevision(state) + 1);

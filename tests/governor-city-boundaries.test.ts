@@ -27,6 +27,9 @@ function fixture(): GameState {
 }
 function tick(state: GameState): void {
   state.time = (state.tick + 1) * 30 - .1; updateGame(state, .1, idle);
+  // The two due governors now drain over two simulation steps. Preserve the
+  // boundary assertions after that explicit one-frame scheduling allowance.
+  updateGame(state, .1, idle);
 }
 
 describe('per-city governor boundaries', () => {

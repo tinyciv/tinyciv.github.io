@@ -10,6 +10,8 @@ import { planHouseAt, planHouseSite } from '../src/game/housing';
 import { queueConstruction, updateConstruction } from '../src/game/structures';
 import { updateMerchant, updateTradeRoutes } from '../src/game/trade';
 import { updateVillageUnit } from '../src/game/villages';
+import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
+import { settlementStep } from '../src/game/settlement-step';
 import type { Building, GameState } from '../src/game/types';
 
 const idleMove = () => {};
@@ -125,9 +127,9 @@ describe('forbidden civilian work', () => {
 
   it('makes allied village guards respect zones and abandons forbidden patrol and combat targets', () => {
     const state = fixture(); ensureBuilders(state);
-    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace', villageId: 1 });
+    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace', villageId: 1 }, { ...state.factions[0], id: 2, relation: 'war' });
     state.villages = [{ id: 1, faction: 1, campId: 3, name: 'Allied camp', identity: 'growers', relation: 'allied',
-      x: 10, y: 8, nextGrowthAt: 90, nextThinkAt: 0, nextRecruitAt: 90 }];
+      x: 10, y: 8 }];
     entityStore(state).buildings.add({ id: 3, kind: 'villageTent', faction: 1, villageId: 1, x: 10, y: 8, hp: 100, maxHp: 100, capacity: 0 });
     const guard = { ...state.units[0], id: 4, kind: 'warrior' as const, faction: 1, villageId: 1, builder: undefined,
       x: 10.5, y: 10.5, inside: false, home: 3, attack: 16, destination: { x: 12.5, y: 10.5 }, villageNextWanderAt: 100 };
@@ -141,6 +143,9 @@ describe('forbidden civilian work', () => {
     expect(attacks).toBe(0); expect(guard.target).toBeUndefined();
     expect(!guard.destination || !isForbidden(state, guard.destination.x, guard.destination.y, 1)).toBe(true);
     forbid(state, 12, 10, 12, 10, false); state.time = 1;
+    // Nearby hostiles come from the Rust 1 Hz census sample of the last unit frame.
+    beginUnitFrame(state); endUnitFrame(state);
+    for (const time of [1, 2, 3]) { state.time = time; settlementStep(state); }
     updateVillageUnit(state, guard, .1, orders); expect(attacks).toBe(1);
   });
 

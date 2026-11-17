@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Individual 8FC ochre stones from the bundled LPC Rocks sheet; unchanged pixels. */
 const sizes: readonly (readonly [number, number])[] = [[11, 6], [11, 7], [9, 7], [9, 7], [5, 4], [11, 7], [7, 4], [10, 8], [11, 7], [6, 4], [11, 6], [12, 8], [11, 7], [7, 5], [5, 4], [8, 5], [12, 8], [6, 4], [6, 4], [11, 7], [7, 6], [7, 4], [5, 4], [7, 4]];
 let image: HTMLImageElement | undefined;
@@ -7,7 +8,7 @@ export function loadDesertStoneArt(): Promise<void> {
     const asset = new Image();
     asset.onload = () => { image = asset; resolve(); };
     asset.onerror = () => reject(new Error('Could not load desert stones'));
-    asset.src = `${import.meta.env.BASE_URL}assets/desert-stones/ochre.png`;
+    asset.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/desert-stones/ochre.png`);
   });
 }
 export function drawDesertStone(c: CanvasRenderingContext2D, variant: number, variation: number): void {

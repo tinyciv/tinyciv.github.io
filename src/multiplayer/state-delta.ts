@@ -1,3 +1,4 @@
+import { arrayJournal } from '../game/cell-journal';
 import type { Building, FarmField, GameState, Unit } from '../game/types';
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -20,11 +21,18 @@ export interface StateDelta {
   fieldsPresent?: boolean;
 }
 
-const scalar = (value: unknown): Json => typeof value === 'number' && !Number.isFinite(value) ? null
-  : value === undefined ? null : value as Json;
+const arrayBaselines = new WeakMap<object, { source: object; revision: number }>();
+
+// Binary snapshots and deltas preserve the same IEEE-754 values.
+const scalar = (value: unknown): Json => value === undefined ? null : value as Json;
 function clone(value: unknown): Json {
   if (value === null || typeof value !== 'object') return scalar(value);
-  if (Array.isArray(value)) return value.map(clone);
+  if (Array.isArray(value)) {
+    const copy = value.map(clone), journal = arrayJournal(value);
+    const baseline = journal ? { source: value, revision: journal.revision } : arrayBaselines.get(value);
+    if (baseline) arrayBaselines.set(copy, baseline);
+    return copy;
+  }
   const result: Record<string, Json> = {};
   for (const key of Object.keys(value)) {
     const item = (value as Record<string, unknown>)[key];
@@ -38,16 +46,22 @@ function clone(value: unknown): Json {
 function difference(previous: Json, current: unknown): ValueDelta | undefined {
   if (current === null || typeof current !== 'object') {
     const value = scalar(current);
-    return previous === value ? undefined : { value };
+    return Object.is(previous, value) ? undefined : { value };
   }
   if (Array.isArray(current)) {
     if (!Array.isArray(previous)) return { value: clone(current) };
     let items: [number, ValueDelta][] | undefined;
     const length = previous.length === current.length ? undefined : current.length;
-    for (let i = 0; i < current.length; i++) {
+    const journal = arrayJournal(current), baseline = arrayBaselines.get(previous);
+    const changes = journal && baseline?.source === current ? journal.since(baseline.revision) : undefined;
+    const indices = changes && !changes.full ? [...changes.cells].filter(i => i < current.length).sort((a, b) => a - b) : undefined;
+    const visit = (i: number): void => {
       const patch = i < previous.length ? difference(previous[i], current[i]) : { value: clone(current[i]) };
       if (patch) { (items ??= []).push([i, patch]); if ('value' in patch) previous[i] = clone(patch.value); }
-    }
+    };
+    if (indices) for (const i of indices) visit(i);
+    else for (let i = 0; i < current.length; i++) visit(i);
+    if (journal) arrayBaselines.set(previous, { source: current, revision: journal.revision });
     if (length !== undefined) previous.length = length;
     return items || length !== undefined ? { items: items ?? [], ...(length === undefined ? {} : { length }) } : undefined;
   }
@@ -72,6 +86,7 @@ export function applyValueDelta<T>(previous: T, patch: ValueDelta): T {
     const array = previous as unknown as Json[];
     for (const [index, item] of patch.items) array[index] = applyValueDelta(array[index], item);
     if (patch.length !== undefined) array.length = patch.length;
+    arrayJournal(array)?.publish(patch.length === undefined ? patch.items.map(([index]) => index) : undefined);
     return previous;
   }
   const object = previous as unknown as Record<string, Json>;

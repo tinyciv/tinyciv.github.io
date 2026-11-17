@@ -1,0 +1,136 @@
+/* The approved 1672 × 941 scene, with live controls over its empty plates.
+ * All chrome and map art comes from imagegen; labels use Pixel Operator. */
+.is-world-generation{overflow:hidden;background:#161411}
+.is-world-generation>.menu-back{display:none}
+.is-world-generation>.menu-front{transform:translate(var(--worldgen-x),var(--worldgen-y)) scale(var(--worldgen-scale))}
+.frontend-single{position:absolute;inset:0;width:1672px;height:941px;background:url('/assets/ui/world-generation/backdrop.webp') center/100% 100% no-repeat;color:#fff2c9;font-size:30px;text-shadow:1px 2px 1px #16130c}
+.frontend-single>.worldgen-heading{position:absolute;inset:0 0 auto;height:90px;display:block;margin:0}
+.worldgen-brand{position:absolute;left:133px;top:12px;font-size:56px;line-height:1;font-weight:700;color:#850900;text-shadow:1px 1px #e6a64b}
+.frontend .worldgen-heading h1{position:absolute;left:358px;top:6px;width:952px;text-align:center;font-size:70px;line-height:1;color:#850900;text-shadow:2px 2px #efb758;letter-spacing:1px;white-space:nowrap}
+.worldgen-form{position:absolute;inset:0}
+.worldgen-form fieldset{position:absolute;margin:0;padding:0;border:0;min-width:0}
+.worldgen-form legend{position:absolute;left:0;top:0;width:100%;padding:0;text-align:center;text-transform:uppercase;font-weight:700;font-size:34px;line-height:36px;letter-spacing:1px}
+.worldgen-size{left:94px;top:103px;width:411px;height:228px}
+.worldgen-barbarians{left:1168px;top:103px;width:410px;height:228px}
+.worldgen-radio-list{position:absolute;top:35px;left:116px;display:grid;grid-auto-rows:30px}
+.worldgen-barbarians .worldgen-radio-list{left:86px}
+.worldgen-radio{position:relative;display:flex;align-items:center;gap:23px;width:max-content;max-width:100%;font-size:32px;line-height:30px;cursor:pointer;white-space:nowrap}
+.frontend .worldgen-radio input{appearance:none;position:relative;flex:none;width:27px;height:27px;margin:0;padding:0;border:0;border-radius:50%;background:url('/assets/ui/world-generation/backdrop.webp') -114px -884px/1672px 941px no-repeat;cursor:pointer;transition:filter .12s,box-shadow .12s}
+.worldgen-radio span{transition:color .12s,text-shadow .12s}
+.worldgen-radio input:checked{filter:brightness(1.9) saturate(1.9);box-shadow:0 0 3px 2px #fff1a2,0 0 10px 3px #f79c00}
+.frontend .worldgen-radio input[type=checkbox]::after{content:none}
+.worldgen-radio:has(input:checked)>span{color:#ffdd64;font-weight:700;text-shadow:1px 2px #3d2407,0 0 6px #b47b1555}
+.worldgen-radio:hover input:not(:disabled){filter:brightness(1.5)}
+.worldgen-radio input:disabled,.worldgen-form fieldset:disabled{opacity:.5;cursor:default}
+.worldgen-map{position:absolute;left:524px;top:94px;width:624px;height:239px;overflow:hidden}
+.worldgen-map-art{display:block;width:100%;height:100%;background:url('/assets/ui/world-generation/backdrop.webp') 50% 13.3903%/267.9487% 393.7238% no-repeat;transition:filter .12s}
+.worldgen-map[data-landmass=pangaea] .worldgen-map-art{background-size:1211.5942% 1254.6667%;background-position:20.2738% 44.1109%}
+.worldgen-map[data-landmass=archipelago] .worldgen-map-art{background-size:1211.5942% 1254.6667%;background-position:80.1825% 44.1109%}
+.worldgen-map[data-landmass=pangaea][data-water="80"] .worldgen-map-art{background-position-x:10.6910%}
+.worldgen-map[data-landmass=pangaea][data-water="60"] .worldgen-map-art{background-position-x:29.8566%}
+.worldgen-map[data-landmass=archipelago][data-water="80"] .worldgen-map-art{background-position-x:70.5997%}
+.worldgen-map[data-landmass=archipelago][data-water="60"] .worldgen-map-art{background-position-x:89.7653%}
+.worldgen-map[data-landmass=continents][data-water="80"] .worldgen-map-art{background-size:1211.5942% 1254.6667%;background-position:40.7432% 44.1109%}
+.worldgen-map[data-landmass=continents][data-water="60"] .worldgen-map-art{background-size:1211.5942% 1254.6667%;background-position:59.7784% 44.1109%}
+.worldgen-map[data-landmass=random] .worldgen-map-art{filter:sepia(.35) saturate(.7)}
+.worldgen-land{left:94px;top:337px;width:1484px;height:197px}
+.worldgen-land>legend{left:466px;width:552px;top:0;font-size:31px;line-height:37px;letter-spacing:.7px}
+.worldgen-land-choices{position:absolute;left:70px;right:66px;top:45px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.worldgen-water-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.worldgen-tile{position:relative;display:block;min-width:0;cursor:pointer;text-align:center;font-size:26px;line-height:30px;white-space:nowrap}
+.frontend .worldgen-tile input{position:absolute;inset:0;z-index:1;opacity:0;width:100%;height:100%;margin:0;padding:0;border:0;cursor:pointer}
+.worldgen-thumb{display:block;height:75px;border-radius:4px;background-image:url('/assets/ui/world-generation/backdrop.webp');background-repeat:no-repeat;transition:box-shadow .12s,filter .12s}
+.worldgen-tile:has(input:checked) .worldgen-thumb{outline:2px solid #fff1a2;outline-offset:-3px;box-shadow:inset 0 0 0 3px #ffb900,0 0 4px 2px #ffc400,0 0 11px #ffb000}
+.worldgen-tile:has(input:focus-visible) .worldgen-thumb{outline:3px solid #fff2a0;outline-offset:3px}
+.worldgen-tile:hover .worldgen-thumb{filter:brightness(1.14);box-shadow:0 0 8px 2px #ffc55799}
+.worldgen-tile:has(input:checked)>span:last-child{color:#ffdc63;font-weight:700}
+.worldgen-land-group h3{font-size:27px;font-weight:400;line-height:30px;margin:5px 0 0;text-align:center;white-space:nowrap}
+.worldgen-land-group h3 label{cursor:pointer}
+.worldgen-land>.worldgen-radio{position:absolute;left:673px;top:158px;gap:14px;font-size:29px}
+.worldgen-land .worldgen-thumb{background-size:1211.5942% 1254.6667%;background-position-y:44.1109%}
+.worldgen-land .worldgen-tile:has(input:checked)::after{content:'';position:absolute;inset:0;z-index:2;border:3px solid #ffd447;border-radius:4px;box-shadow:inset 0 0 3px #fff3a7,0 0 6px 2px #ffba00;pointer-events:none}
+.worldgen-land-group:nth-child(1) .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:10.6910%}
+.worldgen-land-group:nth-child(1) .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:20.2738%}
+.worldgen-land-group:nth-child(1) .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:29.8566%}
+.worldgen-land-group:nth-child(2) .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:40.7432%}
+.worldgen-land-group:nth-child(2) .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:50.1956%}
+.worldgen-land-group:nth-child(2) .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:59.7784%}
+.worldgen-land-group:nth-child(3) .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:70.5997%}
+.worldgen-land-group:nth-child(3) .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:80.1825%}
+.worldgen-land-group:nth-child(3) .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:89.7653%}
+.worldgen-environment{top:548px;width:482px;height:277px}
+.worldgen-climate{left:96px}
+.worldgen-temperature{left:595px}
+.worldgen-age{left:1094px}
+.worldgen-region-preview{position:absolute;left:18px;top:37px;width:448px;height:132px;background-image:url('/assets/ui/world-generation/backdrop.webp');background-size:373.2143% 712.8788%;background-repeat:no-repeat;transition:filter .12s}
+.worldgen-climate .worldgen-region-preview{background-position:9.3137% 72.3115%}
+.worldgen-temperature .worldgen-region-preview{background-position:50.0817% 72.3115%}
+.worldgen-age .worldgen-region-preview{background-position:90.6863% 72.3115%}
+.worldgen-form[data-climate="0"] .worldgen-climate .worldgen-region-preview{filter:sepia(.65) saturate(1.25)}
+.worldgen-form[data-climate="2"] .worldgen-climate .worldgen-region-preview{filter:hue-rotate(20deg) saturate(1.35)}
+.worldgen-form[data-temperature="0"] .worldgen-temperature .worldgen-region-preview{filter:sepia(.4) saturate(1.2)}
+.worldgen-form[data-temperature="2"] .worldgen-temperature .worldgen-region-preview{filter:saturate(.5) brightness(1.22)}
+.worldgen-form[data-age="0"] .worldgen-age .worldgen-region-preview{filter:contrast(1.4) brightness(.85)}
+.worldgen-form[data-age="2"] .worldgen-age .worldgen-region-preview{filter:contrast(.65) brightness(1.15)}
+.worldgen-environment-choices{position:absolute;left:39px;right:32px;top:175px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:21px}
+.worldgen-environment .worldgen-thumb{height:65px;margin-bottom:2px;background-size:1359.3496% 1425.7576%;background-position-y:82.5143%}
+.worldgen-climate .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:8.7153%}
+.worldgen-climate .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:18.0116%}
+.worldgen-climate .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:27.3079%}
+.worldgen-temperature .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:40.9942%}
+.worldgen-temperature .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:50.2905%}
+.worldgen-temperature .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:59.5868%}
+.worldgen-age .worldgen-tile:nth-child(1) .worldgen-thumb{background-position-x:72.9503%}
+.worldgen-age .worldgen-tile:nth-child(2) .worldgen-thumb{background-position-x:82.2466%}
+.worldgen-age .worldgen-tile:nth-child(3) .worldgen-thumb{background-position-x:91.5429%}
+.worldgen-form.is-random-environment .worldgen-environment input:checked+.worldgen-thumb{outline:0;box-shadow:none}
+.worldgen-form.is-random-environment .worldgen-environment .worldgen-tile>span:last-child{color:inherit;font-weight:400}
+.worldgen-random-environment{position:absolute;left:767px;top:826px;gap:14px;font-size:29px}
+.worldgen-footer{position:absolute;left:0;right:0;top:879px;height:39px}
+.frontend .worldgen-footer>.menu-button{position:absolute;height:39px;padding:0;justify-content:center;text-align:center;font-size:35px;line-height:39px}
+.frontend .worldgen-back{left:112px;width:225px}
+.frontend .worldgen-generate{left:1245px;width:326px}
+.frontend .worldgen-footer>.menu-button::before,.frontend .worldgen-footer>.menu-button::after{inset:-7px;background-image:url('/assets/ui/world-generation/backdrop.webp');background-size:1672px 941px;background-repeat:no-repeat}
+.frontend .worldgen-back::before,.frontend .worldgen-back::after{background-position:-105px -872px}
+.frontend .worldgen-generate::before,.frontend .worldgen-generate::after{background-position:-1238px -872px}
+.frontend .worldgen-footer>.menu-button::after{filter:brightness(1.2) saturate(1.25)}
+.worldgen-advanced-start{position:absolute;left:600px;top:0;width:472px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:28px;line-height:39px;white-space:nowrap;cursor:pointer}
+.frontend .worldgen-advanced-start input[type=range]{flex:none;width:120px;height:24px;margin:0;padding:0;border:0;background:none;accent-color:#f0b43c;cursor:pointer}
+.worldgen-advanced-start output{min-width:118px;color:#ffdd64;font-weight:700;text-shadow:1px 2px #3d2407}
+.frontend-single>.frontend-status{position:absolute;bottom:10px;left:370px;max-width:245px;margin:0;font-size:18px}
+
+/* Narrow screens keep the same generated brass art and native controls, with
+ * sections stacked in reading order and comfortably sized touch targets. */
+.frontend.is-compact.is-world-generation{padding:12px;overflow:auto;background:#211f1a}
+.is-compact.is-world-generation>.menu-front{transform:none}
+.is-compact .frontend-single{display:flex;flex-direction:column;gap:14px;width:100%;height:auto;max-width:560px;background:none;margin:0 auto}
+.is-compact .frontend-single>.worldgen-heading{position:relative;inset:auto;display:block;height:92px;flex:none;background:url('/assets/ui/world-generation/backdrop.webp') 4.058% 0/572.603% 1057.303% no-repeat}
+.is-compact .worldgen-brand{display:none}
+.frontend.is-compact .worldgen-heading h1{left:12px;right:12px;top:27px;width:auto;font-size:clamp(29px,7vw,40px);letter-spacing:0;color:#850900}
+.is-compact .worldgen-form{position:static;display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.is-compact .worldgen-form fieldset{position:relative;inset:auto;width:auto;height:auto;padding:40px 14px 18px;background:#2c2a24;border:10px solid transparent;border-image:url('/assets/runtime/ui/forged/panel-frame.png') 110 fill / 10px;box-shadow:0 3px 8px #0008}
+.is-compact .worldgen-form legend{font-size:clamp(19px,4.6vw,27px);line-height:32px;top:2px;letter-spacing:0}
+.is-compact .worldgen-radio-list{position:static;display:grid;gap:8px;grid-auto-rows:34px}
+.is-compact .worldgen-radio{font-size:clamp(18px,4.6vw,26px);line-height:34px;gap:9px}
+.frontend.is-compact .worldgen-radio input{width:27px;height:27px}
+.is-compact .worldgen-map{position:relative;inset:auto;width:100%;height:auto;aspect-ratio:624/239;grid-column:1/-1;grid-row:1}
+.is-compact .worldgen-land{grid-column:1/-1}
+.is-compact .worldgen-land>legend{left:0;width:100%;font-size:clamp(17px,4.8vw,26px)}
+.is-compact .worldgen-land-choices{position:static;display:grid;grid-template-columns:1fr;gap:16px}
+.is-compact .worldgen-land-group h3{margin:6px 0 0;font-size:24px;line-height:28px}
+.is-compact .worldgen-water-choices{gap:8px}
+.is-compact .worldgen-land .worldgen-thumb{height:auto;aspect-ratio:138/75}
+.is-compact .worldgen-land>.worldgen-radio{position:static;margin:16px auto 0}
+.is-compact .worldgen-form .worldgen-environment{grid-column:1/-1;padding:40px 10px 14px}
+.is-compact .worldgen-region-preview{position:relative;inset:auto;width:100%;height:auto;aspect-ratio:448/132;margin-bottom:12px}
+.is-compact .worldgen-environment-choices{position:static;gap:12px}
+.is-compact .worldgen-environment .worldgen-thumb{height:auto;aspect-ratio:123/66;margin-bottom:4px}
+.is-compact .worldgen-environment .worldgen-tile{font-size:clamp(18px,5vw,26px);line-height:30px}
+.is-compact .worldgen-random-environment{position:static;grid-column:1/-1;justify-self:center}
+.is-compact .worldgen-footer{position:relative;inset:auto;height:auto;grid-column:1/-1;display:grid;grid-template-columns:1fr 1.5fr;gap:16px;padding:12px 6px}
+.frontend.is-compact .worldgen-footer>.menu-button{position:relative;inset:auto;width:100%;height:48px;font-size:clamp(20px,5vw,30px);line-height:1;aspect-ratio:auto}
+.frontend.is-compact .worldgen-footer>.menu-button::before,.frontend.is-compact .worldgen-footer>.menu-button::after{background-image:url('/assets/runtime/ui/main-menu/button.png');background-position:0 0;background-size:100% 100%;inset:-6px}
+.frontend.is-compact .worldgen-footer>.menu-button::after{background-image:url('/assets/runtime/ui/main-menu/button-active.png')}
+.is-compact .worldgen-advanced-start{position:static;grid-column:1/-1;grid-row:2;justify-self:center;width:auto;min-height:44px;font-size:26px;gap:14px}
+.is-compact .frontend-single>.frontend-status{position:static;max-width:none;margin:0;text-align:center}
+@media(max-width:360px){.is-compact .worldgen-form{grid-template-columns:1fr}.is-compact .worldgen-radio-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 4px}.is-compact .worldgen-form .worldgen-barbarians .worldgen-radio-list{grid-template-columns:1fr}.is-compact .worldgen-size .worldgen-radio{font-size:22px}}

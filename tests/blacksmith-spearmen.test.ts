@@ -13,14 +13,14 @@ function fixture() {
 }
 
 describe('blacksmith spearman allocation', () => {
-  it('requires Military tactics at the smithy, and rejects the former range command', () => {
+  it('requires Military tactics and accepts army controls at either training building', () => {
     const { state, smithy, range } = fixture();
     delete state.factions[0].research!.levels.militaryTactics;
     expect(setSpearmanFraction(state, smithy, .5)).toBe(false);
     expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, fraction: .5 }).ok).toBe(false);
     state.factions[0].research!.levels.militaryTactics = 1;
-    expect(setSpearmanFraction(state, range, .5)).toBe(false);
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: range.id, fraction: .5 }).ok).toBe(false);
+    expect(setSpearmanFraction(state, state.buildings[1], .5)).toBe(false);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: range.id, fraction: .5 }).ok).toBe(true);
     expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, fraction: .5 }).ok).toBe(true);
     const trainees = state.units.filter(unit => unit.training);
     expect(trainees).toHaveLength(2);

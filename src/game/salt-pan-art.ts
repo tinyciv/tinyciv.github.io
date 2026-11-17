@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { WATER, type Tile, type World } from './types';
 import type { PunyPixels } from './puny-world';
 
@@ -7,7 +8,7 @@ let loading: Promise<void> | undefined;
 /** Salt is a flat ground feature, beneath roads, buildings and vegetation. */
 export function isSaltPan(tile: Tile | undefined): boolean {
     return !!tile && tile.resource === 'salt' && !WATER.has(tile.terrain)
-        && !tile.ridge && !tile.creek && !tile.stair;
+        && !tile.relief && !tile.creek;
 }
 
 /** Same eight-neighbor convention as wheat: N E S W NE SE SW NW.
@@ -36,7 +37,7 @@ export function loadSaltPanArt(): Promise<void> {
             c.drawImage(image, 0, 0); pixels = c.getImageData(0, 0, 256, 256); resolve();
         };
         image.onerror = () => reject(new Error('Salt-pan artwork could not be loaded.'));
-        image.src = `${import.meta.env.BASE_URL}assets/resources/salt-pan-joins.png`;
+        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/resources/salt-pan-joins.png`);
     });
 }
 

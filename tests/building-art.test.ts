@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildingSize, type Building, type GameState } from '../src/game/types';
 import { buildingBlockers } from '../src/game/pathfinding';
 import { startConstruction } from '../src/game/structures';
+import { loadPalisadeTowerArt } from '../src/game/palisade-tower-art';
+import { loadStoneWallTowerArt } from '../src/game/stone-wall-tower-art';
+import { loadConstructionArt } from '../src/game/construction-art';
+import type { TowerWallKind } from '../src/game/wall-towers';
 
 // Capture destination geometry after the same canvas transforms a real atlas
 // draw uses. This verifies art sizing independently of its logical footprint.
@@ -37,6 +41,7 @@ import { buildingKey, NativeArt } from '../src/game/native-art';
 type Rect = { x: number; y: number; width: number; height: number };
 class RecordingCanvas {
   images: Rect[] = [];
+  spriteSources: string[] = [];
   sources: { rect: number[]; color?: string }[] = [];
   fills: Rect[] = [];
   matrix = { x: 0, y: 0, sx: 1, sy: 1 };
@@ -53,19 +58,34 @@ class RecordingCanvas {
   rectangle(x: number, y: number, width: number, height: number): Rect {
     return { x: this.matrix.x + x * this.matrix.sx, y: this.matrix.y + y * this.matrix.sy, width: width * this.matrix.sx, height: height * this.matrix.sy };
   }
+  drawImage(image: { src: string }, x: number, y: number, width: number, height: number) {
+    this.images.push(this.rectangle(x, y, width, height));
+    this.spriteSources.push(image.src);
+  }
   fillRect(x: number, y: number, width: number, height: number) { this.fills.push(this.rectangle(x, y, width, height)); }
   beginPath() { this.paths.push([]); }
   rect(x: number, y: number, width: number, height: number) { this.paths.at(-1)!.push(this.rectangle(x, y, width, height)); }
   clip(rule = 'nonzero') { this.clips.push(rule); }
 }
 const structure = (kind: Building['kind']): Building => ({ id: 1, kind, faction: 0, x: 1, y: 1, hp: 100, maxHp: 100, capacity: 0 });
-function render(building: Building, time = 10, attached = false): RecordingCanvas {
+function render(building: Building, time = 10, attached = false, towerWall?: TowerWallKind): RecordingCanvas {
   const canvas = new RecordingCanvas();
-  drawBuilding(canvas as unknown as CanvasRenderingContext2D, building, 64, 96, 64, time, '#3988ff', undefined, undefined, attached);
+  drawBuilding(canvas as unknown as CanvasRenderingContext2D, building, 64, 96, 64, time, '#3988ff', undefined, undefined, attached, towerWall);
   return canvas;
 }
 
 describe('building artwork and construction stages', () => {
+  beforeAll(async () => {
+    vi.stubGlobal('Image', class {
+      src = '';
+      get naturalWidth() { return this.src.endsWith('construction/2x2.png') ? 32 : 16; }
+      get naturalHeight() { return this.src.includes('assets/construction/') ? this.naturalWidth : 28; }
+      async decode() {}
+    });
+    await Promise.all([loadPalisadeTowerArt(), loadStoneWallTowerArt(), loadConstructionArt()]);
+  });
+  afterAll(() => vi.unstubAllGlobals());
+
   it.each([
     [1, [64, 416, 16, 16]],
     [2, [64, 432, 16, 16]],
@@ -99,7 +119,7 @@ describe('building artwork and construction stages', () => {
     expect(buildingSize(structure('well'))).toBe(1);
   });
 
-  it('marks attached well construction with the same offset pegs throughout work', () => {
+  it('marks attached well construction with the same offset site throughout work', () => {
     const well = { ...structure('well'), construction: { startedAt: 0, duration: 20, waitingForBuilder: true } };
     const draw = () => {
       const canvas = new RecordingCanvas();
@@ -107,22 +127,21 @@ describe('building artwork and construction stages', () => {
       return canvas;
     };
     const reserved = draw();
-    expect(reserved.sources).toEqual(Array.from({ length: 4 }, () => ({ rect: [352, 424, 3, 8] })));
+    expect(reserved.sources).toEqual([]);
+    expect(reserved.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(reserved.images).toEqual([{ x: 40, y: 108, width: 64, height: 64 }]);
     expect(reserved.fills).toHaveLength(0);
     well.construction.waitingForBuilder = false;
     const active = draw();
-    expect(active.sources).toEqual(reserved.sources);
+    expect(active.spriteSources).toEqual(reserved.spriteSources);
     expect(active.images).toEqual(reserved.images);
     expect(active.fills).toHaveLength(0);
   });
 
-  it.each([
-    ['woodenTower', [[112, 432, 16, 16]]],
-    ['palace', [[192, 416, 16, 32], [208, 416, 16, 32]]],
-  ] as const)('routes the %s team surfaces through the original atlas', (kind, rectangles) => {
-    const building = { ...structure(kind), ...(kind === 'palace' ? { palaceLevel: 2 as const } : {}) };
+  it('routes the palace team surfaces through the original atlas', () => {
+    const building = { ...structure('palace'), palaceLevel: 2 as const };
     expect(render(building).sources.filter(source => source.color)).toEqual(
-      rectangles.map(rect => ({ rect: [...rect], color: '#3988ff' })),
+      [[192, 416, 16, 32], [208, 416, 16, 32]].map(rect => ({ rect, color: '#3988ff' })),
     );
   });
 
@@ -162,21 +181,20 @@ describe('building artwork and construction stages', () => {
     expect(Math.min(...render(building).images.map(image => image.y))).toBeGreaterThanOrEqual(96);
   });
 
-  it('crops mounted wooden supports to short stubs while preserving the roof and standalone legs', () => {
-    const tower = structure('woodenTower'), standalone = render(tower), mounted = render(tower, 10, true);
-    expect(standalone.sources.slice(0, 2)).toEqual(Array.from({ length: 2 }, () => ({ rect: [352, 432, 4, 16] })));
-    expect(mounted.sources.slice(0, 2)).toEqual(Array.from({ length: 2 }, () => ({ rect: [352, 432, 4, 5] })));
-    expect(mounted.images.slice(0, 2)).toEqual([
-      { x: 72, y: 96, width: 16, height: 20 }, { x: 104, y: 96, width: 16, height: 20 },
-    ]);
-    expect(standalone.images.slice(0, 2).every(image => image.height === 64)).toBe(true);
-    expect(mounted.images.at(-1)).toEqual(standalone.images.at(-1));
-    expect(mounted.sources.at(-1)).toEqual(standalone.sources.at(-1));
+  it.each([
+    [undefined, 'palisade-tower.png'],
+    ['palisade', 'palisade-tower.png'],
+    ['wall', 'stone-wall-tower.png'],
+  ] as const)('uses the approved %s-supported watchtower sprite at the original ground anchor', (support, filename) => {
+    const tower = structure('woodenTower'), canvas = render(tower, 10, support !== undefined, support);
+    expect(canvas.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/buildings/${filename}`]);
+    expect(canvas.sources).toEqual([]);
+    expect(canvas.images).toEqual([{ x: 64, y: 48, width: 64, height: 112 }]);
     tower.construction = { startedAt: 0, duration: 15, waitingForBuilder: true };
-    expect(render(tower, 10, true).images).toEqual(render(tower).images);
+    expect(render(tower, 10, support !== undefined, support).images).toEqual(render(tower).images);
   });
 
-  it('separates mounted tower atlas art from full supports without enlarging its bounds', () => {
+  it('keeps the same tower bounds when attaching to a wall', () => {
     const tower = structure('woodenTower'), art = new NativeArt();
     const paint = vi.spyOn(art, 'paint').mockImplementation((_key, bounds) => ({ ...bounds, texture: null! }));
     const standalone = art.building(tower, 0, '#3988ff'), mounted = art.building(tower, 0, '#3988ff', undefined, undefined, true);
@@ -208,11 +226,13 @@ describe('building artwork and construction stages', () => {
     expect([...buildingBlockers(state, 0)]).toEqual([5, 6, 9, 10]);
   });
 
-  it('keeps only the reservation pegs after the builder arrives and throughout progress', () => {
+  it('keeps the approved construction site after the builder arrives and throughout progress', () => {
     const house = structure('house');
     house.construction = { startedAt: 0, duration: 20, waitingForBuilder: true };
     const reserved = render(house);
-    expect(reserved.images).toHaveLength(4); expect(reserved.fills).toHaveLength(0);
+    expect(reserved.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
+    expect(reserved.images).toEqual([{ x: 64, y: 96, width: 64, height: 64 }]);
+    expect(reserved.fills).toHaveLength(0);
     house.construction.waitingForBuilder = false;
     const active = render(house);
     expect(active.images).toEqual(reserved.images);
@@ -220,29 +240,24 @@ describe('building artwork and construction stages', () => {
     expect(render(house, 19.9).images).toEqual(reserved.images);
   });
 
-  it('keeps interrupted construction marked with the same static pegs', () => {
+  it('keeps interrupted construction marked with the same static site', () => {
     const house = structure('house');
     house.construction = { startedAt: 5, duration: 20, waitingForBuilder: true, pausedAt: 10 };
     expect(render(house, 20).fills).toEqual(render(house, 100).fills);
-    expect(render(house, 20).images).toHaveLength(4);
+    expect(render(house, 20).images).toHaveLength(1);
     expect(render(house, 20).fills).toHaveLength(0);
   });
 
-  it.each(['camp', 'shack', 'cottage'] as const)('keeps %s construction as static perimeter posts around the single plot', kind => {
+  it.each(['camp', 'shack', 'cottage'] as const)('keeps %s construction as the approved site within the single plot', kind => {
     const farm = structure(kind);
     farm.construction = { startedAt: 0, duration: 15, waitingForBuilder: true };
     const outline = render(farm);
-    expect(outline.images).toHaveLength(4);
+    expect(outline.images).toHaveLength(1);
+    expect(outline.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
     expect(outline.fills).toHaveLength(0);
-    // Posts remain inside the one-cell footprint and leave its center clear.
+    // The selected site retains the one-cell footprint and native pixel scale.
     expect(buildingSize(farm)).toBe(1);
-    expect(Math.min(...outline.images.map(image => image.x))).toBe(70);
-    expect(Math.max(...outline.images.map(image => image.x + image.width))).toBe(122);
-    expect(Math.min(...outline.images.map(image => image.y))).toBe(100);
-    expect(Math.max(...outline.images.map(image => image.y + image.height))).toBe(156);
-    for (const x of [96]) for (const y of [128])
-      expect(outline.images.some(image => x >= image.x && x < image.x + image.width
-        && y >= image.y && y < image.y + image.height)).toBe(false);
+    expect(outline.images).toEqual([{ x: 64, y: 96, width: 64, height: 64 }]);
     farm.construction.waitingForBuilder = false;
     for (const time of [0, 7.5, 14.9]) {
       expect(render(farm, time).images).toEqual(outline.images);
@@ -254,12 +269,13 @@ describe('building artwork and construction stages', () => {
     expect(render(farm).images).toHaveLength(0);
   });
 
-  it.each(['wall', 'palisade'] as const)('builds %s sections in four seconds with static posts until completion', kind => {
+  it.each(['wall', 'palisade'] as const)('builds %s sections in four seconds with the static site until completion', kind => {
     const building = structure(kind);
     startConstruction(building, 10);
     expect(building.construction!.duration).toBe(4);
     const outline = render(building, 10);
-    expect(outline.images).toHaveLength(4);
+    expect(outline.images).toHaveLength(1);
+    expect(outline.spriteSources).toEqual([`${import.meta.env.BASE_URL}assets/construction/1x1.png`]);
     expect(outline.fills).toHaveLength(0);
     expect(render(building, 13.9).images).toEqual(outline.images);
     expect(render(building, 13.9).fills).toHaveLength(0);

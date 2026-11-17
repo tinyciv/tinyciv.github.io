@@ -1,0 +1,3722 @@
+{
+  "harness": "tools/simulation-harness/cli.mjs",
+  "version": 3,
+  "mode": "world",
+  "dt": 0.1,
+  "seconds": 3600,
+  "checkpoints": [
+    30,
+    120,
+    300,
+    600,
+    900,
+    3600
+  ],
+  "perturbed": 0,
+  "configuration": {
+    "mode": "world",
+    "seconds": 3600,
+    "dt": 0.1,
+    "seeds": 1,
+    "seed": "iteration-2-world-check",
+    "scenarios": [
+      "default"
+    ],
+    "policies": [
+      "evolved-assault"
+    ],
+    "baseline": null,
+    "policyDefinitions": [
+      {
+        "id": "hard-assault",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "campaignSafetyRatio": 1.2,
+          "campaignCooldown": 10,
+          "reserveUpkeepCycles": 1.2
+        }
+      },
+      {
+        "id": "field-concentration",
+        "extends": "hard-assault",
+        "logic": {
+          "garrison": 0
+        }
+      },
+      {
+        "id": "evolved-assault",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        },
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "policySource": {
+      "path": "/Users/ckrapu/strongman/btv/experiments/ai-iteration-2/finalists.json",
+      "sha256": "061e17cd1a2f15c4f86860232f48ca70fb9814bae85ce4da0efadce6578c22ec"
+    },
+    "checkpoints": [
+      30,
+      120,
+      300,
+      600,
+      900,
+      3600
+    ],
+    "gameOver": "continue",
+    "jobs": 1,
+    "perturb": 0,
+    "out": "/Users/ckrapu/strongman/btv/benchmarks/ai-iteration-2/world-evolved-assault.json"
+  },
+  "environment": {
+    "node": "v25.9.0",
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin arm64"
+  },
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "timing": {
+    "buildSeconds": 0.0000646250000000066,
+    "elapsedSeconds": 719.052145667,
+    "simulatedSeconds": 3600
+  },
+  "scenarios": {
+    "default": {
+      "id": "default",
+      "scenario": "default",
+      "seedIndex": 1,
+      "seed": "iteration-2-world-check",
+      "policy": "evolved-assault",
+      "initialStateHash": "721d139e9efebf7881d74f82cc16f825b65bde7c51466727bac9f1ea130fa490",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1,
+        2,
+        3
+      ],
+      "simulatedSeconds": 3600,
+      "steps": 36000,
+      "setupSeconds": 6.536602,
+      "wallSeconds": 712.258873,
+      "speedup": 5.05,
+      "gameOver": {
+        "t": 305.5,
+        "victory": false,
+        "winner": null
+      },
+      "stopReason": "duration",
+      "create": "game",
+      "options": {},
+      "perturbed": 0,
+      "enemyStrength": null,
+      "checkpoints": [
+        {
+          "t": 30,
+          "tick": 1,
+          "totals": {
+            "population": 76,
+            "food": 1964,
+            "gold": 2276.53,
+            "incomeFood": 33,
+            "incomeGold": 226.03,
+            "culture": 42,
+            "researchLevels": 0,
+            "buildingsReady": 1136,
+            "buildingsConstruction": 16,
+            "units": 198,
+            "soldiers": 24,
+            "hostileUnits": 8,
+            "territoryCells": 1526,
+            "deaths": 7,
+            "kills": 7,
+            "projectilesFired": 28,
+            "villageStageSum": 0,
+            "villageStages": [
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 0,
+            "raiderCamps": 3,
+            "marauderPacks": 7,
+            "pathSearches": 628,
+            "travelMaps": 73,
+            "nearestMaps": 50
+          },
+          "deathsByKind": {
+            "warrior": 7
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": false,
+              "relation": "self",
+              "population": 20,
+              "food": 484,
+              "gold": 517.5,
+              "culture": 6,
+              "income": {
+                "food": 4,
+                "gold": 20,
+                "culture": 6
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 41,
+                  "house": 8,
+                  "palace": 1,
+                  "road": 36
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "warrior": 5,
+                "worker": 13
+              },
+              "territoryCells": 248,
+              "kills": 3,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 12,
+              "food": 492.5,
+              "gold": 712.92,
+              "culture": 12,
+              "income": {
+                "food": 8,
+                "gold": 68.42,
+                "culture": 12
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 26,
+                  "house": 8,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 91,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 4
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 5,
+                "worker": 10
+              },
+              "territoryCells": 347,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 12,
+              "food": 495,
+              "gold": 612.43,
+              "culture": 12,
+              "income": {
+                "food": 13,
+                "gold": 67.93,
+                "culture": 12
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 23,
+                  "house": 8,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 88,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 6
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 5,
+                "worker": 8
+              },
+              "territoryCells": 375,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 11
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "war",
+              "population": 12,
+              "food": 492.5,
+              "gold": 433.68,
+              "culture": 12,
+              "income": {
+                "food": 8,
+                "gold": 69.68,
+                "culture": 12
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 20,
+                  "house": 8,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 99,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 6
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 5,
+                "worker": 9
+              },
+              "territoryCells": 316,
+              "kills": 2,
+              "deaths": 0,
+              "projectilesFired": 8
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 3,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 3
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 4,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 4
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 3,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 3
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 2,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 2
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 5
+              },
+              "territoryCells": 35,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 3,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 3
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {},
+            "deaths": {
+              "-2": 7
+            },
+            "kills": {},
+            "units": {
+              "-2": {
+                "warrior": 8
+              },
+              "-3": {
+                "boar": 45,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 32,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.24,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 6,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 30.24,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 8,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "a14be6fcde778eda"
+        },
+        {
+          "t": 120,
+          "tick": 4,
+          "totals": {
+            "population": 110,
+            "food": 1814.6,
+            "gold": 912.88,
+            "incomeFood": 208.35,
+            "incomeGold": 629.63,
+            "culture": 168,
+            "researchLevels": 0,
+            "buildingsReady": 1164,
+            "buildingsConstruction": 29,
+            "units": 245,
+            "soldiers": 28,
+            "hostileUnits": 39,
+            "territoryCells": 1531,
+            "deaths": 22,
+            "kills": 32,
+            "projectilesFired": 108,
+            "villageStageSum": 0,
+            "villageStages": [
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 0,
+            "raiderCamps": 3,
+            "marauderPacks": 14,
+            "pathSearches": 3271,
+            "travelMaps": 239,
+            "nearestMaps": 134
+          },
+          "deathsByKind": {
+            "warrior": 22
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": false,
+              "relation": "self",
+              "population": 19,
+              "food": 433.27,
+              "gold": 439.75,
+              "culture": 24,
+              "income": {
+                "food": 40.27,
+                "gold": 126.5,
+                "culture": 24
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 42,
+                  "house": 10,
+                  "palace": 1,
+                  "road": 36
+                },
+                "construction": {
+                  "house": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "warrior": 2,
+                "worker": 12
+              },
+              "territoryCells": 248,
+              "kills": 19,
+              "deaths": 8,
+              "projectilesFired": 6
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 22,
+              "food": 462,
+              "gold": 20.57,
+              "culture": 48,
+              "income": {
+                "food": 52.75,
+                "gold": 118.57,
+                "culture": 48
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 30,
+                  "house": 9,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 89,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 5,
+                  "house": 4,
+                  "library": 2
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 5,
+                "worker": 14
+              },
+              "territoryCells": 347,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 22,
+              "food": 453.12,
+              "gold": 170.45,
+              "culture": 48,
+              "income": {
+                "food": 59.12,
+                "gold": 168.95,
+                "culture": 48
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 31,
+                  "house": 11,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 92,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 3,
+                  "house": 2,
+                  "library": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 11
+              },
+              "territoryCells": 378,
+              "kills": 2,
+              "deaths": 0,
+              "projectilesFired": 15
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "war",
+              "population": 22,
+              "food": 466.21,
+              "gold": 282.11,
+              "culture": 48,
+              "income": {
+                "food": 56.21,
+                "gold": 215.61,
+                "culture": 48
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 26,
+                  "house": 9,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 99,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 9,
+                  "house": 2
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 11
+              },
+              "territoryCells": 318,
+              "kills": 3,
+              "deaths": 0,
+              "projectilesFired": 32
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 4,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 1,
+                "worker": 4
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 1,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 4,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 1,
+                "worker": 4
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 3,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 1,
+                "worker": 3
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "worker": 5
+              },
+              "territoryCells": 35,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 4,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 1,
+                "worker": 4
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {
+              "-2": 46
+            },
+            "deaths": {
+              "-2": 14
+            },
+            "kills": {
+              "-2": 7
+            },
+            "units": {
+              "-2": {
+                "archer": 1,
+                "warrior": 38
+              },
+              "-3": {
+                "boar": 44,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 32,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.22,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 6,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 30.08,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 8,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "ee5f81d35e3088f4"
+        },
+        {
+          "t": 300,
+          "tick": 10,
+          "totals": {
+            "population": 146,
+            "food": 1632.94,
+            "gold": 549,
+            "incomeFood": 755.69,
+            "incomeGold": 2252.32,
+            "culture": 420,
+            "researchLevels": 3,
+            "buildingsReady": 1215,
+            "buildingsConstruction": 14,
+            "units": 310,
+            "soldiers": 37,
+            "hostileUnits": 68,
+            "territoryCells": 1840,
+            "deaths": 104,
+            "kills": 198,
+            "projectilesFired": 546,
+            "villageStageSum": 0,
+            "villageStages": [
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 0,
+            "raiderCamps": 3,
+            "marauderPacks": 17,
+            "pathSearches": 12730,
+            "travelMaps": 508,
+            "nearestMaps": 250
+          },
+          "deathsByKind": {
+            "archer": 2,
+            "leader": 3,
+            "warrior": 99
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": false,
+              "relation": "self",
+              "population": 20,
+              "food": 398.04,
+              "gold": 12.6,
+              "culture": 60,
+              "income": {
+                "food": 175.04,
+                "gold": 271.5,
+                "culture": 60
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 48,
+                  "house": 8,
+                  "palace": 1,
+                  "road": 36
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "worker": 15
+              },
+              "territoryCells": 248,
+              "kills": 45,
+              "deaths": 24,
+              "projectilesFired": 33
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 33,
+              "food": 434.73,
+              "gold": 0,
+              "culture": 120,
+              "income": {
+                "food": 191.73,
+                "gold": 267.45,
+                "culture": 120
+              },
+              "research": {
+                "levelSum": 1,
+                "progressSum": 32.88,
+                "levels": {
+                  "woodenTower": 1
+                },
+                "focus": "scoutLodge"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 35,
+                  "house": 13,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 93,
+                  "woodenTower": 8
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 19
+              },
+              "territoryCells": 444,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 38,
+              "food": 388.07,
+              "gold": 35.32,
+              "culture": 120,
+              "income": {
+                "food": 235.07,
+                "gold": 634.04,
+                "culture": 120
+              },
+              "research": {
+                "levelSum": 2,
+                "progressSum": 72.134,
+                "levels": {
+                  "scoutLodge": 1,
+                  "woodenTower": 1
+                },
+                "focus": "wall"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 52,
+                  "house": 15,
+                  "library": 1,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 92,
+                  "well": 1,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 3
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 7,
+                "worker": 15
+              },
+              "territoryCells": 505,
+              "kills": 22,
+              "deaths": 0,
+              "projectilesFired": 76
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "war",
+              "population": 25,
+              "food": 412.1,
+              "gold": 501.08,
+              "culture": 120,
+              "income": {
+                "food": 153.85,
+                "gold": 1079.33,
+                "culture": 120
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 31,
+                  "house": 10,
+                  "palace": 2,
+                  "palisade": 63,
+                  "road": 99,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 7,
+                  "house": 2,
+                  "library": 1,
+                  "palisade": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 8,
+                "worker": 16
+              },
+              "territoryCells": 403,
+              "kills": 109,
+              "deaths": 11,
+              "projectilesFired": 136
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 35,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 41,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {
+              "-2": 292
+            },
+            "deaths": {
+              "-2": 69
+            },
+            "kills": {
+              "-2": 21
+            },
+            "units": {
+              "-2": {
+                "archer": 1,
+                "warrior": 67
+              },
+              "-3": {
+                "boar": 49,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 32,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.21,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 6,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 29.34,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 8,
+              "topForeign": 0,
+              "topAffiliation": 30.25,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 0,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "a036e717854cb9f4"
+        },
+        {
+          "t": 600,
+          "tick": 20,
+          "totals": {
+            "population": 159,
+            "food": 1479.45,
+            "gold": 1122.1,
+            "incomeFood": 1644.7,
+            "incomeGold": 5041.72,
+            "culture": 781.04,
+            "researchLevels": 8,
+            "buildingsReady": 1328,
+            "buildingsConstruction": 15,
+            "units": 406,
+            "soldiers": 39,
+            "hostileUnits": 150,
+            "territoryCells": 1677,
+            "deaths": 218,
+            "kills": 413,
+            "projectilesFired": 1006,
+            "villageStageSum": 6,
+            "villageStages": [
+              0,
+              6,
+              0,
+              0,
+              0
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 1,
+            "raiderCamps": 3,
+            "marauderPacks": 25,
+            "pathSearches": 40908,
+            "travelMaps": 990,
+            "nearestMaps": 472
+          },
+          "deathsByKind": {
+            "archer": 6,
+            "leader": 4,
+            "warrior": 208
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": true,
+              "relation": "self",
+              "population": 0,
+              "food": 398.04,
+              "gold": 0,
+              "culture": 61.04,
+              "income": {
+                "food": 175.04,
+                "gold": 271.5,
+                "culture": 61.04
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 48,
+                  "road": 36
+                },
+                "construction": {}
+              },
+              "units": {},
+              "territoryCells": 0,
+              "kills": 45,
+              "deaths": 26,
+              "projectilesFired": 40
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 33,
+              "food": 436.3,
+              "gold": 0,
+              "culture": 240,
+              "income": {
+                "food": 440.8,
+                "gold": 558.34,
+                "culture": 240
+              },
+              "research": {
+                "levelSum": 3,
+                "progressSum": 126.726,
+                "levels": {
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "irrigation"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 35,
+                  "house": 13,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 95,
+                  "woodenTower": 8
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 19
+              },
+              "territoryCells": 444,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 57,
+              "food": 323.37,
+              "gold": 25.11,
+              "culture": 240,
+              "income": {
+                "food": 710.37,
+                "gold": 1899.1,
+                "culture": 240
+              },
+              "research": {
+                "levelSum": 5,
+                "progressSum": 379.581,
+                "levels": {
+                  "irrigation": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "grainStorage"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 93,
+                  "house": 18,
+                  "library": 1,
+                  "palace": 2,
+                  "palisade": 62,
+                  "road": 93,
+                  "wall": 2,
+                  "well": 2,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 4,
+                  "house": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 9,
+                "worker": 26
+              },
+              "territoryCells": 517,
+              "kills": 126,
+              "deaths": 6,
+              "projectilesFired": 273
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 33,
+              "food": 321.74,
+              "gold": 1096.99,
+              "culture": 240,
+              "income": {
+                "food": 318.49,
+                "gold": 2312.78,
+                "culture": 240
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 9.105,
+                "levels": {},
+                "focus": "woodenTower"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 36,
+                  "house": 12,
+                  "library": 1,
+                  "palace": 2,
+                  "palisade": 59,
+                  "road": 103,
+                  "woodenTower": 7
+                },
+                "construction": {
+                  "camp": 2,
+                  "library": 1,
+                  "palisade": 5,
+                  "well": 2
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 8,
+                "worker": 19
+              },
+              "territoryCells": 403,
+              "kills": 211,
+              "deaths": 12,
+              "projectilesFired": 316
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 6,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 1,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 6
+              },
+              "territoryCells": 54,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "road": 6,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 42,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 6,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 3,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 6
+              },
+              "territoryCells": 56,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 6,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 1,
+                  "road": 10,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 6
+              },
+              "territoryCells": 55,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 7,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 2,
+                  "road": 8,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 3,
+                "worker": 7
+              },
+              "territoryCells": 51,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 6,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 1,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 6
+              },
+              "territoryCells": 55,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {
+              "-2": 368
+            },
+            "deaths": {
+              "-2": 174
+            },
+            "kills": {
+              "-2": 30
+            },
+            "units": {
+              "-2": {
+                "archer": 13,
+                "warrior": 137
+              },
+              "-3": {
+                "boar": 56,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 31,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.23,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 6,
+              "topForeign": 2,
+              "topAffiliation": 24.75,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 25.76,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 8,
+              "topForeign": 2,
+              "topAffiliation": 24.75,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "a9cd6a0c3044cb55"
+        },
+        {
+          "t": 900,
+          "tick": 30,
+          "totals": {
+            "population": 199,
+            "food": 1214.52,
+            "gold": 1602.27,
+            "incomeFood": 2723.27,
+            "incomeGold": 8739.57,
+            "culture": 1141.04,
+            "researchLevels": 17,
+            "buildingsReady": 1412,
+            "buildingsConstruction": 11,
+            "units": 526,
+            "soldiers": 45,
+            "hostileUnits": 240,
+            "territoryCells": 1914,
+            "deaths": 355,
+            "kills": 741,
+            "projectilesFired": 1519,
+            "villageStageSum": 6,
+            "villageStages": [
+              0,
+              6,
+              0,
+              0,
+              0
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 1,
+            "raiderCamps": 3,
+            "marauderPacks": 35,
+            "pathSearches": 82859,
+            "travelMaps": 1444,
+            "nearestMaps": 662
+          },
+          "deathsByKind": {
+            "archer": 18,
+            "leader": 4,
+            "warrior": 333
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": true,
+              "relation": "self",
+              "population": 0,
+              "food": 398.04,
+              "gold": 0,
+              "culture": 61.04,
+              "income": {
+                "food": 175.04,
+                "gold": 271.5,
+                "culture": 61.04
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 48,
+                  "road": 36
+                },
+                "construction": {}
+              },
+              "units": {},
+              "territoryCells": 0,
+              "kills": 45,
+              "deaths": 26,
+              "projectilesFired": 40
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 33,
+              "food": 437.87,
+              "gold": 0,
+              "culture": 360,
+              "income": {
+                "food": 689.87,
+                "gold": 847.3,
+                "culture": 360
+              },
+              "research": {
+                "levelSum": 4,
+                "progressSum": 221.009,
+                "levels": {
+                  "irrigation": 1,
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "sailing"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 35,
+                  "house": 13,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 95,
+                  "woodenTower": 8
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 19
+              },
+              "territoryCells": 515,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 80,
+              "food": 185.93,
+              "gold": 48.78,
+              "culture": 360,
+              "income": {
+                "food": 1360.93,
+                "gold": 3323.66,
+                "culture": 360
+              },
+              "research": {
+                "levelSum": 7,
+                "progressSum": 737.017,
+                "levels": {
+                  "archeryRange": 1,
+                  "grainStorage": 1,
+                  "irrigation": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "horsebackRiding"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 135,
+                  "house": 26,
+                  "library": 1,
+                  "palace": 2,
+                  "palisade": 62,
+                  "road": 95,
+                  "wall": 2,
+                  "well": 2,
+                  "woodenTower": 7
+                },
+                "construction": {
+                  "camp": 2,
+                  "house": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 7,
+                "worker": 39
+              },
+              "territoryCells": 620,
+              "kills": 247,
+              "deaths": 11,
+              "projectilesFired": 429
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 41,
+              "food": 192.68,
+              "gold": 1553.49,
+              "culture": 360,
+              "income": {
+                "food": 497.43,
+                "gold": 4297.11,
+                "culture": 360
+              },
+              "research": {
+                "levelSum": 6,
+                "progressSum": 588.619,
+                "levels": {
+                  "grainStorage": 1,
+                  "irrigation": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "archeryRange"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 44,
+                  "guardPost": 1,
+                  "house": 14,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 62,
+                  "road": 112,
+                  "well": 1,
+                  "woodenTower": 7
+                },
+                "construction": {
+                  "camp": 5,
+                  "palisade": 2,
+                  "well": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 2,
+                "militia": 3,
+                "warrior": 8,
+                "worker": 20
+              },
+              "territoryCells": 459,
+              "kills": 412,
+              "deaths": 15,
+              "projectilesFired": 522
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 8,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 3,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 3,
+                "worker": 8
+              },
+              "territoryCells": 55,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "road": 6,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 42,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 8,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 3,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 3,
+                "worker": 8
+              },
+              "territoryCells": 56,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 9,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 5,
+                  "road": 10,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 4,
+                "worker": 9
+              },
+              "territoryCells": 60,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 7,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 2,
+                  "road": 8,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 3,
+                "worker": 7
+              },
+              "territoryCells": 51,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 8,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 3,
+                  "road": 12,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 3,
+                "worker": 8
+              },
+              "territoryCells": 56,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {
+              "-2": 519
+            },
+            "deaths": {
+              "-2": 303
+            },
+            "kills": {
+              "-2": 36
+            },
+            "units": {
+              "-2": {
+                "archer": 41,
+                "warrior": 199
+              },
+              "-3": {
+                "boar": 56,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 31,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.24,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 6,
+              "topForeign": 2,
+              "topAffiliation": 24.75,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 36.28,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 8,
+              "topForeign": 2,
+              "topAffiliation": 24.75,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "4996dcf346af0592"
+        },
+        {
+          "t": 3600,
+          "tick": 120,
+          "totals": {
+            "population": 409,
+            "food": 1696.76,
+            "gold": 894.37,
+            "incomeFood": 15924.92,
+            "incomeGold": 44187.55,
+            "culture": 4381.04,
+            "researchLevels": 38,
+            "buildingsReady": 2053,
+            "buildingsConstruction": 17,
+            "units": 657,
+            "soldiers": 70,
+            "hostileUnits": 180,
+            "territoryCells": 2757,
+            "deaths": 2269,
+            "kills": 7818,
+            "projectilesFired": 10369,
+            "villageStageSum": 14,
+            "villageStages": [
+              0,
+              1,
+              3,
+              1,
+              1
+            ],
+            "villagesActive": 6,
+            "defeatedFactions": 1,
+            "raiderCamps": 3,
+            "marauderPacks": 45,
+            "pathSearches": 468313,
+            "travelMaps": 6751,
+            "nearestMaps": 3197
+          },
+          "deathsByKind": {
+            "archer": 299,
+            "horseman": 3,
+            "leader": 4,
+            "merchant": 3,
+            "militia": 39,
+            "warrior": 1816,
+            "worker": 105
+          },
+          "factions": [
+            {
+              "id": 0,
+              "name": "Roma",
+              "village": false,
+              "defeated": true,
+              "relation": "self",
+              "population": 0,
+              "food": 398.04,
+              "gold": 0,
+              "culture": 61.04,
+              "income": {
+                "food": 175.04,
+                "gold": 271.5,
+                "culture": 61.04
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 48,
+                  "road": 36
+                },
+                "construction": {}
+              },
+              "units": {},
+              "territoryCells": 0,
+              "kills": 45,
+              "deaths": 26,
+              "projectilesFired": 40
+            },
+            {
+              "id": 1,
+              "name": "Egyptians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 33,
+              "food": 451.97,
+              "gold": 0,
+              "culture": 1440,
+              "income": {
+                "food": 2931.47,
+                "gold": 3453.73,
+                "culture": 1440
+              },
+              "research": {
+                "levelSum": 8,
+                "progressSum": 1068.025,
+                "levels": {
+                  "archeryRange": 1,
+                  "grainStorage": 1,
+                  "horsebackRiding": 1,
+                  "irrigation": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "monument"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 35,
+                  "house": 13,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 64,
+                  "road": 95,
+                  "woodenTower": 8
+                },
+                "construction": {}
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 6,
+                "worker": 19
+              },
+              "territoryCells": 652,
+              "kills": 1,
+              "deaths": 0,
+              "projectilesFired": 9
+            },
+            {
+              "id": 2,
+              "name": "Greeks",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 159,
+              "food": 846.75,
+              "gold": 473.63,
+              "culture": 1440,
+              "income": {
+                "food": 8477.25,
+                "gold": 16684.22,
+                "culture": 1440
+              },
+              "research": {
+                "levelSum": 14,
+                "progressSum": 4168.665,
+                "levels": {
+                  "archeryRange": 1,
+                  "blacksmith": 1,
+                  "coinage": 1,
+                  "engineering": 1,
+                  "grainStorage": 1,
+                  "horsebackRiding": 1,
+                  "irrigation": 1,
+                  "monument": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "supplyTrain": 1,
+                  "traditionalMedicine": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "metalTools"
+              },
+              "buildings": {
+                "ready": {
+                  "camp": 278,
+                  "house": 47,
+                  "irrigation": 1,
+                  "library": 2,
+                  "palace": 2,
+                  "palisade": 33,
+                  "road": 185,
+                  "wall": 31,
+                  "well": 2,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 10,
+                  "house": 1
+                }
+              },
+              "units": {
+                "leader": 1,
+                "merchant": 1,
+                "warrior": 10,
+                "worker": 98
+              },
+              "territoryCells": 861,
+              "kills": 2662,
+              "deaths": 163,
+              "projectilesFired": 2692
+            },
+            {
+              "id": 3,
+              "name": "Persians",
+              "village": false,
+              "defeated": false,
+              "relation": "peace",
+              "population": 114,
+              "food": 0,
+              "gold": 420.74,
+              "culture": 1440,
+              "income": {
+                "food": 4341.16,
+                "gold": 23778.1,
+                "culture": 1440
+              },
+              "research": {
+                "levelSum": 16,
+                "progressSum": 5157.586,
+                "levels": {
+                  "archeryRange": 1,
+                  "blacksmith": 1,
+                  "coinage": 1,
+                  "engineering": 1,
+                  "fletching": 1,
+                  "grainStorage": 1,
+                  "horsebackRiding": 1,
+                  "irrigation": 1,
+                  "metalTools": 1,
+                  "monument": 1,
+                  "sailing": 1,
+                  "scoutLodge": 1,
+                  "supplyTrain": 1,
+                  "traditionalMedicine": 1,
+                  "wall": 1,
+                  "woodenTower": 1
+                },
+                "focus": "militaryTactics"
+              },
+              "buildings": {
+                "ready": {
+                  "archeryRange": 1,
+                  "blacksmith": 1,
+                  "camp": 176,
+                  "fort": 4,
+                  "guardPost": 2,
+                  "healerShack": 1,
+                  "house": 47,
+                  "library": 1,
+                  "palace": 2,
+                  "palisade": 7,
+                  "road": 210,
+                  "stable": 1,
+                  "supplyDepot": 1,
+                  "wall": 57,
+                  "well": 2,
+                  "woodenTower": 8
+                },
+                "construction": {
+                  "camp": 6
+                }
+              },
+              "units": {
+                "archer": 2,
+                "horseman": 3,
+                "leader": 1,
+                "merchant": 2,
+                "militia": 6,
+                "skirmisher": 12,
+                "warrior": 7,
+                "worker": 57
+              },
+              "territoryCells": 784,
+              "kills": 4756,
+              "deaths": 180,
+              "projectilesFired": 3310
+            },
+            {
+              "id": 4,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 19,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 9,
+                  "road": 23,
+                  "villageTent": 1
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 4,
+                "worker": 19
+              },
+              "territoryCells": 84,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 5,
+              "name": "Liguri Hearth",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 5,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "road": 6,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 2,
+                "worker": 5
+              },
+              "territoryCells": 42,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 6,
+              "name": "Etruscan Hollow",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 17,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 7,
+                  "road": 22,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 5,
+                "worker": 17
+              },
+              "territoryCells": 77,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 7,
+              "name": "Veneti Rest",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 28,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "guardPost": 1,
+                  "house": 14,
+                  "road": 45,
+                  "villageTent": 1,
+                  "well": 1,
+                  "woodenTower": 2
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 12,
+                "worker": 28
+              },
+              "territoryCells": 107,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 8,
+              "name": "Veneti Grove",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 17,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 6,
+                  "road": 22,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 5,
+                "worker": 17
+              },
+              "territoryCells": 74,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            },
+            {
+              "id": 9,
+              "name": "Veneti Crossing",
+              "village": true,
+              "defeated": false,
+              "relation": "peace",
+              "population": 17,
+              "food": 0,
+              "gold": 0,
+              "culture": 0,
+              "income": {
+                "food": 0,
+                "gold": 0,
+                "culture": 0
+              },
+              "research": {
+                "levelSum": 0,
+                "progressSum": 0,
+                "levels": {},
+                "focus": null
+              },
+              "buildings": {
+                "ready": {
+                  "dock": 1,
+                  "house": 7,
+                  "road": 23,
+                  "villageTent": 3
+                },
+                "construction": {}
+              },
+              "units": {
+                "warrior": 5,
+                "worker": 17
+              },
+              "territoryCells": 76,
+              "kills": 0,
+              "deaths": 0,
+              "projectilesFired": 0
+            }
+          ],
+          "other": {
+            "projectilesFired": {
+              "-2": 4318
+            },
+            "deaths": {
+              "-2": 1900
+            },
+            "kills": {
+              "-2": 354
+            },
+            "units": {
+              "-2": {
+                "archer": 31,
+                "sailboat": 2,
+                "warrior": 147
+              },
+              "-3": {
+                "boar": 56,
+                "marshBird": 58
+              }
+            },
+            "buildings": {
+              "-2": {
+                "palisade": 96,
+                "road": 239,
+                "villageTent": 31,
+                "wall": 48,
+                "woodenTower": 18
+              }
+            }
+          },
+          "villages": [
+            {
+              "id": 1,
+              "campId": 1141,
+              "faction": 4,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 3,
+              "owner": 4,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 2,
+              "campId": 1148,
+              "faction": 5,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 1,
+              "owner": 5,
+              "topForeign": 3,
+              "topAffiliation": 30.25,
+              "family": 4
+            },
+            {
+              "id": 3,
+              "campId": 1156,
+              "faction": 6,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 2,
+              "owner": 6,
+              "topForeign": 2,
+              "topAffiliation": 24.74,
+              "family": 4
+            },
+            {
+              "id": 4,
+              "campId": 1163,
+              "faction": 7,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 4,
+              "owner": 7,
+              "topForeign": 3,
+              "topAffiliation": 45.05,
+              "family": 4
+            },
+            {
+              "id": 5,
+              "campId": 1169,
+              "faction": 8,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 2,
+              "owner": 8,
+              "topForeign": 2,
+              "topAffiliation": 24.75,
+              "family": 1
+            },
+            {
+              "id": 6,
+              "campId": 1178,
+              "faction": 9,
+              "destroyed": false,
+              "confederatedInto": null,
+              "stage": 2,
+              "owner": 9,
+              "topForeign": 1,
+              "topAffiliation": 30.25,
+              "family": 4
+            }
+          ],
+          "hash": "ab4b381994df2e6c"
+        }
+      ]
+    }
+  }
+}

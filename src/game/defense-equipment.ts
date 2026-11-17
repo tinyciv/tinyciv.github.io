@@ -6,7 +6,7 @@ type EquipmentOwner = Pick<Faction, 'armorLevel' | 'weaponLevel'> | undefined;
 
 export function isDefensiveBuilding(building: Pick<Building, 'kind' | 'palaceLevel'>): boolean {
   return isWallKind(building.kind) || building.kind === 'fort' || building.kind === 'tower' || building.kind === 'woodenTower'
-    || building.kind === 'guardPost' || building.kind === 'ballista' || building.kind === 'palace' && building.palaceLevel === 2;
+    || building.kind === 'guardPost' || building.kind === 'ballista' || building.kind === 'siegeCannon' || building.kind === 'palace' && building.palaceLevel === 2;
 }
 
 /** Derive equipment from the current owner. Authored armor and research health

@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { Unit } from './types';
 
 export const HORSEMAN_NATIVE_SCALE = 1.5;
@@ -12,7 +13,7 @@ export function loadCavalryArt(): Promise<void> {
   return loading ??= Promise.all((['Horseman', 'Stable', 'SpearRider', 'HorseArcher'] as const).map(async kind => {
     const [width, height] = sizes[kind];
     const variants = await Promise.all(['Cyan', 'Red'].map(async color => {
-      const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/miniworld/${kind === 'SpearRider' ? 'Spear-Rider.png' : kind === 'HorseArcher' ? 'Horse-Archer.png' : `${kind}-${color}.png`}`; await image.decode();
+      const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/${kind === 'SpearRider' ? 'Spear-Rider.png' : kind === 'HorseArcher' ? 'Horse-Archer.png' : `${kind}-${color}.png`}`); await image.decode();
       if (image.naturalWidth !== width || image.naturalHeight !== height) throw new Error(`Invalid native cavalry asset: ${kind}-${color}`);
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
       const c = canvas.getContext('2d')!; c.drawImage(image, 0, 0); return c.getImageData(0, 0, width, height);

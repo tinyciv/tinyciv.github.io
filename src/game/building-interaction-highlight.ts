@@ -1,4 +1,4 @@
-import { villageRelation } from './village-relations';
+import { villageRelationView } from './settlement-bridge';
 import { playerFaction } from './player-context';
 import { buildingActivityAvailable } from './building-activity';
 import { buildingInSight, type FogView } from './fog';
@@ -11,7 +11,7 @@ export function buildingInteractionHighlighted(state: GameState, building: Build
     if (!buildingInSight(fog, building)) return false;
     if (building.villageId !== undefined) {
         const village = state.villages?.find(candidate => candidate.id === building.villageId);
-        return !state.gameOver && building.hp > 0 && !!village && !village.destroyed && villageRelation(village, playerFaction(state)) !== 'war'
+        return !state.gameOver && building.hp > 0 && !!village && !village.destroyed && villageRelationView(state, village, playerFaction(state)) !== 'war'
             && state.buildings.some(camp => camp.id === village.campId && buildingReady(camp));
     }
     return !isFarmKind(building.kind) && buildingActivityAvailable(state, building);

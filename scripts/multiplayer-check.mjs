@@ -1,4 +1,4 @@
-import { ClientStateReplica, PROTOCOL_VERSION } from './multiplayer-wire.mjs';
+import { ClientStateReplica, PROTOCOL_VERSION, encodeMessage, decodeMessage } from './multiplayer-wire.mjs';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -12,7 +12,7 @@ class Peer {
   async open() {
     this.socket = new WebSocket(wsUrl, { handshakeTimeout: 15000, ...(process.env.MULTIPLAYER_ORIGIN ? { origin: process.env.MULTIPLAYER_ORIGIN } : {}) });
     this.socket.on('message', data => {
-      const message = JSON.parse(data);
+      const message = decodeMessage(data);
       // Frames are consumed immediately; retaining every world snapshot makes
       // the smoke client itself exhaust memory on the larger maps.
       if (message.type === 'snapshot') this.messages = this.messages.filter(item => item.type !== 'snapshot');
@@ -33,7 +33,7 @@ class Peer {
     this.send({ type: 'hello', version: PROTOCOL_VERSION, ...(this.token ? { token: this.token } : {}) });
     await this.wait(message => message.type === 'welcome');
   }
-  send(message) { this.socket.send(JSON.stringify(message)); }
+  send(message) { this.socket.send(encodeMessage(message)); }
   async wait(predicate, timeout = 45000) {
     const started = Date.now();
     while (Date.now() - started < timeout) {

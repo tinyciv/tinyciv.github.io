@@ -1,16 +1,16 @@
 # Faction AI and military support
 
-Enemy civilizations begin with 100 additional gold (1,600 total), a gated palisade enclosure and four watchtowers around each starting city. These are completed starting defenses; later construction and maintenance use the ordinary treasury. Human multiplayer opponents receive equal human starts.
+Enemy civilizations begin with 100 additional gold (1,600 total) and up to four completed wooden watchtowers around each starting city, subject to terrain and available space. The towers have open approaches and no surrounding palisades. AI wooden towers have no upkeep; replacement construction still uses the ordinary treasury and workforce. Human multiplayer opponents receive equal human starts and pay normal tower upkeep.
 
 The AI assesses nearby combat strength, health, morale, reinforcements and observed tower coverage. It gathers escorts, attacks in Infantry Drill formations when researched and sufficiently staffed, retreats from unfavorable fights, and keeps defenders near home. Its economic planner reserves wages, improves equipment, spends Leader skill points and develops support buildings through the normal rules.
 
 Run the deterministic headless comparison with:
 
 ```sh
-npm run benchmark:ai -- --seconds=90 --seeds=3
+npm run sim -- ai --seconds=90 --seeds=3
 ```
 
-The harness runs the actual simulation with identical conditions for legacy, aggressive and coordinated policies. Open battles, fortified assaults and outnumbered defense measure Leader survival, casualties, remaining health, damage to enemy settlements and time spent in formation. The report is written to `benchmarks/faction-ai.json`. The recorded 27-run comparison selected coordinated AI: mean score 261.33 versus 238.09 for aggressive and 221.18 for legacy, with Leader survival in 9/9 coordinated runs versus 8/9 legacy runs. The score is an explicit scenario metric, not a claim about universal win rate; longer campaigns and additional maps can be assessed by extending the harness. See the [AI harness report](faction-ai-harness.md) for policy details, scenario limitations, navigation checks and startup measurements.
+The harness runs the actual simulation with identical conditions for legacy, aggressive and coordinated policies. Open battles, fortified assaults and outnumbered defense measure Leader survival, casualties, remaining health, damage to enemy settlements and time spent in formation. The report is written to `benchmarks/simulation-ai.json`. The historical 27-run comparison selected coordinated AI: mean score 261.33 versus 238.09 for aggressive and 221.18 for legacy, with Leader survival in 9/9 coordinated runs versus 8/9 legacy runs. The score is an explicit scenario metric, not a claim about universal win rate; longer campaigns and additional maps can be assessed by extending the harness. See the [AI harness report](faction-ai-harness.md) for policy details, scenario limitations, navigation checks and startup measurements.
 
 ## Fort
 

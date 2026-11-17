@@ -47,6 +47,37 @@ function advance(state: GameState, seconds: number, observe: () => void = () => 
 }
 
 describe('rival leader and army operations in the live simulation', () => {
+  it('initiates combat against an idle human enemy outside the city instead of circling until attacked', () => {
+    const state = fixture(), leader = state.units[1];
+    state.factions[1].relation = 'war';
+    for (const member of state.units.filter(unit => unit.faction === 1)) { member.x += 14; member.home = 101; }
+    const intruder = { ...unit(80, 'warrior', 0, 42.5, 21.5), speed: 0, attack: 1, cooldown: 1e6 };
+    entityStore(state).units.add(intruder);
+    const originalArmy = state.units.filter(unit => unit.faction === 1);
+    const alliedHealth = originalArmy.map(unit => unit.hp);
+    let engagedAwayFromHome = false;
+    advance(state, 6, () => { engagedAwayFromHome ||= intruder.hp < 100 && distance(leader, { x: 19, y: 21 }) > 11; });
+    expect(intruder.hp).toBeLessThan(100);
+    expect(engagedAwayFromHome).toBe(true);
+    // Staffing may create a civilian worker during these steps. Only the
+    // original combatants establish whether an enemy struck before this army.
+    expect(originalArmy.map(unit => unit.hp)).toEqual(alliedHealth);
+  });
+
+  it('lets a straggling escort engage a local enemy while the army is regrouping', () => {
+    const state = fixture(), escort = state.units[2];
+    state.factions[1].relation = 'war';
+    for (const member of state.units.filter(unit => unit.faction === 1)) member.home = 101;
+    Object.assign(escort, { x: 36.5, y: 21.5 });
+    const intruder = { ...unit(80, 'warrior', 0, 38.5, 21.5), speed: 0, attack: 1, cooldown: 1e6 };
+    entityStore(state).units.add(intruder);
+    advance(state, 2);
+    expect(distance(escort, state.units[1])).toBeGreaterThan(7);
+    expect(escort.target).toBe(intruder.id);
+    expect(intruder.hp).toBeLessThan(100);
+    expect(escort.hp).toBe(100);
+  });
+
   it('does not let a raid order give a faction soldier an independent assault role', () => {
     const state = fixture(), soldier = state.units[2];
     state.factions[1].relation = 'war';

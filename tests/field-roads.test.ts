@@ -40,15 +40,15 @@ function noOverlap(state: GameState): void {
 }
 
 describe('single crop tiles and displaced roads', () => {
-  it('charges a rounded fifteen-gold farm price and one quarter of the former build time for a single reserved tile', () => {
+  it('charges the growth-balanced farm price and preserves the build time for a single reserved tile', () => {
     const state = fixture(), gold = state.factions[0].gold;
     expect(buildAt(state, 'camp', 13, 8).ok).toBe(true);
     const farm = state.buildings.at(-1)!;
     expect([buildingWidth(farm), buildingHeight(farm)]).toEqual([1, 1]);
-    expect(BUILD_COSTS.camp.gold).toBe(15); expect(CONSTRUCTION_SECONDS.camp).toBe(3.75);
-    expect(farm.construction).toMatchObject({ duration: 3.75, paidGold: 15 });
-    expect(state.factions[0].gold).toBe(gold - 15);
-    expect(cancelConstruction(state, farm.id)).toMatchObject({ ok: true, refund: 15 });
+    expect(BUILD_COSTS.camp.gold).toBe(9.75); expect(CONSTRUCTION_SECONDS.camp).toBe(3.75);
+    expect(farm.construction).toMatchObject({ duration: 3.75, paidGold: 9.75 });
+    expect(state.factions[0].gold).toBe(gold - 9.75);
+    expect(cancelConstruction(state, farm.id)).toMatchObject({ ok: true, refund: 9.75 });
     expect(state.factions[0].gold).toBe(gold);
   });
 
@@ -87,10 +87,10 @@ describe('single crop tiles and displaced roads', () => {
   });
 
   it('moves a queued farm order without charging it again or starting crops early', () => {
-    const state = fixture(), farm = state.buildings[1]; queueConstruction(farm, 0, 15, state); synchronizeFarms(state);
+    const state = fixture(), farm = state.buildings[1]; queueConstruction(farm, 0, BUILD_COSTS.camp.gold, state); synchronizeFarms(state);
     const old = { x: farm.x, y: farm.y }, gold = state.factions[0].gold;
     expect(buildAt(state, 'road', old.x, old.y).ok).toBe(true);
-    expect(farm).not.toMatchObject(old); expect(farm.construction).toMatchObject({ paidGold: 15, duration: 3.75, waitingForBuilder: true });
+    expect(farm).not.toMatchObject(old); expect(farm.construction).toMatchObject({ paidGold: 9.75, duration: 3.75, waitingForBuilder: true });
     expect(farm.construction!.pausedAt).toBeUndefined(); expect(state.fields).toHaveLength(0);
     expect(state.factions[0].gold).toBe(gold - 10); noOverlap(state);
   });

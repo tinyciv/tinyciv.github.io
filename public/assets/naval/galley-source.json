@@ -552,5 +552,11 @@
       ],
       "sha256": "a593c960f10bc820d2be172bcda4492d67d8975df9d7389bcfd2c29820227c9c"
     }
-  ]
+  ],
+  "leaderScale": 0.85,
+  "leaderPhysicalFootprint": [
+    1.7,
+    0.85
+  ],
+  "leaderWorldPixelScale": 1.7
 }

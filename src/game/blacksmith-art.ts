@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Shade's one-cell Miniworld smithy, cropped unchanged from Wood/Workshops. */
 export const BLACKSMITH_SPRITE = { width: 16, height: 16 } as const;
 let smithy: HTMLImageElement | undefined;
@@ -6,7 +7,7 @@ let loading: Promise<void> | undefined;
 export function loadBlacksmithArt(): Promise<void> {
   return loading ??= (async () => {
     const image = new Image();
-    image.src = `${import.meta.env.BASE_URL}assets/miniworld/Blacksmith.png`;
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/Blacksmith.png`);
     await image.decode();
     if (image.naturalWidth !== 16 || image.naturalHeight !== 16)
       throw new Error('Invalid Miniworld blacksmith cell.');

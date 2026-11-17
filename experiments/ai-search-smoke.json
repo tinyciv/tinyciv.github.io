@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "baseline": "expansionist",
+  "seed": "creative-ai-pipeline-smoke-1",
+  "generations": 2,
+  "population": 2,
+  "archiveSize": 2,
+  "jobs": 2,
+  "maxMatches": 60,
+  "maxWallSeconds": 300,
+  "screening": { "seconds": 3, "seeds": 1, "scenarios": ["field-battle"] },
+  "confirmation": { "seconds": 3, "seeds": 1, "scenarios": ["field-battle"] },
+  "promotion": { "minPositiveSeeds": 1, "alpha": 0.05 }
+}

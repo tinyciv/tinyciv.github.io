@@ -1,10 +1,11 @@
+import { runtimeArtUrl } from './runtime-art';
 /** Exact, unmodified horizontal Puny World Medieval sawmill. */
 let image: HTMLImageElement | undefined;
 let loading: Promise<void> | undefined;
 export function loadSupplyDepotArt(): Promise<void> {
   return loading ??= (async () => {
     const source = new Image();
-    source.src = `${import.meta.env.BASE_URL}assets/medieval/Supply-Depot.png`;
+    source.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/medieval/Supply-Depot.png`);
     await source.decode();
     if (source.naturalWidth !== 32 || source.naturalHeight !== 16) throw new Error('Invalid supply depot artwork.');
     image = source;

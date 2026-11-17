@@ -12,7 +12,7 @@ function fixture() {
   const boat: FishingBoat = { id: 1, faction: 0, dock: 1, city: 2, x: 32.5, y: 20.5,
     hp: 80, home: { x: 32.5, y: 20.5 }, phase: 'idle', cargo: 0, facing: 0, moving: false, path: [], nextPlanAt: 0 };
   const fish: FishingFish = { id: 2, zone: 1, x: 34.5, y: 20.5, food: 5, spawnedAt: 0, facing: 0 };
-  state.fishing = { seed: state.seed, startedAt: 0, sequence: 4, zones: [], fish: [fish, { ...fish, id: 3, x: 8.5 }],
+  state.fishing = { seed: state.seed, startedAt: 0, sequence: 4, whales: [], buffs: {}, nextTick: 1, zones: [], fish: [fish, { ...fish, id: 3, x: 8.5 }],
     boats: [boat, { ...boat, id: 4, faction: 1, x: 8.5 }], receipts: [], replacements: {} };
   for (const current of state.fishing.fish) setSurfaceFrame(current, state.time, 3);
   return { state, boat };
@@ -45,7 +45,7 @@ describe('fishing presentation and local sight', () => {
   it('draws only observed fish and vessels beneath fog, without zone indicators', () => {
     const { state } = fixture(), frame = recordNativeFrame(state);
     const fish = frame.drawOrder.filter(key => key.startsWith('fish:'));
-    const boats = frame.drawOrder.filter(key => key.startsWith('fishing-boat:'));
+    const boats = frame.drawOrder.filter(key => key.startsWith('maritime:'));
     expect(fish).toHaveLength(1); expect(boats).toHaveLength(1);
     expect(frame.drawOrder.indexOf(fish[0])).toBeLessThan(frame.drawOrder.indexOf('fog'));
     expect(frame.drawOrder.indexOf(boats[0])).toBeLessThan(frame.drawOrder.indexOf('fog'));
@@ -57,7 +57,7 @@ describe('fishing presentation and local sight', () => {
     for (const fish of state.fishing!.fish) setSurfaceFrame(fish, state.time, -1);
     const frame = recordNativeFrame(state);
     expect(frame.drawOrder.some(key => key.startsWith('fish:'))).toBe(false);
-    expect(frame.drawOrder.filter(key => key.startsWith('fishing-boat:'))).toHaveLength(1);
+    expect(frame.drawOrder.filter(key => key.startsWith('maritime:'))).toHaveLength(1);
     expect(frame.drawOrder.some(key => key.includes('fishing-zone'))).toBe(false);
   });
 });

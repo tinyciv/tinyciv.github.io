@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dockPlacement, dockBerth, dockBerthOccupiedByFootprint, dockFootprint, DOCK_BUILD_SECONDS, DOCK_COST, DOCK_DIRECTIONS, dockMoorings } from '../src/game/dock';
+import { createDockShoreCrossingQuery, dockShoreCrossingClear, dockPlacement, dockBerth, dockBerthOccupiedByFootprint, dockFootprint, DOCK_BUILD_SECONDS, DOCK_COST, DOCK_DIRECTIONS, dockMoorings } from '../src/game/dock';
 import { buildAt, validateBuildAt, BUILD_COSTS } from '../src/game/simulation';
 import { buildingResearchRequirement, isBuildingUnlocked, RESEARCH_BRANCHES } from '../src/game/research';
 import { CONSTRUCTION_SECONDS } from '../src/game/structures';
@@ -29,6 +29,39 @@ function coast(state: GameState, facing = 2) {
 }
 
 describe('coastal dock placement', () => {
+  it('matches direct crossing checks for every adjacent edge, footprint and proposed dock', () => {
+    const state = fixture();
+    entityStore(state).buildings.add(
+      building(2, 'house', 2, 7), building(3, 'wall', 8, 5), building(4, 'road', 10, 5),
+      building(5, 'camp', 10, 7), building(6, 'irrigation', 12, 7), building(7, 'ruin', 14, 7),
+      { ...building(8, 'dock', 5, 10), dockFacing: 0 },
+      { ...building(9, 'dock', 12, 10), dockFacing: 3 },
+      { ...building(10, 'house', 14, 2), hp: 0 });
+    state.world.tiles[8 * 18 + 8].ridge = 1;
+    const query = createDockShoreCrossingQuery(state);
+    for (const proposed of [undefined, { x: 8, y: 8, dockFacing: 2 as const }]) {
+      for (let y = 0; y < 14; y++) for (let x = 0; x < 18; x++) {
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const from = { x: x + .5, y: y + .5 }, to = { x: x + dx + .5, y: y + dy + .5 };
+          expect(query(from, to, proposed)).toBe(dockShoreCrossingClear(state, from, to, proposed));
+        }
+      }
+    }
+  });
+
+  it('reads remote building occupancy once for a batch of shore candidates', () => {
+    const state = fixture();
+    const remote = Array.from({ length: 2500 }, (_, index) => building(index + 10, 'road', index % 18, 1));
+    entityStore(state).buildings.add(...remote);
+    let reads = 0;
+    for (const item of remote) Object.defineProperty(item, 'hp', { get: () => { reads++; return 100; } });
+    const query = createDockShoreCrossingQuery(state);
+    expect(reads).toBe(2500);
+    reads = 0;
+    for (let index = 0; index < 100; index++) expect(query({ x: 8.5, y: 7.5 }, { x: 8.5, y: 6.5 })).toBe(true);
+    expect(reads).toBe(0);
+  });
+
   it.each([0, 1, 2, 3] as const)('faces its reserved water tile in direction %i while retaining a dry house tile', facing => {
     const state = fixture(), direction = DOCK_DIRECTIONS[facing];
     coast(state, facing);

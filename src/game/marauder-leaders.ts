@@ -16,7 +16,7 @@ export function ensureMarauderLeaders(state: GameState): void {
     if (members) members.push(unit); else membersByPack.set(unit.marauderPack, [unit]);
   }
   for (const pack of state.marauderPacks ?? []) {
-    if (pack.campDefense) continue;
+    if (pack.campDefense || pack.seaInvasion !== undefined) continue;
     if (pack.leaderId !== undefined) {
       const existing = byId.get(pack.leaderId);
       if (existing?.marauderLeader && existing.marauderPack === pack.id) { if (existing.kind === 'archer') setSoldierRole(existing, 'warrior'); existing.speed = MARAUDER_LEADER_SPEED; existing.range = 1.1; }

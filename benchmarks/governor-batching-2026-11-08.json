@@ -1,0 +1,94 @@
+{
+  "method": "Runs the actual faction-development callback extracted unchanged from each source, with warm travel maps. Alternates engines and verifies the complete serialized resulting state for no-op and fully due/rich governor plans.",
+  "before": "/tmp/btv-smooth-2026-11-08/final-budget",
+  "snapshot": "/tmp/btv-smooth-2026-11-08/state.json",
+  "rounds": 3,
+  "timings": {
+    "before": {
+      "no-op": {
+        "samples": 3,
+        "median": 97.25054100000034,
+        "p95": 103.61416699999995,
+        "mean": 96.52794433333331
+      },
+      "fully-due": {
+        "samples": 3,
+        "median": 602.8155829999996,
+        "p95": 619.1252079999995,
+        "mean": 601.1439303333331
+      }
+    },
+    "after": {
+      "no-op": {
+        "samples": 3,
+        "median": 91.5545830000001,
+        "p95": 118.57241700000122,
+        "mean": 90.54881933333377
+      },
+      "fully-due": {
+        "samples": 3,
+        "median": 448.8703340000002,
+        "p95": 464.30616700000064,
+        "mean": 452.75756966666694
+      }
+    }
+  },
+  "parity": [
+    {
+      "key": "0:no-op",
+      "equal": true,
+      "addedBuildings": 0
+    },
+    {
+      "key": "0:fully-due",
+      "equal": true,
+      "addedBuildings": 31
+    },
+    {
+      "key": "1:no-op",
+      "equal": true,
+      "addedBuildings": 0
+    },
+    {
+      "key": "1:fully-due",
+      "equal": true,
+      "addedBuildings": 31
+    },
+    {
+      "key": "2:no-op",
+      "equal": true,
+      "addedBuildings": 0
+    },
+    {
+      "key": "2:fully-due",
+      "equal": true,
+      "addedBuildings": 31
+    }
+  ],
+  "samples": {
+    "before": {
+      "no-op": [
+        103.61416699999995,
+        97.25054100000034,
+        88.71912499999962
+      ],
+      "fully-due": [
+        581.491,
+        602.8155829999996,
+        619.1252079999995
+      ]
+    },
+    "after": {
+      "no-op": [
+        61.519457999999986,
+        91.5545830000001,
+        118.57241700000122
+      ],
+      "fully-due": [
+        445.09620799999993,
+        448.8703340000002,
+        464.30616700000064
+      ]
+    }
+  }
+}

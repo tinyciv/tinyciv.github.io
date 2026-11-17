@@ -1,0 +1,82 @@
+{
+  "provider": "built-in imagegen",
+  "scope": "Approved copper, iron and gold outcrops used in game",
+  "styleReference": "public/assets/relief/atlas-B.png",
+  "scaleReference": "scratch/2026-11-15-relief-integration/grassland.png",
+  "grid": {
+    "columns": [
+      "copper",
+      "iron",
+      "gold"
+    ],
+    "rows": [
+      "silhouette A",
+      "silhouette B"
+    ]
+  },
+  "originals": [
+    {
+      "file": "ore-1.png",
+      "sha256": "1884617427331f536a63bba28c6144b37bd27fd8ca70d3770595457a2b82c786"
+    },
+    {
+      "file": "ore-2.png",
+      "sha256": "7af6bcc75a8f517b7719a1194ce9e0330ce45f4dc1b52fde9ba5029c2d912b94"
+    },
+    {
+      "file": "ore-3.png",
+      "sha256": "bdc9eb0335328e11c6cd6297fefabf6d7fff3a62f3eb144c07f7553414e25e71"
+    }
+  ],
+  "preview": "Original generated atlases retained unchanged. Canvas review crops alpha>=224 bounds, rasterizes to 16x16, 32x32 and 48x32, removes alpha noise, and composites existing terrain art. Palette previews recolor host rock and grass while preserving mineral colors.",
+  "proposedPlacement": "Ore on dry flat ground touching the outside edge of a hill or mountain region, in short broken clusters following its foot. Never water, river, hill summit or mountain core. Keep a clear flat approach for miners; gold uses the same adjacency rule.",
+  "production": {
+    "renderer": "src/game/ore-art.ts",
+    "placement": "rust/src/ore.rs",
+    "ironAppearance": {
+      "sources": ["ore-2.png", "ore-3.png"],
+      "column": 1,
+      "rows": [0, 1],
+      "native": [[32, 32], [48, 32]],
+      "palette": "grassland",
+      "rendering": "One complete mountain outcrop per connected iron deposit, using foothill clumps or exposed seam ribs with both silhouette variants. Native family and variant are preserved; patches without family metadata use their aspect ratio. Each silhouette fits uniformly inside the footprint, with no biome recoloring or dark tiled texture."
+    },
+    "families": [
+      {
+        "id": 0,
+        "native": [
+          16,
+          16
+        ],
+        "footprint": [
+          2,
+          2
+        ]
+      },
+      {
+        "id": 1,
+        "native": [
+          32,
+          32
+        ],
+        "footprint": [
+          3,
+          3
+        ]
+      },
+      {
+        "id": 2,
+        "native": [
+          48,
+          32
+        ],
+        "footprint": [
+          5,
+          3
+        ]
+      }
+    ],
+    "mining": "Existing timber door from resource-objects.png, fitted to the rock face only after development; native gold reward is paid after a completed miner visit.",
+    "visualScale": 1.5
+  }
+}

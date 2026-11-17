@@ -1,20 +1,22 @@
 import { tileAt, type Overlay, type Point, type World } from './types';
-import { ridgeLevel } from './ridges';
+import { reliefLevel, reliefHasHeightAdvantage } from './relief';
+import { hasMountainCover, mountainTerrainHandle } from './terrain-rays-native';
+import { rustEngine } from './rust-engine';
 
 export const HIGH_GROUND_SIGHT_MULTIPLIER = 1.5;
 
-/** Playable ledge tiers extend sight toward lower ground. Cover still consumes
+/** Walkable hills extend sight toward lower ground. Cover still consumes
  * the full ray; buildings opt out to retain their established sight ranges. */
-export function highGroundSightMultiplier(world: World | undefined, source: Point, target: Point, includeRidges = true): number {
-    if (!world || !includeRidges) return 1;
+export function highGroundSightMultiplier(world: World | undefined, source: Point, target: Point, includeRelief = true): number {
+    if (!world || !includeRelief) return 1;
     const observer = tileAt(world, source.x, source.y), destination = tileAt(world, target.x, target.y);
-    return observer && destination && ridgeLevel(observer) > ridgeLevel(destination) ? HIGH_GROUND_SIGHT_MULTIPLIER : 1;
+    return observer && destination && reliefHasHeightAdvantage(observer, destination) ? HIGH_GROUND_SIGHT_MULTIPLIER : 1;
 }
 
 /** Conservative search radius; target-specific height checks happen afterward. */
-export function maximumHighGroundSightMultiplier(world: World | undefined, source: Point, includeRidges = true): number {
+export function maximumHighGroundSightMultiplier(world: World | undefined, source: Point, includeRelief = true): number {
     const tile = world && tileAt(world, source.x, source.y);
-    return includeRidges && ridgeLevel(tile) > 0 ? HIGH_GROUND_SIGHT_MULTIPLIER : 1;
+    return includeRelief && reliefLevel(tile) > 0 ? HIGH_GROUND_SIGHT_MULTIPLIER : 1;
 }
 
 /** A tile of continuous woodland leaves 30% of the usual viewing distance. */
@@ -25,6 +27,7 @@ export function landCoverSightCost(overlay: Overlay | undefined): number {
 /** Skip ray traversal altogether for observers whose surroundings are open. */
 export function hasSightCover(world: World | undefined, source: Point, radius: number): boolean {
     if (!world) return false;
+    if (hasMountainCover(world, source, radius)) return true;
     const x0 = Math.max(0, Math.floor(source.x - radius)), x1 = Math.min(world.width - 1, Math.floor(source.x + radius));
     const y0 = Math.max(0, Math.floor(source.y - radius)), y1 = Math.min(world.height - 1, Math.floor(source.y + radius));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++)
@@ -38,6 +41,7 @@ export function hasSightCover(world: World | undefined, source: Point, radius: n
 export function sightDistance(world: World | undefined, source: Point, x: number, y: number, limit = Infinity): number {
     const dx = x - source.x, dy = y - source.y, distance = Math.hypot(dx, dy);
     if (!world || !world.tiles.length || !distance || distance > limit) return distance;
+    if (!rustEngine.terrain_rays_clear(mountainTerrainHandle(world), source.x, source.y, x, y, 1)) return Infinity;
     let tileX = Math.floor(source.x), tileY = Math.floor(source.y), t = 0, cost = 0;
     const stepX = Math.sign(dx), stepY = Math.sign(dy);
     const deltaX = dx ? 1 / Math.abs(dx) : Infinity, deltaY = dy ? 1 / Math.abs(dy) : Infinity;

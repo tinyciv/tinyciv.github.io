@@ -1,24 +1,25 @@
+import { cannonRearGoals } from './field-cannon-formation';
+import { cancelOffensive } from './offensive-native';
+import { whalingMovementSpeed } from './fishing';
+import { rustEngine } from './rust-engine';
+import { UNIT_KIND_CODES } from './entity-store';
+import { militaryFormationCode, militaryFormationType, type MilitaryFormationType } from './military-academy';
 import { simulationReadsActive } from './simulation-reads';
 import { announceArmyMobilization } from './army-warnings';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { CHECK_INTERVAL } from './work-cadence';
+import { marauderFormationElapsed } from './marauder-schedule';
 import { buildingBlockerView, canMove, canWalk, findPath } from './pathfinding';
 import { playerFaction } from './player-context';
 import { isInfantryDrillUnlocked } from './research';
 import { entityStore } from './entity-store';
+import { requestMovementPath } from './movement-path-schedule';
 import { beginBattleRout } from './battle-morale';
 import { distance, isSoldier, type GameState, type InputState, type Point, type Unit } from './types';
 
 export const INFANTRY_FORMATION_SPEED = .7 * 1.5;
 export const INFANTRY_CATCHUP_MULTIPLIER = 1.25;
 export const INFANTRY_SPACING = .72;
-export const INFANTRY_FORMATION_ASPECT = 1.6;
-export const LARGE_INFANTRY_FORMATION_ASPECT = 2.2;
-export const LARGE_INFANTRY_FORMATION_THRESHOLD = 30;
-export const infantryFormationAspect = (soldiers: number): number => soldiers > LARGE_INFANTRY_FORMATION_THRESHOLD
-  ? LARGE_INFANTRY_FORMATION_ASPECT : INFANTRY_FORMATION_ASPECT;
-export const INFANTRY_ATTACK_MULTIPLIER = 1.25;
-export const INFANTRY_DEFENSE_MULTIPLIER = 1.5;
 export const INFANTRY_FORMATION_MIN_START = 8;
 export const INFANTRY_FORMATION_MIN_REMAINING = 5;
 const BODY_RADIUS = .17, SETTLED_DISTANCE = .008;
@@ -26,18 +27,19 @@ const copy = (point: Point): Point => ({ x: point.x, y: point.y });
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const angleDelta = (from: number, to: number): number => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 export interface InfantryFormationState {
-  active: boolean; heading: number; manualFacing?: boolean; lastTurnAt?: number; mode: 'rectangle' | 'column'; modeSince: number;
+  type?: MilitaryFormationType; active: boolean; heading: number; manualFacing?: boolean; lastTurnAt?: number; mode: 'rectangle' | 'column'; modeSince: number;
   slots: { id: number; x: number; y: number }[];
   spine: Point[]; lengths: number[]; progress: number; goalDistance: number; goal?: Point;
   history: Point[]; slow: boolean;
 }
 interface Runtime {
   world: GameState['world']; keyboard: boolean; keyboardPlanAt: number; keyboardHeading: number;
-  keyboardX: number; keyboardY: number; revision?: number; goals: Map<number, Point>;
+  keyboardX: number; keyboardY: number; goals: Map<number, Point>;
   routes: Map<number, { path: Point[]; target: Point; retryAt: number }>;
   adjusted: Set<number>; temporary: Map<number, Point>;
   searchBudgets: Map<number, { until: number; remaining: number }>;
   validatedSlots?: InfantryFormationState['slots'];
+  validatedType?: MilitaryFormationType;
   validatedRoles?: Map<number, Unit['kind']>;
   planning: DecisionClock; members: Unit[]; byId: Map<number, Unit>; speed: number; outer: number;
 }
@@ -107,10 +109,13 @@ export function toggleInfantryFormation(state: GameState): { ok: boolean; messag
     return { ok: true, message: 'Formation released.' };
   }
   if (!isInfantryDrillUnlocked(state.factions.find(candidate => candidate.id === faction))) return { ok: false, message: 'Research Infantry Drill first.' };
-  if (!available(leader)) return { ok: false, message: 'Your Leader must be alive and on land.' };
-  if (infantryFormationSoldierCount(state, faction) < INFANTRY_FORMATION_MIN_START)
-    return { ok: false, message: `Formation requires ${INFANTRY_FORMATION_MIN_START} living retinue soldiers.` };
-  leader.infantryFormation = { active: true, heading: leader.facing, mode: 'rectangle', modeSince: state.time,
+  if (!available(leader)) return { ok: false, message: leader.order === 'flee' ? 'Wait for your Leader to rally before forming ranks.'
+    : leader.boardingBoat !== undefined ? 'Finish or cancel boarding before forming ranks.' : 'Bring your Leader ashore before forming ranks.' };
+  const soldiers = infantryFormationSoldierCount(state, faction);
+  if (soldiers < INFANTRY_FORMATION_MIN_START)
+    return { ok: false, message: `Formation needs ${INFANTRY_FORMATION_MIN_START} available soldiers on land (${soldiers}/${INFANTRY_FORMATION_MIN_START}). Training, routed and garrisoned troops cannot form ranks.` };
+  cancelOffensive(state, faction);
+  leader.infantryFormation = { type: militaryFormationType(state, faction), active: true, heading: leader.facing, mode: 'rectangle', modeSince: state.time,
     slots: [], spine: [], lengths: [], progress: 0, goalDistance: 0, history: [copy(leader)], slow: false };
   runtimes.delete(leader);
   for (const unit of state.units) if (unit === leader || eligible(unit, leader)) {
@@ -121,53 +126,21 @@ export function toggleInfantryFormation(state: GameState): { ok: boolean; messag
   announceArmyMobilization(state, leader, 'formation');
   return { ok: true, message: 'Forming ranks around the Leader.' };
 }
-/** Balanced ranks describe a rectangle, rather than filling a diamond outward
- * from its center. Local x is forward, so the longer y axis is across the march.
- * Choose the most compact rank count, then expand spacing on just one axis to
- * reach 1.6:1 (2.2:1 above thirty soldiers) without crowding ordinary drill spacing.
- * The Leader occupies the center; even retinues retain opposite slot pairs. */
-export function infantryRectangleOffsets(count: number): Point[] {
+/** Native drill geometry fixes the rank count at two, three or four. */
+export function infantryRectangleOffsets(count: number, type: MilitaryFormationType = 'standard'): Point[] {
   count = Math.max(0, Math.floor(count));
-  const aspect = infantryFormationAspect(count);
-  if (!count) return [];
-  if (count <= 2) return [{ x: -INFANTRY_SPACING / aspect, y: -INFANTRY_SPACING },
-    { x: INFANTRY_SPACING / aspect, y: INFANTRY_SPACING }].slice(0, count);
-  // An odd number leaves one vacancy in otherwise symmetric ranks. Removing
-  // an interior slot below keeps the bounding rectangle and Leader centered.
-  const total = count + count % 2 + 1;
-  let layout: { ranks: number[]; depthSpacing: number; widthSpacing: number; width: number } | undefined;
-  for (let rows = 3; rows <= Math.max(3, Math.ceil(Math.sqrt(total)) + 2); rows += 2) {
-    const base = Math.floor(total / rows), middle = base % 2 ? base : base + 1, paired = total - middle;
-    const perRank = Math.floor(paired / (rows - 1));
-    if (perRank < 1) continue;
-    const extraPairs = (paired - perRank * (rows - 1)) / 2, half = (rows - 1) / 2;
-    const ranks = Array.from({ length: rows }, (_, row) => row === half ? middle
-      : perRank + Number(Math.min(row, rows - 1 - row) < extraPairs));
-    const columns = Math.max(...ranks);
-    const width = Math.max((columns - 1) * INFANTRY_SPACING, (rows - 1) * INFANTRY_SPACING * aspect);
-    if (!layout || width < layout.width - 1e-9)
-      layout = { ranks, width, widthSpacing: width / (columns - 1), depthSpacing: width / aspect / (rows - 1) };
-  }
-  const { ranks, depthSpacing, widthSpacing } = layout!, result: Point[] = [];
-  for (let row = 0; row < ranks.length; row++) for (let column = 0; column < ranks[row]; column++) {
-    const x = (row - (ranks.length - 1) / 2) * depthSpacing, y = (column - (ranks[row] - 1) / 2) * widthSpacing;
-    if (x || y) result.push({ x, y });
-  }
-  if (result.length > count) {
-    // Prefer the vacancy nearest the center, rather than clipping a corner.
-    let nearest = 0;
-    for (let index = 1; index < result.length; index++)
-      if (Math.hypot(result[index].x, result[index].y) < Math.hypot(result[nearest].x, result[nearest].y)) nearest = index;
-    result.splice(nearest, 1);
-  }
-  return result;
+  const code = militaryFormationCode(type);
+  return Array.from({ length: count }, (_, index) => ({
+    x: rustEngine.infantry_formation_offset(count, code, index, 0),
+    y: rustEngine.infantry_formation_offset(count, code, index, 1),
+  }));
 }
-function synchronizeSlots(formation: InfantryFormationState, members: Unit[], rt: Runtime): void {
+function synchronizeSlots(state: GameState, formation: InfantryFormationState, members: Unit[], rt: Runtime): void {
   const byId = new Map(members.map(unit => [unit.id, unit]));
-  if (rt.validatedSlots === formation.slots && formation.slots.length === members.length
+  if (rt.validatedType === formation.type && rt.validatedSlots === formation.slots && formation.slots.length === members.length
     && members.every(unit => rt.validatedRoles?.get(unit.id) === unit.kind)) return;
   const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : unit.kind === 'archer' || unit.range > 1.5 ? 'ranged' : 'melee';
-  const offsets = infantryRectangleOffsets(members.length);
+  const offsets = infantryRectangleOffsets(members.length, formation.type);
   // Local +x is forward and y is lateral. The least protected troops occupy
   // the outer wings; ranged regulars take the rear among the remaining cells.
   const levyCount = members.filter(unit => role(unit) === 'levy').length;
@@ -175,7 +148,7 @@ function synchronizeSlots(formation: InfantryFormationState, members: Unit[], rt
   const rangedCount = members.filter(unit => role(unit) === 'ranged').length;
   const rear = new Set(offsets.filter(offset => !wings.has(offset)).sort((a, b) => a.x - b.x || Math.abs(a.y) - Math.abs(b.y) || a.y - b.y).slice(0, rangedCount));
   const slotRole = (offset: Point) => wings.has(offset) ? 'levy' : rear.has(offset) ? 'ranged' : 'melee';
-  const valid = formation.slots.length === members.length && formation.slots.every(slot => {
+  const valid = rt.validatedType === formation.type && formation.slots.length === members.length && formation.slots.every(slot => {
     const member = byId.get(slot.id), offset = offsets.find(point => point.x === slot.x && point.y === slot.y);
     return !!member && !!offset && role(member) === slotRole(offset);
   });
@@ -191,7 +164,8 @@ function synchronizeSlots(formation: InfantryFormationState, members: Unit[], rt
     const next = remaining.findIndex(unit => role(unit) === slotRole(offsets[index]));
     slots[index].id = remaining.splice(next, 1)[0].id;
   }
-  formation.slots = slots; rt.validatedSlots = slots; rt.validatedRoles = new Map(members.map(unit => [unit.id, unit.kind]));
+  const artilleryRear = cannonRearGoals(state, members, new Map(slots.map(slot => [slot.id, { x: slot.x, y: slot.y }])), { x: 0, y: 0 }, 0);
+  formation.slots = slots.map(slot => ({ id: slot.id, ...artilleryRear.get(slot.id)! })); rt.validatedType = formation.type; rt.validatedSlots = formation.slots; rt.validatedRoles = new Map(members.map(unit => [unit.id, unit.kind]));
 }
 
 /** The game permits diagonal point navigation at touching tile corners. Close
@@ -214,8 +188,17 @@ export function infantrySegmentClear(state: GameState, from: Point, to: Point, f
     return (x - from.x - t * dx) ** 2 + (y - from.y - t * dy) ** 2;
   };
   const blockers = buildingBlockerView(state, faction), radiusSquared = BODY_RADIUS * BODY_RADIUS - 1e-9;
-  for (let y = Math.floor(Math.min(from.y, to.y) - BODY_RADIUS); y <= Math.floor(Math.max(from.y, to.y) + BODY_RADIUS); y++)
-    for (let x = Math.floor(Math.min(from.x, to.x) - BODY_RADIUS); x <= Math.floor(Math.max(from.x, to.x) + BODY_RADIUS); x++) {
+  const minX = Math.floor(Math.min(from.x, to.x) - BODY_RADIUS), maxX = Math.floor(Math.max(from.x, to.x) + BODY_RADIUS);
+  for (let y = Math.floor(Math.min(from.y, to.y) - BODY_RADIUS); y <= Math.floor(Math.max(from.y, to.y) + BODY_RADIUS); y++) {
+    // Only the narrow swept body can touch an obstacle. Clipping the segment
+    // to this row's expanded vertical interval avoids testing every tile in a
+    // potentially continent-sized rectangle for a long diagonal detour.
+    const a = dy ? clamp((y - BODY_RADIUS - from.y) / dy, 0, 1) : 0;
+    const b = dy ? clamp((y + 1 + BODY_RADIUS - from.y) / dy, 0, 1) : 1;
+    const ax = from.x + a * dx, bx = from.x + b * dx;
+    const rowMin = Math.max(minX, Math.floor(Math.min(ax, bx) - BODY_RADIUS));
+    const rowMax = Math.min(maxX, Math.floor(Math.max(ax, bx) + BODY_RADIUS));
+    for (let x = rowMin; x <= rowMax; x++) {
       if (canWalk(state, x, y, faction, blockers)) continue;
       // With center-line crossings already rejected above, the closest pair
       // is an endpoint against a box edge, or a box corner against the segment.
@@ -225,9 +208,13 @@ export function infantrySegmentClear(state: GameState, from: Point, to: Point, f
       if (Math.min(endpoint(from), endpoint(to), pointSegmentSquared(x, y), pointSegmentSquared(x + 1, y),
         pointSegmentSquared(x, y + 1), pointSegmentSquared(x + 1, y + 1)) < radiusSquared) return false;
     }
+  }
   return true;
 }
-function route(state: GameState, from: Point, to: Point, faction: number): Point[] {
+/** Smooth a route using bounded shortcut probes. A nearer waypoint is fine
+ * when a farther shortcut cannot be proven clear; every accepted segment still
+ * uses the exact swept-body collision test. */
+export function infantryRoute(state: GameState, from: Point, to: Point, faction: number): Point[] {
   if (!infantryPointClear(state, to, faction)) return [];
   if (infantrySegmentClear(state, from, to, faction)) return [copy(to)];
   const raw = findPath(state, from, to, faction, false, undefined, undefined, undefined, true);
@@ -236,9 +223,21 @@ function route(state: GameState, from: Point, to: Point, faction: number): Point
   if (!infantrySegmentClear(state, from, raw[0], faction) && infantrySegmentClear(state, from, centered, faction)) raw.unshift(centered);
   const path: Point[] = []; let origin = from, index = 0;
   while (index < raw.length) {
-    let end = raw.length - 1;
-    while (end > index && !infantrySegmentClear(state, origin, raw[end], faction)) end--;
-    if (!infantrySegmentClear(state, origin, raw[end], faction)) return [];
+    if (!infantrySegmentClear(state, origin, raw[index], faction)) return [];
+    let end = index, blocked = raw.length;
+    // Forward doubling avoids testing the whole remaining route backwards
+    // for each corner of a long winding path. Visibility need not be monotone:
+    // skipping a later visible shortcut only retains an extra safe waypoint.
+    for (let stride = 1; end < raw.length - 1; stride *= 2) {
+      const candidate = Math.min(raw.length - 1, index + stride);
+      if (!infantrySegmentClear(state, origin, raw[candidate], faction)) { blocked = candidate; break; }
+      end = candidate;
+    }
+    while (blocked - end > 1) {
+      const candidate = (end + blocked) >>> 1;
+      if (infantrySegmentClear(state, origin, raw[candidate], faction)) end = candidate;
+      else blocked = candidate;
+    }
     path.push(raw[end]); origin = raw[end]; index = end + 1;
   }
   return path;
@@ -280,8 +279,11 @@ function memberRoute(state: GameState, rt: Runtime, unit: Unit, target: Point): 
     budget = { until: state.time + CHECK_INTERVAL, remaining: 2 }; rt.searchBudgets.set(unit.id, budget);
   }
   if (budget.remaining <= 0) return;
+  // A hidden group's wake-up must share the same fair route budget as other
+  // moving units. Deferral retains both local search credit and any old route.
+  if (!requestMovementPath(state, unit)) return;
   budget.remaining--;
-  return route(state, unit, target, unit.faction);
+  return infantryRoute(state, unit, target, unit.faction);
 }
 function plannedRoute(state: GameState, rt: Runtime, unit: Unit, target: Point): Point[] {
   let pending = rt.routes.get(unit.id);
@@ -355,7 +357,7 @@ function walk(state: GameState, runtime: Runtime, unit: Unit, target: Point, spe
 
 /** The whole group moves before its combat decisions, independent of save-file
  * unit order. Normal live movement still handles enemy traffic and terrain pace. */
-export function advanceInfantryFormations(state: GameState, dt: number, inputFor: (faction: number) => InputState, move: InfantryMove): void {
+export function advanceInfantryFormations(state: GameState, frameDt: number, inputFor: (faction: number) => InputState, move: InfantryMove): void {
   let strengthClock = strengthClocks.get(state);
   if (!strengthClock) { strengthClock = {}; strengthClocks.set(state, strengthClock); }
   if (!simulationReadsActive(state) || decisionDue(strengthClock, state.time, 913)) {
@@ -367,11 +369,24 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
     if (!leader.infantryFormation?.active) continue;
     const form = leader.infantryFormation, previousHeading = form.heading;
     if (leader.marauderLeader ? !available(leader) : !infantryFormationActive(state, leader.faction)) { form.active = false; continue; }
-    const rt = runtime(state, leader), think = !simulationReadsActive(state) || decisionDue(rt.planning, state.time, leader.id);
+    const rt = runtime(state, leader);
+    let dt = frameDt;
+    if (leader.marauderLeader && rt.members.length) {
+      dt = marauderFormationElapsed(state, leader, rt.members, frameDt);
+      if (!dt) {
+        // Keep combat membership valid even on a skipped hidden movement step.
+        leader.infantryDrillLeader = leader.id;
+        for (const member of rt.members) if (eligible(member, leader)) member.infantryDrillLeader = leader.id;
+        continue;
+      }
+    }
+    const think = !simulationReadsActive(state) || decisionDue(rt.planning, state.time, leader.id);
     if (think) {
+      form.type = militaryFormationType(state, leader.faction);
       rt.members = (simulationReadsActive(state) ? entityStore(state).units.query('soldier') : state.units).filter(unit => eligible(unit, leader));
-      synchronizeSlots(form, rt.members, rt);
-      if (rt.revision !== state.world.revision) { rt.routes.clear(); rt.revision = state.world.revision; }
+      synchronizeSlots(state, form, rt.members, rt);
+      // Each retained route validates its next segment below. Distant roads,
+      // crop appearance and unrelated construction need not discard it.
       rt.byId = new Map(rt.members.map(unit => [unit.id, unit]));
       rt.speed = Math.min(leader.speed, ...rt.members.map(unit => unit.speed)) * INFANTRY_FORMATION_SPEED;
       rt.outer = Math.max(1, ...form.slots.map(slot => Math.hypot(slot.x, slot.y)));
@@ -379,7 +394,7 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
     const members = rt.members, byId = rt.byId;
     leader.infantryDrillLeader = leader.id;
     for (const member of members) member.infantryDrillLeader = leader.id;
-    const speed = rt.speed;
+    const speed = whalingMovementSpeed(state, leader.faction, rt.speed);
     const catchup = speed * INFANTRY_CATCHUP_MULTIPLIER, input = inputFor(leader.faction);
     const turn = Number(!!input.turnRight) - Number(!!input.turnLeft);
     const outer = rt.outer;
@@ -403,7 +418,7 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
     } else if (rt.keyboard) { form.goal = undefined; form.goalDistance = form.progress; }
     rt.keyboard = keyboard;
     if (!keyboard && leader.destination && (!form.goal || distance(form.goal, leader.destination) > .01)) {
-      const path = route(state, leader, leader.destination, leader.faction);
+      const path = infantryRoute(state, leader, leader.destination, leader.faction);
       if (path.length) { setRoute(state, leader, leader.destination, path); if (!input.turnLeft && !input.turnRight) form.manualFacing = false; }
       else { form.goal = undefined; leader.destination = undefined; }
     }
@@ -443,6 +458,7 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
         const goal = localGoal(state, leader, member, point, rt, reserved); rt.goals.set(member.id, goal);
         if (distance(goal, point) > .001) reserved.push(goal);
       }
+      cannonRearGoals(state, members, rt.goals, leader, form.heading, id => { rt.adjusted.add(id); rt.routes.delete(id); });
       const mode = rt.adjusted.size ? 'column' : 'rectangle';
       if (mode !== form.mode) { form.mode = mode; form.modeSince = state.time; }
     }
@@ -457,6 +473,7 @@ export function advanceInfantryFormations(state: GameState, dt: number, inputFor
       if (!eligible(member, leader)) { member.infantryDrillLeader = undefined; continue; }
       const goal = rt.goals.get(member.id);
       if (!goal) continue;
+      if (member.kind === 'fieldCannon') continue; // Native artillery movement consumes this same goal.
       walk(state, rt, member, goal, catchup, dt, move); member.facing = form.heading;
       if (distance(member, goal) < .5) member.joiningRetinue = undefined;
     }
@@ -481,10 +498,18 @@ function formationFront(state: GameState, unit: Unit, other: Point): boolean {
   return Math.cos(angleDelta(leader.infantryFormation!.heading, Math.atan2(other.y - unit.y, other.x - unit.x))) >= .5 - 1e-9;
 }
 export function infantryAttackMultiplier(state: GameState, unit: Unit, other: Point): number {
-  return formationFront(state, unit, other) ? INFANTRY_ATTACK_MULTIPLIER : 1;
+  const front = formationFront(state, unit, other);
+  return rustEngine.infantry_formation_modifier(militaryFormationCode(infantryFormationLeader(state, unit)?.infantryFormation?.type), UNIT_KIND_CODES[unit.kind], 0, Number(front), Number(front));
 }
 export function infantryDefenseMultiplier(state: GameState, unit: Unit, other: Point): number {
-  return formationFront(state, unit, other) ? INFANTRY_DEFENSE_MULTIPLIER : 1;
+  const front = formationFront(state, unit, other);
+  return rustEngine.infantry_formation_modifier(militaryFormationCode(infantryFormationLeader(state, unit)?.infantryFormation?.type), UNIT_KIND_CODES[unit.kind], 1, Number(front), Number(front));
+}
+/** Wide missile ranks trade frontal protection for a faster firing cycle. */
+export function infantryAttackCooldown(state: GameState, unit: Unit, cooldown: number): number {
+  const leader = infantryFormationLeader(state, unit), goal = leader && infantryFormationGoal(state, unit);
+  return rustEngine.infantry_formation_cooldown(militaryFormationCode(leader?.infantryFormation?.type), UNIT_KIND_CODES[unit.kind],
+    Number(!!leader), Number(unit === leader), goal ? distance(unit, goal) : NaN, cooldown);
 }
 /** Briefly retain the direction cue after a turn so releasing a key does not
  * abruptly flash it off. Both held rotation and automatic wheeling update it. */

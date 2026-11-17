@@ -1,0 +1,32 @@
+[
+  {
+    "source": "assets/resources/mountain-ore/ore-1.png",
+    "output": "assets/runtime/game/ore-1.webp",
+    "transform": "ore-atlas",
+    "family": 0,
+    "alias": false
+  },
+  {
+    "source": "assets/resources/mountain-ore/ore-2.png",
+    "output": "assets/runtime/game/ore-2.webp",
+    "transform": "ore-atlas",
+    "family": 1,
+    "alias": false
+  },
+  {
+    "source": "assets/resources/mountain-ore/ore-3.png",
+    "output": "assets/runtime/game/ore-3.webp",
+    "transform": "ore-atlas",
+    "family": 2,
+    "alias": false
+  },
+  {
+    "source": "assets/puny-world/dungeon.png",
+    "output": "assets/runtime/game/monument.webp",
+    "crop": [368, 288, 16, 16],
+    "width": 16,
+    "height": 16,
+    "resample": "nearest",
+    "alias": false
+  }
+]

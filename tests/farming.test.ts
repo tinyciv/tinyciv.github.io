@@ -87,6 +87,7 @@ describe('compact farmland and food deliveries', () => {
     const state = realm(), food = state.factions[0].food;
     const collectorIds = state.units.filter(unit => unit.collector).map(unit => unit.id);
     for (const field of state.fields!) { field.food = 3; field.nextHarvest = 1000; }
+    updateHarvests(state);
     let loaded = false;
     for (let step = 0; step < 250; step++) {
       advance(state, .1);
@@ -266,7 +267,7 @@ describe('compact farmland and food deliveries', () => {
     expect(state.factions[0].food).toBe(food + FIELD_HARVEST_FOOD / 2);
   });
 
-  it('ripens a connected crop block together and uses one shared peasant to sweep it', () => {
+  it('ripens a connected crop block together and uses one shared peasant to pick it up', () => {
     const state = realm(), camps = state.buildings.filter(building => building.kind === 'camp');
     const starts = camps.map(camp => state.fields!.find(field => field.camp === camp.id)!.nextHarvest);
     expect(starts[0]).toBe(starts[1]);
@@ -290,7 +291,7 @@ describe('compact farmland and food deliveries', () => {
 
   it('walks from the palace, picks up a bag, and credits it only upon returning', () => {
     const state = realm(), field = state.fields![0], player = state.factions[0];
-    field.food = 3;
+    field.food = 3; updateHarvests(state);
     const originalFood = player.food;
     advance(state, .2);
     const collector = state.units.find(unit => unit.field === field.id)!;
@@ -310,7 +311,7 @@ describe('compact farmland and food deliveries', () => {
     const state = realm(), field = state.fields![0], player = state.factions[0];
     const guard = state.units.find(unit => unit.kind === 'warrior')!;
     guard.order = 'hold';
-    field.food = 3;
+    field.food = 3; updateHarvests(state);
     const food = player.food;
     advance(state, .2);
     const collector = state.units.find(unit => unit.field === field.id)!;
@@ -339,7 +340,7 @@ describe('compact farmland and food deliveries', () => {
     entityStore(state).buildings.add({ id: 1000, kind: 'tower', faction: 0, x: palace.x + 3, y: palace.y + 1, hp: 1200, maxHp: 1200, capacity: 0 });
     synchronizeFarms(state);
     const field = state.fields!.find(field => field.x === palace.x + 3 && field.y === palace.y + 2)!;
-    field.food = 3;
+    field.food = 3; updateHarvests(state);
     const food = state.factions[0].food;
     advance(state, 8);
     expect(field.food).toBe(0);
@@ -349,21 +350,16 @@ describe('compact farmland and food deliveries', () => {
     expect(guard.y).toBe(palace.y + 2.27);
   });
 
-  it('walks toward a bag beside another peasant and collects it once the pickup point is clear', () => {
-    const state = realm(), field = state.fields![0];
+  it('collects a parcel while another peasant stands on its crop', () => {
+    const state = realm(), field = state.fields![0], food = state.factions[0].food;
     const guard = state.units.find(unit => unit.kind === 'warrior')!;
     entityStore(state).setUnitRole(guard, { kind: 'worker' }); guard.order = 'work'; guard.x = field.x + .5; guard.y = field.y + .5;
-    field.food = 3;
-    advance(state, 1);
-    const courier = state.units.find(unit => unit.collector && unit.field === field.id)!;
-    expect(courier).toBeDefined(); expect(courier.inside).toBe(false);
-    expect(field.food).toBe(3);
-    advance(state, 8);
-    expect(Math.hypot(courier.x-guard.x,courier.y-guard.y)).toBeGreaterThanOrEqual(.28-1e-5);
-    guard.x = 25.5; guard.y = 25.5;
+    field.food = 3; updateHarvests(state);
+    const courier = state.units.find(unit => unit.collector)!;
     advance(state, 8);
     expect(field.food).toBe(0);
     expect(courier.inside).toBe(true);
+    expect(state.factions[0].food).toBe(food + 3);
   });
 
   it('leaves food behind an impassable wall instead of teleporting or crediting it', () => {
@@ -387,7 +383,7 @@ describe('compact farmland and food deliveries', () => {
 
   it('preserves bags, harvest timing and couriers in transit across save migration', () => {
     const state = realm(), field = state.fields![0];
-    field.food = 7; advance(state, .2);
+    field.food = 7; updateHarvests(state); advance(state, .2);
     const collector = state.units.find(unit => unit.field === field.id)!;
     const restored = migrateGame(JSON.parse(JSON.stringify(state)) as GameState);
     expect(restored.fields!.find(other => other.id === field.id)?.food).toBe(7);

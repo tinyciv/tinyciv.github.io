@@ -1,7 +1,7 @@
 import { constructionEdges } from './builders';
 import { canWalk, hasStaticPath, withNavigationFrame } from './pathfinding';
 import { validateNetworkPlacement } from './network-placement';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefFootprintAllowed } from './relief';
 import { buildingHeight, buildingWidth, isWallKind, tileAt, WATER, type Building, type GameState, type Point } from './types';
 
 export const FACTION_CITY_TOWERS = 4;
@@ -33,7 +33,7 @@ function planner(state: GameState, palace: Building): (tower: Point) => FactionT
   const buildable = (point: Point): boolean => {
     const tile = tileAt(state.world, point.x, point.y);
     return !!tile && !tile.marsh && !WATER.has(tile.terrain) && !['volcano', 'glacier'].includes(tile.overlay)
-      && ridgeFootprintAllowed(state.world, point.x, point.y);
+      && reliefFootprintAllowed(state.world, point.x, point.y);
   };
   return tower => {
     const walls: Point[] = [];

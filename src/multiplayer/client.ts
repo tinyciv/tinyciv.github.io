@@ -1,8 +1,9 @@
+import { encodeMessage, decodeMessage } from './wire';
 import type { GameState, InputState, Unit } from '../game/types';
 import { PROTOCOL_VERSION, type ClientMessage, type ServerMessage, type LobbyRoom, type MatchOptions, type GameCommand, type CommandResult } from './protocol';
 import { INPUT_KEYS, NO_INPUT, validatedInput } from './input';
 import { ClientStateReplica } from './client-state';
-import { recordWorldTileChanges, worldRevisions } from '../game/world-revisions';
+import { recordReplicatedWorldChanges, worldRevisions } from '../game/world-revisions';
 
 interface ClientEvents {
   onRooms(rooms: LobbyRoom[]): void;
@@ -64,6 +65,7 @@ export class MultiplayerClient {
     this.events.onStatus(this.reconnectAttempt ? 'Reconnecting...' : 'Connecting...');
     const promise = new Promise<void>((resolve, reject) => {
       const socket = this.socket = new WebSocket(url);
+      socket.binaryType = 'arraybuffer';
       let welcomed = false;
       const timer = setTimeout(() => { reject(new Error('Connection timed out.')); socket.close(); }, 12000);
       this.cancelConnect = () => { clearTimeout(timer); reject(new Error('Connection cancelled.')); };
@@ -71,7 +73,7 @@ export class MultiplayerClient {
       socket.onmessage = event => {
         if (this.socket !== socket) return;
         let message: ServerMessage;
-        try { message = JSON.parse(event.data); } catch { return; }
+        try { message = decodeMessage<ServerMessage>(new Uint8Array(event.data)); } catch { return; }
         if (message.type === 'welcome') {
           if (message.version !== PROTOCOL_VERSION) { reject(new Error('Reload the game to update multiplayer.')); socket.close(); return; }
           welcomed = true; clearTimeout(timer); this.connected = true; this.token = message.token; this.playerId = message.playerId;
@@ -136,8 +138,7 @@ export class MultiplayerClient {
         if (message.sequence !== this.sequence + 1) { this.send({ type: 'sync' }); break; }
         worldRevisions(this.state.world);
         if (message.tiles) for (const [index, tile] of message.tiles) this.state.world.tiles[index] = tile;
-        if (message.worldRevision !== undefined) this.state.world.revision = message.worldRevision;
-        if (message.tiles?.length) recordWorldTileChanges(this.state.world, message.tiles.map(([index]) => index));
+        recordReplicatedWorldChanges(this.state.world, message.worldRevision, message.tiles?.map(([index]) => index) ?? []);
         const now = performance.now(), duration = Math.max(60, Math.min(160, now - this.previousFrameAt));
         this.previousFrameAt = now;
         let displayX = 0, displayY = 0;
@@ -180,7 +181,7 @@ export class MultiplayerClient {
   }
   private send(message: ClientMessage): boolean {
     if (this.socket?.readyState !== WebSocket.OPEN) return false;
-    this.socket.send(JSON.stringify(message)); return true;
+    this.socket.send(encodeMessage(message)); return true;
   }
   list(): void { this.send({ type: 'list' }); }
   create(name: string, playerName: string, color: string, options: MatchOptions): void { this.send({ type: 'create', name, playerName, color, options }); }

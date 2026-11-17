@@ -67,11 +67,13 @@ describe('approved armed civilian artwork', () => {
     expect(auxiliaryBody(unit).marauderPack).toBeUndefined();
     expect(unit.kind).toBe('supplyCart'); expect(unit.armorLevel).toBe(6);
   });
-  it('provides dedicated faction-colored garrison and three-person levy emblems', () => {
-    const garrison = militaryActionIcon('garrison', '#c94c4c'), levy = militaryActionIcon('levy', '#c94c4c');
-    expect(garrison).toContain('garrison-action-icon'); expect(garrison).toContain('#c94c4c');
-    expect(levy.match(/<g transform/g)).toHaveLength(3); expect(levy).toContain('levy-action-icon');
+  it('provides dedicated decorative garrison and levy imagegen emblems', () => {
+    const garrison = militaryActionIcon('garrison'), levy = militaryActionIcon('levy');
+    expect(garrison).toContain('garrison-action-icon'); expect(levy).toContain('levy-action-icon');
+    for (const markup of [garrison, levy]) {
+      expect(markup).toContain('<span'); expect(markup).toContain('aria-hidden="true"');
+      expect(markup).toContain('assets/ui/military/actions-simple.png'); expect(markup).not.toContain('<svg');
+    }
     expect(levy).not.toBe(garrison);
-    expect(militaryActionIcon('levy', '\" onload=\"attack()')).not.toContain('onload');
   });
 });

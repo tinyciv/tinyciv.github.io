@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { createGame, housingCapacity, migrateGame, updateGame } from '../src/game/simulation';
+import { BUILD_COSTS, createGame, housingCapacity, migrateGame, updateGame } from '../src/game/simulation';
 import { ensureCollectors, fieldHarvestYield, harvestFoodPerEconomyCycle, synchronizeFarms } from '../src/game/farms';
 import { buildingReady, buildingSize, isFarmKind, type GameState, type World } from '../src/game/types';
 import { PALACE_FOOD_PER_CYCLE } from '../src/game/city-support';
@@ -66,7 +66,7 @@ describe('automatic residential housing', () => {
     expect(houses(state)).toHaveLength(6);
     const house = houses(state).find(home => home.construction)!;
     expect(house.capacity).toBe(2); expect(buildingSize(house)).toBe(1);
-    expect(house.construction).toMatchObject({ waitingForBuilder: true, paidGold: 65, duration: 40 / 3 });
+    expect(house.construction).toMatchObject({ waitingForBuilder: true, paidGold: BUILD_COSTS.house.gold, duration: 40 / 3 });
     expect(housingCapacity(state)).toBe(12);
     expect(fields).not.toContain(`${house.x},${house.y}`);
     expect(roads.some(road => road.x === house.x && road.y === house.y)).toBe(false);

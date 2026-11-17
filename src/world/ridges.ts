@@ -138,6 +138,45 @@ export function placeRidges(tiles: Tile[], width: number, height: number, seed: 
   harmonizeRidgeTerrain(world);
 }
 
+/** A ledge must border walkable upper ground. Shelf parts only one or two tiles
+ * across draw as two cliff outlines around a "floor" that is zero tiles wide and
+ * can never be walked. Lower such cells a tier (to flat ground at tier one)
+ * until every remaining ledge has a top, then drop stairs left without one.
+ * Canyon banks and waterfalls keep their ledges: the river is their floor. */
+export function removeFloorlessLedges(world: World): number {
+  const { tiles, width, height } = world;
+  const nearWater = (x: number, y: number) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+    const n = tiles[(y + dy) * width + x + dx]; return !!n && (WATER.has(n.terrain) || !!n.waterfall);
+  });
+  const hasTop = (x: number, y: number, tile: Tile) => {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const n = tiles[(y + dy) * width + x + dx];
+      if (n?.ridge === tile.ridge && ridgeLevel(n) >= ridgeLevel(tile) && (n.stair || !ridgeIsLedge(world, x + dx, y + dy))) return true;
+    }
+    return false;
+  };
+  let lowered = 0;
+  for (let changed = true; changed;) {
+    changed = false;
+    const floorless: number[] = [];
+    for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
+      const tile = tiles[y * width + x];
+      if (!tile.ridge || tile.stair || !ridgeIsLedge(world, x, y) || nearWater(x, y) || hasTop(x, y, tile)) continue;
+      floorless.push(y * width + x);
+    }
+    for (const i of floorless) {
+      const tile = tiles[i];
+      if (ridgeLevel(tile) > 1) tile.ridgeTier = (ridgeLevel(tile) - 1) as Tile['ridgeTier'];
+      else { delete tile.ridge; delete tile.ridgeTier; }
+      lowered++; changed = true;
+    }
+  }
+  if (lowered) for (let i = 0; i < tiles.length; i++)
+    if (tiles[i].stair && !ridgeGroundWalkable(world, i % width, Math.floor(i / width))) delete tiles[i].stair;
+  return lowered;
+}
+
 /** A native ledge and its two-cell apron share one ground palette. Overlapping
  * aprons form a group, so a later hill cannot repaint an earlier hill's edge. */
 export function harmonizeRidgeTerrain(world: World): void {

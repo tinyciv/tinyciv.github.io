@@ -1,0 +1,359 @@
+{
+  "status": "complete",
+  "generations": 3,
+  "matches": 228,
+  "incumbent": "hard-assault",
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "history": [
+    {
+      "generation": 1,
+      "candidates": [
+        "evo-g1-c1",
+        "evo-g1-c2",
+        "evo-g1-c3"
+      ],
+      "rejections": [],
+      "previousIncumbent": "hard-assault",
+      "challenger": "evo-g1-c1",
+      "promoted": false,
+      "incumbent": "hard-assault",
+      "evidence": {
+        "positive": 0,
+        "negative": 2,
+        "tied": 10,
+        "pairs": 12,
+        "seeds": 12,
+        "signTestP": 1,
+        "byScenario": {
+          "field-battle": -3
+        },
+        "alpha": 0.016666666666666666,
+        "faults": false
+      },
+      "rejectedForLogicFaults": [],
+      "screening": {
+        "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+        "table": [
+          {
+            "policy": "evo-g1-c1",
+            "matches": 18,
+            "wins": 4,
+            "draws": 14,
+            "losses": 0,
+            "points": 26,
+            "winRate": 0.222222,
+            "meanSurvivingArmyHP": 349.211222
+          },
+          {
+            "policy": "evo-g1-c3",
+            "matches": 18,
+            "wins": 2,
+            "draws": 14,
+            "losses": 2,
+            "points": 20,
+            "winRate": 0.111111,
+            "meanSurvivingArmyHP": 280.425926
+          },
+          {
+            "policy": "hard-assault",
+            "matches": 18,
+            "wins": 0,
+            "draws": 16,
+            "losses": 2,
+            "points": 16,
+            "winRate": 0,
+            "meanSurvivingArmyHP": 287.887778
+          },
+          {
+            "policy": "evo-g1-c2",
+            "matches": 18,
+            "wins": 0,
+            "draws": 16,
+            "losses": 2,
+            "points": 16,
+            "winRate": 0,
+            "meanSurvivingArmyHP": 287.887778
+          }
+        ],
+        "uniqueLeader": "evo-g1-c1",
+        "byScenario": {
+          "field-battle": [
+            {
+              "policy": "hard-assault",
+              "wins": 0,
+              "draws": 16,
+              "losses": 2
+            },
+            {
+              "policy": "evo-g1-c1",
+              "wins": 4,
+              "draws": 14,
+              "losses": 0
+            },
+            {
+              "policy": "evo-g1-c2",
+              "wins": 0,
+              "draws": 16,
+              "losses": 2
+            },
+            {
+              "policy": "evo-g1-c3",
+              "wins": 2,
+              "draws": 14,
+              "losses": 2
+            }
+          ]
+        }
+      },
+      "archive": [
+        "hard-assault",
+        "evo-g1-c1"
+      ]
+    },
+    {
+      "generation": 2,
+      "candidates": [
+        "evo-g2-c1",
+        "evo-g2-c2",
+        "evo-g2-c3"
+      ],
+      "rejections": [],
+      "previousIncumbent": "hard-assault",
+      "challenger": "evo-g2-c3",
+      "promoted": false,
+      "incumbent": "hard-assault",
+      "evidence": {
+        "positive": 5,
+        "negative": 1,
+        "tied": 6,
+        "pairs": 12,
+        "seeds": 12,
+        "signTestP": 0.10937500000000003,
+        "byScenario": {
+          "field-battle": 6
+        },
+        "alpha": 0.016666666666666666,
+        "faults": false
+      },
+      "rejectedForLogicFaults": [],
+      "screening": {
+        "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+        "table": [
+          {
+            "policy": "evo-g2-c3",
+            "matches": 24,
+            "wins": 12,
+            "draws": 8,
+            "losses": 4,
+            "points": 44,
+            "winRate": 0.5,
+            "meanSurvivingArmyHP": 294.740875
+          },
+          {
+            "policy": "evo-g1-c1",
+            "matches": 24,
+            "wins": 8,
+            "draws": 7,
+            "losses": 9,
+            "points": 31,
+            "winRate": 0.333333,
+            "meanSurvivingArmyHP": 278.029875
+          },
+          {
+            "policy": "evo-g2-c1",
+            "matches": 24,
+            "wins": 8,
+            "draws": 7,
+            "losses": 9,
+            "points": 31,
+            "winRate": 0.333333,
+            "meanSurvivingArmyHP": 261.173375
+          },
+          {
+            "policy": "evo-g2-c2",
+            "matches": 24,
+            "wins": 8,
+            "draws": 7,
+            "losses": 9,
+            "points": 31,
+            "winRate": 0.333333,
+            "meanSurvivingArmyHP": 278.029875
+          },
+          {
+            "policy": "hard-assault",
+            "matches": 24,
+            "wins": 7,
+            "draws": 5,
+            "losses": 12,
+            "points": 26,
+            "winRate": 0.291667,
+            "meanSurvivingArmyHP": 254.131833
+          }
+        ],
+        "uniqueLeader": "evo-g2-c3",
+        "byScenario": {
+          "field-battle": [
+            {
+              "policy": "hard-assault",
+              "wins": 7,
+              "draws": 5,
+              "losses": 12
+            },
+            {
+              "policy": "evo-g1-c1",
+              "wins": 8,
+              "draws": 7,
+              "losses": 9
+            },
+            {
+              "policy": "evo-g2-c1",
+              "wins": 8,
+              "draws": 7,
+              "losses": 9
+            },
+            {
+              "policy": "evo-g2-c2",
+              "wins": 8,
+              "draws": 7,
+              "losses": 9
+            },
+            {
+              "policy": "evo-g2-c3",
+              "wins": 12,
+              "draws": 8,
+              "losses": 4
+            }
+          ]
+        }
+      },
+      "archive": [
+        "hard-assault",
+        "evo-g2-c3"
+      ]
+    },
+    {
+      "generation": 3,
+      "candidates": [
+        "evo-g3-c1",
+        "evo-g3-c2",
+        "evo-g3-c3"
+      ],
+      "rejections": [],
+      "previousIncumbent": "hard-assault",
+      "challenger": "evo-g2-c3",
+      "promoted": false,
+      "incumbent": "hard-assault",
+      "evidence": {
+        "positive": 4,
+        "negative": 1,
+        "tied": 7,
+        "pairs": 12,
+        "seeds": 12,
+        "signTestP": 0.18749999999999994,
+        "byScenario": {
+          "field-battle": 4
+        },
+        "alpha": 0.016666666666666666,
+        "faults": false
+      },
+      "rejectedForLogicFaults": [],
+      "screening": {
+        "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+        "table": [
+          {
+            "policy": "evo-g2-c3",
+            "matches": 24,
+            "wins": 12,
+            "draws": 6,
+            "losses": 6,
+            "points": 42,
+            "winRate": 0.5,
+            "meanSurvivingArmyHP": 294.338354
+          },
+          {
+            "policy": "hard-assault",
+            "matches": 24,
+            "wins": 10,
+            "draws": 6,
+            "losses": 8,
+            "points": 36,
+            "winRate": 0.416667,
+            "meanSurvivingArmyHP": 285.357757
+          },
+          {
+            "policy": "evo-g3-c2",
+            "matches": 24,
+            "wins": 10,
+            "draws": 6,
+            "losses": 8,
+            "points": 36,
+            "winRate": 0.416667,
+            "meanSurvivingArmyHP": 285.357757
+          },
+          {
+            "policy": "evo-g3-c1",
+            "matches": 24,
+            "wins": 9,
+            "draws": 4,
+            "losses": 11,
+            "points": 31,
+            "winRate": 0.375,
+            "meanSurvivingArmyHP": 291.69466
+          },
+          {
+            "policy": "evo-g3-c3",
+            "matches": 24,
+            "wins": 4,
+            "draws": 8,
+            "losses": 12,
+            "points": 20,
+            "winRate": 0.166667,
+            "meanSurvivingArmyHP": 198.22025
+          }
+        ],
+        "uniqueLeader": "evo-g2-c3",
+        "byScenario": {
+          "field-battle": [
+            {
+              "policy": "hard-assault",
+              "wins": 10,
+              "draws": 6,
+              "losses": 8
+            },
+            {
+              "policy": "evo-g2-c3",
+              "wins": 12,
+              "draws": 6,
+              "losses": 6
+            },
+            {
+              "policy": "evo-g3-c1",
+              "wins": 9,
+              "draws": 4,
+              "losses": 11
+            },
+            {
+              "policy": "evo-g3-c2",
+              "wins": 10,
+              "draws": 6,
+              "losses": 8
+            },
+            {
+              "policy": "evo-g3-c3",
+              "wins": 4,
+              "draws": 8,
+              "losses": 12
+            }
+          ]
+        }
+      },
+      "archive": [
+        "hard-assault",
+        "evo-g2-c3"
+      ]
+    }
+  ]
+}

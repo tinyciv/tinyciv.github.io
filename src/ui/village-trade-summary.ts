@@ -22,6 +22,6 @@ export function villageTradeSummary(quote: Quote): string {
     <dl>
       <div${quote.hasResource ? '' : ' class="is-current"'}><dt>Without ${resource}</dt><dd>${without}</dd></div>
       <div${quote.hasResource ? ' class="is-current"' : ''}><dt>With ${resource} · 4×</dt><dd>${withResource}</dd></div>
-    </dl>${quote.routeAvailable ? '' : '<p class="village-trade-unreachable">No reachable settlement.</p>'}
+    </dl>${quote.routeAvailable ? '' : '<p class="village-trade-unreachable">No reachable town.</p>'}
   </section>`;
 }

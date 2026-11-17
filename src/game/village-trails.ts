@@ -1,4 +1,5 @@
 import TinyQueue from 'tinyqueue';
+import { reliefBuildable } from './relief';
 import { groundMovementMultiplier } from './geography';
 import { canTraverseEdge, invalidateNavigation, traversable } from './pathfinding';
 import type { RoadLinks } from './road-sprites';
@@ -42,7 +43,7 @@ export function removeVillageTrailAt(world: World, x: number, y: number): boolea
 }
 
 /** A small deterministic spanning network joins every reachable village group.
- * Search traverses real ground, stairs and existing fords. New crossings are
+ * Search traverses walkable hills and existing fords. New crossings are
  * atomic straight river spans with two legal dry banks; open sea and lakes
  * never become a disguised bridge. Work is bounded to six searches per village
  * and one settled visit per map cell in each search. No per-frame upkeep. */
@@ -66,9 +67,9 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
   }
   const point = (cell: number): Point => ({ x: cell % width, y: Math.floor(cell / width) });
   const open = Uint8Array.from(tiles, (tile, cell) => Number(!blocked[cell] && (traversable(world, cell % width, Math.floor(cell / width))
-    || bridges.has(cell) && WATER.has(tile.terrain) && !tile.ridge && !tile.stair)));
+    || bridges.has(cell) && WATER.has(tile.terrain) && !tile.relief)));
   const legalEdge = (from: number, to: number): boolean => canTraverseEdge(world, point(from), point(to));
-  const dryBank = (cell: number): boolean => !!open[cell] && !WATER.has(tiles[cell].terrain) && !tiles[cell].ridge && !tiles[cell].stair;
+  const dryBank = (cell: number): boolean => !!open[cell] && !WATER.has(tiles[cell].terrain) && reliefBuildable(tiles[cell]);
   const crossings = new Map<number, Crossing[]>();
   for (let cell = 0; cell < count; cell++) {
     if (!dryBank(cell)) continue;
@@ -86,7 +87,7 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
           }
           break;
         }
-        if (tile.terrain !== 'river' || tile.ridge || tile.stair || blocked[next] || water.length === VILLAGE_TRAIL_MAX_FORD_SPAN) break;
+        if (tile.terrain !== 'river' || tile.relief || blocked[next] || water.length === VILLAGE_TRAIL_MAX_FORD_SPAN) break;
         water.push(next); previous = next;
       }
     }

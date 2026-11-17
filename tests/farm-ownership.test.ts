@@ -4,6 +4,7 @@ import { ensureCollectors, synchronizeFarms, updateHarvests, FARM_ABANDON_SECOND
 import { updateGame } from '../src/game/simulation';
 import { type Building, type GameState, tileAt } from '../src/game/types';
 import { updateWallOwnership, WALL_CLAIM_RADIUS } from '../src/game/wall-ownership';
+import { worldChangesSince } from '../src/game/world-revisions';
 
 function fixture(): GameState {
   return {
@@ -35,11 +36,14 @@ describe('local farm claims', () => {
     const before = crops.map(crop => ({ id: crop.id, nextHarvest: crop.nextHarvest }));
     farm.farmLastVisitedAt = 12;
     expect(updateWallOwnership(state)).toBe(false);
+    const cursor = worldChangesSince(state.world).revision;
     support.hp = 0;
     expect(updateWallOwnership(state)).toBe(true);
     expect(farm.faction).toBe(0);
     expect(farm.farmLastVisitedAt).toBe(12);
     expect(state.fields).toBe(crops);
+    expect(worldChangesSince(state.world, cursor)).toMatchObject({ full: false,
+      cells: crops.map(crop => crop.y * state.world.width + crop.x) });
     expect(crops.map(crop => ({ id: crop.id, nextHarvest: crop.nextHarvest }))).toEqual(before);
     for (const crop of crops) {
       expect(crop).toMatchObject({ faction: 0, food: 2, expiresAt: 70, foodBatches: [{ amount: 2, expiresAt: 70 }] });

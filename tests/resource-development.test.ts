@@ -152,9 +152,11 @@ describe('resource development and faction benefits', () => {
     const s = state(); deposit(s, 'copper', [[11, 10], [12, 10], [11, 11], [12, 11]]);
     expect(resourceDevelopmentStatus(s, 11, 10)).toMatchObject({ ok: true, cost: 200, developedCount: 0, totalCount: 4, city: { id: 1 } });
     s.factions[0].gold = 199;
-    expect(developResourceGroup(s, 11, 10).ok).toBe(false); expect(s.factions[0].gold).toBe(199);
-    expect(resourceDevelopmentStatus(s, 11, 10)).toMatchObject({ ok: false, resource: 'copper', city: { id: 1 }, cost: 200 });
-    s.factions[0].gold = 250;
+    expect(resourceDevelopmentStatus(s, 11, 10)).toMatchObject({ ok: true, cost: 150, remainingCount: 1 });
+    expect(developResourceGroup(s, 11, 10).ok).toBe(true); expect(s.factions[0].gold).toBe(49);
+    expect(factionDevelopedResourceCount(s, 0, 'copper')).toBe(3);
+    expect(resourceDevelopmentStatus(s, 11, 10)).toMatchObject({ ok: false, resource: 'copper', city: { id: 1 }, cost: 50 });
+    s.factions[0].gold = 100;
     expect(developResourceGroup(s, 11, 10).ok).toBe(true); expect(s.factions[0].gold).toBe(50);
     expect(factionHasDevelopedResource(s, 0, 'copper')).toBe(true);
     expect(resourceDevelopmentStatus(s, 11, 10)).toMatchObject({ ok: false, developedCount: 4, cost: 0, resource: 'copper' });
@@ -202,10 +204,34 @@ describe('resource development and faction benefits', () => {
     expect(oliveVillageTradeMultiplier(s, 0)).toBeCloseTo(1.12);
   });
 
+  it('tracks local deposit edits through cosmetic updates, ground changes and tile replacement', () => {
+    const s = state(), cell = 10 * s.world.width + 11;
+    deposit(s, 'salt', [[11, 10]], true);
+    expect(factionDevelopedResourceCount(s, 0, 'salt')).toBe(1);
+    s.world.tiles[cell].variation = .8;
+    markWorldChanged(s.world, 'appearance', [cell]);
+    expect(factionDevelopedResourceCount(s, 0, 'salt')).toBe(1);
+    s.world.tiles[cell].resource = 'olives';
+    markWorldChanged(s.world, 'appearance', [cell]);
+    expect(factionDevelopedResourceCount(s, 0, 'salt')).toBe(0);
+    expect(factionDevelopedResourceCount(s, 0, 'olives')).toBe(1);
+    s.world.tiles[cell].creek = true;
+    markWorldChanged(s.world, 'geometry', [cell]);
+    expect(factionDevelopedResourceCount(s, 0, 'olives')).toBe(0);
+    s.world.tiles[cell].creek = false;
+    markWorldChanged(s.world, 'geometry', [cell]);
+    expect(factionDevelopedResourceCount(s, 0, 'olives')).toBe(1);
+    s.world.tiles = s.world.tiles.map(tile => ({ ...tile, resourceDeveloped: false }));
+    expect(factionDevelopedResourceCount(s, 0, 'olives')).toBe(0);
+  });
+
   it('lets governors buy an affordable patch within their maintenance-reserved budget', () => {
     const s = state(); s.buildings[0].faction = 1;
     deposit(s, 'copper', [[11, 10], [12, 10], [11, 11], [12, 11]]);
-    expect(autoDevelopResources(s, 1, 199).ok).toBe(false);
+    expect(autoDevelopResources(s, 1, 49).ok).toBe(false);
+    expect(autoDevelopResources(s, 1, 199).ok).toBe(true);
+    expect(factionDevelopedResourceCount(s, 1, 'copper')).toBe(3);
+    expect(s.factions[1].gold).toBe(4850);
     expect(autoDevelopResources(s, 1, 200).ok).toBe(true);
     expect(s.factions[1].gold).toBe(4800);
     expect(factionHasDevelopedResource(s, 1, 'copper')).toBe(true);

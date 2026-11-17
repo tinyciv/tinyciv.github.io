@@ -2,7 +2,7 @@ import type { GameState, InputState, PlayerControlState } from './types';
 
 export const playerFaction = (state: GameState): number => state.playerFaction ?? 0;
 export const isHumanFaction = (state: GameState, faction: number): boolean =>
-  state.multiplayer ? state.multiplayer.humanFactionIds.includes(faction) : faction === 0;
+  state.scenarioPreparing ? false : state.multiplayer ? state.multiplayer.humanFactionIds.includes(faction) : faction === 0;
 const activeContexts = new WeakMap<GameState, number>();
 const NO_INPUT: InputState = { up: false, down: false, left: false, right: false };
 

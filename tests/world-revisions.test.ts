@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markWorldChanged, recordWorldTileChanges, worldChangesSince, worldRevisions } from '../src/game/world-revisions';
+import { markWorldChanged, recordWorldTileChanges, worldChangesSince, worldSightChangesSince, worldRevisions } from '../src/game/world-revisions';
 import type { World } from '../src/game/types';
 
 const fixture = (): World => ({ width: 2, height: 2, seed: 'semantic-world', source: 'test', revision: 0, spawns: [],
@@ -7,6 +7,37 @@ const fixture = (): World => ({ width: 2, height: 2, seed: 'semantic-world', sou
     moisture: .5, food: 1, production: 1, gold: 0, variation: .5 })) });
 
 describe('semantic world revisions', () => {
+  it('keeps sight history independent of cosmetic edits, including cosmetic journal overflow', () => {
+    const world = fixture(), all = worldChangesSince(world).revision, sight = worldSightChangesSince(world).revision;
+    for (let i = 0; i < 1100; i++) markWorldChanged(world, 'appearance', [2]);
+    recordWorldTileChanges(world, [3]); markWorldChanged(world, 'structure', [0]);
+    expect(worldChangesSince(world, all).full).toBe(true);
+    expect(worldSightChangesSince(world, sight)).toEqual({ revision: sight, full: false, cells: [] });
+    // A generator may be consumed only once when populating both journals.
+    markWorldChanged(world, 'sight', (function* () { yield 1; yield 1; })());
+    markWorldChanged(world, 'geometry', [0]);
+    expect(worldSightChangesSince(world, sight)).toEqual({ revision: sight + 2, full: false, cells: [0, 1] });
+  });
+
+  it('keeps sight readers conservative after unknown edits, replacements and sight history overflow', () => {
+    const world = fixture();
+    let cursor = worldSightChangesSince(world).revision;
+    world.revision!++; markWorldChanged(world, 'appearance', [2]);
+    expect(worldSightChangesSince(world, cursor).full).toBe(true);
+    cursor = worldSightChangesSince(world).revision;
+    world.tiles = world.tiles.map(tile => ({ ...tile }));
+    expect(worldSightChangesSince(world, cursor).full).toBe(true);
+    cursor = worldSightChangesSince(world).revision;
+    markWorldChanged(world, 'sight');
+    expect(worldSightChangesSince(world, cursor).full).toBe(true);
+    cursor = worldSightChangesSince(world).revision;
+    for (let i = 0; i < 1100; i++) markWorldChanged(world, 'sight', [i % 4]);
+    expect(worldSightChangesSince(world, cursor).full).toBe(true);
+    const fresh = worldSightChangesSince(world).revision;
+    expect(worldSightChangesSince(world, fresh)).toEqual({ revision: fresh, full: false, cells: [] });
+    expect(worldSightChangesSince(world, fresh + 1).full).toBe(true);
+  });
+
   it('lets independent consumers read deduplicated tile edits without structural false positives', () => {
     const world = fixture(), start = worldChangesSince(world);
     expect(start.full).toBe(true);

@@ -1,0 +1,1046 @@
+{
+  "generator": "PixelLab API edit-images-v2",
+  "approved": "Crowned civilian 1A",
+  "dimensions": [
+    288,
+    256
+  ],
+  "cell": [
+    32,
+    32
+  ],
+  "rows": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "columns": [
+    "idle",
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4",
+    "attack1",
+    "attack2",
+    "attack3",
+    "attack4"
+  ],
+  "references": "Original civilian motion and approved 1A, one batch per source direction",
+  "processing": "Original palette; hard alpha; crown/head retained while oversized lower torsos are shortened with nearest-neighbor; feet aligned; western directions mirrored; exact approved south idle and approved crown retained in rear views.",
+  "sha256": "c73d3c57a7f958ba7d3154d118372c3f3ef47a69ada32250afdf9759c07fc8c6",
+  "frames": [
+    {
+      "direction": "S",
+      "frame": 0,
+      "bbox": [
+        9,
+        7,
+        23,
+        23
+      ],
+      "source": "S-01.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "S",
+      "frame": 1,
+      "bbox": [
+        9,
+        6,
+        23,
+        23
+      ],
+      "source": "S-02.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "S",
+      "frame": 2,
+      "bbox": [
+        11,
+        6,
+        23,
+        23
+      ],
+      "source": "S-03.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "S",
+      "frame": 3,
+      "bbox": [
+        9,
+        6,
+        23,
+        23
+      ],
+      "source": "S-04.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "S",
+      "frame": 4,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "S-05.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "S",
+      "frame": 5,
+      "bbox": [
+        8,
+        6,
+        21,
+        23
+      ],
+      "source": "S-06.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "S",
+      "frame": 6,
+      "bbox": [
+        8,
+        6,
+        21,
+        23
+      ],
+      "source": "S-07.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "S",
+      "frame": 7,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "S-08.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "S",
+      "frame": 8,
+      "bbox": [
+        13,
+        8,
+        25,
+        23
+      ],
+      "source": "S-09.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "SE",
+      "frame": 0,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "SE-01.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 1,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "SE-02.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 2,
+      "bbox": [
+        11,
+        6,
+        24,
+        23
+      ],
+      "source": "SE-03.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "SE",
+      "frame": 3,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "SE-04.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 4,
+      "bbox": [
+        13,
+        7,
+        23,
+        23
+      ],
+      "source": "SE-05.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 5,
+      "bbox": [
+        8,
+        7,
+        22,
+        23
+      ],
+      "source": "SE-06.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 6,
+      "bbox": [
+        8,
+        7,
+        22,
+        23
+      ],
+      "source": "SE-07.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 7,
+      "bbox": [
+        13,
+        7,
+        26,
+        23
+      ],
+      "source": "SE-08.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SE",
+      "frame": 8,
+      "bbox": [
+        13,
+        8,
+        26,
+        23
+      ],
+      "source": "SE-09.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "E",
+      "frame": 0,
+      "bbox": [
+        13,
+        7,
+        23,
+        23
+      ],
+      "source": "E-01.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "E",
+      "frame": 1,
+      "bbox": [
+        13,
+        6,
+        23,
+        23
+      ],
+      "source": "E-02.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "E",
+      "frame": 2,
+      "bbox": [
+        13,
+        7,
+        23,
+        23
+      ],
+      "source": "E-03.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "E",
+      "frame": 3,
+      "bbox": [
+        13,
+        6,
+        23,
+        23
+      ],
+      "source": "E-04.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "E",
+      "frame": 4,
+      "bbox": [
+        13,
+        7,
+        24,
+        23
+      ],
+      "source": "E-05.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "E",
+      "frame": 5,
+      "bbox": [
+        12,
+        7,
+        23,
+        23
+      ],
+      "source": "E-06.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "E",
+      "frame": 6,
+      "bbox": [
+        12,
+        7,
+        23,
+        23
+      ],
+      "source": "E-07.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "E",
+      "frame": 7,
+      "bbox": [
+        13,
+        8,
+        26,
+        23
+      ],
+      "source": "E-08.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "E",
+      "frame": 8,
+      "bbox": [
+        13,
+        8,
+        26,
+        23
+      ],
+      "source": "E-09.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "NE",
+      "frame": 0,
+      "bbox": [
+        11,
+        7,
+        23,
+        23
+      ],
+      "source": "NE-01.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "NE",
+      "frame": 1,
+      "bbox": [
+        11,
+        6,
+        23,
+        23
+      ],
+      "source": "NE-02.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 2,
+      "bbox": [
+        9,
+        6,
+        22,
+        23
+      ],
+      "source": "NE-03.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 3,
+      "bbox": [
+        11,
+        6,
+        23,
+        23
+      ],
+      "source": "NE-04.png",
+      "mirrored": false,
+      "originalHeight": 18,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 4,
+      "bbox": [
+        13,
+        6,
+        23,
+        23
+      ],
+      "source": "NE-05.png",
+      "mirrored": false,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 5,
+      "bbox": [
+        12,
+        6,
+        25,
+        23
+      ],
+      "source": "NE-06.png",
+      "mirrored": false,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 6,
+      "bbox": [
+        11,
+        6,
+        26,
+        23
+      ],
+      "source": "NE-07.png",
+      "mirrored": false,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 7,
+      "bbox": [
+        11,
+        6,
+        25,
+        23
+      ],
+      "source": "NE-08.png",
+      "mirrored": false,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NE",
+      "frame": 8,
+      "bbox": [
+        10,
+        6,
+        25,
+        23
+      ],
+      "source": "NE-09.png",
+      "mirrored": false,
+      "originalHeight": 19,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 0,
+      "bbox": [
+        9,
+        7,
+        23,
+        23
+      ],
+      "source": "N-01.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 16
+    },
+    {
+      "direction": "N",
+      "frame": 1,
+      "bbox": [
+        9,
+        6,
+        23,
+        23
+      ],
+      "source": "N-02.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 2,
+      "bbox": [
+        11,
+        6,
+        23,
+        23
+      ],
+      "source": "N-03.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 3,
+      "bbox": [
+        9,
+        6,
+        23,
+        23
+      ],
+      "source": "N-04.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 4,
+      "bbox": [
+        11,
+        6,
+        23,
+        23
+      ],
+      "source": "N-05.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 5,
+      "bbox": [
+        13,
+        6,
+        26,
+        23
+      ],
+      "source": "N-06.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 6,
+      "bbox": [
+        13,
+        6,
+        26,
+        23
+      ],
+      "source": "N-07.png",
+      "mirrored": false,
+      "originalHeight": 16,
+      "finalHeight": 17
+    },
+    {
+      "direction": "N",
+      "frame": 7,
+      "bbox": [
+        9,
+        7,
+        24,
+        23
+      ],
+      "source": "N-08.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 16
+    },
+    {
+      "direction": "N",
+      "frame": 8,
+      "bbox": [
+        11,
+        7,
+        25,
+        23
+      ],
+      "source": "N-09.png",
+      "mirrored": false,
+      "originalHeight": 15,
+      "finalHeight": 16
+    },
+    {
+      "direction": "NW",
+      "frame": 0,
+      "bbox": [
+        9,
+        7,
+        21,
+        23
+      ],
+      "source": "NE-01.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "NW",
+      "frame": 1,
+      "bbox": [
+        9,
+        6,
+        21,
+        23
+      ],
+      "source": "NE-02.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 2,
+      "bbox": [
+        10,
+        6,
+        23,
+        23
+      ],
+      "source": "NE-03.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 3,
+      "bbox": [
+        9,
+        6,
+        21,
+        23
+      ],
+      "source": "NE-04.png",
+      "mirrored": true,
+      "originalHeight": 18,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 4,
+      "bbox": [
+        9,
+        6,
+        19,
+        23
+      ],
+      "source": "NE-05.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 5,
+      "bbox": [
+        7,
+        6,
+        20,
+        23
+      ],
+      "source": "NE-06.png",
+      "mirrored": true,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 6,
+      "bbox": [
+        6,
+        6,
+        21,
+        23
+      ],
+      "source": "NE-07.png",
+      "mirrored": true,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 7,
+      "bbox": [
+        7,
+        6,
+        21,
+        23
+      ],
+      "source": "NE-08.png",
+      "mirrored": true,
+      "originalHeight": 20,
+      "finalHeight": 17
+    },
+    {
+      "direction": "NW",
+      "frame": 8,
+      "bbox": [
+        7,
+        6,
+        22,
+        23
+      ],
+      "source": "NE-09.png",
+      "mirrored": true,
+      "originalHeight": 19,
+      "finalHeight": 17
+    },
+    {
+      "direction": "W",
+      "frame": 0,
+      "bbox": [
+        9,
+        7,
+        19,
+        23
+      ],
+      "source": "E-01.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "W",
+      "frame": 1,
+      "bbox": [
+        9,
+        6,
+        19,
+        23
+      ],
+      "source": "E-02.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "W",
+      "frame": 2,
+      "bbox": [
+        9,
+        7,
+        19,
+        23
+      ],
+      "source": "E-03.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "W",
+      "frame": 3,
+      "bbox": [
+        9,
+        6,
+        19,
+        23
+      ],
+      "source": "E-04.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "W",
+      "frame": 4,
+      "bbox": [
+        8,
+        7,
+        19,
+        23
+      ],
+      "source": "E-05.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "W",
+      "frame": 5,
+      "bbox": [
+        9,
+        7,
+        20,
+        23
+      ],
+      "source": "E-06.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "W",
+      "frame": 6,
+      "bbox": [
+        9,
+        7,
+        20,
+        23
+      ],
+      "source": "E-07.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "W",
+      "frame": 7,
+      "bbox": [
+        6,
+        8,
+        19,
+        23
+      ],
+      "source": "E-08.png",
+      "mirrored": true,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "W",
+      "frame": 8,
+      "bbox": [
+        6,
+        8,
+        19,
+        23
+      ],
+      "source": "E-09.png",
+      "mirrored": true,
+      "originalHeight": 15,
+      "finalHeight": 15
+    },
+    {
+      "direction": "SW",
+      "frame": 0,
+      "bbox": [
+        9,
+        7,
+        21,
+        23
+      ],
+      "source": "SE-01.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 1,
+      "bbox": [
+        9,
+        7,
+        21,
+        23
+      ],
+      "source": "SE-02.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 2,
+      "bbox": [
+        8,
+        6,
+        21,
+        23
+      ],
+      "source": "SE-03.png",
+      "mirrored": true,
+      "originalHeight": 17,
+      "finalHeight": 17
+    },
+    {
+      "direction": "SW",
+      "frame": 3,
+      "bbox": [
+        9,
+        7,
+        21,
+        23
+      ],
+      "source": "SE-04.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 4,
+      "bbox": [
+        9,
+        7,
+        19,
+        23
+      ],
+      "source": "SE-05.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 5,
+      "bbox": [
+        10,
+        7,
+        24,
+        23
+      ],
+      "source": "SE-06.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 6,
+      "bbox": [
+        10,
+        7,
+        24,
+        23
+      ],
+      "source": "SE-07.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 7,
+      "bbox": [
+        6,
+        7,
+        19,
+        23
+      ],
+      "source": "SE-08.png",
+      "mirrored": true,
+      "originalHeight": 16,
+      "finalHeight": 16
+    },
+    {
+      "direction": "SW",
+      "frame": 8,
+      "bbox": [
+        6,
+        8,
+        19,
+        23
+      ],
+      "source": "SE-09.png",
+      "mirrored": true,
+      "originalHeight": 15,
+      "finalHeight": 15
+    }
+  ]
+}

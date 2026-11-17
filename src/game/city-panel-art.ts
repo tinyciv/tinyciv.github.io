@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 let panel: HTMLImageElement | undefined;
 let loading: Promise<void> | undefined;
 
@@ -5,7 +6,7 @@ let loading: Promise<void> | undefined;
 export function loadCityPanelArt(): Promise<void> {
     return loading ??= (async () => {
         const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}assets/ui/city-panel-walnut.png`;
+        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/ui/city-panel-walnut.png`);
         await image.decode();
         if (image.naturalWidth !== 103 || image.naturalHeight !== 20) throw new Error('Invalid city panel artwork.');
         panel = image;

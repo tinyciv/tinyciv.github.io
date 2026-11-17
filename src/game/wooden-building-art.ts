@@ -1,6 +1,6 @@
 import type { Building, HouseStyle } from './types';
 import { drawPuny, loadPunyWorld, punyWorldImage } from './puny-world';
-import { drawPunyBuildingTile, drawPunyBuildingRegion, nativeHouseTier, NATIVE_BUILDINGS } from './puny-building-art';
+import { drawPunyBuildingTile, nativeHouseTier, NATIVE_BUILDINGS } from './puny-building-art';
 import { drawHouseVariant } from './house-variant-art';
 
 /** Compatibility entry points for callers of the former generated art set. */
@@ -15,20 +15,6 @@ export function drawWoodenHouse(c: CanvasRenderingContext2D, building: Pick<Buil
   if (drawHouseVariant(c, building, x, y, size, color)) return;
   const source = NATIVE_BUILDINGS.houses[nativeHouseTier(building)];
   drawPunyBuildingTile(c, source.column, source.row, x, y, size, size, color);
-}
-
-/** Mounted platforms retain short timber brackets; the wall supports the rest.
- * Crop the original posts instead of shrinking their native pixel thickness. */
-export function drawWoodenTower(c: CanvasRenderingContext2D, x = 0, y = -24, size = 32, color = '#3988ff', mounted = false): void {
-  c.save(); c.translate(x, y + size * 24 / 32); c.scale(size / 32, size / 32);
-  for (const post of NATIVE_BUILDINGS.woodenTower.posts) {
-    const [sx, sy, sw, sh] = post.rect, [dx, dy, dw, dh] = post.destination;
-    const height = mounted ? 5 : sh;
-    drawPuny(c, sx, sy, sw, height, dx, dy, dw, dh * height / sh);
-  }
-  const platform = NATIVE_BUILDINGS.woodenTower.platform;
-  drawPunyBuildingRegion(c, platform.rect, ...platform.destination, color);
-  c.restore();
 }
 
 /** The caller clips road passages through these original timber gate posts. */

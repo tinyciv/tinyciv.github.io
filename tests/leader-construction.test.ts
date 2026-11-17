@@ -37,7 +37,7 @@ describe('Leader construction', () => {
     expect(buildAt(state, 'wall', 12, 10).ok).toBe(true);
     const fence = state.buildings.at(-1)!;
     expect(before - state.factions[0].gold).toBe(BUILD_COSTS.wall.gold);
-    expect(BUILD_COSTS.wall).toEqual({ gold: 30, food: 0, production: 0 });
+    expect(BUILD_COSTS.wall).toEqual({ gold: 15, food: 0, production: 0 });
     expect(CONSTRUCTION_SECONDS.wall).toBe(4);
     expect(fence).toMatchObject({ kind: 'wall', x: 12, y: 10, maxHp: 2250, armor: 2 });
     expect(fence.construction).toMatchObject({ duration: CONSTRUCTION_SECONDS.wall, waitingForBuilder: true });
@@ -50,7 +50,7 @@ describe('Leader construction', () => {
     extra(state, 'road', 11, 9);
     expect(buildStroke(state, first, line).placed).toBe(4);
     expect(buildStroke(state, second, line).placed).toBe(2);
-    expect(state.factions[0].gold).toBe(second === 'wall' ? 400 : 360);
+    expect(state.factions[0].gold).toBe(500 - 4 * BUILD_COSTS[first].gold - 2 * BUILD_COSTS[second].gold);
     expect(canWalk(state, 12.5, 9.5, 0)).toBe(true);
     for (const b of state.buildings) delete b.construction;
     expect(canWalk(state, 12.5, 9.5, 0)).toBe(true);

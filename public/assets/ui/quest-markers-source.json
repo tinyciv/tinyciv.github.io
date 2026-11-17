@@ -1,0 +1,9 @@
+{
+  "generator": "Built-in imagegen",
+  "date": "2026-11-15",
+  "asset": "quest-markers.png",
+  "layout": "3 columns by 3 rows; selected column 1. Rows: available yellow !, active gray ?, ready yellow ?.",
+  "variants": "Flat, restrained forged metal, softly painted; designed for 18px, 24px and 32px use.",
+  "source": "/Users/ckrapu/.codex/generated_images/01a1e0ad-f5c4-7f51-aff4-e58bacf947ed/exec-5bf448e8-032c-4ea5-95dc-02571fae053c.png",
+  "prompt": "Create ONE transparent-background UI atlas for a compact medieval strategy game's quest markers. Use a 3-column by 3-row grid of exactly nine isolated symbols, each centered in an equal square cell with generous transparent padding and no labels. Row 1: golden-yellow exclamation mark ! in each column. Row 2: silver-gray question mark ? in each column. Row 3: golden-yellow question mark ? in each column. Column 1 is extremely simple flat thick glyphs with a dark warm outline, designed to remain readable at 18px tall. Column 2 uses a restrained warm forged-metal finish, simple broad shapes with only one highlight, readable at 24px. Column 3 is a softly painted stylized fantasy finish, only slightly more dimensional, readable at 32px. Match a tiny classical/medieval strategy UI with warm ivory and muted bronze accents; gold is bright #f2c94c, gray is #aeb4bb, outline dark #25231d. These are clean UI symbols, NOT pixel art or sprite extractions. No badges, frames, coins, characters, landscape, shadows outside the outline, extra ornaments, words, or other marks. Make all columns use consistent alignment, height, and stroke weight within their set. Pixel Operator-like compact readable proportions for the ! and ?. The entire background and space between icons must be truly transparent. Output a square atlas so all nine cells have equal square dimensions."
+}

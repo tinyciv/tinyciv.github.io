@@ -1,9 +1,11 @@
+import { reliefBuildable } from './relief';
+import { territoryValue } from './territory-cells';
 import { territory, UNCLAIMED } from './borders';
 import { entityStore } from './entity-store';
 import { isHumanFaction, playerFaction, withPlayerFaction } from './player-context';
 import { pointExplored, updateFog } from './fog';
 import { spendGold } from './gold-ledger';
-import { markWorldChanged, worldRevisions, worldStructureRevision } from './world-revisions';
+import { markWorldChanged, worldChangesSince, worldStructureRevision } from './world-revisions';
 import { onResourceDeveloped } from './resource-workers';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, WATER,
   type Building, type GameState, type RegionalResource, type Tile } from './types';
@@ -12,7 +14,7 @@ export const RESOURCE_DEVELOPMENT_COST = 50;
 export const SALT_RESIDENTS_PER_TILE = 10;
 export const SALT_FOOD_REDUCTION = .25;
 export const OLIVE_VILLAGE_TRADE_BONUS_PER_TILE = .02;
-export const DEVELOPABLE_RESOURCES = ['copper', 'iron', 'stone', 'salt', 'olives'] as const;
+export const DEVELOPABLE_RESOURCES = ['copper', 'iron', 'gold', 'stone', 'salt', 'olives'] as const;
 export type DevelopableResource = typeof DEVELOPABLE_RESOURCES[number];
 export const isDevelopableResource = (resource: RegionalResource | undefined): resource is DevelopableResource =>
   resource !== undefined && (DEVELOPABLE_RESOURCES as readonly RegionalResource[]).includes(resource);
@@ -21,9 +23,10 @@ export interface ResourceDevelopmentStatus {
   ok: boolean;
   message: string;
   resource: DevelopableResource | undefined;
-  /** Newly developable tiles in this connected patch, within this city's borders. */
+  /** Affordable undeveloped tiles in this city's part of the patch; all candidates when blocked for lack of gold. */
   cells: number[];
   cost: number;
+  remainingCount: number;
   developedCount: number;
   totalCount: number;
   city: Building | undefined;
@@ -42,13 +45,44 @@ const increments = (map: Map<number, Map<RegionalResource, number>>, key: number
   counts.set(resource, (counts.get(resource) ?? 0) + 1);
 };
 export const resourceGroundAvailable = (tile: Tile | undefined): boolean => !!tile && !WATER.has(tile.terrain)
-  && !tile.creek && !tile.stair && !tile.mountainPass;
+  && !tile.creek && reliefBuildable(tile);
+
+interface ResourceCell { resource: DevelopableResource; developed: boolean; }
+interface ResourceCells {
+  tiles: Tile[]; cursor?: number; revision: number; cells: Map<number, ResourceCell>;
+}
+const deposits = new WeakMap<GameState['world'], ResourceCells>();
+
+/** Resource deposits are sparse and crop/road artwork does not change them.
+ * Consume the tile journal once, retaining only usable resource cells. */
+function resourceCells(world: GameState['world']): ResourceCells {
+  let result = deposits.get(world);
+  if (!result || result.tiles !== world.tiles) {
+    result = { tiles: world.tiles, revision: 0, cells: new Map() };
+    deposits.set(world, result);
+  }
+  const changes = worldChangesSince(world, result.cursor);
+  let changed = false;
+  const reconcile = (cell: number) => {
+    const tile = world.tiles[cell], previous = result.cells.get(cell);
+    if (!isDevelopableResource(tile.resource) || !resourceGroundAvailable(tile)) {
+      if (previous) { result.cells.delete(cell); changed = true; }
+    } else if (previous?.resource !== tile.resource || previous.developed !== !!tile.resourceDeveloped) {
+      result.cells.set(cell, { resource: tile.resource, developed: !!tile.resourceDeveloped }); changed = true;
+    }
+  };
+  if (changes.full) for (let cell = 0; cell < world.tiles.length; cell++) reconcile(cell);
+  else for (const cell of changes.cells) reconcile(cell);
+  if (changed) result.revision++;
+  result.cursor = changes.revision;
+  return result;
+}
 
 /** One ownership index serves all city food calculations, trade trips and
  * recruitment checks. Border/structure edits invalidate it; unit movement does not. */
 function resourceIndex(state: GameState): ResourceIndex {
   const borders = territory(state), world = state.world;
-  const revision = worldRevisions(world).appearance, structures = worldStructureRevision(world);
+  const resources = resourceCells(world), revision = resources.revision, structures = worldStructureRevision(world);
   const buildings = entityStore(state).buildings.revision, previous = indexes.get(state);
   if (previous?.world === world && previous.tiles === world.tiles && previous.revision === revision
     && previous.territoryRevision === borders.revision && previous.structures === structures && previous.buildings === buildings) return previous;
@@ -65,9 +99,9 @@ function resourceIndex(state: GameState): ResourceIndex {
   }
   const result: ResourceIndex = { world, tiles: world.tiles, revision, structures, buildings, territoryRevision: borders.revision,
     cityAt: new Int32Array(world.tiles.length).fill(-1), blocked, cities, cityCounts: new Map(), factionCounts: new Map(), ownedUndeveloped: new Map() };
-  for (let cell = 0; cell < world.tiles.length; cell++) {
-    const tile = world.tiles[cell], faction = borders.owners[cell];
-    if (!isDevelopableResource(tile.resource) || !resourceGroundAvailable(tile) || faction === UNCLAIMED) continue;
+  for (const [cell, resource] of resources.cells) {
+    const faction = territoryValue(borders, cell);
+    if (faction === UNCLAIMED) continue;
     const x = cell % world.width + .5, y = Math.floor(cell / world.width) + .5;
     let city: Building | undefined, best = Infinity;
     for (const candidate of citiesByFaction.get(faction) ?? []) {
@@ -77,8 +111,8 @@ function resourceIndex(state: GameState): ResourceIndex {
     if (!city) continue;
     result.cityAt[cell] = city.id;
     if (blocked[cell]) continue;
-    if (tile.resourceDeveloped) {
-      increments(result.cityCounts, city.id, tile.resource); increments(result.factionCounts, faction, tile.resource);
+    if (resource.developed) {
+      increments(result.cityCounts, city.id, resource.resource); increments(result.factionCounts, faction, resource.resource);
     } else {
       const list = result.ownedUndeveloped.get(faction) ?? []; list.push(cell); result.ownedUndeveloped.set(faction, list);
     }
@@ -93,8 +127,8 @@ export function resourceCityAt(state: GameState, x: number, y: number): Building
   const index = resourceIndex(state); return index.cities.get(index.cityAt[y * state.world.width + x]);
 }
 
-export function resourceDevelopmentStatus(state: GameState, x: number, y: number, faction = playerFaction(state)): ResourceDevelopmentStatus {
-  const result: ResourceDevelopmentStatus = { ok: false, message: '', resource: undefined, cells: [], cost: 0, developedCount: 0, totalCount: 0, city: undefined };
+export function resourceDevelopmentStatus(state: GameState, x: number, y: number, faction = playerFaction(state), budget = Infinity): ResourceDevelopmentStatus {
+  const result: ResourceDevelopmentStatus = { ok: false, message: '', resource: undefined, cells: [], cost: 0, remainingCount: 0, developedCount: 0, totalCount: 0, city: undefined };
   const fail = (message: string) => ({ ...result, message });
   if (!Number.isFinite(x) || !Number.isFinite(y)) return fail('Choose a resource deposit.');
   x = Math.floor(x); y = Math.floor(y);
@@ -128,12 +162,21 @@ export function resourceDevelopmentStatus(state: GameState, x: number, y: number
   }
   result.cells.sort((a, b) => a - b); result.cost = result.cells.length * RESOURCE_DEVELOPMENT_COST;
   if (!result.cells.length) return fail(result.developedCount ? 'This part of the deposit is already developed.' : 'No clear resource tiles are available here.');
-  if (owner.gold < result.cost) return fail(`Need ${result.cost} gold to develop ${result.cells.length} tiles.`);
+  // Purchase whole tiles nearest the clicked cell first. Unpurchased tiles
+  // remain ordinary undeveloped deposits for a later visit.
+  result.cells.sort((a, b) => Math.abs(a % world.width - x) + Math.abs(Math.floor(a / world.width) - y)
+    - Math.abs(b % world.width - x) - Math.abs(Math.floor(b / world.width) - y) || a - b);
+  const available = Math.max(0, Math.min(owner.gold, budget));
+  const affordable = Math.floor(available / RESOURCE_DEVELOPMENT_COST);
+  result.remainingCount = Math.max(0, result.cells.length - affordable);
+  if (affordable < 1) return fail(`Need ${RESOURCE_DEVELOPMENT_COST} gold to develop one tile.`);
+  result.cells = result.cells.slice(0, affordable);
+  result.cost = result.cells.length * RESOURCE_DEVELOPMENT_COST;
   result.ok = true; return result;
 }
 
-export function developResourceGroup(state: GameState, x: number, y: number, faction = playerFaction(state)): { ok: boolean; message: string } {
-  const status = resourceDevelopmentStatus(state, x, y, faction);
+export function developResourceGroup(state: GameState, x: number, y: number, faction = playerFaction(state), budget = Infinity): { ok: boolean; message: string } {
+  const status = resourceDevelopmentStatus(state, x, y, faction, budget);
   if (!status.ok) return { ok: false, message: status.message };
   spendGold(state, state.factions.find(f => f.id === faction)!, status.cost, 'upgrades');
   for (const cell of status.cells) state.world.tiles[cell].resourceDeveloped = true;
@@ -164,15 +207,15 @@ export function oliveVillageTradeMultiplier(state: GameState, faction: number): 
  * supplies its spendable budget after keeping the usual maintenance reserve. */
 export function autoDevelopResources(state: GameState, faction: number, budget: number): { ok: boolean; message: string } {
   if (isHumanFaction(state, faction) || budget < RESOURCE_DEVELOPMENT_COST) return { ok: false, message: '' };
-  const index = resourceIndex(state), seen = new Set<number>();
-  const priority = (resource: RegionalResource) => resource === 'copper' && !factionHasDevelopedResource(state, faction, resource) ? 0
-    : resource === 'iron' && !factionHasDevelopedResource(state, faction, resource) ? 1 : resource === 'salt' ? 2 : resource === 'olives' ? 3 : 4;
+  const index = resourceIndex(state), seen = new Set<number>(), developed = index.factionCounts.get(faction);
+  const priority = (resource: RegionalResource) => resource === 'copper' && !developed?.get(resource) ? 0
+    : resource === 'iron' && !developed?.get(resource) ? 1 : resource === 'salt' ? 2 : resource === 'olives' ? 3 : 4;
   const cells = [...(index.ownedUndeveloped.get(faction) ?? [])].sort((a, b) => priority(state.world.tiles[a].resource!) - priority(state.world.tiles[b].resource!) || a - b);
   for (const cell of cells) {
     if (seen.has(cell)) continue;
-    const x = cell % state.world.width, y = Math.floor(cell / state.world.width), status = resourceDevelopmentStatus(state, x, y, faction);
+    const x = cell % state.world.width, y = Math.floor(cell / state.world.width), status = resourceDevelopmentStatus(state, x, y, faction, budget);
     for (const next of status.cells) seen.add(next);
-    if (status.ok && status.cost <= budget) return developResourceGroup(state, x, y, faction);
+    if (status.ok && status.cost <= budget) return developResourceGroup(state, x, y, faction, budget);
   }
   return { ok: false, message: '' };
 }

@@ -1,4 +1,4 @@
-import { villageAlliedWith } from './village-relations';
+import { villageAlliedWith } from './settlement-bridge';
 import { playerFaction } from './player-context';
 import { buildingReady, type Building, type GameState } from './types';
 
@@ -8,7 +8,7 @@ const CHECKMARK = ['      #', '     ##', '#   ## ', '## ##  ', ' ###   ', '  #  
 /** A destroyed camp immediately loses its visible alliance symbol. */
 export function alliedVillageCamps(state: GameState): Building[] {
   return (state.villages ?? []).flatMap(village => {
-    if (!villageAlliedWith(village, playerFaction(state))) return [];
+    if (!villageAlliedWith(state, village, playerFaction(state))) return [];
     const camp = state.buildings.find(building => building.id === village.campId && buildingReady(building));
     return camp ? [camp] : [];
   });

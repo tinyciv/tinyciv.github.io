@@ -1,11 +1,11 @@
 import { playerFaction } from './player-context';
 import { civilianWorkforcePopulations, constructionWorkerAllowance, recordCivilianCasualties } from './civilian-population';
-import { isForbidden } from './forbidden-zones';
+import { forbiddenRevision, isForbidden } from './forbidden-zones';
 import { buildingWorkForbidden } from './forbidden-work';
 import { canDispatchPeasant } from './peasant-capacity';
 import { indexedBuilding } from './spatial';
 import { type Building, type FarmField, type FoodBatch, type GameState, type Point, type Unit, type World, buildingReady, buildingSize, buildingWidth, buildingHeight, distance, isFarmKind, tileAt, WATER } from './types';
-import { canWalk, hasStaticPath, movementMultiplier, withNavigationFrame } from './pathfinding';
+import { canWalk, hasStaticPath, withNavigationFrame, workNavigationState } from './pathfinding';
 import { terrainYields } from '../world/generator';
 import { houseCapacity, updateWellUpgrades } from './wells';
 import { deliverFoodCargo, expireFoodCargo, refreshFoodCargo } from './food-cargo';
@@ -13,15 +13,20 @@ import { ORCHARD_YIELD_MULTIPLIER } from './orchards';
 import { irrigationYieldMultiplier } from './irrigation';
 import { soilFertility } from './fertility';
 import { SimulationEvents } from './simulation-events';
-import { entityStore } from './entity-store';
+import { entityStore, buildingWithId } from './entity-store';
 import { idleJobDecisionDue } from './settlement-decisions';
+import { questEffect } from './quest-effects';
+import { AchievementEffect, achievementEffect } from './achievement-effects';
 import { grainStorageMultiplier } from './research-bonuses';
-import { farmCityQuery, farmTravelRevision } from './farm-travel';
+import { farmCityQuery, farmStorageQuery, farmTravelRevision } from './farm-travel';
+import { assignFarmStorage, granaryYieldMultiplier, STORAGE_REASSIGN, STORAGE_ENTER } from './granaries-native';
 import { courierOutboundPath, courierReturnPath } from './courier-routes';
-import { farmPickupPath } from './farm-pickup-routes';
+import { farmParcelChanged, parcelHarvest, setParcelPickup } from './farm-parcels';
+import { canDepartFarm, departFarm, finishFarmTrip, farmDispatchWakeAt, invalidateFarmDispatch } from './farm-dispatch';
 import { invalidateCourierSleep, wakeFarmCouriers } from './courier-sleep';
 import { markWorldChanged, worldRevisions, worldStructureRevision } from './world-revisions';
 import { ECONOMY_INTERVAL } from './economy-constants';
+import { reliefBuildable } from './relief';
 import { refreshWheatReadiness, wheatFieldGroups, type WheatGroups } from './wheat-fields';
 import { farmFieldIndex, invalidateFarmFieldIndex, type FarmFieldIndex } from './farm-index';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
@@ -38,20 +43,17 @@ export const FIELD_HARVEST_FOOD = (.4 * 4 / 3) * FIELD_HARVEST_SECONDS / ECONOMY
 export function harvestFoodPerEconomyCycle(food: number): number {
   return food * ECONOMY_INTERVAL / FIELD_HARVEST_SECONDS;
 }
-/** Ripening starts an 11-second clock, paused during active in-field gathering.
- * Return travel still consumes it; distance and terrain limit delivered food. */
-export const FIELD_SPOIL_SECONDS = 11;
+/** A fixed half-cycle pickup/delivery window leaves room for the city's queue.
+ * Gathering never rewrites deadlines, even if the worker is delayed or fleeing. */
+export const FIELD_SPOIL_SECONDS = FIELD_HARVEST_SECONDS / 2;
+/** Investment reserves the rest of the pickup window for queueing. Keeping
+ * a short travel budget favors compact farms as city dispatch becomes bounded. */
+const FARM_TRANSPORT_SECONDS = 11;
 export const FIELD_SPOIL_WARNING_SECONDS = 4;
 export const FARM_COURIER_SPEED = 2.2;
 export const FARM_IDLE_SECONDS = 120;
 export const FARM_ABANDON_SECONDS = 600;
-/** One collector sweeps an entire connected parcel before returning. */
-export const FARM_COURIER_MAX_PICKUPS = 16;
-const PICKUP_MAX_WALKING = 16, PICKUP_DELIVERY_MARGIN = .75, PICKUP_CANDIDATE_LIMIT = 16;
-/** Spread a city's departure queue over a short window, never past a bag's
- * safe delivery time. Separate settlements keep independent queues. */
-export const FARM_DISPATCH_WINDOW = 2;
-const FARM_DISPATCH_MAX_INTERVAL = .3, PICKUP_RESERVATION_STALL_SECONDS = 2;
+const PICKUP_CANDIDATE_LIMIT = 4, FARM_ROUTE_RETRY_SECONDS = 3;
 
 export function fieldSpoilsSoon(field: FarmField, time: number): boolean {
   return field.food > 0 && field.expiresAt !== undefined && field.expiresAt > time
@@ -92,7 +94,7 @@ function spoilCargo(state: GameState, unit: Unit): void {
 }
 function cargoShelfLife(state: GameState, unit: Unit): number {
   const source = claimedField(state, unit.cargoField ?? unit.field)
-    ?? state.buildings.find(building => building.id === unit.collectorCamp);
+    ?? buildingWithId(state, unit.collectorCamp);
   return harvestShelfLife(state, { faction: source?.faction ?? unit.faction, orchard: source?.orchard });
 }
 const CLEARABLE = new Set(['forest', 'jungle', 'swamp']);
@@ -106,22 +108,25 @@ export function fieldHarvestFood(world: World, x: number, y: number): number {
 }
 
 /** Actual and projected farm production share the same completed-ditch bonus. */
-export function fieldHarvestFoodForState(state: GameState, x: number, y: number, factionId = tileAt(state.world, x, y)?.farm ?? 0): number {
+export function fieldHarvestFoodForState(state: GameState, x: number, y: number, factionId = tileAt(state.world, x, y)?.farm ?? 0, orchard = false): number {
   const faction = state.factions.find(candidate => candidate.id === factionId);
-  return fieldHarvestFood(state.world, x, y) * irrigationYieldMultiplier(state, x, y) * (1 + (faction?.villageBonuses?.food ?? 0));
+  return fieldHarvestFood(state.world, x, y) * achievementEffect(faction, AchievementEffect.orchard,
+    questEffect(faction, 6, irrigationYieldMultiplier(state, x, y) * (1 + (faction?.villageBonuses?.food ?? 0))
+      * granaryYieldMultiplier(state, factionId, x, y) * (orchard ? ORCHARD_YIELD_MULTIPLIER : 1)), Number(orchard));
 }
 
 /** Actual production includes orchard establishment and its mature yield. */
 export function fieldHarvestYield(state: GameState, field: FarmField, time = state.time): number {
   if (field.orchard && time + 1e-7 < field.orchard.readyAt) return 0;
-  return fieldHarvestFoodForState(state, field.x, field.y, field.faction) * (field.orchard ? ORCHARD_YIELD_MULTIPLIER : 1);
+  return fieldHarvestFoodForState(state, field.x, field.y, field.faction, !!field.orchard);
 }
 
-/** Expected share delivered after travel and the collection turnaround.
- * This only guides investment; actual bags expire on their individual clocks.
- * No population limit or palace intake quota is imposed. */
+/** Coarse investment estimate after reserving time for the city's queue.
+ * Storage research expands both queue and travel allowances proportionally;
+ * actual food keeps its fixed harvest deadline until delivery. */
 export function expectedFarmDelivery(walkingDistance: number, shelfLife = FIELD_SPOIL_SECONDS): number {
-  return Math.max(0, Math.min(1, (shelfLife - 2 * walkingDistance / FARM_COURIER_SPEED + 1) / 6));
+  const travelWindow = shelfLife * FARM_TRANSPORT_SECONDS / FIELD_SPOIL_SECONDS;
+  return Math.max(0, Math.min(1, (travelWindow - 2 * walkingDistance / FARM_COURIER_SPEED + 1) / 6));
 }
 
 /** Irrational spacing distributes camps throughout the cycle without consuming simulation RNG. */
@@ -163,6 +168,7 @@ function harvestDue(state: GameState, field: FarmField, dormantAt = Infinity): v
     state.farmVersion = (state.farmVersion ?? 0) + 1;
   }
   if (state.farmVersion !== version) wakeFarmCouriers(state, field.camp);
+  if (state.farmVersion !== version) farmParcelChanged(state, field);
 }
 
 /** Each farm occupies one tile; neighboring farms may share all four edges. */
@@ -176,7 +182,7 @@ export function isHome(building: Building): boolean {
 /** Reserve the future plot while its camp is being built, without growing food early. */
 export function isPendingCampField(state: GameState, x: number, y: number): boolean {
   const tile = tileAt(state.world, x, y);
-  if (!tile || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none')) return false;
+  if (!tile || !reliefBuildable(tile) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none')) return false;
   return state.buildings.some(site => site.hp > 0 && site.construction && isHome(site) && !site.farmSuppressed
     && x >= site.x && y >= site.y && x < site.x + buildingWidth(site) && y < site.y + buildingHeight(site)
     && !state.buildings.some(building => building.id !== site.id && building.hp > 0 && building.kind !== 'irrigation' && x >= building.x && y >= building.y
@@ -249,7 +255,7 @@ export function synchronizeFarms(state: GameState): void {
     // Keep residents in their existing city instead of repacking the realm
     // into the first houses every frame. Population losses still clamp totals.
     for (const house of houses) {
-      house.capacity = houseCapacity(house, faction);
+      house.capacity = houseCapacity(house, faction, state);
       house.residents = buildingReady(house) ? Math.min(house.capacity, Math.max(0, house.residents ?? 0), Math.max(0, remaining)) : 0;
       remaining -= house.residents;
     }
@@ -311,7 +317,7 @@ export function synchronizeFarms(state: GameState): void {
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const x = camp.x + dx, y = camp.y + dy, key = y * state.world.width + x;
       const tile = tileAt(state.world, x, y);
-      if (!tile || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none') || reserved.has(key)) continue;
+      if (!tile || !reliefBuildable(tile) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none') || reserved.has(key)) continue;
       const occupants = occupied.get(key);
       if (occupants && (occupants.size > 1 || !occupants.has(camp.id))) continue;
       const old = previousPlots.get(camp.id)?.get(key);
@@ -382,18 +388,12 @@ export function synchronizeFarms(state: GameState): void {
 
 interface PalaceEntranceClock extends DecisionClock { state: GameState; points: Point[] }
 const palaceEntranceClocks = new WeakMap<Building, PalaceEntranceClock>();
-function palaceEdges(state: GameState, palace: Building, flow?: 'outbound' | 'returning'): Point[] {
+function palaceEdges(state: GameState, palace: Building): Point[] {
   let clock = palaceEntranceClocks.get(palace);
   if (!clock || clock.state !== state) { clock = { state, points: [] }; palaceEntranceClocks.set(palace, clock); }
   if (!simulationReadsActive(state) || decisionDue(clock, state.time, palace.id)) clock.points = scanPalaceEdges(state, palace);
   // Callers sort their door choices, so never expose the retained array itself.
-  const entrances = clock.points.slice(), size = buildingSize(palace);
-  if (!flow) return entrances;
-  const outgoing = (point: Point): boolean => point.x < palace.x ? point.y >= palace.y + size / 2
-    : point.x > palace.x + size ? point.y < palace.y + size / 2
-    : point.y < palace.y ? point.x < palace.x + size / 2 : point.x >= palace.x + size / 2;
-  const preferred = entrances.filter(point => outgoing(point) === (flow === 'outbound'));
-  return preferred.length ? preferred : entrances;
+  return clock.points.slice();
 }
 function scanPalaceEdges(state: GameState, palace: Building): Point[] {
   const size = buildingSize(palace), points: Point[] = [];
@@ -406,7 +406,7 @@ function scanPalaceEdges(state: GameState, palace: Building): Point[] {
 
 function createCollector(state: GameState, palace: Building, camp: Building): Unit {
   const unit: Unit = {
-    id: Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id)) + 1,
+    id: entityStore(state).allocateId(),
     x: palace.x + 1, y: palace.y + 1, kind: 'worker', faction: palace.faction, home: palace.id,
     hp: 50, maxHp: 50, morale: 100, attack: 0, defense: 0, speed: FARM_COURIER_SPEED, range: 1.1, order: 'work',
     cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time,
@@ -466,19 +466,18 @@ function releaseClaims(state: GameState, unit: Unit): void {
   for (const field of schedule?.claimed ?? state.fields ?? []) if (field.claimedBy === unit.id) {
     delete field.claimedBy; schedule?.claimed.delete(field);
   }
-  unit.collectorStops = undefined;
 }
 
 function ownsHarvestClaim(unit: Unit | undefined, field: FarmField): boolean {
   return !!unit && unit.hp > 0 && unit.faction === field.faction && !unit.inside && !unit.civilianPanic && !unit.routed
-    && unit.collectPhase === 'outbound' && (unit.field === field.id || !!unit.collectorStops?.includes(field.id));
+    && unit.collectPhase === 'outbound' && unit.field === field.id;
 }
 
 /** Downsizing the old courier pool returns cargo to a bag, never directly to the treasury. */
 function restoreCargo(state: GameState, unit: Unit): void {
   if ((unit.cargo ?? 0) > 0) {
     const fields = (state.fields ?? []).filter(field => field.faction === unit.faction);
-    const camp = state.buildings.find(building => building.id === unit.collectorCamp && building.faction === unit.faction && isHome(building) && building.hp > 0);
+    const camp = buildingWithId(state, unit.collectorCamp, building => building.faction === unit.faction && isHome(building) && building.hp > 0);
     const field = fields.find(field => field.id === unit.cargoField)
       ?? fields.find(field => field.id === unit.field)
       ?? fields.filter(field => field.camp === unit.collectorCamp).sort((a, b) => distance(a, unit) - distance(b, unit))[0]
@@ -498,7 +497,8 @@ function restoreCargo(state: GameState, unit: Unit): void {
 /** A resident changing jobs relinquishes physical harvest claims and cargo. */
 export function releaseCollectorWork(state: GameState, unit: Unit): void {
   releaseClaims(state, unit); restoreCargo(state, unit);
-  unit.field = undefined; unit.collectorPickups = undefined; unit.cultivating = undefined;
+  finishFarmTrip(state, unit);
+  unit.field = undefined; unit.cultivating = undefined;
 }
 
 /** A connected parcel owns exactly one gathering job. Population can leave
@@ -514,9 +514,10 @@ export function ensureCollectors(state: GameState): void {
   const available = new Set(collectors.filter(unit => unit.hp > 0));
   const campsById = new Map(camps.map(camp => [camp.id, camp]));
   const budgets = new Map<number, number>(), staffing = new Map<number, number>();
+  const storageQueries = new Map<number, ReturnType<typeof farmStorageQuery>>();
   for (const [city, population] of populations) budgets.set(city, Math.max(0, population - constructionWorkerAllowance(population)));
   const nonCollectors = new Map<number, number>();
-  for (const unit of roster.workers) if (unit.hp > 0 && (!unit.collector || unit.builder)) {
+  for (const unit of roster.workers) if (unit.hp > 0 && !unit.explorationRefugee && (!unit.collector || unit.builder)) {
     const city = roster.cities.get(unit)?.id;
     if (city !== undefined) nonCollectors.set(city, (nonCollectors.get(city) ?? 0) + 1);
   }
@@ -527,13 +528,13 @@ export function ensureCollectors(state: GameState): void {
     if (group?.faction !== unit.faction) continue;
     const list = assigned.get(group) ?? []; list.push(unit); assigned.set(group, list);
   }
+  const priorities = new Map(groups.groups.map(group => [group, parcelHarvest(state, group)]));
   // Stable jobs first; with scarce residents rotate only the unstaffed jobs
   // according to ripe food and oldest visit, rather than spawning per tile.
   const jobs = groups.groups.filter(group => group.fields.some(field => campsById.has(field.camp)))
     .sort((a, b) => Number(assigned.get(b)?.some(unit => !unit.inside || unit.civilianPanic)) - Number(assigned.get(a)?.some(unit => !unit.inside || unit.civilianPanic))
-      || Number(b.fields.some(field => field.food > 0)) - Number(a.fields.some(field => field.food > 0))
-      || Math.min(...a.fields.map(field => campsById.get(field.camp)?.farmLastVisitedAt ?? -Infinity))
-        - Math.min(...b.fields.map(field => campsById.get(field.camp)?.farmLastVisitedAt ?? -Infinity)) || a.anchor - b.anchor);
+      || Number(priorities.get(b)!.food > 0) - Number(priorities.get(a)!.food > 0)
+      || priorities.get(a)!.lastVisitedAt - priorities.get(b)!.lastVisitedAt || a.anchor - b.anchor);
   for (const group of jobs) {
     const current = (assigned.get(group) ?? []).filter(unit => available.has(unit))
       .sort((a, b) => Number(!a.inside) - Number(!b.inside) || a.id - b.id);
@@ -558,14 +559,27 @@ export function ensureCollectors(state: GameState): void {
     // Keep an existing member as anchor, avoiding churn when a parcel grows.
     if (previousGroup !== group || !campsById.has(unit.collectorCamp!)) unit.collectorCamp = camp.id;
     if (unit.home !== palace.id) {
+      invalidateFarmDispatch(state);
       unit.home = palace.id; invalidateWorkerHomes(state);
       if (unit.inside) { unit.x = palace.x + 1; unit.y = palace.y + 1; }
     }
-    if (unit.civilianPanic) releaseHarvestStops(state, unit);
+    let storageQuery = storageQueries.get(palace.id);
+    if (!storageQuery) { storageQuery = farmStorageQuery(state, palace); storageQueries.set(palace.id, storageQuery); }
+    const assignment = assignFarmStorage(state, unit, palace, storageQuery(camp));
+    unit.collectorStorage = assignment.storage.id;
+    if (assignment.flags & STORAGE_REASSIGN) {
+      releaseClaims(state, unit); unit.field = undefined; clearJourney(unit);
+      unit.collectPhase = assignment.flags & STORAGE_ENTER ? 'idle' : 'returning';
+      if (assignment.flags & STORAGE_ENTER) {
+        unit.x = assignment.storage.x + buildingWidth(assignment.storage) / 2;
+        unit.y = assignment.storage.y + buildingHeight(assignment.storage) / 2;
+      }
+      invalidateFarmDispatch(state);
+    }
   }
   const removed = new Set(collectors.filter(unit => available.has(unit) || unit.hp <= 0).map(unit => unit.id));
   if (removed.size) {
-    for (const unit of collectors) if (removed.has(unit.id)) { releaseClaims(state, unit); if (unit.hp > 0) restoreCargo(state, unit); }
+    for (const unit of collectors) if (removed.has(unit.id)) { finishFarmTrip(state, unit); releaseClaims(state, unit); if (unit.hp > 0) restoreCargo(state, unit); }
     entityStore(state).units.retain(unit => !removed.has(unit.id));
     for (const unit of state.units) if (unit.target !== undefined && removed.has(unit.target)) unit.target = undefined;
     state.projectiles = state.projectiles?.filter(projectile => !removed.has(projectile.target));
@@ -608,6 +622,7 @@ export function invalidateScheduledHarvests(state: GameState): void {
 }
 
 function harvestFieldChanged(state: GameState, field: FarmField): void {
+  farmParcelChanged(state, field);
   const schedule = scheduledHarvests.get(state);
   if (!schedule) return;
   schedule.dirty.add(field);
@@ -784,7 +799,6 @@ export function updateHarvests(state: GameState): void {
   // Standalone/editor reconciliation observes direct scalar mutations. The
   // live engine calls updateScheduledHarvests and reports mutations instead.
   invalidateScheduledHarvests(state);
-  for (const unit of state.units) if (unit.collector) pauseHarvestWhileGathering(state, unit);
   const clock = harvestClock(state), due = new Set(clock.events.takeDue(state.time + 1e-7));
   const entities = entityStore(state), units = entities.units;
   const camps = new Map(entities.buildings.query('farm').filter(buildingReady).map(camp => [camp.id, camp]));
@@ -851,7 +865,6 @@ export function updateHarvests(state: GameState): void {
 export function updateScheduledHarvests(state: GameState): void {
   const schedule = scheduledHarvestState(state), { index, camps, wheat, clock } = schedule;
   const entities = entityStore(state), dueCamps = new Map<number, Building>();
-  for (const unit of entities.units.query('collector')) pauseHarvestWhileGathering(state, unit);
   const dirty = schedule.dirty;
   schedule.dirty = new Set();
   for (const field of clock.events.takeDue(state.time + 1e-7)) if (index.fields.get(field.id) === field) dirty.add(field);
@@ -884,6 +897,7 @@ export function updateScheduledHarvests(state: GameState): void {
     }
     rememberFieldClock(clock, field, dormantAt, state.time);
     if (field.food > 0) schedule.ready.add(field); else schedule.ready.delete(field);
+    farmParcelChanged(state, field);
     refreshWheatReadiness(state, field);
   }
   for (const camp of dueCamps.values()) if (state.time + 1e-7 >= farmDormantAt(state, camp) && !camp.farmFallow) {
@@ -928,8 +942,6 @@ type Move = (state: GameState, unit: Unit, goal: Point, dt: number, direct?: boo
 
 interface CollectorFrame {
   fields: Map<number, FarmField>; camps: Map<number, FarmField[]>; cells: Map<number, FarmField>;
-  homes?: Map<number, Building>;
-  dispatchBacklog?: Map<number, number>;
   groups: FarmWorkGroups;
 }
 const collectorFrames = new WeakMap<GameState, CollectorFrame>();
@@ -944,221 +956,80 @@ function campFields(state: GameState, camp: Building): readonly FarmField[] {
   return farmFieldIndex(state).camps.get(camp.id) ?? [];
 }
 
-/** The same shared city allocation used by staffing also governs incidental pickups. */
-function collectorFarmHomes(state: GameState): Map<number, Building> {
-  const frame = collectorFrames.get(state);
-  if (frame?.homes) return frame.homes;
-  const homes = campPalaces(state, entityStore(state).buildings.query('farm').filter(buildingReady));
-  if (frame) frame.homes = homes;
-  return homes;
-}
-
 function workGroups(state: GameState): FarmWorkGroups {
   return collectorFrames.get(state)?.groups ?? farmWorkGroups(state);
 }
-function workFields(state: GameState, unit: Unit): readonly FarmField[] {
-  return workGroups(state).byCamp.get(unit.collectorCamp!)?.fields ?? [];
-}
-
-interface HarvestPauseClock { time: number; x: number; y: number; progressAt: number; group?: FarmWorkGroup }
-const harvestPauseClocks = new WeakMap<Unit, HarvestPauseClock>();
-const pausedFieldAt = new WeakMap<FarmField, number>();
-
-/** Freeze only time actually spent gathering inside the assigned parcel. The
- * movement path updates this clock before and after every step, so merely
- * crossing a field on the return trip, fleeing, or waiting at home never helps. */
-function pauseHarvestWhileGathering(state: GameState, unit: Unit): void {
-  const previous = harvestPauseClocks.get(unit);
-  const progressed = !previous || state.time < previous.time || distance(unit, previous) > .01;
-  const progressAt = progressed ? state.time : previous.progressAt;
-  const groups = workGroups(state), target = groups.index.fields.get(unit.field!);
-  const underfoot = groups.index.cells.get(Math.floor(unit.y) * state.world.width + Math.floor(unit.x));
-  const group = unit.collector && !unit.builder && unit.hp > 0 && !unit.inside && !unit.routed && !unit.civilianPanic
-    && unit.collectPhase === 'outbound' && unit.order === 'work' && target?.faction === unit.faction
-    && target.food > 0 && target.claimedBy === unit.id && underfoot?.faction === unit.faction
-    && (state.time - progressAt <= PICKUP_RESERVATION_STALL_SECONDS || distance(unit, { x: target.x + .5, y: target.y + .5 }) < .12)
-    && !isForbidden(state, underfoot.x, underfoot.y, unit.faction)
-    && groups.byField.get(underfoot) === groups.byCamp.get(unit.collectorCamp!)
-    && groups.byField.get(target) === groups.byField.get(underfoot) ? groups.byField.get(underfoot) : undefined;
-  if (group && previous?.group === group && state.time > previous.time) {
-    for (const field of group.fields) {
-      const from = Math.max(previous.time, pausedFieldAt.get(field) ?? previous.time), elapsed = state.time - from;
-      if (elapsed <= 0) continue;
-      let changed = false;
-      for (const batch of fieldBatches(state, field)) if (batch.expiresAt > from + 1e-7) { batch.expiresAt += elapsed; changed = true; }
-      if (changed) { refreshField(field); harvestFieldChanged(state, field); }
-      pausedFieldAt.set(field, state.time);
-    }
-    let changed = false;
-    for (const batch of unit.cargoBatches ?? []) if (batch.expiresAt > previous.time + 1e-7) { batch.expiresAt += state.time - previous.time; changed = true; }
-    if (changed) refreshCargo(unit);
-  }
-  harvestPauseClocks.set(unit, { time: state.time, x: unit.x, y: unit.y, progressAt, group });
-}
-
-function walkingCost(state: GameState, from: Point, path: readonly Point[]): number {
-  let cost = 0, previous = from;
-  for (const point of path) {
-    cost += distance(previous, point) * (1 / movementMultiplier(state, previous.x, previous.y) + 1 / movementMultiplier(state, point.x, point.y)) / 2;
-    previous = point;
-  }
-  return cost;
-}
-interface HarvestReturn { entrance: Point; path: Point[]; seconds: number }
-/** A real, complete return route proves that another pickup can still reach storage.
- * Shared reverse paths keep these checks cheap across neighboring couriers. */
+interface HarvestReturn { entrance: Point; path: Point[] }
+/** Plan the single journey home. Shared reverse paths reuse settlement routes. */
 function harvestReturn(state: GameState, unit: Unit, from: Point, palace: Building): HarvestReturn | undefined {
   const entrances = palaceEdges(state, palace).sort((a, b) => distance(from, a) - distance(from, b));
   for (const entrance of entrances) {
-    if (!hasStaticPath(state, from, entrance, unit.faction, true)) continue;
+    if (!hasStaticPath(workNavigationState(state, false, -1, undefined, true), from, entrance, unit.faction, true)) continue;
     const path = distance(from, entrance) < .12 ? [] : courierReturnPath(state, from, entrance, unit.faction);
     if (distance(from, entrance) >= .12 && (!path.length || distance(path[path.length - 1], entrance) > .12)) continue;
-    return { entrance, path, seconds: walkingCost(state, from, path) / Math.max(.01, unit.speed) };
+    return { entrance, path };
   }
 }
 
-interface HarvestStop { field: FarmField; goal: Point; path: Point[]; seconds: number; deadline: number }
-/** Real routes and the oldest spoilage deadline govern every extra stop,
- * including the stops promised before the courier leaves the settlement. */
-function chooseHarvestStop(state: GameState, unit: Unit, palace: Building, from: Point, at: number, deadline: number): HarvestStop | undefined {
-  if (deadline - at <= PICKUP_DELIVERY_MARGIN) return;
-  const group = workGroups(state).byCamp.get(unit.collectorCamp!);
-  const candidates = (group?.fields ?? []).filter(field => {
-    const farm = indexedBuilding(state, field.camp);
-    return field.faction === unit.faction && field.food > 0 && (field.claimedBy === undefined || field.claimedBy === unit.id && unit.collectorStops?.includes(field.id))
-      && !isForbidden(state, field.x, field.y, unit.faction)
-      && !!farm && farm.faction === unit.faction && buildingReady(farm);
-  })
-    .sort((a, b) => Number(b.claimedBy === unit.id) - Number(a.claimedBy === unit.id)
-      || distance(from, { x: a.x + .5, y: a.y + .5 }) - distance(from, { x: b.x + .5, y: b.y + .5 })
-      || distance(a, palace) - distance(b, palace) || a.id - b.id).slice(0, PICKUP_CANDIDATE_LIMIT);
-  for (const field of candidates) {
-    const goal = { x: field.x + .5, y: field.y + .5 };
-    const path = farmPickupPath(state, from, goal, unit.faction, { x: Math.min(Math.floor(from.x), field.x), y: Math.min(Math.floor(from.y), field.y) });
-    if (!path.length) continue;
-    const cost = walkingCost(state, from, path);
-    if (cost > PICKUP_MAX_WALKING) continue;
-    const home = harvestReturn(state, unit, goal, palace);
-    const cropDeadline = field.expiresAt ?? state.time + harvestShelfLife(state, field);
-    const seconds = cost / Math.max(.01, unit.speed);
-    // Collection travel inside the parcel pauses both its ground food and the
-    // worker's cargo. Only the final journey back to storage spends shelf life.
-    const entirelyInField = path.every(point => {
-      const crossed = workGroups(state).index.cells.get(Math.floor(point.y) * state.world.width + Math.floor(point.x));
-      return !!crossed && workGroups(state).byField.get(crossed) === group;
-    });
-    if (!home || (entirelyInField ? 0 : seconds) + home.seconds + PICKUP_DELIVERY_MARGIN >= Math.min(deadline, cropDeadline) - at) continue;
-    return { field, goal, path, seconds, deadline: Math.min(deadline, cropDeadline) };
+interface ParcelApproach { city: number; generation: object; zones: number; candidates: FarmField[] }
+const parcelApproaches = new WeakMap<FarmWorkGroup, ParcelApproach>();
+
+/** Keep only four nearest tiles plus the parcel's cardinal extremes. This
+ * bounded shortlist tolerates a suboptimal entry instead of pathfinding to
+ * every crop tile. A live route check still rejects walls/closed gates. */
+function pickupCandidates(state: GameState, group: FarmWorkGroup, palace: Building): readonly FarmField[] {
+  const generation = farmTravelRevision(state), zones = forbiddenRevision(state), old = parcelApproaches.get(group);
+  if (old && old.city === palace.id && old.generation === generation && old.zones === zones && simulationReadsActive(state)) return old.candidates;
+  const nearest: FarmField[] = [], extremes: (FarmField | undefined)[] = [];
+  const cost = (field: FarmField) => (field.x + .5 - palace.x - 1) ** 2 + (field.y + .5 - palace.y - 1) ** 2;
+  for (const field of group.fields) {
+    if (isForbidden(state, field.x, field.y, group.faction)) continue;
+    let i = 0;
+    while (i < nearest.length && (cost(nearest[i]) < cost(field) || cost(nearest[i]) === cost(field) && nearest[i].id < field.id)) i++;
+    if (i < PICKUP_CANDIDATE_LIMIT) { nearest.splice(i, 0, field); if (nearest.length > PICKUP_CANDIDATE_LIMIT) nearest.pop(); }
+    if (!extremes[0] || field.x < extremes[0].x) extremes[0] = field;
+    if (!extremes[1] || field.x > extremes[1].x) extremes[1] = field;
+    if (!extremes[2] || field.y < extremes[2].y) extremes[2] = field;
+    if (!extremes[3] || field.y > extremes[3].y) extremes[3] = field;
   }
+  const candidates = [...new Set([...nearest, ...extremes.filter((field): field is FarmField => !!field)])];
+  parcelApproaches.set(group, { city: palace.id, generation, zones, candidates });
+  return candidates;
 }
 
-function releaseHarvestStops(state: GameState, unit: Unit): void {
-  for (const id of unit.collectorStops ?? []) {
-    const field = claimedField(state, id);
-    if (field?.claimedBy === unit.id && field.id !== unit.field) delete field.claimedBy;
-  }
-  unit.collectorStops = undefined;
-}
-
-/** Plan the parcel sweep before departure. Live pickup decisions extend it as
- * the in-field pause preserves freshness; detours and the trip home still cost time. */
-function reserveHarvestStops(state: GameState, unit: Unit, palace: Building, first: FarmField, outboundSeconds: number): void {
-  releaseHarvestStops(state, unit);
-  unit.collectorStops = [];
-  let from = { x: first.x + .5, y: first.y + .5 }, at = state.time + outboundSeconds, deadline = first.expiresAt ?? state.time + harvestShelfLife(state, first);
-  for (let stops = 1; stops < FARM_COURIER_MAX_PICKUPS; stops++) {
-    // Reserved stops are excluded while extending the plan, then become the
-    // preferred candidates as the courier physically finishes each pickup.
-    const reserved: number[] = unit.collectorStops ?? [];
-    unit.collectorStops = [];
-    const stop = chooseHarvestStop(state, unit, palace, from, at, deadline);
-    unit.collectorStops = reserved;
-    if (!stop) break;
-    claimHarvestField(state, stop.field, unit.id); reserved.push(stop.field.id);
-    from = stop.goal; at += stop.seconds + .05; deadline = stop.deadline;
-  }
-}
-
-/** Sweep this worker's whole parcel, rechecking routes and remaining food. */
-function nextHarvestPickup(state: GameState, unit: Unit, palace: Building): boolean {
-  if ((unit.collectorPickups ?? 0) < Math.max(FARM_COURIER_MAX_PICKUPS, workFields(state, unit).length) && (unit.cargo ?? 0) > 0) {
-    const stop = chooseHarvestStop(state, unit, palace, unit, state.time, unit.cargoExpiresAt ?? Infinity);
-    if (stop) {
-      unit.collectorStops = unit.collectorStops?.filter(id => id !== stop.field.id);
-      unit.field = stop.field.id; unit.collectPhase = 'outbound'; claimHarvestField(state, stop.field, unit.id);
-      setJourney(unit, stop.goal, stop.path);
-      return true;
+/** One arrival transfers the parcel's surviving food into one carried load.
+ * Equal deadlines coalesce; a recent merge or research upgrade cannot extend
+ * an older crop's life. Movement never walks or reserves individual stops. */
+function collectParcel(state: GameState, unit: Unit, group: FarmWorkGroup): void {
+  const batches = new Map<number, number>();
+  for (const field of group.fields) {
+    const camp = indexedBuilding(state, field.camp);
+    if (field.faction !== unit.faction || !camp || camp.faction !== unit.faction || !buildingReady(camp)
+      || isForbidden(state, field.x, field.y, unit.faction) || field.claimedBy !== undefined && field.claimedBy !== unit.id) continue;
+    if (field.orchard) visitFarm(state, camp);
+    for (const batch of fieldBatches(state, field)) if (batch.expiresAt > state.time + 1e-7) {
+      batches.set(batch.expiresAt, (batches.get(batch.expiresAt) ?? 0) + batch.amount);
     }
+    field.food = 0; field.foodBatches = []; field.expiresAt = undefined; field.harvestedAt = state.time; delete field.claimedBy;
+    harvestFieldChanged(state, field);
+    refreshWheatReadiness(state, field);
   }
-  releaseHarvestStops(state, unit);
-  return false;
-}
-
-interface DispatchClock { nextAt: number; time: number; interval: number }
-const dispatchClocks = new WeakMap<GameState, Map<number, DispatchClock>>();
-function harvestDispatchInterval(state: GameState, palace: Building): number {
-  const frame = collectorFrames.get(state);
-  let backlog = frame?.dispatchBacklog;
-  if (!backlog) {
-    backlog = new Map();
-    const homes = collectorFarmHomes(state);
-    for (const field of state.fields ?? []) if (field.food > 0 && field.claimedBy === undefined) {
-      const city = homes.get(field.camp);
-      if (city) backlog.set(city.id, (backlog.get(city.id) ?? 0) + 1);
-    }
-    if (frame) frame.dispatchBacklog = backlog;
-  }
-  return Math.min(FARM_DISPATCH_MAX_INTERVAL, FARM_DISPATCH_WINDOW / Math.max(1, Math.ceil((backlog.get(palace.id) ?? 0) / FARM_COURIER_MAX_PICKUPS)));
-}
-function allowHarvestDeparture(state: GameState, unit: Unit, palace: Building, field: FarmField, outboundSeconds: number): boolean {
-  let cities = dispatchClocks.get(state);
-  if (!cities) { cities = new Map(); dispatchClocks.set(state, cities); }
-  let clock = cities.get(palace.id);
-  if (!clock || state.time < clock.time) {
-    clock = { nextAt: state.time, time: state.time, interval: harvestDispatchInterval(state, palace) }; cities.set(palace.id, clock);
-  }
-  clock.time = state.time;
-  if (clock.nextAt < state.time - FARM_DISPATCH_MAX_INTERVAL) {
-    clock.nextAt = state.time; clock.interval = harvestDispatchInterval(state, palace);
-  }
-  // Remote farms with very little shelf life must leave immediately. Smoothing
-  // is never a reason to sacrifice a harvest which could otherwise get home.
-  const latestDeparture = (field.expiresAt ?? Infinity) - outboundSeconds * 2 - PICKUP_DELIVERY_MARGIN;
-  if (clock.nextAt > state.time + 1e-7 && clock.nextAt < latestDeparture) {
-    unit.repathAt = Math.min(clock.nextAt, state.time + FARM_DISPATCH_MAX_INTERVAL);
-    return false;
-  }
-  clock.nextAt = Math.min(state.time + FARM_DISPATCH_WINDOW, clock.nextAt + clock.interval);
-  return true;
-}
-
-interface HarvestProgress { x: number; y: number; at: number }
-const harvestProgress = new WeakMap<Unit, HarvestProgress>();
-const harvestProgressClocks = new WeakMap<Unit, DecisionClock>();
-function releaseStalledHarvestStops(state: GameState, unit: Unit): void {
-  if (!unit.collectorStops?.length) { harvestProgress.delete(unit); return; }
-  let clock = harvestProgressClocks.get(unit);
-  if (!clock) { clock = {}; harvestProgressClocks.set(unit, clock); }
-  if (!decisionDue(clock, state.time, unit.id)) return;
-  let progress = harvestProgress.get(unit);
-  if (!progress || state.time < progress.at || distance(unit, progress) > .2) {
-    progress = { x: unit.x, y: unit.y, at: state.time }; harvestProgress.set(unit, progress);
-  }
-  if (state.time - progress.at > PICKUP_RESERVATION_STALL_SECONDS) {
-    releaseHarvestStops(state, unit);
-    harvestProgress.delete(unit);
-  }
+  unit.cargoBatches = [...batches].sort((a, b) => a[0] - b[0]).map(([expiresAt, amount]) => ({ amount, expiresAt }));
+  refreshCargo(unit);
+  state.farmVersion = (state.farmVersion ?? 0) + 1;
 }
 
 /** Hidden idle couriers need another decision only when their farm has work. */
 export function farmCourierWakeAt(state: GameState, unit: Unit): number {
   const camp = indexedBuilding(state, unit.collectorCamp);
-  if (!camp || !isHome(camp) || !buildingReady(camp) || camp.faction !== unit.faction || camp.farmFallow) return state.time;
-  const fields = workFields(state, unit);
-  if (fields.some(field => field.food > 0 || indexedBuilding(state, field.camp)?.farmFallow)) return state.time;
+  if (!camp || !isHome(camp) || !buildingReady(camp) || camp.faction !== unit.faction) return state.time;
+  const group = workGroups(state).byCamp.get(camp.id);
+  if (!group) return state.time;
+  const harvest = parcelHarvest(state, group);
+  if (harvest.food > 0 || harvest.fallow) return farmDispatchWakeAt(state, unit);
   let wakeAt = farmDormantAt(state, camp);
   if (camp.orchard && camp.orchard.readyAt > state.time) wakeAt = Math.min(wakeAt, camp.orchard.readyAt);
-  for (const field of fields) if (field.planted) wakeAt = Math.min(wakeAt, field.nextHarvest);
+  wakeAt = Math.min(wakeAt, harvest.nextHarvest);
   return wakeAt;
 }
 
@@ -1222,74 +1093,66 @@ function setJourney(unit: Unit, goal: Point, path: Point[]): void {
 
 /** Pickup and delivery are separate events: food in fields or in transit is not spendable. */
 export function updateCollector(state: GameState, unit: Unit, dt: number, move: Move): void {
-  pauseHarvestWhileGathering(state, unit);
-  try { updateCollectorStep(state, unit, dt, move); }
-  finally { pauseHarvestWhileGathering(state, unit); }
-}
-function updateCollectorStep(state: GameState, unit: Unit, dt: number, move: Move): void {
   spoilCargo(state, unit);
-  releaseStalledHarvestStops(state, unit);
   if ((unit.collectPhase === 'idle' || !unit.collectPhase) && !idleJobDecisionDue(state, unit)) return;
-  const palace = indexedBuilding(state, unit.home), camp = indexedBuilding(state, unit.collectorCamp);
-  if (!palace || palace.kind !== 'palace' || palace.faction !== unit.faction || !buildingReady(palace)
-    || !camp || !isHome(camp) || camp.faction !== unit.faction || !buildingReady(camp)) return;
-  const key = (point: Point): number => Math.floor(point.y) * state.world.width + Math.floor(point.x);
-  if ((unit.collectPhase === 'idle' || !unit.collectPhase) && state.time < (unit.repathAt ?? 0)) return;
+  const city = indexedBuilding(state, unit.home), palace = indexedBuilding(state, unit.collectorStorage ?? unit.home), camp = indexedBuilding(state, unit.collectorCamp);
+  if (!city || city.kind !== 'palace' || city.faction !== unit.faction || !buildingReady(city)
+    || !palace || palace.faction !== unit.faction || !buildingReady(palace)) return;
+  if (!camp || !isHome(camp) || camp.faction !== unit.faction || !buildingReady(camp)) {
+    releaseClaims(state, unit); unit.field = undefined;
+    if (unit.inside) { finishFarmTrip(state, unit); return; }
+    if (unit.collectPhase !== 'returning') { unit.collectPhase = 'returning'; clearJourney(unit); }
+  }
   if (unit.inside && !canDispatchPeasant(state, unit)) return;
   if (unit.collectPhase === 'idle' || !unit.collectPhase) {
-    const fields = workFields(state, unit).filter(field => field.faction === unit.faction && (field.food > 0 || indexedBuilding(state, field.camp)?.farmFallow) && field.claimedBy === undefined && !isForbidden(state, field.x, field.y, unit.faction))
-      .sort((a, b) => distance(palace, a) - distance(palace, b));
-    for (const field of fields) {
+    const group = workGroups(state).byCamp.get(unit.collectorCamp!);
+    if (!group) return;
+    const harvest = parcelHarvest(state, group);
+    if (!(harvest.food > 0 || harvest.fallow) || !canDepartFarm(state, unit)) return;
+    const entrances = palaceEdges(state, palace);
+    for (const field of pickupCandidates(state, group, palace)) {
+      const farm = indexedBuilding(state, field.camp);
+      if (!farm || !buildingReady(farm) || farm.faction !== unit.faction
+        || field.claimedBy !== undefined && field.claimedBy !== unit.id) continue;
       const goal = { x: field.x + .5, y: field.y + .5 };
-      let entrances = palaceEdges(state, palace, 'outbound');
-      // A river or wall may leave only an opposite-flow door connected to this
-      // farm. Traffic convention must never turn a reachable farm into an island.
-      if (!entrances.some(entrance => hasStaticPath(state, entrance, goal, unit.faction, true))) entrances = palaceEdges(state, palace);
+      // Bounded city traffic needs no separate entrance lanes. Take the
+      // nearest connected door, including an opposite-side island fallback.
       for (const entrance of entrances.slice().sort((a, b) => distance(a, goal) - distance(b, goal))) {
-        // Workers pass through every unit; terrain, buildings and forbidden
-        // zones remain part of the static route's live validation.
+        if (!hasStaticPath(workNavigationState(state, false, -1, undefined, true), entrance, goal, unit.faction, true)) continue;
         const path = courierOutboundPath(state, entrance, goal, unit.faction);
         if (!path.length) continue;
-        const outboundSeconds = walkingCost(state, entrance, path) / Math.max(.01, unit.speed);
-        if (field.food > 0 && !allowHarvestDeparture(state, unit, palace, field, outboundSeconds)) return;
+        // One coarse round-trip estimate is sufficient. Do not dispatch a
+        // queued harvest that is already too old to get back to storage.
+        if (harvest.food > 0 && !harvest.fallow && state.time + 2 * path.length / Math.max(.01, unit.speed) >= harvest.expiresAt) {
+          unit.repathAt = harvest.expiresAt;
+          finishFarmTrip(state, unit);
+          return;
+        }
         unit.x = entrance.x; unit.y = entrance.y; unit.inside = false; unit.field = field.id;
-        unit.collectorPickups = 0;
         unit.collectPhase = 'outbound'; claimHarvestField(state, field, unit.id);
-        unit.cultivating = !!indexedBuilding(state, field.camp)?.farmFallow;
-        setJourney(unit, goal, path);
-        if (field.food > 0) reserveHarvestStops(state, unit, palace, field, outboundSeconds);
+        unit.cultivating = harvest.fallow;
+        setParcelPickup(state, group, field);
+        setJourney(unit, goal, path); departFarm(state, unit);
         return;
       }
     }
-    unit.repathAt = state.time + .75;
+    unit.repathAt = state.time + FARM_ROUTE_RETRY_SECONDS;
+    finishFarmTrip(state, unit);
     return;
   }
   if (unit.collectPhase === 'outbound') {
-    const candidate = claimedField(state, unit.field);
-    // Finish a cultivation trip even if walking onto the first plot has already
-    // reactivated the camp. Ordinary spoiled-food trips may still turn back.
-    const targetCamp = candidate && indexedBuilding(state, candidate.camp);
-    // Extra stops were checked against the city map when reserved. Staffing
-    // refreshes that relationship at its regular cadence; movement need not
-    // rescan every farm and settlement on every animation step.
-    const sameCity = candidate && workGroups(state).byField.get(candidate) === workGroups(state).byCamp.get(camp.id);
-    const field = sameCity && candidate.faction === unit.faction && targetCamp && buildingReady(targetCamp) && targetCamp.faction === unit.faction
-      && !isForbidden(state, candidate.x, candidate.y, unit.faction) && (candidate.food > 0 || unit.cultivating) ? candidate : undefined;
+    const candidate = claimedField(state, unit.field), groups = workGroups(state);
+    const group = groups.byCamp.get(unit.collectorCamp!), targetCamp = candidate && indexedBuilding(state, candidate.camp);
+    const field = candidate && group && groups.byField.get(candidate) === group && candidate.faction === unit.faction
+      && targetCamp && buildingReady(targetCamp) && targetCamp.faction === unit.faction
+      && !isForbidden(state, candidate.x, candidate.y, unit.faction) ? candidate : undefined;
     if (!field) {
       releaseClaims(state, unit); unit.field = undefined; unit.collectPhase = 'returning'; clearJourney(unit);
     } else if (distance(unit, { x: field.x + .5, y: field.y + .5 }) < .12) {
-      visitFarm(state, targetCamp!);
-      unit.cargoBatches = [...(unit.cargoBatches ?? []), ...fieldBatches(state, field)]; refreshCargo(unit);
-      unit.cargoField ??= field.id;
-      field.food = 0; field.foodBatches = []; field.expiresAt = undefined; field.harvestedAt = state.time; delete field.claimedBy;
-      harvestFieldChanged(state, field);
-      refreshWheatReadiness(state, field);
+      if (!field.orchard) visitFarm(state, targetCamp!);
+      unit.cargoField = field.id;
+      collectParcel(state, unit, group!);
       unit.collectPhase = 'returning'; unit.field = undefined; clearJourney(unit);
-      unit.collectorPickups = (unit.collectorPickups ?? 0) + 1;
-      state.farmVersion = (state.farmVersion ?? 0) + 1;
-      if (nextHarvestPickup(state, unit, palace)) return;
-      // Use the same deadline-checked direct return policy after the final stop,
-      // rather than choosing a farther door solely for traffic convention.
       const home = harvestReturn(state, unit, unit, palace);
       if (home) setJourney(unit, home.entrance, home.path);
     } else {
@@ -1303,35 +1166,18 @@ function updateCollectorStep(state: GameState, unit: Unit, dt: number, move: Mov
     if (entrances.some(point => distance(point, unit) < .2)) {
       releaseClaims(state, unit);
       deliverFoodCargo(state, palace, unit);
+      if ((unit.cargo ?? 0) > 0) { clearJourney(unit); unit.repathAt = state.time + CHECK_INTERVAL; return; }
       unit.cargo = 0; unit.cargoField = undefined; unit.cargoBatches = []; unit.cargoExpiresAt = undefined;
-      unit.inside = true; unit.collectPhase = 'idle'; clearJourney(unit);
-      unit.collectorPickups = 0;
-      unit.x = palace.x + 1; unit.y = palace.y + 1; unit.moving = false; unit.repathAt = state.time + CHECK_INTERVAL;
+      unit.inside = true; unit.collectPhase = 'idle'; clearJourney(unit); finishFarmTrip(state, unit);
+      unit.x = palace.x + 1; unit.y = palace.y + 1; unit.repathAt = state.time + CHECK_INTERVAL;
       return;
     }
     if (!unit.destination && state.time < (unit.repathAt ?? 0)) return;
-    // Choose a door once per return trip. A temporarily occupied doorway is a
-    // queue, not a reason to send the entire crowd circling around the palace.
     if (!unit.destination || !entrances.some(point => distance(point, unit.destination!) < .1)) {
       clearJourney(unit);
-      const doors = new Map(entrances.map(entrance => [key(entrance), entrance])), queued = new Map<number, number>();
-      for (const other of state.units) if (other.id !== unit.id && other.hp > 0 && other.collector && other.home === palace.id
-        && other.collectPhase === 'returning' && other.destination) {
-        const cell = key(other.destination), entrance = doors.get(cell);
-        if (entrance && distance(other.destination, entrance) < .1) queued.set(cell, (queued.get(cell) ?? 0) + 1);
-      }
-      const incoming = new Set(palaceEdges(state, palace, 'returning').map(key));
-      const scores = new Map(entrances.map(entrance => {
-        const cell = key(entrance);
-        return [entrance, distance(entrance, unit) + (queued.get(cell) ?? 0) * 3 + (incoming.has(cell) ? 0 : 1000)];
-      }));
-      entrances.sort((a, b) => scores.get(a)! - scores.get(b)!);
-      for (const entrance of entrances) {
-        if (!hasStaticPath(state, unit, entrance, unit.faction, true)) continue;
-        const path = courierReturnPath(state, unit, entrance, unit.faction);
-        if (path.length) { setJourney(unit, entrance, path); break; }
-      }
-      if (!unit.destination) unit.repathAt = state.time + .75;
+      const home = harvestReturn(state, unit, unit, palace);
+      if (home) setJourney(unit, home.entrance, home.path);
+      else unit.repathAt = state.time + FARM_ROUTE_RETRY_SECONDS;
     }
     if (unit.destination) move(state, unit, unit.destination, dt);
   }

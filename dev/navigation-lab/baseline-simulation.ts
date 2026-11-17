@@ -9,9 +9,17 @@ import { entityVisible, isVisible, updateFog } from '../../src/game/fog';
 import { buildingAlignmentBonus, campSpacingAllowed, palaceReachability } from '../../src/game/placement';
 import { retinueFormation } from '../../src/game/formation';
 import { unitAtPoint } from '../../src/game/hit-testing';
+import { MILITARY_ACADEMY_GOLD } from '../../src/game/military-academy';
 
 export const ECONOMY_INTERVAL = 30;
 export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; production: number }> = {
+  militaryAcademy: { food: 0, gold: MILITARY_ACADEMY_GOLD, production: 0 },
+  foundry: { food: 0, gold: 600, production: 0 },
+  whalingPost: { food: 0, gold: 300, production: 0 },
+  shipyard: { food: 0, gold: 500, production: 0 },
+  thermalBath: { food: 0, gold: 300, production: 0 },
+  granary: { food: 0, gold: 200, production: 0 },
+  forum: { food: 0, gold: 300, production: 0 },
   fort: { food: 0, gold: 300, production: 0 }, supplyDepot: { food: 0, gold: 120, production: 0 },
     stable: { food: 0, gold: 350, production: 0 },
   dock: { food: 0, gold: 100, production: 0 },
@@ -19,6 +27,7 @@ export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; pro
   villageTent: { food: 0, gold: 0, production: 0 },
   scoutLodge: { food: 0, gold: 200, production: 0 },
   ballista: { food: 0, gold: 300, production: 0 },
+  siegeCannon: { food: 0, gold: 500, production: 0 },
   healerShack: { food: 0, gold: 200, production: 0 },
   palace: { food: 0, gold: 0, production: 80 }, camp: { food: 0, gold: 0, production: 8 },
   house: { food: 0, gold: 0, production: 18 }, shack: { food: 0, gold: 0, production: 18 }, cottage: { food: 0, gold: 10, production: 30 },
@@ -28,7 +37,7 @@ export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; pro
   tower: { food: 0, gold: 20, production: 60 },
   palisade: { food: 0, gold: 0, production: 6 }, woodenTower: { food: 0, gold: 10, production: 30 },
   well: { food: 0, gold: 600, production: 0 }, monument: { food: 0, gold: 200, production: 0 },
-  blacksmith: { food: 0, gold: 400, production: 0 }, archeryRange: { food: 0, gold: 400, production: 0 }, library: { food: 0, gold: 400, production: 0 },
+  blacksmith: { food: 0, gold: 400, production: 0 }, archeryRange: { food: 0, gold: 400, production: 0 }, library: { food: 0, gold: 400, production: 0 }, colosseum: { food: 0, gold: 2500, production: 0 }, barracks: { food: 0, gold: 300, production: 0 },
   guardPost: { food: 0, gold: 200, production: 0 },
 };
 const HOUSE_CAPACITY: Partial<Record<BuildingKind, number>> = { camp: 4, shack: 4, cottage: 4 };
@@ -1070,7 +1079,7 @@ export function diplomacyAction(state: GameState, factionId: number, action: 'wa
   }
   if (faction.lastDiplomacy !== undefined && state.time - faction.lastDiplomacy < 30) return { ok: false, message: 'Allow 30 seconds for your hosts to reconsider.' };
   faction.lastDiplomacy = state.time;
-  const chance = (0.15 + faction.affinity * 0.007) * (faction.relation === 'war' ? 0.5 : 1);
+  const chance = (0.15 + (faction.affinity ?? 50) * 0.007) * (faction.relation === 'war' ? 0.5 : 1);
   if (random(state) < chance) {
     const player = state.factions[0];
     player.food += faction.food; player.gold += faction.gold; player.production += faction.production; player.population += faction.population;
@@ -1092,7 +1101,7 @@ export function diplomacyAction(state: GameState, factionId: number, action: 'wa
     logEvent(state, message, 'good'); checkGameOver(state);
     return { ok: true, message };
   }
-  if (random(state) < (100 - faction.affinity) / 130) {
+  if (random(state) < (100 - (faction.affinity ?? 50)) / 130) {
     faction.relation = 'war'; faction.nextRaid = state.time + 12;
     const message = `${faction.name} rejected confederation and declared war!`;
     logEvent(state, message, 'warning'); return { ok: false, message };

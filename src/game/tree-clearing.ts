@@ -1,7 +1,7 @@
 import { playerFaction } from './player-context';
 import { isForbidden } from './forbidden-zones';
 import { type GameState, type Point, WATER, buildingReady, buildingWidth, buildingHeight, distance, tileAt } from './types';
-import { canWalk, findPath, invalidateNavigation } from './pathfinding';
+import { canWalk, findPath, invalidateNavigation, workNavigationState } from './pathfinding';
 import { terrainYields } from '../world/generator';
 import { markWorldChanged } from './world-revisions';
 import { vegetationStump } from './vegetation-art';
@@ -60,9 +60,9 @@ export function validateTreeClearing(state: GameState, x: number, y: number): { 
     for (let i = 0; i < 2; i++) exits.push({ x: palace.x - .5, y: palace.y + i + .5 }, { x: palace.x + 2.5, y: palace.y + i + .5 },
       { x: palace.x + i + .5, y: palace.y - .5 }, { x: palace.x + i + .5, y: palace.y + 2.5 });
     for (const exit of exits.filter(exit => canWalk(state, exit.x, exit.y, playerFaction(state), undefined, true))) for (const edge of edges)
-      if (distance(exit, edge) < .12 || findPath(state, exit, edge, playerFaction(state), false, undefined, undefined, undefined, false, true).length) return { ok: true, message: '' };
+      if (distance(exit, edge) < .12 || findPath(workNavigationState(state, true), exit, edge, playerFaction(state), false, undefined, undefined, undefined, false, true).length) return { ok: true, message: '' };
   }
-  return { ok: false, message: `${name} need${marsh ? '' : 's'} a route from the settlement.` };
+  return { ok: false, message: `${name} need${marsh ? '' : 's'} a route from the town.` };
 }
 export function orderTreeClearing(state: GameState, x: number, y: number): { ok: boolean; message: string } {
   const validation = validateTreeClearing(state, x, y);

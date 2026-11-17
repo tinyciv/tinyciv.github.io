@@ -1,14 +1,20 @@
+import { territoryValue } from './territory-cells';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
+import { refreshWaterTraffic } from './water-traffic';
+import { atWar } from './relations';
+import { unitNavigationState } from './unit-navigation';
 import { territory } from './borders';
 import { constructionEdges } from './builders';
-import { dockShoreCrossingClear, DOCK_DIRECTIONS } from './dock';
+import { createDockShoreCrossingQuery, dockShoreCrossingClear, DOCK_DIRECTIONS } from './dock';
 import { entityStore } from './entity-store';
 import { forbiddenRevision, isForbidden } from './forbidden-zones';
 import { canTraverseEdge, canWalk, findPath, hasStaticPath } from './pathfinding';
 import { sailingNavigation, sailingPath } from './sailing';
-import { buildingReady, distance, isFord, tileAt, WATER, type Building, type GameState, type Point,
+import { buildingReady, distance, tileAt, WATER, type Building, type GameState, type Point,
   type RiverTradeConnection, type RiverTradeEnd, type TradeRoute, type Unit } from './types';
 
-export const RIVER_TRADE_TILE_VALUE = 2.5;
+export const RIVER_TRADE_TIME_MULTIPLIER = 2.5;
 const MAX_SHORES = 8;
 const copy = (p: Point): Point => ({ x: p.x, y: p.y });
 export function pathDistance(start: Point, path: readonly Point[]): number {
@@ -21,7 +27,13 @@ const probe = (faction: number, p: Point): Unit => ({ id: -1, kind: 'merchant', 
   lastCombat: -100, moving: false, facing: 0, attackTime: 0 });
 export const riverTradeUnlocked = (state: GameState, faction: number): boolean =>
   (state.factions.find(owner => owner.id === faction)?.research?.levels.sailing ?? 0) >= 1;
-interface Planner { signature: string; shores: Map<number, RiverTradeEnd[]>; pairs: Map<string, RiverTradeConnection | undefined> }
+interface Planner {
+  signature: string;
+  shores: Map<number, RiverTradeEnd[]>;
+  pairs: Map<string, RiverTradeConnection | undefined>;
+  crossingClear?: ReturnType<typeof createDockShoreCrossingQuery>;
+  riverCells?: Map<number, number[]>;
+}
 const planners = new WeakMap<GameState, Planner>();
 
 function planner(state: GameState): Planner {
@@ -35,21 +47,29 @@ function planner(state: GameState): Planner {
  * A distant city's border touching the river cannot lend this city a port. */
 function shores(state: GameState, city: Building, cache: Planner): RiverTradeEnd[] {
   const cached = cache.shores.get(city.id); if (cached) return cached;
+  const crossingClear = cache.crossingClear ??= createDockShoreCrossingQuery(state);
   const borders = territory(state), cities = state.buildings.filter(b => b.kind === 'palace' && b.faction === city.faction && buildingReady(b));
+  if (!cache.riverCells) {
+    cache.riverCells = new Map();
+    for (let cell = 0; cell < state.world.tiles.length; cell++) {
+      if (state.world.tiles[cell].terrain !== 'river') continue;
+      const faction = territoryValue(borders, cell), cells = cache.riverCells.get(faction);
+      if (cells) cells.push(cell); else cache.riverCells.set(faction, [cell]);
+    }
+  }
   const nav = sailingNavigation(state, probe(city.faction, city), true, true), choices: { shore: Point; water: Point }[] = [];
   const nearest = (p: Point): boolean => cities.every(other => other.id === city.id
     || distance({ x: city.x + 1, y: city.y + 1 }, p) < distance({ x: other.x + 1, y: other.y + 1 }, p)
     || distance({ x: city.x + 1, y: city.y + 1 }, p) === distance({ x: other.x + 1, y: other.y + 1 }, p) && city.id < other.id);
-  for (let cell = 0; cell < state.world.tiles.length; cell++) {
-    if (state.world.tiles[cell].terrain !== 'river' || borders.owners[cell] !== city.faction) continue;
+  for (const cell of cache.riverCells.get(city.faction) ?? []) {
     const water = { x: cell % state.world.width + .5, y: Math.floor(cell / state.world.width) + .5 };
     if (!nearest(water) || !nav.position(water)) continue;
     for (const d of DOCK_DIRECTIONS) {
       const shore = { x: water.x + d.x, y: water.y + d.y }, tile = tileAt(state.world, shore.x, shore.y);
       if (!tile || WATER.has(tile.terrain) || isForbidden(state, shore.x, shore.y, city.faction)
-        || borders.owners[Math.floor(shore.y) * state.world.width + Math.floor(shore.x)] !== city.faction
+        || territoryValue(borders, Math.floor(shore.y) * state.world.width + Math.floor(shore.x)) !== city.faction
         || !nearest(shore) || !canWalk(state, shore.x, shore.y, city.faction, undefined, true)
-        || !dockShoreCrossingClear(state, water, shore)) continue;
+        || !crossingClear(water, shore)) continue;
       choices.push({ shore, water });
     }
   }
@@ -71,19 +91,24 @@ function shores(state: GameState, city: Building, cache: Planner): RiverTradeEnd
   ends.sort((a, b) => a.landDistance - b.landDistance); cache.shores.set(city.id, ends); return ends;
 }
 
-/** Same connected river only: oceans/lakes, fords, bridges, cliffs and solid
+/** Same connected river only: oceans/lakes, bridges, cliffs and solid
  * structures cannot substitute for a navigable river stretch. */
-export function findRiverTradeConnection(state: GameState, origin: Building, partner: Building): RiverTradeConnection | undefined {
-  if (origin.faction !== partner.faction || !riverTradeUnlocked(state, origin.faction)) return;
+export function findRiverTradeConnection(state: GameState, origin: Building, partner: Building, negotiatingPeace = false): RiverTradeConnection | undefined {
+  if (!negotiatingPeace && atWar(state, origin.faction, partner.faction) || !riverTradeUnlocked(state, origin.faction)) return;
   const cache = planner(state), key = `${origin.id}:${partner.id}`;
   if (cache.pairs.has(key)) return cache.pairs.get(key);
   const candidates = shores(state, origin, cache).flatMap(a => shores(state, partner, cache).map(b => ({ a, b })))
     .sort((a, b) => a.a.landDistance + a.b.landDistance + distance(a.a.water, a.b.water)
       - b.a.landDistance - b.b.landDistance - distance(b.a.water, b.b.water));
   let result: RiverTradeConnection | undefined, best = Infinity;
+  // All probes use the same merchant hull, faction and static water rules.
+  // Reuse both blockers and lazily flooded components for this read-only batch.
+  // Banks on disconnected river stretches need no repeated A* exploration.
+  const navigation = candidates.length ? sailingNavigation(state, probe(origin.faction, origin), true, true) : undefined;
   // A bounded set of nearby entrances avoids repeated whole-map searches.
   for (const { a, b } of candidates.slice(0, 16)) {
-    const path = sailingPath(state, probe(origin.faction, a.water), b.water, true, true);
+    if (!navigation!.connected(a.water, b.water)) continue;
+    const path = sailingPath(state, probe(origin.faction, a.water), b.water, true, true, navigation);
     if (!path.length) continue;
     const waterDistance = pathDistance(a.water, path);
     if (waterDistance <= a.landDistance || waterDistance <= b.landDistance) continue;
@@ -100,25 +125,24 @@ export function findRiverTradeConnection(state: GameState, origin: Building, par
  * on land finishes first; switching to river never teleports a live caravan. */
 export function beginRiverTradeLeg(state: GameState, route: TradeRoute, merchant: Unit): number | undefined {
   const connection = route.river; if (!connection) return;
+  const navigation = unitNavigationState(state, merchant);
   const fromOrigin = route.target === route.partner, source = fromOrigin ? connection.origin : connection.partner;
   const destination = fromOrigin ? connection.partner : connection.origin;
   const path = distance(merchant, source.shore) < .01 ? [copy(source.shore)]
-    : findPath(state, merchant, source.shore, merchant.faction, false, undefined, undefined, undefined, true, true);
+    : findPath(navigation, merchant, source.shore, merchant.faction, false, undefined, undefined, undefined, true, true);
   if (!path.length || distance(path.at(-1)!, source.shore) > .18) return;
-  const endPath = findPath(state, destination.shore, destination.door, merchant.faction, false, undefined, undefined, undefined, true, true);
+  const endPath = findPath(navigation, destination.shore, destination.door, merchant.faction, false, undefined, undefined, undefined, true, true);
   if (!endPath.length || distance(endPath.at(-1)!, destination.door) > .18) return;
   route.riverLeg = { connection, fromOrigin, phase: 'embark', waterPath: (fromOrigin ? connection.waterPath : [...connection.waterPath].reverse()).map(copy) };
   route.goal = copy(destination.door); merchant.path = path; merchant.pathGoal = copy(source.shore); merchant.repathAt = 0;
-  return pathDistance(merchant, path) + pathDistance(destination.shore, endPath) + 2 + connection.waterDistance * RIVER_TRADE_TILE_VALUE;
+  return pathDistance(merchant, path) + pathDistance(destination.shore, endPath) + 2 + connection.waterDistance;
 }
 
 type Move = (state: GameState, unit: Unit, goal: Point, dt: number) => void;
-function stepToward(unit: Unit, goal: Point, dt: number): void {
-  const gap = distance(unit, goal), step = Math.min(gap, unit.speed * dt);
-  unit.moving = step > .0001;
-  if (!unit.moving) return;
-  unit.facing = Math.atan2(goal.y - unit.y, goal.x - unit.x);
-  unit.x += (goal.x - unit.x) * step / gap; unit.y += (goal.y - unit.y) * step / gap;
+function stepToward(state: GameState, unit: Unit, goal: Point, dt: number): void {
+  const pointer = rustEngine.sim_trade_boat_steer(simCore(state).handle, unit.x, unit.y, unit.facing, goal.x, goal.y, dt, state.factions.find(f => f.id === unit.faction)?.whalingUntil ?? 0, state.time);
+  const result = new Float64Array(rustEngine.memory.buffer, pointer, 4);
+  unit.x = result[0]; unit.y = result[1]; unit.facing = result[2]; unit.moving = !!result[3];
 }
 const clearOrders = (unit: Unit): void => { unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.repathAt = 0; };
 
@@ -140,12 +164,13 @@ export function riverTradingPosts(state: GameState): Point[] {
 /** Shore crossings interpolate at merchant speed; no warps or free shortcuts.
  * The vessel remains the same damageable merchant throughout the itinerary. */
 export function advanceRiverTrade(state: GameState, route: TradeRoute, merchant: Unit, dt: number, move: Move): boolean {
+  const navigation = unitNavigationState(state, merchant);
   const leg = route.riverLeg!;
   const source = leg.fromOrigin ? leg.connection.origin : leg.connection.partner;
   const destination = leg.fromOrigin ? leg.connection.partner : leg.connection.origin;
   merchant.moving = false;
   if (leg.phase === 'embark') {
-    if (!canWalk(state, source.shore.x, source.shore.y, merchant.faction, undefined, true)
+    if (!canWalk(navigation, source.shore.x, source.shore.y, merchant.faction, undefined, true)
       || !dockShoreCrossingClear(state, source.water, source.shore)) {
       if (state.time < (leg.nextRepathAt ?? 0)) return false;
       leg.nextRepathAt = state.time + 4;
@@ -160,12 +185,12 @@ export function advanceRiverTrade(state: GameState, route: TradeRoute, merchant:
     if (distance(merchant, source.shore) < .13) { leg.phase = 'board'; clearOrders(merchant); }
   } else if (leg.phase === 'board' || leg.phase === 'disembark') {
     const end = leg.phase === 'board' ? source : destination;
-    if (!canWalk(state, end.shore.x, end.shore.y, merchant.faction, undefined, true)
+    if (!canWalk(navigation, end.shore.x, end.shore.y, merchant.faction, undefined, true)
       || !dockShoreCrossingClear(state, end.water, end.shore)) {
       if (leg.phase === 'disembark') {
         // Retrace the transfer if construction appears during disembarkation,
         // then choose another clear bank using the ordinary river replanner.
-        stepToward(merchant, end.water, dt);
+        stepToward(state, merchant, end.water, dt);
         if (distance(merchant, end.water) < .001) leg.phase = 'river';
       } else if (!merchant.aboardRiverTrade) {
         // Still on land: use another bank rather than waiting on this order.
@@ -174,20 +199,20 @@ export function advanceRiverTrade(state: GameState, route: TradeRoute, merchant:
         && sailingNavigation(state, merchant, true).position(end.water)) {
         // The transfer has already started. Leave newly obstructed ground
         // toward its clear water, without returning into the new structure.
-        stepToward(merchant, end.water, dt);
+        stepToward(state, merchant, end.water, dt);
         if (distance(merchant, end.water) < .001) leg.phase = 'river';
       }
       return false;
     }
     if (!sailingNavigation(state, merchant, true).position(end.water)) return false;
-    merchant.aboardRiverTrade = true;
-    stepToward(merchant, leg.phase === 'board' ? end.water : end.shore, dt);
+    merchant.aboardRiverTrade = true; refreshWaterTraffic(state, merchant);
+    stepToward(state, merchant, leg.phase === 'board' ? end.water : end.shore, dt);
     if (distance(merchant, leg.phase === 'board' ? end.water : end.shore) < .001) {
       if (leg.phase === 'board') leg.phase = 'river';
       else { leg.phase = 'city'; merchant.aboardRiverTrade = false; clearOrders(merchant); }
     }
   } else if (leg.phase === 'river') {
-    if (!canWalk(state, destination.shore.x, destination.shore.y, merchant.faction, undefined, true)
+    if (!canWalk(navigation, destination.shore.x, destination.shore.y, merchant.faction, undefined, true)
       || !dockShoreCrossingClear(state, destination.water, destination.shore)) {
       if (state.time < (leg.nextRepathAt ?? 0)) return false;
       leg.nextRepathAt = state.time + 4;
@@ -209,13 +234,13 @@ export function advanceRiverTrade(state: GameState, route: TradeRoute, merchant:
       }
       return false;
     }
-    stepToward(merchant, next, dt);
+    stepToward(state, merchant, next, dt); refreshWaterTraffic(state, merchant);
   } else {
-    if (!canWalk(state, destination.door.x, destination.door.y, merchant.faction, undefined, true)) {
+    if (!canWalk(navigation, destination.door.x, destination.door.y, merchant.faction, undefined, true)) {
       if (state.time < (leg.nextRepathAt ?? 0)) return false;
       leg.nextRepathAt = state.time + 4;
       const city = entityStore(state).buildings.get(destination.city);
-      const door = city && constructionEdges(state, city, true).find(p => hasStaticPath(state, merchant, p, merchant.faction, true));
+      const door = city && constructionEdges(navigation, city, true).find(p => hasStaticPath(navigation, merchant, p, merchant.faction, true));
       if (!door) return false;
       destination.door = door; route.goal = copy(door); clearOrders(merchant);
     }

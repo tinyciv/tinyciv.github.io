@@ -20,7 +20,7 @@ function fixture(): GameState {
       relation: id ? 'peace' : 'self', villageId: id ? 1 : undefined, population: 20, food: 500, gold: 1000,
       production: 0, culture: 20, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false })),
     villages: [{ id: 1, faction: 1, campId: 2, name: 'Village', identity: 'growers', requiredResource: 'copper',
-      relation: 'neutral', x: 27, y: 7, nextGrowthAt: Infinity, nextRecruitAt: Infinity, nextThinkAt: 0 }],
+      relation: 'neutral', x: 27, y: 7 }],
     time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'village-quote', rngState: 9,
   };
@@ -33,7 +33,7 @@ describe('village trade income quotes', () => {
     expect(quote).toMatchObject({ requiredResource: 'copper', hasResource: false, routeAvailable: true, originId: 1 });
     expect(quote.distance).toBeGreaterThan(10);
     expect(quote.roundTripSeconds).toBeCloseTo(quote.distance! * 2 / MERCHANT_SPEED + 3);
-    expect(quote.withoutResourceGoldPer30).toBeCloseTo(villageTradePayout(state, village, 0, quote.distance!, false) * 60 / quote.roundTripSeconds!);
+    expect(quote.withoutResourceGoldPer30).toBeCloseTo(villageTradePayout(state, village, 0, (quote.roundTripSeconds! - 3) / 2, false) * 60 / quote.roundTripSeconds!);
     expect(quote.withResourceGoldPer30).toBeCloseTo(quote.withoutResourceGoldPer30 * 4);
     expect(JSON.stringify(state)).toBe(before);
   });
@@ -62,7 +62,7 @@ describe('village trade income quotes', () => {
     const after = villageTradeQuote(state, village);
     expect(after.roundTripSeconds).toBeCloseTo(after.distance! * 2 / (MERCHANT_SPEED * 1.5) + 3);
     expect(after.roundTripSeconds!).toBeLessThan(before.roundTripSeconds!);
-    expect(after.withoutResourceGoldPer30).toBeGreaterThan(before.withoutResourceGoldPer30);
+    expect(after.withoutResourceGoldPer30).toBeCloseTo(villageTradePayout(state, village, 0, (after.roundTripSeconds! - 3) / 2, false) * 60 / after.roundTripSeconds!);
   });
 
   it('uses the retained route origin until that settlement is lost', () => {

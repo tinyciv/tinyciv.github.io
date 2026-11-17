@@ -35,7 +35,7 @@ for (const name of names) {
   });
   modules[name] = await import(pathToFileURL(outfile).href);
 }
-const wasm = await readFile(path.join(roots.current, 'public/wasm/navigation.wasm'));
+const wasm = await readFile(path.join(roots.current, 'public/wasm/simulation.wasm'));
 for (const name of names) await modules[name].installNavigationWasm(wasm);
 const savedText = scenes.includes('settlement') ? await readFile(statePath, 'utf8') : undefined;
 const hash = value => createHash('sha256').update(value).digest('hex');

@@ -20,8 +20,8 @@ function release(state: GameState, leader: Unit): void {
 /** One shared strategic route per large band. Only visible contacts can move
  * the goal away from the known city; hidden enemy positions never guide it.
  * Partial paths end at a reachable wall face so ranks can conduct a breach. */
-export function updateMarauderFormations(state: GameState, visible: (observer: Unit, target: Unit | Building) => boolean): void {
-  if (state.time < (clocks.get(state) ?? -Infinity)) return;
+export function updateMarauderFormations(state: GameState, visible: (observer: Unit, target: Unit | Building) => boolean, immediate = false): void {
+  if (!immediate && state.time < (clocks.get(state) ?? -Infinity)) return;
   clocks.set(state, state.time + 1);
   const members = new Map<number, Unit[]>();
   for (const unit of state.units) if (unit.marauderPack !== undefined && eligible(unit)) {
@@ -34,19 +34,19 @@ export function updateMarauderFormations(state: GameState, visible: (observer: U
     const group = members.get(pack.id) ?? [];
     if (!eligible(leader) || !pack.raid || pack.returning || pack.campDefense || leader.marauderRetreating
       || pack.motivation === 'theft' || pack.motivation === 'harass' || pack.phase === 'muster'
-      || group.length < (leader.infantryFormation?.active ? 6 : MARAUDER_FORMATION_MIN_SIZE)) { release(state, leader); continue; }
+      || group.length < (pack.ruinsAmbush ? 1 : leader.infantryFormation?.active ? 6 : MARAUDER_FORMATION_MIN_SIZE)) { release(state, leader); continue; }
     // Low-health commanders retain their existing refuge behavior instead of
     // being held in the formation combat branch until they die.
-    if (leader.hp < (leader.maxHp ?? 100) * .45 && state.time - (leader.lastDamagedAt ?? -Infinity) <= 3) {
+    if (!pack.ruinsAmbush && leader.hp < (leader.maxHp ?? 100) * .45 && state.time - (leader.lastDamagedAt ?? -Infinity) <= 3) {
       pack.returning = true; leader.marauderRetreating = true; release(state, leader); continue;
     }
     const contacts = state.units.filter(unit => unit.hp > 0 && !unit.inside && isRaiderEnemyFaction(state, unit.faction)
       && distance(unit, leader) <= 8 && visible(leader, unit)).sort((a, b) => distance(a, leader) - distance(b, leader) || a.id - b.id);
-    if (marauderLeaderInDanger(state, leader, contacts)) {
+    if (!pack.ruinsAmbush && marauderLeaderInDanger(state, leader, contacts)) {
       pack.returning = true; leader.marauderRetreating = true; release(state, leader); continue;
     }
     const target = pack.targetBuilding === undefined ? undefined : entityStore(state).buildings.get(pack.targetBuilding);
-    let goal: Point = contacts[0] ?? (pack.motivation === 'siege' && pack.phase !== 'attack' ? pack.rally ?? pack.waypoint
+    let goal: Point = pack.ruinsAmbush ? contacts[0] ?? pack.waypoint : contacts[0] ?? (pack.motivation === 'siege' && pack.phase !== 'attack' ? pack.rally ?? pack.waypoint
       : target && buildingReady(target) ? center(target) : pack.waypoint);
     if (contacts[0]) {
       const gap = distance(leader, goal), advance = Math.max(0, gap - 1.4);

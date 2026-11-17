@@ -1,5 +1,7 @@
+import { villageAllyView } from './settlement-bridge';
 import { playerFaction, playerControl, isHumanFaction } from './player-context';
 import type { GameState, Point, Unit } from './types';
+import { entityStore } from './entity-store';
 
 export interface ForbiddenRegion {
   id: number;
@@ -40,7 +42,7 @@ export const forbiddenCells = (state: GameState, faction = playerFaction(state))
 export function factionRespectsForbidden(state: GameState, faction: number): boolean {
   if (state.multiplayer) return isHumanFaction(state, faction);
   return faction === 0 || state.factions.some(candidate => candidate.id === faction && candidate.relation === 'confederated')
-    || !!state.villages?.some(village => village.faction === faction && village.relation === 'allied' && !village.destroyed);
+    || !!state.villages?.some(village => village.faction === faction && villageAllyView(state, village) === 0 && !village.destroyed);
 }
 
 export function isForbidden(state: GameState, x: number, y: number, faction = playerFaction(state)): boolean {
@@ -53,7 +55,8 @@ export function isForbidden(state: GameState, x: number, y: number, faction = pl
 /** Only the Leader and combat retinue may ignore forbidden work areas. */
 export function unitRespectsForbidden(state: GameState, unit: Pick<Unit, 'kind' | 'faction' | 'villageId' | 'guardPost' | 'engineer'>): boolean {
   const retinue = unit.villageId === undefined && unit.guardPost === undefined
-    && (unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || (unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight') || unit.kind === 'archer');
+    && (unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || unit.kind === 'pikeman' || unit.kind === 'musketman' || (unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight') || unit.kind === 'archer');
+  if (unit.guardPost !== undefined && entityStore(state).buildings.get(unit.guardPost)?.guardPost?.ignoreForbidden) return false;
   return unit.kind !== 'leader' && !unit.engineer && !retinue && factionRespectsForbidden(state, unit.faction);
 }
 

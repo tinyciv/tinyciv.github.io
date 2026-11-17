@@ -1,19 +1,44 @@
+import { runtimeArtUrl } from './runtime-art';
+import { loadWarshipArt } from './warship-art';
 import type { Building, Unit } from './types';
 import { dockFootprint } from './dock';
 import { loadGalleyArt } from './galley-art';
+import { loadBarbarianGalleyArt } from './barbarian-galley-art';
+import { loadMerchantShipArt } from './merchant-ship-art';
 
 let house: HTMLImageElement | undefined, jetty: HTMLImageElement | undefined, sailboat: HTMLImageElement | undefined;
 let loading: Promise<void> | undefined;
 let dockIcon: string | undefined;
+let rowboat: HTMLImageElement | undefined;
+
+const rowboatOccupants = new WeakMap<Unit, Unit>();
+/** Reuse a render-only view without copying each worker's observed game state every frame. */
+export function rowboatOccupant(unit: Unit): Unit {
+  let view = rowboatOccupants.get(unit);
+  if (!view) {
+    view = Object.create(unit, {
+      aboardRowboat: { value: false }, aboardRiverTrade: { value: false },
+      inside: { value: false }, moving: { value: false },
+      attackTime: { value: 0 }, order: { value: 'hold' },
+    }) as Unit;
+    rowboatOccupants.set(unit, view);
+  }
+  return view;
+}
 
 /** Original PixelHole pixels. Only the boat's baked cyan foam is removed. */
 export function loadNavalArt(): Promise<void> {
-  return loading ??= Promise.all([loadGalleyArt(), ...['pixelhole-overworld/Dock-House.png', 'pixelhole-overworld/Dock-Jetty.png', 'pixelhole-overworld/Sailboat.png'].map(async (file, index) => {
-    const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/${file}`;
+  return loading ??= Promise.all([loadGalleyArt(), loadWarshipArt(), loadBarbarianGalleyArt(), loadMerchantShipArt(), ...['pixelhole-overworld/Dock-House.png', 'pixelhole-overworld/Dock-Jetty.png', 'pixelhole-overworld/Sailboat.png'].map(async (file, index) => {
+    const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/${file}`);
     await image.decode();
     if (image.naturalWidth !== 16 || image.naturalHeight !== (index === 1 ? 20 : 16)) throw new Error(`Invalid naval sprite: ${file}`);
     if (index === 0) house = image; else if (index === 1) jetty = image; else sailboat = image;
-  })]).then(() => {});
+  }), (async () => {
+    const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/miniworld/Fishing-Boat.png`);
+    await image.decode();
+    if (image.naturalWidth !== 32 || image.naturalHeight !== 16) throw new Error('Invalid rowboat sprite.');
+    rowboat = image;
+  })()]).then(() => {});
 }
 
 /** Bounds relative to the land anchor, in the ordinary 32px tile plane. */
@@ -41,6 +66,12 @@ export function drawDock(c: CanvasRenderingContext2D, building: Pick<Building, '
 }
 
 export function sailboatMirrored(unit: Pick<Unit, 'facing'>): boolean { return Math.cos(unit.facing) < -.01; }
+export const rowboatFrame = (unit: Pick<Unit, 'facing'>): number => Math.abs(Math.cos(unit.facing)) > Math.abs(Math.sin(unit.facing)) ? 16 : 0;
+export function drawRowboat(c: CanvasRenderingContext2D, unit: Pick<Unit, 'facing'>, x: number, y: number, size: number): void {
+  if (!rowboat) return;
+  c.save(); c.imageSmoothingEnabled = false;
+  c.drawImage(rowboat, rowboatFrame(unit), 0, 16, 16, x, y, size, size); c.restore();
+}
 /** Small automatic trading posts reuse the dock house's original pixels. The
  * clear bank in front remains the merchant's boarding/disembarkation point. */
 export function drawRiverTradingPost(c: CanvasRenderingContext2D, x: number, y: number, size: number): void {

@@ -38,7 +38,7 @@ describe('monument construction', () => {
     const monument = order(state);
     expect(BUILD_COSTS.monument).toEqual({ food: 0, gold: 200, production: 0 });
     expect(state.factions[0].gold).toBe(0); expect(CONSTRUCTION_SECONDS.monument).toBe(20);
-    expect(monument).toMatchObject({ faction: 0, x: 12, y: 10, hp: 250, maxHp: 250, armor: 0, capacity: 0,
+    expect(monument).toMatchObject({ faction: 0, x: 12, y: 10, hp: 1, maxHp: 250, armor: 0, capacity: 0,
       construction: { duration: 20, paidGold: 200, waitingForBuilder: true } });
     expect(buildingSize(monument)).toBe(1); expect(canWalk(state, 12.5, 10.5, 0)).toBe(true);
     expect(state.units.some(unit => unit.builder && unit.home === 1)).toBe(true);

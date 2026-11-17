@@ -2,7 +2,9 @@
  * deadline events keep their own fast updates; only expensive sensing/planning
  * uses these clocks. Runtime clocks are intentionally not part of saved state. */
 import type { GameState } from './types';
-import { CHECK_INTERVAL, MAX_CHECK_HZ } from './work-cadence';
+import { MAX_CHECK_HZ } from './work-cadence';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
 
 export const QUIET_DECISION_HZ = MAX_CHECK_HZ;
 export const COMBAT_DECISION_HZ = MAX_CHECK_HZ;
@@ -13,27 +15,23 @@ export interface DecisionClock {
   interval?: number;
 }
 
-const revisions = new WeakMap<GameState, number>();
-/** Explicit commands and changes of allegiance invalidate pending decisions. */
-export const decisionRevision = (state: GameState): number => revisions.get(state) ?? 0;
-export function invalidateDecisions(state: GameState): void {
-  revisions.set(state, decisionRevision(state) + 1);
-}
+let decisionResult: Float64Array | undefined;
+/** Explicit commands and changes of allegiance invalidate pending decisions.
+ * The revision is a resource of the game's native simulation core. */
+export const decisionRevision = (state: GameState): number => rustEngine.sim_decision_revision(simCore(state).handle);
+export function invalidateDecisions(state: GameState): void { rustEngine.sim_decisions_invalidate(simCore(state).handle); }
 
 /** Stable entity phases distribute recurring work without consuming gameplay
- * RNG. Damage, orders and entering combat do not bypass the minimum spacing;
- * execution still validates a retained target before moving or attacking.
- * Missed decisions are coalesced, never replayed as a catch-up burst. */
-export function decisionDue(clock: DecisionClock, now: number, key: number, _active = false, _urgent = false): boolean {
-  if (!Number.isFinite(now)) return false;
-  const first = clock.sampledAt === undefined;
-  const rewind = !first && now < clock.sampledAt!;
-  if (!first && !rewind && now + 1e-9 < clock.nextAt!) return false;
-  const phase = (Math.imul(key | 0, 0x9e3779b1) >>> 0) / 0x100000000;
-  clock.sampledAt = now;
-  clock.interval = CHECK_INTERVAL;
-  // First observations are immediate. Only their first follow-up is phased;
-  // rounding to an absolute phase after every scan could violate the cap.
-  clock.nextAt = now + CHECK_INTERVAL * (first || rewind ? 1 + phase : 1);
+ * RNG. Units `active` in combat re-decide at 8 Hz, quiet units at 3 Hz; an
+ * `urgent` event (damage, a lost target, a new order) or entering combat
+ * bypasses the pending deadline. Missed decisions are coalesced, never replayed.
+ * 2026-11-13: restoring this responsiveness (removed on 11-08) roughly halved
+ * soldiers standing idle beside enemies in the battle experiments. */
+export function decisionDue(clock: DecisionClock, now: number, key: number, active = false, urgent = false): boolean {
+  const pointer = rustEngine.cadence_decision_due(now, key | 0, clock.nextAt ?? NaN, clock.sampledAt ?? NaN, clock.interval ?? NaN, Number(active), Number(urgent));
+  if (!decisionResult || decisionResult.buffer !== rustEngine.memory.buffer || decisionResult.byteOffset !== pointer)
+    decisionResult = new Float64Array(rustEngine.memory.buffer, pointer, 4);
+  if (!decisionResult[0]) return false;
+  clock.nextAt = decisionResult[1]; clock.sampledAt = decisionResult[2]; clock.interval = decisionResult[3];
   return true;
 }

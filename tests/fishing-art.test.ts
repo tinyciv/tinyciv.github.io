@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { fishArtFrame, fishArtKey, fishSurfaceFrame, fishingBoatArtKey } from '../src/game/fishing-art';
+import { fishArtFrame, fishArtKey, fishSurfaceFrame, fishBreachMirrored, fishingBoatArtKey } from '../src/game/fishing-art';
 import { galleyPose } from '../src/game/galley-art';
 import { unitKey, NativeArt, type BakedArt } from '../src/game/native-art';
 import type { Unit } from '../src/game/types';
@@ -33,8 +33,10 @@ describe('native Miniworld fishing artwork', () => {
     expect(fish.size).toBeGreaterThan(8); expect(fish.size).toBeLessThanOrEqual(8 * 17); expect(boats.size).toBe(2);
   });
 
-  it('uses the native north, south, east and west swimming perspectives', () => {
-    expect([0, Math.PI / 2, Math.PI, -Math.PI / 2].map(facing => fishArtFrame({ id: 1, facing })[1])).toEqual([32, 48, 16, 0]);
+  it('keeps breaches upright and mirrors fish swimming west', () => {
+    const directions = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+    expect(directions.map(facing => fishBreachMirrored({ facing }))).toEqual([false, false, true, false]);
+    expect(directions.map(facing => fishArtFrame({ id: 1, facing })[1])).toEqual([0, 0, 0, 0]);
   });
 
   it('keeps fishing sailboats distinct from the Leader galley and redraws a boarding passenger', () => {
@@ -65,14 +67,14 @@ describe('native Miniworld fishing artwork', () => {
     expect(keys.size).toBeLessThanOrEqual(24); expect(keys.has('galley:hull:1:0')).toBe(true);
   });
 
-  it('keeps fish entirely underwater about 90% of the time and staggers brief surface events', () => {
+  it('keeps fish entirely underwater between short staggered breaches', () => {
     let hidden = 0, surface = 0, glimpses = 0;
     for (let id = 1; id <= 100; id++) for (let time = 0; time < 120; time += .1) {
       const frame = fishSurfaceFrame({ id, spawnedAt: 0 }, time);
       if (frame < 0) hidden++; else { surface++; if (frame <= 6) glimpses++; }
     }
-    expect(hidden / (hidden + surface)).toBeGreaterThan(.88);
-    expect(hidden / (hidden + surface)).toBeLessThan(.93);
+    expect(hidden / (hidden + surface)).toBeGreaterThan(.93);
+    expect(hidden / (hidden + surface)).toBeLessThan(.96);
     expect(glimpses / (hidden + surface)).toBeLessThan(.05);
     const simultaneous = Array.from({ length: 100 }, (_, id) => fishSurfaceFrame({ id, spawnedAt: 0 }, 10)).filter(frame => frame >= 0).length;
     expect(simultaneous).toBeGreaterThan(2); expect(simultaneous).toBeLessThan(20);

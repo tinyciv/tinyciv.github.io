@@ -1,0 +1,127 @@
+{
+  "methodology": "Real before/after clock implementations replay identical recorded RAF intervals at 3\u00d7 speed, capped at one 0.1-game-second update. Excludes the first 10 game seconds. Counts simultaneous due tasks, not CPU time. Late observations retain the original unrounded phases in the new implementation. Average nominal rate remains 3 Hz; physical observations can be one frame closer.",
+  "framesFile": "/tmp/btv-pop800-2026-11-08/baseline.json",
+  "framesSha256": "e0ca1d8c2ff264ea976eafc28432278843648b866f7ec1970480027f7bc98423",
+  "baseline": "/tmp/btv-pop800-2026-11-08/baseline",
+  "sourceKeys": [
+    "health-initialization",
+    "retinue-membership",
+    "tree-stumps",
+    "retinue-recruitment",
+    "construction-completion",
+    "sailboat-launches",
+    "wall-ownership",
+    "wall-stats",
+    "villages",
+    "research",
+    "faction-defenses",
+    "resource-workers",
+    "forts",
+    "supply-depots",
+    "mass-levy",
+    "archery-training",
+    "harvests",
+    "wildlife",
+    "courier-wakeups",
+    "fog-raids",
+    "marauder-packs",
+    "guard-posts",
+    "faction-strategies",
+    "treasure-discovery",
+    "traffic-maintenance",
+    "dead-entities",
+    "defense-rebuilds",
+    "game-over"
+  ],
+  "counts": {
+    "recurring": 28,
+    "directSettlement": 3,
+    "decisions": 120
+  },
+  "results": {
+    "before": {
+      "measuredFrames": 982,
+      "gameTime": 75.5804999999992,
+      "recurring": {
+        "maximum": 20,
+        "p95": 20,
+        "mean": 5.266802443991853,
+        "histogram": {
+          "0": 592,
+          "4": 21,
+          "8": 184,
+          "16": 21,
+          "20": 164
+        }
+      },
+      "directSettlement": {
+        "maximum": 3,
+        "p95": 3,
+        "mean": 0.5621181262729125,
+        "histogram": {
+          "0": 798,
+          "3": 184
+        }
+      },
+      "decisions": {
+        "maximum": 90,
+        "p95": 90,
+        "mean": 22.576374745417514,
+        "histogram": {
+          "0": 592,
+          "18": 21,
+          "30": 184,
+          "72": 21,
+          "90": 164
+        }
+      }
+    },
+    "after": {
+      "measuredFrames": 982,
+      "gameTime": 75.5804999999992,
+      "recurring": {
+        "maximum": 11,
+        "p95": 10,
+        "mean": 5.608961303462322,
+        "histogram": {
+          "1": 22,
+          "2": 42,
+          "3": 114,
+          "4": 193,
+          "5": 197,
+          "6": 107,
+          "7": 64,
+          "8": 70,
+          "9": 88,
+          "10": 74,
+          "11": 11
+        }
+      },
+      "directSettlement": {
+        "maximum": 2,
+        "p95": 2,
+        "mean": 0.6018329938900203,
+        "histogram": {
+          "0": 534,
+          "1": 305,
+          "2": 143
+        }
+      },
+      "decisions": {
+        "maximum": 38,
+        "p95": 37,
+        "mean": 24.042769857433807,
+        "histogram": {
+          "17": 161,
+          "18": 330,
+          "19": 161,
+          "34": 3,
+          "35": 66,
+          "36": 197,
+          "37": 62,
+          "38": 2
+        }
+      }
+    }
+  }
+}

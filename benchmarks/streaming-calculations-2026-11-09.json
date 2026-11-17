@@ -1,0 +1,147 @@
+{
+  "method": "Deterministic headless operation counts on the frozen working tree and current source. Initial caches are warmed except ID import. No game loop or rendering. Counters are inserted only into temporary bundles.",
+  "baseline": "/tmp/btv-streaming-before",
+  "cpu": "Apple M3 Pro",
+  "results": {
+    "before": {
+      "entityIds": {
+        "initialEntities": 10000,
+        "allocations": 100,
+        "idReads": 1004950
+      },
+      "casualtyIndex": {
+        "deaths": 500,
+        "oldEventVisits": 124750
+      },
+      "territory": {
+        "worldCells": 65536,
+        "changedOwners": 7,
+        "contributions": 3861,
+        "evaluatedCells": "full reconstruction",
+        "borderCellsScanned": 65536,
+        "oldSnapshotUnchanged": true
+      },
+      "liveEconomy": {
+        "unchangedReads": 2,
+        "buildingVisits": 4002,
+        "unitVisits": 400
+      },
+      "irrigation": {
+        "topologyChanges": 0,
+        "elapsedSeconds": 0.1,
+        "buildingVisits": 2001
+      },
+      "specialties": {
+        "cacheHitBuildingVisits": 2001,
+        "unrelatedAppearanceSearches": 1
+      },
+      "minimap": {
+        "newlyExploredCells": 1,
+        "projectionExploredReads": 65536,
+        "memoryExploredReads": 65536
+      },
+      "multiplayer": {
+        "unchangedEncode": true,
+        "exploredCellReadsPerViewer": 131072
+      },
+      "fishingRates": {
+        "cities": 20,
+        "retainedReceipts": 100,
+        "steadyReceiptVisits": 2000
+      },
+      "denseConstruction": {
+        "commitMs": [
+          1.6421250000000214,
+          0.7743330000000128
+        ],
+        "reconciliationMs": [
+          1.1777090000000499,
+          0.0027910000000019863
+        ],
+        "maxMs": 1.6421250000000214
+      }
+    },
+    "after": {
+      "entityIds": {
+        "initialEntities": 10000,
+        "allocations": 100,
+        "idReads": 10000
+      },
+      "casualtyIndex": {
+        "deaths": 500,
+        "oldEventVisits": 0
+      },
+      "territory": {
+        "worldCells": 65536,
+        "changedOwners": 7,
+        "contributions": 71,
+        "evaluatedCells": 37,
+        "borderCellsScanned": 23,
+        "oldSnapshotUnchanged": true
+      },
+      "liveEconomy": {
+        "unchangedReads": 2,
+        "buildingVisits": 0,
+        "unitVisits": 0
+      },
+      "irrigation": {
+        "topologyChanges": 0,
+        "elapsedSeconds": 0.1,
+        "buildingVisits": 0
+      },
+      "specialties": {
+        "cacheHitBuildingVisits": 0,
+        "unrelatedAppearanceSearches": 0
+      },
+      "minimap": {
+        "newlyExploredCells": 1,
+        "projectionExploredReads": 2,
+        "memoryExploredReads": 1
+      },
+      "multiplayer": {
+        "unchangedEncode": true,
+        "exploredCellReadsPerViewer": 0
+      },
+      "fishingRates": {
+        "cities": 20,
+        "retainedReceipts": 100,
+        "steadyReceiptVisits": 0
+      },
+      "denseConstruction": {
+        "commitMs": [
+          1.6614580000000387,
+          0.8245410000000675
+        ],
+        "reconciliationMs": [
+          1.7251659999999447,
+          0.0025409999999510546
+        ],
+        "maxMs": 1.7251659999999447
+      }
+    }
+  },
+  "parity": {
+    "beforeEconomy": [
+      {
+        "palace": 1,
+        "name": "Review",
+        "population": 0,
+        "housing": 5,
+        "food": 4,
+        "gold": 0
+      }
+    ],
+    "afterEconomy": [
+      {
+        "palace": 1,
+        "name": "Review",
+        "population": 0,
+        "housing": 5,
+        "food": 4,
+        "gold": 0
+      }
+    ],
+    "territory": true,
+    "economy": true
+  }
+}

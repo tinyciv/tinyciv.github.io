@@ -1,4 +1,6 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { Building, Unit } from './types';
+import { loadCannonArt } from './cannon-art';
 
 /** Unmodified Miniworld sprites. Native thrusts occupy two cells so their
  * extended spear is never clipped into the single-cell walking rectangle. */
@@ -17,10 +19,11 @@ const url = (name: string) => `${import.meta.env.BASE_URL}assets/miniworld/${nam
 
 export function loadSiegeArt(): Promise<void> {
   return loading ??= (async () => {
+    await loadCannonArt();
     const images = await Promise.all([
       ['Ballista', 112, 64], ['BallistaBolt', 32, 16], ['Spearman-Cyan', 80, 224], ['Spearman-Red', 80, 224],
     ].map(async ([name, width, height]) => {
-      const image = new Image(); image.src = url(String(name)); await image.decode();
+      const image = new Image(); image.src = runtimeArtUrl(url(String(name))); await image.decode();
       if (image.naturalWidth !== width || image.naturalHeight !== height) throw new Error(`Invalid native siege sheet: ${name}`);
       return image;
     }));

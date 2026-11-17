@@ -21,16 +21,16 @@ function fixture(buildings: Building[]): GameState {
 }
 
 describe('settlement and watchtower maintenance', () => {
-  it('exempts exactly the oldest completed city per faction and charges every completed watchtower', () => {
+  it('exempts exactly the oldest completed city per faction and charges completed human watchtowers', () => {
     const state = fixture([building(30, 'palace'), building(10, 'palace'), building(20, 'palace'),
       building(40, 'woodenTower'), building(41, 'tower'), building(1, 'palace', 1), building(2, 'palace', 1)]);
     const before = JSON.stringify(state);
-    expect(state.buildings.map(value => buildingMaintenance(state, value))).toEqual([37.5, 0, 37.5, 5, 5, 0, 37.5]);
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(85);
-    expect(factionBuildingMaintenance(state, state.factions[1])).toBe(37.5);
+    expect(state.buildings.map(value => buildingMaintenance(state, value))).toEqual([25, 0, 25, 5, 5, 0, 25]);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(60);
+    expect(factionBuildingMaintenance(state, state.factions[1])).toBe(25);
     expect(JSON.stringify(state)).toBe(before);
     entityStore(state).buildings.replace([...state.buildings].reverse());
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(85);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(60);
     expect(buildingMaintenance(state, state.buildings.find(value => value.id === 10)!)).toBe(0);
   });
 
@@ -44,33 +44,33 @@ describe('settlement and watchtower maintenance', () => {
     expect(factionBuildingMaintenance(state, state.factions[0])).toBe(0);
     delete state.buildings[0].construction;
     expect(buildingMaintenance(state, state.buildings[0])).toBe(0);
-    expect(buildingMaintenance(state, state.buildings[1])).toBe(37.5);
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(37.5);
+    expect(buildingMaintenance(state, state.buildings[1])).toBe(25);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(25);
   });
 
   it('reassigns the one capital exemption immediately after capture and destruction', () => {
     const first = building(10, 'palace'), second = building(20, 'palace');
     const captured = building(3, 'palace', 1), rival = building(30, 'palace', 1);
     const state = fixture([first, second, captured, rival]);
-    expect(state.factions.slice(0, 2).map(owner => factionBuildingMaintenance(state, owner))).toEqual([37.5, 37.5]);
+    expect(state.factions.slice(0, 2).map(owner => factionBuildingMaintenance(state, owner))).toEqual([25, 25]);
     captured.faction = 0;
-    expect([first, second, captured, rival].map(value => buildingMaintenance(state, value))).toEqual([37.5, 37.5, 0, 0]);
-    expect(state.factions.slice(0, 2).map(owner => factionBuildingMaintenance(state, owner))).toEqual([75, 0]);
+    expect([first, second, captured, rival].map(value => buildingMaintenance(state, value))).toEqual([25, 25, 0, 0]);
+    expect(state.factions.slice(0, 2).map(owner => factionBuildingMaintenance(state, owner))).toEqual([50, 0]);
     captured.hp = 0;
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(37.5);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(25);
     expect(buildingMaintenance(state, first)).toBe(0);
     first.hp = 0;
     expect(factionBuildingMaintenance(state, state.factions[0])).toBe(0);
     expect(buildingMaintenance(state, second)).toBe(0);
   });
 
-  it('exempts neutral villages, raiders and village property without exempting a normal rival faction', () => {
+  it('exempts neutral villages, raiders and village property and AI defenses while retaining rival settlement upkeep', () => {
     const state = fixture([building(1, 'palace', 2), building(2, 'palace', 2), building(3, 'woodenTower', 2),
       building(4, 'palace', -2), building(5, 'palace', -2), building(6, 'woodenTower', -2),
       building(7, 'woodenTower', 0, { villageId: 1 }), building(8, 'palace', 0, { villageId: 1 }),
       building(9, 'palace', 1), building(10, 'palace', 1), building(11, 'woodenTower', 1)]);
     expect(state.buildings.slice(0, 8).map(value => buildingMaintenance(state, value))).toEqual(Array(8).fill(0));
-    expect(state.factions.map(owner => factionBuildingMaintenance(state, owner))).toEqual([0, 42.5, 0, 0]);
+    expect(state.factions.map(owner => factionBuildingMaintenance(state, owner))).toEqual([0, 25, 0, 0]);
   });
 
   it('charges towers even without a surviving city and never scales fees with population or housing', () => {
@@ -80,9 +80,9 @@ describe('settlement and watchtower maintenance', () => {
     for (const population of [0, 20, 100, 500, 10000]) {
       state.factions[0].population = population;
       state.buildings[2].capacity = population;
-      expect(factionBuildingMaintenance(state, state.factions[0])).toBe(42.5);
+      expect(factionBuildingMaintenance(state, state.factions[0])).toBe(30);
     }
     tower.hp = 0;
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(37.5);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(25);
   });
 });

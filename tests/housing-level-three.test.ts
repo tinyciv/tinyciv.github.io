@@ -6,6 +6,14 @@ import { nativeHouseTier } from '../src/game/puny-building-art';
 import { houseBirthProgress, isHouseEnclosed } from '../src/game/enclosures';
 import type { Building, GameState, Unit } from '../src/game/types';
 
+/** These tests isolate eligibility/geometry; the fifteen-second countdown has
+ * dedicated coverage in upgrade-economy-aura.test.ts. Pre-age eligible orders. */
+function settleHousingRequirements(state: GameState): void {
+  updateWellUpgrades(state);
+  for (const house of state.buildings) if (house.houseUpgradeAt !== undefined) house.houseUpgradeAt = state.time;
+  updateWellUpgrades(state);
+}
+
 const building = (id: number, kind: Building['kind'], x: number, y: number, extra: Partial<Building> = {}): Building => ({
   id, kind, x, y, faction: 0, hp: 150, maxHp: 200, capacity: 0, ...extra,
 });
@@ -34,7 +42,7 @@ function enclose(state: GameState): Building[] {
 describe('level-three city housing', () => {
   it('requires forty actual nearby residents, a well and a completed guard post in the same city borders', () => {
     const state = fixture(), house = home(state);
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(house).toMatchObject({ houseLevel: 3, capacity: 4, hp: 150, maxHp: 200, houseStyle: 'cottage' });
     expect(nativeHouseTier(house)).toBe(3);
     expect(house.houseDowngradeAt).toBeUndefined();
@@ -50,59 +58,59 @@ describe('level-three city housing', () => {
     if (missing === 'unfinished post') state.buildings[1].construction = { startedAt: 0, duration: 30 };
     if (missing === 'enemy post') state.buildings[1].faction = 1;
     if (missing === 'remote post') { state.buildings[1].x = 40; state.buildings[1].y = 20; }
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(home(state).houseLevel).toBe(2);
   });
 
   it('counts only residents within six tiles and excludes living soldiers and another city’s post', () => {
     const state = fixture(), target = home(state);
     state.buildings.find(building => building.id === 17)!.x = target.x + 7;
-    updateWellUpgrades(state); expect(target.houseLevel).toBe(2);
+    settleHousingRequirements(state); expect(target.houseLevel).toBe(2);
     state.buildings.find(building => building.id === 17)!.x = target.x + 6;
     state.buildings.find(building => building.id === 17)!.y = target.y;
-    updateWellUpgrades(state); expect(target.houseLevel).toBe(3);
+    settleHousingRequirements(state); expect(target.houseLevel).toBe(3);
     const second = building(100, 'palace', 38, 20);
     entityStore(state).buildings.add(second); state.buildings[1].x = 40; state.buildings[1].y = 20;
-    state.time = 1; updateWellUpgrades(state);
+    state.time = 1; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(61);
   });
 
   it('warns for a full minute, cancels the warning after recovery, then downgrades without changing health', () => {
-    const state = fixture(), target = home(state); updateWellUpgrades(state);
-    state.factions[0].population = 39; state.time = 5; updateWellUpgrades(state);
+    const state = fixture(), target = home(state); settleHousingRequirements(state);
+    state.factions[0].population = 39; state.time = 5; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(65); expect(target.houseLevel).toBe(3);
-    state.time = 64.99; updateWellUpgrades(state); expect(target.houseLevel).toBe(3);
-    state.factions[0].population = 40; updateWellUpgrades(state); expect(target.houseDowngradeAt).toBeUndefined();
-    state.buildings[2].hp = 0; state.time = 70; updateWellUpgrades(state);
+    state.time = 64.99; settleHousingRequirements(state); expect(target.houseLevel).toBe(3);
+    state.factions[0].population = 40; settleHousingRequirements(state); expect(target.houseDowngradeAt).toBeUndefined();
+    state.buildings[2].hp = 0; state.time = 70; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(130);
-    state.time = 130; updateWellUpgrades(state);
+    state.time = 130; settleHousingRequirements(state);
     expect(target).toMatchObject({ houseLevel: 2, capacity: 3, hp: 150, maxHp: 200 });
     expect(target.houseDowngradeAt).toBeUndefined(); expect(housingGoldBonus(state, 0)).toBe(0);
   });
 
   it('keeps the permanent farm-redevelopment bed and only taxes actual resident population', () => {
     const state = fixture(), target = home(state); target.redevelopedFarm = true;
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(houseCapacity(target)).toBe(5);
     target.residents = 5;
     expect(housingGoldBonus(state, 0)).toBe(20); // The realm still has forty people, not forty-five.
-    state.time = 10; state.buildings[1].hp = 0; updateWellUpgrades(state);
-    state.time = 70; updateWellUpgrades(state); expect(houseCapacity(target)).toBe(4);
+    state.time = 10; state.buildings[1].hp = 0; settleHousingRequirements(state);
+    state.time = 70; settleHousingRequirements(state); expect(houseCapacity(target)).toBe(4);
   });
 });
 
 describe('level-four protected city housing', () => {
   it('earns the chimney house only with the same protection that grants the growth bonus', () => {
     const state = fixture(), target = home(state);
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(target.houseLevel).toBe(3);
     expect(houseBirthProgress(state, target)).toBe(1);
-    enclose(state); updateWellUpgrades(state);
+    enclose(state); settleHousingRequirements(state);
     expect(target).toMatchObject({ houseLevel: 4, houseStyle: 'villa', capacity: 5, hp: 150, maxHp: 200 });
     expect(nativeHouseTier(target)).toBe(4);
     expect(houseBirthProgress(state, target)).toBeCloseTo(1 / 1.3);
     expect(citySummaries(state)[0]).toMatchObject({ population: 40, housing: 100, gold: 42 });
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(target.capacity).toBe(5);
   });
 
@@ -112,7 +120,7 @@ describe('level-four protected city housing', () => {
     if (missing === 'well') state.buildings[2].hp = 0;
     if (missing === 'guard post') state.buildings[1].construction = { startedAt: 0, duration: 30 };
     expect(isHouseEnclosed(state, home(state))).toBe(true);
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(home(state).houseLevel).toBe(2);
   });
 
@@ -121,7 +129,7 @@ describe('level-four protected city housing', () => {
     const outside = building(400, 'house', 16, 10, { houseLevel: 2, capacity: 3, residents: 2 });
     entityStore(state).buildings.add(outside); state.factions[0].population = 62;
     for (const house of state.buildings.filter(house => house.kind === 'house' && house !== outside)) house.residents = 3;
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(home(state).houseLevel).toBe(4);
     expect(outside.houseLevel).toBe(3);
     expect(houseBirthProgress(state, outside)).toBe(1);
@@ -130,31 +138,31 @@ describe('level-four protected city housing', () => {
   it('warns on a breach, cancels after repairs, and returns to level three after an unrepaired breach', () => {
     const state = fixture(), target = home(state), walls = enclose(state);
     const wall = walls.find(wall => wall.x === 6 && wall.y === 11)!;
-    updateWellUpgrades(state);
-    wall.hp = 0; state.time = 5; updateWellUpgrades(state);
+    settleHousingRequirements(state);
+    wall.hp = 0; state.time = 5; settleHousingRequirements(state);
     expect(houseBirthProgress(state, target)).toBe(1);
     expect(target).toMatchObject({ houseLevel: 4, capacity: 5, houseDowngradeAt: 65 });
-    state.time = 64.99; updateWellUpgrades(state); expect(target.houseLevel).toBe(4);
-    wall.hp = 100; updateWellUpgrades(state); expect(target.houseDowngradeAt).toBeUndefined();
-    wall.hp = 0; state.time = 70; updateWellUpgrades(state);
+    state.time = 64.99; settleHousingRequirements(state); expect(target.houseLevel).toBe(4);
+    wall.hp = 100; settleHousingRequirements(state); expect(target.houseDowngradeAt).toBeUndefined();
+    wall.hp = 0; state.time = 70; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(130);
-    state.time = 130; updateWellUpgrades(state);
+    state.time = 130; settleHousingRequirements(state);
     expect(target).toMatchObject({ houseLevel: 3, houseStyle: 'cottage', capacity: 4, hp: 150, maxHp: 200 });
     expect(target.houseDowngradeAt).toBeUndefined();
-    wall.hp = 100; updateWellUpgrades(state);
+    wall.hp = 100; settleHousingRequirements(state);
     expect(target.houseLevel).toBe(4);
   });
 
   it('uses the same live-intruder check as the growth bonus even when no walls change', () => {
     const state = fixture(), target = home(state); enclose(state);
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     const intruder: Unit = { id: 900, kind: 'warrior', faction: -2, x: 11.5, y: 11.5,
       hp: 65, maxHp: 65, attack: 10, defense: 2, morale: 100, speed: 2.35, range: 1.1,
       order: 'hold', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0 };
-    entityStore(state).units.add(intruder); state.time = 1; updateWellUpgrades(state);
+    entityStore(state).units.add(intruder); state.time = 1; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(61);
     expect(houseBirthProgress(state, target)).toBe(1);
-    intruder.hp = 0; state.time = 2; updateWellUpgrades(state);
+    intruder.hp = 0; state.time = 2; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBeUndefined();
     expect(target.houseLevel).toBe(4);
     expect(houseBirthProgress(state, target)).toBeCloseTo(1 / 1.3);
@@ -164,10 +172,10 @@ describe('level-four protected city housing', () => {
     const state = fixture(), target = home(state); enclose(state);
     target.redevelopedFarm = true;
     state.factions[0].research = { focus: 'urbanPlanning', levels: { urbanPlanning: 1 }, progress: {} };
-    updateWellUpgrades(state); expect(target.capacity).toBe(7);
-    state.buildings[2].hp = 0; state.time = 10; updateWellUpgrades(state);
+    settleHousingRequirements(state); expect(target.capacity).toBe(7);
+    state.buildings[2].hp = 0; state.time = 10; settleHousingRequirements(state);
     expect(target.houseDowngradeAt).toBe(70);
-    state.time = 70; updateWellUpgrades(state);
+    state.time = 70; settleHousingRequirements(state);
     expect(target).toMatchObject({ houseLevel: 2, capacity: 5, hp: 150, maxHp: 200 });
     expect(target.houseDowngradeAt).toBeUndefined();
   });
@@ -177,7 +185,7 @@ describe('level-four protected city housing', () => {
     entityStore(state).buildings.add(building(400, 'road', 6, 11));
     state.factions[0] = { ...state.factions[0], id: 1, relation: 'war' };
     for (const structure of state.buildings) structure.faction = 1;
-    updateWellUpgrades(state);
+    settleHousingRequirements(state);
     expect(home(state)).toMatchObject({ houseLevel: 4, capacity: 5 });
     expect(houseBirthProgress(state, home(state))).toBeCloseTo(1 / 1.3);
   });

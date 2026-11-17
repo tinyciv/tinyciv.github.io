@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { scenario } from '../dev/navigation-lab/scenarios';
 import { entityStore } from '../src/game/entity-store';
 import { movementProfile, setMovementProfiling } from '../src/game/movement-profile';
-import { moveUnit } from '../src/game/simulation';
+import { moveUnit, updateFriendlyYield } from '../src/game/simulation';
+import * as navigation from '../src/game/pathfinding';
 import { beginUnitFrame, endUnitFrame, lastCollidingUnitInCell, nearbyUnits, refreshIndexedUnit } from '../src/game/spatial';
 import type { Point, Unit } from '../src/game/types';
 
@@ -16,6 +17,47 @@ function fixture() {
 }
 
 describe('reused movement bookkeeping', () => {
+  it('coalesces a pair boxed by terrain and retries immediately when a passage opens', () => {
+    const { state, unit } = fixture();
+    unit.x = 8.9; unit.y = 8.5; unit.order = 'follow'; unit.marauderPack = undefined;
+    const blocker = { ...unit, id: 101, x: 9.5, path: undefined, destination: undefined, moving: false };
+    entityStore(state).units.add(blocker);
+    for (let y = 7; y <= 9; y++) for (let x = 8; x <= 10; x++)
+      if (y !== 8 || x === 10) state.world.tiles[y * state.world.width + x].terrain = 'lake';
+    state.world.revision!++;
+    const move = vi.spyOn(navigation, 'canMove');
+    const probes = () => move.mock.calls.filter(call => call[1] === blocker).length;
+    try {
+      for (let i = 1; i <= 10; i++) { state.time = i / 100; moveUnit(state, unit, { x: 10.5, y: 8.5 }, .1, true); }
+      expect(probes()).toBe(8);
+      state.time = .4; moveUnit(state, unit, { x: 10.5, y: 8.5 }, .1, true);
+      expect(probes()).toBe(16);
+      state.world.tiles[8 * state.world.width + 10].terrain = 'grassland'; state.world.revision!++;
+      state.time = .41; moveUnit(state, unit, { x: 10.5, y: 8.5 }, .1, true);
+      expect(probes()).toBeGreaterThan(16);
+      expect(updateFriendlyYield(state, blocker, .1)).toBe(true);
+      expect(blocker.x).toBeGreaterThan(9.5);
+    } finally { move.mockRestore(); }
+  });
+
+  it('retries a failed yield immediately when a third actor vacates the only exit', () => {
+    const { state, unit } = fixture();
+    Object.assign(unit, { x: 8.9, y: 8.5, order: 'follow', marauderPack: undefined });
+    const blocker: Unit = { ...unit, id: 101, x: 9.5, path: undefined, destination: undefined, moving: false };
+    const third: Unit = { ...blocker, id: 102, kind: 'leader', x: 10.5 };
+    entityStore(state).units.add(blocker, third);
+    for (let y = 7; y <= 9; y++) for (let x = 8; x <= 11; x++)
+      if (y !== 8 || x === 11) state.world.tiles[y * state.world.width + x].terrain = 'lake';
+    state.world.revision!++;
+    state.time = .01; moveUnit(state, unit, { x: 10.5, y: 8.5 }, .1, true);
+    expect(updateFriendlyYield(state, blocker, .1)).toBe(false);
+    // Neither member of the original pair moved, and terrain did not change.
+    third.hp = 0;
+    state.time = .02; moveUnit(state, unit, { x: 10.5, y: 8.5 }, .1, true);
+    expect(updateFriendlyYield(state, blocker, .1)).toBe(true);
+    expect(blocker.x).toBeGreaterThan(9.5);
+  });
+
   it('preserves yield-chain occupant priority through overlapping units, movement and removal', () => {
     const { state, unit } = fixture(), store = entityStore(state);
     const first = { ...unit, id: 101, x: 10.5 }, last = { ...unit, id: 102, x: 10.5 };

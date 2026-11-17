@@ -4,10 +4,13 @@ import { isRetinueMember } from './types';
 import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-activity';
 import { equipmentMultiplier, MAX_EQUIPMENT_LEVEL } from './equipment';
 import { buildingReady, type Building, type EquipmentLevel, type Faction, type GameState, type Unit } from './types';
-import { factionHasDevelopedResource } from './resource-development';
+import { factionDevelopedResourceCount } from './resource-development';
 
 export type BlacksmithUpgradeTrack = 'armor' | 'weapon';
 export const BLACKSMITH_UPGRADE_COSTS = [200, 400, 600, 800, 1000, 1200] as const;
+
+export const blacksmithIronRequired = (faction: Pick<Faction, 'armorLevel' | 'weaponLevel'>): number =>
+  3 * (1 + (faction.armorLevel ?? 0) + (faction.weaponLevel ?? 0));
 
 export interface BlacksmithUpgradeStatus {
   level: EquipmentLevel;
@@ -16,6 +19,8 @@ export interface BlacksmithUpgradeStatus {
   /** The multiplier purchased by the next tier, or the current one at max tier. */
   multiplier: number;
   cost: number | null;
+  ironRequired: number;
+  ironControlled: number;
   available: boolean;
   reason: string;
 }
@@ -39,6 +44,7 @@ export function blacksmithUpgradeStatus(state: GameState, building: Building, tr
   const level = faction?.[track === 'armor' ? 'armorLevel' : 'weaponLevel'] ?? 0;
   const nextLevel = level < MAX_EQUIPMENT_LEVEL ? (level + 1) as EquipmentLevel : null;
   const cost = level === MAX_EQUIPMENT_LEVEL ? null : BLACKSMITH_UPGRADE_COSTS[level];
+  const ironRequired = blacksmithIronRequired(faction ?? {}), ironControlled = factionDevelopedResourceCount(state, building.faction, 'iron');
   let reason = '';
   if (state.gameOver || faction?.defeated) reason = 'Your realm can no longer upgrade equipment.';
   else if (building.kind !== 'blacksmith' || building.faction !== playerFaction(state) || !faction || !state.buildings.includes(building))
@@ -46,10 +52,10 @@ export function blacksmithUpgradeStatus(state: GameState, building: Building, tr
   else if (!buildingReady(building)) reason = 'Complete the blacksmith first.';
   else if (!buildingActivityAvailable(state, building)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the blacksmith.`;
   else if (nextLevel === null) reason = 'Fully upgraded.';
-  else if (!factionHasDevelopedResource(state, building.faction, 'iron')) reason = 'Develop an iron mine inside your city borders first.';
+  else if (ironControlled < ironRequired) reason = `Need ${ironRequired} developed iron tiles; you control ${ironControlled}.`;
   else if (faction.gold < cost!) reason = `Need ${cost} gold.`;
   return { level, nextLevel, currentMultiplier: equipmentMultiplier(level), multiplier: equipmentMultiplier(nextLevel ?? level),
-    cost, available: !reason, reason };
+    cost, ironRequired, ironControlled, available: !reason, reason };
 }
 
 export function purchaseBlacksmithUpgrade(state: GameState, building: Building, track: BlacksmithUpgradeTrack): { ok: boolean; message: string } {

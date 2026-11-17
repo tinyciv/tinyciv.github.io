@@ -48,7 +48,7 @@ describe('raider equipment and frequency escalation', () => {
       { id: 3, faction: 0, kind: 'warrior', hp: 100, attack: 20, defense: 4 },
     ] as Unit[];
     const state = { units, time: 0 };
-    const attacks = units.map(unit => unitAttack(unit)), defenses = units.map(unitDefense);
+    const attacks = units.map(unit => unitAttack(unit)), defenses = units.map(unit => unitDefense(unit));
     state.time = 450; updateRaiderEquipment(state); updateRaiderEquipment(state);
     for (const index of [0, 1]) {
       expect(unitAttack(units[index])).toBeCloseTo(attacks[index] * 1.3);

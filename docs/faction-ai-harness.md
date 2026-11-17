@@ -1,16 +1,20 @@
 # Faction AI tournament
 
-Run `npm run benchmark:ai`. The harness bundles the authoritative TypeScript game simulation for Node and advances it without a renderer or browser. Options include `--seconds=90`, `--seeds=3`, and `--scenarios=open-battle,fortified-assault,outnumbered-defense`. When using npm, put options after `--`.
+Run `npm run sim -- ai`. The [unified simulation harness](simulation-harness.md) bundles the production simulation and loads its Rust/WASM core in Node, without a renderer or browser. Options include `--seconds=90`, `--seeds=3`, and `--scenarios=open-battle,fortified-assault,outnumbered-defense`. When using npm, put options after `--`.
 
-The default run compares three policies in 27 deterministic trials: three policies × three scenarios × three seeds. Every policy receives identical initial units, research, resources, terrain, and positions for a given trial. Calls advance 0.2 game seconds; decisive game-over states stop a trial early. Results are written to `benchmarks/faction-ai.json`, including raw unit survival, damage, kills, mission time, formation time, and run configuration.
+The default run compares four policies in 36 deterministic trials: four policies × three scenarios × three seeds. Every policy receives identical initial units, research, resources, terrain, and positions for a given trial. Calls advance 0.1 game seconds with an injected simulated host clock; decisive game-over states stop a trial early. Results are written to `benchmarks/simulation-ai.json`, including raw unit survival, damage, kills, mission time, formation time, speed measurements, and run configuration. The historical results below compared the original three policies using the earlier 0.2-second host calls and have not been rerun with the unified runner.
 
 ## Policies
+
+The [policy experiment system](ai-policy-experiments.md) supports named variants, JSON configuration, and paired baseline analysis. Use `--policy-file=experiments/ai-policies.json --policies=cautious` to compare an example variant against coordinated on identical fixtures. The original three builtins below remain available for comparisons; the aggressive emergency replanning threshold now follows its own retreat-health setting.
 
 - **Legacy:** Previous garrison allocation and threat thresholds; no automatic Infantry Drill formations or military purchases.
 - **Aggressive:** Formation attacks and military purchases, with a lower retreat-health threshold and greater willingness to fight unfavorable groups.
 - **Coordinated:** Complete professional armies when town towers can cover the garrison; researched formation attacks that engage intercepting troops before advancing on the city; observed tower and army strength estimates; earlier retreat; reachable attack positions; regrouping and recovery from stuck ranks.
 
 The live coordinated AI also spends earned Leader skill points, purchases affordable equipment and extra retinue capacity through normal building access, develops researched supply depots and sustainable Forts, and raises an affordable defensive levy before returning peasants to their jobs after danger passes. These economic capabilities do not confer free combat stats or ignore research requirements.
+
+- **Expansionist (live default):** Earlier housing and wells, paid Keep and brigade upgrades, settlement expeditions, additional Forts, more frequent campaigns, and forward siege assembly. It retains real construction, research, resources and capture rules. See [policy experiments](ai-policy-experiments.md) for limits and configuration.
 
 ## Results, 2026-11-04
 
@@ -28,10 +32,10 @@ The controlled scenarios test open combat, an assault on a defended settlement, 
 
 ## Starting defenses and navigation
 
-AI factions start with 1,600 gold and up to four separate watchtower enclosures per city, subject to terrain and available space. Each tower sits inside an independent 3×3 palisade ring with one cardinal road gate facing an accessible city approach. A one-cell walking lane surrounds each enclosure. Palisades are never joined into a city-wide perimeter; farms and housing can grow between the forts.
+AI factions start with 1,600 gold and up to four freestanding wooden watchtowers per city, subject to terrain and available space. Their existing spaced sites retain open walking approaches. Starting grants and later replacement orders create towers without palisade rings or gate roads.
 
-The starting and ongoing planners use the same geometry. Ongoing construction completes the gate road before closing the remaining sides, respects research, charges normal prices, reserves productive investment and upkeep, and caps each city's planned tower count. Completed layouts skip repeated path searches. Player cities, human multiplayer starts, and marauder camps use their existing rules.
+The starting and ongoing planners use the same site selection. Replacement construction respects research, charges normal construction prices, reserves productive investment and other committed upkeep, and caps each city's planned tower count. Existing towers do not trigger enclosure completion or stone-wall upgrades. Player cities, human multiplayer starts, and marauder camps use their existing rules.
 
-`node scripts/check-faction-forts.mjs` exercises the native renderer and checks real friendly paths from each settlement to every tower's sole repair contact, hostile gate blocking, eight distinct palisades per fort, and no shared perimeter tiles. Images and results are written to `scratch/2026-11-06-faction-forts/`. Tests also send actual civilians through the gates to repair all towers and return home, and cover marsh, fords, farms, stairs, and continued paid city growth.
+The starting-defense regression fixtures retain four towers per city, check that no palisades are granted or rebuilt around them, and verify friendly and hostile access to their open repair contacts. Builder fixtures send real civilians to repair the towers and return home. Terrain cases cover marsh, fords, farms and stairs, alongside continued city growth and authoritative replacement-tower placement.
 
-Tower upkeep remains unchanged. A controlled five-minute flat-world comparison against the prior rectangular starting defenses produced the same final rival population (41 across two cities), with 64 palisades instead of 104. The new layout retained more treasury gold (-72 versus -133); both no-raider scenarios eventually ran a deficit under existing settlement/tower upkeep. This defense change does not retune that economy.
+AI wooden towers cost no upkeep, including completed charges, committed-construction budgets and affordability forecasts. Human wooden towers retain their normal five-gold base charge per thirty seconds, before applicable discounts. Other settlement and defense costs keep their existing rules.

@@ -1,0 +1,239 @@
+{
+  "plan": {
+    "version": 1,
+    "policyFile": "experiments/2026-11-15/policies.json",
+    "policies": [
+      "expansionist",
+      "hard-assault",
+      "disciplined",
+      "loose-order"
+    ],
+    "baseline": "expansionist",
+    "jobs": 2,
+    "screening": {
+      "scenarios": [
+        "field-battle",
+        "siege-war"
+      ],
+      "seeds": 4,
+      "seconds": 180,
+      "seed": "ai-2026-11-15-screen"
+    },
+    "validation": {
+      "scenarios": [
+        "field-battle",
+        "siege-war"
+      ],
+      "seeds": 8,
+      "seconds": 240,
+      "seed": "ai-2026-11-15-heldout"
+    }
+  },
+  "qualifiers": [
+    "expansionist",
+    "hard-assault",
+    "disciplined"
+  ],
+  "artifacts": {
+    "bundleSha256": "7143ba6378dcdc03148adb4a0c9683891690004f3711ee26491661f9be7a5903",
+    "wasmSha256": "bb9703983124e6e7e02dd3effd17f601f9e7ac0940c814d9573c1ac20c86f404"
+  },
+  "sources": {
+    "engine.mjs": "cd6822ab55b748812ee270ee7d39e4075ab4b28c39ea92f4d368b244b9843091",
+    "runner.mjs": "fcfdc08af7f5329e5ea7dc0d29911793b9b19b5c3dcfb3860061322fb74e696e",
+    "worker.mjs": "b00e7007121b27059a70682b769067a90ccc911da24fdffda392b30b77b07558",
+    "cli.mjs": "8d3f3490b1b4a918bcbced285e7d87a14be3b7d82e33d6aaf29c4a6883b0e484",
+    "world.mjs": "14f926830498d4f875b9254c23d84470f7a4ab8c633c254150fb8ef0da215f15",
+    "ai.mjs": "5c811a71a7514dc9feeb8d493d2ec9d4ce395e888f296253249e5a713d4fc871",
+    "match.mjs": "37eaf92d12d9818f0c44d91e22b6ba6eec69f43fe8530fff769732fc93a0413a",
+    "policies.mjs": "2e1429da4e3b96e752036597261ed923a8ab5a09ddfd4406864a1b2ecab98541",
+    "policy-analysis.mjs": "d005dda56b250d4c56738595db3677f3561723394f8a7e309f5cc36710bb7f14",
+    "experiment.mjs": "a4ac947aa8fa3737830530e03b798cacb0b21cbc06d98dd9ac7a5cec2048327b"
+  },
+  "screening": {
+    "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+    "table": [
+      {
+        "policy": "hard-assault",
+        "matches": 48,
+        "wins": 15,
+        "draws": 32,
+        "losses": 1,
+        "points": 77,
+        "winRate": 0.3125,
+        "meanSurvivingArmyHP": 444.669207
+      },
+      {
+        "policy": "disciplined",
+        "matches": 48,
+        "wins": 12,
+        "draws": 32,
+        "losses": 4,
+        "points": 68,
+        "winRate": 0.25,
+        "meanSurvivingArmyHP": 387.526257
+      },
+      {
+        "policy": "expansionist",
+        "matches": 48,
+        "wins": 8,
+        "draws": 34,
+        "losses": 6,
+        "points": 58,
+        "winRate": 0.166667,
+        "meanSurvivingArmyHP": 414.977627
+      },
+      {
+        "policy": "loose-order",
+        "matches": 48,
+        "wins": 0,
+        "draws": 24,
+        "losses": 24,
+        "points": 24,
+        "winRate": 0,
+        "meanSurvivingArmyHP": 153.390031
+      }
+    ],
+    "uniqueLeader": "hard-assault",
+    "byScenario": {
+      "field-battle": [
+        {
+          "policy": "expansionist",
+          "wins": 8,
+          "draws": 10,
+          "losses": 6
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 15,
+          "draws": 8,
+          "losses": 1
+        },
+        {
+          "policy": "disciplined",
+          "wins": 12,
+          "draws": 8,
+          "losses": 4
+        },
+        {
+          "policy": "loose-order",
+          "wins": 0,
+          "draws": 0,
+          "losses": 24
+        }
+      ],
+      "siege-war": [
+        {
+          "policy": "expansionist",
+          "wins": 0,
+          "draws": 24,
+          "losses": 0
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 0,
+          "draws": 24,
+          "losses": 0
+        },
+        {
+          "policy": "disciplined",
+          "wins": 0,
+          "draws": 24,
+          "losses": 0
+        },
+        {
+          "policy": "loose-order",
+          "wins": 0,
+          "draws": 24,
+          "losses": 0
+        }
+      ]
+    }
+  },
+  "validation": {
+    "scoring": "3 points per actual faction-defeat win, 1 per duration draw; timeouts are never declared score wins.",
+    "table": [
+      {
+        "policy": "hard-assault",
+        "matches": 64,
+        "wins": 11,
+        "draws": 46,
+        "losses": 7,
+        "points": 79,
+        "winRate": 0.171875,
+        "meanSurvivingArmyHP": 308.145807
+      },
+      {
+        "policy": "expansionist",
+        "matches": 64,
+        "wins": 9,
+        "draws": 46,
+        "losses": 9,
+        "points": 73,
+        "winRate": 0.140625,
+        "meanSurvivingArmyHP": 281.923214
+      },
+      {
+        "policy": "disciplined",
+        "matches": 64,
+        "wins": 7,
+        "draws": 46,
+        "losses": 11,
+        "points": 67,
+        "winRate": 0.109375,
+        "meanSurvivingArmyHP": 237.765755
+      }
+    ],
+    "uniqueLeader": "hard-assault",
+    "byScenario": {
+      "field-battle": [
+        {
+          "policy": "expansionist",
+          "wins": 9,
+          "draws": 14,
+          "losses": 9
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 11,
+          "draws": 14,
+          "losses": 7
+        },
+        {
+          "policy": "disciplined",
+          "wins": 7,
+          "draws": 14,
+          "losses": 11
+        }
+      ],
+      "siege-war": [
+        {
+          "policy": "expansionist",
+          "wins": 0,
+          "draws": 32,
+          "losses": 0
+        },
+        {
+          "policy": "hard-assault",
+          "wins": 0,
+          "draws": 32,
+          "losses": 0
+        },
+        {
+          "policy": "disciplined",
+          "wins": 0,
+          "draws": 32,
+          "losses": 0
+        }
+      ]
+    }
+  },
+  "champion": "hard-assault",
+  "totalMatches": 192,
+  "elapsedSeconds": 518.5366805,
+  "limits": [
+    "Controlled military fixtures with neutral observer and negotiations disabled; not a full generated-world campaign balance study.",
+    "Mirrored legs share seeds and are correlated; raw match counts are not independent sample counts.",
+    "Timeouts are draws. Ranking uses actual faction defeat, not damage or an invented timeout winner."
+  ]
+}

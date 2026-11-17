@@ -1,12 +1,18 @@
+import { runtimeArtUrl } from './runtime-art';
 import type { Unit } from './types';
 import { drawPuny } from './puny-world';
 import { armoredCharacterSheet, armorVisualLevel } from './armor-art';
 import { drawHorseman } from './cavalry-art';
 import { drawSpearman } from './siege-art';
+import { drawMusketman } from './musketman-art';
+import { drawPikeman } from './pikeman-art';
+import { drawBrigand, usesBrigandArt } from './brigand-art';
 
 /** Shade's Puny Characters companion uses 32px cells with 16px figures. */
 export const PUNY_CHARACTERS = {
-  leader: { file: 'Warrior-Blue.png', walk: [1, 2, 3], attack: [16, 17, 18] },
+  leader: { file: 'Crowned-Leader.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
+  leaderFirearm: { file: 'Crowned-Leader-Firearm.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
+  marauderChief: { file: 'Warrior-Blue.png', walk: [1, 2, 3], attack: [16, 17, 18] },
   archer: { file: 'Archer-Green.png', walk: [1, 2, 3], attack: [8, 9, 10, 11] },
   scout: { file: 'Scout.png', walk: [1, 2, 3], attack: [0] },
   swordsman: { file: 'Human-Soldier-Cyan.png', walk: [1, 2, 3, 4], attack: [5, 6, 7, 8] },
@@ -29,9 +35,9 @@ export function loadPunyCharacters(): Promise<void> {
   return loading ??= Promise.all(Object.entries(PUNY_CHARACTERS).map(async ([role, definition]) => {
     const image = new Image();
     const base = (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
-    image.src = `${base}assets/puny-world/characters/${definition.file}`;
+    image.src = runtimeArtUrl(`${base}assets/puny-world/characters/${definition.file}`);
     await image.decode();
-    if (image.naturalWidth !== (role === 'scout' ? 128 : role === 'warrior' || role === 'militia' || role === 'skirmisher' || role === 'slinger' ? 288 : 768) || image.naturalHeight !== 256) throw new Error(`Invalid Puny character sheet: ${definition.file}`);
+    if (image.naturalWidth !== (role === 'scout' ? 128 : role === 'leader' || role === 'leaderFirearm' || role === 'warrior' || role === 'militia' || role === 'skirmisher' || role === 'slinger' ? 288 : 768) || image.naturalHeight !== 256) throw new Error(`Invalid Puny character sheet: ${definition.file}`);
     sheets.set(role as Character, image);
   })).then(() => undefined);
 }
@@ -43,13 +49,15 @@ export function facingOctant(angle: number): number {
 
 export function factionSheet(role: Character, color: string, armorLevel = 0): HTMLImageElement | HTMLCanvasElement | undefined {
   armorLevel = armorVisualLevel(armorLevel);
-  if (armorLevel > 0 && (role === 'leader' || role === 'swordsman')) {
+  // The crowned leader keeps the approved robe at every equipment level.
+  // Armor still affects combat; the old shield overlay belongs to armored units.
+  if (armorLevel > 0 && (role === 'marauderChief' || role === 'swordsman')) {
     const level = armorLevel, key = `${role}:${color}:${level}`;
     const cached = armoredPalettes.get(key);
     if (cached) return cached;
     const source = factionSheet(role, color) as HTMLCanvasElement | undefined;
     if (!source) return undefined;
-    const armored = armoredCharacterSheet(source, role === 'swordsman' ? 'warrior' : role, level, color);
+    const armored = armoredCharacterSheet(source, role === 'swordsman' ? 'warrior' : 'leader', level, color);
     armoredPalettes.set(key, armored); return armored;
   }
   const source = sheets.get(role);
@@ -60,10 +68,11 @@ export function factionSheet(role: Character, color: string, armorLevel = 0): HT
   const c = canvas.getContext('2d')!;
   c.drawImage(source, 0, 0);
   const image = c.getImageData(0, 0, canvas.width, canvas.height), pixels = image.data;
-  recolorCharacterCloth(pixels, color);
+  if (role === 'leaderFirearm') recolorFirearmLeaderCloth(pixels, color);
+  else recolorCharacterCloth(pixels, color);
   // The approved civilians already have their native cloth. Adding a rectangular
   // tabard here would paint over the small shield and weapon in several views.
-  if (role !== 'warrior' && role !== 'militia' && role !== 'skirmisher' && role !== 'slinger') applyChestCloth(pixels, canvas.width, canvas.height, color);
+  if (role !== 'leader' && role !== 'leaderFirearm' && role !== 'warrior' && role !== 'militia' && role !== 'skirmisher' && role !== 'slinger') applyChestCloth(pixels, canvas.width, canvas.height, color);
   c.putImageData(image, 0, 0);
   palettes.set(key, canvas);
   return canvas;
@@ -78,6 +87,17 @@ export function recolorCharacterCloth(pixels: Uint8ClampedArray, color: string):
     const shade = shades.get(pixels[index + 1] * 256 + pixels[index + 2]);
     if (shade === undefined) continue;
     for (let channel = 0; channel < 3; channel++) pixels[index + channel] = Math.round(faction[channel] * shade);
+  }
+}
+
+/** The generated robe uses turquoise shades; wood, steel and the crown stay. */
+function recolorFirearmLeaderCloth(pixels: Uint8ClampedArray, color: string): void {
+  const faction = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
+  for (let index = 0; index < pixels.length; index += 4) {
+    const r = pixels[index], g = pixels[index + 1], b = pixels[index + 2];
+    if (!pixels[index + 3] || g <= r + 20 || b <= r + 8 || g < b - 20) continue;
+    const shade = g / 180;
+    for (let channel = 0; channel < 3; channel++) pixels[index + channel] = Math.min(255, Math.round(faction[channel] * shade));
   }
 }
 
@@ -124,10 +144,10 @@ export function characterIconUrl(role: Character, color: string, armorLevel = 0)
 }
 
 /** Eight original perspectives, with faction cloth following each animation. */
-export function personFrame(unit: Unit, time: number): { role: Character; row: number; frame: number } {
+export function personFrame(unit: Unit, time: number, firearm = false): { role: Character; row: number; frame: number } {
   if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'levyInfantry' && unit.kind !== 'skirmisher' && unit.kind !== 'slinger' && unit.kind !== 'worker')
     return { role: 'worker', row: 0, frame: 0 };
-  const role: Character = unit.marauderLeader ? 'leader' : unit.kind === 'archer' ? 'archer' : unit.marauderPack !== undefined ? 'marauder' : unit.kind === 'levyInfantry' ? 'militia' : unit.kind;
+  const role: Character = unit.kind === 'archer' ? 'archer' : unit.marauderLeader ? 'marauderChief' : unit.marauderPack !== undefined ? 'marauder' : unit.kind === 'levyInfantry' ? 'militia' : unit.kind === 'leader' && firearm ? 'leaderFirearm' : unit.kind;
   const definition = PUNY_CHARACTERS[role];
   // Rows are S, SE, E, NE, N, NW, W, SW.
   const row = (10 - facingOctant(unit.facing)) % 8;
@@ -138,11 +158,14 @@ export function personFrame(unit: Unit, time: number): { role: Character; row: n
   return { role, row, frame };
 }
 
-export function drawPerson(c: CanvasRenderingContext2D, unit: Unit, time: number, color: string): void {
+export function drawPerson(c: CanvasRenderingContext2D, unit: Unit, time: number, color: string, firearm = false): void {
+  if (usesBrigandArt(unit)) { drawBrigand(c, unit, time, color); return; }
   if ((unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight')) { drawHorseman(c, unit, time, color); return; }
   if (unit.kind === 'spearman') { drawSpearman(c, unit, time, color); return; }
+  if (unit.kind === 'musketman') { drawMusketman(c, unit, time, color); return; }
+  if (unit.kind === 'pikeman') { drawPikeman(c, unit, time, color); return; }
   if (unit.inside || (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'levyInfantry' && unit.kind !== 'skirmisher' && unit.kind !== 'slinger' && unit.kind !== 'worker')) return;
-  const { role, row, frame } = personFrame(unit, time), sheet = factionSheet(role, color, unit.armorLevel);
+  const { role, row, frame } = personFrame(unit, time, firearm), sheet = factionSheet(role, color, unit.armorLevel);
   if (!sheet) return;
   c.save();
   c.imageSmoothingEnabled = false;

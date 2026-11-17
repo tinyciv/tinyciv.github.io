@@ -1,0 +1,83 @@
+{
+  "generator": "PixelLab API /create-tileset",
+  "style": "Medium gray between the previous dark and pale roads, retaining dense fine speckling and the unchanged light brown shoulder.",
+  "nativeCell": [
+    16,
+    16
+  ],
+  "view": "high top-down",
+  "isometric": false,
+  "tilesetId": "5907a5c3-a5b7-459a-9b16-8a90a3177767",
+  "backgroundJobId": "d4d51cbf-ee9e-4ec5-83b5-4e9f5c3d6bfa",
+  "request": {
+    "lower_description": "Flat LIGHT BROWN packed earth shoulder of a road. Soft natural sandy light brown and dusty beige-brown, not yellow, ochre, green or orange. Mostly uniform fine earth with very sparse subtle small flecks. This is the lower terrain.",
+    "upper_description": "A simple MID-LIGHT NEUTRAL GRAY densely SPECKLED ROAD SURFACE, halfway between dark gray and pale silver-gray. The dominant gray must be RGB approximately (162,166,163), hex #a2a6a3. All gray face colors stay in a narrow mid-gray range from #9b9f9c to #aaaeab. Use the three gray colors for the base and abundant small speckles; brown colors are reserved for the lower shoulder terrain only. A moderately light concrete-gray base with MANY tiny lighter-gray and darker-gray SINGLE-PIXEL flecks distributed evenly across the entire tile. About ONE QUARTER of the pixels form fine visible speckling, roughly 55 to 70 scattered fleck pixels in this native 16x16 material. Bright and dark flecks are mixed closely for fine varied grain. Each fleck is only one native pixel, occasionally two. Keep the medium-light gray base dominant, with fine slightly darker and lighter gray flecks. The road must be darker than pale gray, not white or silver. Moderate texture contrast so the numerous tiny speckles remain visible at native size. NO individual stones, NO flagstones, NO cobblestones, NO slabs, NO stone outlines, NO cracks or joint networks, NO bricks, NO tile grid, NO stripes or lane markings. Readable simple restrained retro strategy-game pixel art, with abundant tiny speckles only. High top-down orthographic, NOT isometric. No relief or visible raised sides.",
+    "transition_description": "The medium-light gray densely speckled road softly gives way to a narrow worn LIGHT BROWN earthen shoulder. A few tiny gray speckles grow sparse toward bare light brown earth at road endings. Simple flat native 16-pixel game terrain. Use the existing dirt path image only for pixel scale and soft ground transitions, not its yellow color. No curb, no border line, no grass, no rocks, no isometric perspective, no sidewalls or shadows.",
+    "tile_size": {
+      "width": 16,
+      "height": 16
+    },
+    "mode": "pro",
+    "view": "high top-down",
+    "transition_size": 0,
+    "raggedness": 0.2,
+    "roundness": 0.65,
+    "boundary_amplitude": 0.1,
+    "connect_diagonals": true,
+    "shading": "basic shading",
+    "detail": "medium detail",
+    "lower_reference_image": {
+      "source": "scratch/2026-11-15-mid-gray-road/references/unchanged-brown-shoulder.png",
+      "role": "Preserve the existing light brown shoulder"
+    },
+    "transition_reference_image": {
+      "source": "public/assets/puny-world/overworld.png",
+      "rectangle": [
+        48,
+        16,
+        16,
+        16
+      ]
+    },
+    "target_palette": {
+      "colors": [
+        "#9b9f9c",
+        "#a2a6a3",
+        "#aaaeab",
+        "#b49a79",
+        "#bfa685",
+        "#c9b393",
+        "#d3bfa1",
+        "#a38b6d",
+        "#92806a"
+      ]
+    },
+    "seed": 2611152001
+  },
+  "processing": "Raw generated PNGs copied unchanged. Existing runtime road masks and dirt end transitions are unchanged.",
+  "visualVerification": {
+    "brownShoulderPixelsUnchanged": true,
+    "surfaceMeanBrightness": 154.4,
+    "surfaceSpecklePixels": 88,
+    "previousDarkMeanBrightness": 121.4,
+    "previousLightMeanBrightness": 204.4
+  },
+  "files": {
+    "tile-00.png": "b64507080fd45ea73043356ff0c153a0ca3d542fd77b8806611bbb217c354379",
+    "tile-01.png": "b45e1d4dfc95fb6577cf09a762c562aec6f06ecc46bc887eee554626e278d55e",
+    "tile-02.png": "d701da9c6d1e723c6d728573be6e0bbc32effbbb3daa5c3bb079611431530565",
+    "tile-03.png": "a04d5ee160680a9eb848aab86fb345067ed327a699cce5c42de1005997458391",
+    "tile-04.png": "6c5f6fb5af338b40dfba3dc108206238bfd5846cffc2ecfe51d70841df66c553",
+    "tile-05.png": "bf7e09dbbf9db43f9e2eb9de1f8474fc6103158f7c6fe8345e0905aee50f5802",
+    "tile-06.png": "ef162c7d6cb882a4a922a636b86c9f91e261486c41d3ee92b2a0db19a7b96f6d",
+    "tile-07.png": "392b3ee055e4792ead5b4127412494da863b9766aa58ef1a48ae444675a6c3c2",
+    "tile-08.png": "044d1009627953a2c40c21e992b74b605d83b16144cf8664e24711e3c5a0ed9b",
+    "tile-09.png": "224056a904ef5b51348cb630ea365a149d9e9cca05c4cb0459ab1feee4b57391",
+    "tile-10.png": "85a169b9246b3c2fa8dafc504a9e9270c5b028d8191182d631f702eb68bda839",
+    "tile-11.png": "93f068391b67b7f2f14b07434a74b24c8f8c24e292a2986c51eb05bb65b1cd9e",
+    "tile-12.png": "1a7d7a719f1179188672f2b865e7f3cafd3c212b536400b63e5ea4761388a010",
+    "tile-13.png": "da04613c7bc08d2df0eb6ca578faf0c8fcbf23693f263b926d8b3f6eb7dda88a",
+    "tile-14.png": "1e62eccc75401793243f84532c521a9034bdc46ac4081d074e6789605ca4d7ed",
+    "tile-15.png": "35023e8717c7c3e0cb5a9803c836c22b518630215021685e51485daf6f871fd5"
+  }
+}

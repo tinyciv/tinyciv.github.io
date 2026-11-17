@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { farmWorkGroups } from '../src/game/farm-work-groups';
+import { farmHarvestMarkers, parcelHarvest } from '../src/game/farm-parcels';
+import { withSimulationReads } from '../src/game/simulation-reads';
 import { prepareCourierUpdates, settleCourier, wakeFarmCouriers } from '../src/game/courier-sleep';
 import { beginCollectorFrame, endCollectorFrame, ensureCollectors, FIELD_SPOIL_SECONDS,
   synchronizeFarms, updateCollector, updateHarvests, updateScheduledHarvests } from '../src/game/farms';
@@ -75,17 +77,24 @@ describe('one gatherer per contiguous field', () => {
     expect(collectors(state)).toEqual([worker]);
   });
 
-  it.each([false, true])('sweeps all 16 cells and delivers with collection time paused (scheduled=%s)', scheduled => {
+  it.each([false, true])('collects all 16 cells at one stop with fixed deadlines (scheduled=%s)', scheduled => {
     const state = fixture(), worker = collectors(state)[0]; ripe(state);
-    let sawExtendedGround = false, sawExtendedCargo = false;
+    let pickups = 0;
     for (let step = 0; step < 400; step++) {
       state.time = step / 10;
       (scheduled ? updateScheduledHarvests : updateHarvests)(state);
+      const before = worker.cargo ?? 0;
       beginCollectorFrame(state); updateCollector(state, worker, .1, walk); endCollectorFrame(state);
-      sawExtendedGround ||= state.fields!.some(field => (field.expiresAt ?? 0) > FIELD_SPOIL_SECONDS + 1);
-      sawExtendedCargo ||= (worker.cargoExpiresAt ?? 0) > FIELD_SPOIL_SECONDS + 1;
+      if ((worker.cargo ?? 0) > before) {
+        pickups++;
+        expect(worker.cargo).toBe(64);
+        expect(worker.cargoBatches).toEqual([{ amount: 64, expiresAt: FIELD_SPOIL_SECONDS }]);
+        expect(worker.collectPhase).toBe('returning');
+        expect(state.fields!.every(field => field.food === 0)).toBe(true);
+      }
+      expect(state.fields!.every(field => (field.expiresAt ?? 0) <= FIELD_SPOIL_SECONDS)).toBe(true);
     }
-    expect(sawExtendedGround).toBe(true); expect(sawExtendedCargo).toBe(true);
+    expect(pickups).toBe(1);
     expect(state.buildings[0].foodDelivered).toBeCloseTo(64);
     expect(worker.inside).toBe(true); expect(collectors(state)).toHaveLength(1);
   });
@@ -119,4 +128,78 @@ describe('one gatherer per contiguous field', () => {
     for (let step = 0; step < 30; step++) { state.time += 1 / 3; ensureCollectors(state); }
     expect(collectors(state).map(unit => unit.id)).toEqual(ids);
   });
+  it('draws one grain load for each connected parcel and removes it at pickup', () => {
+    const state = fixture(), worker = collectors(state)[0]; ripe(state);
+    const markers = farmHarvestMarkers(state);
+    expect(markers.size).toBe(1);
+    expect([...markers.values()][0].food).toBe(64);
+    expect(farmHarvestMarkers(state)).toBe(markers);
+    const field = state.fields![0];
+    Object.assign(worker, { inside: false, x: field.x + .5, y: field.y + .5, field: field.id, collectPhase: 'outbound' });
+    updateCollector(state, worker, .1, walk);
+    expect(farmHarvestMarkers(state).size).toBe(0);
+  });
+
+  it('does not read crop readiness or rewrite tile deadlines while a collector travels', () => {
+    const state = fixture(), worker = collectors(state)[0]; ripe(state);
+    withSimulationReads(state, () => {
+      updateScheduledHarvests(state);
+      updateCollector(state, worker, .01, walk);
+    });
+    expect(worker.collectPhase).toBe('outbound');
+    let foodReads = 0, deadlineWrites = 0;
+    for (const field of state.fields!) {
+      let food = field.food, expiresAt = field.expiresAt;
+      Object.defineProperty(field, 'food', { configurable: true, get: () => { foodReads++; return food; }, set: value => { food = value; } });
+      Object.defineProperty(field, 'expiresAt', { configurable: true, get: () => expiresAt, set: value => { deadlineWrites++; expiresAt = value; } });
+    }
+    for (let step = 1; step <= 200; step++) {
+      state.time = step / 200;
+      withSimulationReads(state, () => {
+        updateScheduledHarvests(state);
+        beginCollectorFrame(state); updateCollector(state, worker, .005, () => {}); endCollectorFrame(state);
+      });
+    }
+    expect(foodReads).toBe(0); expect(deadlineWrites).toBe(0);
+  });
+
+  it('invalidates cached parcel readiness when the scheduled crop ripens', () => {
+    const state = fixture();
+    for (const field of state.fields!) field.nextHarvest = 1;
+    withSimulationReads(state, () => {
+      updateScheduledHarvests(state);
+      const group = farmWorkGroups(state).groups[0];
+      const empty = parcelHarvest(state, group);
+      expect(empty.food).toBe(0);
+      expect(parcelHarvest(state, group)).toBe(empty);
+      state.time = 1; updateScheduledHarvests(state);
+      expect(parcelHarvest(state, group).food).toBeGreaterThan(0);
+    });
+  });
+
+  it('retains parcel readiness across unrelated road construction', () => {
+    const state = fixture(); ripe(state); updateHarvests(state);
+    withSimulationReads(state, () => {
+      const group = farmWorkGroups(state).groups[0], before = parcelHarvest(state, group);
+      expect(before.food).toBe(64);
+      entityStore(state).buildings.add({ id: 500, kind: 'road', x: 1, y: 1, faction: 0, hp: 60, maxHp: 60, capacity: 0 });
+      expect(parcelHarvest(state, group)).toBe(before);
+    });
+  });
+
+  it('cultivates every mature orchard in a connected fallow parcel at one arrival', () => {
+    const state = fixture();
+    for (const camp of state.buildings) if (camp.kind === 'camp') {
+      camp.orchard = { startedAt: -120, readyAt: 0 }; camp.farmFallow = true;
+    }
+    for (const field of state.fields!) { field.orchard = state.buildings.find(camp => camp.id === field.camp)!.orchard; field.planted = false; }
+    synchronizeFarms(state); ensureCollectors(state);
+    const worker = collectors(state)[0], field = state.fields![0];
+    Object.assign(worker, { inside: false, x: field.x + .5, y: field.y + .5, field: field.id, collectPhase: 'outbound', cultivating: true });
+    updateCollector(state, worker, .1, walk);
+    expect(state.buildings.filter(camp => camp.kind === 'camp').every(camp => !camp.farmFallow)).toBe(true);
+    expect(state.fields!.every(field => field.planted)).toBe(true);
+    expect(worker.collectPhase).toBe('returning');
+  });
+
 });

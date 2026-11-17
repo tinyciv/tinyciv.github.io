@@ -1,7 +1,9 @@
+import { handcartIconUrl } from '../game/handcart-art';
 import { auxiliaryIconUrl } from '../game/auxiliary-art';
 import { militaryActionIcon } from './military-action-icons';
 import { horsemanIconUrl, stableIconUrl } from '../game/cavalry-art';
 import { ballistaIconUrl, spearmanIconUrl } from '../game/siege-art';
+import { cannonIconUrl } from '../game/cannon-art';
 import { characterIconUrl } from '../game/unit-sprites';
 import { drawBuilding } from '../game/sprites';
 import { punyWorldImage } from '../game/puny-world';
@@ -14,6 +16,7 @@ import { irrigationIconUrl } from '../game/irrigation-art';
 import { dockIconUrl } from '../game/naval-art';
 import { galleyIconUrl } from '../game/galley-art';
 import { buildingKindForSelection, type BuildingKind, type HouseStyle } from '../game/types';
+import { pikemanIconUrl } from '../game/pikeman-art';
 
 /** HUD pictures use the same source art as the world. */
 const worldIcons: Record<string, [number, number]> = {
@@ -28,7 +31,7 @@ const labels: Record<string, string> = {
 };
 const controlSymbols = new Set(['pause', 'play', 'compass', 'check', 'minus']);
 const characters: Record<string, 'leader' | 'archer' | 'scout' | 'warrior' | 'swordsman' | 'slinger' | 'worker' | 'militia' | 'marauder'> = {
-  supplyCart: 'worker', crown: 'leader', people: 'worker', population: 'worker',
+  crown: 'leader', people: 'worker', population: 'worker',
   slinger: 'slinger', archer: 'archer', scout: 'scout', warrior: 'warrior', swordsman: 'swordsman', militia: 'militia', worker: 'worker', marauder: 'marauder',
 };
 const buildingIcons = new Map<string, string>();
@@ -42,28 +45,47 @@ function farmIconUrl(): string {
 }
 /** Every building portrait calls the world renderer, including gate clipping. */
 export function buildingIconUrl(selection: BuildingKind | 'trail', color: string, tier = 1, gate = false, palaceLevel: 1 | 2 = 1): string {
+  if (selection === 'whalingPost') return `${import.meta.env.BASE_URL}assets/runtime/ui/whaling.webp`;
+  if (selection === 'shipyard') return `${import.meta.env.BASE_URL}assets/runtime/ui/naval/shipyard.webp`;
+  if (selection === 'thermalBath') return `${import.meta.env.BASE_URL}assets/runtime/ui/thermal-bath.webp`;
+  if (selection === 'granary') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/grainStorage.webp`;
+  if (selection === 'militaryAcademy') return `${import.meta.env.BASE_URL}assets/runtime/ui/military-academy.webp`;
+  if (selection === 'foundry') return `${import.meta.env.BASE_URL}assets/runtime/ui/foundry.webp`;
+  if (selection === 'siegeCannon') return cannonIconUrl();
   const kind = selection === 'trail' ? 'road' : buildingKindForSelection(selection);
   const key = `${selection}:${color}:${tier}:${gate}:${palaceLevel}`, cached = buildingIcons.get(key);
   if (cached) return cached;
   const tall = kind === 'tower' || kind === 'woodenTower';
-  const large = kind === 'palace' || kind === 'fort' || kind === 'archeryRange' || kind === 'library';
+  const large = kind === 'palace' || kind === 'fort' || kind === 'archeryRange' || kind === 'library' || kind === 'colosseum' || kind === 'barracks';
   const canvas = document.createElement('canvas');
   canvas.width = 64; canvas.height = tall ? 112 : kind === 'archeryRange' ? 32 : kind === 'palace' ? palaceArtHeight(palaceLevel) : 64;
   const context = canvas.getContext('2d')!;
   const links = { north: false, south: false, east: true, west: true };
   const passage = { north: true, south: true, east: false, west: false };
   drawBuilding(context, { id: 0, kind, roadStyle: selection === 'trail' ? 'trail' : undefined, houseLevel: tier, palaceLevel, faction: 0, x: 0, y: 0, hp: 100, maxHp: 100, capacity: 0 },
-    0, tall ? 48 : 0, large ? 32 : 64, 0, color, links, gate ? passage : undefined);
+    0, tall ? 48 : kind === 'barracks' ? 32 : 0, large ? 32 : 64, 0, color, links, gate ? passage : undefined);
   const url = canvas.toDataURL(); buildingIcons.set(key, url); return url;
 }
 export function icon(name: string, color = '#f34f59', houseStyle?: HouseStyle | number, armorLevel = 0): string {
-  if (name === 'levy' || name === 'garrison') return militaryActionIcon(name, color);
+  if (['gold', 'coins', 'food', 'wheat', 'culture'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/resources/${name === 'coins' ? 'gold' : name === 'wheat' ? 'food' : name}.webp">`;
+  if (['shipyard', 'warGalley', 'caravel', 'frigate'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/naval/${name === 'warGalley' ? 'galley' : name}.webp">`;
+  if (name === 'whalingPost') return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl('whalingPost', color)}">`;
+  if (name === 'thermalBath') return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl('thermalBath', color)}">`;
+  if (name === 'granary') return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl('granary', color)}">`;
+  if (name === 'forum') return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/resources/culture.webp">`;
+  if (name === 'militaryAcademy') return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/military-academy.webp">`;
+  if (name === 'foundry' || name === 'fieldCannon') return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/${name === 'foundry' ? 'foundry' : 'field-cannon'}.webp">`;
+  if (name === 'siegeCannon') return `<img aria-hidden="true" alt="" class="icon" src="${cannonIconUrl()}">`;
+  if (name === 'supplyCart') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${handcartIconUrl(color)}">`;
+  if (name === 'levy' || name === 'garrison') return militaryActionIcon(name);
   if (name === 'levyInfantry' || name === 'skirmisher') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${auxiliaryIconUrl(name, color)}">`;
   if (name === 'infantryFormation') return '<svg aria-hidden="true" class="icon infantry-formation-icon" viewBox="0 0 32 32"><path fill="currentColor" d="M5 5h5v5H5zm9 0h5v5h-5zm9 0h5v5h-5zM5 14h5v5H5zm18 0h5v5h-5zM5 23h5v5H5zm9 0h5v5h-5zm9 0h5v5h-5z"/><path fill="#fff4bc" d="m16.5 12 4.5 4.5-4.5 4.5-4.5-4.5z"/></svg>';
   if (name === 'horseman' || name === 'horseArcher' || name === 'knight') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${horsemanIconUrl(color, name)}">`;
   if (name === 'stable') return `<img aria-hidden="true" alt="" class="icon" src="${stableIconUrl(color)}">`;
   if (name === 'sailboat') return `<img aria-hidden="true" alt="" class="icon" src="${galleyIconUrl()}">`;
   if (name === 'dock') return `<img aria-hidden="true" alt="" class="icon" src="${dockIconUrl()}">`;
+  if (name === 'musketman') return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/blacksmith.webp">`;
+  if (name === 'pikeman') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${pikemanIconUrl(color)}">`;
   if (name === 'spearman') return `<img aria-hidden="true" alt="" class="icon character-icon" src="${spearmanIconUrl(color)}">`;
   if (name === 'ballista') return `<img aria-hidden="true" alt="" class="icon" src="${ballistaIconUrl()}">`;
   if (name === 'irrigation') return `<img aria-hidden="true" alt="" class="icon" src="${irrigationIconUrl()}">`;
@@ -74,7 +96,7 @@ export function icon(name: string, color = '#f34f59', houseStyle?: HouseStyle | 
   if (name === 'demolish') return '<svg aria-hidden="true" class="icon" viewBox="0 0 32 32"><path d="M16 8V5H23V2H27" fill="none" stroke="#ead397" stroke-width="2"/><path d="M4 10H11V28H4ZM12 8H20V30H12ZM21 10H28V28H21Z" fill="#9c3935" stroke="#3a2624" stroke-width="2"/><path d="M6 11V25M14 9V27M23 11V25" stroke="#eb8270" stroke-width="2"/><path d="M3 15H29V23H3Z" fill="#c6ad75" stroke="#463c2e" stroke-width="1.5"/><path d="M7 17H11M9 17V21M13 21V17L17 21V17M20 17H24M22 17V21" fill="none" stroke="#4c3830" stroke-width="1.2"/></svg>';
   if (name === 'clearTrees') return '<svg aria-hidden="true" class="icon" viewBox="0 0 32 32"><path d="M8 28L23 7" stroke="#a97b43" stroke-width="4"/><path d="M17 5L24 3L30 13L21 15Z" fill="#c4c9c5" stroke="#343c38" stroke-width="2"/></svg>';
   if (name === 'camp' && punyWorldImage()) return `<img aria-hidden="true" alt="" class="icon" src="${farmIconUrl()}">`;
-  if (punyWorldImage() && ['fort', 'supplyDepot', 'house', 'home', 'well', 'monument', 'blacksmith', 'archeryRange', 'scoutLodge', 'healerShack', 'library', 'guardPost', 'palace', 'keep', 'tower', 'woodenTower', 'palisade', 'wall', 'bridge', 'road', 'trail', 'palisadeGate', 'wallGate', 'villageTent'].includes(name)) {
+  if (punyWorldImage() && ['fort', 'supplyDepot', 'house', 'home', 'well', 'monument', 'blacksmith', 'archeryRange', 'scoutLodge', 'healerShack', 'library', 'guardPost', 'palace', 'keep', 'colosseum', 'barracks', 'tower', 'woodenTower', 'palisade', 'wall', 'bridge', 'road', 'trail', 'palisadeGate', 'wallGate', 'villageTent'].includes(name)) {
     const kind = name === 'keep' ? 'palace' : name === 'home' ? 'house' : name === 'palisadeGate' ? 'palisade' : name === 'wallGate' ? 'wall' : name as BuildingKind | 'trail';
     const tier = nativeHouseTier({ id: 0, houseLevel: typeof houseStyle === 'number' ? houseStyle : undefined, houseStyle: typeof houseStyle === 'string' ? houseStyle : undefined });
     const style = kind === 'palace' ? ' palace-icon' : ['tower', 'woodenTower', 'wall', 'palisade', 'palisadeGate', 'wallGate'].includes(name) ? ' defense-icon' : '';

@@ -8,6 +8,7 @@ import { continueAfterVictory, updateGame } from '../src/game/simulation';
 import { canWalk, travelTimeMap } from '../src/game/pathfinding';
 import { fogRaidProfile, updateFogRaids } from '../src/game/fog-raids';
 import { type GameState, type MarauderPack, type Unit } from '../src/game/types';
+import { nativeFixture } from './helpers/native-fixture';
 
 const idle = { up: false, down: false, left: false, right: false };
 const person = (id: number, x: number, y: number, faction = -2): Unit => ({ id, x, y, faction, kind: 'warrior', hp: 100, maxHp: 100,
@@ -211,7 +212,7 @@ describe('camp activity and small raids', () => {
   it('reduces camp-defense archer assignments by one-third across small parties', () => {
     let formerArcherAssignments = 0, archers = 0;
     for (let seed = 1; seed <= 180; seed++) {
-      const state = fixture(); state.rngState = seed;
+      const state = fixture(); nativeFixture(state).seedRandom(seed);
       const building = state.buildings[1];
       const count = defendRaiderCamp(state, building, { x: building.x - .5, y: building.y + .5, faction: 0 });
       formerArcherAssignments += Math.floor((count + 1) / 3);

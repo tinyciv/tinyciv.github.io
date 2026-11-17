@@ -1,0 +1,3818 @@
+{
+  "harness": "tools/simulation-harness/cli.mjs",
+  "version": 3,
+  "mode": "ai",
+  "dt": 0.1,
+  "seconds": 90,
+  "checkpoints": [
+    30,
+    90
+  ],
+  "perturbed": 0,
+  "configuration": {
+    "mode": "ai",
+    "seconds": 90,
+    "dt": 0.1,
+    "seeds": 3,
+    "seed": "iteration-2-transfer-ai",
+    "scenarios": [
+      "open-battle",
+      "fortified-assault",
+      "outnumbered-defense"
+    ],
+    "policies": [
+      "expansionist",
+      "hard-assault",
+      "evolved-assault",
+      "field-concentration"
+    ],
+    "baseline": "hard-assault",
+    "policyDefinitions": [
+      {
+        "id": "hard-assault",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "campaignSafetyRatio": 1.2,
+          "campaignCooldown": 10,
+          "reserveUpkeepCycles": 1.2
+        }
+      },
+      {
+        "id": "field-concentration",
+        "extends": "hard-assault",
+        "logic": {
+          "garrison": 0
+        }
+      },
+      {
+        "id": "evolved-assault",
+        "extends": "expansionist",
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        },
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "policySource": {
+      "path": "/Users/ckrapu/strongman/btv/experiments/ai-iteration-2/finalists.json",
+      "sha256": "061e17cd1a2f15c4f86860232f48ca70fb9814bae85ce4da0efadce6578c22ec"
+    },
+    "checkpoints": [
+      30,
+      90
+    ],
+    "gameOver": "stop",
+    "jobs": 2,
+    "perturb": 0,
+    "out": "/Users/ckrapu/strongman/btv/benchmarks/ai-iteration-2/transfer-ai.json"
+  },
+  "environment": {
+    "node": "v25.9.0",
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin arm64"
+  },
+  "artifacts": {
+    "bundleSha256": "846e012968275cec8ec24b68a3e9e976c4c2865f795e0a25015085deaa11bb0e",
+    "wasmSha256": "e8904e71ab28f087b37a411ff2423ca6c639da22a5d0db334ab0ba224b7e78b6"
+  },
+  "timing": {
+    "buildSeconds": 0.0001009999999999991,
+    "elapsedSeconds": 72.561096167,
+    "simulatedSeconds": 3240
+  },
+  "score": "100 for Leader survival + surviving retinue HP / 20 + enemy kills * 10 + enemy palace damage / 100",
+  "summary": [
+    {
+      "policy": "evolved-assault",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 321.35,
+      "meanKills": 17.11,
+      "meanSurvivors": 8.78,
+      "meanFormationSeconds": 46.77
+    },
+    {
+      "policy": "hard-assault",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 317.35,
+      "meanKills": 16.56,
+      "meanSurvivors": 8.89,
+      "meanFormationSeconds": 47.27
+    },
+    {
+      "policy": "field-concentration",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 316.47,
+      "meanKills": 16.44,
+      "meanSurvivors": 9,
+      "meanFormationSeconds": 46.93
+    },
+    {
+      "policy": "expansionist",
+      "runs": 9,
+      "survivalRate": 1,
+      "meanScore": 315.43,
+      "meanKills": 16.11,
+      "meanSurvivors": 9.33,
+      "meanFormationSeconds": 45.21
+    }
+  ],
+  "paired": {
+    "baseline": "hard-assault",
+    "intervalMethod": "Normal approximation to paired mean score differences (mean +/- 1.96 standard errors); descriptive, especially with few seeds.",
+    "comparisons": [
+      {
+        "policy": "evolved-assault",
+        "matchedPairs": 9,
+        "wins": 3,
+        "ties": 6,
+        "losses": 0,
+        "meanScoreDelta": 4,
+        "pairedScoreSD": 6.469252,
+        "approximate95PercentInterval": [
+          -0.226578,
+          8.226578
+        ],
+        "meanLeaderSurvivalDelta": 0,
+        "meanKillsDelta": 0.555556,
+        "meanSurvivorsDelta": -0.111111,
+        "scenarios": {
+          "open-battle": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          },
+          "fortified-assault": {
+            "matchedPairs": 3,
+            "wins": 3,
+            "ties": 0,
+            "losses": 0,
+            "meanScoreDelta": 12,
+            "pairedScoreSD": 4.837861,
+            "approximate95PercentInterval": [
+              6.525445,
+              17.474555
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 1.666667,
+            "meanSurvivorsDelta": -0.333333
+          },
+          "outnumbered-defense": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          }
+        }
+      },
+      {
+        "policy": "field-concentration",
+        "matchedPairs": 9,
+        "wins": 1,
+        "ties": 6,
+        "losses": 2,
+        "meanScoreDelta": -0.883333,
+        "pairedScoreSD": 3.331321,
+        "approximate95PercentInterval": [
+          -3.059796,
+          1.29313
+        ],
+        "meanLeaderSurvivalDelta": 0,
+        "meanKillsDelta": -0.111111,
+        "meanSurvivorsDelta": 0.111111,
+        "scenarios": {
+          "open-battle": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          },
+          "fortified-assault": {
+            "matchedPairs": 3,
+            "wins": 1,
+            "ties": 0,
+            "losses": 2,
+            "meanScoreDelta": -2.65,
+            "pairedScoreSD": 6.112962,
+            "approximate95PercentInterval": [
+              -9.567467,
+              4.267467
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": -0.333333,
+            "meanSurvivorsDelta": 0.333333
+          },
+          "outnumbered-defense": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          }
+        }
+      },
+      {
+        "policy": "expansionist",
+        "matchedPairs": 9,
+        "wins": 1,
+        "ties": 6,
+        "losses": 2,
+        "meanScoreDelta": -1.914444,
+        "pairedScoreSD": 5.850487,
+        "approximate95PercentInterval": [
+          -5.736763,
+          1.907874
+        ],
+        "meanLeaderSurvivalDelta": 0,
+        "meanKillsDelta": -0.444444,
+        "meanSurvivorsDelta": 0.444444,
+        "scenarios": {
+          "open-battle": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          },
+          "fortified-assault": {
+            "matchedPairs": 3,
+            "wins": 1,
+            "ties": 0,
+            "losses": 2,
+            "meanScoreDelta": -5.743333,
+            "pairedScoreSD": 10.194456,
+            "approximate95PercentInterval": [
+              -17.279446,
+              5.79278
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": -1.333333,
+            "meanSurvivorsDelta": 1.333333
+          },
+          "outnumbered-defense": {
+            "matchedPairs": 3,
+            "wins": 0,
+            "ties": 3,
+            "losses": 0,
+            "meanScoreDelta": 0,
+            "pairedScoreSD": 0,
+            "approximate95PercentInterval": [
+              0,
+              0
+            ],
+            "meanLeaderSurvivalDelta": 0,
+            "meanKillsDelta": 0,
+            "meanSurvivorsDelta": 0
+          }
+        }
+      }
+    ]
+  },
+  "rows": [
+    {
+      "id": "open-battle:1:expansionist",
+      "scenario": "open-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "expansionist",
+      "initialStateHash": "3051dde2a3ab51cc7e0bcf594249b106b6f9b5cf517a99c8443cefcc3d06614c",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 3.112087,
+      "wallSeconds": 0.889059,
+      "speedup": 101.23,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 580.98,
+      "kills": 13,
+      "palaceDamage": 5976.188750000037,
+      "formationSeconds": 83.99999999999935,
+      "maximumLeaderDistance": 35.05709628591621,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 318.81
+    },
+    {
+      "id": "open-battle:1:hard-assault",
+      "scenario": "open-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "hard-assault",
+      "initialStateHash": "3051dde2a3ab51cc7e0bcf594249b106b6f9b5cf517a99c8443cefcc3d06614c",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 3.177292,
+      "wallSeconds": 0.890273,
+      "speedup": 101.09,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 580.98,
+      "kills": 13,
+      "palaceDamage": 5976.188750000037,
+      "formationSeconds": 83.99999999999935,
+      "maximumLeaderDistance": 35.05709628591621,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 318.81
+    },
+    {
+      "id": "open-battle:1:evolved-assault",
+      "scenario": "open-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "evolved-assault",
+      "initialStateHash": "3051dde2a3ab51cc7e0bcf594249b106b6f9b5cf517a99c8443cefcc3d06614c",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.979662,
+      "wallSeconds": 1.016841,
+      "speedup": 88.51,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 580.98,
+      "kills": 13,
+      "palaceDamage": 5976.188750000037,
+      "formationSeconds": 83.99999999999935,
+      "maximumLeaderDistance": 35.05709628591621,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 318.81
+    },
+    {
+      "id": "open-battle:1:field-concentration",
+      "scenario": "open-battle",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "field-concentration",
+      "initialStateHash": "3051dde2a3ab51cc7e0bcf594249b106b6f9b5cf517a99c8443cefcc3d06614c",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.988479,
+      "wallSeconds": 1.003209,
+      "speedup": 89.71,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 580.98,
+      "kills": 13,
+      "palaceDamage": 5976.188750000037,
+      "formationSeconds": 83.99999999999935,
+      "maximumLeaderDistance": 35.05709628591621,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 318.81
+    },
+    {
+      "id": "open-battle:2:expansionist",
+      "scenario": "open-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "expansionist",
+      "initialStateHash": "c60bf8402a27a8d90fe9e04bd1c570a7967ab837c853e246c7e6d49e2f82ad80",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.244624,
+      "wallSeconds": 0.850636,
+      "speedup": 105.8,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 9,
+      "survivingHP": 563.3,
+      "kills": 13,
+      "palaceDamage": 4714.612000000005,
+      "formationSeconds": 84.99999999999893,
+      "maximumLeaderDistance": 35.014282800023196,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 305.31
+    },
+    {
+      "id": "open-battle:2:hard-assault",
+      "scenario": "open-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "hard-assault",
+      "initialStateHash": "c60bf8402a27a8d90fe9e04bd1c570a7967ab837c853e246c7e6d49e2f82ad80",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.444656,
+      "wallSeconds": 0.830677,
+      "speedup": 108.35,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 9,
+      "survivingHP": 563.3,
+      "kills": 13,
+      "palaceDamage": 4714.612000000005,
+      "formationSeconds": 84.99999999999893,
+      "maximumLeaderDistance": 35.014282800023196,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 305.31
+    },
+    {
+      "id": "open-battle:2:evolved-assault",
+      "scenario": "open-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "evolved-assault",
+      "initialStateHash": "c60bf8402a27a8d90fe9e04bd1c570a7967ab837c853e246c7e6d49e2f82ad80",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.664477,
+      "wallSeconds": 1.332311,
+      "speedup": 67.55,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 9,
+      "survivingHP": 563.3,
+      "kills": 13,
+      "palaceDamage": 4714.612000000005,
+      "formationSeconds": 84.99999999999893,
+      "maximumLeaderDistance": 35.014282800023196,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 305.31
+    },
+    {
+      "id": "open-battle:2:field-concentration",
+      "scenario": "open-battle",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "field-concentration",
+      "initialStateHash": "c60bf8402a27a8d90fe9e04bd1c570a7967ab837c853e246c7e6d49e2f82ad80",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.693934,
+      "wallSeconds": 1.329691,
+      "speedup": 67.68,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 9,
+      "survivingHP": 563.3,
+      "kills": 13,
+      "palaceDamage": 4714.612000000005,
+      "formationSeconds": 84.99999999999893,
+      "maximumLeaderDistance": 35.014282800023196,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 305.31
+    },
+    {
+      "id": "open-battle:3:expansionist",
+      "scenario": "open-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "expansionist",
+      "initialStateHash": "ac3fa0d2dcd30421d94091eb6eed130a3f96fd8a22877314fa159361396a9e98",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.653672,
+      "wallSeconds": 0.797741,
+      "speedup": 112.82,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 603.5666666666667,
+      "kills": 13,
+      "palaceDamage": 4439.930249999996,
+      "formationSeconds": 89.999999999999,
+      "maximumLeaderDistance": 36.36492947332966,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 304.58
+    },
+    {
+      "id": "open-battle:3:hard-assault",
+      "scenario": "open-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "hard-assault",
+      "initialStateHash": "ac3fa0d2dcd30421d94091eb6eed130a3f96fd8a22877314fa159361396a9e98",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.740798,
+      "wallSeconds": 0.926908,
+      "speedup": 97.1,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 603.5666666666667,
+      "kills": 13,
+      "palaceDamage": 4439.930249999996,
+      "formationSeconds": 89.999999999999,
+      "maximumLeaderDistance": 36.36492947332966,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 304.58
+    },
+    {
+      "id": "open-battle:3:evolved-assault",
+      "scenario": "open-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "evolved-assault",
+      "initialStateHash": "ac3fa0d2dcd30421d94091eb6eed130a3f96fd8a22877314fa159361396a9e98",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.65156,
+      "wallSeconds": 0.829459,
+      "speedup": 108.5,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 603.5666666666667,
+      "kills": 13,
+      "palaceDamage": 4439.930249999996,
+      "formationSeconds": 89.999999999999,
+      "maximumLeaderDistance": 36.36492947332966,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 304.58
+    },
+    {
+      "id": "open-battle:3:field-concentration",
+      "scenario": "open-battle",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "field-concentration",
+      "initialStateHash": "ac3fa0d2dcd30421d94091eb6eed130a3f96fd8a22877314fa159361396a9e98",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.616226,
+      "wallSeconds": 0.889587,
+      "speedup": 101.17,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 170,
+      "survivors": 10,
+      "survivingHP": 603.5666666666667,
+      "kills": 13,
+      "palaceDamage": 4439.930249999996,
+      "formationSeconds": 89.999999999999,
+      "maximumLeaderDistance": 36.36492947332966,
+      "missions": {
+        "attack": 89.999999999999
+      },
+      "score": 304.58
+    },
+    {
+      "id": "fortified-assault:1:expansionist",
+      "scenario": "fortified-assault",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "expansionist",
+      "initialStateHash": "192254dc6d5563a3d94baed3ccf9f4fbf897a2b1ed6481d9a3714457604e7017",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.908158,
+      "wallSeconds": 0.766431,
+      "speedup": 117.43,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 143.5399999999987,
+      "survivors": 7,
+      "survivingHP": 690.7079999999996,
+      "kills": 6,
+      "palaceDamage": 0,
+      "formationSeconds": 19.400000000000006,
+      "maximumLeaderDistance": 25.79930251688613,
+      "missions": {
+        "attack": 36.999999999999574,
+        "recover": 16.00000000000002,
+        "patrol": 35.999999999999396,
+        "regroup": 1.0000000000000142
+      },
+      "score": 194.54
+    },
+    {
+      "id": "fortified-assault:1:hard-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "hard-assault",
+      "initialStateHash": "192254dc6d5563a3d94baed3ccf9f4fbf897a2b1ed6481d9a3714457604e7017",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.912521,
+      "wallSeconds": 0.978008,
+      "speedup": 92.02,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 3,
+      "survivingHP": 195.8699999999984,
+      "kills": 8,
+      "palaceDamage": 0,
+      "formationSeconds": 26.400000000000105,
+      "maximumLeaderDistance": 26.012992752128223,
+      "missions": {
+        "attack": 45.39999999999953,
+        "recover": 15.999999999999538,
+        "patrol": 21.10000000000015,
+        "regroup": 7.499999999999787
+      },
+      "score": 189.79
+    },
+    {
+      "id": "fortified-assault:1:evolved-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "evolved-assault",
+      "initialStateHash": "192254dc6d5563a3d94baed3ccf9f4fbf897a2b1ed6481d9a3714457604e7017",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.986678,
+      "wallSeconds": 0.953063,
+      "speedup": 94.43,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 109.04999999999997,
+      "survivors": 3,
+      "survivingHP": 138.33466666666715,
+      "kills": 10,
+      "palaceDamage": 0,
+      "formationSeconds": 26.400000000000105,
+      "maximumLeaderDistance": 26.012992752128223,
+      "missions": {
+        "attack": 46.99999999999908,
+        "recover": 2.0000000000000284,
+        "patrol": 33.50000000000032,
+        "regroup": 7.499999999999574
+      },
+      "score": 206.92
+    },
+    {
+      "id": "fortified-assault:1:field-concentration",
+      "scenario": "fortified-assault",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "field-concentration",
+      "initialStateHash": "192254dc6d5563a3d94baed3ccf9f4fbf897a2b1ed6481d9a3714457604e7017",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 3.220087,
+      "wallSeconds": 0.903192,
+      "speedup": 99.65,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 144.26999999999992,
+      "survivors": 4,
+      "survivingHP": 205.53133333333352,
+      "kills": 7,
+      "palaceDamage": 0,
+      "formationSeconds": 26.400000000000105,
+      "maximumLeaderDistance": 26.012992752128223,
+      "missions": {
+        "attack": 50.899999999999494,
+        "recover": 22.999999999999638,
+        "patrol": 16.099999999999874
+      },
+      "score": 180.28
+    },
+    {
+      "id": "fortified-assault:2:expansionist",
+      "scenario": "fortified-assault",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "expansionist",
+      "initialStateHash": "ceda237dd7e11d880083fe2e88650433141edc6b96c1c4ddda42b00843423aec",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.583607,
+      "wallSeconds": 0.842057,
+      "speedup": 106.88,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 138.3459999999981,
+      "survivors": 5,
+      "survivingHP": 385.72466666665935,
+      "kills": 6,
+      "palaceDamage": 0,
+      "formationSeconds": 18.39999999999999,
+      "maximumLeaderDistance": 28.007113382139188,
+      "missions": {
+        "attack": 42.89999999999981,
+        "recover": 24.499999999999176,
+        "regroup": 10.50000000000005,
+        "patrol": 12.099999999999973
+      },
+      "score": 179.29
+    },
+    {
+      "id": "fortified-assault:2:hard-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "hard-assault",
+      "initialStateHash": "ceda237dd7e11d880083fe2e88650433141edc6b96c1c4ddda42b00843423aec",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.391799,
+      "wallSeconds": 0.89271,
+      "speedup": 100.82,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 6,
+      "survivingHP": 513.236666666666,
+      "kills": 6,
+      "palaceDamage": 0,
+      "formationSeconds": 21.400000000000034,
+      "maximumLeaderDistance": 26.202261830217267,
+      "missions": {
+        "attack": 43.399999999999494,
+        "recover": 21.599999999999845,
+        "patrol": 24.999999999999666
+      },
+      "score": 185.66
+    },
+    {
+      "id": "fortified-assault:2:evolved-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "evolved-assault",
+      "initialStateHash": "ceda237dd7e11d880083fe2e88650433141edc6b96c1c4ddda42b00843423aec",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.642795,
+      "wallSeconds": 0.990431,
+      "speedup": 90.87,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 145.45,
+      "survivors": 5,
+      "survivingHP": 340.2593333333324,
+      "kills": 8,
+      "palaceDamage": 0,
+      "formationSeconds": 21.400000000000034,
+      "maximumLeaderDistance": 26.202261830217267,
+      "missions": {
+        "attack": 36.399999999999615,
+        "recover": 4.099999999999909,
+        "patrol": 43.49999999999982,
+        "regroup": 5.999999999999659
+      },
+      "score": 197.01
+    },
+    {
+      "id": "fortified-assault:2:field-concentration",
+      "scenario": "fortified-assault",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "field-concentration",
+      "initialStateHash": "ceda237dd7e11d880083fe2e88650433141edc6b96c1c4ddda42b00843423aec",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.684059,
+      "wallSeconds": 0.978003,
+      "speedup": 92.02,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 139.738,
+      "survivors": 5,
+      "survivingHP": 357.5999999999997,
+      "kills": 7,
+      "palaceDamage": 0,
+      "formationSeconds": 21.400000000000034,
+      "maximumLeaderDistance": 28.160255680657446,
+      "missions": {
+        "attack": 55.89999999999893,
+        "recover": 18.60000000000001,
+        "patrol": 14.50000000000005,
+        "regroup": 1.0000000000000142
+      },
+      "score": 187.88
+    },
+    {
+      "id": "fortified-assault:3:expansionist",
+      "scenario": "fortified-assault",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "expansionist",
+      "initialStateHash": "b3223047f3fa03bf27f7bf7c51d8e01eeee72b8963f28bf7154a7dd1533c094d",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.69299,
+      "wallSeconds": 1.065627,
+      "speedup": 84.46,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 7,
+      "survivingHP": 327.69799999999515,
+      "kills": 4,
+      "palaceDamage": 0,
+      "formationSeconds": 33.89999999999968,
+      "maximumLeaderDistance": 25.865716582511926,
+      "missions": {
+        "attack": 33.89999999999968,
+        "recover": 21.599999999999845,
+        "patrol": 32.99999999999957,
+        "regroup": 1.4999999999999147
+      },
+      "score": 156.38
+    },
+    {
+      "id": "fortified-assault:3:hard-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "hard-assault",
+      "initialStateHash": "b3223047f3fa03bf27f7bf7c51d8e01eeee72b8963f28bf7154a7dd1533c094d",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.674327,
+      "wallSeconds": 1.032382,
+      "speedup": 87.18,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 6,
+      "survivingHP": 239.7086666666654,
+      "kills": 6,
+      "palaceDamage": 0,
+      "formationSeconds": 36.399999999999615,
+      "maximumLeaderDistance": 27,
+      "missions": {
+        "attack": 36.399999999999615,
+        "recover": 18.499999999999467,
+        "patrol": 35.09999999999992
+      },
+      "score": 171.99
+    },
+    {
+      "id": "fortified-assault:3:evolved-assault",
+      "scenario": "fortified-assault",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "evolved-assault",
+      "initialStateHash": "b3223047f3fa03bf27f7bf7c51d8e01eeee72b8963f28bf7154a7dd1533c094d",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.669797,
+      "wallSeconds": 1.230429,
+      "speedup": 73.15,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 150,
+      "survivors": 6,
+      "survivingHP": 190.28533333332857,
+      "kills": 7,
+      "palaceDamage": 0,
+      "formationSeconds": 33.4,
+      "maximumLeaderDistance": 27,
+      "missions": {
+        "attack": 41.40000000000011,
+        "recover": 5.499999999999972,
+        "patrol": 43.09999999999892
+      },
+      "score": 179.51
+    },
+    {
+      "id": "fortified-assault:3:field-concentration",
+      "scenario": "fortified-assault",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "field-concentration",
+      "initialStateHash": "b3223047f3fa03bf27f7bf7c51d8e01eeee72b8963f28bf7154a7dd1533c094d",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.955619,
+      "wallSeconds": 1.093391,
+      "speedup": 82.31,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 145.45,
+      "survivors": 7,
+      "survivingHP": 426.69533333333356,
+      "kills": 5,
+      "palaceDamage": 0,
+      "formationSeconds": 33.400000000000205,
+      "maximumLeaderDistance": 27,
+      "missions": {
+        "attack": 50.49999999999923,
+        "recover": 17.500000000000092,
+        "patrol": 14.500000000000107,
+        "regroup": 7.499999999999574
+      },
+      "score": 171.33
+    },
+    {
+      "id": "outnumbered-defense:1:expansionist",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "expansionist",
+      "initialStateHash": "c1340b06af775e2d58bd523351f1681a7cb6f35a58802c82b141349b031601d4",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.969508,
+      "wallSeconds": 1.289865,
+      "speedup": 69.77,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 24.400000000000023,
+      "maximumLeaderDistance": 15.652475842498529,
+      "missions": {
+        "defend": 9.899999999999974,
+        "recover": 3.9999999999999925,
+        "patrol": 34.9999999999995,
+        "attack": 14.50000000000005,
+        "regroup": 26.59999999999949
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:1:hard-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "hard-assault",
+      "initialStateHash": "c1340b06af775e2d58bd523351f1681a7cb6f35a58802c82b141349b031601d4",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.714334,
+      "wallSeconds": 1.146983,
+      "speedup": 78.47,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 24.90000000000012,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 9.899999999999974,
+        "recover": 2.499999999999998,
+        "attack": 15.000000000000147,
+        "patrol": 30.49999999999922,
+        "regroup": 32.09999999999967
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:1:evolved-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "evolved-assault",
+      "initialStateHash": "c1340b06af775e2d58bd523351f1681a7cb6f35a58802c82b141349b031601d4",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.891485,
+      "wallSeconds": 0.982749,
+      "speedup": 91.58,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 22.900000000000098,
+      "maximumLeaderDistance": 15.581989603385056,
+      "missions": {
+        "defend": 8.399999999999983,
+        "recover": 1.0000000000000009,
+        "patrol": 31.999999999999474,
+        "attack": 14.500000000000114,
+        "regroup": 34.09999999999943
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:1:field-concentration",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 1,
+      "seed": "iteration-2-transfer-ai-1",
+      "policy": "field-concentration",
+      "initialStateHash": "c1340b06af775e2d58bd523351f1681a7cb6f35a58802c82b141349b031601d4",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.972864,
+      "wallSeconds": 1.029261,
+      "speedup": 87.44,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 24.90000000000012,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 9.899999999999974,
+        "recover": 2.499999999999998,
+        "attack": 15.000000000000147,
+        "patrol": 30.49999999999922,
+        "regroup": 32.09999999999967
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:2:expansionist",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "expansionist",
+      "initialStateHash": "af9d45b243277a3ba822df2a50b62fe40fd4fd632a57d051b30c49025d98e7f1",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.629867,
+      "wallSeconds": 1.113256,
+      "speedup": 80.84,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 26.90000000000002,
+      "maximumLeaderDistance": 15.652475842498529,
+      "missions": {
+        "defend": 12.39999999999997,
+        "recover": 3.9999999999999925,
+        "patrol": 32.99999999999941,
+        "attack": 14.50000000000005,
+        "regroup": 26.099999999999582
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:2:hard-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "hard-assault",
+      "initialStateHash": "af9d45b243277a3ba822df2a50b62fe40fd4fd632a57d051b30c49025d98e7f1",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.810168,
+      "wallSeconds": 1.042837,
+      "speedup": 86.3,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 26.900000000000148,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 9.899999999999974,
+        "recover": 2.499999999999998,
+        "attack": 17.000000000000178,
+        "patrol": 29.09999999999937,
+        "regroup": 31.49999999999949
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:2:evolved-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "evolved-assault",
+      "initialStateHash": "af9d45b243277a3ba822df2a50b62fe40fd4fd632a57d051b30c49025d98e7f1",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.660714,
+      "wallSeconds": 0.907283,
+      "speedup": 99.2,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 27.400000000000134,
+      "maximumLeaderDistance": 15.652475842498529,
+      "missions": {
+        "defend": 9.899999999999977,
+        "recover": 1.0000000000000009,
+        "attack": 17.500000000000156,
+        "patrol": 31.99999999999934,
+        "regroup": 29.599999999999532
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:2:field-concentration",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 2,
+      "seed": "iteration-2-transfer-ai-2",
+      "policy": "field-concentration",
+      "initialStateHash": "af9d45b243277a3ba822df2a50b62fe40fd4fd632a57d051b30c49025d98e7f1",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.507577,
+      "wallSeconds": 1.056606,
+      "speedup": 85.18,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 26.900000000000148,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 9.899999999999974,
+        "recover": 2.499999999999998,
+        "attack": 17.000000000000178,
+        "patrol": 29.09999999999937,
+        "regroup": 31.49999999999949
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:3:expansionist",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "expansionist",
+      "initialStateHash": "6973f66f2a21284efe4cea27c510c43d5771c38214beb1794115756add8d9349",
+      "policyDefinition": {
+        "logic": {},
+        "code": 3,
+        "id": "expansionist",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.55,
+          "retreatPowerRatio": 1.55,
+          "huntPowerRatio": 1.1,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.05,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.5,
+          "campaignCooldown": 20,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.594064,
+      "wallSeconds": 2.930722,
+      "speedup": 30.71,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 24.90000000000002,
+      "maximumLeaderDistance": 15.811388300841898,
+      "missions": {
+        "defend": 12.399999999999997,
+        "recover": 4.999999999999993,
+        "patrol": 33.09999999999946,
+        "attack": 12.500000000000021,
+        "regroup": 26.99999999999953
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:3:hard-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "hard-assault",
+      "initialStateHash": "6973f66f2a21284efe4cea27c510c43d5771c38214beb1794115756add8d9349",
+      "policyDefinition": {
+        "logic": {},
+        "code": 4,
+        "id": "hard-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 4.157354,
+      "wallSeconds": 1.13039,
+      "speedup": 79.62,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 30.40000000000004,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 12.899999999999963,
+        "recover": 2.499999999999998,
+        "attack": 17.500000000000078,
+        "patrol": 29.09999999999942,
+        "regroup": 27.999999999999545
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:3:evolved-assault",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "evolved-assault",
+      "initialStateHash": "6973f66f2a21284efe4cea27c510c43d5771c38214beb1794115756add8d9349",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0,
+          "recovered": {
+            "op": "and",
+            "args": [
+              {
+                "op": "ge",
+                "args": [
+                  {
+                    "fact": "hp"
+                  },
+                  {
+                    "op": "mul",
+                    "args": [
+                      {
+                        "fact": "maxHp"
+                      },
+                      0.7
+                    ]
+                  }
+                ]
+              },
+              {
+                "op": "and",
+                "args": [
+                  {
+                    "op": "ge",
+                    "args": [
+                      {
+                        "fact": "morale"
+                      },
+                      60
+                    ]
+                  },
+                  {
+                    "op": "le",
+                    "args": [
+                      {
+                        "fact": "enemyPower"
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "fact": "friendlyPower"
+                          },
+                          1.1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "code": 6,
+        "id": "evolved-assault",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.732909,
+      "wallSeconds": 1.228768,
+      "speedup": 73.24,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 30.40000000000004,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 12.899999999999963,
+        "recover": 2.499999999999998,
+        "attack": 17.500000000000078,
+        "patrol": 29.09999999999942,
+        "regroup": 27.999999999999545
+      },
+      "score": 460
+    },
+    {
+      "id": "outnumbered-defense:3:field-concentration",
+      "scenario": "outnumbered-defense",
+      "seedIndex": 3,
+      "seed": "iteration-2-transfer-ai-3",
+      "policy": "field-concentration",
+      "initialStateHash": "6973f66f2a21284efe4cea27c510c43d5771c38214beb1794115756add8d9349",
+      "policyDefinition": {
+        "logic": {
+          "garrison": 0
+        },
+        "code": 5,
+        "id": "field-concentration",
+        "features": {
+          "formations": true,
+          "militaryPurchases": true,
+          "towerGarrison": true,
+          "towerAwareness": true,
+          "interceptEnemies": true,
+          "defensiveLevy": true,
+          "campaignLevy": true,
+          "safeCampaigns": true,
+          "formationApproach": true,
+          "proactiveHousing": true,
+          "foundCities": true,
+          "fortifyCities": true,
+          "offensiveSiege": true,
+          "territorialWars": true
+        },
+        "parameters": {
+          "retreatHealth": 0.4,
+          "retreatPowerRatio": 1.9,
+          "huntPowerRatio": 0.9,
+          "garrisonFraction": 0.15,
+          "towerGarrisonCount": 2,
+          "hostileTowerPower": 3200,
+          "hostileFortPower": 6400,
+          "friendlyTowerPower": 1600,
+          "campaignSafetyRatio": 1.2,
+          "campaignDangerWeight": 20,
+          "retreatMorale": 40,
+          "recoveryHealth": 0.9,
+          "recoveryMorale": 75,
+          "recoveryPowerRatio": 0.6,
+          "decisionInterval": 1,
+          "formationEnterCount": 8,
+          "formationStayCount": 6,
+          "housingOrdersPerCycle": 6,
+          "developmentInterval": 4,
+          "cityLimit": 6,
+          "populationPerCity": 35,
+          "reserveUpkeepCycles": 1.2,
+          "campaignCooldown": 10,
+          "siegeLimit": 2,
+          "fortsPerCity": 2
+        }
+      },
+      "appliedFactions": [
+        1
+      ],
+      "simulatedSeconds": 90,
+      "steps": 900,
+      "setupSeconds": 2.848955,
+      "wallSeconds": 1.090961,
+      "speedup": 82.5,
+      "gameOver": null,
+      "stopReason": "duration",
+      "leaderAlive": true,
+      "leaderHP": 160,
+      "survivors": 12,
+      "survivingHP": 1200,
+      "kills": 30,
+      "palaceDamage": 0,
+      "formationSeconds": 30.40000000000004,
+      "maximumLeaderDistance": 17.26267650163207,
+      "missions": {
+        "defend": 12.899999999999963,
+        "recover": 2.499999999999998,
+        "attack": 17.500000000000078,
+        "patrol": 29.09999999999942,
+        "regroup": 27.999999999999545
+      },
+      "score": 460
+    }
+  ]
+}

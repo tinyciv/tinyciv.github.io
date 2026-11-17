@@ -1,0 +1,49 @@
+{
+  "role": "scout",
+  "selectedVariant": "1A",
+  "creator": "Shade",
+  "assetPack": "Puny Characters",
+  "sourcePath": "scratch/2026-10-26-puny-world-collection/packs/puny-characters/Puny-Characters/Archer-Green.png",
+  "sourceRect": [
+    0,
+    0,
+    128,
+    256
+  ],
+  "width": 128,
+  "height": 256,
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "directions": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "animations": {
+    "idle": {
+      "frames": [
+        0
+      ],
+      "frameMs": 800
+    },
+    "walk": {
+      "frames": [
+        1,
+        2,
+        3
+      ],
+      "frameMs": 120
+    }
+  },
+  "footAnchor": [
+    16,
+    23
+  ],
+  "changes": "Exact crop of the original empty-handed idle and walking frames. No painted pixels or weapon frames. Selected by the user from the scout/mason gallery.",
+  "sourceSha256": "2fe5178f77e431b7e3b6f3934459047ac86f29f2e23f44425eb60e4aac3a89e1"
+}

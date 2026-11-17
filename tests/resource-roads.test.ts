@@ -80,8 +80,7 @@ describe('civilian resource access roads',()=>{
   it('preserves neutral village reservations in both the route search and live placement',()=>{
     const {state,city,cells,worker}=fixture();
     state.factions.push({...state.factions[0],id:1,name:'Village',relation:'peace',population:3,villageId:1});
-    state.villages=[{id:1,faction:1,campId:100,name:'Village',identity:'growers',relation:'neutral',x:8,y:10,
-      nextGrowthAt:90,nextThinkAt:0,nextRecruitAt:90}];
+    state.villages=[{id:1,faction:1,campId:100,name:'Village',identity:'growers',relation:'neutral',x:8,y:10}];
     entityStore(state).buildings.add({...city,id:100,kind:'villageTent',x:8,y:10,faction:1,villageId:1});
     const journey=resourceRoadJourney(state,city,cells)!;
     expect(journey).toBeDefined();

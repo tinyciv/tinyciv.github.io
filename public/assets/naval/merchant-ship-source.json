@@ -1,0 +1,57 @@
+{
+  "generator": "PixelLab /generate-image-v2 + /animate-with-text-v3",
+  "selected": "1A",
+  "reference": "public/assets/naval/warships/caravel.png",
+  "camera": "high top-down",
+  "isometric": false,
+  "nativePixels": [
+    16,
+    32
+  ],
+  "tileFootprint": [
+    1,
+    2
+  ],
+  "frameCount": 9,
+  "frameSeconds": 0.16,
+  "source": "scratch/2026-11-16-merchant-ship",
+  "frames": [
+    {
+      "file": "1A-move/00.png",
+      "sha256": "596aea0c476a31758b26cab5032affc5f1a8a89a6959d06b06ab18f2640d28ec"
+    },
+    {
+      "file": "1A-move/01.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/02.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/03.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/04.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/05.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/06.png",
+      "sha256": "301e6599c3a9ab97e4fe48955f7793d3ad72ecc2d113b4b79622c5f71d6dbdcf"
+    },
+    {
+      "file": "1A-move/07.png",
+      "sha256": "4e61eb5e9d63e3bc1add9a087359153b17a97a06212275c74e843ec76c0c77b9"
+    },
+    {
+      "file": "1A-move/08.png",
+      "sha256": "4e61eb5e9d63e3bc1add9a087359153b17a97a06212275c74e843ec76c0c77b9"
+    }
+  ],
+  "processing": "Unmodified PixelLab frames packed horizontally without rescaling, repainting or alpha changes."
+}

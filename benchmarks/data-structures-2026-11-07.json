@@ -1,0 +1,229 @@
+{
+  "date": "2026-11-07",
+  "scope": "Five data-structure optimizations; unrelated in-progress workspace changes were preserved.",
+  "changes": [
+    "Retain navigation-only wall-breaching planning views with stable identities and live authoritative inputs.",
+    "Share an eight-direction Uint8 terrain edge mask with enclosure flood fills.",
+    "Pack structural cell flags and update changed footprints and terrain halos from a bounded, independent-consumer world tile journal.",
+    "Retain palace-keyed city economic results across no-op orders; refresh affected cities while preserving faction-wide resident allocation order.",
+    "Replicate entity/field deltas and dirty world tiles, preserve client entity indexes, isolate interpolation/fog presentation from authoritative baselines, and bound snapshot/resync queues."
+  ],
+  "validation": {
+    "focusedTests": {
+      "passed": 177,
+      "files": 19,
+      "report": "output/data-structures-2026-11-07/targeted-tests.json"
+    },
+    "replicationFlowTests": {
+      "passed": 4,
+      "files": 1
+    },
+    "build": {
+      "web": true,
+      "server": true,
+      "warning": "Existing Vite large-chunk warning."
+    },
+    "simulationParity": "All serialized-state checkpoints through 390 updates match, including fog and RNG state.",
+    "replicationParity": "Every decoded frame matches the source in real simulation replays and property/entity/field deletion, reordering, and sparse-fog edge cases.",
+    "fullSuite": {
+      "status": "Stopped after assertion failures and long-running world-generation timeouts; not a passing full-suite result.",
+      "log": "output/data-structures-2026-11-07/full-suite-partial.log",
+      "baselineReproductions": "Three tundra palette assertions and two multiplayer projectile-reward assertions fail identically before these changes. Offshore assertions pass with 120 seconds, but its major-landform test takes 89.439 seconds on baseline, exceeding the normal 60-second limit.",
+      "otherFailures": "Additional terrain/world-generation assertions and timeouts were observed; not all were rechecked individually against baseline. A building-activity missing-tile failure is resolved in current source and passes in the focused run.",
+      "environment": "Another full-suite run was active outside this task. Shared output/ci-tests artifacts are not used as authoritative results for this run."
+    },
+    "browser": {
+      "passed": 13,
+      "errors": 0,
+      "report": "output/data-structures-2026-11-07/browser-report.json",
+      "scope": "Local production builds, desktop 1440x900 and mobile 390x700; lobby, movement, faction-specific stance, pause controls, reconnect and victory."
+    },
+    "websocket": {
+      "passed": 11,
+      "report": "output/data-structures-2026-11-07/websocket-report.json",
+      "scope": "Local server: two players, authoritative movement and commands, rejected cross-faction/invalid orders, terrain replication, disconnect/reconnect, victory and room release."
+    },
+    "baselineTerrainLog": "output/data-structures-2026-11-07/baseline-terrain-recheck.log",
+    "diffWhitespaceCheck": true,
+    "testServerCleanup": true
+  },
+  "simulation": {
+    "method": "Simulation-only, navigation WASM enabled, alternating isolated replay order. Wall-clock CPU timings include normal GC, no profiler. Full serialized-state parity includes fog. No rendering/HUD or live FPS measurement.",
+    "cpu": "Apple M3 Pro",
+    "candidate": "/private/tmp/btv-data-structures-implementation/frozen-after.mjs",
+    "snapshotSha256": "0a11adbfca3eb6ede94d7bb70deab95f0468f9c3175da88b1a3d2ccf7b51432e",
+    "warm": 30,
+    "steps": 360,
+    "rounds": 4,
+    "initial": {
+      "units": 393,
+      "buildings": 2389,
+      "fields": 483
+    },
+    "updateMs": {
+      "before": {
+        "mean": 14.032257344444474,
+        "p50": 6.9234590000000935,
+        "p95": 51.589833,
+        "max": 250.48824999999852
+      },
+      "after": {
+        "mean": 11.448262910416634,
+        "p50": 6.495791000001191,
+        "p95": 47.434541000002355,
+        "max": 127.18583300000319
+      }
+    },
+    "parity": [
+      {
+        "step": 1,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 30,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 120,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 240,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 360,
+        "equal": true,
+        "differences": []
+      },
+      {
+        "step": 390,
+        "equal": true,
+        "differences": []
+      }
+    ],
+    "speedup": 1.2257106125398898,
+    "environmentNote": "Other validation processes were active in the shared workspace. Before/after replay order alternated across four rounds, but wall-clock CPU measurements remain diagnostic; no live FPS claim."
+  },
+  "multiplayerReplication": {
+    "source": "scratch/2026-11-04-levy-optimization/btv-levy-live-state.json",
+    "frames": 20,
+    "simulationSeconds": 3,
+    "rounds": 6,
+    "exactDecodedParity": true,
+    "method": "Offline replay of real updateGame samples. Alternating full/delta order; encoding includes diff plus JSON stringify, decoding includes JSON parse plus state replacement or actual ClientStateReplica.apply. Setup, simulation, WASM, snapshots, world tile channel, interpolation, renderer/HUD and downstream cache rebuilding are excluded. Not live FPS or network latency.",
+    "edgeCoverage": "Non-timed property deletion, entity deletion/order, field deletion/order/absence, sparse fog exploration changes.",
+    "scenarios": [
+      {
+        "name": "saved-settlement",
+        "units": 393,
+        "buildings": 2389,
+        "fields": 483,
+        "tiles": 29682,
+        "full": {
+          "encodeMs": {
+            "mean": 9.869819399999907,
+            "p50": 9.647624999999607,
+            "p95": 12.278582999999344
+          },
+          "decodeMs": {
+            "mean": 7.340714583333321,
+            "p50": 7.164000000000669,
+            "p95": 9.087125000000015
+          },
+          "payloadBytes": {
+            "mean": 1106207.95,
+            "p50": 1106551,
+            "p95": 1108392
+          }
+        },
+        "delta": {
+          "encodeMs": {
+            "mean": 9.532259016666739,
+            "p50": 9.08575000000019,
+            "p95": 11.124082999998791
+          },
+          "decodeMs": {
+            "mean": 1.8746468749999015,
+            "p50": 1.582416999999623,
+            "p95": 4.943875000000844
+          },
+          "payloadBytes": {
+            "mean": 74015.85,
+            "p50": 64337,
+            "p95": 162655
+          }
+        }
+      },
+      {
+        "name": "duel-movement-view-0",
+        "units": 106,
+        "buildings": 646,
+        "fields": 159,
+        "tiles": 29682,
+        "full": {
+          "encodeMs": {
+            "mean": 2.85193781666682,
+            "p50": 2.747790999999779,
+            "p95": 3.4904999999998836
+          },
+          "decodeMs": {
+            "mean": 2.53189896666654,
+            "p50": 2.342624999999316,
+            "p95": 3.033499999999549
+          },
+          "payloadBytes": {
+            "mean": 420200.45,
+            "p50": 420748,
+            "p95": 423472
+          }
+        },
+        "delta": {
+          "encodeMs": {
+            "mean": 3.4183851083333745,
+            "p50": 3.101249999999709,
+            "p95": 4.64129099999991
+          },
+          "decodeMs": {
+            "mean": 0.5293694166668198,
+            "p50": 0.40170799999941664,
+            "p95": 1.3809160000000702
+          },
+          "payloadBytes": {
+            "mean": 21123.05,
+            "p50": 19423,
+            "p95": 63491
+          }
+        }
+      }
+    ],
+    "environmentNote": "Other validation processes were active in the shared workspace. Payload byte counts and decoded parity are deterministic; CPU timings remain diagnostic.",
+    "tradeoff": "The smaller duel sample used about 0.57 ms more server encode time per frame; client decode/apply time and payload size were substantially lower. The large saved settlement also reduced encode time slightly.",
+    "snapshotNote": "Bandwidth comparisons cover recurring dynamic-state frames. Full join/resync snapshots are retained; the browser scenario had initial world snapshots of 38.9 MB per client. The bounded send queue preserves delta order behind one such snapshot and recovers safely after congestion."
+  },
+  "provenance": {
+    "baseline": "Original source captured before implementation, with concurrent unrelated loyalty/diplomacy edits applied equally to the final before/after comparison.",
+    "baselineArchive": "/private/tmp/btv-data-structures-implementation/before-source.tar.gz",
+    "baselineArchiveSha256": "0400e2e1623489e9278edeca52e0dfe5f8b974f884ce5c6c91be3cf13d39aacc",
+    "sourceManifestSha256": "38b52211546defebd6d2cfad9de1d9a8d75288ce396941096bf693685c780d94",
+    "beforeBundleSha256": "878fb886b0adf871d2f3fa595072f536ba3983ac91afc1aec155fa7320b66622",
+    "afterBundleSha256": "5ceb059b34f62d7839860414b22d98de0bb5f5a4d8b754453844ee4bf9b0aea4",
+    "commands": [
+      "node scripts/benchmark-engine-work.mjs --before /private/tmp/btv-data-structures-implementation/matched-before.mjs --candidate /private/tmp/btv-data-structures-implementation/frozen-after.mjs --out /private/tmp/btv-data-structures-implementation/final-benchmark --warm 30 --steps 360 --rounds 4",
+      "node scripts/benchmark-multiplayer-delta.mjs --frames=20 --rounds=6 --out=/private/tmp/btv-data-structures-implementation/replication-benchmark.json"
+    ],
+    "finalReplicationSourceSha256": {
+      "server/replication-flow.ts": "7188686e342de04c112365df37c09ad28dd37f1bb40adfc20a1cdc21aa3b1036",
+      "server/server.ts": "ad0c81ed4482cd71202e27e7210d4b08f26e803be8c6d1853f314e3f700f2707",
+      "server/match-worker.ts": "3ced92b8a0cfe1ca4f795d0f1bc49e42ad29a39b8cf4db48dff11867d0dd0a8b",
+      "src/multiplayer/client-state.ts": "3bfd194f1899566b442fc325563afd4b002b568dbc7033ba64cae9353139688b",
+      "src/multiplayer/state-delta.ts": "7b7dc83d31722a43ea82e536542f5d458581d6f5a234a618c7f56f8b1f45fbf5",
+      "src/multiplayer/client.ts": "4562b970ca7ef20b186d25043059ff772afa54dcb1c92d466ee9374e1cff5784",
+      "src/multiplayer/protocol.ts": "f1f366c4241f6b2208706dbf78666afdeb9e3bb066c6713318a5bc307dccf284"
+    }
+  }
+}

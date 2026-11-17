@@ -1,0 +1,38 @@
+{
+  "provider": "built-in imagegen",
+  "approvedSource": "scratch/2026-11-15-landform-biome-palettes",
+  "originalShapes": "scratch/2026-11-14-overlapping-ranges-comparison",
+  "atlases": [
+    {
+      "file": "atlas-A.png",
+      "style": 0,
+      "nativeWidth": 32,
+      "sha256": "ba2389c175259b1fe13f2d9811cb49104e2522522f5aa74483bb191ea283c943"
+    },
+    {
+      "file": "atlas-B.png",
+      "style": 1,
+      "nativeWidth": 48,
+      "sha256": "1f9a13925e3a08493951b0f86921c0ac6db3fbedcead67e4402d4bea20d7b2dc"
+    },
+    {
+      "file": "atlas-C.png",
+      "style": 2,
+      "nativeWidth": 64,
+      "sha256": "42497833cb88d98b45bd9abec361219114fd5d6b9227c8d7c31f210dc6a27aa6"
+    }
+  ],
+  "layout": {
+    "columns": 4,
+    "rows": [
+      "low hills",
+      "grassy foothills",
+      "rocky foothills",
+      "mountains"
+    ]
+  },
+  "paletteFile": "palettes.json",
+  "runtime": "Original atlases copied unchanged. Runtime crops opaque bounds, samples 32/48/64px native widths, removes alpha noise, and applies the approved surface and rock ramps. No mirroring or rotation.",
+  "retainedVariants": "All twelve approved shape/layout variants and four palettes remain in the original gallery. Game regions use all three silhouette styles and seeded geological bands and clumps.",
+  "passCarving": false
+}

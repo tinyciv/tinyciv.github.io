@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "id": "hard-assault",
+      "extends": "expansionist",
+      "parameters": {
+        "retreatHealth": 0.4,
+        "retreatPowerRatio": 1.9,
+        "huntPowerRatio": 0.9,
+        "campaignSafetyRatio": 1.2,
+        "campaignCooldown": 10,
+        "reserveUpkeepCycles": 1.2
+      }
+    },
+    {
+      "id": "field-concentration",
+      "extends": "hard-assault",
+      "logic": {
+        "garrison": 0
+      }
+    },
+    {
+      "id": "small-formations",
+      "extends": "field-concentration",
+      "parameters": {
+        "formationEnterCount": 4,
+        "formationStayCount": 2
+      }
+    },
+    {
+      "id": "steady-pressure",
+      "extends": "field-concentration",
+      "parameters": {
+        "retreatHealth": 0.3,
+        "retreatPowerRatio": 2.6,
+        "retreatMorale": 20,
+        "recoveryHealth": 0.7,
+        "recoveryMorale": 50,
+        "recoveryPowerRatio": 1.1
+      },
+      "logic": {
+        "retreat": {
+          "op": "or",
+          "args": [
+            {
+              "op": "lt",
+              "args": [
+                {
+                  "fact": "hp"
+                },
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "fact": "maxHp"
+                    },
+                    0.3
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "fact": "enemyPower"
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "fact": "friendlyPower"
+                        },
+                        2.0
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    {
+                      "fact": "distanceHome"
+                    },
+                    5
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "patient-pressure",
+      "extends": "field-concentration",
+      "parameters": {
+        "retreatHealth": 0.6,
+        "retreatPowerRatio": 1.7,
+        "recoveryHealth": 0.8,
+        "recoveryMorale": 60,
+        "recoveryPowerRatio": 0.9,
+        "formationEnterCount": 6,
+        "formationStayCount": 3
+      }
+    }
+  ]
+}

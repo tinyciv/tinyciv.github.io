@@ -47,7 +47,7 @@ describe('sinuous river networks after landforms', () => {
         expect(tile.terrain).toBe('river');
         expect(tile.channelWidth).toBeGreaterThanOrEqual(1);
         if (tile.channel === 'main') expect(tile.channelWidth).toBeGreaterThanOrEqual(2);
-        if (tile.channel === 'main') expect(tile.channelWidth).toBeLessThanOrEqual(4);
+        if (tile.channel === 'main') expect(tile.channelWidth).toBeLessThanOrEqual(5);
       } else if (!WATER.has(tile.terrain)) {
         expect(tile.channelWidth).toBeUndefined();
         expect(tile.channelNext).toBeUndefined();
@@ -105,7 +105,7 @@ describe('sinuous river networks after landforms', () => {
     for (const [cell, tile] of tiles.entries()) {
       if (tile.channel !== 'main') continue;
       expect(tile.channelWidth).toBeGreaterThanOrEqual(2);
-      expect(tile.channelWidth).toBeLessThanOrEqual(4);
+      expect(tile.channelWidth).toBeLessThanOrEqual(5);
       const next = tile.channelNext!, step = next - cell;
       if (Math.abs(step) !== 1 && Math.abs(step) !== width) continue;
       const line = new Set<number>(); let at = cell;

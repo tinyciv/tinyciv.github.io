@@ -1,3 +1,5 @@
+import { villageRelationView } from './settlement-bridge';
+import { playerFaction } from './player-context';
 import { buildingArtTop, buildingWidth, buildingHeight, buildingReady, type Building, type GameState, type Point, type Unit } from './types';
 import { entityVisible } from './fog';
 import { HOUSE_WELL_BOUNDS, HOUSE_WELL_OFFSET, sharedHouseForWell } from './house-wells';
@@ -27,7 +29,7 @@ export function neutralVillageEntityAt(state: GameState, point: Point): Building
   const entity = unitAtPoint(state, point) ?? buildingAtPoint(state, point);
   if (!entity || entity.villageId === undefined) return;
   const village = state.villages?.find(village => village.id === entity.villageId);
-  return village && !village.destroyed && village.relation !== 'war'
+  return village && !village.destroyed && villageRelationView(state, village, playerFaction(state)) !== 'war'
     && state.buildings.some(building => building.id === village.campId && buildingReady(building)) ? entity : undefined;
 }
 
@@ -51,6 +53,10 @@ export function buildingAtPoint(state: GameState, point: Point): Building | unde
     if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || !building.construction && (building.kind === 'road' || building.kind === 'bridge' || building.kind === 'irrigation') || !entityVisible(state, building)) continue;
     // Every structure uses its top-left footprint, including two-cell farms.
     const width = buildingWidth(building), height = buildingHeight(building), x = building.x, y = building.y;
+    // Every hit area (dock jetties, well overhangs, tower tops) lies within one
+    // tile of the footprint. Reject distant structures before the shared-tile
+    // lookups below, which each scan every building: a click was O(n²).
+    if (point.x < x - 1 || point.x >= x + Math.max(width, 2) + 1 || point.y < y - 1 || point.y >= y + Math.max(height, 2) + 1) continue;
     const attachedWell = !!sharedHouseForWell(building, state.buildings);
     const mountedTower = !!sharedWallForTower(building, state.buildings);
     const towerOnWall = sharedTowerForWall(building, state.buildings);

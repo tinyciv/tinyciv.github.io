@@ -1,6 +1,8 @@
 import { grantIncome } from './resource-income';
 import type { Building, GameState, Unit } from './types';
 import { simulationReadsActive } from './simulation-reads';
+import { buildingWithId } from './entity-store';
+import { depositGranaryFood } from './granaries-native';
 
 export function refreshFoodCargo(unit: Unit): void {
   unit.cargoBatches = (unit.cargoBatches ?? []).filter(batch => batch.amount > 1e-9);
@@ -23,16 +25,24 @@ export function expireFoodCargo(state: GameState, unit: Unit): void {
   refreshFoodCargo(unit);
 }
 
-/** A courier physically at a palace door deposits every surviving batch.
- * Distance and spoilage determine supply; the palace imposes no intake limit. */
+/** A courier at its town or granary deposits every surviving batch. The city
+ * retains its delivery accounting when storage is in an outlying granary. */
 export function deliverFoodCargo(state: GameState, palace: Building, courier: Unit): number {
   const faction = state.factions.find(candidate => candidate.id === palace.faction);
   if (!faction) return 0;
   expireFoodCargo(state, courier);
   refreshFoodCargo(courier);
-  const delivered = courier.cargo ?? 0;
+  let delivered = courier.cargo ?? 0;
+  const city = palace.kind === 'granary' ? buildingWithId(state, courier.home) : palace;
+  if (palace.kind === 'granary') {
+    if (!city) return 0;
+    const accepted = depositGranaryFood(state, courier, city, palace, delivered);
+    if (accepted < delivered) return 0;
+    delivered = accepted;
+  }
   grantIncome(faction, { food: delivered }, state);
   palace.foodDelivered = (palace.foodDelivered ?? 0) + delivered;
+  if (city && city !== palace) city.foodDelivered = (city.foodDelivered ?? 0) + delivered;
   courier.cargoBatches = [];
   refreshFoodCargo(courier);
   return delivered;

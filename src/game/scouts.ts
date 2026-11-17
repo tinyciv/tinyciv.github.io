@@ -6,6 +6,7 @@ import { BALLISTA_RANGE } from './ballista';
 import { unitSightRadius } from './fog';
 import { chooseScoutExplorationRoute, reserveScoutExplorationGoal, type ScoutThreat } from './scout-exploration';
 import { unitRespectsForbidden } from './forbidden-zones';
+import { unitNavigationState } from './unit-navigation';
 import { canMove, canWalk, createReachabilityQuery } from './pathfinding';
 import { highGroundSightMultiplier, sightDistance } from './sight';
 import { nearbyBuildings, nearbyUnits } from './spatial';
@@ -40,9 +41,9 @@ function observedThreats(state: GameState, scout: Unit, hostile: Hostile): Threa
   }
   for (const building of nearbyBuildings(state, scout, radius)) {
     if (!buildingReady(building) || !hostile(scout.faction, building.faction)
-      || !['tower', 'woodenTower', 'guardPost', 'ballista'].includes(building.kind) && !isKeep(building)) continue;
+      || !['tower', 'woodenTower', 'guardPost', 'ballista', 'siegeCannon'].includes(building.kind) && !isKeep(building)) continue;
     const point = { x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 };
-    if (scoutSees(state, scout, point)) threats.push({ ...point, radius: building.kind === 'guardPost' ? 3 : (building.kind === 'ballista' ? BALLISTA_RANGE + 1 : 7) + downhillRangeBonus(state.world, point, scout) });
+    if (scoutSees(state, scout, point)) threats.push({ ...point, radius: building.kind === 'guardPost' ? 3 : (building.kind === 'ballista' || building.kind === 'siegeCannon' ? BALLISTA_RANGE + 1 : 7) + downhillRangeBonus(state.world, point, scout) });
   }
   return threats;
 }
@@ -56,7 +57,7 @@ function setGoal(unit: Unit, plan: ScoutPlan, goal: Point | undefined): void {
 const danger = (point: Point, threats: readonly Threat[]): number => threats.reduce((sum, threat) => sum + Math.max(0, threat.radius - distance(point, threat)), 0);
 
 function sanctuary(state: GameState, scout: Unit): Point | undefined {
-  const reachable = createReachabilityQuery(state, scout, scout.faction, undefined, unitRespectsForbidden(state, scout)), candidates: Point[] = [];
+  const reachable = createReachabilityQuery(unitNavigationState(state, scout), scout, scout.faction, undefined, unitRespectsForbidden(state, scout)), candidates: Point[] = [];
   for (const building of state.buildings) {
     if (!['palace', 'scoutLodge'].includes(building.kind) || building.faction !== scout.faction || !buildingReady(building)) continue;
     const w = buildingWidth(building), h = buildingHeight(building);
@@ -82,7 +83,7 @@ function escapeGoal(state: GameState, scout: Unit, home: Point | undefined, thre
   for (let i = 0; i < 16; i++) {
     const a = angle + i * TAU / 16;
     const point = centerCell({ x: scout.x + Math.cos(a) * 2.25, y: scout.y + Math.sin(a) * 2.25 });
-    if (distance(scout, point) < .4 || !canMove(state, scout, point, scout.faction, undefined, unitRespectsForbidden(state, scout)) || unitPositionBlocked(state, scout, point)) continue;
+    if (distance(scout, point) < .4 || !canMove(unitNavigationState(state, scout), scout, point, scout.faction, undefined, unitRespectsForbidden(state, scout)) || unitPositionBlocked(state, scout, point)) continue;
     const risk = danger(point, threats);
     // A safe flank is preferable to running straight home through a threat.
     if (risk > hereDanger + .1) continue;

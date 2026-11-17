@@ -213,7 +213,7 @@ describe('settlement defense and shared raider pressure', () => {
     state.factions[0].defeated = true; expect(selectRaidTarget(state, from)?.faction).toBe(1);
   });
 
-  it('queues a paid tower and its palisade gate for NPC builders, respecting authoritative placement validation', () => {
+  it('queues a paid standalone tower for NPC builders, respecting authoritative placement validation', () => {
     const state = fixture(); state.time = 15;
     state.factions[1].population = 20;
     state.factions[1].research = { focus: 'wall', levels: { wall: 1, woodenTower: 1 }, progress: {} };
@@ -222,7 +222,7 @@ describe('settlement defense and shared raider pressure', () => {
       build: (faction, kind, x, y) => buildAt(state, kind, x, y, faction) });
     const defenses = state.buildings.filter(building => building.faction === 1 && ['palisade', 'woodenTower'].includes(building.kind));
     expect(defenses.some(building => building.kind === 'woodenTower')).toBe(true);
-    expect(defenses.some(building => building.kind === 'palisade')).toBe(true);
+    expect(defenses.some(building => building.kind === 'palisade')).toBe(false);
     expect(defenses.every(building => building.construction?.waitingForBuilder)).toBe(true);
     expect(state.factions[1].gold).toBeLessThan(before); expect(state.units.some(worker => worker.faction === 1 && worker.builder)).toBe(true);
     const count = state.buildings.length; updateFactionDefenses(state, { validate: () => ({ ok: true }), build: () => { throw Error('Planner must be throttled'); } });
@@ -239,7 +239,7 @@ describe('settlement defense and shared raider pressure', () => {
     expect(leader.target).toBeUndefined(); expect(distance(leader, { x: 29, y: 17 })).toBeLessThan(9);
   });
 
-  it('completes separate tower enclosures without walling over the city approach road', () => {
+  it('replaces missing standalone towers without walling over the city approach road', () => {
     const state = fixture(); state.factions[1].gold = 10000;
     state.factions[1].population = 100;
     state.factions[1].research = { focus: 'wall', levels: { wall: 1, woodenTower: 1 }, progress: {} };
@@ -257,13 +257,12 @@ describe('settlement defense and shared raider pressure', () => {
     const towers = state.buildings.filter(structure => structure.kind === 'woodenTower' && structure.faction === 1);
     expect(towers).toHaveLength(4);
     const walls = state.buildings.filter(structure => structure.kind === 'palisade' && structure.faction === 1);
-    expect(walls).toHaveLength(32);
+    expect(walls).toHaveLength(0);
     for (const tower of towers) {
-      expect(walls.filter(wall => Math.max(Math.abs(wall.x - tower.x), Math.abs(wall.y - tower.y)) === 1)).toHaveLength(8);
       const contacts = constructionEdges(state, tower);
-      expect(contacts).toHaveLength(1);
-      expect(constructionEdges(state, state.buildings[1]).some(exit => hasStaticPath(state, exit, contacts[0], 1))).toBe(true);
-      expect(canWalk(state, contacts[0].x, contacts[0].y, -2)).toBe(false);
+      expect(contacts.length).toBeGreaterThan(1);
+      expect(constructionEdges(state, state.buildings[1]).some(exit => contacts.some(contact => hasStaticPath(state, exit, contact, 1)))).toBe(true);
+      expect(contacts.every(contact => canWalk(state, contact.x, contact.y, -2))).toBe(true);
     }
     expect(state.buildings.some(structure => structure.kind === 'wall' && structure.faction === 1)).toBe(false);
     expect(canWalk(state, 28.5, 12.5, 1)).toBe(true); expect(canWalk(state, 28.5, 12.5, -2)).toBe(true);

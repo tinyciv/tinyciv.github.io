@@ -1,23 +1,25 @@
 import { constructionEdges } from './builders';
+import { raiderMayAttack } from './raider-aggression';
 import { travelTimeMap, wallBreachingNavigation, withNavigationFrame } from './pathfinding';
-import { buildingPresent, isFarmKind, type Building, type GameState, type Point } from './types';
-import { villageHostility } from './villages';
+import { isFarmKind, type Building, type GameState, type Point } from './types';
+import { buildingTargetable } from './building-targeting';
+import { hostileView } from './settlement-bridge';
 
 /** Shared by strategic objectives and specialist raiders' local sensing. */
 export function isRaiderEnemyFaction(state: GameState, faction: number): boolean {
-  return faction >= 0 && villageHostility(state, -2, faction) !== false;
+  return faction >= 0 && hostileView(state, -2, faction) !== false;
 }
 
 export function isRaidObjective(state: GameState, building: Building): boolean {
   const faction = state.factions.find(faction => faction.id === building.faction);
   return isRaiderEnemyFaction(state, building.faction) && (!state.factions.length || !!faction && !faction.defeated)
-    && buildingPresent(building) && !isFarmKind(building.kind)
+    && buildingTargetable(building) && !isFarmKind(building.kind)
     && !['road', 'bridge', 'irrigation', 'wall', 'palisade', 'ruin'].includes(building.kind);
 }
 
 /** Known settlements are strategic destinations. This never reads hidden unit positions. */
-export function selectRaidTarget(state: GameState, from: Point, ownPack?: number, previousFaction?: number): Building | undefined {
-  const candidates = state.buildings.filter(building => isRaidObjective(state, building));
+export function selectRaidTarget(state: GameState, from: Point, ownPack?: number, previousFaction?: number, camp?: number): Building | undefined {
+  const candidates = state.buildings.filter(building => raiderMayAttack(state, building.faction, camp) && isRaidObjective(state, building));
   if (!candidates.length) return;
   // Walls can be breached; rivers and disconnected islands cannot.
   const planning = wallBreachingNavigation(state, { kind: 'raider' });

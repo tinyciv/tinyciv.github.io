@@ -1,4 +1,5 @@
 import { unitMaxHp, type GameState } from '../../src/game/types';
+import { fullStateDigest } from '../../tests/helpers/state-digest';
 import { PACKED_UNIT_STRIDE, type DynamicState, type SnapshotMetadata, type SnapshotMode, type SnapshotPayload, type StateDigest } from './protocol';
 
 export function snapshotMetadata(state: GameState): SnapshotMetadata {
@@ -48,11 +49,8 @@ export function makeSnapshot(state: GameState, mode: SnapshotMode, reuse?: Array
   return { metadata, payload: { packed: { units, unitCount: state.units.length, stride: PACKED_UNIT_STRIDE } }, transfer: [buffer] };
 }
 
-/** Hash the complete serializable state outside timed frames. The same cloned
- * input and update sequence should produce identical property/array order. */
+/** Hash the complete serializable state outside timed frames (the digest
+ * helper lives in tests/helpers/state-digest.ts). */
 export async function digestGameState(state: GameState): Promise<StateDigest> {
-  const bytes = new TextEncoder().encode(JSON.stringify(state));
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  return { sha256: Array.from(hash, value => value.toString(16).padStart(2, '0')).join(''),
-    jsonBytes: bytes.byteLength, metadata: snapshotMetadata(state) };
+  return { ...await fullStateDigest(state), metadata: snapshotMetadata(state) };
 }

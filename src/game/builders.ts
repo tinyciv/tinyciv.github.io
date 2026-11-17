@@ -9,7 +9,7 @@ import { indexedBuilding, unitOccupancy } from './spatial';
 import { clearConstructionSite } from './construction-clearance';
 import { removeCoveredRoads } from './covered-roads';
 import { type Building, type GameState, type Point, type Unit, buildingReady, buildingWidth, buildingHeight, distance, isFarmKind } from './types';
-import { canTraverseEdge, canWalk, findPath, invalidateNavigation, movementMultiplier, withNavigationFrame } from './pathfinding';
+import { workNavigationState, canTraverseEdge, canWalk, findPath, findShortestPathBetween, hasStaticPathBetween, invalidateNavigation, withNavigationFrame } from './pathfinding';
 
 import { CONSTRUCTION_SECONDS } from './structures';
 import { fellTree, hasTree, TREE_CLEAR_SECONDS, treeWorkEdges } from './tree-clearing';
@@ -19,13 +19,14 @@ import { simulationReadsActive } from './simulation-reads';
 import { invalidateWorkerHomes, settlementWorkers } from './settlement-rosters';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { CHECK_INTERVAL, recurringWorkElapsed } from './work-cadence';
+import { nativeConstructionAccess, nativeRepairRate, nativeRepair, runConstructionRule, CONSTRUCTION_INVALIDATE } from './construction-native';
 export { notifyRepairJobChanged } from './builder-jobs';
 
 export const POPULATION_PER_BUILDER = 5;
 export const REPAIR_QUIET_SECONDS = 5;
 /** Small surviving settlements retain one builder so they can rebuild housing. */
 export function builderCapacity(population: number): number { return constructionWorkerAllowance(population); }
-export function repairRate(building: Building): number { return building.maxHp / Math.max(1, CONSTRUCTION_SECONDS[building.kind]); }
+export function repairRate(building: Building): number { return nativeRepairRate(building.maxHp, CONSTRUCTION_SECONDS[building.kind]); }
 function repairable(state: GameState, building: Building): boolean {
   return !buildingWorkForbidden(state, building) && buildingReady(building) && !isFarmKind(building.kind) && building.kind !== 'ruin' && building.hp < building.maxHp
     && state.time - (building.lastAttacked ?? -Infinity) >= REPAIR_QUIET_SECONDS;
@@ -33,9 +34,7 @@ function repairable(state: GameState, building: Building): boolean {
 function pauseSite(state: GameState, building: Building): void {
   const site = building.construction;
   if (!site) return;
-  if (!site.waitingForBuilder) site.pausedAt = state.time;
-  site.waitingForBuilder = true; site.cleared = false;
-  invalidateNavigation(state);
+  if (runConstructionRule(state, building, 3) & CONSTRUCTION_INVALIDATE) invalidateNavigation(state);
 }
 type Move = (state: GameState, unit: Unit, goal: Point, dt: number, direct?: boolean, allowPartial?: boolean) => void;
 const tileKey = (state: GameState, point: Point): number => Math.floor(point.y) * state.world.width + Math.floor(point.x);
@@ -62,26 +61,46 @@ function routeDecisionDue(state: GameState, unit: Unit): boolean {
   return decisionDue(cached.clock, state.time, unit.id);
 }
 
-/** Peasants stand on a reachable side of a structure, never inside its footprint. */
+/** Peasants work from reachable side or corner cells outside the footprint. */
 export function constructionEdges(state: GameState, building: Building, avoidForbidden = false): Point[] {
-  const width = buildingWidth(building), height = buildingHeight(building), points: Point[] = [];
-  for (let i = 0; i < height; i++) points.push({ x: building.x - .5, y: building.y + i + .5 }, { x: building.x + width + .5, y: building.y + i + .5 });
-  for (let i = 0; i < width; i++) points.push({ x: building.x + i + .5, y: building.y - .5 }, { x: building.x + i + .5, y: building.y + height + .5 });
-  return points.filter(point => canWalk(state, point.x, point.y, building.faction, undefined, avoidForbidden) && canTraverseEdge(state.world, point, {
+  const width = buildingWidth(building), height = buildingHeight(building), points = nativeConstructionAccess(building);
+  return points.filter(point => canWalk(state, point.x, point.y, building.faction, undefined, avoidForbidden, true) && canTraverseEdge(state.world, point, {
     x: Math.max(building.x, Math.min(building.x + width - 1, Math.floor(point.x))),
     y: Math.max(building.y, Math.min(building.y + height - 1, Math.floor(point.y))),
   }));
 }
 
-/** Check access after the proposed solid footprint itself has been reserved. */
+const proposedConstructionViews = new WeakMap<GameState, { state: GameState; buildings: Building[] }>();
+
+/** Candidate checks share scratch navigation storage, but reconcile the live
+ * records afresh each time. The private reservation never enters the real ECS. */
+function constructionNavigationState(state: GameState, building: Building): GameState {
+  if (state.buildings.includes(building)) return state;
+  let entry = proposedConstructionViews.get(state);
+  if (!entry) {
+    entry = { state: Object.create(state), buildings: [] };
+    Object.defineProperty(entry.state, 'buildings', { value: entry.buildings, enumerable: true });
+    proposedConstructionViews.set(state, entry);
+  }
+  // Copy references even for unversioned editor calls and same-array edits.
+  // Keeping this array and view alive lets navigation update only the changed
+  // footprint and reuse its world-sized workspaces across candidate probes.
+  entry.buildings.length = state.buildings.length + 1;
+  for (let i = 0; i < state.buildings.length; i++) entry.buildings[i] = state.buildings[i];
+  entry.buildings[state.buildings.length] = building;
+  return entry.state;
+}
+
+/** Check access after the proposed solid footprint itself has been reserved.
+ * Exact static components answer existence; no weighted route is needed. */
 export function canReachConstruction(state: GameState, palace: Building, building: Building): boolean {
   if (buildingWorkForbidden(state, building, palace.faction)) return false;
-  const planned = state.buildings.includes(building) ? state : { ...state, buildings: [...state.buildings, building] };
-  const exits = constructionEdges(planned, palace, true), edges = constructionEdges(planned, building, true);
-  for (const edge of edges) for (const exit of exits.slice().sort((a, b) => distance(a, edge) - distance(b, edge))) {
-    if (distance(exit, edge) < .12 || findPath(planned, exit, edge, palace.faction, false, undefined, undefined, undefined, false, true).length) return true;
-  }
-  return false;
+  const source = constructionNavigationState(state, building);
+  return withNavigationFrame(source, () => {
+    const planned = workNavigationState(source, true);
+    return withNavigationFrame(planned, () => hasStaticPathBetween(planned,
+      constructionEdges(planned, palace, true), constructionEdges(planned, building, true), palace.faction, true));
+  });
 }
 
 function clearJourney(unit: Unit): void {
@@ -120,31 +139,21 @@ interface ConstructionJourney { palace: Building; exit: Point; goal: Point; path
 function nearestConstructionJourney(state: GameState, unit: Unit, building: Building,
   occupied: Pick<ReadonlySet<number>, 'has'>): ConstructionJourney | undefined {
   return withNavigationFrame(state, () => {
-    const goals = constructionEdges(state, building, true);
+    const navigation = workNavigationState(state, true), goals = constructionEdges(navigation, building, true);
     const palaces = entityStore(state).buildings.query('palace')
       .filter(palace => palace.id === unit.home && palace.faction === unit.faction && buildingReady(palace) && !buildingWorkForbidden(state, palace))
-      .map(palace => ({ palace, exits: constructionEdges(state, palace, true)
+      .map(palace => ({ palace, exits: constructionEdges(navigation, palace, true)
         .filter(exit => !occupied.has(tileKey(state, exit)) && !unitPositionBlocked(state, unit, exit)) }));
     // Prefer an unoccupied working side, as ordinary builder dispatch does.
     for (const busy of [false, true]) {
-      const candidates = palaces.flatMap(({ palace, exits }) => exits.flatMap(exit => goals
-        .filter(goal => occupied.has(tileKey(state, goal)) === busy)
-        .map(goal => ({ palace, exit, goal, lowerBound: distance(exit, goal) / 1.5 }))));
-      candidates.sort((a, b) => a.lowerBound - b.lowerBound || a.palace.id - b.palace.id);
+      const available = goals.filter(goal => occupied.has(tileKey(state, goal)) === busy);
       let best: ConstructionJourney | undefined;
-      for (const candidate of candidates) {
-        // Roads are the fastest terrain at 1.5×, so no remaining route can win.
-        if (best && candidate.lowerBound > best.cost + 1e-8) break;
-        const { palace, exit, goal } = candidate;
-        const path = findPath(state, exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
-        if (!path.length && distance(exit, goal) > .12) continue;
-        let from = exit, cost = 0;
-        for (const point of path) {
-          cost += distance(from, point) * (1 / movementMultiplier(state, from.x, from.y) + 1 / movementMultiplier(state, point.x, point.y)) / 2;
-          from = point;
-        }
-        if (!best || cost < best.cost - 1e-8 || Math.abs(cost - best.cost) < 1e-8 && palace.id < best.palace.id)
-          best = { palace, exit, goal, path, cost };
+      for (const { palace, exits } of palaces) {
+        // All entrances share one weighted search instead of proving the same
+        // long detour again for every exit/working-side pair.
+        const journey = findShortestPathBetween(navigation, exits, available, unit.faction, true);
+        if (journey && (!best || journey.cost < best.cost - 1e-8 || Math.abs(journey.cost - best.cost) < 1e-8 && palace.id < best.palace.id))
+          best = { palace, exit: journey.from, goal: journey.to, path: journey.path, cost: journey.cost };
       }
       if (best) return best;
     }
@@ -167,7 +176,7 @@ export function ensureBuilders(state: GameState): void {
   const pending = new Set<Building>(), wake = new Set<number>(), previous = previousOrders.get(state);
   for (const building of state.buildings) {
     const site = building.construction;
-    if (site && building.kind === 'ballista') continue;
+    if (site && (building.kind === 'ballista' || building.kind === 'siegeCannon')) continue;
     if (site && buildingWorkForbidden(state, building)) {
       if (!site.waitingForBuilder) pauseSite(state, building);
       const builder = byId.get(site.builderId ?? -1);
@@ -194,7 +203,6 @@ export function ensureBuilders(state: GameState): void {
   previousOrders.set(state, pending);
   const remove = new Set<Unit>();
   const roster = settlementWorkers(state);
-  let nextId: number | undefined;
   for (const faction of state.factions) {
     const factionPalaces = entities.buildings.query('palace').filter(building => building.faction === faction.id && buildingReady(building));
     if (!factionPalaces.length) {
@@ -237,12 +245,7 @@ export function ensureBuilders(state: GameState): void {
       for (let count = retained.length; count < wanted && staffed < population; count++, staffed++) {
         let palace = palaces[0];
         for (let i = 1; i < palaces.length; i++) if ((homeCounts.get(palaces[i].id) ?? 0) < (homeCounts.get(palace.id) ?? 0)) palace = palaces[i];
-        if (nextId === undefined) {
-          nextId = 0;
-          for (const id of entities.units.ids()) nextId = Math.max(nextId, id);
-          for (const id of entities.buildings.ids()) nextId = Math.max(nextId, id);
-        }
-        const worker = makeBuilder(state, palace, ++nextId);
+        const worker = makeBuilder(state, palace, entityStore(state).allocateId());
         homeCounts.set(palace.id, (homeCounts.get(palace.id) ?? 0) + 1);
       }
     }
@@ -256,13 +259,9 @@ function beginWork(state: GameState, unit: Unit, building: Building): void {
   if (unit.buildPhase === 'working' && !building.construction?.waitingForBuilder) { unit.moving = false; return; }
   if (buildingWorkForbidden(state, building) || isForbidden(state, unit.x, unit.y, unit.faction) || !clearConstructionSite(state, building)) return;
   const site = building.construction!;
-  if (site.waitingForBuilder) {
-    removeCoveredRoads(state, building);
-    site.startedAt = site.pausedAt === undefined ? state.time : site.startedAt + state.time - site.pausedAt;
-    delete site.pausedAt; site.waitingForBuilder = false;
-    invalidateNavigation(state);
-  }
-  site.builderId = unit.id; unit.buildPhase = 'working'; unit.moving = false; clearJourney(unit);
+  if (site.waitingForBuilder) removeCoveredRoads(state, building);
+  if (runConstructionRule(state, building, 4, { arrivingBuilder: unit.id }) & CONSTRUCTION_INVALIDATE) invalidateNavigation(state);
+  unit.buildPhase = 'working'; unit.moving = false; clearJourney(unit);
   unit.facing = Math.atan2(building.y + buildingHeight(building) / 2 - unit.y, building.x + buildingWidth(building) / 2 - unit.x);
 }
 
@@ -292,7 +291,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
     if (state.time < (unit.repathAt ?? 0)) return;
     if (unit.inside && !canDispatchPeasant(state, unit)) return;
     const construction = simulationReadsActive(state) ? entityStore(state).buildings.query('construction') : state.buildings;
-    const orders = construction.filter(candidate => candidate.kind !== 'ballista' && candidate.hp > 0 && candidate.faction === unit.faction
+    const orders = construction.filter(candidate => candidate.kind !== 'ballista' && candidate.kind !== 'siegeCannon' && candidate.hp > 0 && candidate.faction === unit.faction
       && candidate.construction?.waitingForBuilder && !buildingWorkForbidden(state, candidate) && candidate.construction.builderId === undefined)
       .sort((a, b) => a.construction!.startedAt - b.construction!.startedAt || distance(palace, a) - distance(palace, b));
     for (const order of orders) {
@@ -304,12 +303,12 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       order.construction!.builderId = unit.id; setJourney(unit, journey.goal, journey.path);
       return;
     }
-    const exits = constructionEdges(state, palace, true).filter(point => !occupied.has(tileKey(state, point)) && !unitPositionBlocked(state, unit, point));
+    const exits = constructionEdges(workNavigationState(state, true), palace, true).filter(point => !occupied.has(tileKey(state, point)) && !unitPositionBlocked(state, unit, point));
     // Tree orders share the palace workforce and are worked one tile at a time.
     for (const order of (state.treeClearings ?? []).filter(order => order.faction === unit.faction && order.workerId === undefined && !isForbidden(state, order.x, order.y, unit.faction))) {
       const edges = treeWorkEdges(state, order, unit.faction).sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, palace) - distance(b, palace));
       for (const goal of edges) for (const exit of exits.slice().sort((a, b) => distance(a, goal) - distance(b, goal))) {
-        const path = findPath(state, exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
+        const path = findPath(workNavigationState(state, true), exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
         if (!path.length && distance(exit, goal) > .12) continue;
         unit.x = exit.x; unit.y = exit.y; unit.inside = false; unit.clearTree = { x: order.x, y: order.y };
         unit.clearProgress = 0; unit.buildPhase = 'outbound'; order.workerId = unit.id; setJourney(unit, goal, path); return;
@@ -320,9 +319,9 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || distance(palace, a) - distance(palace, b)
         || entityStore(state).buildings.indexOf(a) - entityStore(state).buildings.indexOf(b));
     for (const repair of repairs) {
-      const edges = constructionEdges(state, repair, true).sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, palace) - distance(b, palace));
+      const edges = constructionEdges(workNavigationState(state, true), repair, true).sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, palace) - distance(b, palace));
       for (const goal of edges) for (const exit of exits.slice().sort((a, b) => distance(a, goal) - distance(b, goal))) {
-        const path = findPath(state, exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
+        const path = findPath(workNavigationState(state, true), exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
         if (!path.length && distance(exit, goal) > .12) continue;
         unit.x = exit.x; unit.y = exit.y; unit.inside = false; unit.repairSite = repair.id; unit.buildPhase = 'outbound';
         repair.repairerId = unit.id; setJourney(unit, goal, path); return;
@@ -352,7 +351,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
         if (!routeDecisionDue(state, unit)) { if (unit.destination) move(state, unit, unit.destination, dt); return; }
         clearJourney(unit);
         for (const edge of edges) {
-          const path = findPath(state, unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
+          const path = findPath(workNavigationState(state, true), unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
           if (path.length) { setJourney(unit, edge, path); break; }
         }
         if (!unit.destination) unit.repathAt = state.time + 2;
@@ -367,13 +366,13 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       releaseSite(state, unit); unit.buildPhase = 'returning';
     } else {
       if (!repairable(state, repair)) { unit.buildPhase = 'outbound'; unit.moving = false; clearJourney(unit); return; }
-      const edges = workerEdges(state, unit, `repair:${repair.id}`, () => constructionEdges(state, repair, true)
+      const edges = workerEdges(state, unit, `repair:${repair.id}`, () => constructionEdges(workNavigationState(state, true), repair, true)
         .sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, unit) - distance(b, unit)));
       if (edges.some(point => distance(point, unit) < .2)) {
         unit.buildPhase = 'repairing'; unit.moving = false; clearJourney(unit);
         unit.facing = Math.atan2(repair.y + buildingHeight(repair) / 2 - unit.y, repair.x + buildingWidth(repair) / 2 - unit.x);
         const tools = constructionSpeedMultiplier(state.factions.find(faction => faction.id === unit.faction));
-        repair.hp = Math.min(repair.maxHp, repair.hp + repairRate(repair) * tools * dt);
+        repair.hp = nativeRepair(repair.hp, repair.maxHp, CONSTRUCTION_SECONDS[repair.kind], tools, dt);
         notifyRepairJobChanged(state, repair);
         if (repair.hp >= repair.maxHp) { releaseSite(state, unit); unit.buildPhase = 'returning'; }
         return;
@@ -384,7 +383,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
         if (!routeDecisionDue(state, unit)) { if (unit.destination) move(state, unit, unit.destination, dt); return; }
         clearJourney(unit);
         for (const edge of edges) {
-          const path = findPath(state, unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
+          const path = findPath(workNavigationState(state, true), unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
           if (path.length) { setJourney(unit, edge, path); break; }
         }
         if (!unit.destination) unit.repathAt = state.time + 2;
@@ -396,7 +395,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
   if (unit.buildPhase === 'outbound'  || unit.buildPhase === 'working') {
     building = indexedBuilding(state, unit.buildSite);
     if (!building || building.hp <= 0 || !building.construction) return;
-    const edges = workerEdges(state, unit, `construction:${building.id}`, () => constructionEdges(state, building!, true)
+    const edges = workerEdges(state, unit, `construction:${building.id}`, () => constructionEdges(workNavigationState(state, true), building!, true)
       .sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, unit) - distance(b, unit)));
     if (edges.some(point => distance(point, unit) < .2)) { beginWork(state, unit, building); return; }
     if (unit.buildPhase === 'working') {
@@ -410,7 +409,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       if (!routeDecisionDue(state, unit)) { if (unit.destination) move(state, unit, unit.destination, dt); return; }
       clearJourney(unit);
       for (const edge of edges) {
-        const path = findPath(state, unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
+        const path = findPath(workNavigationState(state, true), unit, edge, unit.faction, false, undefined, undefined, undefined, false, true);
         if (path.length) { setJourney(unit, edge, path); break; }
       }
       if (!unit.destination) unit.repathAt = state.time + 2;
@@ -420,7 +419,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
   }
   if (unit.buildPhase === 'returning') {
     if (buildingWorkForbidden(state, palace)) { unit.moving = false; clearJourney(unit); return; }
-    const exits = workerEdges(state, unit, `home:${palace.id}`, () => constructionEdges(state, palace, true)
+    const exits = workerEdges(state, unit, `home:${palace.id}`, () => constructionEdges(workNavigationState(state, true), palace, true)
       .sort((a, b) => Number(occupied.has(tileKey(state, a))) - Number(occupied.has(tileKey(state, b))) || distance(a, unit) - distance(b, unit)));
     if (exits.some(point => distance(point, unit) < .2)) {
       unit.x = palace.x + 1; unit.y = palace.y + 1; unit.inside = true; unit.buildPhase = 'idle'; unit.moving = false;
@@ -433,7 +432,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       if (!routeDecisionDue(state, unit)) { if (unit.destination) move(state, unit, unit.destination, dt); return; }
       clearJourney(unit);
       for (const exit of exits) {
-        const path = findPath(state, unit, exit, unit.faction, false, undefined, undefined, undefined, false, true);
+        const path = findPath(workNavigationState(state, true), unit, exit, unit.faction, false, undefined, undefined, undefined, false, true);
         if (path.length) { setJourney(unit, exit, path); break; }
       }
       if (!unit.destination) unit.repathAt = state.time + 2;

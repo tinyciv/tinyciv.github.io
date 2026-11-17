@@ -1,0 +1,75 @@
+{
+  "name": "Simple field cannon 1C",
+  "selected_by_user": true,
+  "selected_on": "2026-11-16",
+  "native_resolution": [
+    16,
+    16
+  ],
+  "approved_resolution": [
+    16,
+    16
+  ],
+  "facing": "north",
+  "camera": "high top-down",
+  "isometric": false,
+  "design": "One dark iron barrel and exactly two wooden wheels; no chassis, platform, rear trail or crew.",
+  "generator": {
+    "idle": "PixelLab /create-object-pro-flash",
+    "animation": "PixelLab /animate-with-text-v3"
+  },
+  "source": "scratch/2026-11-16-simple-field-cannon/1C.png",
+  "source_sha256": "2cd2d4deacdb3460879b62cd65af528aea5222cf53d79c5c412bf761b77bdef4",
+  "source_prompt": "ONE EXTREMELY SIMPLE FIELD CANNON: ONLY ONE BARREL AND EXACTLY TWO WHEELS. Native 16x16 pixel art, transparent background. Canonical facing NORTH: barrel muzzle points straight UP toward the TOP edge of the image. Camera HIGH TOP-DOWN, overhead orthographic, NOT isometric, straight screen-aligned axes. A short dark iron barrel in the center and one wooden wheel on its LEFT side and one wooden wheel on its RIGHT side. The wheels and barrel join at one tiny mostly hidden axle; there is NO visible chassis, carriage box, wooden bed, platform, frame, rear trail, handle or support leg. The entire object consists visually of three bold pieces: LEFT WHEEL, CENTRAL TUBE, RIGHT WHEEL. No fourth wheel, gunner, person, horse, machinery, ammunition, decoration, smoke, muzzle flash, scenery, ground tile or cast shadow. Keep it compact and centered with a one-pixel transparent margin. Barrel roughly 5 to 7 pixels long and 3 pixels wide; wheels roughly 3 pixels wide and 5 pixels tall. Use the supplied existing game ballista ONLY for coarse pixel density, muted ochre wheel color, dark iron outlines and high top-down camera; do NOT copy its crossbow arms, strings, frame or base. Crisp hard pixels, light from upper left, no antialiasing, blur, gradients or detached noise. Slightly more natural proportions but still extremely simple. Two narrow dark-rimmed tan wooden wheels with one small central hub, a slender dark iron tube between them, subdued gray highlights. Eight to twelve colors, minimal shading and no decorative details.",
+  "grounding": "Existing game Ballista native16 sprite for pixel scale, wheel materials, outlines and overhead camera; exact user-selected 1C for both animations.",
+  "processing": "Native16 PNGs preserved unchanged. Animation sheets pack frames without scaling, repainting, palette changes or cropping.",
+  "asset_files": {
+    "idle": "idle.png",
+    "move": "move.png"
+  },
+  "animations": {
+    "move": {
+      "frame_count": 9,
+      "sheet_size": [
+        144,
+        16
+      ],
+      "frame_duration_ms": [
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90,
+        90
+      ],
+      "raw_frames": [
+        "scratch/2026-11-16-simple-field-cannon/move/00.png",
+        "scratch/2026-11-16-simple-field-cannon/move/01.png",
+        "scratch/2026-11-16-simple-field-cannon/move/02.png",
+        "scratch/2026-11-16-simple-field-cannon/move/03.png",
+        "scratch/2026-11-16-simple-field-cannon/move/04.png",
+        "scratch/2026-11-16-simple-field-cannon/move/05.png",
+        "scratch/2026-11-16-simple-field-cannon/move/06.png",
+        "scratch/2026-11-16-simple-field-cannon/move/07.png",
+        "scratch/2026-11-16-simple-field-cannon/move/08.png"
+      ],
+      "unique_visible_frames": 9,
+      "source_frames_unchanged": true,
+      "sha256": "7237827e3c70116e7793b7faba5ef8b466770665e5bc45ba342566146b2fd4ea"
+    }
+  },
+  "firing_presentation": "approved idle body; existing projectile remains visible",
+  "fire_body_pixels_unchanged": false,
+  "animation_prompts": {
+    "move": "Seamless subtle WHEEL ROLL loop IN PLACE. Animate ONLY the two existing wooden wheels with tiny changing hub/rim highlights. Keep the short dark iron barrel absolutely rigid and fixed, muzzle pointing toward TOP. Preserve exactly TWO wheels, their size, positions, palette and outlines. No slide, bounce, camera motion, turning, morphing, body deformation, trails, chassis, carriage, extra parts, crew, legs, smoke, flash or firing. Start and end in the exact reference pose."
+  },
+  "rejected_fire_attempts": [
+    "scratch/2026-11-16-simple-field-cannon/fire-rejected-recoil",
+    "scratch/2026-11-16-simple-field-cannon/fire-rejected-squash",
+    "scratch/2026-11-16-simple-field-cannon/fire"
+  ],
+  "rejected_fire_reason": "Generated firing motions changed the selected barrel silhouette despite stationary-body prompts. No distorted firing frames exported."
+}

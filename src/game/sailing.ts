@@ -1,3 +1,10 @@
+import { whalingMovementSpeed } from './fishing';
+import { warshipAction, warshipMove } from './warships-native';
+import { pushBoatsForLeader } from './boat-push-native';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
+import { atWar } from './relations';
+import { refreshWaterTraffic, SMALL_BOAT_RADIUS } from './water-traffic';
 import TinyQueue from 'tinyqueue';
 import { dockBerth, dockMoorings, dockShoreCrossingClear, DOCK_DIRECTIONS } from './dock';
 import { canTraverseEdge, canWalk, findPath } from './pathfinding';
@@ -7,7 +14,7 @@ import { worldStructureRevision } from './world-revisions';
 import { refreshIndexedUnit } from './spatial';
 import { refreshFogUnit } from './fog';
 import { navigableWaterCell } from './water-navigation';
-import { ridgeLevel } from './ridges';
+import { reliefLevel } from './relief';
 import { createSailingConnectivity } from './sailing-connectivity';
 import { createSailingDistance } from './sailing-distance';
 import { galleyFootprintCells, galleyHullDistance, type GalleyPose } from './galley-footprint';
@@ -15,7 +22,8 @@ import { isForbidden } from './forbidden-zones';
 import { playerFaction } from './player-context';
 import { buildingHeight, buildingWidth, buildingReady, distance, tileAt, WATER, type GameState, type InputState, type Point, type Unit } from './types';
 
-export const SAILBOAT_SPEED = 4.5;
+export const SAILBOAT_SPEED = rustEngine.galley_constant(0, 0);
+const TRANSPORT_SPEED = rustEngine.galley_constant(0, 1);
 export const SAILBOAT_HP = 150;
 export const SAILBOAT_ACCELERATION = 2.6;
 export const SAILBOAT_BRAKING = 4.5;
@@ -53,25 +61,35 @@ function staticSailingBlockers(state: GameState): ReadonlySet<number> {
 
 export function sailingNavigation(state: GameState, boat?: Unit, riverOnly = false, ignoreTraffic = false) {
   const structures = staticSailingBlockers(state), traffic = new Set<number>();
+  const leaderAboard = boat?.sailboat?.passenger !== undefined;
+  const yields = (faction: number): boolean => leaderAboard && !atWar(state, boat!.faction, faction);
   if (!ignoreTraffic) for (const unit of state.units) {
-    if (unit.hp <= 0 || unit.id === boat?.id || unit.kind !== 'sailboat' && !unit.aboardRiverTrade) continue;
+    if (unit.hp <= 0 || unit.id === boat?.id || unit.kind !== 'sailboat' && !unit.aboardRiverTrade || yields(unit.faction)) continue;
     if (unit.kind === 'sailboat') for (const p of galleyFootprintCells(unit)) traffic.add(key(state, p));
     else traffic.add(key(state, unit));
   }
-  const cell = (x: number, y: number): boolean => {
+  if (!ignoreTraffic) for (const fishing of state.fishing?.boats ?? []) if (fishing.hp > 0 && !yields(fishing.faction))
+    for (let y = Math.floor(fishing.y - SMALL_BOAT_RADIUS); y <= Math.floor(fishing.y + SMALL_BOAT_RADIUS); y++)
+      for (let x = Math.floor(fishing.x - SMALL_BOAT_RADIUS); x <= Math.floor(fishing.x + SMALL_BOAT_RADIUS); x++)
+        traffic.add(y * state.world.width + x);
+  if (!ignoreTraffic) for (const ship of state.harborTradeShips ?? []) {
+    const faction = state.villages?.find(v => v.id === ship.village)?.faction ?? ship.faction;
+    if (!yields(faction)) traffic.add(key(state, ship));
+  }
+  const water = (x: number, y: number): boolean => {
     const tile = tileAt(state.world, x, y);
     return !!tile && navigableWaterCell(state.world, x, y) && (!riverOnly || tile.terrain === 'river')
       && (!riverOnly || !isForbidden(state, x, y, boat?.faction ?? 0))
-      && !structures.has(Math.floor(y) * state.world.width + Math.floor(x))
-      && !traffic.has(Math.floor(y) * state.world.width + Math.floor(x));
+      && !structures.has(Math.floor(y) * state.world.width + Math.floor(x));
   };
+  const cell = (x: number, y: number): boolean => water(x, y) && !traffic.has(Math.floor(y) * state.world.width + Math.floor(x));
   const galley = !boat || boat.kind === 'sailboat';
   const position = (p: Point, facing = (p as SailingWaypoint).facing ?? boat?.facing ?? 0): boolean => {
     if (!galley) return [[-RADIUS,-RADIUS],[RADIUS,-RADIUS],[-RADIUS,RADIUS],[RADIUS,RADIUS]]
       .every(([dx,dy]) => cell(p.x + dx, p.y + dy));
-    const level = ridgeLevel(tileAt(state.world, p.x, p.y));
-    return galleyFootprintCells({ ...p, facing }).every(part => cell(part.x, part.y)
-      && ridgeLevel(tileAt(state.world, part.x, part.y)) === level);
+    const level = reliefLevel(tileAt(state.world, p.x, p.y));
+    return galleyFootprintCells({ ...p, facing, seaInvasion: boat ? boat.seaInvasion : 0 }).every(part => cell(part.x, part.y)
+      && reliefLevel(tileAt(state.world, part.x, part.y)) === level);
   };
   const segment = (a: Point, b: Point, facing = boat?.facing ?? 0): boolean => {
     const steps = Math.max(1, Math.ceil(distance(a,b) / .15));
@@ -88,19 +106,19 @@ export function sailingNavigation(state: GameState, boat?: Unit, riverOnly = fal
     for (let i = 1; i <= steps; i++) if (!position(p, from + change * i / steps)) return false;
     return true;
   };
-  return { cell, position, segment, turn, connected: createSailingConnectivity(state.world,cell) };
+  return { cell, water, structures, position, segment, turn, connected: createSailingConnectivity(state.world,cell) };
 }
 export const canSail = (state: GameState, point: SailingWaypoint, boat?: Unit): boolean => sailingNavigation(state, boat).position(point);
 
 const galleySweeps = new Map<string, readonly Point[]>();
 /** Geometry is world-independent. Reuse the swept occupied cells for lattice
  * poses instead of repeating capsule intersection math throughout A*. */
-function latticeSweep(x: number, y: number, heading: number, dx=0, dy=0, turn=0): readonly Point[] {
-  const px=x&1,py=y&1,key=`${px}:${py}:${heading}:${dx}:${dy}:${turn}`,cached=galleySweeps.get(key);
+function latticeSweep(x: number, y: number, heading: number, dx=0, dy=0, turn=0, seaInvasion?: number): readonly Point[] {
+  const px=x&1,py=y&1,key=`${seaInvasion === undefined ? 0 : 1}:${px}:${py}:${heading}:${dx}:${dy}:${turn}`,cached=galleySweeps.get(key);
   if (cached) return cached;
   const cells=new Map<string,Point>(),steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/2/.15),Math.ceil(Math.abs(turn)*Math.PI/4/.08));
   for (let i=0;i<=steps;i++) {
-    const pose={x:4+px/2+dx/2*i/steps,y:4+py/2+dy/2*i/steps,facing:(heading+turn*i/steps)*Math.PI/4};
+    const pose={x:4+px/2+dx/2*i/steps,y:4+py/2+dy/2*i/steps,facing:(heading+turn*i/steps)*Math.PI/4,seaInvasion};
     for (const cell of galleyFootprintCells(pose)) cells.set(`${cell.x}:${cell.y}`,{x:cell.x-4,y:cell.y-4});
   }
   const result=[...cells.values()];galleySweeps.set(key,result);return result;
@@ -129,9 +147,9 @@ function galleyPath(state: GameState, boat: Unit, goal: SailingWaypoint | readon
   };
   const index = (x: number, y: number, heading: number) => (y * gridWidth + x) * 8 + heading;
   const sweepClear=(x:number,y:number,h:number,dx=0,dy=0,turn=0):boolean=>{
-    const originX=Math.floor(x/2),originY=Math.floor(y/2),level=ridgeLevel(tileAt(state.world,x/2,y/2));
-    return latticeSweep(x,y,h,dx,dy,turn).every(p=>nav.cell(originX+p.x,originY+p.y)
-      && ridgeLevel(tileAt(state.world,originX+p.x,originY+p.y))===level);
+    const originX=Math.floor(x/2),originY=Math.floor(y/2),level=reliefLevel(tileAt(state.world,x/2,y/2));
+    return latticeSweep(x,y,h,dx,dy,turn,boat.seaInvasion).every(p=>nav.cell(originX+p.x,originY+p.y)
+      && reliefLevel(tileAt(state.world,originX+p.x,originY+p.y))===level);
   };
   const poseCache = new Map<number, boolean>();
   const clear = (x: number, y: number, heading: number): boolean => {
@@ -200,10 +218,13 @@ function galleyPath(state: GameState, boat: Unit, goal: SailingWaypoint | readon
   return [];
 }
 
-/** Water-only A*: land, fords, bridge decks, buildings and other boats block navigation. */
-export function sailingPath(state: GameState, boat: Unit, goal: Point, riverOnly = false, ignoreTraffic = false): Point[] {
-  if (boat.kind === 'sailboat') return galleyPath(state, boat, goal, riverOnly, ignoreTraffic);
-  const nav = sailingNavigation(state, boat, riverOnly, ignoreTraffic), target = center(goal), start = center(boat);
+/** Water-only A*: land, bridge decks, buildings and other boats block navigation; fords remain open. */
+export function sailingPath(state: GameState, boat: Unit, goal: Point, riverOnly = false, ignoreTraffic = false,
+  navigation?: ReturnType<typeof sailingNavigation>): Point[] {
+  // A read-only batch may share one navigation view across equivalent hulls,
+  // factions and traffic rules. Its owner must discard it before any mutation.
+  if (boat.kind === 'sailboat') return galleyPath(state, boat, goal, riverOnly, ignoreTraffic, navigation);
+  const nav = navigation ?? sailingNavigation(state, boat, riverOnly, ignoreTraffic), target = center(goal), start = center(boat);
   if (!nav.position(target) || !nav.position(start)) return [];
   const startKey = key(state,start), targetKey = key(state,target);
   if (startKey === targetKey) return [target];
@@ -244,15 +265,11 @@ function shoreAvailable(state: GameState, leader: Unit, point: Point): boolean {
     && !state.units.some(u=>u.id!==leader.id && u.hp>0 && !u.inside && u.kind!=='sailboat' && distance(u,point)<.65);
 }
 function canCrossShore(state: GameState, leader: Unit, boat: GalleyPose, shore: Point): boolean {
-  if (!shoreAvailable(state,leader,shore) || galleyHullDistance(boat,shore) > 1.01) return false;
-  return galleyFootprintCells(boat).some(cell => {
-    const water = { x: cell.x + .5, y: cell.y + .5 };
-    return distance(water,shore) <= Math.SQRT2 + .01 && dockShoreCrossingClear(state,water,shore);
-  });
+  return shoreAvailable(state,leader,shore) && !!rustEngine.galley_landing(boat.x,boat.y,boat.facing,shore.x,shore.y);
 }
 function shoreCells(state: GameState, leader: Unit, boat: Unit): Point[] {
   const cells = new Map<number,Point>();
-  for (const part of galleyFootprintCells(boat)) for (const [dx,dy] of directions) {
+  for (const part of galleyFootprintCells(boat)) for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++) {
     const p = { x: part.x + dx + .5, y: part.y + dy + .5 };
     if (canCrossShore(state,leader,boat,p)) cells.set(key(state,p),p);
   }
@@ -265,10 +282,12 @@ export function boardBoat(state: GameState, boat: Unit, leader=ownLeader(state))
   if (!leader || leader.hp<=0 || leader.embarkedOn!==undefined || boat.kind!=='sailboat' || boat.hp<=0 || boat.faction!==leader.faction || !boat.sailboat)
     return {ok:false,message:'Choose your empty galley.'};
   if (boat.sailboat.passenger!==undefined) return {ok:false,message:'This galley already has a passenger.'};
-  if (!canCrossShore(state,leader,boat,leader)) return {ok:false,message:'Move your Leader to the shore beside the galley.'};
+  if (!boat.warship && !canCrossShore(state,leader,boat,leader)) return {ok:false,message:'Move your Leader to the shore beside the galley.'};
+  if (boat.warship) return warshipAction(state, boat, 'board');
   clearOrders(leader); leader.boardingBoat=undefined; leader.embarkedOn=boat.id; leader.inside=true;
   boat.sailboat.passenger=leader.id; boat.sailboat.velocity={x:0,y:0}; clearOrders(boat);
   leader.x=boat.x; leader.y=boat.y; refresh(state,leader); refresh(state,boat);
+  rustEngine.sim_quests_voyage(simCore(state).handle,leader.faction,leader.x,leader.y,1);
   state.selected=boat.id; state.selectedType='unit'; state.diplomacy=null;
   return {ok:true,message:'Leader aboard. W/S advance or reverse, A/D strafe, Q/E turn. Release to coast; right-click a shore to land.'};
 }
@@ -297,11 +316,13 @@ export function completeBoarding(state: GameState, leader: Unit): boolean {
 export function disembarkLeader(state: GameState, shore?: Point, leader=ownLeader(state)): SailingResult {
   const boat=boardedBoat(state,leader);
   if (!leader || !boat) return {ok:false,message:'Your Leader is not aboard a galley.'};
+  if (boat.warship) return warshipAction(state, boat, 'land', shore);
   const destination=shore ? center(shore) : shoreCells(state,leader,boat).sort((a,b)=>distance(boat,a)-distance(boat,b))[0];
-  if (!destination || !canCrossShore(state,leader,boat,destination)) return {ok:false,message:'Sail beside a clear shore to disembark.'};
+  if (!destination || !canCrossShore(state,leader,boat,destination)) return {ok:false,message:'Choose a clear land tile within 2 tiles of this galley.'};
   leader.embarkedOn=undefined; leader.inside=false; leader.x=destination.x; leader.y=destination.y; clearOrders(leader);
   boat.sailboat!.passenger=undefined; boat.sailboat!.landing=undefined; boat.sailboat!.velocity={x:0,y:0}; clearOrders(boat);
   refresh(state,leader); refresh(state,boat);
+  rustEngine.sim_quests_voyage(simCore(state).handle,leader.faction,leader.x,leader.y,0);
   state.selected=leader.id; state.selectedType='unit'; state.diplomacy=null;
   return {ok:true,message:'Leader ashore. The galley remains available for boarding.'};
 }
@@ -310,13 +331,14 @@ export function disembarkLeader(state: GameState, shore?: Point, leader=ownLeade
 export function commandSailingMove(state: GameState, leader: Unit, point: Point): SailingResult {
   const boat=boardedBoat(state,leader), tile=tileAt(state.world,point.x,point.y);
   if (!boat || !tile) return {ok:false,message:'Choose water or a clear shore.'};
+  if (boat.warship) return WATER.has(tile.terrain) ? warshipMove(state, boat, point) : warshipAction(state, boat, 'land', center(point));
   const target=center(point); clearOrders(boat); boat.sailboat!.landing=undefined;
   if (WATER.has(tile.terrain)) {
     const path=sailingPath(state,boat,target);
     if (!path.length) return {ok:false,message:'No clear sailing route to that water.'};
     boat.destination=target; boat.path=path;
   } else {
-    if (!shoreAvailable(state,leader,target)) return {ok:false,message:'Choose an open, low shore to disembark.'};
+    if (!shoreAvailable(state,leader,target)) return {ok:false,message:'Choose an open land tile to disembark.'};
     if (disembarkLeader(state,target,leader).ok) return {ok:true,message:'Leader ashore.'};
     let best:{destination:SailingWaypoint;path:Point[]}|undefined;
     const candidates: (SailingWaypoint & { facing: number })[] = [];
@@ -349,9 +371,20 @@ function approachVelocity(velocity: Point, target: Point, amount: number): void 
 export function updateSailingLeader(state: GameState, leader: Unit, dt: number, input: InputState): boolean {
   const boat=boardedBoat(state,leader);
   if (!boat) return false;
+  if (boat.warship) return true;
+  return steerVessel(state, boat, leader, dt, input);
+}
+/** AI fleets use exactly the same hull, turning, momentum and collision rules. */
+export function updateSailingVessel(state: GameState, boat: Unit, dt: number): void {
+  steerVessel(state, boat, boat, dt, {up:false,down:false,left:false,right:false});
+}
+function steerVessel(state: GameState, boat: Unit, leader: Unit, dt: number, input: InputState): boolean {
   if (!Number.isFinite(dt)||dt<=0) return true;
   const sailing=boat.sailboat!,velocity=sailing.velocity??={x:0,y:0};
+  const topSpeed = whalingMovementSpeed(state, boat.faction, boat.seaInvasion === undefined ? SAILBOAT_SPEED : TRANSPORT_SPEED);
   const nav=sailingNavigation(state,boat),before={x:boat.x,y:boat.y,facing:boat.facing};
+  const push = (target: Point, facing = boat.facing): boolean => leader !== boat && leader.embarkedOn === boat.id
+    ? pushBoatsForLeader(state, boat, target, facing, nav.structures, nav.water) : true;
   const forward=Number(input.up)-Number(input.down),side=Number(input.right)-Number(input.left);
   const turn=Number(!!input.turnRight)-Number(!!input.turnLeft);
   const thrust=!!(forward||side),braking=!!(input.up&&input.down||input.left&&input.right);
@@ -362,13 +395,19 @@ export function updateSailingLeader(state: GameState, leader: Unit, dt: number, 
     let goal:SailingWaypoint|undefined;
     if (manual) {
       const nextFacing = boat.facing + turn*SAILBOAT_TURN_SPEED*elapsed;
-      if (nav.turn(boat,boat.facing,nextFacing)) boat.facing = nextFacing;
+      if (nav.turn(boat,boat.facing,nextFacing) && push(boat,nextFacing)) boat.facing = nextFacing;
     }
     else if (boat.destination) {
       while (boat.path?.length&&distance(boat,boat.path[0])<.035
         && ((boat.path[0] as SailingWaypoint).facing === undefined || Math.abs(angleDelta(boat.facing,(boat.path[0] as SailingWaypoint).facing!)) < .025)) boat.path.shift();
       if (!boat.path?.length&&distance(boat,boat.destination)>.035&&state.time>=(boat.repathAt??0)) {
-        boat.path=sailingPath(state,boat,boat.destination);boat.repathAt=state.time+1;
+        boat.path=sailingPath(state,boat,boat.destination);
+        // A blocked route is the costliest search: it spends the whole node
+        // budget (~100 ms) and fails. Back off 2, 4, 8 s instead of retrying
+        // every second; fleet traffic usually clears within that time.
+        const failures=boat.path.length?0:Math.min(3,boat.sailingRouteFailures??0)+1;
+        boat.sailingRouteFailures=failures||undefined;
+        boat.repathAt=state.time+(failures?2**failures:1);
       }
       // Merge only straight runs with the same planned orientation. Keep
       // in-place turn nodes so the stern cannot swing through a river bank.
@@ -383,18 +422,19 @@ export function updateSailingLeader(state: GameState, leader: Unit, dt: number, 
         const desiredFacing = goal.facing ?? Math.atan2(goal.y-boat.y,goal.x-boat.x);
         const change=angleDelta(boat.facing,desiredFacing);
         const nextFacing=boat.facing+Math.max(-SAILBOAT_TURN_SPEED*elapsed,Math.min(SAILBOAT_TURN_SPEED*elapsed,change));
-        if (nav.turn(boat,boat.facing,nextFacing)) boat.facing=nextFacing;
+        if (nav.turn(boat,boat.facing,nextFacing) && push(boat,nextFacing)) boat.facing=nextFacing;
+        else if (state.time >= (boat.repathAt ?? 0)) { boat.path=undefined; boat.repathAt=state.time+.75; }
       }
     }
     boat.facing=Math.atan2(Math.sin(boat.facing),Math.cos(boat.facing));
     let desired:Point={x:0,y:0},acceleration=braking?SAILBOAT_BRAKING:SAILBOAT_COAST_DECELERATION;
     if (thrust) {
       const length=Math.hypot(forward,side);
-      desired={x:(Math.cos(boat.facing)*forward-Math.sin(boat.facing)*side)/length*SAILBOAT_SPEED,
-        y:(Math.sin(boat.facing)*forward+Math.cos(boat.facing)*side)/length*SAILBOAT_SPEED};
+      desired={x:(Math.cos(boat.facing)*forward-Math.sin(boat.facing)*side)/length*topSpeed,
+        y:(Math.sin(boat.facing)*forward+Math.cos(boat.facing)*side)/length*topSpeed};
       acceleration=velocity.x*desired.x+velocity.y*desired.y<0?SAILBOAT_BRAKING:SAILBOAT_ACCELERATION;
     } else if (goal && (goal.facing === undefined || Math.abs(angleDelta(boat.facing,goal.facing)) < .025)) {
-      const gap=distance(boat,goal),speed=Math.min(SAILBOAT_SPEED,Math.sqrt(2*SAILBOAT_BRAKING*Math.max(0,gap-.02)));
+      const gap=distance(boat,goal),speed=Math.min(topSpeed,Math.sqrt(2*SAILBOAT_BRAKING*Math.max(0,gap-.02)));
       if (gap>.001) desired={x:(goal.x-boat.x)/gap*speed,y:(goal.y-boat.y)/gap*speed};
       acceleration=SAILBOAT_BRAKING;
     }
@@ -408,20 +448,21 @@ export function updateSailingLeader(state: GameState, leader: Unit, dt: number, 
         next.x=goal.x;next.y=goal.y;velocity.x=velocity.y=0;
       }
     }
-    if (nav.segment(boat,next)) {boat.x=next.x;boat.y=next.y;}
+    if (nav.segment(boat,next) && push(next)) {boat.x=next.x;boat.y=next.y;}
     else {
       // A bank absorbs the colliding component; safe tangential momentum can
       // continue along it. Autopilot retries a fresh route after a collision.
       const horizontal={x:next.x,y:boat.y},vertical={x:boat.x,y:next.y};
-      if (nav.segment(boat,horizontal)) {boat.x=horizontal.x;velocity.y=0;}
-      else if (nav.segment(boat,vertical)) {boat.y=vertical.y;velocity.x=0;}
+      if (nav.segment(boat,horizontal) && push(horizontal)) {boat.x=horizontal.x;velocity.y=0;}
+      else if (nav.segment(boat,vertical) && push(vertical)) {boat.y=vertical.y;velocity.x=0;}
       else velocity.x=velocity.y=0;
       if (!manual&&boat.destination) {boat.path=undefined;boat.repathAt=state.time+.3;}
     }
   }
-  if (boat.destination&&distance(boat,boat.destination)<.035&&nav.segment(boat,boat.destination)) {
+  if (boat.destination&&distance(boat,boat.destination)<.035&&nav.segment(boat,boat.destination)&&push(boat.destination)) {
     boat.x=boat.destination.x;boat.y=boat.destination.y;
   }
+  refreshWaterTraffic(state, boat);
   boat.moving=distance(before,boat)>.001 || Math.abs(angleDelta(before.facing,boat.facing))>.001;
   leader.x=boat.x;leader.y=boat.y;leader.facing=boat.facing;leader.moving=boat.moving;leader.target=undefined;leader.attackTime=0;
   if (boat.destination&&distance(boat,boat.destination)<.035
@@ -444,7 +485,7 @@ export function updateSailboatLaunches(state: GameState): void {
       .map(direction=>({x:p.x+direction.x*.5,y:p.y+direction.y*.5,facing:Math.atan2(direction.y,direction.x)})));
     const position=launches.find(p=>canSail(state,p));
     if (!position) continue;
-    const id=Math.max(0,...state.units.map(u=>u.id),...state.buildings.map(b=>b.id))+1;
+    const id=entityStore(state).allocateId();
     entityStore(state).units.add({id,kind:'sailboat',faction:dock.faction,...position,hp:SAILBOAT_HP,maxHp:SAILBOAT_HP,morale:100,
       attack:0,defense:2,speed:SAILBOAT_SPEED,range:0,order:'hold',cooldown:0,lastCombat:-100,moving:false,facing:position.facing,attackTime:0,
       sailboat:{dock:dock.id}});
@@ -458,7 +499,7 @@ export function resolveSailingPassengers(state: GameState): void {
   for (const leader of state.units) if (leader.kind==='leader' && leader.embarkedOn!==undefined) {
     const boat=state.units.find(u=>u.kind==='sailboat' && u.id===leader.embarkedOn);
     if (boat && boat.hp>0 && leader.hp>0 && boat.sailboat?.passenger===leader.id) continue;
-    const shore=boat && shoreCells(state,leader,boat)[0];
+    const shore=boat && !boat.warship && shoreCells(state,leader,boat)[0];
     leader.embarkedOn=undefined; leader.inside=false; clearOrders(leader);
     if (shore && leader.hp>0) {leader.x=shore.x;leader.y=shore.y;}
     else leader.hp=0;

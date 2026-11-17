@@ -1,5 +1,8 @@
 import { invalidateScheduledHarvests } from './farms';
-import { entityStore } from './entity-store';
+import { BUILDING_KIND_CODES, entityStore } from './entity-store';
+import { rustEngine } from './rust-engine';
+import { recordCampaignPopulation } from './campaign-stats';
+import { structureIndex, type StructureIndex } from './structure-index';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, isFarmKind, isWallKind,
   type Building, type GameState, type Point } from './types';
 
@@ -7,12 +10,8 @@ type CaptureOffer = NonNullable<GameState['palaceCaptures']>[number];
 const DEFENSIVE_BUILDINGS = new Set<Building['kind']>(['fort', 'woodenTower', 'tower', 'guardPost']);
 const defensive = (building: Building): boolean => DEFENSIVE_BUILDINGS.has(building.kind);
 const center = (building: Building): Point => ({ x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 });
-interface DefenseIndex {
-  buildings: readonly Building[]; length: number; time: number; revision: number; offers: number;
-  byPalace: Map<number, Building[]>;
-}
-const defenseIndexes = new WeakMap<GameState, DefenseIndex>();
-
+interface DefenseSnapshot { buildings: readonly Building[]; length: number; time: number; revision: number; offers: number; index: StructureIndex; key: number }
+const defenseSnapshots = new WeakMap<GameState, DefenseSnapshot>();
 /** Keep fallen cities in this partition until their pending decisions resolve.
  * Otherwise simultaneous victories would annex the first city's neighbors twice. */
 function cityMembers(state: GameState, palace: Building): Building[] {
@@ -36,32 +35,22 @@ function cityMembers(state: GameState, palace: Building): Building[] {
 /** Empty reservations offer no defense. Once construction physically starts,
  * a watchtower or guard post must be destroyed before its city can fall. */
 export function palaceDefenses(state: GameState, palace: Building): Building[] {
-  if (palace.kind !== 'palace' || state.villages?.some(v => v.campId === palace.id && v.secededCity)) return [];
-  let index = defenseIndexes.get(state);
+  if (palace.kind !== 'palace' || !rustEngine.battle_city_defended(BUILDING_KIND_CODES[palace.kind], palace.palaceLevel ?? 1)
+    || state.villages?.some(v => v.campId === palace.id && v.secededCity)) return [];
+  // The partition of defensive buildings among ready palaces is snapshotted
+  // by the resident building index once per step and topology/offer change.
+  let snapshot = defenseSnapshots.get(state);
   const revision = state.world.revision ?? 0, offers = state.palaceCaptures?.length ?? 0;
-  if (!index || index.buildings !== state.buildings || index.length !== state.buildings.length || index.time !== state.time
-    || index.revision !== revision || index.offers !== offers) {
-    const palaces = state.buildings.filter(building => building.kind === 'palace' && buildingReady(building));
-    const byPalace = new Map<number, Building[]>();
-    for (const building of state.buildings) {
-      if (!defensive(building)) continue;
-      const point = center(building);
-      let best = Infinity, owner: Building | undefined;
-      for (const candidate of palaces) {
-        if (candidate.faction !== building.faction) continue;
-        const d = (point.x - candidate.x - 1) ** 2 + (point.y - candidate.y - 1) ** 2;
-        if (d < best || d === best && candidate.id < owner!.id) { best = d; owner = candidate; }
-      }
-      if (!owner) continue;
-      const list = byPalace.get(owner.id) ?? [];
-      list.push(building); byPalace.set(owner.id, list);
-    }
-    index = { buildings: state.buildings, length: state.buildings.length, time: state.time, revision, offers, byPalace };
-    defenseIndexes.set(state, index);
+  if (!snapshot || snapshot.buildings !== state.buildings || snapshot.length !== state.buildings.length || snapshot.time !== state.time
+    || snapshot.revision !== revision || snapshot.offers !== offers) {
+    snapshot = { buildings: state.buildings, length: state.buildings.length, time: state.time, revision, offers,
+      index: structureIndex(state), key: (snapshot?.key ?? 0) + 1 };
+    defenseSnapshots.set(state, snapshot);
   }
+  const assigned = snapshot.index.defenses(palace.id, snapshot.key);
   // Keep live references: a defense killed or activated earlier in this same
   // simulation step must take effect immediately, without another world scan.
-  return (index.byPalace.get(palace.id) ?? []).filter(building => building.faction === palace.faction && buildingPresent(building));
+  return assigned.filter(building => building.faction === palace.faction && buildingPresent(building));
 }
 
 export function captureOffer(state: GameState, palace: Building): CaptureOffer {
@@ -117,6 +106,7 @@ export function transferCapturedCity(state: GameState, offer: CaptureOffer, pala
   const population = Math.min(offer.population, Math.max(0, former?.population ?? 0));
   if (former) former.population -= population;
   winner.population += population;
+  recordCampaignPopulation(state, winner);
   palace.unhousedResidents = Math.min(population, offer.unhousedResidents);
   palace.populationGrowth = offer.populationGrowth;
 }

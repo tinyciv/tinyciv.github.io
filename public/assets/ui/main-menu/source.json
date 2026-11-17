@@ -1,0 +1,22 @@
+{
+  "purpose": "Main menu scene (src/ui/frontend.ts, src/ui/frontend.css)",
+  "activeBackdrop": "backdrop-no-world.png",
+  "chrome": {
+    "source": "Approved main-menu render supplied on 2026-11-13 (1672 x 941). Kept with the extraction script in scratch/2026-11-13-main-menu/ (render.png, extract.py).",
+    "derivation": "Crops of the supplied render only; no hand-drawn pixels.",
+    "files": {
+      "backdrop-no-world.png": "1672 x 941 edit of backdrop.webp using the built-in imagegen tool on 2026-11-16. Removed the painted globe and its glow, filling the area with matching dark metal. Preserved the title plaque, brass frame, blank menu panel and wheel. Prompt and generated original: scratch/2026-11-16-remove-menu-world/.",
+      "backdrop.webp": "Full render. The seven baked buttons are replaced by the clean panel strip below them (rows 868-938), mirrored and tiled vertically, with a 6 px feathered edge. The painted globe stays as the fallback when WebGL2 is unavailable.",
+      "button.png": "Credits plate, (188,780)-(572,865), label replaced per row by interpolating the clean face either side of the text plus fine texture from the clean strip (432-545). 9 px feathered margin.",
+      "button-active.png": "New Game plate, (188,330)-(572,415), treated the same way (clean strip 482-548).",
+      "title.webp": "Title plate (52,14)-(1092,300) for the narrow-screen layout. Inside the painted globe's disk the plate's mirrored left end replaces the globe, feathered 2 px."
+    }
+  },
+  "globe": {
+    "files": { "globe-world.webp": "Lossless 2048 x 2048 frame of the whole 128 x 128 world: rendered at zoom 1 (4096 px) and box-halved to the art's native 16 px per tile", "globe-world.json": "Bake metadata: land centroid (focus), 92% land radius, deepest 4 x 4 ocean block, cities and battle" },
+    "engine": "Drawn by the game's Renderer (Pixi/WebGL) from real game state: generateWorld('Globe-4', 128, 128, fractal) -> createGame(advanced start: complete) -> 150 s of updateGame -> player army meets the Persians in the field -> 0.7 s of battle. Map revealed; Renderer.overlays = false hides health bars, ribbons and alerts.",
+    "story": "stories/menu/MenuGlobe.stories.ts (menu-globe-bake--whole-world)",
+    "rebake": "npm run storybook, then node scripts/bake-menu-globe.mjs",
+    "runtime": "src/ui/menu-globe.ts wraps the texture onto a sphere (azimuthal equidistant around the land centroid; the land radius spans 0.55 rad so the whole world shows; sharp-bilinear sampling; the map fades over its last two tiles into the repeated deep-water block named in the JSON)."
+  }
+}

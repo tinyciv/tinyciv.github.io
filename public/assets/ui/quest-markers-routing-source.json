@@ -1,0 +1,11 @@
+{
+  "generator": "Built-in imagegen",
+  "date": "2026-11-15",
+  "asset": "quest-markers-routing.png",
+  "reference": "quest-markers.png",
+  "layout": "3 columns × 3 rows. Runtime uses column 1. Rows: available yellow !, active gray ?, ready yellow ?.",
+  "variants": "Narrow flat, softly rounded, slightly stronger warm outline.",
+  "rendering": "World markers 18px instead of 24px; minimap markers 10.5px instead of 14px (25% smaller).",
+  "source": "/Users/ckrapu/.codex/generated_images/01a1e0ad-f5c4-7f51-aff4-e58bacf947ed/exec-e53f12a9-0e90-4f48-a7ef-13fe64512cb4.png",
+  "prompt": "Edit this quest-marker atlas to match the game's existing unit-routing indicators: very compact, narrow, flat Pixel Operator-style punctuation with a warm muted brown outline (#5f5544). Keep the exact 3 by 3 atlas arrangement, equal square cells, transparent background, and row meanings. Top row is yellow !, middle row is gray ?, bottom row is yellow ?. Remove ALL metallic shading, gradients, bevels, shine, paint texture, black chunky borders, and tapered ornamental shapes. Exclamation marks must be slim straight upright rectangular stems with small square dots, like compact bold monospaced UI text. Question marks must be narrow and simple, matching the same compact glyph family, with small square dots. Use pale warm quest yellow (#ffe49a) for rows 1 and 3, soft light gray (#b7b7ae) for row 2, and a subtle warm brown outline instead of the old dark heavy border. Maintain a consistent ink height about 72 percent of each square cell and the original centered positions; do not add more padding. All three columns should now be simple flat UI glyphs: column 1 is the cleanest and thinnest version, column 2 is slightly softer at the edges, column 3 has a marginally stronger brown outline for contrast. The differences must be subtle. These markers will be rendered at only 18 pixels tall, so simplicity is essential. Do not add labels, frames, backgrounds, scenes, badges, or extra symbols. Preserve genuine alpha transparency."
+}

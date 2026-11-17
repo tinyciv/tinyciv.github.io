@@ -6,8 +6,16 @@ import { insideOwnBorders } from '../src/game/borders';
 import { createGame } from '../src/game/simulation';
 import { generateWorld } from '../src/world/generator';
 import { distance, type GameState, type VillageIdentity } from '../src/game/types';
-import { initializeVillages, performVillageAction, refreshVillageBonuses, updateVillages, updateVillageUnit,
-  villageCamp, villageDiplomacyStatus, villageHostility, villageTradeActive, villageRequiredResource, VILLAGE_REQUIRED_RESOURCES } from '../src/game/villages';
+import { initializeVillages, performVillageAction, updateVillageUnit,
+  villageCamp, villageDiplomacyStatus, villageTradeActive, villageRequiredResource, VILLAGE_REQUIRED_RESOURCES } from '../src/game/villages';
+import { villageCenter, applyVillageBonuses, hostileView, setSettlementAffiliation, setVillageRelation, villageRelationView, villageStage, villageTrading } from '../src/game/settlement-bridge';
+import { settlementStep } from '../src/game/settlement-step';
+import { updateGame } from '../src/game/simulation';
+
+const villageHostility = hostileView;
+const idle = { up: false, down: false, left: false, right: false };
+/** Advance only the scheduled settlement pulse, one second at a time. */
+function advance(state: GameState, until: number): void { while (state.time < until) { state.time = Math.min(until, state.time + 1); settlementStep(state); } }
 
 function fixture(civilizations = 1): GameState {
   const corners = [[12, 12], [80, 12], [12, 62], [80, 62]];
@@ -28,6 +36,8 @@ function settlement(identity: VillageIdentity = 'growers') {
   const village = state.villages![0], camp = villageCamp(state, village)!;
   village.identity = identity;
   state.units[0].x = camp.x + .5; state.units[0].y = camp.y + 1.5;
+  // Alliances need affiliation 45; trade needs 15.
+  setSettlementAffiliation(state, camp.id, 0, 50);
   return { state, village, camp };
 }
 function orders(state: GameState) {
@@ -40,7 +50,8 @@ describe('neutral villages', () => {
     const state = fixture(4); initializeVillages(state);
     expect(state.villages).toHaveLength(6);
     for (const village of state.villages!) {
-      expect(village.relation).toBe('neutral');
+      expect(villageRelationView(state, village, 0)).toBe('neutral');
+      expect(village.layout?.family).toBeGreaterThanOrEqual(1); expect(village.layout?.family).toBeLessThanOrEqual(4);
       expect(VILLAGE_REQUIRED_RESOURCES).toContain(village.requiredResource);
       const buildings = state.buildings.filter(b => b.villageId === village.id), units = state.units.filter(u => u.villageId === village.id);
       expect(buildings.filter(b => b.kind === 'villageTent')).toHaveLength(3);
@@ -123,7 +134,7 @@ describe('neutral villages', () => {
     expect(state.tradeRoutes?.some(route => route.villageId === village.id)).toBe(false);
     expect(villageDiplomacyStatus(state, camp)?.trade.available).toBe(true);
     expect(performVillageAction(state, camp, 'trade').ok).toBe(true);
-    expect(village.relation).toBe('allied'); expect(villageTradeActive(state, village)).toBe(true);
+    expect(villageRelationView(state, village, 0)).toBe('allied'); expect(villageTradeActive(state, village)).toBe(true);
     expect(state.factions[0].gold).toBe(1750);
   });
 
@@ -147,7 +158,7 @@ describe('neutral villages', () => {
     performVillageAction(state, camp, 'trade'); performVillageAction(state, camp, 'ally');
     expect(state.factions[0].villageBonuses?.trade).toBe(.15);
     expect(performVillageAction(state, camp, 'war').ok).toBe(true);
-    expect(village.relation).toBe('war'); expect(village.trading).toBe(false);
+    expect(villageRelationView(state, village, 0)).toBe('war'); expect(villageTrading(state, village, 0)).toBe(false);
     expect(state.factions[0].villageBonuses?.trade).toBe(0);
     expect(villageTradeActive(state, village)).toBe(false);
     expect(state.tradeRoutes?.some(route => route.villageId === village.id)).toBe(false);
@@ -160,11 +171,11 @@ describe('neutral villages', () => {
     ('grants the %s bonus while its allied camp survives, without same-identity stacking', (identity, key, value) => {
       const { state, village, camp } = settlement(identity);
       performVillageAction(state, camp, 'ally');
-      const second = state.villages![1]; second.identity = identity; second.relation = 'allied';
-      refreshVillageBonuses(state); expect(state.factions[0].villageBonuses?.[key]).toBe(value);
-      camp.hp = 0; updateVillages(state);
+      const second = state.villages![1]; second.identity = identity; setVillageRelation(state, second, 0, 'allied');
+      applyVillageBonuses(state); expect(state.factions[0].villageBonuses?.[key]).toBe(value);
+      camp.hp = 0; settlementStep(state);
       expect(village.destroyed).toBe(true); expect(state.factions[0].villageBonuses?.[key]).toBe(value);
-      villageCamp(state, second)!.hp = 0; updateVillages(state);
+      villageCamp(state, second)!.hp = 0; settlementStep(state);
       expect(state.factions[0].villageBonuses?.[key]).toBe(0);
       expect(villageDiplomacyStatus(state, camp)).toBeUndefined();
     });
@@ -172,9 +183,9 @@ describe('neutral villages', () => {
   it('removes a destroyed camp’s route immediately and never grows a dead village', () => {
     const { state, village, camp } = settlement(); performVillageAction(state, camp, 'trade');
     const count = state.buildings.filter(b => b.villageId === village.id).length;
-    camp.hp = 0; updateVillages(state);
+    camp.hp = 0; settlementStep(state);
     expect(state.tradeRoutes?.some(route => route.villageId === village.id)).toBe(false);
-    state.time = 5000; updateVillages(state);
+    advance(state, 400);
     expect(state.buildings.filter(b => b.villageId === village.id)).toHaveLength(count);
   });
 
@@ -188,24 +199,22 @@ describe('neutral villages', () => {
     expect(pointInSight(updateFog(state), point.x, point.y)).toBe(true);
     expect(insideOwnBorders(state, village.faction, camp.x + .5, camp.y + .5)).toBe(true);
     expect(insideOwnBorders(state, 0, camp.x + .5, camp.y + .5)).toBe(false);
-    camp.hp = 0; updateVillages(state);
+    camp.hp = 0; settlementStep(state);
     expect(pointInSight(updateFog(state), point.x, point.y)).toBe(false);
   });
 
-  it('grows gradually to at most ten houses, two guard posts and four watchtowers without walls or leaders', () => {
+  it('evolves through stages on its own clocks without walls, palaces or leaders', () => {
     const { state, village } = settlement();
-    state.factions.find(f => f.id === village.faction)!.gold = 10_000;
-    state.time = 89; updateVillages(state);
+    advance(state, 60);
     expect(state.buildings.filter(b => b.villageId === village.id)).toHaveLength(3);
-    for (let step = 1; step <= 65; step++) { state.time = step * 120; updateVillages(state); }
-    const buildings = state.buildings.filter(b => b.villageId === village.id);
-    expect(buildings.filter(b => b.kind === 'house')).toHaveLength(10);
-    expect(buildings.filter(b => b.kind === 'guardPost')).toHaveLength(2);
-    expect(buildings.filter(b => b.kind === 'woodenTower')).toHaveLength(4);
-    expect(buildings.some(b => ['palace', 'wall', 'palisade'].includes(b.kind))).toBe(false);
+    expect(villageStage(state, village)).toBe(0);
+    advance(state, 1200);
+    const buildings = state.buildings.filter(b => b.villageId === village.id && b.hp > 0);
+    expect(villageStage(state, village)).toBeGreaterThanOrEqual(1);
+    expect(buildings.length).toBeGreaterThan(3);
+    expect(buildings.some(b => b.kind === 'house' || b.kind === 'road')).toBe(true);
+    expect(buildings.some(b => ['palace', 'wall', 'palisade', 'camp'].includes(b.kind))).toBe(false);
     expect(state.units.some(u => u.villageId === village.id && u.kind === 'leader')).toBe(false);
-    const guards = state.units.filter(u => u.villageId === village.id && u.kind === 'warrior');
-    expect(guards).toHaveLength(12);
   });
 
   it('is peaceful toward civilizations until war, and allied villages fight the player’s enemies nearby', () => {
@@ -222,9 +231,13 @@ describe('neutral villages', () => {
     villager.x = camp.x + .5; villager.y = camp.y + 1.5;
     const enemy = { ...state.units[0], id: 10000, faction: 100, x: camp.x + 3.5, y: camp.y + 1.5 };
     entityStore(state).units.add(enemy);
+    enemy.speed = 0; enemy.attack = 0; villager.speed = 0;
+    // Nearby hostiles come from the Rust 1 Hz census sample.
+    for (let step = 0; step < 12; step++) updateGame(state, .1, idle);
+    villager.villageNextThinkAt = 0;
     const callbacks = orders(state); updateVillageUnit(state, villager, .1, callbacks);
     expect(callbacks.engage).toHaveBeenCalledWith(villager, enemy, .1);
-    enemy.x = camp.x + 20; state.time = 1; callbacks.engage.mockClear();
+    enemy.x = camp.x + 20; villager.villageNextThinkAt = 0; callbacks.engage.mockClear();
     updateVillageUnit(state, villager, .1, callbacks);
     expect(callbacks.engage).not.toHaveBeenCalled();
   });
@@ -237,7 +250,8 @@ describe('neutral villages', () => {
     state.time = 2; updateVillageUnit(state, villager, .1, callbacks);
     expect(villager.path).toBeUndefined();
     expect(villager.destination).toBeDefined();
-    expect(distance(villager.destination!, village)).toBeLessThanOrEqual(6);
+    // Planned villages wander within 8 tiles of the civic lot center.
+    expect(distance(villager.destination!, villageCenter(village))).toBeLessThanOrEqual(8);
     expect(canWalk(state, villager.destination!.x, villager.destination!.y, village.faction)).toBe(true);
     const destination = { ...villager.destination! };
     for (let step = 0; step < 20; step++) { state.time += .05; updateVillageUnit(state, villager, .05, callbacks); }
@@ -250,15 +264,14 @@ describe('neutral villages', () => {
   it('slowly replaces allied villagers without farms, food stock, or a faction Leader', () => {
     const { state, village, camp } = settlement();
     performVillageAction(state, camp, 'ally');
-    village.nextGrowthAt = Infinity; village.nextRecruitAt = 90;
     const villagers = state.units.filter(u => u.villageId === village.id);
     for (const unit of villagers.slice(1)) unit.hp = 0;
     const count = () => state.units.filter(u => u.villageId === village.id && u.hp > 0 && u.kind === 'worker').length;
-    state.time = 89; updateVillages(state); expect(count()).toBe(1);
-    state.time = 90; updateVillages(state); expect(count()).toBe(2);
-    state.time = 91; updateVillages(state); expect(count()).toBe(2);
-    state.time = 180; updateVillages(state); expect(count()).toBe(3);
-    expect(state.factions.find(f => f.id === village.faction)).toMatchObject({ population: 3, food: 0 });
+    advance(state, 5); expect(count()).toBe(1);
+    // One villager per 90 s growth tick.
+    advance(state, 100); expect(count()).toBeGreaterThanOrEqual(1); expect(count()).toBeLessThanOrEqual(2);
+    advance(state, 290); expect(count()).toBeGreaterThanOrEqual(3); expect(count()).toBeLessThanOrEqual(5);
+    expect(state.factions.find(f => f.id === village.faction)).toMatchObject({ population: count(), food: 0 });
     expect(state.buildings.some(b => b.villageId === village.id && ['camp', 'farm', 'palace'].includes(b.kind))).toBe(false);
     expect(state.units.some(u => u.villageId === village.id && (u.collector || u.kind === 'leader'))).toBe(false);
   });

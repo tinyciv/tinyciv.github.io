@@ -1,0 +1,33 @@
+{
+  "methodology": "Actual saved-world river banks, up to 4096 candidates. Same unchanged scalar crossing function is the oracle. Five alternating-order batches per mode after one warmup; snapshot construction included. This isolates shore occupancy, not complete trade planning or FPS.",
+  "cpu": "Apple M3 Pro",
+  "statePath": "/tmp/btv-smooth-2026-11-08/state.json",
+  "buildings": 2503,
+  "candidates": 4096,
+  "clearCandidates": 4051,
+  "parity": true,
+  "results": {
+    "scalar": {
+      "meanMs": 645.0186084,
+      "maxMs": 768.245416,
+      "samplesMs": [
+        768.245416,
+        749.0453749999999,
+        581.1074170000002,
+        563.1199589999997,
+        563.5748749999998
+      ]
+    },
+    "snapshot": {
+      "meanMs": 1.0262751999998272,
+      "maxMs": 1.374042000000145,
+      "samplesMs": [
+        1.374042000000145,
+        0.90362499999992,
+        1.0834999999997308,
+        0.7206249999999272,
+        1.0495839999994132
+      ]
+    }
+  }
+}

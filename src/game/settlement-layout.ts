@@ -1,9 +1,12 @@
 import { HOUSE_BASE_CAPACITIES } from './housing-config';
+import { tundraStartAllowed } from './tundra-starts';
 import { PALACE_HOUSING } from './city-support';
 import { expectedFarmDelivery, fieldHarvestFood, harvestFoodPerEconomyCycle } from './farms';
 import { farmWalkingDistance, palaceWalkingDistances } from './farm-travel';
 import { buildingWidth, buildingHeight, tileAt, WATER, type Building, type GameState, type Point } from './types';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefBuildable } from './relief';
+import { settlementFootprintAllowed } from './terrain-sites';
+import { startingRoadArm } from './battle-support-native';
 import { farmBlockPlacementQuery } from './farm-blocks';
 import { farmParcelPreferenceQuery, FARM_CLUSTER_PRODUCTION_BONUS } from './farm-clusters';
 
@@ -19,11 +22,14 @@ const CARDINAL = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
 const NEIGHBORS = [...CARDINAL, [-1, -1], [1, -1], [1, 1], [-1, 1]] as const;
 const CLEARABLE = new Set(['none', 'forest', 'jungle', 'swamp']);
 
-/** A closed perimeter, with no road cells inside the palace or connecting arms. */
+/** A closed perimeter with four six-tile roads extending from its corners. */
 function townAt(palace: Point, population: number): StartingSettlementLayout {
   const { x, y } = palace, roads: Point[] = [];
   for (let dy = -1; dy <= 2; dy++) for (let dx = -1; dx <= 2; dx++)
     if (dx === -1 || dx === 2 || dy === -1 || dy === 2) roads.push({ x: x + dx, y: y + dy });
+  for (let corner = 0; corner < 4; corner++) for (let step = 0; step < 6; step++) {
+    const arm = startingRoadArm(corner, step); roads.push({ x: x + arm.x, y: y + arm.y });
+  }
   const houses = [
     { x, y: y - 2 }, { x: x + 3, y }, { x: x + 1, y: y + 3 }, { x: x - 2, y: y + 1 },
     { x: x - 2, y: y - 2 }, { x: x + 3, y: y - 2 }, { x: x + 3, y: y + 3 }, { x: x - 2, y: y + 3 },
@@ -79,7 +85,7 @@ function planStartingFarmSites(state: GameState, palace: Building, population: n
   const top = Math.max(0, Math.ceil(palace.y + .5 - 26)), bottom = Math.min(height - 1, Math.floor(palace.y + .5 + 26));
   for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
     const point = { x, y };
-    if (startingFarmPalaceGap(point, palace) < 2 || !available(point) || !ridgeFootprintAllowed(world, x, y, 1)) continue;
+    if (startingFarmPalaceGap(point, palace) < 2 || !available(point) || !reliefBuildable(tileAt(world, x, y)) || !settlementFootprintAllowed(world, x, y)) continue;
     const travel = farmWalkingDistance(walking, width, x, y), delivery = expectedFarmDelivery(travel);
     if (delivery <= 0 || !Number.isFinite(walking[y * width + x])) continue;
     const yieldFood = harvestFoodPerEconomyCycle(fieldHarvestFood(world, x, y));
@@ -137,7 +143,7 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
     const index = key(point), cached = usableCache[index];
     if (cached) return cached === 2;
     const allowed = !WATER.has(tile.terrain) && !tile.marsh && CLEARABLE.has(tile.overlay) && !occupied.has(index)
-      && ridgeFootprintAllowed(world, point.x, point.y);
+      && settlementFootprintAllowed(world, point.x, point.y);
     usableCache[index] = allowed ? 2 : 1;
     return allowed;
   };
@@ -178,7 +184,7 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
   // Filtering after distance ordering gives the same nearest valid settlements
   // while avoiding expensive footprint/lane checks for every distant tile.
   for (const palace of candidates) {
-    if (!ridgeFootprintAllowed(world, palace.x, palace.y, 2)
+    if (!tundraStartAllowed(world, palace.x, palace.y) || !settlementFootprintAllowed(world, palace.x, palace.y, 2)
       || !palaceCells(palace).every(point => usable(point) && !reserved.has(key(point)))) continue;
     firstPalace ??= palace;
     const layout = townAt(palace, population);
@@ -190,10 +196,8 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
     if (++completeCount >= 48) break;
   }
   if (best) return best;
-  if (minimumFactionDistance && !firstPalace) throw new Error('No valid starting settlement preserves faction separation.');
-  const fallback = townAt(firstPalace ?? {
-    x: Math.max(0, Math.min(width - 2, origin.x)), y: Math.max(0, Math.min(height - 2, origin.y)),
-  }, population);
+  if (!firstPalace) throw new Error('No valid starting town has flat ground and eight-tile mountain clearance.');
+  const fallback = townAt(firstPalace, population);
   fallback.roads = fallback.roads.filter(usable);
   fallback.houses = fallback.houses.filter(point => usable(point) && houseLane(point));
   fallback.farms = farmsFor(fallback).farms;

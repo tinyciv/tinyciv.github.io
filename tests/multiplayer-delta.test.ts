@@ -1,3 +1,4 @@
+import { Packr, Unpackr } from 'msgpackr';
 import { describe, expect, it } from 'vitest';
 import { ClientStateReplica } from '../src/multiplayer/client-state';
 import { StateDeltaEncoder } from '../src/multiplayer/state-delta';
@@ -9,7 +10,8 @@ import { NO_INPUT } from '../src/multiplayer/input';
 import { presentationFog } from '../src/game/fog';
 import type { Building, FarmField, GameState, Unit, World } from '../src/game/types';
 
-const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+const encoder = new Packr({ useRecords: true, sequential: false }), decoder = new Unpackr();
+const wire = <T>(value: T): T => decoder.unpack(encoder.pack(value));
 function fixture(): GameState {
   const world: World = { width: 64, height: 36, seed: 'replication', source: 'fixture', revision: 0,
     spawns: [{ x: 8, y: 18 }, { x: 54, y: 18 }],

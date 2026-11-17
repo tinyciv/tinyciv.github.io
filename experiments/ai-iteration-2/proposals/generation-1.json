@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "proposals": [
+    {
+      "hypothesis": "Concentrate the healthy field army instead of splitting off a standing garrison",
+      "logic": {
+        "garrison": 0
+      }
+    }
+  ]
+}

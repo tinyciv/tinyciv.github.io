@@ -10,6 +10,7 @@ import { canMove, canWalk, findPath } from '../src/game/pathfinding';
 import { BUILD_COSTS, buildAt, migrateGame, moveUnit, updateGame } from '../src/game/simulation';
 import { updateFog } from '../src/game/fog';
 import { recordTraffic } from '../src/game/traffic';
+import { CHECK_INTERVAL } from '../src/game/work-cadence';
 
 function fixture(): GameState {
   const state: GameState = { world: { width: 24, height: 18, seed: 'builders', source: 'test', spawns: [], tiles: Array.from({ length: 24 * 18 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 2, production: 1, gold: 0, variation: .2 })) },
@@ -328,8 +329,10 @@ describe('palace construction peasants', () => {
     expect(tower.construction!.waitingForBuilder).toBe(false);
     expect(tower.construction!.startedAt).toBeGreaterThan(4);
     const left = tower.construction!.startedAt + tower.construction!.duration - state.time;
-    updateGame(state, left - .2, idle); expect(buildingReady(tower)).toBe(false);
-    updateGame(state, .3, idle); expect(buildingReady(tower)).toBe(true);
+    updateGame(state, left - .01, idle); expect(buildingReady(tower)).toBe(false);
+    // The work deadline is exact; its completion becomes visible on the next
+    // phased maintenance pass, within one check interval plus a simulation step.
+    updateGame(state, .01 + CHECK_INTERVAL + .1, idle); expect(buildingReady(tower)).toBe(true);
   });
   it('reserves an order, walks from the palace, then starts the actual duration on arrival', () => {
     const state = fixture(), site = order(state);

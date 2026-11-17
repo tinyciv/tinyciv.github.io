@@ -1,5 +1,5 @@
 import { actionTooltip } from './action-tooltips';
-import { leaderProgressionView, leaderXpRequired, LEADER_SKILL_IDS, leaderSkillMaxRank, skillName, skillEffect, type LeaderSkillId } from '../game/leader-progression';
+import { leaderProgressionView, leaderXpRequired, LEADER_SKILL_IDS, leaderSkillMaxRank, skillName, type LeaderSkillId } from '../game/leader-progression';
 import type { GameState } from '../game/types';
 import './leader-progression.css';
 import { wholeNumber } from './number-format';
@@ -33,7 +33,7 @@ export class LeaderProgressionUI {
       <span class="leader-level-badge">1</span><span class="leader-xp-track" role="progressbar" aria-label="Leader experience" aria-valuemin="0"><span class="leader-xp-fill"></span><span class="leader-xp-text">0 / ${leaderXpRequired(1)} XP</span></span>
       </button><button type="button" class="leader-xp-points" aria-haspopup="dialog" aria-controls="leader-skills" aria-expanded="false" title="Leader skill points">0</button>`;
     popup.innerHTML = `<header class="leader-skills-header"><h2 id="leader-skills-title">Leader</h2><span class="leader-skills-level">Level 1</span><button type="button" data-leader-close aria-label="Close Leader skills">×</button></header>
-      <div class="leader-skills-bonuses"><strong class="leader-skills-points">0 skill points</strong><span>Level bonus</span><span>+10 HP</span><span>+1 Attack</span></div>
+      <div class="leader-skills-bonuses"><strong class="leader-skills-points">0 skill points</strong></div>
       <div class="leader-skills-list" aria-label="Leader skills">${LEADER_SKILL_IDS.slice(0, 3).map(skill => this.skillRow(skill)).join('')}</div>
       <div class="leader-advanced-heading">Technology skills</div>
       <div class="leader-skills-list leader-advanced-skills" aria-label="Technology skills">${LEADER_SKILL_IDS.slice(3).map(skill => this.skillRow(skill)).join('')}</div>
@@ -57,7 +57,7 @@ export class LeaderProgressionUI {
   }
 
   private skillRow(skill: LeaderSkillId): string {
-    return `<article class="leader-skill-row" data-leader-skill="${skill}">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong><span>${skillEffect[skill]}</span><small class="leader-skill-preview"></small><small class="leader-skill-tech"></small></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips${leaderSkillMaxRank(skill) > 3 ? ' expanded' : ''}" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span><button type="button" data-leader-learn="${skill}" aria-label="Learn ${skillName[skill]}">+</button></article>`;
+    return `<article class="leader-skill-row" data-leader-skill="${skill}">${skillIcon(skill)}<span class="leader-skill-copy"><strong>${skillName[skill]}</strong></span><span class="leader-skill-ranks"><span class="leader-skill-rank">0/${leaderSkillMaxRank(skill)}</span><span class="leader-skill-pips${leaderSkillMaxRank(skill) > 3 ? ' expanded' : ''}" aria-hidden="true">${'<i></i>'.repeat(leaderSkillMaxRank(skill))}</span></span><button type="button" data-leader-learn="${skill}" aria-label="Learn ${skillName[skill]}">+</button></article>`;
   }
 
   get isOpen(): boolean { return this.opened; }
@@ -97,6 +97,7 @@ export class LeaderProgressionUI {
       }
     }
     this.rail.querySelector('.leader-level-badge')!.textContent = String(view.level);
+    this.rail.querySelector<HTMLElement>('.leader-level-badge')!.title = `Command aura: +${view.level * 2}% soldier attack within 6 tiles`;
     this.rail.querySelector('.leader-xp-text')!.textContent = `${number(view.xp)} / ${number(view.xpRequired)} XP`;
     this.rail.querySelector<HTMLElement>('.leader-xp-fill')!.style.width = `${Math.min(100, view.xp / view.xpRequired * 100)}%`;
     const track = this.rail.querySelector('.leader-xp-track')!;
@@ -118,14 +119,8 @@ export class LeaderProgressionUI {
       row.setAttribute('aria-label', `${skill.name}, ${skill.rank} of ${skill.maxRank}, ${skill.effect}`);
       row.title = `${skill.name} · ${skill.effect}${skill.requiredTech ? ` · ${skill.requiredTech}` : ' per rank'}`;
       row.classList.toggle('is-locked', !skill.unlocked);
-      row.querySelector('.leader-skill-tech')!.textContent = skill.requiredTech ? `${skill.unlocked ? 'Unlocked' : 'Requires'}: ${skill.requiredTech}` : '';
       row.querySelector('.leader-skill-rank')!.textContent = `${skill.rank}/${skill.maxRank}`;
       row.querySelectorAll('.leader-skill-pips i').forEach((pip, index) => pip.classList.toggle('earned', index < skill.rank));
-      const label = skill.id === 'power' ? 'Attack' : skill.id === 'guard' ? 'Defense' : 'Retinue';
-      const current = skill.id === 'power' ? view.attack : skill.id === 'guard' ? view.defense : view.retinueBonus;
-      const next = skill.id === 'power' ? skill.nextAttack : skill.id === 'guard' ? skill.nextDefense : skill.nextRetinueBonus;
-      row.querySelector('.leader-skill-preview')!.textContent = skill.requiredTech ? ''
-        : `${label} ${number(current)}${skill.rank < skill.maxRank ? ` → ${number(next)}` : ''}`;
       const learn = row.querySelector<HTMLButtonElement>('[data-leader-learn]')!;
       const waiting = this.pending?.skill === skill.id;
       learn.disabled = !skill.canLearn || !!this.pending;

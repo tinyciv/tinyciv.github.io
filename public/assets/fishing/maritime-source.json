@@ -1,0 +1,103 @@
+{
+  "generator": "PixelLab API /generate-image-v2 and /animate-with-text-v3",
+  "selection": {
+    "fishing": "B",
+    "whaling": "A",
+    "whale": "B",
+    "post": "B"
+  },
+  "approvedBy": "User in conversation: B assets except A whaling ship",
+  "camera": "high top-down",
+  "isometric": false,
+  "pixelsPerCell": 16,
+  "files": [
+    {
+      "file": "fishing-move.png",
+      "source": "scratch/2026-11-16-fishing-animation-refresh/1C-animation.png",
+      "nativeFrame": [
+        16,
+        32
+      ],
+      "frameCount": 9,
+      "jobId": "41de12e0-c09a-4fd9-8a35-8cb18b58f319",
+      "frameSeconds": 0.18,
+      "sha256": "805fc82bd2363e7da775a9dda262eb26d72df7b154d0e21719749a4b4d8f4f7c"
+    },
+    {
+      "file": "fishing-load.png",
+      "source": "scratch/2026-11-16-fishing-animation-refresh/1A-animation.png",
+      "nativeFrame": [
+        16,
+        32
+      ],
+      "frameCount": 9,
+      "jobId": "3352cc1f-0687-4c79-b8d7-196aaaaa4b63",
+      "frameSeconds": 0.18,
+      "sha256": "b1cc2605e10e58aa78d096da0f2411dc6a3d711dbb69f1300c4613c5ae214cae"
+    },
+    {
+      "file": "fishing-unload.png",
+      "source": "scratch/2026-11-16-fishing-animation-refresh/1D-animation.png",
+      "nativeFrame": [
+        16,
+        32
+      ],
+      "frameCount": 9,
+      "jobId": "da12413b-84c7-4aaa-941e-77fe09a6840a",
+      "frameSeconds": 0.18,
+      "sha256": "1d59e66800c15714f7beca572949291e978a6bf7ff2806f4298c6b4215a5a64b"
+    },
+    {
+      "file": "whaling-move.png",
+      "source": "scratch/2026-11-15-fisheries-whaling/whaler-A-move.png",
+      "nativeFrame": [
+        16,
+        48
+      ],
+      "frameCount": 9,
+      "jobId": "7206c1bc-b0e7-4dc9-b528-41c4bb1943b9"
+    },
+    {
+      "file": "whaling-harvest.png",
+      "source": "scratch/2026-11-15-fisheries-whaling/whaler-A-harvest.png",
+      "nativeFrame": [
+        16,
+        48
+      ],
+      "frameCount": 9,
+      "jobId": "7fc977f6-78fd-4301-9cbf-8e9b2b0cab2b"
+    },
+    {
+      "file": "whale.png",
+      "source": "scratch/2026-11-15-fisheries-whaling/whale-B-breach.png",
+      "nativeFrame": [
+        32,
+        32
+      ],
+      "frameCount": 13,
+      "jobId": "4e885540-aeb6-48f8-be9a-3a3a74977eeb"
+    },
+    {
+      "file": "whaling-post.png",
+      "source": "scratch/2026-11-15-fisheries-whaling/post-B.png",
+      "nativeFrame": [
+        32,
+        32
+      ],
+      "frameCount": 1,
+      "jobId": "72752e76-e0c7-4545-acb4-5a9e212d75b8"
+    }
+  ],
+  "icon": {
+    "generator": "built-in imagegen",
+    "file": "public/assets/ui/whaling.png",
+    "reference": "public/assets/ui/thermal-bath.png"
+  },
+  "processing": "Byte-for-byte copies of generated sprite sheets. No sprite painting or resampling.",
+  "fishingAnimationSelection": {
+    "fishing": "1A",
+    "sailing": "1C",
+    "unloading": "1D"
+  },
+  "fishingAnimationApproval": "User reviewed the animation previews and said: Looks good to me, put this in."
+}

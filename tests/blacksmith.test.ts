@@ -21,7 +21,7 @@ const building = (id: number, kind: Building['kind'], x: number, y: number, fact
   id, kind, faction, x, y, hp: 250, maxHp: 250, capacity: 0,
 });
 function fixture(): GameState {
-  return withDevelopedResources({
+  const state = withDevelopedResources({
     world: { width: 32, height: 24, seed: 'blacksmith', source: 'test', spawns: [],
       tiles: Array.from({ length: 32 * 24 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .3,
         moisture: .5, food: 3, production: 1, gold: 0, variation: .5 })) },
@@ -34,6 +34,9 @@ function fixture(): GameState {
     marauderPacks: [], raiderCamps: [], roamingMaraudersVersion: 1,
     fogRaids: { nextAt: Infinity, waves: 0, pressureVersion: 1 },
   }, ['iron']);
+  for (let y = 6; y < 10; y++) for (let x = 2; x < 11; x++)
+    Object.assign(state.world.tiles[y * 32 + x], {resource: 'iron', resourceDeveloped: true});
+  return state;
 }
 
 describe('blacksmith construction', () => {
@@ -209,7 +212,7 @@ describe('upgraded equipment in combat', () => {
     const victim = { ...unit(20, 'warrior', 16.5, 13.5, -2), attack: 0, speed: 0 };
     entityStore(state).units.add(victim);
     const multiplier = equipmentMultiplier(level);
-    const expected = (17 * multiplier - 4) * .7;
+    const expected = (17 * multiplier - 4) * .7 * 1.02;
     updateGame(state, .1, idle);
     expect(victim.hp).toBeCloseTo(100 - expected);
     const shot = state.projectiles?.find(projectile => projectile.attacker === state.units[0].id);

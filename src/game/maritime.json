@@ -1,0 +1,35 @@
+{
+  "approved": true,
+  "pixelsPerCell": 16,
+  "frameSeconds": 0.13,
+  "fishing": {
+    "file": "fishing.png",
+    "frameSeconds": 0.18,
+    "width": 16,
+    "height": 32,
+    "review": "scratch/2026-11-16-fishing-animation-refresh/index.html",
+    "selection": "1A"
+  },
+  "whaling": {
+    "file": "whaling.png",
+    "width": 16,
+    "height": 48
+  },
+  "whale": {
+    "file": "whale.png",
+    "width": 32,
+    "height": 32
+  },
+  "post": {
+    "file": "whaling-post.png",
+    "width": 32,
+    "height": 32
+  },
+  "review": "scratch/2026-11-15-fisheries-whaling/index.html",
+  "selection": {
+    "fishing": "B",
+    "whaling": "A",
+    "whale": "B",
+    "post": "B"
+  }
+}

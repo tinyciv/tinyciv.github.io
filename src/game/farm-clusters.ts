@@ -10,6 +10,28 @@ export interface ClusterOptions {
 
 /** A bounded preference: joining a crop edge matters most; extra neighbors
  * fill holes and corners instead of extending a thin row indefinitely. */
+/** Per-cell crop counts for a read-only pass that excludes a different single
+ * camp per probe; equivalent to farmCompactnessQuery(state, faction, { excludeCamp }). */
+export function farmCompactnessExclusions(state: GameState, faction: number): (camp: { id: number; x: number; y: number; hp: number; faction: number; kind: Building['kind'] }) => (x: number, y: number) => number {
+  const { width, height } = state.world, crops = new Map<number, number>();
+  for (const building of state.buildings) if (building.hp > 0 && building.faction === faction && isFarmKind(building.kind)) {
+    const cell = building.y * width + building.x; crops.set(cell, (crops.get(cell) ?? 0) + 1);
+  }
+  return camp => {
+    const excluded = camp.hp > 0 && camp.faction === faction && isFarmKind(camp.kind) ? camp.y * width + camp.x : -1;
+    const cropAt = (x: number, y: number): number => {
+      if (x < 0 || y < 0 || x >= width || y >= height) return 0;
+      const cell = y * width + x;
+      return Number((crops.get(cell) ?? 0) - Number(cell === excluded) > 0);
+    };
+    return (x, y) => {
+      const cardinal = cropAt(x - 1, y) + cropAt(x + 1, y) + cropAt(x, y - 1) + cropAt(x, y + 1);
+      const diagonal = cropAt(x - 1, y - 1) + cropAt(x + 1, y - 1) + cropAt(x - 1, y + 1) + cropAt(x + 1, y + 1);
+      return ((cardinal ? 12 + cardinal : 0) + diagonal * .5) / 18;
+    };
+  };
+}
+
 export function farmCompactnessQuery(state: GameState, faction: number, options: ClusterOptions = {}): (x: number, y: number) => number {
   const { width, height } = state.world, crops = new Set(options.plannedCells);
   for (const building of state.buildings) {

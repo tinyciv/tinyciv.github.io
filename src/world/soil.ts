@@ -19,7 +19,7 @@ export function applySoilFertility(world: World): void {
       if (!WATER.has(other.terrain)) slope = Math.max(slope, Math.abs(other.elevation - tile.elevation));
     }
     const wetness = tile.moisture, temperature = tile.temperature ?? .55;
-    const wetland = tile.terrain !== 'tundra' && !tile.ridge && !tile.beach && !cores[cell] && freshwater[cell] <= 2
+    const wetland = tile.terrain !== 'tundra' && !tile.relief && !tile.beach && !cores[cell] && freshwater[cell] <= 2
       && wetness > .67 && temperature > .25 && slope < .09;
     if (wetland) tile.biome = 'wetland';
     tile.fertility = baseSoilFertility(tile.terrain) + freshwaterFertilityBonus(freshwater[cell]);

@@ -129,6 +129,41 @@ describe('city-specific natural population growth', () => {
     expect(advance(state)).toBe(0); expect(state.factions[0].food).toBe(2);
   });
 
+  it('preserves the caller city order when cities compete for the last four food', () => {
+    const state = realm(); state.factions[0].food = 6;
+    palace(state, 1).populationGrowth = 10; palace(state, 2).populationGrowth = 10;
+    const summaries = citySummaries(state).reverse();
+    expect(advanceCityPopulation(state, state.factions[0], summaries, 1)).toBe(1);
+    expect(populations(state)).toEqual([0, 1]);
+    expect(palace(state, 1).populationGrowth).toBeCloseTo(10 + rate(24));
+    expect(palace(state, 2).populationGrowth).toBeCloseTo(10 + rate(24) - 1);
+  });
+
+  it('assigns an equidistant vacant house to the smaller city ID without sorting the city batch', () => {
+    const state = realm();
+    const first = palace(state, 1), second = palace(state, 2);
+    second.x = 49;
+    const home: Building = { id: 10000, kind: 'house', faction: 0, x: 30, y: 20,
+      hp: 160, maxHp: 160, capacity: 2, residents: 0 };
+    entityStore(state).buildings.replace([second, first, home]);
+    const summaries = [second, first].map(palace => ({ palace, name: palace.cityName!, population: 0, housing: 2, food: 24, gold: 0 }));
+    expect(advanceCityPopulation(state, state.factions[0], summaries, 1)).toBe(2);
+    expect(home.residents).toBe(2);
+    expect(first.populationGrowth).toBeCloseTo(rate(24) - 2);
+    expect(second.populationGrowth).toBeCloseTo(rate(24));
+  });
+
+  it('does not materialize resident fields or change an explicit false depopulation flag without births', () => {
+    const state = realm(); state.factions[0].food = 0;
+    const first = palace(state, 1), home = state.buildings.find(building => building.kind === 'house')!;
+    delete first.unhousedResidents; delete home.residents; first.depopulated = false;
+    expect(advance(state)).toBe(0);
+    expect(Object.hasOwn(first, 'unhousedResidents')).toBe(false);
+    expect(Object.hasOwn(home, 'residents')).toBe(false);
+    expect(first.depopulated).toBe(false);
+    expect(first.populationGrowth).toBe(0);
+  });
+
   it('keeps the existing meal-shortage credit decay local to each palace', () => {
     const state = realm(); state.factions[0].food = 0;
     palace(state, 1).populationGrowth = .2; palace(state, 2).populationGrowth = .8;

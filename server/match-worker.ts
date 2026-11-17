@@ -1,8 +1,7 @@
+import { encodeMessage } from '../src/multiplayer/wire';
 import { parentPort, workerData } from 'node:worker_threads';
-import { readFile } from 'node:fs/promises';
 import { generateWorld } from '../src/world/generator';
 import { createDuelGame, updateGame, updateLeaderRespawns } from '../src/game/simulation';
-import { installNavigationWasm } from '../src/game/navigation-wasm';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { NO_INPUT, validatedInput } from '../src/multiplayer/input';
 import { StateDeltaEncoder } from '../src/multiplayer/state-delta';
@@ -20,7 +19,12 @@ const encoders = new Map<number, StateDeltaEncoder>();
 let playing = true, initialized = false;
 let clock: ReturnType<typeof setInterval> | undefined;
 const lastInput = [0, 0];
-const send = (faction: number, message: ServerMessage) => port.postMessage({ type: 'send', faction, messageType: message.type, payload: JSON.stringify(message) });
+const send = (faction: number, message: ServerMessage) => {
+  // Own the allocation: transferring a msgpackr/Node pooled buffer would detach
+  // unrelated messages. The main server forwards bytes without decoding them.
+  const payload = Uint8Array.from(encodeMessage(message));
+  port.postMessage({ type: 'send', faction, messageType: message.type, payload }, [payload.buffer]);
+};
 const broadcast = (message: ServerMessage) => { for (let faction = 0; faction < 2; faction++) send(faction, message); };
 
 const view = (faction: number): GameState => multiplayerView(state, faction);
@@ -68,7 +72,6 @@ port.on('message', message => {
 
 async function initialize(): Promise<void> {
   broadcast({ type: 'loading', message: 'Preparing the battlefield...', progress: .15 });
-  await installNavigationWasm(await readFile(new URL('./navigation.wasm', import.meta.url)));
   // This size leaves room for two realms while keeping snapshots and pathfinding modest.
   const world = generateWorld(data.options.seed, undefined, undefined, data.options);
   broadcast({ type: 'loading', message: 'Founding the two realms...', progress: .7 });
@@ -83,8 +86,9 @@ async function initialize(): Promise<void> {
   clock = setInterval(() => {
     const now = performance.now(), dt = Math.min(.15, (now - previous) / 1000); previous = now;
     for (let faction = 0; faction < 2; faction++) if (now - lastInput[faction] > 750) state.multiplayer!.inputs[faction] = { ...emptyInput };
-    if (playing) updateGame(state, dt, emptyInput);
-    else updateLeaderRespawns(state);
+    // The match worker is the host wall clock for real-time Leader respawns.
+    if (playing) updateGame(state, dt, emptyInput, { wallNow: Date.now() });
+    else updateLeaderRespawns(state, Date.now());
     if (now - lastFrame >= 125) { lastFrame = now; frames(); }
     if (state.gameOver && !reportedFinish) { reportedFinish = true; frames(); clearInterval(clock); port.postMessage({ type: 'finished', winner: state.multiplayer!.winner }); }
   }, 50);

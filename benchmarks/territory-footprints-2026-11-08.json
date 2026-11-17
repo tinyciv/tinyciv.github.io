@@ -1,0 +1,298 @@
+{
+  "method": "Alternating frozen/current engines on the captured world after warming initial territory. Six successive house addition, local cover, ownership and removal edits per round. Exact owners, source/alternate winners, radii, edges and rounded paths compared after every mutation. No rendering or approximation.",
+  "snapshot": "/tmp/btv-pop800-2026-11-08/state.json",
+  "baseline": "/tmp/btv-pop800-2026-11-08/baseline",
+  "cpu": "Apple M3 Pro",
+  "timings": {
+    "before": {
+      "samples": 18,
+      "meanMs": 38.96247911111114,
+      "medianMs": 38.829999999999984,
+      "p95Ms": 50.659374999999955
+    },
+    "after": {
+      "samples": 18,
+      "meanMs": 9.849182777777761,
+      "medianMs": 8.42070799999999,
+      "p95Ms": 26.124624999999924
+    }
+  },
+  "parity": [
+    {
+      "round": 0,
+      "step": 0,
+      "equal": true
+    },
+    {
+      "round": 0,
+      "step": 1,
+      "equal": true
+    },
+    {
+      "round": 0,
+      "step": 2,
+      "equal": true
+    },
+    {
+      "round": 0,
+      "step": 3,
+      "equal": true
+    },
+    {
+      "round": 0,
+      "step": 4,
+      "equal": true
+    },
+    {
+      "round": 0,
+      "step": 5,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 0,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 1,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 2,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 3,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 4,
+      "equal": true
+    },
+    {
+      "round": 1,
+      "step": 5,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 0,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 1,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 2,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 3,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 4,
+      "equal": true
+    },
+    {
+      "round": 2,
+      "step": 5,
+      "equal": true
+    }
+  ],
+  "samples": {
+    "before": [
+      {
+        "round": 0,
+        "step": 0,
+        "milliseconds": 42.736333
+      },
+      {
+        "round": 0,
+        "step": 1,
+        "milliseconds": 41.95920800000005
+      },
+      {
+        "round": 0,
+        "step": 2,
+        "milliseconds": 40.48504200000002
+      },
+      {
+        "round": 0,
+        "step": 3,
+        "milliseconds": 40.97724999999997
+      },
+      {
+        "round": 0,
+        "step": 4,
+        "milliseconds": 39.31204199999996
+      },
+      {
+        "round": 0,
+        "step": 5,
+        "milliseconds": 38.829999999999984
+      },
+      {
+        "round": 1,
+        "step": 0,
+        "milliseconds": 38.5742909999999
+      },
+      {
+        "round": 1,
+        "step": 1,
+        "milliseconds": 37.064375000000155
+      },
+      {
+        "round": 1,
+        "step": 2,
+        "milliseconds": 43.387707999999975
+      },
+      {
+        "round": 1,
+        "step": 3,
+        "milliseconds": 38.4993750000001
+      },
+      {
+        "round": 1,
+        "step": 4,
+        "milliseconds": 34.88891699999999
+      },
+      {
+        "round": 1,
+        "step": 5,
+        "milliseconds": 35.792958
+      },
+      {
+        "round": 2,
+        "step": 0,
+        "milliseconds": 50.659374999999955
+      },
+      {
+        "round": 2,
+        "step": 1,
+        "milliseconds": 35.01941600000009
+      },
+      {
+        "round": 2,
+        "step": 2,
+        "milliseconds": 39.27412500000014
+      },
+      {
+        "round": 2,
+        "step": 3,
+        "milliseconds": 34.611625000000004
+      },
+      {
+        "round": 2,
+        "step": 4,
+        "milliseconds": 34.92912500000011
+      },
+      {
+        "round": 2,
+        "step": 5,
+        "milliseconds": 34.323459000000184
+      }
+    ],
+    "after": [
+      {
+        "round": 0,
+        "step": 0,
+        "milliseconds": 10.574250000000006
+      },
+      {
+        "round": 0,
+        "step": 1,
+        "milliseconds": 8.42070799999999
+      },
+      {
+        "round": 0,
+        "step": 2,
+        "milliseconds": 16.874165999999946
+      },
+      {
+        "round": 0,
+        "step": 3,
+        "milliseconds": 7.305334000000016
+      },
+      {
+        "round": 0,
+        "step": 4,
+        "milliseconds": 8.862750000000005
+      },
+      {
+        "round": 0,
+        "step": 5,
+        "milliseconds": 5.606167000000028
+      },
+      {
+        "round": 1,
+        "step": 0,
+        "milliseconds": 8.051207999999974
+      },
+      {
+        "round": 1,
+        "step": 1,
+        "milliseconds": 10.355457999999999
+      },
+      {
+        "round": 1,
+        "step": 2,
+        "milliseconds": 15.368790999999987
+      },
+      {
+        "round": 1,
+        "step": 3,
+        "milliseconds": 6.338333000000034
+      },
+      {
+        "round": 1,
+        "step": 4,
+        "milliseconds": 10.198167000000012
+      },
+      {
+        "round": 1,
+        "step": 5,
+        "milliseconds": 6.548541
+      },
+      {
+        "round": 2,
+        "step": 0,
+        "milliseconds": 6.394416999999976
+      },
+      {
+        "round": 2,
+        "step": 1,
+        "milliseconds": 12.335624999999936
+      },
+      {
+        "round": 2,
+        "step": 2,
+        "milliseconds": 26.124624999999924
+      },
+      {
+        "round": 2,
+        "step": 3,
+        "milliseconds": 6.407750000000078
+      },
+      {
+        "round": 2,
+        "step": 4,
+        "milliseconds": 5.979957999999897
+      },
+      {
+        "round": 2,
+        "step": 5,
+        "milliseconds": 5.539041999999881
+      }
+    ]
+  }
+}

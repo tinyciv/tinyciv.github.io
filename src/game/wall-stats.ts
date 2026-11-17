@@ -2,8 +2,10 @@ import { entityStore } from './entity-store';
 import { defenseHealthMultiplier } from './research-bonuses';
 import { buildingReady, isWallKind, type Building, type Faction, type GameState } from './types';
 import { markWorldChanged } from './world-revisions';
+import { rustEngine } from './rust-engine';
 
-export const STONE_WALL_GOLD = 30;
+export const STONE_WALL_GOLD = 15;
+export const PALISADE_GOLD = 5 * .75;
 export const STONE_WALL_HEALTH_MULTIPLIER = 10;
 export const STONE_GATE_HEALTH_MULTIPLIER = 5;
 export const STONE_WALL_DEFENSE_MULTIPLIER = 1.5;
@@ -25,7 +27,8 @@ export function applyDefensiveStats(building: Building, faction: Pick<Faction, '
   if (!defensive(building)) return;
   const base = building.defenseBaseMaxHp ??= building.maxHp / (building.enemyStrengthMultiplier ?? 1);
   const layout = building.fortificationHealthMultiplier ?? (building.kind === 'wall' || building.kind === 'fort' ? STONE_WALL_HEALTH_MULTIPLIER : 1);
-  const maximum = base * layout * defenseHealthMultiplier(faction) * (building.enemyStrengthMultiplier ?? 1);
+  const maximum = base * layout * defenseHealthMultiplier(faction) * (building.enemyStrengthMultiplier ?? 1)
+    * (building.kind === 'fort' ? rustEngine.fort_health_multiplier(building.fortLevel ?? 1) : 1);
   if (maximum === building.maxHp) return;
   const fraction = building.maxHp > 0 ? Math.max(0, Math.min(1, building.hp / building.maxHp)) : 0;
   building.maxHp = maximum;

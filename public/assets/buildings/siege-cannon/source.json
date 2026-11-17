@@ -1,0 +1,194 @@
+{
+  "name": "Siege cannon",
+  "selected_review": "16C",
+  "selection_date": "2026-11-14",
+  "footprint": [
+    1,
+    1
+  ],
+  "pixel_canvas": [
+    16,
+    16
+  ],
+  "camera": "high top-down",
+  "isometric": false,
+  "poses": [
+    {
+      "direction": "east",
+      "file": "east.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        1,
+        2,
+        14,
+        16
+      ],
+      "ground_anchor": [
+        8,
+        16
+      ],
+      "sha256": "4f0f317943302880aa3d8147673f1452e9bcb3789f0ee0800df7dac73e6e7f38"
+    },
+    {
+      "direction": "south-east",
+      "file": "south-east.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        2,
+        2,
+        14,
+        14
+      ],
+      "ground_anchor": [
+        8,
+        14
+      ],
+      "sha256": "eb3e635a22c2394fd1776a55badbe1c260573e46ce761cd8ef4febf3fed18898"
+    },
+    {
+      "direction": "south",
+      "file": "south.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        1,
+        1,
+        15,
+        15
+      ],
+      "ground_anchor": [
+        8,
+        15
+      ],
+      "sha256": "eab945101790f5e6a9e889ab54b07e7537c1ef71c35754d60b2838b98aae2f83"
+    },
+    {
+      "direction": "south-west",
+      "file": "south-west.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        2,
+        2,
+        14,
+        14
+      ],
+      "ground_anchor": [
+        8,
+        14
+      ],
+      "sha256": "7ba8efe9536a01f979eb98216d5cda74ef4a480ccdcdfb662c6c12f8bd822860"
+    },
+    {
+      "direction": "west",
+      "file": "west.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        2,
+        3,
+        13,
+        14
+      ],
+      "ground_anchor": [
+        8,
+        14
+      ],
+      "sha256": "4d2a3f8d8e000707525404af00b1a0790155b4a17da328f758331eb3fb959d6e"
+    },
+    {
+      "direction": "north-west",
+      "file": "north-west.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        3,
+        2,
+        13,
+        15
+      ],
+      "ground_anchor": [
+        8,
+        15
+      ],
+      "sha256": "2657745e465e00595cea96307a2add9e9805820ac6dfc600588d87c11e326860"
+    },
+    {
+      "direction": "north",
+      "file": "north.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        3,
+        2,
+        14,
+        16
+      ],
+      "ground_anchor": [
+        8,
+        16
+      ],
+      "sha256": "2632803e38aaafea598f94defee33199ab138839d1583ca17abcaee1cb1b5a8e"
+    },
+    {
+      "direction": "north-east",
+      "file": "north-east.png",
+      "canvas": [
+        16,
+        16
+      ],
+      "visible_bounds": [
+        2,
+        2,
+        13,
+        14
+      ],
+      "ground_anchor": [
+        8,
+        14
+      ],
+      "sha256": "e193d78c288c1cc36183f419aebcc04eba032fefc90a5546e02e9e9325688b73"
+    }
+  ],
+  "approved_south": {
+    "source": "scratch/2026-11-14-siege-cannon/16/frame_8.png",
+    "sha256": "eab945101790f5e6a9e889ab54b07e7537c1ef71c35754d60b2838b98aae2f83",
+    "operation": "byte-for-byte copy"
+  },
+  "grounding": {
+    "source": "public/assets/miniworld/Ballista.png",
+    "rectangle": [
+      0,
+      16,
+      16,
+      16
+    ]
+  },
+  "generation": {
+    "approved_view": "PixelLab create-1-direction-object, frame 8",
+    "directional_object": "6bc6a48a-5321-4058-9422-8af52bb40c41",
+    "other_views": "PixelLab Objects Pro Flash, then PixelLab resize generator at 16x16; lossless reference crops remove export padding"
+  },
+  "provenance": "scratch/2026-11-14-siege-cannon/provenance.md",
+  "ui_icon": {
+    "file": "public/assets/ui/siege-cannon.png",
+    "generator": "built-in imagegen",
+    "sha256": "c884cc3e9f3c625286d50710af86ea1dd7a5b7f12d55edd500b4baa146dff8de"
+  }
+}

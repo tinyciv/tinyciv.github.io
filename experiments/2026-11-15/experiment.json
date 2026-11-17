@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "policyFile": "experiments/2026-11-15/policies.json",
+  "policies": ["expansionist", "hard-assault", "disciplined", "loose-order"],
+  "baseline": "expansionist",
+  "jobs": 2,
+  "screening": { "scenarios": ["field-battle", "siege-war"], "seeds": 4, "seconds": 180, "seed": "ai-2026-11-15-screen" },
+  "validation": { "scenarios": ["field-battle", "siege-war"], "seeds": 8, "seconds": 240, "seed": "ai-2026-11-15-heldout" }
+}

@@ -1,4 +1,7 @@
-import { villageAlliedWith } from './village-relations';
+import { diplomaticAllies } from './diplomacy-view';
+import { territoryValue } from './territory-cells';
+import { trackArray } from './cell-journal';
+import { villageAlliedWith, villageAllyView } from './settlement-bridge';
 import { observationPostVisibleTo } from './observation-visibility';
 import { HIGH_GROUND_RANGE_BONUS } from './combat-range';
 import { BALLISTA_RANGE } from './ballista';
@@ -6,12 +9,13 @@ import { playerFaction, withPlayerFaction, playerControl } from './player-contex
 import { isSoldier } from './types';
 import { buildingWidth, buildingHeight, buildingReady, isWallKind, tileAt, type Building, type FarmField, type FarmFieldMemory, type GameState, type Point, type Unit, type World } from './types';
 import { hasSightCover, highGroundSightMultiplier, maximumHighGroundSightMultiplier, sightDistance } from './sight';
-import { ridgeLevel } from './ridges';
-import { territory } from './borders';
-import { worldRevisions, worldStructureRevision } from './world-revisions';
+import { reliefLevel } from './relief';
+import { territory, territoryChanges, type Territory } from './borders';
+import { worldSightChangesSince, worldRevisions, worldStructureRevision, type WorldCellChanges } from './world-revisions';
 import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision, withSimulationReads } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
+import { galleyFootprintCells } from './galley-footprint';
 
 /** Visibility and last-seen memories are sampled at half the ordinary sensing
  * rate. Rendering can continue interpolating fades between these snapshots. */
@@ -39,14 +43,40 @@ export interface FogView {
     revision: number;
     explorationRevision: number;
 }
+// A local development view never writes exploration or changes the simulation's
+// sight samples, so disabling it restores fog and does not suppress hidden raids.
+const revealedMaps = new WeakSet<GameState>();
+const revealedViews = new WeakMap<GameState, { view: FogView; time: number; buildings: readonly Building[]; buildingRevision?: number; fields?: FarmField[] }>();
+export const isMapRevealed = (state: GameState): boolean => !state.multiplayer && (state.world.scenario === 'tutorial' || revealedMaps.has(state));
+export function setMapRevealed(state: GameState, enabled: boolean): void {
+    if (enabled && !state.multiplayer) revealedMaps.add(state); else revealedMaps.delete(state);
+    revealedViews.delete(state);
+}
+function revealedFog(state: GameState): FogView {
+    let old = revealedViews.get(state);
+    if (!old || old.view.world !== state.world) {
+        const { width, height } = state.world, all = new Uint8Array(width * height).fill(1);
+        const view: FogView = { width, height, world: state.world, faction: playerFaction(state), visible: all, owned: all,
+            explored: Array(width * height).fill(1), sources: [], buildings: [], fields: [], revision: 1e9, explorationRevision: 1e9 };
+        old = { view, time: -Infinity, buildings: [] }; revealedViews.set(state, old);
+    }
+    const buildingRevision = entityStore(state).buildings.revision;
+    if (old.time !== state.time || old.buildings !== state.buildings || old.buildingRevision !== buildingRevision || old.fields !== state.fields) {
+        old.view.buildings = state.buildings.filter(b => b.hp > 0);
+        old.view.fields = (state.fields ?? []).map(field => rememberField(field, state.time));
+        old.time = state.time; old.buildings = state.buildings; old.buildingRevision = buildingRevision; old.fields = state.fields;
+    }
+    return old.view;
+}
 interface SightRecord { source: SightSource; key: string }
 interface CachedFog extends FogView {
     sampledAt?: number; rememberedAt?: number; sampledStore?: EntityStore;
+    rememberedBuildings?: number;
     memorySignature: string; persisted: NonNullable<GameState['fog']>;
     sourceRecords: SightRecord[]; sourceScratch: SightRecord[]; sourceEntities: WeakMap<object, SightRecord>;
     buildingMemories: Map<number, Building>; fieldMemories: Map<number, FarmFieldMemory>;
     liveBuildingIds: Set<number>; liveFields: Map<number, FarmField>; hiddenSites: Set<number>;
-    patches: Map<string, number[]>; coverage: Uint32Array; worldRevision: number; territoryRevision: number;
+    patches: Map<string, number[]>; coverage: Uint32Array; worldRevision: number; sightJournal?: number; territoryRevision: number; territoryView?: Territory;
 }
 const cache = new WeakMap<object, CachedFog>();
 const replicatedFog = new WeakSet<GameState>();
@@ -105,7 +135,7 @@ function committedFog(state: GameState): FogView | undefined {
 }
 
 export function presentationFog(state: GameState): FogView {
-    return committedFog(state) ?? updateFog(state);
+    return isMapRevealed(state) ? revealedFog(state) : committedFog(state) ?? updateFog(state);
 }
 
 /** Only a coherent published simulation state admits trusted presentation
@@ -133,7 +163,7 @@ export function invalidateFog(state: GameState): void {
 
 function reconcileFrameSources(state: GameState, frame: FogFrame): void {
     frame.sources.clear();
-    for (const unit of state.units) if (unit.faction === playerFaction(state) && unit.hp > 0 && !unit.inside)
+    for (const unit of state.units) if ((unit.faction === playerFaction(state) || (isSoldier(unit) || unit.kind === 'leader' || unit.kind === 'militia') && diplomaticAllies(state, playerFaction(state), unit.faction)) && unit.hp > 0 && !unit.inside)
         frame.sources.set(unit, unitSightSource(state.world, unit));
     frame.sourceUnits = state.units; frame.sourceMembership = entityStore(state).units.revision;
     frame.sourceWorld = state.world; frame.sourceSight = worldRevisions(state.world).sight; frame.sourcesDirty = false;
@@ -151,7 +181,7 @@ export function refreshFogUnit(state: GameState, unit: Unit): void {
         return;
     }
     const x = quantize(unit.x), y = quantize(unit.y), radius = unitSightRadius(unit);
-    const highGround = ridgeLevel(tileAt(state.world, x, y)) > 0;
+    const highGround = reliefLevel(tileAt(state.world, x, y)) > 0;
     if (old?.x === x && old.y === y && old.radius === radius && old.highGround === highGround) return;
     frame.sources.set(unit, { x, y, radius, highGround });
     frame.view = undefined;
@@ -175,12 +205,12 @@ function rememberValidation(state: GameState, frame: FogFrame, view: FogView, re
 }
 
 export const unitSightRadius = (unit: Pick<Unit, 'kind' | 'observationPost'>): number => unit.observationPost && !unit.observationPost.retreating ? 21 : unit.kind === 'leader' || unit.kind === 'sailboat' ? 9 : isSoldier(unit) || unit.kind === 'scout' || unit.kind === 'militia' ? 7 : 6;
-export const buildingSightRadius = (building: Pick<Building, 'kind'>): number => building.kind === 'tower' ? 18 : building.kind === 'ballista' ? BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS + .65 : building.kind === 'woodenTower' || building.kind === 'fort' ? 12 : building.kind === 'palace' ? 9 : building.kind === 'monument' ? 7 : isWallKind(building.kind) ? 3 : 6;
+export const buildingSightRadius = (building: Pick<Building, 'kind'>): number => building.kind === 'tower' ? 18 : building.kind === 'ballista' || building.kind === 'siegeCannon' ? BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS + .65 : building.kind === 'woodenTower' || building.kind === 'fort' ? 12 : building.kind === 'palace' ? 9 : building.kind === 'monument' ? 7 : isWallKind(building.kind) ? 3 : 6;
 
 function unitSightSource(world: World, unit: Unit): SightSource {
     const x = quantize(unit.x), y = quantize(unit.y);
     const tile = tileAt(world, x, y);
-    return { x, y, radius: unitSightRadius(unit), highGround: ridgeLevel(tile) > 0 };
+    return { x, y, radius: unitSightRadius(unit), highGround: reliefLevel(tile) > 0 };
 }
 
 function rememberBuilding(building: Building): Building {
@@ -253,22 +283,22 @@ function refreshSightSources(state: GameState, fog: CachedFog): boolean {
         if (frame.sourcesDirty || frame.sourceUnits !== state.units || frame.sourceMembership !== entityStore(state).units.revision
             || frame.sourceWorld !== state.world || frame.sourceSight !== worldRevisions(state.world).sight) reconcileFrameSources(state, frame);
         for (const [unit, source] of frame.sources) add(unit, source.x, source.y, source.radius, source.highGround);
-    } else for (const u of state.units) if (u.faction === playerFaction(state) && u.hp > 0 && !u.inside) {
+    } else for (const u of state.units) if ((u.faction === playerFaction(state) || (isSoldier(u) || u.kind === 'leader' || u.kind === 'militia') && diplomaticAllies(state, playerFaction(state), u.faction)) && u.hp > 0 && !u.inside) {
         const x = quantize(u.x), y = quantize(u.y);
-        add(u, x, y, unitSightRadius(u), ridgeLevel(tileAt(state.world, x, y)) > 0);
+        add(u, x, y, unitSightRadius(u), reliefLevel(tileAt(state.world, x, y)) > 0);
     }
     for (const boat of state.fishing?.boats ?? []) if (boat.faction === playerFaction(state) && boat.hp > 0)
         add(boat, quantize(boat.x), quantize(boat.y), 4);
-    const staticKey = frame && `${worldStructureRevision(state.world)}|${entityStore(state).buildings.revision}|${structureChangeRevision(state)}|`
-        + (state.villages ?? []).map(v => `${v.id},${v.campId},${v.relation},${v.alliedFaction ?? -1},${Number(!!v.destroyed)}`).join(';');
+    const staticKey = frame && `${state.diplomacyState?.accessRevision ?? 0}|${worldStructureRevision(state.world)}|${entityStore(state).buildings.revision}|${structureChangeRevision(state)}|`
+        + (state.villages ?? []).map(v => `${v.id},${v.campId},${villageAllyView(state, v) ?? -1},${Number(!!v.destroyed)}`).join(';');
     if (frame?.staticSources && frame.staticKey === staticKey) records.push(...frame.staticSources);
     else {
     const start = records.length;
-    for (const b of state.buildings) if (b.faction === playerFaction(state) && buildingReady(b) && !['road', 'bridge', 'irrigation', 'ruin'].includes(b.kind)) {
+    for (const b of state.buildings) if ((b.faction === playerFaction(state) || ['tower', 'woodenTower', 'fort', 'palace'].includes(b.kind) && diplomaticAllies(state, playerFaction(state), b.faction)) && buildingReady(b) && !['road', 'bridge', 'irrigation', 'ruin'].includes(b.kind)) {
         const x = b.x + buildingWidth(b) / 2, y = b.y + buildingHeight(b) / 2;
         add(b, x, y, buildingSightRadius(b));
     }
-    for (const village of state.villages ?? []) if (villageAlliedWith(village, playerFaction(state))) {
+    for (const village of state.villages ?? []) if (villageAlliedWith(state, village, playerFaction(state))) {
         const candidate = entityStore(state).buildings.get(village.campId);
         const camp = candidate && buildingReady(candidate) ? candidate : undefined;
         if (camp) {
@@ -287,6 +317,11 @@ function refreshSightSources(state: GameState, fog: CachedFog): boolean {
 export function pointInSight(fog: FogView, x: number, y: number): boolean {
     return x >= 0 && y >= 0 && x < fog.width && y < fog.height
         && !!fog.visible[Math.floor(y) * fog.width + Math.floor(x)];
+}
+/** A vessel remains visible while any of its physical hull is in sight. */
+export function unitInSight(fog: FogView,unit: Unit): boolean {
+    if(pointInSight(fog,unit.x,unit.y))return true;
+    return unit.kind==='sailboat' && galleyFootprintCells(unit).some(p=>pointInSight(fog,p.x+.5,p.y+.5));
 }
 
 export interface FogRevealMask {
@@ -497,12 +532,35 @@ export function pointExplored(fog: FogView, x: number, y: number): boolean {
 }
 
 export function buildingInSight(fog: FogView, b: Building): boolean {
-    // Rival build orders and worksites are private until the building is ready.
-    // Share this rule with targeting and selection, not just the compositor.
-    if (b.faction !== (fog.faction ?? 0) && b.construction) return false;
     for (let dy = 0; dy < buildingHeight(b); dy++) for (let dx = 0; dx < buildingWidth(b); dx++)
         if (pointInSight(fog, b.x + dx + .5, b.y + dy + .5)) return true;
     return false;
+}
+
+/** LOS rays stay inside their source's bounded rectangle. A local woodland or
+ * relief edit cannot invalidate distant sources; unknown editor edits remain
+ * conservative. Sorted sparse rows avoid scanning the whole map per source. */
+function changedSightTiles(world: World, changes: WorldCellChanges): (left: number, top: number, right: number, bottom: number) => boolean {
+    if (changes.full) return () => true;
+    const rows = new Map<number, number[]>();
+    for (const cell of changes.cells) {
+        const y = Math.floor(cell / world.width), x = cell % world.width, row = rows.get(y);
+        if (row) row.push(x); else rows.set(y, [x]);
+    }
+    const ys = [...rows.keys()].sort((a, b) => a - b);
+    for (const row of rows.values()) row.sort((a, b) => a - b);
+    const lowerBound = (values: readonly number[], target: number) => {
+        let low = 0, high = values.length;
+        while (low < high) { const middle = (low + high) >>> 1; if (values[middle] < target) low = middle + 1; else high = middle; }
+        return low;
+    };
+    return (left, top, right, bottom) => {
+        for (let index = lowerBound(ys, top); index < ys.length && ys[index] <= bottom; index++) {
+            const row = rows.get(ys[index])!;
+            if (row[lowerBound(row, left)] <= right) return true;
+        }
+        return false;
+    };
 }
 
 /** Empty saves start black, then reveal only the player's present surroundings. */
@@ -512,15 +570,17 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     const trusted = simulationReadsActive(state), store = trusted ? entityStore(state) : undefined;
     const previous = cache.get(contextKey(state));
     const retained = trusted && !!previous && previous.sampledStore === store && previous.world === state.world && previous.persisted === state.fog;
+    const worldRevision = worldRevisions(state.world).sight;
     const sampleSight = !retained || previous.sampledAt === undefined || state.time < previous.sampledAt
+        || state.paused && previous.worldRevision !== worldRevision
         || state.time + 1e-9 >= previous.sampledAt + FOG_SAMPLE_INTERVAL;
-    const sampleMemories = remember && (!retained || previous.rememberedAt === undefined || state.time < previous.rememberedAt
+    const sampleMemories = remember && (!retained || previous.rememberedBuildings !== store?.buildings.revision
+        || previous.rememberedAt === undefined || state.time < previous.rememberedAt
         || state.time + 1e-9 >= previous.rememberedAt + FOG_SAMPLE_INTERVAL);
     if (!sampleSight && !sampleMemories) { previous!.presentationTime = state.time; return previous!; }
     const frame = frames.get(contextKey(state)), validated = frame && validatedFrame(state, frame);
     if (validated && (!remember || frame!.remembered)) return validated;
     const { width, height, seed } = state.world;
-    const worldRevision = worldRevisions(state.world).sight;
     if (!state.fog || state.fog.width !== width || state.fog.height !== height || state.fog.seed !== seed || !Array.isArray(state.fog.explored) || state.fog.explored.length !== width * height) {
         state.fog = { width, height, seed, explored: Array(width * height).fill(0), buildings: [], fields: [] };
     }
@@ -529,7 +589,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     let fog = cache.get(contextKey(state));
     if (!fog || fog.persisted !== persisted || fog.world !== state.world) {
         fog = { faction: playerFaction(state), width, height, world: state.world, visible: new Uint8Array(width * height), owned: new Uint8Array(width * height), ownershipRevision: 0, explored: persisted.explored,
-            sources: [], buildings: (persisted.buildings ?? []).filter(b => b.faction === playerFaction(state) || !b.construction).map(rememberBuilding),
+            sources: [], buildings: (persisted.buildings ?? []).map(rememberBuilding),
             fields: (persisted.fields ?? []).map(field => rememberField(field, field.observedAt ?? state.time)), revision: 0, explorationRevision: 0,
             memorySignature: '', persisted, patches: new Map(), coverage: new Uint32Array(width * height),
             sourceRecords: [], sourceScratch: [], sourceEntities: new WeakMap(),
@@ -540,23 +600,30 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
         cache.set(contextKey(state), fog);
     }
     fog.presentationTime = state.time;
+    const explorationJournal = trackArray(fog.explored);
     if (sampleSight) {
+    const terrainChanges = worldSightChangesSince(state.world, fog.sightJournal);
+    fog.sightJournal = terrainChanges.revision;
     const borders = territory(state);
     const sourcesChanged = refreshSightSources(state, fog);
     if (sourcesChanged || worldRevision !== fog.worldRevision || borders.revision !== fog.territoryRevision || !fog.revision) {
         let discovered = false, ownershipChanged = false, visibilityChanged = false;
+        const exploredCells: number[] = [];
         const worldChanged = fog.worldRevision !== worldRevision;
+        const changed = worldChanged && changedSightTiles(state.world, terrainChanges);
         const touched = new Set<number>();
         const patches = new Map<string, number[]>();
         for (const { source: s, key } of fog.sourceRecords) {
             if (patches.has(key)) continue;
-            let cells = worldChanged ? undefined : fog.patches.get(key);
+            const elevated = !!s.highGround;
+            const radius = s.radius * (elevated ? maximumHighGroundSightMultiplier(state.world, s, true) : 1);
+            const x0 = Math.max(0, Math.floor(s.x - radius)), x1 = Math.min(width - 1, Math.ceil(s.x + radius));
+            const y0 = Math.max(0, Math.floor(s.y - radius)), y1 = Math.min(height - 1, Math.ceil(s.y + radius));
+            let cells = fog.patches.get(key);
+            if (cells && changed && changed(x0, y0, x1, y1)) cells = undefined;
             if (!cells) {
                 cells = [];
-                const elevated = !!s.highGround;
-                const radius = s.radius * (elevated ? maximumHighGroundSightMultiplier(state.world, s, !!s.highGround) : 1), covered = hasSightCover(state.world, s, radius);
-                const x0 = Math.max(0, Math.floor(s.x - radius)), x1 = Math.min(width - 1, Math.ceil(s.x + radius));
-                const y0 = Math.max(0, Math.floor(s.y - radius)), y1 = Math.min(height - 1, Math.ceil(s.y + radius));
+                const covered = hasSightCover(state.world, s, radius);
                 for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
                     const d2 = (x + .5 - s.x) ** 2 + (y + .5 - s.y) ** 2;
                     const targetRadius = s.radius * (elevated ? highGroundSightMultiplier(state.world, s, { x, y }, !!s.highGround) : 1);
@@ -570,31 +637,35 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
         // coverage counts for the union instead of repainting every source's
         // patch whenever one scout crosses a cell boundary. Equal source keys
         // remain deduplicated, just as they are in the full union.
-        for (const [key, cells] of fog.patches) if (worldChanged || !patches.has(key)) {
+        for (const [key, cells] of fog.patches) if (patches.get(key) !== cells) {
             for (const i of cells) { fog.coverage[i]--; touched.add(i); }
         }
-        for (const [key, cells] of patches) if (worldChanged || !fog.patches.has(key)) {
+        for (const [key, cells] of patches) if (fog.patches.get(key) !== cells) {
             for (const i of cells) { fog.coverage[i]++; touched.add(i); }
         }
         if (fog.territoryRevision !== borders.revision) {
-            for (let i = 0; i < fog.visible.length; i++) {
-                const owned = Number(borders.owners[i] === playerFaction(state));
+            const ownershipCells = territoryChanges(borders, fog.territoryView);
+            const refreshOwnership = (i: number): void => {
+                const owned = Number(territoryValue(borders, i) === playerFaction(state));
                 if (fog.owned![i] !== owned) { ownershipChanged = true; touched.add(i); }
                 fog.owned![i] = owned;
-            }
-            fog.territoryRevision = borders.revision;
+            };
+            if (ownershipCells.full) for (let i = 0; i < fog.visible.length; i++) refreshOwnership(i);
+            else for (const i of ownershipCells.cells) refreshOwnership(i);
+            fog.territoryRevision = borders.revision; fog.territoryView = borders;
         }
         for (const i of touched) {
             const visible = Number(!!fog.owned![i] || fog.coverage[i] > 0);
             if (fog.visible[i] !== visible) visibilityChanged = true;
             fog.visible[i] = visible;
-            if (!replicatedFog.has(state) && fog.visible[i] && !fog.explored[i]) { fog.explored[i] = 1; discovered = true; }
+            if (!replicatedFog.has(state) && fog.visible[i] && !fog.explored[i]) { fog.explored[i] = 1; exploredCells.push(i); discovered = true; }
         }
         if (ownershipChanged) fog.ownershipRevision = (fog.ownershipRevision ?? 0) + 1;
         fog.worldRevision = worldRevision;
         fog.patches = patches;
         if (visibilityChanged || ownershipChanged || !fog.revision) fog.revision++;
         if (discovered || !fog.explorationRevision) fog.explorationRevision++;
+        explorationJournal.publish(exploredCells);
     }
     if (trusted) { fog.sampledAt = state.time; fog.sampledStore = store; }
     }
@@ -603,18 +674,22 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     // A scout moving inside already observed ground changes the source list,
     // not what can be remembered. Keep the observation cadence, but avoid
     // rebuilding every building/field memory repeatedly within that interval.
-    const memorySignature = `${fog.revision}|${state.world.revision ?? 0}|${state.time.toFixed(1)}|${state.buildings.length}|${state.fields?.length ?? 0}|${state.farmVersion ?? 0}`;
+    const memorySignature = `${fog.revision}|${state.world.revision ?? 0}|${state.time.toFixed(1)}|${entityStore(state).buildings.revision}|${state.buildings.length}|${state.fields?.length ?? 0}|${state.farmVersion ?? 0}`;
     if (sampleMemories && memorySignature !== fog.memorySignature) {
         fog.memorySignature = memorySignature;
         const memories = fog.buildingMemories, live = fog.liveBuildingIds, hiddenSites = fog.hiddenSites;
+        let buildingsChanged = false;
         live.clear(); hiddenSites.clear();
         for (const building of state.buildings) {
             live.add(building.id);
             if (building.faction !== playerFaction(state) && building.construction) hiddenSites.add(building.id);
+            const previous = memories.get(building.id);
+            if (previous?.faction === playerFaction(state) && previous.construction
+                && building.faction !== playerFaction(state) && !buildingInSight(fog, building)) {
+                memories.delete(building.id); buildingsChanged = true;
+            }
         }
-        let buildingsChanged = false;
-        for (const [id, b] of memories) if (hiddenSites.has(id) || b.faction !== playerFaction(state) && b.construction
-            || (b.faction === playerFaction(state) || buildingInSight(fog, b)) && !live.has(id)) { memories.delete(id); buildingsChanged = true; }
+        for (const [id, b] of memories) if ((b.faction === playerFaction(state) || buildingInSight(fog, b)) && !live.has(id)) { memories.delete(id); buildingsChanged = true; }
         for (const b of state.buildings) if (b.faction === playerFaction(state) || buildingInSight(fog, b)) {
             const previous = memories.get(b.id);
             if (!previous || !buildingMemoryCurrent(previous, b)) { memories.set(b.id, rememberBuilding(b)); buildingsChanged = true; }
@@ -642,7 +717,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
         if (fieldsChanged) fog.fields = [...fieldMemories.values()];
         if (!replicatedFog.has(state)) persisted.fields = fog.fields;
     }
-    if (trusted && sampleMemories) fog.rememberedAt = state.time;
+    if (trusted && sampleMemories) { fog.rememberedAt = state.time; fog.rememberedBuildings = store!.buildings.revision; }
     // An explicit/editor query is a new live observation; it must not leave a
     // trusted timestamp behind for a subsequently resumed simulation.
     if (!trusted) { fog.sampledAt = undefined; fog.rememberedAt = undefined; fog.sampledStore = undefined; }
@@ -650,7 +725,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     return fog;
 }
 
-export function isVisible(state: GameState, x: number, y: number): boolean { return pointInSight(updateFog(state), x, y); }
+export function isVisible(state: GameState, x: number, y: number): boolean { return pointInSight(isMapRevealed(state) ? revealedFog(state) : updateFog(state), x, y); }
 /** Wilderness spawning must stay hidden from every human, not just the host. */
 export function humanFogViews(state: GameState): FogView[] {
     return state.multiplayer ? state.multiplayer.humanFactionIds.map(faction => updateFog(state, faction)) : [updateFog(state)];
@@ -662,10 +737,31 @@ export function humanVisibilityViews(state: GameState): FogView[] {
     return state.multiplayer ? state.multiplayer.humanFactionIds.map(faction => updateFog(state, faction, false))
         : [updateFog(state, playerFaction(state), false)];
 }
-export function isExplored(state: GameState, x: number, y: number): boolean { return pointExplored(updateFog(state), x, y); }
+export function isExplored(state: GameState, x: number, y: number): boolean { return pointExplored(isMapRevealed(state) ? revealedFog(state) : updateFog(state), x, y); }
 export function entityVisible(state: GameState, entity: Unit | Building): boolean {
+    if (isMapRevealed(state)) return !('inside' in entity && entity.inside);
     if ('inside' in entity && entity.inside || !('capacity' in entity) && !observationPostVisibleTo(entity, playerFaction(state))) return false;
     if (entity.faction === playerFaction(state)) return true;
     const fog = updateFog(state);
-    return 'capacity' in entity ? buildingInSight(fog, entity) : pointInSight(fog, entity.x, entity.y);
+    return 'capacity' in entity ? buildingInSight(fog, entity) : unitInSight(fog,entity);
+}
+
+/** A hermit's map records geography and structures once; it grants no ongoing sight. */
+export function revealExplorationCells(state: GameState, faction: number, cells: readonly number[]): void {
+    withPlayerFaction(state, faction, () => {
+        updateFog(state, faction);
+        const fog = cache.get(contextKey(state))!;
+        for (const cell of cells) fog.explored[cell] = 1;
+        trackArray(fog.explored).publish(cells);
+        fog.explorationRevision++;
+        const revealed = new Set(cells), width = state.world.width;
+        for (const b of state.buildings) if (b.hp > 0 && !b.construction) {
+            let mapped = false;
+            for (let dy = 0; dy < buildingHeight(b); dy++) for (let dx = 0; dx < buildingWidth(b); dx++)
+                if (revealed.has((b.y + dy) * width + b.x + dx)) mapped = true;
+            if (mapped) fog.buildingMemories.set(b.id, rememberBuilding(b));
+        }
+        fog.buildings = [...fog.buildingMemories.values()]; fog.persisted.buildings = fog.buildings;
+        invalidateFog(state);
+    });
 }

@@ -1,0 +1,152 @@
+{
+  "generator": "PixelLab API",
+  "date": "2026-11-15",
+  "view": "high top-down",
+  "isometric": false,
+  "styleReferences": [
+    {
+      "file": "references/barracks.png",
+      "source": "public/assets/buildings/barracks.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only"
+    },
+    {
+      "file": "references/granary.png",
+      "source": "public/assets/buildings/granary.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only"
+    },
+    {
+      "file": "references/forum.png",
+      "source": "public/assets/buildings/forum.png",
+      "size": [
+        32,
+        32
+      ],
+      "role": "Building style context only"
+    }
+  ],
+  "pixelProcessing": "Original PixelLab pixels; horizontal frame assembly only.",
+  "assets": [
+    {
+      "id": 1,
+      "kind": "volcano",
+      "variant": "A",
+      "file": "volcano-a.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 140,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/volcano-1A-loop.png",
+      "sha256": "dad592965351e74b04cfb8ca4024a31aa78e430db501c1746c18dd38bda391f0",
+      "prompt": "ONE JAGGED ASYMMETRIC VOLCANO: a broad craggy volcanic massif with an off-center open glowing crater, a broken serrated rim, two uneven rocky spurs and a collapsed shoulder. Tall angular ridge on the left, shorter broken ledges on the right. Irregular stepped flanks and a broad uneven low base. Low rugged silhouette, clearly volcanic but LESS CONICAL: avoid a smooth symmetric cone, triangle or circular pedestal. Warm charcoal/taupe stone, a small terracotta-orange lava opening and one short lava runnel. Include the whole mountain, with upper 7 pixels left clear for eruption. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. Very simple stylized silhouette, three broad shading regions, minimum detail, large connected pixel clusters. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    },
+    {
+      "id": 2,
+      "kind": "volcano",
+      "variant": "B",
+      "file": "volcano-b.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 140,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/volcano-1B-loop.png",
+      "sha256": "16c08ae8f067054926d523733de4d6b3bd3c1d13966c546f8cfd3a30e2648d3f",
+      "prompt": "ONE JAGGED ASYMMETRIC VOLCANO: a broad craggy volcanic massif with an off-center open glowing crater, a broken serrated rim, two uneven rocky spurs and a collapsed shoulder. Tall angular ridge on the left, shorter broken ledges on the right. Irregular stepped flanks and a broad uneven low base. Low rugged silhouette, clearly volcanic but LESS CONICAL: avoid a smooth symmetric cone, triangle or circular pedestal. Warm charcoal/taupe stone, a small terracotta-orange lava opening and one short lava runnel. Include the whole mountain, with upper 7 pixels left clear for eruption. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. Match the restrained Puny building detail density, angular stepped contours and four broad shaded color regions, carefully readable at native resolution. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    },
+    {
+      "id": 3,
+      "kind": "volcano",
+      "variant": "C",
+      "file": "volcano-c.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 140,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/volcano-1C-loop.png",
+      "sha256": "aa0f85f793d9557238d3dea1a327bea290c92e7743f28f9dbfe1c30b8d6ee78e",
+      "prompt": "ONE JAGGED ASYMMETRIC VOLCANO: a broad craggy volcanic massif with an off-center open glowing crater, a broken serrated rim, two uneven rocky spurs and a collapsed shoulder. Tall angular ridge on the left, shorter broken ledges on the right. Irregular stepped flanks and a broad uneven low base. Low rugged silhouette, clearly volcanic but LESS CONICAL: avoid a smooth symmetric cone, triangle or circular pedestal. Warm charcoal/taupe stone, a small terracotta-orange lava opening and one short lava runnel. Include the whole mountain, with upper 7 pixels left clear for eruption. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. More natural asymmetric weathered silhouette, four broad shaded regions and a few large structural facets, sparse detail without mottled texture. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    },
+    {
+      "id": 4,
+      "kind": "mud-pool",
+      "variant": "A",
+      "file": "mud-pool-a.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 180,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/mud-pool-2A-loop.png",
+      "sha256": "23a7045451353c4105a268cf7a2f5d1b271d0c074499d89c9953a036085b85b6",
+      "prompt": "ONE HOT STEAMING GEOTHERMAL MUD POOL: a low broad irregular oval basin filled with thick warm gray-brown muddy slurry, viewed from high above. Soft ochre and taupe earthen lip around the complete visible muddy surface. Two large round pale tan mud bubbles swelling from the slurry and a compact cream-gray steam wisp rising above the pool. Broad filled oval pool, approximately 26 pixels wide and 13 pixels deep, with transparent margins and room above for steam. No crack, fissure, lava, orange glow, fire, geyser fountain, tall rock walls or water-blue colors. The flat muddy surface must dominate the object. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. Very simple stylized silhouette, three broad shading regions, minimum detail, large connected pixel clusters. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    },
+    {
+      "id": 5,
+      "kind": "mud-pool",
+      "variant": "B",
+      "file": "mud-pool-b.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 180,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/mud-pool-2B-loop.png",
+      "sha256": "f92a2fd021edb3ccdfb763af76a47b76109d6ea79f6ec35c17453c6c89a39a25",
+      "prompt": "ONE HOT STEAMING GEOTHERMAL MUD POOL: a low broad irregular oval basin filled with thick warm gray-brown muddy slurry, viewed from high above. Soft ochre and taupe earthen lip around the complete visible muddy surface. Two large round pale tan mud bubbles swelling from the slurry and a compact cream-gray steam wisp rising above the pool. Broad filled oval pool, approximately 26 pixels wide and 13 pixels deep, with transparent margins and room above for steam. No crack, fissure, lava, orange glow, fire, geyser fountain, tall rock walls or water-blue colors. The flat muddy surface must dominate the object. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. Match the restrained Puny building detail density, angular stepped contours and four broad shaded color regions, carefully readable at native resolution. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    },
+    {
+      "id": 6,
+      "kind": "mud-pool",
+      "variant": "C",
+      "file": "mud-pool-c.png",
+      "frameSize": [
+        32,
+        32
+      ],
+      "frameCount": 9,
+      "frameDurationMs": 180,
+      "footprint": [
+        2,
+        2
+      ],
+      "source": "scratch/2026-11-15-volcano-mud-pool/exports/mud-pool-2C-loop.png",
+      "sha256": "7575c9759e034d90a6ea31cbabbdabf1ee0e5252f72132f6bb03f2e2aae85a3e",
+      "prompt": "ONE HOT STEAMING GEOTHERMAL MUD POOL: a low broad irregular oval basin filled with thick warm gray-brown muddy slurry, viewed from high above. Soft ochre and taupe earthen lip around the complete visible muddy surface. Two large round pale tan mud bubbles swelling from the slurry and a compact cream-gray steam wisp rising above the pool. Broad filled oval pool, approximately 26 pixels wide and 13 pixels deep, with transparent margins and room above for steam. No crack, fissure, lava, orange glow, fire, geyser fountain, tall rock walls or water-blue colors. The flat muddy surface must dominate the object. Native 32x32 pixel-art natural map prop. Use the building reference ONLY for pixel scale, stepped contours, flat connected color clusters, muted ochre/cream highlights, warm dark brown outlines and lighting from upper left. Remove ALL architecture: no roof, door, wall, columns, timber, house, furnace or chimney. High top-down orthographic camera, NOT isometric, no diamond base. More natural asymmetric weathered silhouette, four broad shaded regions and a few large structural facets, sparse detail without mottled texture. Use the restrained warm earthy palette and clear brightness hierarchy of the reference buildings; reserve cream highlights for the focal point. Transparent background and transparent outer margins. No grass tile, scenery, text, cast shadow, blur, antialiasing or scattered single-pixel noise. Keep all edges and effects within this fixed 32x32 canvas."
+    }
+  ]
+}

@@ -22,6 +22,48 @@ function fixture():GameState {
 function launched(){const state=fixture();updateSailboatLaunches(state);return {state,captain:state.units[0],boat:state.units.find(u=>u.kind==='sailboat')!};}
 function sailFor(state:GameState,captain:Unit,seconds:number,input=idle){for(let frame=0;frame<Math.round(seconds/.05);frame++){state.time+=.05;updateSailingLeader(state,captain,.05,input);}}
 
+describe('batched river navigation', () => {
+ it('preserves standalone routes across connected, divided, forbidden and cliff channels', () => {
+  let reachable = 0, blocked = 0;
+  for (let variant = 0; variant < 6; variant++) {
+   const state = fixture(); entityStore(state).buildings.replace([]); entityStore(state).units.replace([]);
+   for (const tile of state.world.tiles) if (tile.terrain === 'coast') tile.terrain = 'river';
+   for (let y = 4; y < 10; y++) {
+    const tile = state.world.tiles[y * state.world.width + 9];
+    if (variant === 1) tile.terrain = 'grassland';
+    if (variant === 2 && y !== 7) tile.terrain = 'grassland';
+    if (variant === 3) tile.waterfall = 'south';
+    if (variant === 4) entityStore(state).buildings.add({ id: 100 + y, kind: 'bridge', faction: 0, x: 9, y, hp: 100, maxHp: 100, capacity: 0 });
+   }
+   if (variant === 5) state.forbiddenZones = { cells: [4, 5, 6, 7, 8, 9].map(y => y * state.world.width + 9), revision: 1 };
+   const merchant: Unit = { ...leader(), kind: 'merchant', x: 3.5, y: 5.5 };
+   const nav = sailingNavigation(state, merchant, true, true);
+   for (const x of [3.5, 7.5, 13.5]) for (const y of [5.5, 8.5]) {
+    const from = { ...merchant, y }, goal = { x, y: 8.5 };
+    const reference = sailingPath(state, from, goal, true, true);
+    const batched = nav.connected(from, goal) ? sailingPath(state, from, goal, true, true, nav) : [];
+    expect(batched).toEqual(reference);
+    if (reference.length) reachable++; else blocked++;
+   }
+  }
+  expect(reachable).toBeGreaterThan(0); expect(blocked).toBeGreaterThan(0);
+ });
+ it('observes newly blocked and reopened river crossings in the next batch', () => {
+  const state = fixture(); entityStore(state).buildings.replace([]); entityStore(state).units.replace([]);
+  for (const tile of state.world.tiles) if (tile.terrain === 'coast') tile.terrain = 'river';
+  const merchant: Unit = { ...leader(), kind: 'merchant', x: 3.5, y: 5.5 }, goal = { x: 13.5, y: 5.5 };
+  const query = () => {
+   const nav = sailingNavigation(state, merchant, true, true);
+   return nav.connected(merchant, goal) ? sailingPath(state, merchant, goal, true, true, nav) : [];
+  };
+  expect(query().length).toBeGreaterThan(0);
+  for (let y = 4; y < 10; y++) entityStore(state).buildings.add({ id: 100 + y, kind: 'bridge', faction: 0, x: 9, y, hp: 100, maxHp: 100, capacity: 0 });
+  expect(query()).toEqual([]);
+  state.buildings.find(building => building.y === 7)!.hp = 0;
+  expect(query().length).toBeGreaterThan(0);
+ });
+});
+
 describe('sailboats and Leader transport',()=>{
  it('launches one adjacent boat after completion, retries blocked moorings and never replaces a sunk boat',()=>{
   const state=fixture(),dock=state.buildings[0];dock.construction={startedAt:0,duration:30};

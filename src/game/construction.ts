@@ -6,28 +6,17 @@ import { hasNeighboringRoad } from './traffic';
 import { hasGateWall } from './network-placement';
 import { queueConstruction } from './structures';
 import { bridgeStroke } from './bridge-spans';
-import { irrigationConnects, isFreshwaterSource } from './irrigation';
+import { createIrrigationConnectionQuery, isFreshwaterSource } from './irrigation';
 import { farmAt, planRoadFarmRelocation, planWallFarmRelocation, previewFarmRelocation } from './farm-relocation';
-import { constructionPreviewContext, rememberConstructionPreview } from './construction-preview-cache';
+import { constructionPreviewContext, rememberConstructionPreview, constructionFunds, sameConstructionFunds, constructionQuoteAffordable, constructionDisplayReadsActive } from './construction-preview-cache';
 import { withSimulationReads } from './simulation-reads';
+import { constructionPreviewState } from './construction-preview-state';
+import { withImmediateMaintenance } from './work-cadence';
+import { nativeConstructionLine } from './construction-native';
 
 /** A single-width, cardinal-connected stroke for roads, walls, bridges and irrigation. */
 export function constructionLine(from: Point, to: Point): Point[] {
-  let x = Math.floor(from.x), y = Math.floor(from.y);
-  const endX = Math.floor(to.x), endY = Math.floor(to.y);
-  const dx = Math.abs(endX - x), dy = Math.abs(endY - y);
-  const sx = Math.sign(endX - x), sy = Math.sign(endY - y);
-  let movedX = 0, movedY = 0;
-  const result: Point[] = [{ x, y }];
-  while (movedX < dx || movedY < dy) {
-    if (movedY === dy || (movedX < dx && (movedX + .5) * dy <= (movedY + .5) * dx)) {
-      x += sx; movedX++;
-    } else {
-      y += sy; movedY++;
-    }
-    result.push({ x, y });
-  }
-  return result;
+  return nativeConstructionLine(from, to);
 }
 
 
@@ -47,12 +36,21 @@ export interface ConstructionPlan {
   cost: number;
   costs: { production: number; food: number; gold: number };
 }
+const commitContexts = new WeakMap<ConstructionPlan, object>();
 /** Reserve each eligible cell independently; a gap never seeds a new road island. */
 export function planConstruction(state: GameState, selection: BuildSelection, points: Point[]): ConstructionPlan {
   if (!['road', 'wall', 'palisade', 'bridge', 'irrigation'].includes(selection)) return planConstructionUncached(state, selection, points);
-  const context = constructionPreviewContext(state), key = `${selection}:${points.map(p => `${Math.floor(p.x)},${Math.floor(p.y)}`).join(';')}`;
-  const cached = context.plans.get(key);
-  return cached ?? rememberConstructionPreview(context.plans, key, planConstructionUncached(state, selection, points));
+  const context = constructionPreviewContext(state, selection), key = `${selection}:${points.map(p => `${Math.floor(p.x)},${Math.floor(p.y)}`).join(';')}`;
+  const cached = context.plans.get(key), funds = constructionFunds(state);
+  if (cached && (sameConstructionFunds(cached.funds, funds) || constructionQuoteAffordable(cached.value, funds))) return cached.value;
+  const value = planConstructionUncached(state, selection, points);
+  // Interactive road caches ignore remote routine work. Keep a full-state
+  // validation token so purchases can distinguish a fresh quote from one
+  // whose ranking/negative result needs authoritative reconsideration.
+  // A private UI view is never purchased. Its real-state release performs
+  // live per-cell validation, so no global authoritative token is needed here.
+  if (!constructionDisplayReadsActive(state)) commitContexts.set(value, constructionPreviewContext(state));
+  return rememberConstructionPreview(context.plans, key, { value, funds }).value;
 }
 
 function planConstructionUncached(state: GameState, selection: BuildSelection, points: Point[]): ConstructionPlan {
@@ -105,27 +103,30 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
       skipped: result.ok ? 0 : 1, cost: costs.gold, costs };
   }
 
+  // A hover over completed/queued cells is a no-op. It needs no private
+  // transaction, terrain reset, farm view or ECS reconstruction.
+  if (cells.every(cell => cell.existing)) return { ok: true, message: '', tiles: [], cells, skipped: 0,
+    cost: 0, costs: { production: 0, food: 0, gold: 0 } };
+
   const reservedTiles = isWallKind(kind) || kind === 'road' ? new Set(cells.map(cell => cell.y * state.world.width + cell.x)) : undefined;
   const movesFarms = !!reservedTiles && cells.some(cell => farmAt(state, cell, playerFaction(state)));
   // Farm relocation edits crops, terrain and courier destinations. A preview
   // owns those records and never moves live farms while the mouse is held.
-  const virtual: GameState = { ...state,
-    multiplayer: state.multiplayer && structuredClone(state.multiplayer),
-    world: movesFarms ? { ...state.world, tiles: state.world.tiles.map(tile => ({ ...tile })) } : state.world,
-    buildings: movesFarms ? state.buildings.map(building => ({ ...building,
-      construction: building.construction && { ...building.construction } })) : [...state.buildings],
-    units: state.units,
-    fields: movesFarms ? state.fields?.map(field => ({ ...field })) : state.fields,
-    factions: state.factions.map(f => ({ ...f })),
-    // Visibility validation remembers visible structures. Keep those preview
-    // memories and exploration changes separate from the live save state.
-    fog: state.fog && { ...state.fog, explored: [...state.fog.explored],
-      buildings: state.fog.buildings && [...state.fog.buildings], fields: state.fog.fields && [...state.fog.fields] } };
+  // UI irrigation never relocates crops or changes occupancy: an accepted-cell
+  // overlay supplies connectivity. Keep its existing indexed view instead of
+  // cloning fog/the world and rebuilding ECS for each pointer endpoint.
+  const lightweightIrrigation = kind === 'irrigation' && constructionDisplayReadsActive(state);
+  const virtual = lightweightIrrigation ? state : constructionPreviewState(state, movesFarms);
   // This private transaction owns every mutation and publishes membership and
   // structure revisions. Share derived reads between its consecutive cells.
   return withSimulationReads(virtual, () => {
+    const factions = virtual.factions;
+    if (lightweightIrrigation) virtual.factions = factions.map(faction => ({ ...faction }));
+    try {
     const pending = cells.filter(cell => !cell.existing), tiles: Point[] = [];
     const costs = { production: 0, food: 0, gold: 0 };
+    const irrigationConnections = kind === 'irrigation' ? createIrrigationConnectionQuery(virtual) : undefined;
+    const reservedDitches = kind === 'irrigation' ? new Set<number>() : undefined;
     if (kind === 'bridge') {
       const totalGold = pending.reduce((total, cell) => total + buildCostAt(virtual, kind, cell.x, cell.y).gold, 0);
       if (virtual.factions.find(faction => faction.id === playerFaction(state))!.gold < totalGold) return rejectAll(`Need ${totalGold} gold for this complete bridge.`);
@@ -134,28 +135,29 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
       // A stroke may be drawn toward a road instead of away from one. Always
       // reserve its connected end first, then grow outward in either direction.
       const next = kind === 'road' ? pending.findIndex(tile => hasGateWall(virtual, tile.x, tile.y) || hasNeighboringRoad(virtual, tile.x, tile.y))
-        : kind === 'irrigation' ? pending.findIndex(tile => irrigationConnects(virtual, tile.x, tile.y)) : 0;
+        : irrigationConnections ? pending.findIndex(tile => irrigationConnections(tile.x, tile.y, reservedDitches)) : 0;
       if (next < 0) {
-        for (const cell of pending) cell.message = validateBuildAt(virtual, kind, cell.x, cell.y).message;
+        for (const cell of pending) cell.message = validateBuildAt(virtual, kind, cell.x, cell.y, playerFaction(state), reservedDitches).message;
         break;
       }
       const [cell] = pending.splice(next, 1);
-      const result = validateBuildAt(virtual, kind, cell.x, cell.y, playerFaction(state), reservedTiles);
+      const result = validateBuildAt(virtual, kind, cell.x, cell.y, playerFaction(state), reservedDitches ?? reservedTiles);
       cell.ok = result.ok; cell.message = result.message;
       if (!result.ok) continue;
       const tile = { x: cell.x, y: cell.y };
       const unitCost = buildCostAt(virtual, kind, cell.x, cell.y);
       if (reservedTiles && farmAt(virtual, tile, playerFaction(state))) {
         const relocation = (kind === 'road' ? planRoadFarmRelocation : planWallFarmRelocation)(virtual, tile, playerFaction(state), reservedTiles);
-        if (!relocation) {
-          cell.ok = false; cell.message = 'The farm no longer has a valid replacement plot.'; continue;
-        }
-        previewFarmRelocation(virtual, relocation);
+        // No replacement plot: the order clears the farm for a half refund.
+        if (relocation) previewFarmRelocation(virtual, relocation);
       }
-      const building: Building = { id: -virtual.buildings.length - 1, kind, faction: playerFaction(state), ...tile, hp: 100, maxHp: 100, capacity: 0 };
-      // Reservations must not extend sight as though they were finished buildings.
-      queueConstruction(building, state.time, 0, virtual);
-      entityStore(virtual).buildings.add(building);
+      reservedDitches?.add(cell.y * virtual.world.width + cell.x);
+      if (!lightweightIrrigation) {
+        const building: Building = { id: -virtual.buildings.length - 1, kind, faction: playerFaction(state), ...tile, hp: 100, maxHp: 100, capacity: 0 };
+        // Reservations must not extend sight as though they were finished buildings.
+        queueConstruction(building, state.time, 0, virtual);
+        entityStore(virtual).buildings.addPreview(building);
+      }
       for (const resource of ['production', 'food', 'gold'] as const) {
         virtual.factions.find(faction => faction.id === playerFaction(state))![resource] -= unitCost[resource];
         costs[resource] += unitCost[resource];
@@ -167,16 +169,23 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
     const plan = { ok: tiles.length > 0 || rejected.length === 0, message: rejected[0]?.message ?? '',
       tiles, cells, skipped: rejected.length, cost: costs.gold, costs };
     return plan;
+    } finally { if (lightweightIrrigation) virtual.factions = factions; }
   });
 }
 
 export function buildStroke(state: GameState, selection: BuildSelection, points: Point[]) {
-  return withConstructionBatch(state, () => buildStrokeInBatch(state, selection, points));
+  // The transaction and final reconciliation both own their indexed writes.
+  // Explicit commands also force one maintenance pass per key, including when
+  // paused after the ordinary simulation clock was already sampled.
+  return withSimulationReads(state, () => withImmediateMaintenance(state,
+    () => withConstructionBatch(state, () => buildStrokeInBatch(state, selection, points), true)));
 }
 
 function buildStrokeInBatch(state: GameState, selection: BuildSelection, points: Point[]) {
   const kind = selection === 'clearTrees' ? selection : buildingKindForSelection(selection);
-  const plan = planConstruction(state, selection, points);
+  let plan = planConstruction(state, selection, points);
+  if (['road', 'wall', 'palisade', 'bridge', 'irrigation'].includes(selection)
+    && commitContexts.get(plan) !== constructionPreviewContext(state)) plan = planConstructionUncached(state, selection, points);
   if (!plan.ok) return { ok: false, message: plan.message, placed: 0, skipped: plan.skipped };
   let placed = 0, skipped = plan.skipped, message = plan.message;
   const reservedTiles = kind === 'wall' || kind === 'palisade' || kind === 'road' ? new Set(plan.cells.map(cell => cell.y * state.world.width + cell.x)) : undefined;

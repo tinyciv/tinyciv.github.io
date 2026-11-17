@@ -1,15 +1,16 @@
 import { createNoise2D } from 'simplex-noise';
-import { narrowHillPassage, ridgeEdgeAllowed, ridgeGroundWalkable, ridgeStairAccess } from '../game/ridges';
+import { reliefBuildable, reliefEdgeAllowed, reliefGroundWalkable } from '../game/relief';
 import { resourceBlocksGround } from '../game/resource-terrain';
 import { WATER, type World } from '../game/types';
 import { environmentRandom, settlementCoreMask, terrainDistance } from './environment-fields';
 import { stonePlainsSites } from './stone-plains';
+import { assignOreDeposits, resourceHabitats, saltPanLimit } from './ore-native';
 
 const CARDINAL = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
-export const RESOURCE_GROUP_SIZES = { copper: [2, 18], iron: [2, 18], stone: [3, 24], olives: [4, 32], salt: [8, 50] } as const;
+export const RESOURCE_GROUP_SIZES = { copper: [4, 15], iron: [4, 15], gold: [4, 15], stone: [3, 10], olives: [4, 32], salt: [2, saltPanLimit()] } as const;
 /** Minimum distance between the closest occupied tiles of distinct deposits. */
 export const RESOURCE_GROUP_SEPARATION = 10;
-type ClusterResource = keyof typeof RESOURCE_GROUP_SIZES;
+type ClusterResource = 'stone' | 'olives' | 'salt';
 
 /** Rotated seams, rounded outcrops, bent veins and irregular groves. Every
  * deposit has its own clear space, including deposits of different resources.
@@ -30,55 +31,61 @@ export function assignRegionalResources(world: World): void {
   const coast = terrainDistance(world, tile => tile.terrain === 'coast' || tile.terrain === 'ocean', 8);
   const land = terrainDistance(world, tile => !WATER.has(tile.terrain), 5), cores = settlementCoreMask(world);
   const stoneSites = stonePlainsSites(world);
+  const habitats = resourceHabitats(world);
   // Starting layouts need clear ground beyond the settlement's own footprint.
   for (const site of [...world.spawns, ...(world.secondarySpawns ?? [])])
-    for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) {
+    for (let dy = -9; dy <= 9; dy++) for (let dx = -9; dx <= 9; dx++) {
       const x = Math.floor(site.x) + dx, y = Math.floor(site.y) + dy;
       if (x >= 0 && y >= 0 && x < width && y < height) cores[y * width + x] = 1;
     }
-  for (const tile of tiles) { delete tile.resource; delete tile.resourceGroup; delete tile.resourceDeveloped; }
+  for (const tile of tiles) { delete tile.resource; delete tile.resourceGroup; delete tile.resourceDeveloped; delete tile.oreAnchor; delete tile.oreFamily; delete tile.oreVariant; delete tile.oreWidth; delete tile.oreHeight; }
+  let nextGroup = assignOreDeposits(world, cores);
   const at = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height ? y * width + x : -1;
   const neighbors = (cell: number) => CARDINAL.map(([dx, dy]) => at(cell % width + dx, Math.floor(cell / width) + dy)).filter(next => next >= 0);
   const usable = new Uint8Array(tiles.length);
   let dryLand = 0;
   for (let cell = 0; cell < tiles.length; cell++) {
     const tile = tiles[cell], x = cell % width, y = Math.floor(cell / width);
-    usable[cell] = Number(!cores[cell] && !WATER.has(tile.terrain) && !tile.creek && !ridgeStairAccess(world, x, y) && !narrowHillPassage(world, x, y)
-      && !tile.mountainPass && !tile.marsh && tile.farm === undefined && ridgeGroundWalkable(world, x, y));
+    if (!WATER.has(tile.terrain) && !(habitats[cell] & 4)) continue;
+    usable[cell] = Number(!cores[cell] && !WATER.has(tile.terrain) && !tile.creek && !tile.resource && reliefBuildable(tile)
+      && !tile.marsh && tile.farm === undefined && reliefGroundWalkable(world, x, y));
     if (usable[cell]) dryLand++;
-    if (cores[cell] || tile.stair || tile.mountainPass) continue;
+    if (cores[cell] || tile.resource || !reliefBuildable(tile)) continue;
     const patch = .5 + geology(x * .047, y * .047) * .34 + seams(x * .16 + 29, y * .16 - 37) * .16;
     if (patch < .67) continue;
     if (WATER.has(tile.terrain)) {
-      if (tile.terrain !== 'ocean' && land[cell] <= 3 && (tile.temperature ?? .5) > .2) tile.resource = 'fish';
-    } else if (fresh[cell] <= 3 && !tile.ridge && (tile.fertility ?? .5) > .5) tile.resource = 'clay';
+      if ((habitats[cell] & 2) && land[cell] <= 3 && (tile.temperature ?? .5) > .2) tile.resource = 'fish';
+    } else if (fresh[cell] <= 3 && !tile.relief && (tile.fertility ?? .5) > .5) tile.resource = 'clay';
   }
-  let nextGroup = 1;
   const excluded = new Uint8Array(tiles.length);
   const separationOffsets: [number, number][] = [];
   for (let dy = -RESOURCE_GROUP_SEPARATION; dy <= RESOURCE_GROUP_SEPARATION; dy++)
     for (let dx = -RESOURCE_GROUP_SEPARATION; dx <= RESOURCE_GROUP_SEPARATION; dx++)
       if (dx * dx + dy * dy < RESOURCE_GROUP_SEPARATION ** 2) separationOffsets.push([dx, dy]);
+  // Native ore placement reserves its complete footprint before other deposits.
+  for (let cell = 0; cell < tiles.length; cell++) if (tiles[cell].oreAnchor !== undefined) {
+    const x = cell % width, y = Math.floor(cell / width);
+    for (const [dx, dy] of separationOffsets) { const near = at(x + dx, y + dy); if (near >= 0) excluded[near] = 1; }
+  }
   const habitat = (resource: ClusterResource, cell: number): boolean => {
     const tile = tiles[cell];
     if (!usable[cell] || excluded[cell] || tile.resource) return false;
-    if (resource === 'salt') return !tile.ridge && coast[cell] <= 6 && tile.moisture < .58;
+    if (resource === 'salt') return !!(habitats[cell] & 1) && !tile.relief && coast[cell] <= 6 && tile.moisture < .58;
     if (resource === 'olives') return (tile.terrain === 'grassland' || tile.terrain === 'plains')
       && (tile.temperature ?? .6) >= .35 && (tile.temperature ?? .6) <= .85 && tile.moisture >= .22 && tile.moisture <= .76;
     // Keep the continuous sandy shore walkable; coastal salt pans are flat,
     // but ore and stone are solid obstacles.
     if (tile.beach) return false;
     if (resource === 'stone') return !!stoneSites[cell];
-    if (resource === 'iron') return !!tile.ridge || tile.elevation > .51;
-    return tile.terrain !== 'tundra' && (tile.elevation > .34 || !!tile.ridge);
+    return false;
   };
   const priority = (resource: ClusterResource, cell: number): number => {
     const tile = tiles[cell], x = cell % width, y = Math.floor(cell / width);
-    const province = geology(x * .033 + (resource === 'iron' ? 170 : 0), y * .033 - 83);
+    const province = geology(x * .033, y * .033 - 83);
     if (resource === 'salt') return coast[cell] * .05 + tile.moisture;
     if (resource === 'olives') return Math.abs(tile.moisture - .48) - province * .18;
     // Prefer exposed uplands, but allow lower open ground when mountain
-    // shelves occupy every high site (notably the Mediterranean map).
+    // shelves occupy every high site.
     const lowStone = resource === 'stone' && tile.elevation <= .51 ? 2 : 0;
     return lowStone - tile.elevation * .3 - province * .25;
   };
@@ -123,11 +130,11 @@ export function assignRegionalResources(world: World): void {
     const removed = new Set(cells), approaches = new Set<number>();
     const ground = (cell: number) => {
       const tile = tiles[cell];
-      return !removed.has(cell) && !resourceBlocksGround(tile) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
+      return !removed.has(cell) && !resourceBlocksGround(tile, false, cell, width) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
         && (!WATER.has(tile.terrain) || tile.terrain === 'river' && tile.overlay === 'ford')
-        && ridgeGroundWalkable(world, cell % width, Math.floor(cell / width));
+        && reliefGroundWalkable(world, cell % width, Math.floor(cell / width));
     };
-    const linked = (a: number, b: number) => ridgeEdgeAllowed(world,
+    const linked = (a: number, b: number) => reliefEdgeAllowed(world,
       { x: a % width, y: Math.floor(a / width) }, { x: b % width, y: Math.floor(b / width) });
     // Woodland guarantees an exposed, usable cell beside each remaining tree.
     // A rocky deposit can preserve overall connectivity while consuming that
@@ -154,8 +161,8 @@ export function assignRegionalResources(world: World): void {
     }
     return approaches.size === 0;
   };
-  const perArea: Record<ClusterResource, number> = { copper: 1100, iron: 1400, stone: 1500, olives: 1000, salt: 2200 };
-  const plans = (['salt', 'copper', 'iron', 'stone', 'olives'] as const).map(resource => {
+  const perArea: Record<ClusterResource, number> = { stone: 1500, olives: 1000, salt: 550 };
+  const plans = (['salt', 'stone', 'olives'] as const).map(resource => {
     const candidates = tiles.flatMap((_, cell) => habitat(resource, cell) ? [{ cell, score: priority(resource, cell) + sample(resource, cell) * .6 }] : []);
     candidates.sort((a, b) => a.score - b.score || a.cell - b.cell);
     return { resource, candidates, cursor: 0, count: 0, desired: Math.max(1, Math.round(dryLand / perArea[resource])) };
@@ -172,7 +179,7 @@ export function assignRegionalResources(world: World): void {
       // patch converging on the same middle-sized circle.
       const target = minimum + Math.floor(sample(resource, cell, 1) ** 1.45 * (maximum - minimum + 1));
       const cells = grow(resource, cell, target);
-      if (cells.length < minimum || (resource === 'copper' || resource === 'iron' || resource === 'stone') && !keepsApproachesConnected(cells)) continue;
+      if (cells.length < minimum || resource === 'stone' && !keepsApproachesConnected(cells)) continue;
       const group = nextGroup++; plan.count++;
       for (const next of cells) {
         const tile = tiles[next]; tile.resource = resource; tile.resourceGroup = group;

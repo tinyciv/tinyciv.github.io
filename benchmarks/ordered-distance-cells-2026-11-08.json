@@ -1,0 +1,35 @@
+{
+  "methodology": "Actual nearest player-palace travel field; 256 nearest candidates consumed. Full-sort oracle versus lazy exact heap ordering, six alternating rounds after one warmup. A fresh immutable field is used each round; copying the field and calculating navigation are outside timing. Complete ordering parity is also checked on the actual field. This isolates ordering, not whole construction or FPS.",
+  "statePath": "/tmp/btv-smooth-2026-11-08/state.json",
+  "cpu": "Apple M3 Pro",
+  "cells": 118272,
+  "candidates": 256,
+  "palace": 1,
+  "parity": true,
+  "results": {
+    "sorted": {
+      "meanMs": 12.201090333333346,
+      "maxMs": 12.552958999999987,
+      "samplesMs": [
+        11.911665999999968,
+        12.367375000000038,
+        12.345124999999996,
+        12.030958000000055,
+        12.552958999999987,
+        11.998459000000025
+      ]
+    },
+    "lazy": {
+      "meanMs": 1.3499028333333076,
+      "maxMs": 1.7725829999999974,
+      "samplesMs": [
+        1.685041999999953,
+        1.7725829999999974,
+        1.7721669999999676,
+        0.9713749999999663,
+        0.9232909999999492,
+        0.9749590000000126
+      ]
+    }
+  }
+}

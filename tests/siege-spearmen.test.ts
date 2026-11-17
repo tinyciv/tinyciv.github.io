@@ -45,7 +45,7 @@ describe('ballista siege engine', () => {
     expect(buildingWithinBorders(state, 'house', 18, 12)).toBe(false);
     expect(buildAt(state, 'ballista', 18, 12)).toMatchObject({ ok: true });
     const engine = state.buildings.find(value => value.kind === 'ballista')!;
-    expect(engine).toMatchObject({ hp: 200, construction: { duration: 30, paidGold: 300, waitingForBuilder: false } });
+    expect(engine).toMatchObject({ hp: 1, construction: { duration: 30, paidGold: 300, waitingForBuilder: false } });
     expect(state.factions[0].gold).toBe(700);
     for (let step = 0; step < 299; step++) updateGame(state, .1, idle);
     expect(engine.construction).toBeDefined();
@@ -167,9 +167,9 @@ describe('spearman retinue', () => {
     });
     attacker.forcedAttack = { target: 21 }; entityStore(state).units.add(attacker, ...targets);
     updateGame(state, .1, idle);
-    expect(targets[0].hp).toBeCloseTo(100 - unitDamage(attacker, 0));
-    expect(targets[1].hp).toBeCloseTo(100 - incomingUnitDamage(targets[1], unitDamage(attacker, 0) * SPEAR_PIERCE_DAMAGE_MULTIPLIER));
-    expect(targets[2].hp).toBeCloseTo(100 - unitDamage(attacker, 0) * SPEAR_PIERCE_DAMAGE_MULTIPLIER);
+    expect(targets[0].hp).toBeCloseTo(100 - unitDamage(attacker, 0) * 1.02);
+    expect(targets[1].hp).toBeCloseTo(100 - incomingUnitDamage(targets[1], unitDamage(attacker, 0) * 1.02 * SPEAR_PIERCE_DAMAGE_MULTIPLIER));
+    expect(targets[2].hp).toBeCloseTo(100 - unitDamage(attacker, 0) * 1.02 * SPEAR_PIERCE_DAMAGE_MULTIPLIER);
     expect(targets.slice(3).map(value => value.hp)).toEqual([100, 100, 100]);
     expect(targets[1].lastDamagedAt).toBeCloseTo(.1);
     expect(attacker.cooldown).toBeCloseTo(.95);
@@ -192,9 +192,9 @@ describe('spearman retinue', () => {
     const primary = unit(21, 16.5, 12.5, 1), farther = unit(22, 19, 12.5, 1), wider = unit(23, 17.5, 13.05, 1);
     entityStore(state).units.add(attacker, primary, farther, wider); attacker.forcedAttack = { target: primary.id };
     updateGame(state, .1, idle);
-    expect(primary.hp).toBeCloseTo(100 - unitDamage(attacker, 0));
+    expect(primary.hp).toBeCloseTo(100 - unitDamage(attacker, 0) * 1.02);
     for (const secondary of [farther, wider])
-      expect(secondary.hp).toBeCloseTo(100 - unitDamage(attacker, 0) * .6);
+      expect(secondary.hp).toBeCloseTo(100 - unitDamage(attacker, 0) * 1.02 * .6);
     expect(attacker.range).toBe(1.4);
   });
 

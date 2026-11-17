@@ -33,8 +33,9 @@ describe('local wall ownership', () => {
         expect(wall.faction).toBe(0);
     });
 
-    it('leaves unsupported walls neutral; roads, farms, other walls and ruins do not preserve them', () => {
+    it('leaves defeated factions\' unsupported walls neutral; roads, farms, other walls and ruins do not preserve them', () => {
         const state = fixture(), wall = add(state, 'wall', 1);
+        state.factions[1].defeated = true;
         for (const kind of ['road', 'bridge', 'camp', 'shack', 'cottage', 'wall', 'palisade', 'ruin'] as const) add(state, kind, 1, 17, 17);
         add(state, 'house', 1, 18, 17).hp = 0;
         expect(updateWallOwnership(state)).toBe(true);
@@ -77,24 +78,28 @@ describe('local wall ownership', () => {
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(1);
         house.hp = 0;
+        state.factions[1].defeated = true;
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(-1);
     });
 
     it('uses an inclusive eight-tile radius and checks each wall locally', () => {
-        const state = fixture(), near = add(state, 'wall', 0), far = add(state, 'wall', 0, 15, 15);
+        const state = fixture(), near = add(state, 'wall', -1), far = add(state, 'wall', -1, 15, 15);
         add(state, 'house', 0, 16 + WALL_CLAIM_RADIUS, 16);
         expect(updateWallOwnership(state)).toBe(true);
         expect(near.faction).toBe(0);
         expect(far.faction).toBe(-1);
     });
 
-    it('preserves commissioned unfinished walls until they are complete', () => {
+    it('preserves outlying commissioned walls through completion until their faction is defeated', () => {
         const state = fixture(), wall = add(state, 'wall', 0);
         wall.construction = { startedAt: 0, duration: 4, waitingForBuilder: true };
         expect(updateWallOwnership(state)).toBe(false);
         expect(wall.faction).toBe(0);
         delete wall.construction;
+        expect(updateWallOwnership(state)).toBe(false);
+        expect(wall.faction).toBe(0);
+        state.factions[0].defeated = true;
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(-1);
     });
@@ -140,13 +145,16 @@ describe('local wall ownership', () => {
         expect(updateWallOwnership(state)).toBe(false);
         expect(state.world.revision).toBe(revision);
         house.x = 35;
+        state.factions[0].defeated = true;
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(-1);
         expect(state.world.revision).toBe(revision! + 1);
         house.x = 18;
+        state.factions[0].defeated = false;
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(0);
         entityStore(state).buildings.replace(state.buildings.filter((_, index) => index < (state.buildings.indexOf(house)) || index >= (state.buildings.indexOf(house)) + (1)));
+        state.factions[0].defeated = true;
         expect(updateWallOwnership(state)).toBe(true);
         expect(wall.faction).toBe(-1);
     });
@@ -167,7 +175,7 @@ describe('local wall ownership', () => {
         );
         const previousActivity = { ...state.units[2].forcedAttack };
         expect(updateWallOwnership(state)).toBe(true);
-        expect(road.construction).toEqual({ startedAt: 4, duration: 2, waitingForBuilder: true, cleared: false, pausedAt: 5 });
+        expect(road.construction).toEqual({ startedAt: 4, duration: 2, healthProgress: .5, waitingForBuilder: true, cleared: false, pausedAt: 5 });
         expect(road.faction).toBe(0);
         for (const worker of state.units.slice(0, 2)) {
             expect(worker.buildSite).toBeUndefined(); expect(worker.repairSite).toBeUndefined();

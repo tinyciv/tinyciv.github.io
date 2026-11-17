@@ -1,0 +1,1294 @@
+{
+  "date": "2026-11-09",
+  "objective": "Make road and irrigation dragging responsive in the captured 843-population world.",
+  "environment": {
+    "cpu": "Apple M3 Pro",
+    "browser": "Chrome 156.0.8078.81 headless",
+    "initialPopulation": 843,
+    "configuredSpeed": 3,
+    "snapshot": "/tmp/btv-pop800-2026-11-08/state.json",
+    "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba"
+  },
+  "method": [
+    "Serialized independent browser replays with the same captured save, viewport, device scale, and tool-specific pointer endpoints. Real mouse down/up, renderer, HUD, simulation, autosave and construction pumps remain active.",
+    "Matched baseline and final are immutable source copies. Concurrent unrelated archery/water-traffic/fishing/sailing/river-trade changes are held identical in both; baseline reverts only the construction changes listed below.",
+    "Main comparisons request 30 seconds of play with pointer changes every 125 ms; runs extend until queued purchases and reconciliation finish. Stress case requests 15 seconds with an endpoint change every frame.",
+    "Five paused render warmup frames. First active frame excluded from work percentiles but included in FPS and gameplay advancement. FPS is JavaScript RAF throughput, not compositor presentation timing.",
+    "Release metric includes the final pointer event and pointerup. After coalescing, commit.previewCells records the last drawn preview before release flush; actual purchase success is measured independently.",
+    "Pointer work moved to the shared renderer callback. Total frame work and draw work capture that cost; the lower pointer-handler number alone is not a complete speedup measure.",
+    "One run per condition; runtime variability and dynamic simulation evolution limit precise percentage attribution. Baseline and final can advance different amounts of game time."
+  ],
+  "source": {
+    "changedFiles": [
+      "src/game/construction-display.ts",
+      "src/game/construction-gesture.ts",
+      "src/game/construction-presentation.ts",
+      "src/game/construction-preview-cache.ts",
+      "src/game/construction-preview-region.ts",
+      "src/game/construction-route.ts",
+      "src/game/construction.ts",
+      "src/game/irrigation.ts",
+      "src/game/renderer.ts",
+      "src/game/road-purchase.ts",
+      "src/game/simulation.ts",
+      "src/main.ts",
+      "src/style.css"
+    ],
+    "snapshots": {
+      "baseline": {
+        "directory": "/tmp/btv-drag-implementation-2026-11-09/baseline",
+        "manifest": "/tmp/btv-drag-implementation-2026-11-09/baseline/source-manifest.json",
+        "manifestSha256": "e1bb0bca422c5bf2217563cab59906428f4e485e5bcfdbafc75ac770ba37a844"
+      },
+      "final": {
+        "directory": "/tmp/btv-drag-implementation-2026-11-09/final",
+        "manifest": "/tmp/btv-drag-implementation-2026-11-09/final/source-manifest.json",
+        "manifestSha256": "a59500b10f0543ab26a40cd208320520914028d2dcad49bdcae5df907db42b62"
+      }
+    }
+  },
+  "scenarios": {
+    "baseline-irrigation": {
+      "label": "baseline-irrigation",
+      "url": "http://127.0.0.1:5223/",
+      "viewport": {
+        "width": 1213,
+        "height": 903,
+        "dpr": 1.5,
+        "camera": {
+          "x": 141.87333877450018,
+          "y": 151.48684569297643
+        },
+        "zoom": 1.35,
+        "reveal": false
+      },
+      "cadence": 0,
+      "pointerInterval": 125,
+      "elapsed": 30025.199999809265,
+      "activity": {
+        "livingUnits": 1138,
+        "outsideUnits": 698,
+        "workers": 592,
+        "outsideWorkers": 181,
+        "collectors": 270,
+        "workingBuilders": 8,
+        "movingUnits": 170,
+        "displacedUnits": 594,
+        "engagedUnits": 6,
+        "unitHpLost": -6299.657003333334,
+        "meanDisplacement": 5.641170157935144,
+        "returnOrders": 0,
+        "foodDelivered": 2134.613333333342,
+        "activeConstruction": 8
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 3,
+          "unsupported": 0,
+          "instances": 3,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 4773,
+          "travelMaps": 161,
+          "nearestMaps": 52,
+          "unsupported": 0,
+          "instances": 20,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 4773,
+          "travelMaps": 161,
+          "nearestMaps": 49,
+          "unsupported": 0,
+          "instances": 17,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": {
+        "kind": "irrigation",
+        "pointerMoves": 207,
+        "previewFrames": 675,
+        "validPreviewFrames": 675,
+        "maximumRouteCells": 10,
+        "commit": {
+          "atMs": 29840,
+          "durationMs": 66.40000009536743,
+          "previewCells": 10,
+          "pending": false,
+          "completed": true,
+          "placedCells": 2,
+          "completedJobs": 0,
+          "completedAtMs": 29896.5,
+          "completionLatencyMs": 122.90000009536743
+        }
+      },
+      "gameSeconds": 60.879200000173114,
+      "units": 1138,
+      "buildings": 5423,
+      "fields": 2451,
+      "speed": 3,
+      "renderStats": {
+        "rasterized": 2,
+        "rasterCacheHits": 564,
+        "textureUploads": 2,
+        "atlasPages": 8,
+        "sprites": 572,
+        "directImages": 572,
+        "sceneMutations": 38
+      },
+      "gameOver": false,
+      "dragSetup": {
+        "faction": 0,
+        "start": {
+          "x": 139,
+          "y": 150
+        },
+        "endpoints": [
+          {
+            "x": 138,
+            "y": 151
+          },
+          {
+            "x": 137,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 152
+          },
+          {
+            "x": 135,
+            "y": 152
+          },
+          {
+            "x": 134,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 153
+          }
+        ],
+        "routeCells": 10,
+        "newCells": 2,
+        "cost": 70,
+        "clientStart": {
+          "x": 503.9717649415921,
+          "y": 408.8682660634182
+        },
+        "candidates": 3,
+        "routeAttempts": 1,
+        "setup": "Validated while paused; real mouse-down after render warmup; preflight route and quote cache entries cleared."
+      },
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba",
+      "initial": {
+        "units": 1070,
+        "buildings": 5387,
+        "fields": 2415
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 25.299999713897705,
+        "construction": 0,
+        "sim": 184.60000038146973,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.6000003814697266,
+        "draw": 22.200000286102295,
+        "total": 232.10000038146973,
+        "other": 0
+      },
+      "fps": 22.614337290153383,
+      "over33": 363,
+      "over50": 220,
+      "metrics": {
+        "total": {
+          "mean": 43.08849557100144,
+          "p50": 35.09999990463257,
+          "p95": 88.40000009536743,
+          "p99": 104,
+          "max": 129.5
+        },
+        "sim": {
+          "mean": 26.63613568857356,
+          "p50": 24.700000286102295,
+          "p95": 45.90000009536743,
+          "p99": 58.19999980926514,
+          "max": 90.09999990463257
+        },
+        "draw": {
+          "mean": 5.424041300748302,
+          "p50": 4.400000095367432,
+          "p95": 12.400000095367432,
+          "p99": 18.200000286102295,
+          "max": 42.80000019073486
+        },
+        "pointer": {
+          "mean": 10.106932150579132,
+          "p50": 0,
+          "p95": 38.19999980926514,
+          "p99": 44.39999961853027,
+          "max": 65.09999990463257
+        },
+        "commit": {
+          "mean": 0.09793510338549768,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 66.40000009536743
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.8234513277149482,
+          "p50": 0,
+          "p95": 6.400000095367432,
+          "p99": 12.900000095367432,
+          "max": 22.299999713897705
+        },
+        "interval": {
+          "mean": 44.22153392330383,
+          "p50": 33.399999999999636,
+          "p95": 83.40000000000146,
+          "p99": 100.10000000000218,
+          "max": 216.70000000000073
+        }
+      },
+      "pointerEventMs": {
+        "count": 206,
+        "mean": 33.26456309753714,
+        "p95": 43.09999990463257,
+        "max": 65.09999990463257
+      },
+      "rawArtifact": "/tmp/btv-drag-implementation-2026-11-09/baseline-irrigation.json"
+    },
+    "final-irrigation": {
+      "label": "final-irrigation",
+      "url": "http://127.0.0.1:5222/",
+      "viewport": {
+        "width": 1213,
+        "height": 903,
+        "dpr": 1.5,
+        "camera": {
+          "x": 141.87333877450018,
+          "y": 151.48684569297643
+        },
+        "zoom": 1.35,
+        "reveal": false
+      },
+      "cadence": 0,
+      "pointerInterval": 125,
+      "elapsed": 30677.10000038147,
+      "activity": {
+        "livingUnits": 1150,
+        "outsideUnits": 729,
+        "workers": 595,
+        "outsideWorkers": 186,
+        "collectors": 275,
+        "workingBuilders": 1,
+        "movingUnits": 198,
+        "displacedUnits": 653,
+        "engagedUnits": 11,
+        "unitHpLost": -7292.763746666358,
+        "meanDisplacement": 7.172884128437344,
+        "returnOrders": 0,
+        "foodDelivered": 2948.640000000014,
+        "activeConstruction": 1
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 3,
+          "unsupported": 0,
+          "instances": 3,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 7117,
+          "travelMaps": 229,
+          "nearestMaps": 70,
+          "unsupported": 0,
+          "instances": 20,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 7117,
+          "travelMaps": 229,
+          "nearestMaps": 67,
+          "unsupported": 0,
+          "instances": 17,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": {
+        "kind": "irrigation",
+        "pointerMoves": 211,
+        "previewFrames": 1073,
+        "validPreviewFrames": 1073,
+        "maximumRouteCells": 10,
+        "commit": {
+          "atMs": 29773,
+          "durationMs": 13.399999618530273,
+          "previewCells": 3,
+          "pending": false,
+          "completed": true,
+          "placedCells": 2,
+          "completedJobs": 1,
+          "completedAtMs": 30673.800000190735,
+          "completionLatencyMs": 914.1999998092651,
+          "result": {
+            "done": true,
+            "ok": true,
+            "placed": 2,
+            "skipped": 0,
+            "message": ""
+          }
+        }
+      },
+      "gameSeconds": 84.06250000020918,
+      "units": 1150,
+      "buildings": 5438,
+      "fields": 2463,
+      "speed": 3,
+      "renderStats": {
+        "rasterized": 2,
+        "rasterCacheHits": 567,
+        "textureUploads": 2,
+        "atlasPages": 8,
+        "sprites": 575,
+        "directImages": 575,
+        "sceneMutations": 13
+      },
+      "gameOver": false,
+      "dragSetup": {
+        "faction": 0,
+        "start": {
+          "x": 139,
+          "y": 150
+        },
+        "endpoints": [
+          {
+            "x": 138,
+            "y": 151
+          },
+          {
+            "x": 137,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 152
+          },
+          {
+            "x": 135,
+            "y": 152
+          },
+          {
+            "x": 134,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 153
+          }
+        ],
+        "routeCells": 10,
+        "newCells": 2,
+        "cost": 70,
+        "clientStart": {
+          "x": 503.9717649415921,
+          "y": 408.8682660634182
+        },
+        "candidates": 3,
+        "routeAttempts": 1,
+        "setup": "Validated while paused; real mouse-down after render warmup; preflight route and quote cache entries cleared."
+      },
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba",
+      "initial": {
+        "units": 1070,
+        "buildings": 5387,
+        "fields": 2415
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 0.19999980926513672,
+        "construction": 0,
+        "sim": 195.40000009536743,
+        "prepareFog": 0.10000038146972656,
+        "drawMinimap": 0.6000003814697266,
+        "draw": 20.800000190734863,
+        "total": 216.5,
+        "other": 0.09999990463256836
+      },
+      "fps": 35.82476831207428,
+      "over33": 222,
+      "over50": 57,
+      "metrics": {
+        "total": {
+          "mean": 27.147996356144194,
+          "p50": 24.90000009536743,
+          "p95": 50.30000019073486,
+          "p99": 64.30000019073486,
+          "max": 96.19999980926514
+        },
+        "sim": {
+          "mean": 22.969581057248003,
+          "p50": 21,
+          "p95": 43.09999990463257,
+          "p99": 56.700000286102295,
+          "max": 80.90000009536743
+        },
+        "draw": {
+          "mean": 3.7425318776149785,
+          "p50": 3.0999999046325684,
+          "p95": 6.800000190734863,
+          "p99": 11.199999809265137,
+          "max": 19.799999713897705
+        },
+        "pointer": {
+          "mean": 0.023406192470335135,
+          "p50": 0,
+          "p95": 0.19999980926513672,
+          "p99": 0.2999997138977051,
+          "max": 0.40000009536743164
+        },
+        "commit": {
+          "mean": 0.012204006938552161,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 13.399999618530273
+        },
+        "construction": {
+          "mean": 0.006739526498513144,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 2.5999999046325684
+        },
+        "other": {
+          "mean": 0.3935336953738131,
+          "p50": 0,
+          "p95": 4.099999904632568,
+          "p99": 5.300000190734863,
+          "max": 12.900000095367432
+        },
+        "interval": {
+          "mean": 27.913205828779596,
+          "p50": 33.299999999995634,
+          "p95": 50,
+          "p99": 66.70000000000073,
+          "max": 216.5
+        }
+      },
+      "pointerEventMs": {
+        "count": 210,
+        "mean": 0.12238094920203799,
+        "p95": 0.2999997138977051,
+        "max": 0.40000009536743164
+      },
+      "rawArtifact": "/tmp/btv-drag-implementation-2026-11-09/final-irrigation.json"
+    },
+    "baseline-road": {
+      "label": "baseline-road",
+      "url": "http://127.0.0.1:5223/",
+      "viewport": {
+        "width": 1213,
+        "height": 903,
+        "dpr": 1.5,
+        "camera": {
+          "x": 141.87333877450018,
+          "y": 151.48684569297643
+        },
+        "zoom": 1.35,
+        "reveal": false
+      },
+      "cadence": 0,
+      "pointerInterval": 125,
+      "elapsed": 31471.099999904633,
+      "activity": {
+        "livingUnits": 1148,
+        "outsideUnits": 718,
+        "workers": 589,
+        "outsideWorkers": 178,
+        "collectors": 271,
+        "workingBuilders": 4,
+        "movingUnits": 190,
+        "displacedUnits": 643,
+        "engagedUnits": 12,
+        "unitHpLost": -7187.0582733334595,
+        "meanDisplacement": 6.926491326957629,
+        "returnOrders": 0,
+        "foodDelivered": 3022.4533333333675,
+        "activeConstruction": 6
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 3,
+          "unsupported": 0,
+          "instances": 3,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 7061,
+          "travelMaps": 238,
+          "nearestMaps": 71,
+          "unsupported": 0,
+          "instances": 20,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 7061,
+          "travelMaps": 238,
+          "nearestMaps": 68,
+          "unsupported": 0,
+          "instances": 17,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": {
+        "kind": "road",
+        "pointerMoves": 211,
+        "previewFrames": 1027,
+        "validPreviewFrames": 1027,
+        "maximumRouteCells": 6,
+        "commit": {
+          "atMs": 29775.099999904633,
+          "durationMs": 14.899999618530273,
+          "previewCells": 6,
+          "pending": false,
+          "completed": true,
+          "placedCells": 6,
+          "completedJobs": 1,
+          "completedAtMs": 31467.800000190735,
+          "completionLatencyMs": 1707.5999999046326,
+          "result": {
+            "done": true,
+            "ok": true,
+            "placed": 6,
+            "skipped": 0,
+            "message": ""
+          }
+        }
+      },
+      "gameSeconds": 85.56190000022616,
+      "units": 1148,
+      "buildings": 5452,
+      "fields": 2461,
+      "speed": 3,
+      "renderStats": {
+        "rasterized": 3,
+        "rasterCacheHits": 585,
+        "textureUploads": 2,
+        "atlasPages": 8,
+        "sprites": 594,
+        "directImages": 594,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "dragSetup": {
+        "faction": 0,
+        "start": {
+          "x": 148,
+          "y": 151
+        },
+        "endpoints": [
+          {
+            "x": 148,
+            "y": 149
+          },
+          {
+            "x": 148,
+            "y": 148
+          },
+          {
+            "x": 148,
+            "y": 147
+          },
+          {
+            "x": 148,
+            "y": 146
+          }
+        ],
+        "routeCells": 6,
+        "newCells": 6,
+        "cost": 30,
+        "clientStart": {
+          "x": 892.7717649415921,
+          "y": 452.0682660634182
+        },
+        "candidates": 15,
+        "routeAttempts": 124,
+        "setup": "Validated while paused; real mouse-down after render warmup; preflight route and quote cache entries cleared."
+      },
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba",
+      "initial": {
+        "units": 1070,
+        "buildings": 5387,
+        "fields": 2415
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 3.799999713897705,
+        "construction": 0,
+        "sim": 183.09999990463257,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.9000000953674316,
+        "draw": 22.40000009536743,
+        "total": 209.39999961853027,
+        "other": 0.09999990463256836
+      },
+      "fps": 34.09477266454784,
+      "over33": 314,
+      "over50": 42,
+      "metrics": {
+        "total": {
+          "mean": 28.605410443313087,
+          "p50": 26.5,
+          "p95": 48.30000019073486,
+          "p99": 62.40000009536743,
+          "max": 92.40000009536743
+        },
+        "sim": {
+          "mean": 22.823600744133564,
+          "p50": 21.09999990463257,
+          "p95": 39.299999713897705,
+          "p99": 51.59999990463257,
+          "max": 74.40000009536743
+        },
+        "draw": {
+          "mean": 3.9813432777995494,
+          "p50": 3.1999998092651367,
+          "p95": 7.5,
+          "p99": 12.099999904632568,
+          "max": 37.80000019073486
+        },
+        "pointer": {
+          "mean": 1.2166044787684482,
+          "p50": 0,
+          "p95": 7.300000190734863,
+          "p99": 8.700000286102295,
+          "max": 19.199999809265137
+        },
+        "commit": {
+          "mean": 0.013899253375494658,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 14.899999618530273
+        },
+        "construction": {
+          "mean": 0.023694030829329988,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 6
+        },
+        "other": {
+          "mean": 0.5462686584066989,
+          "p50": 0,
+          "p95": 5.900000095367432,
+          "p99": 8.699999809265137,
+          "max": 15
+        },
+        "interval": {
+          "mean": 29.320988805970156,
+          "p50": 33.29999999999927,
+          "p95": 50,
+          "p99": 66.69999999999709,
+          "max": 200
+        }
+      },
+      "pointerEventMs": {
+        "count": 210,
+        "mean": 6.210476196379888,
+        "p95": 8.700000286102295,
+        "max": 19.199999809265137
+      },
+      "rawArtifact": "/tmp/btv-drag-implementation-2026-11-09/baseline-road.json"
+    },
+    "final-road": {
+      "label": "final-road",
+      "url": "http://127.0.0.1:5222/",
+      "viewport": {
+        "width": 1213,
+        "height": 903,
+        "dpr": 1.5,
+        "camera": {
+          "x": 141.87333877450018,
+          "y": 151.48684569297643
+        },
+        "zoom": 1.35,
+        "reveal": false
+      },
+      "cadence": 0,
+      "pointerInterval": 125,
+      "elapsed": 31087.800000190735,
+      "activity": {
+        "livingUnits": 1143,
+        "outsideUnits": 707,
+        "workers": 588,
+        "outsideWorkers": 170,
+        "collectors": 271,
+        "workingBuilders": 3,
+        "movingUnits": 149,
+        "displacedUnits": 652,
+        "engagedUnits": 0,
+        "unitHpLost": -7233.159286666851,
+        "meanDisplacement": 6.453336984688822,
+        "returnOrders": 0,
+        "foodDelivered": 3075.8400000000256,
+        "activeConstruction": 5
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 3,
+          "unsupported": 0,
+          "instances": 3,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 7351,
+          "travelMaps": 232,
+          "nearestMaps": 69,
+          "unsupported": 0,
+          "instances": 20,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 7351,
+          "travelMaps": 232,
+          "nearestMaps": 66,
+          "unsupported": 0,
+          "instances": 17,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": {
+        "kind": "road",
+        "pointerMoves": 214,
+        "previewFrames": 1189,
+        "validPreviewFrames": 1189,
+        "maximumRouteCells": 6,
+        "commit": {
+          "atMs": 29774.900000095367,
+          "durationMs": 17.699999809265137,
+          "previewCells": 6,
+          "pending": false,
+          "completed": true,
+          "placedCells": 6,
+          "completedJobs": 1,
+          "completedAtMs": 31084.5,
+          "completionLatencyMs": 1327.2999997138977,
+          "result": {
+            "done": true,
+            "ok": true,
+            "placed": 6,
+            "skipped": 0,
+            "message": ""
+          }
+        }
+      },
+      "gameSeconds": 86.76680000022134,
+      "units": 1143,
+      "buildings": 5438,
+      "fields": 2462,
+      "speed": 3,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 557,
+        "textureUploads": 1,
+        "atlasPages": 8,
+        "sprites": 563,
+        "directImages": 563,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "dragSetup": {
+        "faction": 0,
+        "start": {
+          "x": 148,
+          "y": 151
+        },
+        "endpoints": [
+          {
+            "x": 148,
+            "y": 149
+          },
+          {
+            "x": 148,
+            "y": 148
+          },
+          {
+            "x": 148,
+            "y": 147
+          },
+          {
+            "x": 148,
+            "y": 146
+          }
+        ],
+        "routeCells": 6,
+        "newCells": 6,
+        "cost": 30,
+        "clientStart": {
+          "x": 892.7717649415921,
+          "y": 452.0682660634182
+        },
+        "candidates": 15,
+        "routeAttempts": 124,
+        "setup": "Validated while paused; real mouse-down after render warmup; preflight route and quote cache entries cleared."
+      },
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba",
+      "initial": {
+        "units": 1070,
+        "buildings": 5387,
+        "fields": 2415
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 0.19999980926513672,
+        "construction": 0,
+        "sim": 167.10000038146973,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.5999999046325684,
+        "draw": 24.59999990463257,
+        "total": 192,
+        "other": 0.09999990463256836
+      },
+      "fps": 39.72619484146266,
+      "over33": 204,
+      "over50": 39,
+      "metrics": {
+        "total": {
+          "mean": 24.435251215481873,
+          "p50": 21.700000286102295,
+          "p95": 45.80000019073486,
+          "p99": 60.90000009536743,
+          "max": 134.80000019073486
+        },
+        "sim": {
+          "mean": 20.68760129968776,
+          "p50": 18.399999618530273,
+          "p95": 39.59999990463257,
+          "p99": 52,
+          "max": 103.2000002861023
+        },
+        "draw": {
+          "mean": 3.374554292889043,
+          "p50": 2.6999998092651367,
+          "p95": 6.400000095367432,
+          "p99": 12.800000190734863,
+          "max": 31.40000009536743
+        },
+        "pointer": {
+          "mean": 0.01985413367396622,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 0.20000028610229492,
+          "max": 2
+        },
+        "commit": {
+          "mean": 0.01434359790053901,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 17.699999809265137
+        },
+        "construction": {
+          "mean": 0.014991895885869402,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 4.599999904632568
+        },
+        "other": {
+          "mean": 0.323905995444695,
+          "p50": 0,
+          "p95": 3.6999998092651367,
+          "p99": 4.799999713897705,
+          "max": 6.799999713897705
+        },
+        "interval": {
+          "mean": 25.161021069692055,
+          "p50": 16.700000000000728,
+          "p95": 50,
+          "p99": 66.69999999999891,
+          "max": 183.30000000000018
+        }
+      },
+      "pointerEventMs": {
+        "count": 213,
+        "mean": 0.11502347865574797,
+        "p95": 0.2999997138977051,
+        "max": 2
+      },
+      "rawArtifact": "/tmp/btv-drag-implementation-2026-11-09/final-road.json"
+    },
+    "final-irrigation-every-frame": {
+      "label": "final-irrigation-every-frame",
+      "url": "http://127.0.0.1:5222/",
+      "viewport": {
+        "width": 1213,
+        "height": 903,
+        "dpr": 1.5,
+        "camera": {
+          "x": 141.87333877450018,
+          "y": 151.48684569297643
+        },
+        "zoom": 1.35,
+        "reveal": false
+      },
+      "cadence": 0,
+      "pointerInterval": 0,
+      "elapsed": 15398.5,
+      "activity": {
+        "livingUnits": 1136,
+        "outsideUnits": 711,
+        "workers": 584,
+        "outsideWorkers": 185,
+        "collectors": 268,
+        "workingBuilders": 2,
+        "movingUnits": 212,
+        "displacedUnits": 632,
+        "engagedUnits": 2,
+        "unitHpLost": -6236.936863333285,
+        "meanDisplacement": 5.602280996194096,
+        "returnOrders": 0,
+        "foodDelivered": 1526.7733333333454,
+        "activeConstruction": 2
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 3,
+          "unsupported": 0,
+          "instances": 3,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 3737,
+          "travelMaps": 99,
+          "nearestMaps": 37,
+          "unsupported": 0,
+          "instances": 18,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 3737,
+          "travelMaps": 99,
+          "nearestMaps": 34,
+          "unsupported": 0,
+          "instances": 15,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": {
+        "kind": "irrigation",
+        "pointerMoves": 563,
+        "previewFrames": 562,
+        "validPreviewFrames": 562,
+        "maximumRouteCells": 10,
+        "commit": {
+          "atMs": 14778.699999809265,
+          "durationMs": 14,
+          "previewCells": 4,
+          "pending": false,
+          "completed": true,
+          "placedCells": 2,
+          "completedJobs": 1,
+          "completedAtMs": 15386.199999809265,
+          "completionLatencyMs": 621.5999999046326,
+          "result": {
+            "done": true,
+            "ok": true,
+            "placed": 2,
+            "skipped": 0,
+            "message": ""
+          }
+        }
+      },
+      "gameSeconds": 42.681400000107715,
+      "units": 1136,
+      "buildings": 5411,
+      "fields": 2446,
+      "speed": 3,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 566,
+        "textureUploads": 1,
+        "atlasPages": 6,
+        "sprites": 572,
+        "directImages": 572,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "dragSetup": {
+        "faction": 0,
+        "start": {
+          "x": 139,
+          "y": 150
+        },
+        "endpoints": [
+          {
+            "x": 138,
+            "y": 151
+          },
+          {
+            "x": 137,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 151
+          },
+          {
+            "x": 136,
+            "y": 152
+          },
+          {
+            "x": 135,
+            "y": 152
+          },
+          {
+            "x": 134,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 152
+          },
+          {
+            "x": 133,
+            "y": 153
+          }
+        ],
+        "routeCells": 10,
+        "newCells": 2,
+        "cost": 70,
+        "clientStart": {
+          "x": 503.9717649415921,
+          "y": 408.8682660634182
+        },
+        "candidates": 3,
+        "routeAttempts": 1,
+        "setup": "Validated while paused; real mouse-down after render warmup; preflight route and quote cache entries cleared."
+      },
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "c7e0137015f7573ee30a04cfae7e08c5b32a9f71a2dea346eaf32aa503121aba",
+      "initial": {
+        "units": 1070,
+        "buildings": 5387,
+        "fields": 2415
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 0.19999980926513672,
+        "construction": 0,
+        "sim": 179.5,
+        "prepareFog": 0,
+        "drawMinimap": 0.5999999046325684,
+        "draw": 18.90000009536743,
+        "total": 198.7999997138977,
+        "other": 0.19999980926513672
+      },
+      "fps": 37.92577199077832,
+      "over33": 107,
+      "over50": 23,
+      "metrics": {
+        "total": {
+          "mean": 25.258490561621063,
+          "p50": 22.5,
+          "p95": 44.80000019073486,
+          "p99": 66.59999990463257,
+          "max": 77.09999990463257
+        },
+        "sim": {
+          "mean": 20.33207547071663,
+          "p50": 17.90000009536743,
+          "p95": 37.59999990463257,
+          "p99": 51.5,
+          "max": 67.39999961853027
+        },
+        "draw": {
+          "mean": 4.316981120134095,
+          "p50": 3.6999998092651367,
+          "p95": 7.099999904632568,
+          "p99": 14.400000095367432,
+          "max": 33.09999990463257
+        },
+        "pointer": {
+          "mean": 0.10017152756810392,
+          "p50": 0.09999990463256836,
+          "p95": 0.20000028610229492,
+          "p99": 0.3000001907348633,
+          "max": 0.5
+        },
+        "commit": {
+          "mean": 0.024013722126929673,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 14
+        },
+        "construction": {
+          "mean": 0.014922813526762084,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 3.5999999046325684
+        },
+        "other": {
+          "mean": 0.47032590754854126,
+          "p50": 0.19999980926513672,
+          "p95": 3.9000000953674316,
+          "p99": 5.199999809265137,
+          "max": 7.5
+        },
+        "interval": {
+          "mean": 26.32813036020583,
+          "p50": 16.700000000000728,
+          "p95": 50,
+          "p99": 66.70000000000073,
+          "max": 200
+        }
+      },
+      "pointerEventMs": {
+        "count": 562,
+        "mean": 0.10391459176548859,
+        "p95": 0.20000028610229492,
+        "max": 0.5
+      },
+      "rawArtifact": "/tmp/btv-drag-implementation-2026-11-09/final-irrigation-every-frame.json"
+    }
+  },
+  "behavior": {
+    "coalescing": {
+      "events": 200,
+      "samePreviewBeforeFrame": true
+    },
+    "irrigationPreview": {
+      "end": {
+        "x": 133,
+        "y": 153
+      },
+      "cost": 70,
+      "cells": 2
+    },
+    "affordability": {
+      "sameRoute": true,
+      "affordable": 1,
+      "requested": 2,
+      "status": "Choose end \u00b7 1 of 2 tiles \u00b7 35 gold \u00b7 Need 35 more gold \u00b7 Farmland yield: 2\u00d7 on other land, 3\u00d7 on desert within 2 tiles"
+    },
+    "irrigationRelease": {
+      "jobs": 1,
+      "newlyCreated": 0,
+      "pendingOutlines": 10
+    },
+    "irrigationCompletion": {
+      "done": true,
+      "ok": true,
+      "placed": 2,
+      "skipped": 0,
+      "message": "",
+      "paused": true,
+      "spent": 70,
+      "cropsUnmoved": true,
+      "remainingOutlines": 0
+    },
+    "roadCancellation": {
+      "created": 1,
+      "spent": 5,
+      "pending": false,
+      "remainingOutlines": 0,
+      "status": "5 remaining tiles cancelled \u00b7 1 ordered"
+    },
+    "errors": []
+  },
+  "checks": {
+    "build": "Passed npm run build; existing large-bundle warning.",
+    "focusedSuites": "Shared gesture3, preview/cache/route/irrigation56, presentation/layering/effects/dock67, purchase/connectivity/irrigation/batch47. Suite groups overlap; counts must not be summed as unique tests.",
+    "browser": "Rapid pointer event coalescing; stable route under funds changes; affordable/requested costs; asynchronous release; paused irrigation completion with crops unmoved; road partial cancellation and cleanup.",
+    "fullRepositorySuite": "Not run."
+  },
+  "limitations": [
+    "Some simulation frames remain above 33.3 ms; these changes do not establish a locked 30 FPS guarantee.",
+    "Road preview remains optimistic about farm relocation; each live purchase checks a destination before payment.",
+    "Irrigation purchases and reconciliation now finish across later frames; progress outlines and Escape cancellation expose this delay.",
+    "Fallback routing retains its existing bounded search and sorted open list; irrigation skips irrelevant road/wall reservation allocations."
+  ]
+}

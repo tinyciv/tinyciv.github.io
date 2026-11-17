@@ -62,7 +62,12 @@ deleted with its instance.
 ## Build and deploy
 
 The [deployment workflow](../.github/workflows/deploy.yml) runs for pushes to
-`main`, pull requests targeting `main`, and manual **Run workflow** requests.
+`tinyciv/tinyciv.github.io`'s `main` branch, pull requests targeting `main`, and
+manual **Run workflow** requests. Pushes to `ckrapu/btv` or other branches do
+not deploy production. This checkout's `production` remote points to
+`https://github.com/tinyciv/tinyciv.github.io.git`; `origin` remains the
+development repository. Production releases must reach the production
+repository's `main` branch.
 It installs the locked dependencies on Node 22, builds navigation WASM, runs the
 game test gate, type-checks and builds both client and server, then exercises an
 isolated local multiplayer match and the production UI in Chromium. Test reports
@@ -80,6 +85,8 @@ rooms to empty; if the wait expires, the deployment fails without replacing
 the server or publishing the new Pages build. The Pages job runs only after
 the server passes its health checks. Releases
 are serialized, and an in-progress release is never cancelled by a newer push.
+Up to 100 pending releases queue instead of replacing one another; GitHub
+cancels additional runs if that queue fills.
 Pull requests only test and build; they receive neither AWS credentials nor Pages
 write access. Actions are pinned to immutable commit hashes.
 

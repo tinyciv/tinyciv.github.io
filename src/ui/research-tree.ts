@@ -8,22 +8,6 @@ import { RESEARCH_POSITIONS as positions, RESEARCH_COLUMNS, RESEARCH_COLUMN_PITC
 import './research-tree.css';
 
 const definitions = new Map(RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
-const summaries: Partial<Record<ResearchBranchId, string>> = {
-  metalCasting: 'Train swordsmen at blacksmiths: twice spear attack, less defense.',
-  woodenTower: 'Unlocks wooden towers, guard posts and settlement upgrades to Keeps.',
-  traditionalMedicine: 'Healers’ shacks triple nearby healing inside your borders.',
-  scoutLodge: 'Build Scouts’ Lodges to unlock concealed observation posts.',
-  sailing: 'Unlocks docks, exploration galleys and automatic river trade.',
-  engineering: 'Extends bridges from 2 to 8 water tiles, with land at both ends.',
-  militaryTactics: 'Train defensive spearmen whose thrusts pierce multiple enemies.',
-  infantryDrill: 'Close ranks with stronger frontal combat. Requires eight retinue soldiers.',
-  horsebackRiding: 'Stables train fast spear cavalry with a running charge.',
-  compoundBow: 'Train mobile horse archers at stables.',
-  stirrups: 'Train heavily armored knights with devastating charges.',
-  siegeEngines: 'Build long-range ballistae to attack enemy fortifications.',
-  supplyTrain: 'Supply carts reach the Leader and heal all friendly units by 10 HP.',
-  massLevy: 'Levy one third of your population; 5 gold per soldier every 30 seconds.',
-};
 const text = (element: HTMLElement, value: string) => { if (element.textContent !== value) element.textContent = value; };
 const percentage = (progress: number, required: number) => Math.min(100, Math.floor(progress / Math.max(1, required) * 100 + 1e-7));
 export interface ResearchTreeActions {
@@ -55,19 +39,19 @@ export class ResearchTree {
       <label for="research-allocation">Gold income to Science <output for="research-allocation" class="research-allocation-value">25%</output></label>
       <input id="research-allocation" name="research-allocation" type="range" min="0" max="100" step="5" value="25" aria-label="Gold income allocated to research">
     </div>
-    <div class="research-queue"><span class="research-queue-label">Priorities</span><div class="research-queue-list" aria-label="Research priorities"></div><span class="research-default">Cheapest available first</span></div>
+    <div class="research-queue"><span class="research-queue-label">Priorities</span><div class="research-queue-list" aria-label="Research priorities"></div></div>
     <div class="research-tree-scroll" aria-label="Technology tree, scroll horizontally"><div class="research-board" style="width:${RESEARCH_BOARD_WIDTH}px">
       <svg class="research-connections" width="${RESEARCH_BOARD_WIDTH}" height="${RESEARCH_BOARD_HEIGHT}" viewBox="0 0 ${RESEARCH_BOARD_WIDTH} ${RESEARCH_BOARD_HEIGHT}" preserveAspectRatio="none" aria-label="Research prerequisites"><defs><marker id="research-arrow" viewBox="0 0 6 8" refX="5" refY="4" markerWidth="5" markerHeight="6" orient="auto"><path d="M0 0L6 4L0 8" fill="none" stroke="context-stroke" stroke-width="1.5"/></marker></defs>${edges}</svg>
       ${RESEARCH_COLUMNS.flat().filter((id): id is ResearchBranchId => !!id).map(id => {
         const branch = definitions.get(id)!, position = positions.get(id)!;
         return `<button type="button" class="research-node" data-research="${id}" style="left:${10 + position.x * RESEARCH_COLUMN_PITCH}px;--research-row:${position.y}" aria-pressed="false">
           <span class="research-node-frame"><img class="research-node-icon" alt=""><span class="research-node-badge" aria-hidden="true"></span></span>
-          <span class="research-node-copy"><strong>${branch.label}</strong><span class="research-node-meta"><span class="research-node-price"><span class="research-cost-number"></span>${scienceIcon()}</span><span class="research-node-state"></span></span></span>
+          <span class="research-node-copy"><strong>${branch.label}</strong><span class="research-node-meta"><span class="research-node-price"><span class="research-cost-number"></span>${scienceIcon()}</span></span></span>
           <span class="research-node-progress" aria-hidden="true" hidden><span></span></span></button>`;
       }).join('')}
     </div></div>
       <section class="research-detail" aria-label="Selected technology">
-        <img class="research-detail-icon" alt=""><div class="research-detail-copy"><h3 class="research-tech"></h3><p class="research-effect"></p><p class="research-requirement"></p><p class="research-plan"></p></div>
+        <img class="research-detail-icon" alt=""><div class="research-detail-copy"><h3 class="research-tech"></h3></div>
         <div class="research-detail-controls">
         <div class="research-priority-actions"><button type="button" class="research-prioritize">Prioritize</button><button type="button" class="research-remove" hidden>Remove priority</button></div>
         <progress class="research-progress" aria-label="Selected technology progress" max="100" value="0"></progress>
@@ -131,7 +115,13 @@ export class ResearchTree {
     const signature = JSON.stringify([selected, status.focus, status.active, state.paused, status.allocation, status.priorities,
       status.branches.map(branch => [branch.id, branch.complete, Math.floor(branch.progress), percentage(branch.progress, branch.required), branch.required])]);
     if (signature === this.signature) return; this.signature = signature;
-    if (!this.iconsReady) { for (const [id, button] of this.nodes) button.querySelector<HTMLImageElement>('img')!.src = researchIconUrl(id); this.iconsReady = true; }
+    if (!this.iconsReady) {
+      for (const [id, button] of this.nodes) {
+        const image = button.querySelector<HTMLImageElement>('img')!;
+        image.src = researchIconUrl(id); image.dataset.research = id;
+      }
+      this.iconsReady = true;
+    }
     for (const branch of status.branches) {
       const button = this.nodes.get(branch.id); if (!button) continue;
       const missing = branch.prerequisites.filter(id => !status.branches.find(item => item.id === id)?.complete);
@@ -147,33 +137,21 @@ export class ResearchTree {
       button.setAttribute('aria-label', `${branch.label}, ${formatResearchCost(branch.required)} Science, ${label}. ${requirement}`);
       text(button.querySelector<HTMLElement>('.research-cost-number')!, formatResearchCost(branch.required));
       button.querySelector<HTMLElement>('.research-node-price')!.setAttribute('aria-label', `${formatResearchCost(branch.required)} Science`);
-      text(button.querySelector<HTMLElement>('.research-node-state')!, branch.complete || current || priority >= 0 ? label : '');
       const bar = button.querySelector<HTMLElement>('.research-node-progress')!; bar.hidden = branch.complete || (!current && branch.progress <= 0);
       bar.firstElementChild!.setAttribute('style', `width:${percent}%`);
       const chip = this.chips.get(branch.id)!; chip.hidden = priority < 0; chip.style.order = String(priority);
       text(chip, `${priority + 1}. ${branch.label}`); chip.classList.toggle('is-selected', selected === branch.id);
       chip.title = actionTooltip(`Selects ${branch.label} to change its research priority.`);
     }
-    this.element.querySelector<HTMLElement>('.research-default')!.hidden = status.priorities.length > 0;
     for (const edge of this.element.querySelectorAll<SVGGElement>('.research-edge')) {
       const from = edge.dataset.from as ResearchBranchId, to = edge.dataset.to as ResearchBranchId;
       edge.classList.toggle('is-open', !!status.branches.find(branch => branch.id === from)?.complete);
       edge.classList.toggle('is-selected', selected === from || selected === to);
     }
     const branch = status.branches.find(branch => branch.id === selected)!, priority = status.priorities.indexOf(selected);
-    const missing = branch.prerequisites.filter(id => !status.branches.find(item => item.id === id)?.complete);
     const detailIcon = this.element.querySelector<HTMLImageElement>('.research-detail-icon')!;
     if (detailIcon.dataset.research !== selected) { detailIcon.src = researchIconUrl(selected); detailIcon.dataset.research = selected; }
     text(this.element.querySelector<HTMLElement>('.research-tech')!, branch.label);
-    const effect = this.element.querySelector<HTMLElement>('.research-effect')!;
-    text(effect, summaries[selected] ?? definitions.get(selected)!.tiers[0].description);
-    effect.title = definitions.get(selected)!.tiers[0].description;
-    const requirement = this.element.querySelector<HTMLElement>('.research-requirement')!;
-    text(requirement, missing.length ? `Requires ${missing.map(id => definitions.get(id)!.label).join(' + ')}` : ''); requirement.hidden = !missing.length;
-    const plan = this.element.querySelector<HTMLElement>('.research-plan')!;
-    text(plan, branch.complete ? '' : priority === 0 && status.focus !== selected ? `${definitions.get(status.focus)!.label} first`
-      : missing.length ? 'Prerequisites included automatically' : '');
-    plan.hidden = !plan.textContent;
     const prioritize = this.element.querySelector<HTMLButtonElement>('.research-prioritize')!, remove = this.element.querySelector<HTMLButtonElement>('.research-remove')!;
     prioritize.hidden = branch.complete; prioritize.disabled = priority === 0;
     prioritize.title = actionTooltip('Researches this technology and its prerequisites first.');

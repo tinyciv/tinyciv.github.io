@@ -1,0 +1,48 @@
+{
+  "source": "PixelLab edit-images-v2 edits of original Human-Worker-Cyan idle, walk and attack poses",
+  "approved": "scratch/2026-11-07-pixellab-club-warrior/outputs/club-1b.png",
+  "requests": "scratch/2026-11-07-club-warrior-integration/generation-manifest.json",
+  "frameProof": "scratch/2026-11-07-club-warrior-integration/frame-proof.json",
+  "cell": [
+    32,
+    32
+  ],
+  "sheet": [
+    288,
+    256
+  ],
+  "rows": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "idle": [
+    0
+  ],
+  "walk": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "attack": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "attackFrameMs": 70,
+  "walkFps": 9,
+  "groundAnchor": [
+    16,
+    23
+  ],
+  "worldScale": 1.4,
+  "factionCloth": "Exact runtime turquoise palette",
+  "notes": "Native-pixel palette matching, body-based integer registration, excess lower-robe row removal when needed. South idle exactly approved1B."
+}

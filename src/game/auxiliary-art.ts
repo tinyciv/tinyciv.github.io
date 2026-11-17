@@ -1,5 +1,5 @@
-import { drawPerson, personFrame, facingOctant, factionSheet } from './unit-sprites';
-import { drawPuny } from './puny-world';
+import { drawPerson, personFrame, factionSheet } from './unit-sprites';
+import { drawHandcart, handcartPose } from './handcart-art';
 import type { Unit } from './types';
 
 /** Supply-cart drivers retain the ordinary unarmored worker gait. */
@@ -7,20 +7,17 @@ export function auxiliaryBody(unit: Unit): Unit {
   return { ...unit, kind: 'worker', order: 'follow', armorLevel: 0, cargo: 0, attackTime: 0, marauderLeader: false, marauderPack: undefined };
 }
 export function auxiliaryArtKey(unit: Unit, time: number, color: string): string {
-  const frame = personFrame(unit.kind === 'supplyCart' ? auxiliaryBody(unit) : unit, time);
+  if (unit.kind === 'supplyCart') {
+    const pose = handcartPose(unit, time);
+    return `handcart:${pose.row}:${pose.frame}:${color}:${!!unit.inside}`;
+  }
+  const frame = personFrame(unit, time);
   return `auxiliary:${unit.kind}:${frame.row}:${frame.frame}:${color}:${!!unit.inside}`;
 }
 export function drawAuxiliary(c: CanvasRenderingContext2D, unit: Unit, time: number, color: string): void {
   if (unit.inside) return;
-  drawPerson(c, unit.kind === 'supplyCart' ? auxiliaryBody(unit) : unit, time, color);
-  if (unit.kind === 'supplyCart') {
-    const right = Math.cos(facingOctant(unit.facing) * Math.PI / 4) >= -.01, x = right ? 0 : 21;
-    drawPuny(c, 146, 501, 12, 10, x, 18, 13, 11);
-    c.fillStyle = '#543b26'; c.fillRect(x - 1, 27, 16, 3);
-    c.fillRect(right ? x + 10 : x - 5, 20, 8, 2);
-    c.fillStyle = '#302923'; c.fillRect(x + 1, 28, 4, 4); c.fillRect(x + 10, 28, 4, 4);
-    c.fillStyle = '#b69a65'; c.fillRect(x + 2, 29, 2, 2); c.fillRect(x + 11, 29, 2, 2);
-  }
+  if (unit.kind === 'supplyCart') { drawHandcart(c, unit, time, color); return; }
+  drawPerson(c, unit, time, color);
 }
 
 const portraits = new Map<string, string>();

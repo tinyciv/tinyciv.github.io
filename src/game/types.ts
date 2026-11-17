@@ -1,5 +1,6 @@
-import type { CityLoyalty } from './loyalty-model';
+import type { DiplomacySnapshot } from './diplomacy-view';
 import type { FishingState } from './fishing';
+import type { HarborTradeShip } from './harbor-trade';
 import type { InfantryFormationState } from './infantry-drill';
 import type { ArmyWarning } from './army-warnings';
 import type { WorldGenerationStyle } from '../world/options';
@@ -9,8 +10,8 @@ export type Overlay = 'none' | 'forest' | 'jungle' | 'swamp' | 'volcano' | 'glac
 export type TreeClass = 'tropical' | 'dry' | 'temperate' | 'conifer' | 'snowy';
 export type Biome = 'temperate' | 'taiga' | 'tundra' | 'rainforest' | 'savanna' | 'steppe' | 'desert' | 'wetland' | 'alpine';
 export type HillBiome = 'desert-hills' | 'forest-hills';
-export type RegionalResource = 'clay' | 'copper' | 'iron' | 'stone' | 'salt' | 'olives' | 'fish';
-export type ResourceWorkKind = 'copper' | 'iron' | 'stone' | 'salt' | 'olives';
+export type RegionalResource = 'clay' | 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives' | 'fish';
+export type ResourceWorkKind = 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives';
 export interface ResourceWorkSite {
     id: number;
     faction: number;
@@ -26,6 +27,8 @@ export interface ResourceWork {
     site: number;
     revision: number;
     resource: ResourceWorkKind;
+    /** Assigned footprint retained through the return trip and ownership edits. */
+    cells?: number[];
     phase: 'road' | 'outbound' | 'working' | 'returning';
     goal: Point;
     approach: Point;
@@ -39,6 +42,10 @@ export interface ResourceWork {
     nextPlanAt?: number;
 }
 export interface Tile {
+    /** 1..3 volcanoes, 4..6 hot mud pools; every occupied cell is volcanic terrain. */
+    geothermal?: 1 | 2 | 3 | 4 | 5 | 6;
+    /** Top-left cell index of this feature's complete 2x2 footprint. */
+    geothermalAnchor?: number;
     /** Nonblocking 8FC desert decoration; permanently removed by construction. */
     desertStone?: number;
     terrain: Terrain;
@@ -57,6 +64,12 @@ export interface Tile {
     resource?: RegionalResource;
     /** Connected geological deposit/grove identity, stable within this world. */
     resourceGroup?: number;
+    /** Complete native ore footprint; all members reference its top-left cell. */
+    oreAnchor?: number;
+    oreFamily?: 0 | 1 | 2;
+    oreVariant?: 0 | 1;
+    oreWidth?: number;
+    oreHeight?: number;
     /** Development belongs to the land; benefits follow its current city owner. */
     resourceDeveloped?: boolean;
     /** Catchment runoff and downstream tile index in the generated drainage network. */
@@ -71,6 +84,8 @@ export interface Tile {
     creekGround?: 'grassland' | 'plains' | 'desert';
     /** Original Puny 10px banked channel through a waterfall-bearing reach. */
     riverArt?: 'banked';
+    /** A detached crescent left beside a winding lowland river. */
+    oxbow?: boolean;
     /** Downstream drop through a south-facing native ledge; never a crossing. */
     waterfall?: 'south';
     /** Coastal delta identity; marsh marks dry, vegetated interchannel ground. */
@@ -98,6 +113,16 @@ export interface Tile {
     ridgeTier?: 1 | 2 | 3 | 4 | 5;
     /** Broad landform region; vegetation remains an independent overlay. */
     relief?: 'hills' | 'mountains';
+    /** Native terrain region; identity has no effect on traversal. */
+    reliefRegion?: number;
+    /** Rust policy bits: walkable 1, buildable 2, trees 4. */
+    reliefFlags?: number;
+    /** Tactical elevation independently of cliff/stair artwork. */
+    reliefLevel?: number;
+    reliefSpeed?: number;
+    reliefRuggedness?: number;
+    /** Retained chunky/reference/natural art treatment. */
+    reliefStyle?: 0 | 1 | 2;
     /** Low-ground corridor through a layered mountain range. */
     mountainPass?: boolean;
     /** Freshwater basin shape, independent of connected rivers. */
@@ -109,6 +134,8 @@ export interface Tile {
     /** Generated neutral-village footpath; normal road placement removes it. */
     villageTrail?: true;
     farm?: number;
+    /** Native-generated landscape identity; independent of movement/building rules. */
+    worldFeature?: number;
 }
 export interface Point {
     x: number;
@@ -121,7 +148,17 @@ export interface TreasureChest extends Point {
     name?: string;
     rewardGold?: number;
 }
+export type WorldFeatureKind = 'atoll' | 'harbor' | 'oasis' | 'old-river' | 'volcanic-island';
+export interface WorldFeature extends Point {
+    id: number;
+    kind: WorldFeatureKind;
+    radiusX: number;
+    radiusY: number;
+}
 export interface World {
+    scenario?: import('./scenario-content').ScenarioId;
+    /** The initial ECS terrain-placement command has completed. */
+    geothermalGenerated?: true;
     width: number;
     height: number;
     seed: string;
@@ -130,6 +167,7 @@ export interface World {
     landformFamily?: import('../world/options').LandformFamily;
     landformProvinces?: import('../world/landforms').LandformProvince[];
     riverDeltas?: import('../world/river-deltas').RiverDelta[];
+    worldFeatures?: WorldFeature[];
     tiles: Tile[];
     spawns: Point[];
     /** Second city for each rival, indexed by faction id minus one. */
@@ -139,7 +177,7 @@ export interface World {
     source: string;
     revision?: number;
 }
-export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'stable' | 'library' | 'villageTent';
+export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy';
 export type RoadStyle = 'road' | 'trail';
 export type BuildSelection = BuildingKind | 'clearTrees';
 export const buildingKindForSelection = (kind: Exclude<BuildSelection, 'clearTrees'>): BuildingKind => kind;
@@ -148,9 +186,30 @@ export type HouseStyle = 'shack' | 'hovel' | 'cottage' | 'villa';
 export const isWallKind = (kind: BuildingKind): boolean => kind === 'wall' || kind === 'palisade';
 /** Farms are uninhabited, pathable single-tile crop plots. */
 export const isFarmKind = (kind: BuildingKind): boolean => kind === 'camp' || kind === 'shack' || kind === 'cottage';
-export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'stable', 'library', 'palace'];
+export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy'];
+export type WarshipClass = 'warGalley' | 'caravel' | 'frigate';
+export type NavalWeapon = 'empty' | 'ballista' | 'cannon';
+export type MarineType = 'warrior' | 'spearman' | 'archer' | 'musketman';
+export interface NavalGunner {
+    target?: number; facing: number; firedAt?: number;
+    shot?: { from: Point; to: Point; time: number; projectile?: boolean };
+}
+export interface ShipSinking extends Point {
+    id: number; class: WarshipClass; faction: number; facing: number; time: number;
+}
+export interface Warship {
+    class: WarshipClass; name: string; yard: number; speed: number; kills: number;
+    marine: MarineType; crewHp: number; weapons: NavalWeapon[]; anchored: boolean;
+    readyAt: number; nextUpkeepAt: number; funded: boolean; lastAttacker: number; lastAttackerShip?: number; rewarded: boolean;
+    boarding?: number; target?: number; attackTarget?: number; guns?: NavalGunner[]; passengers?: number[]; shore?: Point; reinforcing?: boolean;
+}
 export interface Building extends Point {
-    loyalty?: CityLoyalty;
+    scenarioCity?: boolean;
+    explorationUpkeepUntil?: number;
+    /** Previous sovereign for negotiated return of captured towns. */
+    previousSovereign?: number;
+    /** A confederated village's palace keeps the village identity bonus. */
+    villageIdentity?: VillageIdentity;
     fort?: { brigadeLevel: 0 | 1 | 2 | 3; nextUpkeepAt: number; funded: boolean; nextRecruitAt: number; destroyed?: boolean; initialGold?: number };
     supplyDepot?: { nextDispatchAt: number };
     id: number;
@@ -159,6 +218,8 @@ export interface Building extends Point {
     kind: BuildingKind;
     /** Omitted for the standard road; trails differ only in their artwork. */
     roadStyle?: RoadStyle;
+    /** Derived by the native neighborhood/research rule. */
+    roadPaved?: boolean;
     /** Direction from this dock's dry house tile to the reserved water tile: N/E/S/W. */
     dockFacing?: 0 | 1 | 2 | 3;
     /** Set only after the dock successfully launches its one included sailboat. */
@@ -176,6 +237,10 @@ export interface Building extends Point {
     fortificationHealthMultiplier?: number;
     /** A palace's city identity persists when its faction changes. */
     cityName?: string;
+    /** A fort's name persists through destruction and rebuilding. */
+    fortName?: string;
+    /** Original fort, then moat; the 3×3 plot never changes. */
+    fortLevel?: 1 | 2;
     /** Palaces begin as settlements; Fortification permits a one-time Keep upgrade. */
     palaceLevel?: 1 | 2;
     /** One paid expansion raises the Keep's own housing from 10 to 25. */
@@ -192,6 +257,8 @@ export interface Building extends Point {
     automaticHouseCredit?: number;
     /** Each palace plans its own automatic construction on this game-time clock. */
     governorNextPlanAt?: number;
+    /** Simulation time last credited by a governor's housing phase. */
+    governorHousingCreditedAt?: number;
     /** Cancelled or demolished productive buildings pause only this city's replacement orders. */
     governorPauseUntil?: Partial<Record<'camp' | 'house', number>>;
     /** Each city's governor independently controls new farm and house orders. */
@@ -205,6 +272,9 @@ export interface Building extends Point {
     houseLevel?: number;
     /** Advanced homes keep their current tier during this 60-second recovery grace period. */
     houseDowngradeAt?: number;
+    houseUpgradeAt?: number;
+    houseUpgradeLevel?: number;
+    houseUpgradeFaction?: number;
     /** A residential lot reclaimed by moving its farm retains one extra bed. */
     redevelopedFarm?: boolean;
     residents?: number;
@@ -236,18 +306,30 @@ export interface Building extends Point {
     /** The two free starting explorers and replacement deadline persist with this lodge. */
     scoutLodge?: { owner: number; initialRemaining: number; nextRecruitAt?: number };
     /** Completed guard posts pay for their garrison every thirty game seconds. */
-    guardPost?: { nextUpkeepAt: number; funded: boolean; level?: 0 | 1 | 2; kills?: number; lastThreatAt?: number; needsRecruits?: boolean; wallsOnly?: boolean };
-    construction?: { startedAt: number; duration: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number };
+    guardPost?: { nextUpkeepAt: number; funded: boolean; level?: 0 | 1 | 2; kills?: number; lastThreatAt?: number; needsRecruits?: boolean; wallsOnly?: boolean;
+        /** Guards route and pursue through forbidden zones (default: they avoid them). */
+        ignoreForbidden?: boolean };
+    construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number };
 }
-export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich';
-export const isSoldier = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight' || unit.kind === 'levyInfantry' || unit.kind === 'slinger' || unit.kind === 'skirmisher';
+export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich' | 'musketman' | 'fieldCannon';
+// `kind` is an observed scalar on live entities: read it once per call.
+const SOLDIER_KINDS: ReadonlySet<string> = new Set(['fieldCannon', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'archer', 'horseman', 'horseArcher', 'knight', 'levyInfantry', 'slinger', 'skirmisher']);
+export const isSoldier = (unit: Pick<Unit, 'kind'>): boolean => SOLDIER_KINDS.has(unit.kind);
 /** Dedicated lodge scouts explore independently of the Leader's combat retinue. */
 export const isMountedKind = (kind: UnitKind): boolean => kind === 'horseman' || kind === 'horseArcher' || kind === 'knight';
 export const isMeleeCavalry = (kind: UnitKind): boolean => kind === 'horseman' || kind === 'knight';
-export const isRetinueMember = (unit: Pick<Unit, 'kind'>): boolean => unit.kind === 'warrior' || unit.kind === 'swordsman' || unit.kind === 'spearman' || unit.kind === 'archer' || unit.kind === 'horseman' || unit.kind === 'horseArcher' || unit.kind === 'knight';
+const RETINUE_KINDS: ReadonlySet<string> = new Set(['fieldCannon', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'archer', 'horseman', 'horseArcher', 'knight']);
+export const isRetinueMember = (unit: Pick<Unit, 'kind'>): boolean => RETINUE_KINDS.has(unit.kind);
 export type EquipmentLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type UnitOrder = 'follow' | 'hold' | 'work' | 'raid' | 'wander' | 'flee';
 export type RetinueStance = 'defensive' | 'hold' | 'aggressive';
+export interface OffensiveState {
+    faction: number;
+    leader: number;
+    phase: 'rally' | 'attack' | 'captured';
+    rally: Point;
+    objective: Point;
+}
 export type BaseLeaderSkillId = 'power' | 'guard' | 'command';
 export type AdvancedLeaderSkillId = 'engineer' | 'brace' | 'discretion';
 export type LeaderSkillId = BaseLeaderSkillId | AdvancedLeaderSkillId;
@@ -267,6 +349,10 @@ export interface LeaderRespawnState {
     position: Point;
 }
 export interface Unit extends Point {
+    fieldCannon?: { nextUpkeepAt: number; funded: boolean; shotAt?: number };
+    /** Immutable ranger specialty uses the archer combat and art pipeline. */
+    ranger?: boolean;
+    explorationRefugee?: Point & { city: number };
     /** A nonresident companion, independent of civilian jobs and retinue slots. */
     engineer?: { leader: number };
     brace?: { x: number; y: number; stillFor: number; defense: number };
@@ -286,6 +372,8 @@ export interface Unit extends Point {
     /** Pending approach to an empty, friendly sailboat. */
     boardingBoat?: number;
     /** One boat is launched per completed dock. Landing is an explicit shore order. */
+    warship?: Warship;
+    barbarianGalley?: {target?:number;firedAt?:number;aim?:number};
     sailboat?: { dock: number; passenger?: number; landing?: Point; velocity?: Point };
     /** A human-owned Leader has directional right of way through its retinue. */
     humanControlled?: boolean;
@@ -294,6 +382,11 @@ export interface Unit extends Point {
     faction: number;
     villageId?: number;
     raiderEquipmentMultiplier?: number;
+    technologyBonus?: { attack: number; defense: number };
+    raiderBonus?: { attack: number; defense: number };
+    seaInvasion?: number;
+    wallPatrol?: { gate: number; wall?: number; enteringUntil?: number; nextWall?: number; previousWall?: number };
+
     /** Applied difficulty factor; role conversion preserves the scaled health. */
     enemyStrengthMultiplier?: number;
     villageNextWanderAt?: number;
@@ -323,9 +416,9 @@ export interface Unit extends Point {
     /** Home lodge for an independent explorer; it never consumes a retinue slot. */
     scoutLodge?: number;
     /** A resident assigned to a concealed, stationary wilderness lookout. */
-    observationPost?: { x: number; y: number; city: number; discoveredBy: number[]; nextUpkeepAt: number; nextSmokeAt: number; retreating?: boolean };
+    observationPost?: { x: number; y: number; city: number; discoveredBy: number[]; nextUpkeepAt: number; nextSmokeAt: number; retreating?: boolean; questVillage?: number };
     /** Combat role changes require a physical visit to a range or stable. */
-    training?: { range: number; role: 'warrior' | 'swordsman' | 'spearman' | 'archer' | 'horseman' | 'horseArcher' | 'knight'; enteredAt?: number };
+    training?: { range: number; role: 'fieldCannon' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'musketman' | 'archer' | 'horseman' | 'horseArcher' | 'knight'; enteredAt?: number };
     warriorStats?: { hp: number; attack: number; defense: number; speed?: number };
     /** Actual continuous running distance and the next allowed cavalry charge. */
     cavalryCharge?: { distance: number; dx: number; dy: number; lastMoveAt: number; readyAt: number };
@@ -353,6 +446,8 @@ export interface Unit extends Point {
     tradeRoute?: number;
     /** The same caravan is drawn and navigated as a boat during its river leg. */
     aboardRiverTrade?: boolean;
+    /** Native-derived civilian travel mode; refreshed after movement. */
+    aboardRowboat?: boolean;
     target?: number;
     destination?: Point;
     path?: Point[];
@@ -378,9 +473,12 @@ export interface Unit extends Point {
     /** Actual worker losses count once, even when multiple staffing passes see the corpse. */
     civilianCasualtyRecorded?: boolean;
     repathAt?: number;
+    /** Consecutive failed galley route searches; drives retry backoff. */
+    sailingRouteFailures?: number;
     pathGoal?: Point;
     /** Independent roaming band; its members share hostility, never a settled faction. */
     marauderPack?: number;
+    lastFormationWarningAt?: number;
     marauderLeader?: boolean;
     marauderRetreating?: boolean;
     kills?: number;
@@ -390,12 +488,10 @@ export interface Unit extends Point {
     name?: string;
     /** Palace collectors replace stationary farming sprites. */
     collector?: boolean;
-    /** Primary farm assignment for this worker's current harvest circuit. */
+    /** A member of the contiguous parcel assigned to this collector. */
     collectorCamp?: number;
-    /** Fields collected on this trip; nearby harvest detours are bounded. */
-    collectorPickups?: number;
-    /** Nearby bags reserved for this courier's current multi-stop harvest trip. */
-    collectorStops?: number[];
+    /** Grain collection point; home remains the resident's owning city. */
+    collectorStorage?: number;
     /** Source field for restoring a carried harvest if a courier is retired. */
     cargoField?: number;
     inside?: boolean;
@@ -415,6 +511,8 @@ export interface Unit extends Point {
     repairSite?: number;
     buildSite?: number;
     buildPhase?: 'idle' | 'outbound' | 'working' | 'repairing' | 'clearing' | 'returning';
+    /** Native Drainage target and the dry bank where its civilian works. */
+    drainageWork?: { cell: number; workCell: number; progress: number; farms: [number, number] };
     clearTree?: Point;
     clearProgress?: number;
     trafficTile?: number;
@@ -451,6 +549,9 @@ export interface FarmFieldMemory extends FarmField {
     observedAt: number;
 }
 export interface MarauderPack {
+    ruinsAmbush?: { leader: number; committed: boolean; finished?: boolean };
+    seaInvasion?: number;
+    lastFormationWarningAt?: number;
     id: number;
     name: string;
     color: string;
@@ -517,29 +618,27 @@ export interface RaiderCamp extends Point {
 }
 export type VillageIdentity = 'growers' | 'merchants' | 'builders' | 'scholars';
 export type VillageRelation = 'neutral' | 'trade' | 'allied' | 'war';
+/** Static founding data and presentation for a neutral settlement. Relations,
+ * trade ledgers, affiliation, treasury, growth and clocks live in the Rust
+ * settlement engine (settlement.rs) and are read through settlement-view.ts. */
 export interface NeutralVillage extends Point {
     /** A seceded city keeps its settlement, people and existing footprint. */
     secededCity?: { formerFaction: number; territoryCells: number[] };
-    relationsByFaction?: Record<number, VillageRelation>;
-    alliedFaction?: number;
     id: number;
     faction: number;
     campId: number;
     name: string;
     identity: VillageIdentity;
-    relation: VillageRelation;
+    /** Scenario seed: the relation toward faction 0 installed when the settlement
+     * engine first imports this village. Rust owns the relation afterwards. */
+    relation?: VillageRelation;
     /** Stable demand; access to a developed deposit quadruples this partner's trade. */
     requiredResource?: ResourceWorkKind;
-    trading?: boolean;
-    /** Additional civilization partners; player trade is controlled by diplomacy. */
-    tradingFactions?: number[];
-    nextTradeAt?: number;
-    /** Lifetime delivered trade revenue per partner, independent of spending. */
-    tradeGoldByFaction?: Record<number, number>;
-    nextGrowthAt: number;
-    nextThinkAt: number;
-    nextRecruitAt: number;
+    /** Founding layout chosen by settlement_plan_choose (lot origin in tiles). */
+    layout?: { family: number; transform: number; lotX: number; lotY: number };
     destroyed?: boolean;
+    /** The palace this village became when it confederated. */
+    confederatedInto?: number;
 }
 export interface WildlifeHerd {
     id: number;
@@ -555,6 +654,8 @@ export interface WildlifeHerd {
     lastThreat?: Point;
 }
 /** A city's merchant owns one persistent back-and-forth route. */
+export interface FactionTradeAgreement { faction: number; partnerFaction: number; origin: number; partner: number }
+
 export interface TradeRoute {
     id: number;
     faction: number;
@@ -564,14 +665,16 @@ export interface TradeRoute {
     merchantId?: number;
     nextDepartureAt: number;
     distance: number;
-    /** Domestic delivery quote, fixed when this leg departs; villages retain
-     * their separately calibrated actual-travel payout. */
-    legValue?: { distance: number; originShare: number; partnerShare: number; gold: number };
+    /** Population-supported rate fixed at departure, paid on arrival. */
+    legValue?: { distance: number; originShare: number; partnerShare: number; goldPerSecond: number };
+    /** Active game seconds, weighted by the river premium while aboard. */
+    transitSeconds?: number;
+    partnerFaction?: number;
     journeys: number;
     goal?: Point;
     nextPlanAt?: number;
     stuckSince?: number;
-    /** Additional village connections use distance-based, resource-sensitive trade. */
+    /** Additional village connections use time-based, resource-sensitive trade. */
     villageId?: number;
     river?: RiverTradeConnection;
     /** A new river partner is adopted only after the current caravan returns home. */
@@ -586,8 +689,8 @@ export interface RetinueSquad {
     faction: number;
     kills: number;
 }
-export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding' | 'compoundBow' | 'stirrups'
-    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering';
+export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding' | 'compoundBow' | 'gunpowder' | 'stirrups' | 'populism' | 'urbanMilitia'
+    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering' | 'culturalIdentity' | 'roadBuilding' | 'lateenSails' | 'navalEngineering' | 'whaling' | 'fieldCannon' | 'drainage' | 'militaryScience' | 'officerCorps';
 export interface ResearchState {
     /** Resolved project; explicit priorities may refer to later technologies. */
     focus: ResearchBranchId;
@@ -599,10 +702,12 @@ export interface ResearchState {
     funding?: { points: number; remaining: number }[];
     /** Released Science awaiting the next continuous progress step. */
     credit?: number;
+    /** Gold actually paid for the unspent Science reserve. */
+    reservedGold?: number;
     /** Bounded thirty-second Science receipts for the presentation rate. */
     receipts?: { time: number; points: number }[];
 }
-export type GoldInputCategory = 'taxes' | 'trade' | 'loot' | 'treasure' | 'refunds' | 'transfers' | 'other';
+export type GoldInputCategory = 'taxes' | 'trade' | 'mining' | 'loot' | 'treasure' | 'refunds' | 'transfers' | 'other';
 export type GoldOutlayCategory = 'construction' | 'settlements' | 'defenses' | 'army' | 'science' | 'upgrades' | 'immigration' | 'diplomacy' | 'raided' | 'transfers' | 'other';
 export interface GoldLedgerEntry {
     /** Exact game time; transactions in one simulation step share a bucket. */
@@ -610,7 +715,12 @@ export interface GoldLedgerEntry {
     inputs: Partial<Record<GoldInputCategory, number>>;
     outlays: Partial<Record<GoldOutlayCategory, number>>;
 }
+export type MilitaryFormationType = 'wide' | 'standard' | 'deep';
 export interface Faction {
+    formationType?: MilitaryFormationType;
+    rangerCompanions?: number;
+    /** Native whale-delivery reward: expiry in simulation seconds. */
+    whalingUntil?: number;
     levyReadyAt?: number;
     leaderRespawn?: LeaderRespawnState;
     engineerRespawnAt?: number;
@@ -619,7 +729,8 @@ export interface Faction {
     id: number;
     name: string;
     color: string;
-    affinity: number;
+    /** @deprecated Ignored. Confederation uses Rust settlement affiliation. */
+    affinity?: number;
     relation: Relation;
     food: number;
     gold: number;
@@ -637,6 +748,11 @@ export interface Faction {
     /** Desired fraction of the faction retinue trained as archers. */
     archerFraction?: number;
     spearmanFraction?: number;
+    /** Desired fraction of the retinue trained as pikemen at a barracks. */
+    pikemanFraction?: number;
+    /** Desired share trained as musketmen at barracks after Gunpowder. */
+    musketmanFraction?: number;
+    fieldCannonFraction?: number;
     swordsmanFraction?: number;
     levySlingerFraction?: number;
     horsemanFraction?: number;
@@ -647,8 +763,14 @@ export interface Faction {
     /** Permanent paid retinue capacity, charged even while its slots are vacant. */
     purchasedRetinueSlots?: number;
     research?: ResearchState;
-    /** Accumulated cultural influence produced by completed monuments. */
+    /** Unspent culture produced by towns and monuments. */
     culture?: number;
+    /** Culture invested at forums; still counts toward territorial influence. */
+    cultureSpent?: number;
+    /** Permanent faction achievement bitset, with rules and costs owned by Rust. */
+    achievements?: number;
+    /** Permanent, once-per-quest rewards owned by the native quest account. */
+    questBenefits?: number;
     /** Gross earned resources; purchases, upkeep and refunds never change these counters. */
     incomeTotals?: { food: number; gold: number; culture: number };
     yields: {
@@ -671,10 +793,11 @@ export interface GameEvent {
     kind: 'info' | 'good' | 'warning';
 }
 export interface Particle extends Point {
+    followUnit?: number;
     text: string;
     color: string;
     life: number;
-    kind?: 'hunt' | 'food' | 'damage';
+    kind?: 'hunt' | 'food' | 'damage' | 'healing' | 'exploration';
     duration?: number;
     direction?: number;
     /** Damaged unit's owner; color is chosen per viewer, including multiplayer. */
@@ -695,6 +818,15 @@ export interface UnitDeath extends Point {
     time: number;
     color: string;
 }
+/** Rust-owned destruction lifetime; the building is a drawing snapshot only. */
+export interface BuildingDestruction extends Point {
+    id: number;
+    width: number;
+    height: number;
+    faction: number;
+    time: number;
+    building?: Building;
+}
 /** Nearby losses are remembered briefly for battlefield morale. */
 export interface BattleCasualty extends Point {
     unit: number;
@@ -702,10 +834,16 @@ export interface BattleCasualty extends Point {
     time: number;
 }
 /** A thrown javelin deals its damage when it reaches its target. */
+/** Transient native shell landing; depth keeps a primary building hit visible. */
+export interface ShellImpact extends Point {
+    id: number;
+    time: number;
+    renderDepth?: number;
+}
 export interface Projectile extends Point {
     /** Preserve Leader XP credit when a retinue archer dies before its arrow lands. */
     leaderXp?: number;
-    kind?: 'stone' | 'javelin' | 'arrow' | 'ballistaBolt';
+    kind?: 'stone' | 'javelin' | 'arrow' | 'ballistaBolt' | 'bullet' | 'cannonball';
     start: Point;
     end: Point;
     /** Taller firing platforms interpolate down to the target's torso. */
@@ -720,6 +858,10 @@ export interface Projectile extends Point {
     duration: number;
 }
 export interface GameState {
+    /** Temporary setup phase; normal economy/builders grow scenario towns. */
+    scenarioPreparing?: boolean;
+    raiderTechnologyAt?: number;
+    seaRaids?: import('./sea-raids').SeaRaidState;
     /** Local view and synchronous command actor; never identifies every human. */
     playerFaction?: number;
     multiplayer?: {
@@ -736,12 +878,18 @@ export interface GameState {
     palaceCaptures?: { palaceId: number; faction: number; captor?: number; x: number; y: number; cityName: string;
         /** Snapshot membership before the fallen palace leaves the nearest-city map. */
         buildingIds: number[]; workerIds: number[]; population: number; unhousedResidents: number; populationGrowth: number }[];
+    explorationSites?: import('./exploration-native').ExplorationSite[];
     treasures?: TreasureChest[];
     hermits?: Hermit[];
+    /** Serializable presentation mirrors; Rust owns quest rules and progress. */
+    quests?: import('./quest-types').QuestView[];
+    questsRevision?: number;
     factions: Faction[];
     villages?: NeutralVillage[];
-    nextLoyaltyAt?: number;
-    loyaltyUpdatedAt?: number;
+    /** Base64 sectioned native simulation snapshot (rust/src/sim/save.rs):
+     * section 0 clock and RNG, section 1 settlements. Present only in saves;
+     * the simulation core consumes it when it is created. */
+    simCore?: string;
     /** Surviving squads retain their experience while replacements arrive. */
     retinueSquads?: RetinueSquad[];
     nextRetinueSquadId?: number;
@@ -755,8 +903,11 @@ export interface GameState {
     particles: Particle[];
     bloodEffects?: BloodEffect[];
     unitDeaths?: UnitDeath[];
+    buildingDestructions?: BuildingDestruction[];
+    shipSinkings?: ShipSinking[];
     casualties?: BattleCasualty[];
     projectiles?: Projectile[];
+    shellImpacts?: ShellImpact[];
     selected: number | null;
     selectedType: 'unit' | 'building' | null;
     buildMode: BuildSelection | null;
@@ -766,23 +917,34 @@ export interface GameState {
     /** Developed connected deposits dispatch resident workers on a game-time schedule. */
     resourceWorkSites?: ResourceWorkSite[];
     nextResourceWorkSiteId?: number;
+    /** Read-only publication of the native offensive orders. */
+    offensives?: OffensiveState[];
     /** Temporary, walkable remains of felled trees; source coordinates preserve the tree family. */
     treeStumps?: { x: number; y: number; sourceX: number; sourceY: number; expiresAt: number }[];
     retinueStance?: RetinueStance;
     movementMode?: 'travel' | 'formation';
     diplomacy: number | null;
+    /** Read-only publication of the native diplomacy ECS. */
+    diplomacyState?: DiplomacySnapshot;
     gameOver: boolean;
     victory: boolean;
     /** Victory was acknowledged; keep simulating this world, including defeat. */
     victoryContinued?: boolean;
+    /** Game-wide border wave: index and each realm's claimed culture for this wave. */
+    borderWave?: { index: number; culture: Record<number, number> };
     seed: string;
+    /** Mirror of the native mulberry32 state (rust/src/sim); written only by sim-handle.ts. */
     rngState: number;
+    /** Display IDs for native policy codes; definitions and assignments live in simCore. */
+    aiPolicyNames?: string[];
     /** Approximate smoke hints contain no hidden post identity or exact location. */
     observationSmoke?: { x: number; y: number; faction: number; startedAt: number }[];
     /** Bandit spawn-rate and living-population multiplier; 1 is the default. */
     banditIntensity?: number;
     /** Computer unit/building HP, damage and earned gold multiplier. */
     enemyStrength?: number;
+    /** Single-player cheat: add 5,000 gold per 30-second economy tick. */
+    infiniteGold?: boolean;
     defenseRebuilds?: import('./defense-rebuilding').DefenseRebuild[];
     /** Frozen spawn-clock origin and prior multiplier while intensity is zero. */
     banditSpawnPause?: { at: number; intensity: number };
@@ -790,7 +952,10 @@ export interface GameState {
     wildlife?: { herds: WildlifeHerd[]; nextRespawnAt: number; sequence: number; targetHerds: number };
     /** Shared natural fish stocks and independent dock-operated fishing vessels. */
     fishing?: FishingState;
+    /** Render-only mirror; authoritative harbor voyages are saved in simCore. */
+    harborTradeShips?: HarborTradeShip[];
     tradeRoutes?: TradeRoute[];
+    factionTrades?: FactionTradeAgreement[];
     /** Merchant casualty replacement deadlines, keyed by unordered palace IDs. */
     tradeCooldowns?: Record<string, number>;
     /** One-time scattering of independent packs; defeated packs never refill on load. */
@@ -827,12 +992,14 @@ export interface PlayerControlState {
 }
 export const TILE_SIZE = 32;
 /** Maximum span, for broad spatial queries. Use width/height for footprints. */
-export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'palace' || building.kind === 'fort' || building.kind === 'archeryRange' || building.kind === 'supplyDepot' || building.kind === 'library' ? 2 : 1;
+const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy']);
+const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy']);
+export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : WIDE_KINDS.has(building.kind) ? 2 : 1;
 export const buildingWidth = (building: Pick<Building, 'kind'>): number => buildingSize(building);
-export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'archeryRange' || building.kind === 'supplyDepot' ? 1 : buildingSize(building);
+export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : SQUARE_WIDE_KINDS.has(building.kind) ? 2 : 1;
 /** Northward art overhang, in tiles; collision footprints remain unchanged. */
 export const buildingArtTop = (building: Pick<Building, 'kind' | 'construction'>): number =>
-    !building.construction && (building.kind === 'tower' || building.kind === 'woodenTower') ? -.75 : 0;
+    building.construction ? 0 : building.kind === 'tower' || building.kind === 'woodenTower' ? -.75 : building.kind === 'barracks' ? -1 : 0;
 export const buildingReady = (building: Building): boolean => building.hp > 0 && !building.construction;
 /** A reservation is open ground until a peasant actually starts working. */
 export const buildingPresent = (building: Building): boolean => building.hp > 0 && (!building.construction

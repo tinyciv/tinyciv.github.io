@@ -1,10 +1,8 @@
-import { harmonizeRidgeTerrain } from './ridges';
 import { applySoilFertility } from './soil';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type World } from '../game/types';
 import { environmentRandom } from './environment-fields';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
-import { treeClimateLatitude } from './tree-climate';
 import { terrainYields } from './generator';
 
 /** Coherent polar regions, with a gently wandering rather than ruler-straight edge. */
@@ -21,10 +19,12 @@ export function applyTundra(world: World, parameters: LandscapeParameters = DEFA
   });
   for (let y = 0; y < world.height; y++) for (let x = 0; x < world.width; x++) {
     const tile = world.tiles[y * world.width + x];
-    if (WATER.has(tile.terrain) || tile.beach || tile.resource === 'salt' || stoneFringe[y * world.width + x]) continue;
-    const latitude = treeClimateLatitude(y, world.height, parameters);
-    const edge = .98 + noise(x * .025, y * .025) * .19 + noise(x * .09 + 37, y * .09) * .045;
-    if (latitude < edge) continue;
+    if (WATER.has(tile.terrain) || tile.beach || stoneFringe[y * world.width + x]) continue;
+    // Polar caps belong at both map edges, independently of the warmer
+    // equator's position. Keep their irregular boundary in the outer 9–15%.
+    const poleDistance = Math.min(y, world.height - 1 - y) / Math.max(1, world.height - 1);
+    const edge = .12 + noise(x * .025, y * .025) * .022 + noise(x * .09 + 37, y * .09) * .008;
+    if (poleDistance > edge) continue;
     const old = terrainYields(tile.terrain, tile.overlay);
     tile.terrain = 'tundra'; tile.biome = 'tundra';
     delete tile.palm; delete tile.marsh; delete tile.desertStone;
@@ -34,7 +34,6 @@ export function applyTundra(world: World, parameters: LandscapeParameters = DEFA
     for (const resource of ['food', 'production', 'gold'] as const)
       tile[resource] = Math.max(0, tile[resource] + next[resource] - old[resource]);
   }
-  harmonizeRidgeTerrain(world);
   for (const tile of world.tiles) {
     if (tile.hillBiome) {
       if (tile.terrain === 'desert') tile.hillBiome = 'desert-hills';

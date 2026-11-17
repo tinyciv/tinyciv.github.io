@@ -1,3 +1,4 @@
+import { territoryValue } from './territory-cells';
 import { territory, UNCLAIMED } from './borders';
 import { playerFaction } from './player-context';
 import { buildingReady, type Building, type Faction, type GameState, type Point } from './types';
@@ -53,7 +54,7 @@ export function updateDefenseRebuilds(state: GameState, build: (order: DefenseRe
   state.defenseRebuilds = state.defenseRebuilds.filter(order => {
     const faction = factions.get(order.faction);
     if (!automaticallyRebuildDefenses(faction) || faction!.defeated) return false;
-    const owner = borders.owners[order.y * state.world.width + order.x];
+    const owner = territoryValue(borders, order.y * state.world.width + order.x);
     // A captured neighborhood belongs to its new owner, not the old blueprint.
     if (owner !== undefined && owner !== UNCLAIMED && owner !== order.faction) return false;
     if (occupied.has(key(order, order.kind))) return false;

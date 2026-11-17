@@ -9,7 +9,7 @@ import { grantIncome } from '../src/game/resource-income';
 import {
   canUpgradeSettlement, isKeep, KEEP_MAX_HP, SETTLEMENT_MAX_HP,
   settlementLabel, settlementUpgradeStatus, upgradeSettlement, keepHousingUpgradeStatus, purchaseKeepHousing,
-  KEEP_HOUSING, KEEP_HOUSING_BONUS, KEEP_HOUSING_COST,
+  KEEP_HOUSING, KEEP_HOUSING_BONUS, KEEP_UPGRADE_COST, KEEP_HOUSING_COST,
 } from '../src/game/settlement-upgrades';
 import { housingCapacity } from '../src/game/simulation';
 import { applyGameCommand } from '../src/multiplayer/commands';
@@ -33,7 +33,7 @@ function fixture() {
         moisture: .5, food: 3, production: 1, gold: 0, variation: .5 })) },
     buildings: [settlement], units: [leader],
     factions: [{ id: 0, name: 'Player', color: '#3988ff', relation: 'self', affinity: 100,
-      food: 100, gold: 0, production: 0, population: 4, yields: { food: 0, gold: 0, production: 0 },
+      food: 100, gold: KEEP_UPGRADE_COST, production: 0, population: 4, yields: { food: 0, gold: 0, production: 0 },
       nextRaid: Infinity, defeated: false, research: { focus: 'woodenTower', levels: { wall: 1, woodenTower: 1 }, progress: {} } }],
     time: 30, tick: 0, paused: true, speed: 1, events: [], particles: [], selected: 1, selectedType: 'building',
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'keep-upgrade', rngState: 1,
@@ -57,8 +57,9 @@ describe('Settlement to Keep upgrade', () => {
     endFogFrame(state);
   });
 
-  it('unlocks only from completed Fortification, without requiring a surviving library or gold', () => {
+  it('requires completed Fortification and payment, without requiring a surviving library', () => {
     const { state, settlement, player } = fixture();
+    player.gold = 0;
     const cost = RESEARCH_BRANCHES.find(branch => branch.id === 'woodenTower')!.tiers[0].points;
     player.research = { focus: 'woodenTower', priorities: ['woodenTower'], allocation: 1, levels: {}, progress: { woodenTower: cost - .1 } };
     expect(settlementUpgradeStatus(state, settlement)).toEqual({ available: false, reason: 'Research Fortification first.' });
@@ -75,6 +76,8 @@ describe('Settlement to Keep upgrade', () => {
     state.paused = true;
     expect(state.buildings.some(building => building.kind === 'library')).toBe(false);
     expect(player.gold).toBeCloseTo(0);
+    expect(settlementUpgradeStatus(state, settlement)).toEqual({ available: false, reason: 'Need 1000 gold.' });
+    player.gold = KEEP_UPGRADE_COST;
     expect(canUpgradeSettlement(state, settlement)).toBe(true);
     expect(upgradeSettlement(state, settlement).ok).toBe(true);
     expect(player.gold).toBeCloseTo(0);
@@ -88,11 +91,21 @@ describe('Settlement to Keep upgrade', () => {
     expect(settlement).toEqual({ ...original, palaceLevel: 2, maxHp: KEEP_MAX_HP, hp: KEEP_MAX_HP * fraction, capacity: KEEP_HOUSING });
     expect(KEEP_MAX_HP).toBe(6500);
     expect([buildingWidth(settlement), buildingHeight(settlement)]).toEqual([2, 2]);
-    expect(player).toEqual(originalFaction);
+    expect(player).toEqual({ ...originalFaction, gold: originalFaction.gold - KEEP_UPGRADE_COST,
+      goldLedger: [{ time: state.time, inputs: {}, outlays: { upgrades: KEEP_UPGRADE_COST } }] });
     expect(state.buildings[0]).toBe(settlement);
     const upgraded = structuredClone(settlement);
     expect(upgradeSettlement(state, settlement)).toEqual({ ok: false, message: 'Already a Keep.' });
     expect(settlement).toEqual(upgraded);
+    expect(player.gold).toBe(0);
+  });
+
+  it.each([0, 999.99, NaN, Infinity])('rejects a %s-gold treasury without altering the settlement or recording a payment', gold => {
+    const { state, settlement, player } = fixture(); player.gold = gold;
+    const before = structuredClone({ settlement, player });
+    expect(settlementUpgradeStatus(state, settlement)).toEqual({ available: false, reason: 'Need 1000 gold.' });
+    expect(upgradeSettlement(state, settlement)).toEqual({ ok: false, message: 'Need 1000 gold.' });
+    expect({ settlement, player }).toEqual(before);
   });
 
   it('uses the actual footing and the same Leader reach check for status and action', () => {
@@ -161,7 +174,7 @@ describe('Settlement to Keep upgrade', () => {
   });
 
   it('provides ten beds, then buys fifteen more once without adding people, food or health', () => {
-    const { state, settlement, player } = fixture(); player.gold = KEEP_HOUSING_COST + 250;
+    const { state, settlement, player } = fixture(); player.gold = KEEP_UPGRADE_COST + KEEP_HOUSING_COST + 250;
     settlement.hp = SETTLEMENT_MAX_HP * .4;
     expect(housingCapacity(state)).toBe(4);
     expect(upgradeSettlement(state, settlement).ok).toBe(true);
@@ -171,7 +184,7 @@ describe('Settlement to Keep upgrade', () => {
     expect(housingCapacity(state)).toBe(KEEP_HOUSING + KEEP_HOUSING_BONUS);
     expect(settlement).toEqual({ ...before.settlement, capacity: 25, keepHousingExpanded: true });
     expect(player).toEqual({ ...before.player, gold: 250,
-      goldLedger: [{ time: state.time, inputs: {}, outlays: { upgrades: KEEP_HOUSING_COST } }] });
+      goldLedger: [{ time: state.time, inputs: {}, outlays: { upgrades: KEEP_UPGRADE_COST + KEEP_HOUSING_COST } }] });
     expect(purchaseKeepHousing(state, settlement)).toEqual({ ok: false, message: 'Keep housing is fully expanded.' });
     expect(player.gold).toBe(250); expect(settlement.capacity).toBe(25);
     const loaded = structuredClone(state);
@@ -180,9 +193,9 @@ describe('Settlement to Keep upgrade', () => {
 
   it.each(['ordinary settlement', 'insufficient gold', 'outside reach', 'foreign Keep', 'unfinished Keep', 'destroyed Keep'] as const)(
     'rejects a housing purchase for %s without spending or changing capacity', reason => {
-      const { state, settlement, player, leader } = fixture(); player.gold = KEEP_HOUSING_COST;
+      const { state, settlement, player, leader } = fixture(); player.gold = KEEP_UPGRADE_COST + KEEP_HOUSING_COST;
       if (reason !== 'ordinary settlement') upgradeSettlement(state, settlement);
-      if (reason === 'insufficient gold') player.gold--;
+      if (reason === 'insufficient gold') player.gold = KEEP_HOUSING_COST - 1;
       if (reason === 'outside reach') leader.x = 22;
       if (reason === 'foreign Keep') settlement.faction = 1;
       if (reason === 'unfinished Keep') settlement.construction = { startedAt: 0, duration: 90 };
@@ -204,6 +217,20 @@ describe('Settlement to Keep upgrade', () => {
     expect(applyGameCommand(state, 1, { type: 'keep-housing', buildingId: settlement.id }).ok).toBe(true);
     expect(player.gold).toBe(500); expect(settlement.capacity).toBe(25);
     expect(applyGameCommand(state, 1, { type: 'keep-housing', buildingId: settlement.id }).ok).toBe(false);
+    expect(player.gold).toBe(500);
+  });
+
+  it('charges an authenticated multiplayer Keep conversion once and rejects other owners', () => {
+    const { state, settlement, leader, player } = fixture();
+    settlement.faction = leader.faction = player.id = 1; player.gold = 1500;
+    state.factions.push({ ...structuredClone(player), id: 0, gold: 9000 });
+    entityStore(state).units.add({ ...leader, id: 11, faction: 0 });
+    state.multiplayer = { humanFactionIds: [0, 1], inputs: {}, controls: {}, winner: null };
+    expect(applyGameCommand(state, 0, { type: 'keep', buildingId: settlement.id }).ok).toBe(false);
+    expect(player.gold).toBe(1500);
+    expect(applyGameCommand(state, 1, { type: 'keep', buildingId: settlement.id }).ok).toBe(true);
+    expect(player.gold).toBe(500); expect(settlement.palaceLevel).toBe(2);
+    expect(applyGameCommand(state, 1, { type: 'keep', buildingId: settlement.id }).ok).toBe(false);
     expect(player.gold).toBe(500);
   });
 });

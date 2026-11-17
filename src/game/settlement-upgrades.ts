@@ -4,43 +4,47 @@ import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-a
 import { researchLevel } from './research';
 import { buildingReady, type Building, type GameState } from './types';
 import { markWorldChanged } from './world-revisions';
+import { rustEngine } from './rust-engine';
 
 export const SETTLEMENT_MAX_HP = 650;
 export const KEEP_MAX_HP = SETTLEMENT_MAX_HP * 10;
 export const KEEP_HOUSING = 10;
 export const KEEP_HOUSING_BONUS = 15;
-export const KEEP_HOUSING_COST = 1000;
+export const KEEP_UPGRADE_COST = rustEngine.progression_constant(9);
+export const KEEP_HOUSING_COST = rustEngine.progression_constant(10);
 
 export const isKeep = (building: Pick<Building, 'kind' | 'palaceLevel'>): boolean =>
   building.kind === 'palace' && building.palaceLevel === 2;
 
-export const settlementLabel = (building: Pick<Building, 'kind' | 'palaceLevel'>): 'Settlement' | 'Keep' =>
-  isKeep(building) ? 'Keep' : 'Settlement';
+export const settlementLabel = (building: Pick<Building, 'kind' | 'palaceLevel'>): 'Town' | 'Keep' =>
+  isKeep(building) ? 'Keep' : 'Town';
 
 export function settlementUpgradeStatus(state: GameState, building: Building): { available: boolean; reason: string } {
   const player = state.factions.find(faction => faction.id === playerFaction(state));
   let reason = '';
-  if (state.gameOver || player?.defeated) reason = 'Your realm can no longer upgrade settlements.';
+  if (state.gameOver || player?.defeated) reason = 'Your realm can no longer upgrade towns.';
   else if (building.kind !== 'palace' || building.faction !== playerFaction(state) || !player || !state.buildings.includes(building))
-    reason = 'Choose your own settlement.';
+    reason = 'Choose your own town.';
   else if (!Number.isFinite(building.hp) || !Number.isFinite(building.maxHp) || building.hp <= 0 || building.maxHp <= 0)
-    reason = 'Only a surviving settlement can be upgraded.';
-  else if (!buildingReady(building)) reason = 'Complete the settlement first.';
+    reason = 'Only a surviving town can be upgraded.';
+  else if (!buildingReady(building)) reason = 'Complete the town first.';
   else if (isKeep(building)) reason = 'Already a Keep.';
   else if (!researchLevel(player, 'woodenTower')) reason = 'Research Fortification first.';
   else if (!buildingActivityAvailable(state, building))
-    reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the settlement.`;
+    reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the town.`;
+  else if (rustEngine.progression_purchase(player.gold, KEEP_UPGRADE_COST) < 0) reason = `Need ${KEEP_UPGRADE_COST} gold.`;
   return { available: !reason, reason };
 }
 
 export const canUpgradeSettlement = (state: GameState, building: Building): boolean =>
   settlementUpgradeStatus(state, building).available;
 
-/** Fortification unlocks one free conversion without repairing existing damage. */
+/** Fortification unlocks a paid conversion without repairing existing damage. */
 export function upgradeSettlement(state: GameState, building: Building): { ok: boolean; message: string } {
   const status = settlementUpgradeStatus(state, building);
   if (!status.available) return { ok: false, message: status.reason };
   const healthFraction = Math.max(0, Math.min(1, building.hp / building.maxHp));
+  spendGold(state, state.factions.find(faction => faction.id === building.faction)!, KEEP_UPGRADE_COST, 'upgrades');
   building.palaceLevel = 2;
   building.maxHp = KEEP_MAX_HP * (building.enemyStrengthMultiplier ?? 1);
   building.hp = building.maxHp * healthFraction;
@@ -48,7 +52,7 @@ export function upgradeSettlement(state: GameState, building: Building): { ok: b
   // Visible building memories also render while paused. Refresh them without
   // rebuilding terrain or changing sight/collision geometry.
   markWorldChanged(state.world);
-  return { ok: true, message: `${building.cityName ?? 'Settlement'} upgraded to a Keep.` };
+  return { ok: true, message: `${building.cityName ?? 'Town'} upgraded to a Keep.` };
 }
 
 export function keepHousingUpgradeStatus(state: GameState, building: Building): { available: boolean; reason: string } {
@@ -61,7 +65,7 @@ export function keepHousingUpgradeStatus(state: GameState, building: Building): 
   else if (building.keepHousingExpanded) reason = 'Keep housing is fully expanded.';
   else if (!buildingActivityAvailable(state, building))
     reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the Keep.`;
-  else if (!Number.isFinite(player.gold) || player.gold < KEEP_HOUSING_COST) reason = `Need ${KEEP_HOUSING_COST} gold.`;
+  else if (rustEngine.progression_purchase(player.gold, KEEP_HOUSING_COST) < 0) reason = `Need ${KEEP_HOUSING_COST} gold.`;
   return { available: !reason, reason };
 }
 

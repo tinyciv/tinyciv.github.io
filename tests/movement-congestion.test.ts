@@ -4,6 +4,7 @@ import { scenario } from '../dev/navigation-lab/scenarios';
 import { unitObstructs } from '../src/game/collisions';
 import { claimAttackSpot, movementCongestion } from '../src/game/engagement';
 import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
+import { withSimulationReads } from '../src/game/simulation-reads';
 import type { GameState, Point, Unit } from '../src/game/types';
 
 const cell = (state: GameState, point: Point) => Math.floor(point.y) * state.world.width + Math.floor(point.x);
@@ -27,6 +28,62 @@ function reference(state: GameState, unit: Unit, claims: Map<number, { point: Po
 }
 
 describe('fused obstruction and movement-cost scan', () => {
+  it('uses ordered collision roles while keeping live military, engineer and wildlife rules', () => {
+    const state = scenario('Open melee'), base = state.units[1];
+    const kinds: Unit['kind'][] = ['warrior', 'worker', 'worker', 'deer', 'militia', 'leader', 'scout', 'merchant', 'supplyCart', 'slinger'];
+    const units = kinds.map((kind, i): Unit => ({ ...base, id: 100 + i, kind, faction: i % 3 === 0 ? 1 : 0,
+      x: 3.5 + i * 2, y: 12.5, moving: i % 2 === 0,
+      engineer: i === 2 ? { leader: 105 } : undefined, path: [{ x: 20.5, y: 12.5 }] }));
+    const store = entityStore(state); store.units.replace(units);
+    const check = () => withSimulationReads(state, () => {
+      for (const observer of units) {
+        const visits: Unit[] = [];
+        const actual = movementCongestion(state, observer, unit => visits.push(unit));
+        expect([...actual]).toEqual([...reference(state, observer, new Map())]);
+        expect(visits).toEqual(state.units.filter(other => unitObstructs(observer, other)));
+      }
+    });
+    check();
+    units[0].hp = 0; units[3].inside = true; units[4].faction = 1;
+    units[9].levyAssembling = true; units[5].humanControlled = true;
+    units[4].wallPatrol = { wall: 99 } as Unit['wallPatrol'];
+    check();
+    // Updating an existing worker's role must update the shared candidate view.
+    store.setUnitRole(units[1], { kind: 'warrior' });
+    units[6].kind = 'worker'; units[6].engineer = { leader: 105 }; store.units.updateRoles(units[6]);
+    check();
+    const added = { ...base, id: 900, kind: 'warrior' as const, x: 30.5, y: 20.5 };
+    store.units.add(added); check();
+    store.units.retain(unit => unit !== units[2]); check();
+  });
+
+  it('still observes unversioned civilian role edits outside simulation reads', () => {
+    const state = scenario('Open melee'), base = state.units[1];
+    const observer = { ...base, id: 100, kind: 'warrior' as const, faction: 0 };
+    const changed = { ...base, id: 101, kind: 'worker' as Unit['kind'], faction: 0 };
+    entityStore(state).units.replace([observer, changed]);
+    withSimulationReads(state, () => expect(movementCongestion(state, observer).size).toBe(0));
+    changed.kind = 'warrior';
+    expect([...movementCongestion(state, observer)]).toEqual([...reference(state, observer, new Map())]);
+    expect(movementCongestion(state, observer).size).toBeGreaterThan(0);
+  });
+
+  it('retains distant traffic so route planning can choose lanes before reaching a crowd', () => {
+    const state = scenario('Open melee'), base = state.units[1];
+    const observer = { ...base, id: 100, faction: 0, x: 3.5, y: 3.5 };
+    const local = { ...base, id: 101, faction: 0, x: 4.5, y: 3.5 };
+    const remote = { ...base, id: 200, faction: 0, x: 30.5, y: 20.5 };
+    entityStore(state).units.replace([observer, local, remote]);
+    beginUnitFrame(state);
+    try {
+      const visited: Unit[] = [];
+      const congestion = movementCongestion(state, observer, unit => visited.push(unit));
+      expect(visited).toEqual([local, remote]);
+      expect(congestion.has(cell(state, local))).toBe(true);
+      expect(congestion.has(cell(state, remote))).toBe(true);
+    } finally { endUnitFrame(state); }
+  });
+
   it('clears reused search costs when units die or belong to a different observer', () => {
     const state = scenario('Open melee'), base = state.units[1];
     const a = { ...base, id: 100, faction: 0, x: 8.5, y: 8.5 };

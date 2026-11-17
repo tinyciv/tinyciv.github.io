@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { createGame, updateGame } from '../src/game/simulation';
+import { advanceAutomaticDevelopment, createGame, updateGame } from '../src/game/simulation';
 import { cityDevelopmentNeeds, governorPermissions, setGovernorPermission } from '../src/game/governor';
 import { ensureCollectors, synchronizeFarms } from '../src/game/farms';
 import { buildingReady, isFarmKind, type GameState } from '../src/game/types';
@@ -18,12 +18,15 @@ function realm(): GameState {
   palace(state).populationGrowth = -1000;
   synchronizeFarms(state); ensureCollectors(state); return state;
 }
-function economy(state: GameState): void {
+function economy(state: GameState, drain = true): void {
   state.time = (state.tick + 1) * 30 - .05;
   // Courier trips are omitted by the time jump. Existing farms remain tended
   // while these checks isolate automatic-construction permissions.
   for (const farm of state.buildings) if (isFarmKind(farm.kind) && buildingReady(farm)) farm.farmLastVisitedAt = state.time;
   updateGame(state, .05, idle);
+  // Drain the city cohort at the same simulation time; runtime spreads these
+  // bounded turns across frames, preserving the same earned order allowance.
+  if (drain) for (let turn = 0; turn < 160; turn++) advanceAutomaticDevelopment(state);
 }
 const palace = (state: GameState) => state.buildings.find(building => building.kind === 'palace')!;
 const count = (state: GameState, kind: 'camp' | 'house') => state.buildings.filter(building => building.kind === kind).length;
@@ -76,7 +79,14 @@ describe('city governor permissions and growth priorities', () => {
     const state = realm(), first = palace(state);
     setGovernorPermission(first, 'farms', false); setGovernorPermission(first, 'housing', false);
     entityStore(state).buildings.add({ ...first, id: 10000, x: 48, y: 20, governorPermissions: { farms: true, housing: false } });
-    economy(state);
+    economy(state, false);
+    expect(state.buildings.some(building => building.kind === 'camp' && building.construction)).toBe(false);
+    // Only the disabled first city ran at the shared deadline. The second
+    // governor starts searching on the next fast step, then spends only when
+    // its bounded search finishes; no additional game time is required.
+    updateGame(state, .05, idle);
+    expect(state.buildings.find(building => building.id === 10000)!.governorNextPlanAt).toBeGreaterThan(state.time);
+    for (let turn = 0; turn < 160; turn++) advanceAutomaticDevelopment(state);
     const farm = state.buildings.find(building => building.kind === 'camp' && building.construction)!;
     expect(farm).toBeDefined(); expect(Math.hypot(farm.x - 48, farm.y - 20)).toBeLessThan(16);
     expect(Math.hypot(farm.x - first.x, farm.y - first.y)).toBeGreaterThan(16);

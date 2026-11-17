@@ -2,14 +2,16 @@ import { playerFaction } from './player-context';
 import { buildingSize, type Building, type GameState, type Point, type Unit } from './types';
 import { civilianFootprint, unitObstructs, unitBlocksNavigationCell, unitsCollide } from './collisions';
 import { entityStore, type UnitRole } from './entity-store';
+import { nativeMovement, type NativeMovementWorld } from './movement-native';
+import { structureIndex } from './structure-index';
 
 const BUCKET_SIZE = 4;
 interface IndexedUnit {
   unit: Unit; order: number; cell: number; tile: number; bucketOrder: number; bucketSlot: number;
   seen: number;
-  tilePrevious?: IndexedUnit; tileNext?: IndexedUnit;
 }
 interface UnitIndex {
+  native: NativeMovementWorld;
   buckets: IndexedUnit[][];
   bucketVersions: number[];
   unitQueries: Map<number | string, { versions: number[]; units: Unit[] }>;
@@ -17,13 +19,12 @@ interface UnitIndex {
   buildingQueries: Map<number | string, Building[]>;
   unitOrder: readonly Unit[];
   unitRevision: number;
-  occupancyRevision: number;
-  occupancyAdditions: Unit[];
   unitBits: Uint32Array;
   uniqueUnitOrders: boolean;
   buildingOrder: Building[];
+  buildingSource?: readonly Building[];
+  buildingGeometry?: number;
   buildingBits: Uint32Array;
-  tiles: Map<number, IndexedUnit>;
   entries: Map<Unit, IndexedUnit>;
   generation: number;
   buildingCells: number[];
@@ -44,21 +45,6 @@ const retained = new WeakMap<GameState, UnitIndex>();
 const bucket = (index: UnitIndex, x: number, y: number): number => Math.floor(y / BUCKET_SIZE) * index.columns + Math.floor(x / BUCKET_SIZE);
 const tile = (index: UnitIndex, unit: Point): number => Math.floor(unit.y) * index.width + Math.floor(unit.x);
 
-// Intrusive tile lists reuse the broad-phase entries. Most cells hold one unit,
-// so point occupancy needs neither a full bucket scan nor a per-cell Set.
-function addTile(index: UnitIndex, entry: IndexedUnit): void {
-  const head = index.tiles.get(entry.tile);
-  entry.tilePrevious = undefined; entry.tileNext = head;
-  if (head) head.tilePrevious = entry;
-  index.tiles.set(entry.tile, entry);
-}
-function removeTile(index: UnitIndex, entry: IndexedUnit): void {
-  if (entry.tilePrevious) entry.tilePrevious.tileNext = entry.tileNext;
-  else if (entry.tileNext) index.tiles.set(entry.tile, entry.tileNext);
-  else index.tiles.delete(entry.tile);
-  if (entry.tileNext) entry.tileNext.tilePrevious = entry.tilePrevious;
-}
-
 /** Reuse position buckets between steps. Movement updates only changed cells.
  * Original array order still defines deterministic query and yield priority. */
 export function beginUnitFrame(state: GameState): void {
@@ -66,21 +52,29 @@ export function beginUnitFrame(state: GameState): void {
   const columns = Math.ceil(state.world.width / BUCKET_SIZE), rows = Math.ceil(state.world.height / BUCKET_SIZE);
   if (!index || index.width !== state.world.width || index.rows !== rows) {
     index = {
+      native: nativeMovement(state),
       buckets: [], bucketVersions: [], unitQueries: new Map(), buildingQueries: new Map(),
       occupancyViews: new WeakMap(),
-      unitOrder: [], unitRevision: -1, occupancyRevision: -1, occupancyAdditions: [], unitBits: new Uint32Array(0), uniqueUnitOrders: true,
+      unitOrder: [], unitRevision: -1, unitBits: new Uint32Array(0), uniqueUnitOrders: true,
       buildingOrder: [], buildingBits: new Uint32Array(0), buildingCells: [], buildingSizes: [],
       buildingXs: [], buildingYs: [], buildingKinds: [], buildingEntries: [],
-      tiles: new Map(), entries: new Map(), generation: 0,
+      entries: new Map(), generation: 0,
       buildingBuckets: [], maxBuildingSize: 1, columns, rows, width: state.world.width, nextBucketOrder: 0,
     };
     retained.set(state, index);
   }
+  index.native = nativeMovement(state); index.native.begin(entityStore(state));
   index.generation++; index.uniqueUnitOrders = true;
   if (index.unitQueries.size > 1024) index.unitQueries.clear();
   if (index.buildingQueries.size > 1024) index.buildingQueries.clear();
   let buildingChanged = index.buildingOrder.length !== state.buildings.length;
-  for (let order = 0; order < state.buildings.length; order++) {
+  // The resident building index publishes every membership, position and kind
+  // change. An unchanged geometry revision means every footprint below is
+  // current, so the per-building comparison is skipped for the whole list.
+  const geometry = structureIndex(state).geometry;
+  const buildingsCurrent = !buildingChanged && index.buildingSource === state.buildings && index.buildingGeometry === geometry;
+  index.buildingSource = state.buildings; index.buildingGeometry = geometry;
+  if (!buildingsCurrent) for (let order = 0; order < state.buildings.length; order++) {
     const building = state.buildings[order];
     // Keep exact support for direct editor/test mutations, but only recalculate
     // geometry for changed objects. Health and ownership never affect buckets.
@@ -117,22 +111,22 @@ export function beginUnitFrame(state: GameState): void {
     if (!entry) {
       const group = index.buckets[key] ?? (index.buckets[key] = []);
       entry = { unit, order, cell: key, tile: nextTile, bucketOrder: order, bucketSlot: group.length, seen: index.generation };
-      group.push(entry); index.entries.set(unit, entry); addTile(index, entry);
+      group.push(entry); index.entries.set(unit, entry);
       index.bucketVersions[key] = (index.bucketVersions[key] ?? 0) + 1;
     } else {
-      if (entry.tile !== nextTile) { removeTile(index, entry); entry.tile = nextTile; addTile(index, entry); }
+      entry.tile = nextTile;
       if (entry.cell !== key) moveBucket(index, entry, key);
       entry.order = order; entry.bucketOrder = order; entry.seen = index.generation;
     }
+    index.native.index(unit, order, entry.bucketOrder, entry.tile);
   }
   for (const [unit, entry] of index.entries) if (entry.seen !== index.generation) {
-    removeBucket(index, entry); removeTile(index, entry); index.entries.delete(unit);
+    removeBucket(index, entry); index.native.remove(unit); index.entries.delete(unit);
   }
   if (unitOrderChanged) index.unitQueries.clear();
   if (index.unitBits.length * 32 < state.units.length) index.unitBits = new Uint32Array(Math.ceil(state.units.length / 32));
   index.nextBucketOrder = state.units.length;
-  index.occupancyRevision = units.revision;
-  index.occupancyAdditions.length = 0;
+  index.native.finishBegin();
   frames.set(state, index);
 }
 
@@ -153,28 +147,32 @@ export function refreshIndexedUnit(state: GameState, unit: Unit): void {
   if (!index) return;
   let entry = index.entries.get(unit);
   if (entityStore(state).isUnitSleeping(unit)) {
-    if (entry) { removeBucket(index, entry); removeTile(index, entry); index.entries.delete(unit); }
+    if (entry) { removeBucket(index, entry); index.native.remove(unit); index.entries.delete(unit); }
     return;
   }
   const key = bucket(index, unit.x, unit.y), nextTile = tile(index, unit);
   if (entry && entry.tile !== nextTile) {
-    removeTile(index, entry); entry.tile = nextTile; addTile(index, entry);
+    entry.tile = nextTile;
   }
-  if (key === entry?.cell) return;
+  if (key === entry?.cell) { index.native.index(unit, entry.order, entry.bucketOrder, entry.tile); return; }
   if (entry) moveBucket(index, entry, key);
   else {
     const order = entityStore(state).units.indexOf(unit), group = index.buckets[key] ?? (index.buckets[key] = []);
     entry = { unit, order, cell: key, tile: nextTile, bucketOrder: index.nextBucketOrder, bucketSlot: group.length, seen: index.generation };
     if (order < 0 || index.unitOrder[order] && index.unitOrder[order] !== unit) index.uniqueUnitOrders = false;
     if (order >= index.unitBits.length * 32) index.unitBits = new Uint32Array(Math.ceil((order + 1) / 32));
-    index.entries.set(unit, entry); group.push(entry); addTile(index, entry);
+    index.entries.set(unit, entry); group.push(entry);
     index.bucketVersions[key] = (index.bucketVersions[key] ?? 0) + 1;
   }
   entry.bucketOrder = index.nextBucketOrder++;
+  index.native.index(unit, entry.order, entry.bucketOrder, entry.tile);
 }
-export function endUnitFrame(state: GameState): void { frames.delete(state); }
+export function endUnitFrame(state: GameState): void {
+  const index = frames.get(state); if (index) index.native.active = false;
+  frames.delete(state);
+}
 
-/** Stable bitECS role queries, including outside simulation updates. */
+/** Stable bevy_ecs role queries, including outside simulation updates. */
 export function unitsWithRole(state: GameState, role: UnitRole): readonly Unit[] {
   return entityStore(state).units.query(role);
 }
@@ -270,17 +268,10 @@ export function indexedLeader(state: GameState, faction = playerFaction(state)):
 export function cellOccupant(state: GameState, point: Point, unit: Unit): Unit | undefined {
   if (civilianFootprint(unit)) return undefined;
   const x = Math.floor(point.x), y = Math.floor(point.y), index = frames.get(state);
-  if (!index) return state.units.find(other => unitObstructs(unit, other) && Math.floor(other.x) === x && Math.floor(other.y) === y);
-  let occupant: Unit | undefined, order = Infinity;
-  for (let entry = index.tiles.get(y * index.width + x); entry; entry = entry.tileNext) {
-    const other = entry.unit;
-    // Match the original bucket Set's insertion order when several units share
-    // a cell: friendly-yield arbitration depends on which occupant is first.
-    if (entry.bucketOrder < order && unitObstructs(unit, other) && Math.floor(other.x) === x && Math.floor(other.y) === y) {
-      occupant = other; order = entry.bucketOrder;
-    }
-  }
-  return occupant;
+  if (!index || x < 0 || y < 0 || x >= state.world.width || y >= state.world.height)
+    return state.units.find(other => unitObstructs(unit, other) && Math.floor(other.x) === x && Math.floor(other.y) === y);
+  const id = index.native.occupant(y * index.width + x, unit, 0);
+  return Number.isNaN(id) ? undefined : entityStore(state).units.get(id);
 }
 
 /** Yield chains formerly built a cell Map from the entire unit array. Preserve
@@ -294,30 +285,8 @@ export function lastCollidingUnitInCell(state: GameState, cell: number, unit: Un
     for (let i = state.units.length - 1; i >= 0; i--) if (matches(state.units[i])) return state.units[i];
     return;
   }
-  const units = entityStore(state).units;
-  if (index.occupancyRevision !== units.revision) {
-    // Combat can recruit defenders after the frame's active-unit snapshot.
-    // Discover them once per membership change. Keep this overlay separate
-    // from sensing/movement buckets so a yield probe cannot reorder those
-    // queries or bring forward a new recruit's normal first spatial refresh.
-    index.occupancyAdditions.length = 0;
-    for (const other of units.query('active')) if (!index.entries.has(other)) index.occupancyAdditions.push(other);
-    index.occupancyRevision = units.revision;
-  }
-  // The requester may already have moved within advanceUnit's substeps; its
-  // normal spatial refresh happens only when that movement call finishes.
-  let last = units.indexOf(unit);
-  let occupant: Unit | undefined = last >= 0 && matches(unit) ? unit : undefined;
-  if (!occupant) last = -1;
-  for (let entry = index.tiles.get(cell); entry; entry = entry.tileNext) {
-    const order = units.indexOf(entry.unit);
-    if (order > last && matches(entry.unit)) { occupant = entry.unit; last = order; }
-  }
-  for (const other of index.occupancyAdditions) {
-    const order = units.indexOf(other);
-    if (order > last && matches(other)) { occupant = other; last = order; }
-  }
-  return occupant;
+  const id = index.native.occupant(cell, unit, 1);
+  return Number.isNaN(id) ? undefined : entityStore(state).units.get(id);
 }
 
 /** Read-only unit occupancy for synchronous navigation probes. During a unit
@@ -338,8 +307,7 @@ export function unitOccupancy(state: GameState, unit: Unit): Pick<ReadonlySet<nu
   view = {
     has: cell => {
       if (civilianFootprint(unit)) return false;
-      for (let entry = index.tiles.get(cell); entry; entry = entry.tileNext) if (unitBlocksNavigationCell(unit, entry.unit)) return true;
-      return false;
+      return !Number.isNaN(index.native.occupant(cell, unit, 0));
     },
   };
   index.occupancyViews.set(unit, view);

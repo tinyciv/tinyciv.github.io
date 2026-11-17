@@ -32,6 +32,27 @@ function populate(state: GameState): void {
 }
 
 describe('automatic house placement', () => {
+  it('checks nearby candidates without scanning every distant allowed tile', () => {
+    const state = fixture(), palace = state.buildings[0];
+    state.world.width = 200; state.world.height = 160; state.world.revision = 0;
+    state.world.tiles = Array.from({ length: 32000 }, () => ({ ...state.world.tiles[0] }));
+    palace.x = 70; palace.y = 60;
+    let inspected = 0;
+    const site = planHouseSite(state, palace, () => true, () => { inspected++; return true; });
+    expect(site).toBeDefined();
+    expect(inspected).toBeLessThan(64);
+  });
+
+  it('retains row-column ties and finds distant sites beyond the nearby search', () => {
+    const state = fixture(), palace = state.buildings[0];
+    const first = { x: 6, y: 9 }, tied = { x: 5, y: 10 };
+    expect(planHouseSite(state, palace, undefined, p => p.x === first.x && p.y === first.y || p.x === tied.x && p.y === tied.y)?.point).toEqual(first);
+    state.world.width = 80; state.world.height = 80; state.world.revision = 0;
+    state.world.tiles = Array.from({ length: 6400 }, () => ({ ...state.world.tiles[0] }));
+    const distant = { x: 74, y: 75 };
+    expect(planHouseSite(state, palace, undefined, p => p.x === distant.x && p.y === distant.y)?.point).toEqual(distant);
+  });
+
   it('deterministically finds a reachable one-cell home near the palace', () => {
     const state = fixture(), palace = state.buildings[0], before = JSON.stringify(state);
     const site = nearestHouseSite(state, palace)!;

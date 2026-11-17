@@ -10,12 +10,12 @@ interface Rect { key: string; x: number; y: number; width: number; height: numbe
 interface ImageRect { key: string; x: number; y: number; width: number; height: number; source: number[] }
 interface Stroke { key: string; color: string; width: number; opacity: number; dash: number[]; offset: number; commands: number[][] }
 interface Picture { key: string; texts?: Text[]; rects?: Rect[]; images?: ImageRect[]; strokes?: Stroke[] }
-interface Shape { rect(...args: number[]): Shape; roundRect(...args: number[]): Shape; fill(style: string | { color: string; alpha?: number }): Shape }
+interface Shape { position: { set(x?: number, y?: number): void }; rect(...args: number[]): Shape; roundRect(...args: number[]): Shape; fill(style: string | { color: string; alpha?: number }): Shape }
 
 /** Exercise the real world compositor without a browser/GPU. Only the final
  * Pixi display list and offscreen text/path baking are replaced by recorders. */
 export function recordNativeFrame(state: GameState, options: { fog?: fogModule.FogView; size?: number; ox?: number; oy?: number; width?: number; height?: number;
-    buildPreview?: Point[]; paintFieldMasks?: boolean } = {}) {
+    buildPreview?: Point[]; constructionGesture?: Renderer['constructionGesture']; pendingConstruction?: Renderer['pendingConstruction']; paintFieldMasks?: boolean } = {}) {
     const texts: Text[] = [], rects: Rect[] = [], images: ImageRect[] = [], strokes: Stroke[] = [], sprites: { key: string; x: number; y: number; scale: number; alpha: number }[] = [], drawOrder: string[] = [];
     const paint = (key: string, _bounds: unknown, draw: (c: CanvasRenderingContext2D) => void): Picture => {
         const picture = { key, texts: [] as Text[], rects: [] as Rect[], images: [] as ImageRect[], strokes: [] as Stroke[] };
@@ -36,7 +36,9 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
         draw(new Proxy(context, { get: (target, property) => property in target ? Reflect.get(target, property) : () => {} }) as unknown as CanvasRenderingContext2D);
         return picture;
     };
+    let cameraX = 0, cameraY = 0;
     const sprite = (picture: Picture, x: number, y: number, scale = 1, alpha = 1) => {
+        x += cameraX; y += cameraY;
         drawOrder.push(picture.key);
         sprites.push({ key: picture.key, x, y, scale, alpha });
         for (const text of picture.texts ?? []) texts.push({ ...text, x: x + text.x * scale, y: y + text.y * scale, alpha: text.alpha * alpha });
@@ -46,13 +48,13 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
             commands: stroke.commands.map(command => command.map((value, i) => i === 0 ? value : value * scale + (i % 2 ? x : y))) });
         return { pivot: { set() {} }, position: { set() {} }, rotation: 0 };
     };
-    const graphics = () => {
+    const graphics = (poseX = 0, poseY = 0, opacity = 1) => {
         let pending: number[][] = [];
         let proxy: Shape;
-        const shape: Shape = { rect(...args: number[]) { pending.push(args); return proxy; }, roundRect(...args: number[]) { return shape.rect(...args); },
+        const shape: Shape = { position: { set() {} }, rect(...args: number[]) { pending.push(args); return proxy; }, roundRect(...args: number[]) { return shape.rect(...args); },
             fill(style: string | { color: string; alpha?: number }) {
-                for (const [x, y, width, height] of pending) rects.push({ key: '', x, y, width, height,
-                    color: typeof style === 'string' ? style : style.color, alpha: typeof style === 'string' ? 1 : style.alpha ?? 1 });
+                for (const [x, y, width, height] of pending) rects.push({ key: '', x: x + cameraX + poseX, y: y + cameraY + poseY, width, height,
+                    color: typeof style === 'string' ? style : style.color, alpha: opacity * (typeof style === 'string' ? 1 : style.alpha ?? 1) });
                 pending = []; return proxy;
             } };
         return proxy = new Proxy(shape, { get: (target, property) => property in target ? Reflect.get(target, property) : () => proxy });
@@ -70,10 +72,17 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
         resourceFence: (resource: ResourceCellArt, front: boolean) => ({ key: `resource-fence:${resource.fences}:${resource.gate}:${front}` }) };
     const renderer = Object.assign(Object.create(Renderer.prototype), {
         gpu: { art, beginFrame() {}, terrain() {}, sprite, graphics,
+            setCamera(x: number, y: number) { cameraX = x; cameraY = y; },
+            sharedGraphics(_key: string, draw: (shape: Shape) => void, x: number, y: number, alpha = 1) { const shape = graphics(x, y, alpha); draw(shape); return shape; },
+            rasterLayer(name: string, _key: unknown, width: number, height: number, draw: (context: CanvasRenderingContext2D) => void, x = 0, y = 0) {
+                sprite(paint(name, { width, height }, draw), x, y);
+            },
             retainedGraphics(_key: unknown, draw: (shape: Shape) => void) { const shape = graphics(); draw(shape); return shape; },
             drawFog() { drawOrder.push('fog'); }, finishFrame() {} },
         width, height, zoom: size / 32, camera: { x: (width / 2 - ox) / size, y: (height / 2 - oy) / size }, follow: false,
-        terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), buildPreview: options.buildPreview ?? [], hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},
+        terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), buildPreview: options.buildPreview ?? [],
+        constructionGesture: options.constructionGesture, pendingConstruction: options.pendingConstruction ?? [],
+        hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},
     }) as Renderer;
     const fog = options.fog && vi.spyOn(fogModule, 'presentationFog').mockReturnValue(options.fog);
     try { renderer.draw(state, 0); } finally { fog?.mockRestore(); }

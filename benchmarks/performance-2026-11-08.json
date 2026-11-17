@@ -1,0 +1,689 @@
+{
+  "date": "2026-11-08",
+  "summary": "Sustained frame rate exceeds 30 fps in the captured large world, including active road dragging and queued purchases. This is measured throughput and frame-time distribution, not a hard upper bound on every frame.",
+  "environment": {
+    "cpu": "Apple M3 Pro",
+    "browser": "Chrome 156.0.8078.81, headless",
+    "viewport": {
+      "width": 671,
+      "height": 1137,
+      "dpr": 1.5,
+      "camera": {
+        "x": 213.14164712686548,
+        "y": 225.2460732663196
+      },
+      "zoom": 1.21
+    },
+    "snapshotSha256": "b64c417b158f8f64e0c40bcc002da82f69997e05cc397c2db0d72b14f0bd6d82",
+    "finalSourceManifestSha256": "7177f978e85a543548c4aca9fc926f161e037620cf61cf93baff28e77d9136ee"
+  },
+  "methodology": [
+    "Before/after use the same captured 384 \u00d7 308 world:881 units,2503 buildings,1023 fields, original viewport and 2\u00d7 game speed. Separate local game instances leave the user running game untouched.",
+    "Each replay uses the actual requestAnimationFrame main loop, simulation, Pixi rendering, HUD, and autosave. Five paused render warmup frames load assets. Final comparisons are unprofiled; no other tests or browser benchmarks run concurrently.",
+    "FPS includes the first live cold-cache frame; steady work/interval percentiles exclude only that first frame, which is reported separately. Work duration and display interval differ because vsync rounds render opportunities.",
+    "Road replay moves a real captured pointer 8 times per second across 12 endpoints, displays a 14 cell route, and releases to purchase 3 newroadcells. The measurement includes every queued purchase and cleanup frame until completion.",
+    "Timing schema 3 separates input and queued construction from simulation. Older schema 1 includes input in simulation; compare total work/FPS across schemas. This does not affect the matched no-input comparison.",
+    "Food deliveries, movement, and game-clock advance verify that higherFPS does not come from disabling gameplay or slowing the simulation materially."
+  ],
+  "capturedWorld": {
+    "before": {
+      "label": "baseline-matched",
+      "timingSchemaVersion": null,
+      "fps": 21.285299507242332,
+      "elapsed": 30067.700000286102,
+      "gameSeconds": 58.03059999993866,
+      "speed": 2,
+      "initial": {
+        "units": 881,
+        "buildings": 2503,
+        "fields": 1023
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 351.7000002861023,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.40000009536743164,
+        "draw": 10.699999809265137,
+        "total": 362.5,
+        "other": 0.09999990463256836
+      },
+      "over33": 310,
+      "over50": 207,
+      "metrics": {
+        "total": {
+          "mean": 46.025195632182374,
+          "p50": 31.59999990463257,
+          "p95": 122.59999990463257,
+          "p99": 177.7999997138977,
+          "max": 390.90000009536743
+        },
+        "sim": {
+          "mean": 36.66588419032209,
+          "p50": 23.100000381469727,
+          "p95": 104.90000009536743,
+          "p99": 157.40000009536743,
+          "max": 328.5
+        },
+        "draw": {
+          "mean": 8.28122067638033,
+          "p50": 7.5,
+          "p95": 13,
+          "p99": 29,
+          "max": 43.59999990463257
+        },
+        "other": {
+          "mean": 1.0780907654799579,
+          "p50": 0,
+          "p95": 2,
+          "p99": 2.799999713897705,
+          "max": 278.40000009536743
+        },
+        "interval": {
+          "mean": 46.920500782472615,
+          "p50": 33.30000000000291,
+          "p95": 116.70000000000073,
+          "p99": 183.3000000000011,
+          "max": 400
+        }
+      },
+      "activity": {
+        "livingUnits": 881,
+        "outsideUnits": 610,
+        "workers": 321,
+        "outsideWorkers": 85,
+        "collectors": 160,
+        "workingBuilders": 2,
+        "movingUnits": 104,
+        "displacedUnits": 581,
+        "meanDisplacement": 5.900309287472338,
+        "returnOrders": 0,
+        "foodDelivered": 1131.8933333333334,
+        "activeConstruction": 2
+      },
+      "drag": null,
+      "errors": []
+    },
+    "after": {
+      "label": "release-matched",
+      "timingSchemaVersion": 3,
+      "fps": 56.64212174724286,
+      "elapsed": 30013,
+      "gameSeconds": 59.797199999748955,
+      "speed": 2,
+      "initial": {
+        "units": 881,
+        "buildings": 2503,
+        "fields": 1023
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 164,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.40000009536743164,
+        "draw": 6,
+        "total": 170,
+        "other": 0
+      },
+      "over33": 47,
+      "over50": 8,
+      "metrics": {
+        "total": {
+          "mean": 13.53961153378411,
+          "p50": 11.099999904632568,
+          "p95": 28.5,
+          "p99": 40.19999980926514,
+          "max": 63.80000019073486
+        },
+        "sim": {
+          "mean": 9.579752790710378,
+          "p50": 7.099999904632568,
+          "p95": 24.300000190734863,
+          "p99": 35,
+          "max": 60.5
+        },
+        "draw": {
+          "mean": 3.8577987088253387,
+          "p50": 3.799999713897705,
+          "p95": 5,
+          "p99": 7,
+          "max": 23.799999713897705
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.10206003424839247,
+          "p50": 0,
+          "p95": 0.20000028610229492,
+          "p99": 2.3000001907348633,
+          "max": 3.9000000953674316
+        },
+        "interval": {
+          "mean": 17.656739258387287,
+          "p50": 16.699999999999818,
+          "p95": 16.80000000000291,
+          "p99": 33.400000000001455,
+          "max": 166.70000000000027
+        }
+      },
+      "activity": {
+        "livingUnits": 882,
+        "outsideUnits": 621,
+        "workers": 322,
+        "outsideWorkers": 86,
+        "collectors": 160,
+        "workingBuilders": 0,
+        "movingUnits": 105,
+        "displacedUnits": 578,
+        "engagedUnits": 1,
+        "unitHpLost": 314.3405600011174,
+        "meanDisplacement": 5.567785411901728,
+        "returnOrders": 0,
+        "foodDelivered": 1127.73333333333,
+        "activeConstruction": 0
+      },
+      "drag": null,
+      "errors": []
+    },
+    "roadDrag": {
+      "label": "release-drag",
+      "timingSchemaVersion": 3,
+      "fps": 53.66369421702993,
+      "elapsed": 30076.199999809265,
+      "gameSeconds": 59.7635999997774,
+      "speed": 2,
+      "initial": {
+        "units": 881,
+        "buildings": 2503,
+        "fields": 1023
+      },
+      "firstFrame": {
+        "interval": 0,
+        "pointer": 4.799999713897705,
+        "construction": 0,
+        "sim": 176.30000019073486,
+        "prepareFog": 0.09999990463256836,
+        "drawMinimap": 0.2999997138977051,
+        "draw": 21.59999990463257,
+        "total": 202.69999980926514,
+        "other": 0
+      },
+      "over33": 73,
+      "over50": 16,
+      "metrics": {
+        "total": {
+          "mean": 15.614755116703343,
+          "p50": 12.299999713897705,
+          "p95": 32.5,
+          "p99": 49.19999980926514,
+          "max": 75.19999980926514
+        },
+        "sim": {
+          "mean": 9.707873525932865,
+          "p50": 7.299999713897705,
+          "p95": 22.699999809265137,
+          "p99": 33.299999713897705,
+          "max": 67.7999997138977
+        },
+        "draw": {
+          "mean": 4.514879112279127,
+          "p50": 4.300000190734863,
+          "p95": 6.099999904632568,
+          "p99": 8.199999809265137,
+          "max": 39
+        },
+        "pointer": {
+          "mean": 1.3402975798392252,
+          "p50": 0,
+          "p95": 11,
+          "p99": 19.90000009536743,
+          "max": 29.800000190734863
+        },
+        "commit": {
+          "mean": 0.018660880288054908,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 30.09999990463257
+        },
+        "construction": {
+          "mean": 0.021822690520313166,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 10.599999904632568
+        },
+        "other": {
+          "mean": 0.01122132784375772,
+          "p50": 0,
+          "p95": 0.09999990463256836,
+          "p99": 0.10000038146972656,
+          "max": 0.20000028610229492
+        },
+        "interval": {
+          "mean": 18.62907625542467,
+          "p50": 16.699999999999818,
+          "p95": 33.30000000000109,
+          "p99": 50,
+          "max": 200
+        }
+      },
+      "activity": {
+        "livingUnits": 882,
+        "outsideUnits": 630,
+        "workers": 322,
+        "outsideWorkers": 93,
+        "collectors": 160,
+        "workingBuilders": 2,
+        "movingUnits": 115,
+        "displacedUnits": 578,
+        "engagedUnits": 1,
+        "unitHpLost": 209.41460000086954,
+        "meanDisplacement": 5.571237813258826,
+        "returnOrders": 0,
+        "foodDelivered": 1132.5333333333256,
+        "activeConstruction": 2
+      },
+      "drag": {
+        "kind": "road",
+        "pointerMoves": 221,
+        "previewFrames": 1602,
+        "validPreviewFrames": 1602,
+        "maximumRouteCells": 14,
+        "commit": {
+          "atMs": 29780.599999904633,
+          "durationMs": 30.09999990463257,
+          "previewCells": 14,
+          "pending": false,
+          "completed": true,
+          "placedRoads": 3,
+          "completedJobs": 1,
+          "completedAtMs": 30072.800000190735,
+          "completionLatencyMs": 322.30000019073486,
+          "result": {
+            "done": true,
+            "ok": true,
+            "placed": 3,
+            "skipped": 0,
+            "message": ""
+          }
+        }
+      },
+      "errors": []
+    }
+  },
+  "implementation": [
+    "Native navigation distance fields, shared nearest-city ownership maps, numeric search workspaces, and indexed placement occupancy replace repeated full-world/building scans.",
+    "Route requests, governor decisions, hidden formations and recurring maintenance are scheduled across frames while preserving elapsed economic time and live collision checks.",
+    "Invalidated existing ownership maps refresh one faction per simulation step; standalone queries remain exact. Farm relocation uses lazy exact distance ordering and persistent private preview worlds.",
+    "Road display previews approximate farm relocation. Singleplayer road orders validate/pay one cell per eligible frame; unavailable relocations reject safely. Cleanup runs in separate phases even while paused. Public/server buildStroke stays synchronous.",
+    "Render caches retain sprites/range geometry, update only dirty terrain, and reuse enclosure shimmer textures. No visible actor cap was introduced.",
+    "Chunked cooperative autosave serialization removes the large periodic main-thread pause. Explicit writes are queued and the synchronous unload checkpoint remains."
+  ],
+  "validation": {
+    "productionBuild": "npm run build passed; TypeScript and optimized WASM/Vite build successful",
+    "diffWhitespace": "git diff --check passed",
+    "focusedSuites": "Navigation, movement/congestion, builders, infantry, farms, housing, borders, river trade, construction, governor scheduling, save serialization and cadence regression suites passed. The complete repository suite was not rerun for the final pass.",
+    "recentFocusedRuns": [
+      {
+        "suite": "display/cache/route/road purchase",
+        "passed": 38
+      },
+      {
+        "suite": "construction integration including batching and cadence",
+        "passed": 40
+      },
+      {
+        "suite": "ownership-map scheduling and farm caches",
+        "passed": 38
+      },
+      {
+        "suite": "farm siting/governor integration",
+        "passed": 67
+      },
+      {
+        "suite": "placement occupancy/isolation/docks",
+        "passed": 24
+      }
+    ],
+    "testCountNote": "Focused runs overlap; counts are not additive. Independent agent reviews covered cache invalidation, ownership scheduling, exact lazy ordering, road payment/relocation/cancellation, and paused cleanup.",
+    "visualInspection": "Inspected final captured-world road screenshot; terrain, buildings, actors, UI and minimap render correctly.",
+    "workerCountAudit": {
+      "result": "Natural parcel consolidation, not lost population or disabled work.",
+      "details": "At game time 24.933, farms 2364 and 2368 become cardinal neighbors at (110,108) and (109,108), reducing 1,000 crop parcels to 999 while preserving all 1,000 fields. ensureCollectors retires healthy redundant collector 2369 at 25.017. Home population remains 50; total population remains 5,000; all 1,000 builders continue working.",
+      "replay": "Full 30-game-second simulation on the frozen final source reproduced 1,999 worker actors and 999 collectors.",
+      "trace": "scratch/2026-11-08-stress/worker-retirement-trace.json"
+    }
+  },
+  "limitations": [
+    "Cold first-live-frame cache initialization remains visible:170 ms in final no-input replay and 203 ms in final road replay.",
+    "Occasional heavy frames remain above 33.3 ms: final no-input steady p 9940.2 ms/max 63.8 ms; road p 9949.2 ms/max 75.2 ms. The 30 fps target is sustained throughput with 95% of measured work within budget, not a hard real-time guarantee.",
+    "Road previews can be optimistic when a farm has no replacement plot; each purchase still checks current placement, relocation, connectivity and treasury. Orders and staffing settle over several frames.",
+    "Large simultaneous movement orders may wait for a bounded route-search queue. During extreme overload, the game limits catch-up work rather than entering a growing simulation backlog.",
+    "Performance numbers are specific to this machine, viewport and fixtures. Unbounded worker counts or arbitrary hardware cannot be guaranteed.",
+    "The 2,000-worker stress case has a 341 ms cold first live frame; steady work p95 is 21.7 ms and p99 is 40.6 ms. Its final 1,999 workers reflect verified natural consolidation of two neighboring farm parcels, with all fields and population preserved."
+  ],
+  "artifacts": {
+    "rawRuns": "scratch/2026-11-08-smooth-performance/final",
+    "sourceManifest": "scratch/2026-11-08-smooth-performance/final/source-manifest.json",
+    "scalingReport": "benchmarks/scaling-2026-11-08.json",
+    "roadMicrobenchmark": "benchmarks/construction-drag-2026-11-08.json"
+  },
+  "reproduce": [
+    "npm run dev -- --port 5173",
+    "node benchmarks/frame-budget.mjs --url=http://127.0.0.1:5173/ --label=matched --seconds=30 --state=scratch/2026-11-08-smooth-performance/state.json --viewport=scratch/2026-11-08-smooth-performance/viewport.json --out=scratch/performance-replay",
+    "node benchmarks/frame-budget.mjs --url=http://127.0.0.1:5173/ --label=road-drag --seconds=30 --drag --drag-commit --state=scratch/2026-11-08-smooth-performance/state.json --viewport=scratch/2026-11-08-smooth-performance/viewport.json --out=scratch/performance-replay"
+  ],
+  "scaling": {
+    "workers-2000-release": {
+      "fps": 56.986513192059036,
+      "elapsed": 30007.099999904633,
+      "gameSeconds": 29.76529999999984,
+      "initial": {
+        "units": 2002,
+        "buildings": 2101,
+        "fields": 1000
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 326.7000002861023,
+        "prepareFog": 0,
+        "drawMinimap": 0.7000002861022949,
+        "draw": 14.400000095367432,
+        "total": 341.2000002861023,
+        "other": 0.09999990463256836
+      },
+      "over33": 58,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 8.89332943063092,
+          "p50": 6.599999904632568,
+          "p95": 21.699999809265137,
+          "p99": 40.59999990463257,
+          "max": 49.799999713897705
+        },
+        "sim": {
+          "mean": 6.764950264260531,
+          "p50": 4.5,
+          "p95": 18.699999809265137,
+          "p99": 37.200000286102295,
+          "max": 45.799999713897705
+        },
+        "draw": {
+          "mean": 2.0465184309944346,
+          "p50": 1.8000001907348633,
+          "p95": 3.3999996185302734,
+          "p99": 6.699999809265137,
+          "max": 18.40000009536743
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.08186073537595513,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.700000286102295,
+          "max": 3.1999998092651367
+        },
+        "interval": {
+          "mean": 17.54365125804564,
+          "p50": 16.699999999999818,
+          "p95": 16.800000000000182,
+          "p99": 33.39999999999782,
+          "max": 333.39999999999986
+        }
+      },
+      "activity": {
+        "livingUnits": 2099,
+        "outsideUnits": 1193,
+        "workers": 1999,
+        "outsideWorkers": 1093,
+        "collectors": 999,
+        "workingBuilders": 1000,
+        "movingUnits": 191,
+        "displacedUnits": 93,
+        "engagedUnits": 0,
+        "unitHpLost": -6810,
+        "meanDisplacement": 0.2346399699419547,
+        "returnOrders": 0,
+        "foodDelivered": 1072.533333333333,
+        "activeConstruction": 1000
+      },
+      "errors": []
+    },
+    "move-1000-release": {
+      "fps": 59.80407173900696,
+      "elapsed": 15015.699999809265,
+      "gameSeconds": 15.015999999999948,
+      "initial": {
+        "units": 1000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 54.19999980926514,
+        "prepareFog": 0,
+        "drawMinimap": 0.5,
+        "draw": 3.4000000953674316,
+        "total": 57.59999990463257,
+        "other": 0
+      },
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.51426978945865,
+          "p50": 5,
+          "p95": 15.100000381469727,
+          "p99": 17.5,
+          "max": 26
+        },
+        "sim": {
+          "mean": 4.272240806715677,
+          "p50": 2.6999998092651367,
+          "p95": 13.5,
+          "p99": 14.900000095367432,
+          "max": 18.5
+        },
+        "draw": {
+          "mean": 2.1874024498555706,
+          "p50": 1.9000000953674316,
+          "p95": 3.6999998092651367,
+          "p99": 4.599999904632568,
+          "max": 7.5
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.054626532887402456,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.0999999046325684,
+          "max": 2.200000286102295
+        },
+        "interval": {
+          "mean": 16.721739130434784,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 50
+        }
+      },
+      "activity": {
+        "livingUnits": 1000,
+        "outsideUnits": 1000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 998,
+        "displacedUnits": 998,
+        "engagedUnits": 0,
+        "unitHpLost": 0,
+        "meanDisplacement": 59.15398074504387,
+        "returnOrders": 998,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "errors": []
+    },
+    "combat-600-release": {
+      "fps": 59.85182718721385,
+      "elapsed": 12013,
+      "gameSeconds": 12.016299999999982,
+      "initial": {
+        "units": 620,
+        "buildings": 128,
+        "fields": 4
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 56,
+        "prepareFog": 0,
+        "drawMinimap": 0.09999990463256836,
+        "draw": 5.5,
+        "total": 61.5,
+        "other": 0
+      },
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.81601671123239,
+          "p50": 6.599999904632568,
+          "p95": 9.400000095367432,
+          "p99": 10.800000190734863,
+          "max": 13.599999904632568
+        },
+        "sim": {
+          "mean": 4.952646220294878,
+          "p50": 4.699999809265137,
+          "p95": 7.699999809265137,
+          "p99": 8.799999713897705,
+          "max": 11.099999904632568
+        },
+        "draw": {
+          "mean": 1.817688040082501,
+          "p50": 1.700000286102295,
+          "p95": 2.4000000953674316,
+          "p99": 2.9000000953674316,
+          "max": 6.200000286102295
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.04568245085501073,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 0.9000000953674316,
+          "max": 1.200000286102295
+        },
+        "interval": {
+          "mean": 16.712534818941503,
+          "p50": 16.699999999999818,
+          "p95": 16.700000000000728,
+          "p99": 16.800000000000182,
+          "max": 50
+        }
+      },
+      "activity": {
+        "livingUnits": 620,
+        "outsideUnits": 600,
+        "workers": 20,
+        "outsideWorkers": 0,
+        "collectors": 4,
+        "workingBuilders": 0,
+        "movingUnits": 274,
+        "displacedUnits": 592,
+        "engagedUnits": 50,
+        "unitHpLost": 2042.6000000005588,
+        "meanDisplacement": 7.027176675724761,
+        "returnOrders": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "errors": []
+    }
+  }
+}

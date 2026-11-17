@@ -1,0 +1,1616 @@
+{
+  "methodology": "Serial headless Chrome production-loop replays on an Apple M3 Pro. Five paused render warmup frames; timing begins before the first live simulation step. FPS includes cold work; percentile metrics exclude firstFrame. Real RAF pacing, actual game simulation, rendering, UI and background save callbacks remain enabled. No actor count cap or simulation systems bypassed. Final release replays are unprofiled; earlier worker comparison runs used CPU profiling. Synthetic fixtures test independent workloads; the captured-world and real construction gesture results are in performance-2026-11-08.json.",
+  "reproduction": [
+    "node benchmarks/scaling-fixtures.mjs --out=scratch/frame-stress",
+    "node benchmarks/validate-scaling-fixtures.mjs --out=scratch/frame-stress",
+    "node benchmarks/combat-fixture.mjs --out=scratch/frame-stress",
+    "node benchmarks/frame-budget.mjs --url=http://127.0.0.1:5173/ --label=move-1000-release --seconds=15 --state=scratch/frame-stress/fixtures/move-1000-long.json --viewport=scratch/frame-stress/fixtures/move-1000-long-viewport.json --out=scratch/frame-stress/browser",
+    "node benchmarks/frame-budget.mjs --url=http://127.0.0.1:5173/ --label=workers-2000-release --seconds=30 --state=scratch/frame-stress/fixtures/workers-2000.json --viewport=scratch/frame-stress/fixtures/workers-2000-viewport.json --out=scratch/frame-stress/browser",
+    "node benchmarks/frame-budget.mjs --url=http://127.0.0.1:5173/ --label=combat-600-release --seconds=12 --state=scratch/frame-stress/fixtures/combat-600.json --viewport=scratch/frame-stress/fixtures/combat-600-viewport.json --out=scratch/frame-stress/browser"
+  ],
+  "limitations": [
+    "Measured on Apple M3 Pro with the fixture-specific viewport and real RAF pacing; these figures are not a hard frame-time or unlimited-population guarantee.",
+    "Final active-worker replay: 56.99 fps, steady work p95 21.7 ms/p99 40.6 ms/max 49.8 ms. Cold first live frame 341.2 ms. Advances 29.765 game seconds over 30.007 wall seconds.",
+    "All 1,000 builders keep working. The 1,000 initial collectors become 999 because two neighboring farms form one parcel; all 1,000 fields and 5,000 residents remain. The retirement audit records the exact merge and healthy redundant worker removal.",
+    "Final moving-unit replay: 59.80 fps, steady work p95 15.1 ms/p99 17.5 ms/max 26 ms. Cold first frame 57.6 ms. All 998 ordered units remain moving and displaced.",
+    "Final dense-combat replay: 59.85 fps, steady work p95 9.4 ms/p99 10.8 ms/max 13.6 ms. Cold first frame 61.5 ms. There are 600 visible combatants, 592 displaced units, and 2,042.6 hit points of combat damage.",
+    "Synthetic worker and movement fixtures use distributed towns and open terrain. The separate combat fixture tests dense combat; arbitrary chokepoints and larger populations may behave differently."
+  ],
+  "validation": {
+    "scenarioValidation": {
+      "hold-5000": {
+        "gameSeconds": 5.9999999999999885,
+        "totalUnits": 5000,
+        "activeSoldiers": 5000,
+        "totalWorkers": 0,
+        "collectors": 0,
+        "builders": 0,
+        "maxOutsideWorkers": 0,
+        "maxCollectors": 0,
+        "maxBuilderWorking": 0,
+        "everMoved": 0,
+        "collectorsCarriedFood": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0,
+        "remainingReturnOrders": 0,
+        "gameOver": false,
+        "elapsedMs": 1180.167167
+      },
+      "move-1000-long": {
+        "gameSeconds": 5.9999999999999885,
+        "totalUnits": 1000,
+        "activeSoldiers": 1000,
+        "totalWorkers": 0,
+        "collectors": 0,
+        "builders": 0,
+        "maxOutsideWorkers": 0,
+        "maxCollectors": 0,
+        "maxBuilderWorking": 0,
+        "everMoved": 998,
+        "collectorsCarriedFood": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0,
+        "remainingReturnOrders": 998,
+        "gameOver": false,
+        "elapsedMs": 1946.238667
+      },
+      "workers-2000": {
+        "gameSeconds": 12.000000000000277,
+        "totalUnits": 2100,
+        "activeSoldiers": 2,
+        "totalWorkers": 2000,
+        "collectors": 1000,
+        "builders": 1000,
+        "maxOutsideWorkers": 2000,
+        "maxCollectors": 1000,
+        "maxBuilderWorking": 1000,
+        "everMoved": 1000,
+        "collectorsCarriedFood": 1000,
+        "foodDelivered": 1000,
+        "activeConstruction": 1000,
+        "remainingReturnOrders": 0,
+        "gameOver": false,
+        "elapsedMs": 12058.785542
+      }
+    },
+    "workerRetirement": {
+      "trace": "scratch/2026-11-08-stress/worker-retirement-trace.json",
+      "verified": true,
+      "cause": "Normal adjacent farm parcel merger retires a healthy surplus collector.",
+      "initial": {
+        "time": 10,
+        "workers": 2000,
+        "collectors": 1000,
+        "groups": 1000,
+        "fields": 1000
+      },
+      "final": {
+        "time": 39.999999999998934,
+        "workers": 1999,
+        "collectors": 999,
+        "builders": 1000,
+        "groups": 999,
+        "fields": 1000,
+        "population": 5000
+      },
+      "gameSeconds": 29.999999999998934,
+      "groupChanges": [
+        {
+          "time": 24.933333333333124,
+          "from": 1000,
+          "to": 999
+        }
+      ],
+      "retiredCollector": {
+        "id": 2369,
+        "time": 25.016666666666453,
+        "hp": 50,
+        "maxHp": 50,
+        "cityPopulation": 50,
+        "fieldCamps": [
+          2364,
+          2368
+        ],
+        "fieldLocations": [
+          {
+            "x": 110,
+            "y": 108
+          },
+          {
+            "x": 109,
+            "y": 108
+          }
+        ]
+      }
+    }
+  },
+  "scenarios": {
+    "hold-5000": {
+      "label": "hold-5000",
+      "url": "http://127.0.0.1:5202/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 111,
+          "y": 76
+        },
+        "zoom": 0.8
+      },
+      "elapsed": 15006.400000095367,
+      "activity": {
+        "livingUnits": 5000,
+        "outsideUnits": 5000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 0,
+        "displacedUnits": 0,
+        "meanDisplacement": 0,
+        "returnOrders": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 0,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        }
+      },
+      "gameSeconds": 15.032799999999936,
+      "units": 5000,
+      "buildings": 2,
+      "fields": 0,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 759,
+        "textureUploads": 0,
+        "atlasPages": 1,
+        "sprites": 766,
+        "directImages": 766,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "errors": [],
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "bfb6fdc9b2244b929a1c327f987f4219bf27793ff42a03e6255360a46f39fd6e",
+      "initial": {
+        "units": 5000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "fps": 59.70785798021549,
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.628938555051494,
+          "p50": 6.199999809265137,
+          "p95": 8.799999713897705,
+          "p99": 13.699999809265137,
+          "max": 27.40000009536743
+        },
+        "sim": {
+          "mean": 4.087932960147964,
+          "p50": 3.6999998092651367,
+          "p95": 5.800000190734863,
+          "p99": 8.799999713897705,
+          "max": 20.700000286102295
+        },
+        "draw": {
+          "mean": 2.487709505731167,
+          "p50": 2.4000000953674316,
+          "p95": 3.200000286102295,
+          "p99": 5,
+          "max": 9
+        },
+        "other": {
+          "mean": 0.05329608917236328,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1,
+          "max": 2.8000001907348633
+        },
+        "interval": {
+          "mean": 16.759217877094976,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 66.70000000000005
+        }
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 70.7999997138977,
+        "prepareFog": 0,
+        "drawMinimap": 0.09999990463256836,
+        "draw": 5,
+        "total": 77.59999990463257,
+        "other": 1.8000001907348633
+      },
+      "historicalOptimizationStage": true
+    },
+    "move-1000-long": {
+      "label": "move-1000-long",
+      "url": "http://127.0.0.1:5202/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 160,
+          "y": 38
+        },
+        "zoom": 0.8
+      },
+      "elapsed": 15014.400000095367,
+      "activity": {
+        "livingUnits": 1000,
+        "outsideUnits": 1000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 998,
+        "displacedUnits": 998,
+        "meanDisplacement": 58.4899636035364,
+        "returnOrders": 998,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 998,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 998,
+          "travelMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        }
+      },
+      "gameSeconds": 13.78269999999995,
+      "units": 1000,
+      "buildings": 2,
+      "fields": 0,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 330,
+        "textureUploads": 0,
+        "atlasPages": 1,
+        "sprites": 335,
+        "directImages": 335,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "errors": [],
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "2d72254f4ff37f226e386db13fe3d5db18c365ff7925fee889af1f9d55d55bf1",
+      "initial": {
+        "units": 1000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "fps": 54.74744245489523,
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 4.741169306886327,
+          "p50": 4.400000095367432,
+          "p95": 6,
+          "p99": 13.5,
+          "max": 21.199999809265137
+        },
+        "sim": {
+          "mean": 2.6092569970329555,
+          "p50": 2.4000000953674316,
+          "p95": 3.200000286102295,
+          "p99": 9.900000095367432,
+          "max": 18
+        },
+        "draw": {
+          "mean": 2.0845310667690784,
+          "p50": 1.8000001907348633,
+          "p95": 3.1999998092651367,
+          "p99": 4.400000095367432,
+          "max": 10.199999809265137
+        },
+        "other": {
+          "mean": 0.04738124308429305,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 0.9000000953674316,
+          "max": 1.0999999046325684
+        },
+        "interval": {
+          "mean": 18.26967113276492,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 1333.3000000000002
+        }
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 1345.4000000953674,
+        "prepareFog": 0,
+        "drawMinimap": 0.5,
+        "draw": 3.200000286102295,
+        "total": 1348.6000003814697,
+        "other": 0
+      },
+      "historicalOptimizationStage": true
+    },
+    "workers-2000": {
+      "label": "workers-2000",
+      "url": "http://127.0.0.1:5206/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 90,
+          "y": 90
+        },
+        "zoom": 1
+      },
+      "elapsed": 15268.700000286102,
+      "activity": {
+        "livingUnits": 2100,
+        "outsideUnits": 1100,
+        "workers": 2000,
+        "outsideWorkers": 1000,
+        "collectors": 1000,
+        "workingBuilders": 1000,
+        "movingUnits": 98,
+        "displacedUnits": 0,
+        "meanDisplacement": 0,
+        "returnOrders": 0,
+        "foodDelivered": 1000,
+        "activeConstruction": 1000
+      },
+      "gameSeconds": 10.333399999999976,
+      "units": 2100,
+      "buildings": 4003,
+      "fields": 1000,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 897,
+        "textureUploads": 0,
+        "atlasPages": 2,
+        "sprites": 902,
+        "directImages": 902,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "errors": [],
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "9af7ad3f2d8d5626948d5094cc2e569e7db93bc369286fdd3fd93bc4a4cf5dbf",
+      "initial": {
+        "units": 2002,
+        "buildings": 2101,
+        "fields": 1000
+      },
+      "fps": 31.567847949790643,
+      "over33": 32,
+      "over50": 25,
+      "metrics": {
+        "total": {
+          "mean": 22.20457380774611,
+          "p50": 7.599999904632568,
+          "p95": 44.299999713897705,
+          "p99": 280.69999980926514,
+          "max": 287.30000019073486
+        },
+        "sim": {
+          "mean": 17.869438673998857,
+          "p50": 5.599999904632568,
+          "p95": 32.19999980926514,
+          "p99": 270.40000009536743,
+          "max": 284.2000002861023
+        },
+        "draw": {
+          "mean": 4.21850312028754,
+          "p50": 1.799999713897705,
+          "p95": 3.6999998092651367,
+          "p99": 23.59999990463257,
+          "max": 259.90000009536743
+        },
+        "other": {
+          "mean": 0.11663201345971122,
+          "p50": 0,
+          "p95": 1.1999998092651367,
+          "p99": 1.9000000953674316,
+          "max": 11.300000190734863
+        },
+        "interval": {
+          "mean": 31.21829521829522,
+          "p50": 16.699999999999818,
+          "p95": 33.399999999999636,
+          "p99": 283.3000000000002,
+          "max": 1033.1999999999998
+        }
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 1012.0999999046326,
+        "prepareFog": 0,
+        "drawMinimap": 1.5,
+        "draw": 14.199999809265137,
+        "total": 1028.4000000953674,
+        "other": 2.1000003814697266
+      },
+      "cpuProfileEnabled": true,
+      "historicalOptimizationStage": true
+    },
+    "move-1000-budgeted": {
+      "label": "move-1000-budgeted",
+      "url": "http://127.0.0.1:5203/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 160,
+          "y": 38
+        },
+        "zoom": 0.8
+      },
+      "elapsed": 15013.799999713898,
+      "activity": {
+        "livingUnits": 1000,
+        "outsideUnits": 1000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 998,
+        "displacedUnits": 998,
+        "engagedUnits": 0,
+        "unitHpLost": 0,
+        "meanDisplacement": 59.263127867724926,
+        "returnOrders": 998,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 998,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 998,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "gameSeconds": 15.01599999999992,
+      "units": 1000,
+      "buildings": 2,
+      "fields": 0,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 336,
+        "textureUploads": 0,
+        "atlasPages": 1,
+        "sprites": 341,
+        "directImages": 341,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "errors": [],
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "2d72254f4ff37f226e386db13fe3d5db18c365ff7925fee889af1f9d55d55bf1",
+      "initial": {
+        "units": 1000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 44.40000009536743,
+        "prepareFog": 0,
+        "drawMinimap": 0.40000009536743164,
+        "draw": 2.5,
+        "total": 46.90000009536743,
+        "other": 0
+      },
+      "fps": 59.74503456933576,
+      "over33": 2,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 5.968526786459344,
+          "p50": 4.5,
+          "p95": 14.300000190734863,
+          "p99": 15.899999618530273,
+          "max": 67.69999980926514
+        },
+        "sim": {
+          "mean": 3.8581473289855888,
+          "p50": 2.3000001907348633,
+          "p95": 12.599999904632568,
+          "p99": 13.599999904632568,
+          "max": 21.59999990463257
+        },
+        "draw": {
+          "mean": 2.060267853949751,
+          "p50": 1.799999713897705,
+          "p95": 3.3000001907348633,
+          "p99": 4.400000095367432,
+          "max": 45.90000009536743
+        },
+        "other": {
+          "mean": 0.05011160352400371,
+          "p50": 0,
+          "p95": 0.19999980926513672,
+          "p99": 1,
+          "max": 1.4000000953674316
+        },
+        "interval": {
+          "mean": 16.740290178571428,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 66.79999999999927
+        }
+      },
+      "historicalOptimizationStage": true
+    },
+    "workers-2000-final": {
+      "label": "workers-2000-final",
+      "url": "http://127.0.0.1:5203/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 90,
+          "y": 90
+        },
+        "zoom": 1
+      },
+      "elapsed": 30016.5,
+      "activity": {
+        "livingUnits": 2099,
+        "outsideUnits": 1200,
+        "workers": 1999,
+        "outsideWorkers": 1100,
+        "collectors": 999,
+        "workingBuilders": 1000,
+        "movingUnits": 198,
+        "displacedUnits": 100,
+        "engagedUnits": 0,
+        "unitHpLost": -6810,
+        "meanDisplacement": 0.2430401185230939,
+        "returnOrders": 0,
+        "foodDelivered": 1072.533333333333,
+        "activeConstruction": 1000
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 1,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 4958,
+          "travelMaps": 6,
+          "nearestMaps": 59,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 4958,
+          "travelMaps": 6,
+          "nearestMaps": 58,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "gameSeconds": 29.81559999999979,
+      "units": 2099,
+      "buildings": 4424,
+      "fields": 1000,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 1001,
+        "textureUploads": 0,
+        "atlasPages": 3,
+        "sprites": 1006,
+        "directImages": 1006,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "errors": [],
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "9af7ad3f2d8d5626948d5094cc2e569e7db93bc369286fdd3fd93bc4a4cf5dbf",
+      "initial": {
+        "units": 2002,
+        "buildings": 2101,
+        "fields": 1000
+      },
+      "firstFrame": {
+        "interval": 0,
+        "sim": 387.59999990463257,
+        "prepareFog": 0,
+        "drawMinimap": 4.200000286102295,
+        "draw": 17.700000286102295,
+        "total": 407.7000002861023,
+        "other": 2.4000000953674316
+      },
+      "fps": 56.96866723302184,
+      "over33": 51,
+      "over50": 3,
+      "metrics": {
+        "total": {
+          "mean": 8.641193687043879,
+          "p50": 5.800000190734863,
+          "p95": 23.700000286102295,
+          "p99": 40.69999980926514,
+          "max": 80.90000009536743
+        },
+        "sim": {
+          "mean": 6.389174958849037,
+          "p50": 3.700000286102295,
+          "p95": 20.5,
+          "p99": 36.59999990463257,
+          "max": 44.69999980926514
+        },
+        "draw": {
+          "mean": 2.1594499757654,
+          "p50": 1.9000000953674316,
+          "p95": 3.3000001907348633,
+          "p99": 8.300000190734863,
+          "max": 43.200000286102295
+        },
+        "other": {
+          "mean": 0.09256875242944207,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 2.0999999046325684,
+          "max": 10.900000095367432
+        },
+        "interval": {
+          "mean": 17.563194850789937,
+          "p50": 16.699999999999818,
+          "p95": 16.800000000000182,
+          "p99": 33.399999999999636,
+          "max": 399.9000000000001
+        }
+      },
+      "cpuProfileEnabled": true,
+      "historicalOptimizationStage": true
+    },
+    "workers-2000-release": {
+      "label": "workers-2000-release",
+      "url": "http://127.0.0.1:5209/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 90,
+          "y": 90
+        },
+        "zoom": 1
+      },
+      "elapsed": 30007.099999904633,
+      "activity": {
+        "livingUnits": 2099,
+        "outsideUnits": 1193,
+        "workers": 1999,
+        "outsideWorkers": 1093,
+        "collectors": 999,
+        "workingBuilders": 1000,
+        "movingUnits": 191,
+        "displacedUnits": 93,
+        "engagedUnits": 0,
+        "unitHpLost": -6810,
+        "meanDisplacement": 0.2346399699419547,
+        "returnOrders": 0,
+        "foodDelivered": 1072.533333333333,
+        "activeConstruction": 1000
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 1,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 4944,
+          "travelMaps": 10,
+          "nearestMaps": 112,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 4944,
+          "travelMaps": 10,
+          "nearestMaps": 111,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": null,
+      "gameSeconds": 29.76529999999984,
+      "units": 2099,
+      "buildings": 4586,
+      "fields": 1000,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 1015,
+        "textureUploads": 0,
+        "atlasPages": 3,
+        "sprites": 1020,
+        "directImages": 1020,
+        "sceneMutations": 0
+      },
+      "gameOver": false,
+      "dragSetup": null,
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "9af7ad3f2d8d5626948d5094cc2e569e7db93bc369286fdd3fd93bc4a4cf5dbf",
+      "initial": {
+        "units": 2002,
+        "buildings": 2101,
+        "fields": 1000
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 326.7000002861023,
+        "prepareFog": 0,
+        "drawMinimap": 0.7000002861022949,
+        "draw": 14.400000095367432,
+        "total": 341.2000002861023,
+        "other": 0.09999990463256836
+      },
+      "fps": 56.986513192059036,
+      "over33": 58,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 8.89332943063092,
+          "p50": 6.599999904632568,
+          "p95": 21.699999809265137,
+          "p99": 40.59999990463257,
+          "max": 49.799999713897705
+        },
+        "sim": {
+          "mean": 6.764950264260531,
+          "p50": 4.5,
+          "p95": 18.699999809265137,
+          "p99": 37.200000286102295,
+          "max": 45.799999713897705
+        },
+        "draw": {
+          "mean": 2.0465184309944346,
+          "p50": 1.8000001907348633,
+          "p95": 3.3999996185302734,
+          "p99": 6.699999809265137,
+          "max": 18.40000009536743
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.08186073537595513,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.700000286102295,
+          "max": 3.1999998092651367
+        },
+        "interval": {
+          "mean": 17.54365125804564,
+          "p50": 16.699999999999818,
+          "p95": 16.800000000000182,
+          "p99": 33.39999999999782,
+          "max": 333.39999999999986
+        }
+      },
+      "cpuProfileEnabled": false,
+      "rawReport": "scratch/2026-11-08-stress/browser/workers-2000-release.json"
+    },
+    "move-1000-release": {
+      "label": "move-1000-release",
+      "url": "http://127.0.0.1:5209/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 160,
+          "y": 38
+        },
+        "zoom": 0.8
+      },
+      "elapsed": 15015.699999809265,
+      "activity": {
+        "livingUnits": 1000,
+        "outsideUnits": 1000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 998,
+        "displacedUnits": 998,
+        "engagedUnits": 0,
+        "unitHpLost": 0,
+        "meanDisplacement": 59.15398074504387,
+        "returnOrders": 998,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 998,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 998,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 1,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": null,
+      "gameSeconds": 15.015999999999948,
+      "units": 1000,
+      "buildings": 2,
+      "fields": 0,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 337,
+        "textureUploads": 0,
+        "atlasPages": 1,
+        "sprites": 342,
+        "directImages": 342,
+        "sceneMutations": 3
+      },
+      "gameOver": false,
+      "dragSetup": null,
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "2d72254f4ff37f226e386db13fe3d5db18c365ff7925fee889af1f9d55d55bf1",
+      "initial": {
+        "units": 1000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 54.19999980926514,
+        "prepareFog": 0,
+        "drawMinimap": 0.5,
+        "draw": 3.4000000953674316,
+        "total": 57.59999990463257,
+        "other": 0
+      },
+      "fps": 59.80407173900696,
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.51426978945865,
+          "p50": 5,
+          "p95": 15.100000381469727,
+          "p99": 17.5,
+          "max": 26
+        },
+        "sim": {
+          "mean": 4.272240806715677,
+          "p50": 2.6999998092651367,
+          "p95": 13.5,
+          "p99": 14.900000095367432,
+          "max": 18.5
+        },
+        "draw": {
+          "mean": 2.1874024498555706,
+          "p50": 1.9000000953674316,
+          "p95": 3.6999998092651367,
+          "p99": 4.599999904632568,
+          "max": 7.5
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.054626532887402456,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.0999999046325684,
+          "max": 2.200000286102295
+        },
+        "interval": {
+          "mean": 16.721739130434784,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 50
+        }
+      },
+      "cpuProfileEnabled": false,
+      "rawReport": "scratch/2026-11-08-stress/browser/move-1000-release.json"
+    },
+    "combat-600-release": {
+      "label": "combat-600-release",
+      "url": "http://127.0.0.1:5209/",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "dpr": 1.5,
+        "camera": {
+          "x": 56,
+          "y": 44
+        },
+        "zoom": 1
+      },
+      "elapsed": 12013,
+      "activity": {
+        "livingUnits": 620,
+        "outsideUnits": 600,
+        "workers": 20,
+        "outsideWorkers": 0,
+        "collectors": 4,
+        "workingBuilders": 0,
+        "movingUnits": 274,
+        "displacedUnits": 592,
+        "engagedUnits": 50,
+        "unitHpLost": 2042.6000000005588,
+        "meanDisplacement": 7.027176675724761,
+        "returnOrders": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "navigation": {
+        "before": {
+          "enabled": true,
+          "ready": true,
+          "searches": 0,
+          "travelMaps": 0,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 0,
+          "unavailable": 0
+        },
+        "after": {
+          "enabled": true,
+          "ready": true,
+          "searches": 4854,
+          "travelMaps": 1,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 2,
+          "unavailable": 0
+        },
+        "delta": {
+          "searches": 4854,
+          "travelMaps": 1,
+          "nearestMaps": 0,
+          "unsupported": 0,
+          "instances": 2,
+          "unavailable": 0
+        }
+      },
+      "placement": null,
+      "drag": null,
+      "gameSeconds": 12.016299999999982,
+      "units": 620,
+      "buildings": 128,
+      "fields": 4,
+      "speed": 1,
+      "renderStats": {
+        "rasterized": 0,
+        "rasterCacheHits": 730,
+        "textureUploads": 0,
+        "atlasPages": 2,
+        "sprites": 735,
+        "directImages": 735,
+        "sceneMutations": 3
+      },
+      "gameOver": false,
+      "dragSetup": null,
+      "errors": [],
+      "timingSchemaVersion": 3,
+      "cpu": "Apple M3 Pro",
+      "browser": "156.0.8078.81",
+      "snapshotSha256": "44ae721fe3aa7ea9e5eb7566af6b39e0b184e35b2e761931b949f653296dcd84",
+      "initial": {
+        "units": 620,
+        "buildings": 128,
+        "fields": 4
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 56,
+        "prepareFog": 0,
+        "drawMinimap": 0.09999990463256836,
+        "draw": 5.5,
+        "total": 61.5,
+        "other": 0
+      },
+      "fps": 59.85182718721385,
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.81601671123239,
+          "p50": 6.599999904632568,
+          "p95": 9.400000095367432,
+          "p99": 10.800000190734863,
+          "max": 13.599999904632568
+        },
+        "sim": {
+          "mean": 4.952646220294878,
+          "p50": 4.699999809265137,
+          "p95": 7.699999809265137,
+          "p99": 8.799999713897705,
+          "max": 11.099999904632568
+        },
+        "draw": {
+          "mean": 1.817688040082501,
+          "p50": 1.700000286102295,
+          "p95": 2.4000000953674316,
+          "p99": 2.9000000953674316,
+          "max": 6.200000286102295
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.04568245085501073,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 0.9000000953674316,
+          "max": 1.200000286102295
+        },
+        "interval": {
+          "mean": 16.712534818941503,
+          "p50": 16.699999999999818,
+          "p95": 16.700000000000728,
+          "p99": 16.800000000000182,
+          "max": 50
+        }
+      },
+      "cpuProfileEnabled": false,
+      "rawReport": "scratch/2026-11-08-stress/browser/combat-600-release.json"
+    }
+  },
+  "frozenFinal": {
+    "sourceManifestSha256": "7177f978e85a543548c4aca9fc926f161e037620cf61cf93baff28e77d9136ee",
+    "sourceDirectory": "/tmp/btv-smooth-2026-11-08/final-release",
+    "canonicalReport": "benchmarks/performance-2026-11-08.json",
+    "browser": "Chrome 156.0.8078.81",
+    "profiled": false
+  },
+  "changes": {
+    "movement": "Eight ordinary movement-route requests per simulation substep; FIFO reservations prevent starvation, including five-step hidden cohorts. Human leaders remain immediate. Deferred searches preserve orders and usable routes without marking units stuck or unreachable.",
+    "workers": "One shared multi-source nearest-city travel field replaces rebuilding individual palace maps for farm assignment."
+  },
+  "comparisons": {
+    "movement": {
+      "before": "move-1000-long",
+      "after": "move-1000-release",
+      "coldFrameMs": {
+        "before": 1348.6000003814697,
+        "after": 57.59999990463257
+      },
+      "note": "Same serialized fixture and 15-second duration; 998 simultaneous return orders remain active at the end. All 998 native paths complete, spread across updates. The final release includes later simulation, rendering and construction optimizations.",
+      "previousAfter": "move-1000-budgeted"
+    },
+    "workers": {
+      "before": "workers-2000",
+      "after": "workers-2000-release",
+      "note": "Same initial fixture. Before ran 15 seconds with CPU profiling; final release ran 30 seconds without profiling to include later harvests and recurring jobs. The difference includes profiler overhead and later world evolution. Final delivers 1072.53 food with 1000 staffed construction sites still active.",
+      "previousAfter": "workers-2000-final"
+    }
+  },
+  "finalSummary": [
+    {
+      "scenario": "workers-2000-release",
+      "fps": 56.986513192059036,
+      "coldFrameMs": 341.2000002861023,
+      "workP95Ms": 21.699999809265137,
+      "workP99Ms": 40.59999990463257,
+      "intervalP99Ms": 33.39999999999782,
+      "gameSeconds": 29.76529999999984,
+      "wallSeconds": 30.007099999904632,
+      "errors": 0
+    },
+    {
+      "scenario": "move-1000-release",
+      "fps": 59.80407173900696,
+      "coldFrameMs": 57.59999990463257,
+      "workP95Ms": 15.100000381469727,
+      "workP99Ms": 17.5,
+      "intervalP99Ms": 16.80000000000109,
+      "gameSeconds": 15.015999999999948,
+      "wallSeconds": 15.015699999809264,
+      "errors": 0
+    },
+    {
+      "scenario": "combat-600-release",
+      "fps": 59.85182718721385,
+      "coldFrameMs": 61.5,
+      "workP95Ms": 9.400000095367432,
+      "workP99Ms": 10.800000190734863,
+      "intervalP99Ms": 16.800000000000182,
+      "gameSeconds": 12.016299999999982,
+      "wallSeconds": 12.013,
+      "errors": 0
+    }
+  ],
+  "finalReleaseRuns": {
+    "workers-2000-release": {
+      "fps": 56.986513192059036,
+      "elapsed": 30007.099999904633,
+      "gameSeconds": 29.76529999999984,
+      "initial": {
+        "units": 2002,
+        "buildings": 2101,
+        "fields": 1000
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 326.7000002861023,
+        "prepareFog": 0,
+        "drawMinimap": 0.7000002861022949,
+        "draw": 14.400000095367432,
+        "total": 341.2000002861023,
+        "other": 0.09999990463256836
+      },
+      "over33": 58,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 8.89332943063092,
+          "p50": 6.599999904632568,
+          "p95": 21.699999809265137,
+          "p99": 40.59999990463257,
+          "max": 49.799999713897705
+        },
+        "sim": {
+          "mean": 6.764950264260531,
+          "p50": 4.5,
+          "p95": 18.699999809265137,
+          "p99": 37.200000286102295,
+          "max": 45.799999713897705
+        },
+        "draw": {
+          "mean": 2.0465184309944346,
+          "p50": 1.8000001907348633,
+          "p95": 3.3999996185302734,
+          "p99": 6.699999809265137,
+          "max": 18.40000009536743
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.08186073537595513,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.700000286102295,
+          "max": 3.1999998092651367
+        },
+        "interval": {
+          "mean": 17.54365125804564,
+          "p50": 16.699999999999818,
+          "p95": 16.800000000000182,
+          "p99": 33.39999999999782,
+          "max": 333.39999999999986
+        }
+      },
+      "activity": {
+        "livingUnits": 2099,
+        "outsideUnits": 1193,
+        "workers": 1999,
+        "outsideWorkers": 1093,
+        "collectors": 999,
+        "workingBuilders": 1000,
+        "movingUnits": 191,
+        "displacedUnits": 93,
+        "engagedUnits": 0,
+        "unitHpLost": -6810,
+        "meanDisplacement": 0.2346399699419547,
+        "returnOrders": 0,
+        "foodDelivered": 1072.533333333333,
+        "activeConstruction": 1000
+      },
+      "errors": []
+    },
+    "move-1000-release": {
+      "fps": 59.80407173900696,
+      "elapsed": 15015.699999809265,
+      "gameSeconds": 15.015999999999948,
+      "initial": {
+        "units": 1000,
+        "buildings": 2,
+        "fields": 0
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 54.19999980926514,
+        "prepareFog": 0,
+        "drawMinimap": 0.5,
+        "draw": 3.4000000953674316,
+        "total": 57.59999990463257,
+        "other": 0
+      },
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.51426978945865,
+          "p50": 5,
+          "p95": 15.100000381469727,
+          "p99": 17.5,
+          "max": 26
+        },
+        "sim": {
+          "mean": 4.272240806715677,
+          "p50": 2.6999998092651367,
+          "p95": 13.5,
+          "p99": 14.900000095367432,
+          "max": 18.5
+        },
+        "draw": {
+          "mean": 2.1874024498555706,
+          "p50": 1.9000000953674316,
+          "p95": 3.6999998092651367,
+          "p99": 4.599999904632568,
+          "max": 7.5
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.054626532887402456,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 1.0999999046325684,
+          "max": 2.200000286102295
+        },
+        "interval": {
+          "mean": 16.721739130434784,
+          "p50": 16.69999999999891,
+          "p95": 16.799999999999272,
+          "p99": 16.80000000000109,
+          "max": 50
+        }
+      },
+      "activity": {
+        "livingUnits": 1000,
+        "outsideUnits": 1000,
+        "workers": 0,
+        "outsideWorkers": 0,
+        "collectors": 0,
+        "workingBuilders": 0,
+        "movingUnits": 998,
+        "displacedUnits": 998,
+        "engagedUnits": 0,
+        "unitHpLost": 0,
+        "meanDisplacement": 59.15398074504387,
+        "returnOrders": 998,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "errors": []
+    },
+    "combat-600-release": {
+      "fps": 59.85182718721385,
+      "elapsed": 12013,
+      "gameSeconds": 12.016299999999982,
+      "initial": {
+        "units": 620,
+        "buildings": 128,
+        "fields": 4
+      },
+      "firstFrame": {
+        "interval": 0,
+        "construction": 0,
+        "sim": 56,
+        "prepareFog": 0,
+        "drawMinimap": 0.09999990463256836,
+        "draw": 5.5,
+        "total": 61.5,
+        "other": 0
+      },
+      "over33": 1,
+      "over50": 1,
+      "metrics": {
+        "total": {
+          "mean": 6.81601671123239,
+          "p50": 6.599999904632568,
+          "p95": 9.400000095367432,
+          "p99": 10.800000190734863,
+          "max": 13.599999904632568
+        },
+        "sim": {
+          "mean": 4.952646220294878,
+          "p50": 4.699999809265137,
+          "p95": 7.699999809265137,
+          "p99": 8.799999713897705,
+          "max": 11.099999904632568
+        },
+        "draw": {
+          "mean": 1.817688040082501,
+          "p50": 1.700000286102295,
+          "p95": 2.4000000953674316,
+          "p99": 2.9000000953674316,
+          "max": 6.200000286102295
+        },
+        "pointer": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "commit": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "construction": {
+          "mean": 0,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "other": {
+          "mean": 0.04568245085501073,
+          "p50": 0,
+          "p95": 0.10000038146972656,
+          "p99": 0.9000000953674316,
+          "max": 1.200000286102295
+        },
+        "interval": {
+          "mean": 16.712534818941503,
+          "p50": 16.699999999999818,
+          "p95": 16.700000000000728,
+          "p99": 16.800000000000182,
+          "max": 50
+        }
+      },
+      "activity": {
+        "livingUnits": 620,
+        "outsideUnits": 600,
+        "workers": 20,
+        "outsideWorkers": 0,
+        "collectors": 4,
+        "workingBuilders": 0,
+        "movingUnits": 274,
+        "displacedUnits": 592,
+        "engagedUnits": 50,
+        "unitHpLost": 2042.6000000005588,
+        "meanDisplacement": 7.027176675724761,
+        "returnOrders": 0,
+        "foodDelivered": 0,
+        "activeConstruction": 0
+      },
+      "errors": []
+    }
+  },
+  "workerRetirementAudit": {
+    "result": "Natural parcel consolidation, not lost population or disabled work.",
+    "details": "At game time 24.933, farms 2364 and 2368 become cardinal neighbors at (110,108) and (109,108), reducing 1,000 crop parcels to 999 while preserving all 1,000 fields. ensureCollectors retires healthy redundant collector 2369 at 25.017. Home population remains 50; total population remains 5,000; all 1,000 builders continue working.",
+    "replay": "Full 30-game-second simulation on the frozen final source reproduced 1,999 worker actors and 999 collectors.",
+    "trace": "scratch/2026-11-08-stress/worker-retirement-trace.json"
+  },
+  "historicalNote": "Existing scenarios/comparisons retain earlier optimization passes. finalReleaseRuns and the canonical performance report contain the final unprofiled source measurements."
+}

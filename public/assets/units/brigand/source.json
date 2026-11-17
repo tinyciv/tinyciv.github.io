@@ -1,0 +1,57 @@
+{
+  "generator": "PixelLab API (existing generated assets reused; no new painted pixels)",
+  "brigandSource": "scratch/2026-11-11-military-units/review/brigand",
+  "crownSource": "scratch/2026-11-08-crowned-civilian/1a.png",
+  "crownSourceRectangle": [
+    13,
+    9,
+    6,
+    3
+  ],
+  "frameSize": [
+    48,
+    48
+  ],
+  "directionsOrder": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "groundAnchor": [
+    24,
+    31
+  ],
+  "animations": {
+    "idle": {
+      "columns": 8,
+      "rows": 1
+    },
+    "walk": {
+      "columns": 8,
+      "rows": 8,
+      "fps": 10
+    },
+    "attack": {
+      "columns": 7,
+      "rows": 8
+    },
+    "death": {
+      "columns": 8,
+      "rows": 8,
+      "fps": 10
+    }
+  },
+  "integration": "Marauder warrior/swordsman uses brigand; marauder leader uses the same animations with the existing generated crown registered to its hood once at load. Only teal cloth is faction-colored. Native size, no armor overlay.",
+  "sha256": {
+    "idle.png": "5965168ae7116cde5b4d7c3099126f496072118d7166b93e8372790dc5992546",
+    "crown-source.png": "3fd1fc79531225dc86442407849e10562c850682bd781e1832c65d2e9e41bfff",
+    "walk.png": "0a29e212a444d89d01b02f80dd6debcc34a596a14166e8b6d94f78e418e66fa6",
+    "attack.png": "f48f5e1b80e8225722342e672b00d9642349dce13188f291c5dda6a008c04c82",
+    "death.png": "5c0afe028b7f45545117066e0001a516fb8d227f5f3933aa44227dd938a2fa55"
+  }
+}

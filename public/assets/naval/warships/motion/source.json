@@ -1,0 +1,32 @@
+{
+  "generator": "PixelLab /animate-with-text-v3",
+  "camera": "high top-down, not isometric",
+  "grounding": "Exact production hull first frames",
+  "processing": "Lossless horizontal frame assembly only; no painted or synthesized pixels",
+  "animations": {
+    "galley-rowing": {
+      "frames": 7,
+      "width": 48,
+      "height": 80,
+      "frameSeconds": 0.14
+    },
+    "galley-sinking": {
+      "frames": 9,
+      "width": 48,
+      "height": 80,
+      "frameSeconds": 0.4444444444444444
+    },
+    "caravel-sinking": {
+      "frames": 9,
+      "width": 48,
+      "height": 80,
+      "frameSeconds": 0.4444444444444444
+    },
+    "frigate-sinking": {
+      "frames": 9,
+      "width": 48,
+      "height": 80,
+      "frameSeconds": 0.4444444444444444
+    }
+  }
+}

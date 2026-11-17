@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { loadObservationPostArt } from './observation-post-art';
 import type { PunyPixels } from './puny-world';
 
@@ -25,7 +26,7 @@ export function loadScoutsLodgeArt(): Promise<void> {
   return loading ??= (async () => {
     await loadObservationPostArt();
     originals = await Promise.all(['Scouts-Lodge', 'Scouts-Lodge-blue', 'Scouts-Lodge-red'].map(async name => {
-      const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/medieval/${name}.png`;
+      const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/medieval/${name}.png`);
       await image.decode();
       if (image.naturalWidth !== 16 || image.naturalHeight !== 16) throw new Error('Invalid Scouts’ Lodge artwork.');
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
@@ -56,7 +57,7 @@ export function drawScoutsLodge(c: CanvasRenderingContext2D, x: number, y: numbe
 
 export function scoutsLodgeIconUrl(color = '#c94c4c'): string {
   const image = sprite(color);
-  if (!image) return `${import.meta.env.BASE_URL}assets/medieval/Scouts-Lodge-red.png`;
+  if (!image) return runtimeArtUrl(`${import.meta.env.BASE_URL}assets/medieval/Scouts-Lodge-red.png`);
   let icon = icons.get(color);
   if (!icon) { icon = image.toDataURL('image/png'); icons.set(color, icon); }
   return icon;

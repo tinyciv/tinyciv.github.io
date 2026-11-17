@@ -48,7 +48,7 @@ for (const name of names) {
   bundles[name] = hash(await readFile(outfile));
   modules[name] = await import(pathToFileURL(outfile).href);
 }
-const wasm = await readFile(path.join(roots.current, 'public/wasm/navigation.wasm'));
+const wasm = await readFile(path.join(roots.current, 'public/wasm/simulation.wasm'));
 for (const name of names) await modules[name].installNavigationWasm(wasm);
 
 /** Same open grassland and four-tile city core as the physical food calibration.

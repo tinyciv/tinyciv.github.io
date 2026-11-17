@@ -38,9 +38,9 @@ async function researchFits(width, height) {
 try {
   await page.goto(process.env.GAME_URL || 'http://127.0.0.1:5174/', { waitUntil: 'networkidle' }); await ready();
   await page.locator('[data-view="single"]').click();
-  check('advanced start is offered as an unchecked new-game option', await page.locator('[name="advanced-start"]').isVisible()
-    && !await page.locator('[name="advanced-start"]').isChecked());
-  await page.locator('[name="seed"]').fill('BTV-847'); await page.locator('[name="advanced-start"]').check();
+  check('advanced start is offered as a new-game slider set to Standard', await page.locator('[name="advanced-start"]').isVisible()
+    && await page.locator('[name="advanced-start"]').inputValue() === '0');
+  await page.locator('[name="seed"]').fill('BTV-847'); await page.locator('[name="advanced-start"]').fill('2');
   await page.locator('[data-form="single"] button[type="submit"]').click();
   await page.locator('#frontend').waitFor({ state: 'hidden', timeout: 60000 });
   const advanced = await page.evaluate(async () => {
@@ -57,7 +57,7 @@ try {
     const { createGame } = await import('/src/game/simulation.ts'); const { generateWorld } = await import('/src/world/generator.ts');
     const { BUILDABLE_KINDS, isRetinueMember } = await import('/src/game/types.ts');
     return ['CROWN', 'river-kingdom'].map(seed => {
-      try { const s = createGame(generateWorld(seed), undefined, { advancedStart: true }); return { seed, population: s.factions[0].population,
+      try { const s = createGame(generateWorld(seed), undefined, { advancedStart: 'complete' }); return { seed, population: s.factions[0].population,
         retinue: s.units.filter(u => u.faction === 0 && isRetinueMember(u)).length,
         missing: BUILDABLE_KINDS.filter(kind => !s.buildings.some(b => b.faction === 0 && b.kind === kind && !b.construction)) }; }
       catch (error) { return { seed, error: String(error) }; }

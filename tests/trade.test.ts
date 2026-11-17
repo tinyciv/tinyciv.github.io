@@ -54,9 +54,8 @@ describe('city trade route planning', () => {
     for (let y = 8; y <= 10; y++) state.world.tiles[y * state.world.width + 5].resource = 'clay';
     const merchant = oneMerchant(state), route = state.tradeRoutes![0];
     updateMerchant(state, merchant, .1, () => {});
-    const planned = route.legValue!.distance;
-    Object.assign(merchant, route.goal);
-    updateMerchant(state, merchant, .1, () => {});
+    const planned = 10;
+    updateMerchant(state, merchant, planned, (_, u, goal) => Object.assign(u, goal));
     expect(state.factions[0].gold).toBeCloseTo(domesticTradePayout(planned, 100, 100, 1.05));
     expect(route.journeys).toBe(1);
     expect(state.factions[0].incomeTotals?.gold).toBe(state.factions[0].gold);
@@ -201,10 +200,10 @@ describe('city trade route planning', () => {
 });
 
 describe('physical trading journeys', () => {
-  it('retains the original distance payout for village agreements', () => {
-    expect(tradePayout(20)).toBe(24); expect(tradePayout(100)).toBe(200);
-    expect(tradePayout(50)).toBe(75); expect(tradePayout(10)).toBe(11);
-    expect(tradePayout(20) / 20).toBeGreaterThan(tradePayout(10) / 10);
+  it('uses a constant per-second rate for village agreements', () => {
+    expect(tradePayout(20)).toBe(26); expect(tradePayout(100)).toBe(130);
+    expect(tradePayout(50)).toBe(65); expect(tradePayout(10)).toBe(13);
+    expect(tradePayout(20) / 20).toBe(tradePayout(10) / 10);
     expect(tradePayout(0)).toBe(0); expect(tradePayout(NaN)).toBe(0);
   });
 
@@ -212,14 +211,14 @@ describe('physical trading journeys', () => {
     const state = fixture(); populate(state);
     const merchant = oneMerchant(state), route = state.tradeRoutes![0];
     walk(state, merchant, 1);
-    const quoted = route.legValue!.gold;
+    const quoted = route.legValue!.goldPerSecond;
     expect(state.factions[0].gold).toBe(0); expect(route.distance).toBeGreaterThan(0);
     let first = 0;
     while (route.journeys < 1 && state.time < 60) {
       state.time += .1; updateMerchant(state, merchant, .1, moveUnit);
       first = state.factions[0].gold;
     }
-    expect(route.journeys).toBe(1); expect(first).toBeCloseTo(quoted); expect(first).toBeGreaterThan(0); expect(route.target).toBe(route.origin);
+    expect(route.journeys).toBe(1); expect(first).toBeCloseTo(quoted * state.time); expect(first).toBeGreaterThan(0); expect(route.target).toBe(route.origin);
     const arrival = { x: merchant.x, y: merchant.y };
     walk(state, merchant, 1);
     expect(distance(arrival, merchant)).toBe(0); expect(state.factions[0].gold).toBe(first);
@@ -243,7 +242,7 @@ describe('physical trading journeys', () => {
     }
     expect(route.journeys).toBe(1); expect(traveled).toBeGreaterThan(straight + 8);
     expect(quote.distance).toBeGreaterThan(straight + 8);
-    expect(state.factions[0].gold).toBeCloseTo(domesticTradePayout(quote.distance, 100, 100));
+    expect(state.factions[0].gold).toBeCloseTo(domesticTradePayout(state.time, 100, 100));
   });
 
   it('waits without income or teleporting when a crossing closes during the trip', () => {

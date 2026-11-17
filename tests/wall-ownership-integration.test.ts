@@ -58,7 +58,7 @@ describe('wall ownership through simulation actions', () => {
     expect(state.factions[1].defeated).toBe(false);
   });
 
-  it('neutralizes an unsupported gate immediately after demolition while the game is paused', () => {
+  it('keeps an active faction\'s outlying gate closed to rivals after demolition while paused', () => {
     const state = fixture(), { wall, road } = gate(state, 0), well = building(12, 'well', 0, 22, 18);
     entityStore(state).buildings.add(well); state.paused = true;
     expect(canWalk(state, 24.5, 18.5, 1)).toBe(false);
@@ -67,9 +67,10 @@ describe('wall ownership through simulation actions', () => {
 
     expect(state.time).toBe(0); expect(state.paused).toBe(true);
     expect(state.buildings).not.toContain(well);
-    expect(wall.faction).toBe(-1); expect(road.faction).toBe(-1);
+    expect(wall.faction).toBe(0); expect(road.faction).toBe(0);
     expect(canWalk(state, 24.5, 18.5, 0)).toBe(true);
-    expect(canWalk(state, 24.5, 18.5, 1)).toBe(true);
+    expect(canWalk(state, 24.5, 18.5, 1)).toBe(false);
+    expect(canWalk(state, 24.5, 18.5, -2)).toBe(false);
     expect(state.gameOver).toBe(false);
   });
 
@@ -87,9 +88,10 @@ describe('wall ownership through simulation actions', () => {
 
     updateGame(state, .1, idle);
 
-    // Completion is detected by the next maintenance sample, then ownership
-    // follows in that update rather than requiring another build transaction.
-    updateGame(state, CHECK_INTERVAL, idle);
+    // Initial maintenance phases spread their first follow-up over two check
+    // intervals. Completion and the ownership pass must both publish within
+    // that bounded startup window, without another build transaction.
+    updateGame(state, CHECK_INTERVAL * 2, idle);
     expect(monument.construction).toBeUndefined();
     expect(wall.faction).toBe(0); expect(road.faction).toBe(0);
     expect(canWalk(state, 24.5, 18.5, 0)).toBe(true);

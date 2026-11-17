@@ -1,31 +1,30 @@
 import { applyTundra } from './tundra';
+import { applyScenarioOceanChannel } from './scenario-geography';
+import { tundraStartAllowed } from '../game/tundra-starts';
 import { scatterDesertStones } from './desert-stones';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type Overlay, type Point, type Terrain, type Tile, type World } from '../game/types';
 import { EARTH_SAMPLES } from './data/earth-samples';
-import { harmonizeRidgeTerrain, placeRidges } from './ridges';
+import { applyReliefFootprints, generateRelief } from './relief-native';
+import { reliefBuildable, reliefFlags } from '../game/relief';
+import { settlementTerrainMask } from '../game/terrain-sites';
 import { addOffshoreIslands, createLandformProfile, landformDensity, type LandformProfile } from './islands';
 import { assignTreeClimate } from './tree-climate';
 import { OPPOSING_FACTION_COUNT } from '../game/civilizations';
 import { DEFAULT_WORLD_STYLE, LANDFORM_KINDS, resolveLandscapeParameters, WORLD_GENERATION_STYLES,
   type LandformFamily, type LandscapeParameters, type WorldGenerationOptions, type WorldGenerationStyle } from './options';
 import { placeFreshwaterLakes, placeLandformLakes } from './lakes';
-import { placeLandformRelief } from './regional-relief';
 import { applyLandformHeights, createLandformPlan, shapeLandformCoasts } from './landforms';
 import { applyTerrainEcology, createTerrainEnvironment } from './terrain-ecology';
 import { sampleTerrainClimate, applyWorldClimate } from './climate';
 import { generateRiverNetwork, placeNetworkFords, repairRiverDrainage } from './river-network';
-import { captureRiverRelief, carveRiverCanyons } from './river-canyons';
-import { addWaterfallTributaries, markRiverWaterfalls } from './waterfalls';
 import { generateRiverDeltas } from './river-deltas';
 import { applySoilFertility } from './soil';
 import { assignRegionalResources } from './resources';
 import { applyStonePlains } from './stone-plains';
 import { applyDesertTransitions } from './desert-regions';
-import { finishHillBiomes, placeHillBiomes } from './hill-biomes';
-import { STAIR_UP } from '../game/ridges';
 import { MIN_FACTION_START_DISTANCE, packSettlementSites, spreadFactionStarts } from './starting-sites';
-import { generateMediterraneanWorld, MEDITERRANEAN_WIDTH, MEDITERRANEAN_HEIGHT } from './mediterranean';
+import { generateWorldFeatures } from './features-native';
 
 const PATCH = 24;
 const OVERLAP = 7;
@@ -33,8 +32,9 @@ const STRIDE = PATCH - OVERLAP;
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 const DIAGONAL = [...CARDINAL, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
-export const DEFAULT_WORLD_WIDTH = 320;
-export const DEFAULT_WORLD_HEIGHT = 256;
+// 30% less area than the earlier 224×179 map (each side × √0.7).
+export const DEFAULT_WORLD_WIDTH = 187;
+export const DEFAULT_WORLD_HEIGHT = 150;
 
 /** A stable, local random stream: generation never mutates Math.random. */
 export function seededRandom(seed: string): () => number {
@@ -108,7 +108,7 @@ function seamCut(old: Int8Array, patch: Uint8Array, width: number, height: numbe
 }
 
 /** Real training-image quilting, with a weak, smooth continental prior. */
-function quiltLand(width: number, height: number, random: () => number, noise: (x: number, y: number) => number, profile: LandformProfile): Uint8Array {
+function* quiltLand(width: number, height: number, random: () => number, noise: (x: number, y: number) => number, profile: LandformProfile): Generator<number, Uint8Array> {
   const output = new Int8Array(width * height).fill(-1);
   const target = new Float32Array(width * height);
   const bank = trainingPatches();
@@ -141,6 +141,7 @@ function quiltLand(width: number, height: number, random: () => number, noise: (
       if (output[i] >= 0 && ((left && x < OVERLAP && x <= left[y]) || (top && y < OVERLAP && y <= top[x]))) continue;
       output[i] = best.pixels[y * PATCH + x];
     }
+    if (ox + STRIDE >= width) yield Math.min(1, (oy + STRIDE) / height);
   }
   const land = Uint8Array.from(output, value => Math.max(0, value));
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
@@ -206,7 +207,7 @@ export function terrainYields(terrain: Terrain, overlay: Overlay): Pick<Tile, 'f
 }
 
 function walkable(tile: Tile): boolean {
-  return !tile.ridge && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier') || tile.terrain === 'river' && tile.overlay === 'ford');
+  return !!(reliefFlags(tile)&1) && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier') || tile.terrain === 'river' && tile.overlay === 'ford');
 }
 
 /** A complete bank-to-bank spine with connected, tapered side shallows. The
@@ -268,10 +269,10 @@ export function addRiverFords(world: World): boolean {
   return changed;
 }
 
-/** The native ledge palette and legal stair approaches share two dry cells. */
-function ridgeApron(tiles: Tile[], width: number, height: number): Uint8Array {
+/** Keep permanent starting footprints and coastal scenery off relief bodies. */
+function reliefApron(tiles: Tile[], width: number, height: number): Uint8Array {
   const protectedCells = new Uint8Array(tiles.length);
-  for (let cell = 0; cell < tiles.length; cell++) if (tiles[cell].ridge) {
+  for (let cell = 0; cell < tiles.length; cell++) if (!reliefBuildable(tiles[cell])) {
     const x = cell % width, y = Math.floor(cell / width);
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const nx = x + dx, ny = y + dy;
@@ -303,13 +304,14 @@ function largestWalkable(tiles: Tile[], width: number, height: number): number[]
 }
 
 export function settlements(tiles: Tile[], width: number, height: number, random: () => number,
-  parameters: LandscapeParameters, minimumFactionDistance = 0): { capitals: Point[]; secondary: Point[] } {
+  parameters: LandscapeParameters, minimumFactionDistance = 0, world?: World): { capitals: Point[]; secondary: Point[] } {
   const empty = { capitals: [], secondary: [] };
   const component = largestWalkable(tiles, width, height);
   if (component.length < Math.min(1200, width * height * 0.16)) return empty;
   const members = new Set(component);
+  const placement = settlementTerrainMask(world ?? { width, height, tiles, seed: 'settlement-sites', source: 'generated', spawns: [], revision: 0 });
   // Match the palace ring plus all four houses and their walking lanes. The
-  // old 5×5 core could fit a palace beside a ridge while pushing its full town
+  // old 5×5 core could fit a palace beside hill country while pushing its full town
   // ten tiles away. Compact development maps retain the flexible town planner.
   const townFootprint: Point[] = [];
   for (let dy = -3; dy <= 4; dy++) for (let dx = -3; dx <= 4; dx++) {
@@ -339,18 +341,20 @@ export function settlements(tiles: Tile[], width: number, height: number, random
   for (const i of component) {
     const x = i % width, y = Math.floor(i / width);
     if (x < 7 || y < 7 || x >= width - 7 || y >= height - 7) continue;
+    if ((placement[i] & 3) !== 3) continue;
+    if (!tundraStartAllowed({ tiles, width, height }, x, y)) continue;
     let space = 0, fertile = 0, water = 0, core = true;
     for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) {
       const next = (y + dy) * width + x + dx;
       if (dx * dx + dy * dy > 25) continue;
       if (members.has(next)) { space++; fertile += tiles[next].food; }
       if (WATER.has(tiles[next].terrain)) water++;
-      if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2 && (!members.has(next) || WATER.has(tiles[next].terrain) || tiles[next].marsh)) core = false;
+      if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2 && (!members.has(next) || WATER.has(tiles[next].terrain) || tiles[next].marsh || !reliefBuildable(tiles[next]) || (placement[next] & 3) !== 3)) core = false;
     }
     if (!core || space < 65 || fertile < 110) continue;
     if (Math.min(width, height) >= 128 && townFootprint.some(offset => {
       const next = (y + offset.y) * width + x + offset.x;
-      return !members.has(next) || WATER.has(tiles[next].terrain) || !!tiles[next].marsh;
+      return !members.has(next) || WATER.has(tiles[next].terrain) || !!tiles[next].marsh || !reliefBuildable(tiles[next]) || (placement[next] & 3) !== 3;
     })) continue;
     const tile = tiles[i];
     // Water access improves a site without requiring every city to occupy the
@@ -481,12 +485,12 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
       distance[next] = distance[i] + 1; owner[next] = owner[i]; queue.push(next);
     });
   }
-  const ledgeApron = ridgeApron(tiles, width, height);
+  const raisedApron = reliefApron(tiles, width, height);
   const palms: number[] = [];
   for (const i of queue) {
     const tile = tiles[i], x = i % width, y = Math.floor(i / width), source = owner[i];
     const settlementClearing = settlementSites.some(spawn => Math.abs(x - Math.floor(spawn.x)) <= 2 && Math.abs(y - Math.floor(spawn.y)) <= 2);
-    if (settlementClearing || ledgeApron[i] || tile.marsh) continue;
+    if (settlementClearing || raisedApron[i] || tile.marsh) continue;
     if (sandy[source] && distance[i] <= beachDepth[source]) {
       tile.terrain = 'desert'; tile.overlay = 'none'; tile.beach = true;
       Object.assign(tile, terrainYields(tile.terrain, tile.overlay));
@@ -509,7 +513,7 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
   // its grass palette even when a city excluded it from decorative beaches.
   for (const { index } of shore) {
     const tile = tiles[index];
-    if (tile.beach || tile.ridge || tile.terrain !== 'plains' && tile.terrain !== 'desert') continue;
+    if (tile.beach || tile.relief || tile.terrain !== 'plains' && tile.terrain !== 'desert') continue;
     const before = terrainYields(tile.terrain, tile.overlay), after = terrainYields('grassland', tile.overlay);
     tile.terrain = 'grassland';
     for (const resource of ['food', 'production', 'gold'] as const)
@@ -517,8 +521,17 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
   }
 }
 
-function generateAttempt(seed: string, width: number, height: number, attempt: number, style: WorldGenerationStyle,
-  parameters: LandscapeParameters, landformFamily: LandformFamily, riverDeltas: boolean): World {
+export interface WorldGenerationProgress {
+  /** Completed generation work for the current attempt, from zero to one. */
+  progress: number;
+  phase: string;
+  attempt: number;
+}
+
+function* generateAttempt(seed: string, width: number, height: number, attempt: number, style: WorldGenerationStyle,
+  parameters: LandscapeParameters, landformFamily: LandformFamily, riverDeltas: boolean, includeSettlements: boolean, oceanChannelWidth = 0): Generator<WorldGenerationProgress, World> {
+  const checkpoint = (progress: number, phase: string): WorldGenerationProgress => ({ progress, phase, attempt: attempt + 1 });
+  yield checkpoint(0, 'Shaping land');
   // Development maps still hold every starting city. Scale the waterways
   // with their much smaller area, while keeping ordinary production settings exact.
   const developmentScale = Math.min(width, height) < 128 ? Math.min(1, width * height / (128 * 128)) : 1;
@@ -528,7 +541,14 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
   const warpNoise = createNoise2D(random);
   const profileRandom = seededRandom(`${seed}:landforms`);
   const profile = createLandformProfile(profileRandom, width, height, style, parameters);
-  const land = quiltLand(width, height, random, noise, profile);
+  const quilting = quiltLand(width, height, random, noise, profile);
+  let quilt = quilting.next();
+  while (!quilt.done) {
+    yield checkpoint(quilt.value * .09, 'Shaping land');
+    quilt = quilting.next();
+  }
+  const land = quilt.value;
+  yield checkpoint(.1, 'Shaping coasts');
   const islandRandom = seededRandom(`${seed}:offshore-islands:${attempt}`);
   const islandNoise = createNoise2D(islandRandom);
   addOffshoreIslands(land, width, height, islandRandom, islandNoise, profile.compact ? {} : {
@@ -537,21 +557,26 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
     largeChance: profile.style === 'pangaea' ? .15 : .4,
     size: (.8 + profileRandom() * .7) * parameters.islandSize,
   });
+  if (oceanChannelWidth > 0) applyScenarioOceanChannel(land, width, height, oceanChannelWidth);
   const plan = !profile.compact ? createLandformPlan(seed, width, height, land, landformFamily, parameters) : undefined;
   if (plan) shapeLandformCoasts(land, width, height, plan);
   const inland = distanceField(land, width, height, 0);
   const offshore = distanceField(land, width, height, 1);
   const tiles: Tile[] = [];
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const i = y * width + x;
-    const climate = sampleTerrainClimate(x, y, width, height, moistureNoise, warpNoise, parameters);
-    const { wx, wy, moisture } = climate;
-    const ridge = Math.abs(noise(wx * 0.030 + 72, wy * 0.030 - 17)
-      + warpNoise(wx * 0.14 - 9, wy * 0.14 + 18) * 0.22);
-    const elevation = land[i] ? clamp(0.13 + inland[i] * 0.014 + Math.max(0, 0.22 - ridge) * 2.5) : 0;
-    const terrain: Terrain = land[i] ? climate.terrain : offshore[i] <= 2 ? 'coast' : 'ocean';
-    const overlay: Overlay = 'none';
-    tiles.push({ terrain, overlay, elevation, moisture, ...terrainYields(terrain, overlay), variation: random() });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const climate = sampleTerrainClimate(x, y, width, height, moistureNoise, warpNoise, parameters);
+      const { wx, wy, moisture } = climate;
+      const ridge = Math.abs(noise(wx * 0.030 + 72, wy * 0.030 - 17)
+        + warpNoise(wx * 0.14 - 9, wy * 0.14 + 18) * 0.22);
+      const elevation = land[i] ? clamp(0.13 + inland[i] * 0.014 + Math.max(0, 0.22 - ridge) * 2.5) : 0;
+      const terrain: Terrain = land[i] ? climate.terrain : offshore[i] <= 2 ? 'coast' : 'ocean';
+      const overlay: Overlay = 'none';
+      tiles.push({ terrain, overlay, elevation, moisture, ...terrainYields(terrain, overlay), variation: random() });
+    }
+    if ((y + 1) % 16 === 0 || y === height - 1)
+      yield checkpoint(.14 + .14 * (y + 1) / height, 'Shaping terrain');
   }
   const world: World = { width, height, seed, tiles, spawns: [], generationStyle: style,
     generationParameters: { ...parameters }, landformFamily, landformProvinces: plan?.provinces,
@@ -567,27 +592,20 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
     }
   }
   const plannedLakes = plan ? placeLandformLakes(world, plan, inland, parameters) : [];
-  if (!plan) {
-    placeRidges(tiles, width, height, seed);
-    for (const tile of tiles) if (tile.ridge) tile.elevation = .76 + (tile.ridgeTier === 2 ? .14 : 0);
-  } else placeLandformRelief(world, plan, parameters);
   applyWorldClimate(world, parameters);
-  placeHillBiomes(world, parameters);
   const lakeCount = developmentScale < 1 ? Math.max(1, Math.round(Math.max(3,
     Math.min(7, land.reduce((sum, value) => sum + value, 0) / 5500)) * parameters.lakeDensity * developmentScale)) : undefined;
   const usualLakes = lakeCount ?? Math.max(1, Math.round(Math.max(3,
     Math.min(7, land.reduce((sum, value) => sum + value, 0) / 5500)) * parameters.lakeDensity));
   placeFreshwaterLakes(tiles, width, height, `${seed}:${attempt}`, inland,
     { parameters, count: Math.max(1, usualLakes - plannedLakes.length) });
-  // Rivers are a later incision into completed landforms. Native relief is
-  // captured before channel painting, then its cut banks are rebuilt as ledges.
+  yield checkpoint(.36, 'Carving rivers');
+  // Complete waterways before selecting the dry relief footprint.
   // Keep this rainfall event fixed so discharge and channel widths agree.
   applyWorldClimate(world, parameters);
-  const riverRelief = captureRiverRelief(world);
   generateRiverNetwork(world, parameters);
-  carveRiverCanyons(world, riverRelief);
-  addWaterfallTributaries(world);
   repairRiverDrainage(world);
+  yield checkpoint(.47, 'Forming wetlands');
   // Sediment builds coastal wetlands only after the upstream landforms and
   // channel network are complete. Settlement and beach placement respect them.
   world.riverDeltas = riverDeltas ? generateRiverDeltas(world) : [];
@@ -601,62 +619,93 @@ function generateAttempt(seed: string, width: number, height: number, attempt: n
     }
   }
   addRiverFords(world);
+  // Starting-site selection must see the polar climate, not terrain that
+  // will subsequently turn into the middle of a snowfield.
+  applyTundra(world, parameters);
+  yield checkpoint(.56, 'Raising hills');
+  // Rivers, creeks, lakes and wetlands are final exclusions. Rust selects
+  // connected hill/mountain regions only on the remaining dry ground.
+  generateRelief(world, plan, parameters);
+  applyReliefFootprints(world);
+  yield checkpoint(.68, 'Finding city sites');
   const minimumFactionDistance = width >= DEFAULT_WORLD_WIDTH && height >= DEFAULT_WORLD_HEIGHT ? MIN_FACTION_START_DISTANCE : 0;
   world.minimumFactionStartDistance = minimumFactionDistance || undefined;
-  const sites = settlements(tiles, width, height, random, parameters, minimumFactionDistance);
+  // Starting town footprints must stay on buildable low ground.
+  const sites = includeSettlements ? settlements(tiles, width, height, random, parameters, minimumFactionDistance, world)
+    : { capitals: [], secondary: [] };
   world.spawns = sites.capitals;
   world.secondarySpawns = sites.secondary;
-  harmonizeRidgeTerrain(world);
-  markRiverWaterfalls(world);
+  yield checkpoint(.78, 'Growing woodland');
   addCoastalBeaches(world, attempt, parameters);
   applyDesertTransitions(world);
-  finishHillBiomes(world);
   applyTerrainEcology(world, parameters);
   assignTreeClimate(world, parameters);
   applySoilFertility(world);
+  // Complete polar/soil policy before the native landscape pass. The new
+  // water and lowlands then participate in normal resources and pathing.
+  applyTundra(world, parameters);
+  if (generateWorldFeatures(world)) {
+    assignTreeClimate(world, parameters);
+    applySoilFertility(world);
+    applyReliefFootprints(world);
+  }
+  yield checkpoint(.88, 'Placing resources');
   assignRegionalResources(world);
   applyStonePlains(world);
   scatterDesertStones(world);
-  applyTundra(world, parameters);
+  applyReliefFootprints(world);
+  yield checkpoint(1, 'Terrain ready');
   return world;
 }
 
-/** Build a deterministic playable world from real, rotated geographical patches. */
-export function generateWorld(seed: string, width?: number, height?: number,
-  options: WorldGenerationOptions = {}): World {
+function* generateWorldSteps(seed: string, width?: number, height?: number,
+  options: WorldGenerationOptions = {}): Generator<WorldGenerationProgress, World> {
   const style = options.style ?? DEFAULT_WORLD_STYLE;
-  const automaticSize = width === undefined && height === undefined;
-  width ??= style === 'mediterranean' ? MEDITERRANEAN_WIDTH : DEFAULT_WORLD_WIDTH;
-  height ??= style === 'mediterranean' ? MEDITERRANEAN_HEIGHT : DEFAULT_WORLD_HEIGHT;
+  width ??= DEFAULT_WORLD_WIDTH;
+  height ??= DEFAULT_WORLD_HEIGHT;
   const landformFamily = options.landformFamily ?? 'mixed';
   const parameters = resolveLandscapeParameters(options.parameters);
   if (!WORLD_GENERATION_STYLES.includes(style)) throw new RangeError(`Unknown world style: ${style}`);
   if (landformFamily !== 'mixed' && !(LANDFORM_KINDS as readonly string[]).includes(landformFamily))
     throw new RangeError(`Unknown landform family: ${landformFamily}`);
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 64 || height < 64 || width > 512 || height > 512) {
-    throw new RangeError('World dimensions must be integers between 64 and 512 tiles.');
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 24 || height < 24 || width > 512 || height > 512) {
+    throw new RangeError('World dimensions must be integers between 24 and 512 tiles.');
   }
-  if (style === 'mediterranean') return generateMediterraneanWorld(seed, width, height);
   for (let attempt = 0; attempt < 20; attempt++) {
-    // Some branching continents have too little connected, fertile land for
-    // six separated realms. Give them more room instead of weakening the
-    // eighty-cell rule or spending every retry at an impossible size.
-    if (automaticSize && attempt > 0 && attempt % 3 === 0) {
-      const expansion = Math.min(1.2, 512 / width, 512 / height);
-      width = Math.min(512, Math.ceil(width * expansion));
-      height = Math.min(512, Math.ceil(height * expansion));
-    }
-    const world = generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options.riverDeltas !== false);
-    if (world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) return world;
+    const world = yield* generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options.riverDeltas !== false, options.settlements !== false, options.oceanChannelWidth);
+    if (options.settlements === false || world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) return world;
   }
   throw new Error(`Could not find ${OPPOSING_FACTION_COUNT + 1} connected capitals and ${OPPOSING_FACTION_COUNT} second cities for seed "${seed}".`);
+}
+
+/** Build a deterministic playable world from real, rotated geographical patches. */
+export function generateWorld(seed: string, width?: number, height?: number,
+  options: WorldGenerationOptions = {}): World {
+  const steps = generateWorldSteps(seed, width, height, options);
+  let next = steps.next();
+  while (!next.done) next = steps.next();
+  return next.value;
+}
+
+/** The same deterministic work, with a paint opportunity after completed stages.
+ * Progress comes from generation checkpoints, never a timer or a simulated fill. */
+export async function generateWorldAsync(seed: string, width?: number, height?: number,
+  options: WorldGenerationOptions = {}, onProgress?: (progress: WorldGenerationProgress) => void): Promise<World> {
+  const steps = generateWorldSteps(seed, width, height, options);
+  let next = steps.next();
+  while (!next.done) {
+    onProgress?.(next.value);
+    await new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    next = steps.next();
+  }
+  return next.value;
 }
 
 /** Retire unsupported landscape concepts in old saves without hidden blockers. */
 export function normalizePunyWorld(world: World): void {
   let changed = false;
   world.tiles.forEach(tile => {
-    // Discard obsolete ramp fields; new raised terrain uses ridge/stair metadata.
+    // Discard obsolete ramp fields from the source geography.
     const legacyTile = tile as Tile & { ramp?: boolean; rampDirection?: string };
     if ('ramp' in legacyTile || 'rampDirection' in legacyTile) {
       delete legacyTile.ramp;
@@ -668,7 +717,7 @@ export function normalizePunyWorld(world: World): void {
     if (['hills', 'mountains'].includes(tile.overlay as string)) tile.overlay = 'none';
     if (tile.overlay === 'jungle') tile.overlay = 'forest';
     else if (tile.overlay === 'swamp') tile.overlay = 'none';
-    else if (tile.overlay === 'volcano' || tile.overlay === 'glacier') tile.overlay = 'none';
+    else if ((tile.overlay === 'volcano' && !tile.geothermal) || tile.overlay === 'glacier') tile.overlay = 'none';
     if (tile.terrain === terrain && tile.overlay === overlay) return;
     changed = true;
     const oldYields = terrainYields(terrain, overlay), nextYields = terrainYields(tile.terrain, tile.overlay);
@@ -677,7 +726,6 @@ export function normalizePunyWorld(world: World): void {
     tile.production = Math.max(0, nextYields.production + tile.production - oldYields.production);
     tile.gold = Math.max(0, nextYields.gold + tile.gold - oldYields.gold);
   });
-  // Geographic maps already contain authored bank-to-bank crossings; retain them.
-  if (world.generationStyle !== 'mediterranean') changed = addRiverFords(world) || changed;
+  changed = addRiverFords(world) || changed;
   if (changed) world.revision = (world.revision ?? 0) + 1;
 }

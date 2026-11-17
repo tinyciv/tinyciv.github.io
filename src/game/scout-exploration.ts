@@ -2,6 +2,7 @@ import { updateFog, type FogView } from './fog';
 import { playerFaction, withPlayerFaction } from './player-context';
 import { unitRespectsForbidden } from './forbidden-zones';
 import { createReachabilityQuery, findPath, movementMultiplier, withNavigationFrame } from './pathfinding';
+import { unitNavigationState } from './unit-navigation';
 import { distance, type GameState, type Point, type Unit, type World } from './types';
 
 export interface ScoutThreat extends Point { radius: number }
@@ -80,7 +81,8 @@ export function chooseScoutExplorationRoute(state: GameState, scout: Unit, faile
   return withNavigationFrame(state, () => {
     const board = refreshFrontiers(state, scout.faction), explored = board.fog!.explored, { width, height } = state.world;
     const avoidForbidden = unitRespectsForbidden(state, scout);
-    const reachable = createReachabilityQuery(state, scout, scout.faction, undefined, avoidForbidden);
+    const navigation = unitNavigationState(state, scout);
+    const reachable = createReachabilityQuery(navigation, scout, scout.faction, undefined, avoidForbidden);
     const reservations = [...board.reservations].filter(([id]) => id !== scout.id).map(([, value]) => value.point);
     const failures = [...failed].filter(([, until]) => until > state.time).map(([cell]) => pointAt(cell, width));
     const risk = (point: Point): boolean => threats.some(threat => distance(point, threat) < threat.radius + .15);
@@ -108,12 +110,12 @@ export function chooseScoutExplorationRoute(state: GameState, scout: Unit, faile
     }
     let best: ScoutExplorationRoute | undefined, bestScore = Infinity;
     for (const candidate of shortlist) {
-      const path = findPath(state, scout, candidate.point, scout.faction, false,
+      const path = findPath(navigation, scout, candidate.point, scout.faction, false,
         threatenedCells.size ? threatenedCells : undefined, undefined, undefined, false, avoidForbidden);
       if (!path.length) continue;
       let previous: Point = scout, seconds = 0;
       for (const next of path) {
-        seconds += distance(previous, next) / Math.max(.05, Math.min(movementMultiplier(state, previous.x, previous.y), movementMultiplier(state, next.x, next.y)) * scout.speed);
+        seconds += distance(previous, next) / Math.max(.05, Math.min(movementMultiplier(navigation, previous.x, previous.y), movementMultiplier(navigation, next.x, next.y)) * scout.speed);
         previous = next;
       }
       const score = seconds + candidate.overlap - candidate.gain * .025;

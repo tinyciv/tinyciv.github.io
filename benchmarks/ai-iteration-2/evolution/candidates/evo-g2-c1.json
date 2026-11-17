@@ -1,0 +1,58 @@
+{
+  "definition": {
+    "id": "evo-g2-c1",
+    "extends": "expansionist",
+    "parameters": {
+      "retreatHealth": 0.58232,
+      "retreatPowerRatio": 1.9,
+      "huntPowerRatio": 0.9,
+      "garrisonFraction": 0.15,
+      "towerGarrisonCount": 2,
+      "hostileTowerPower": 3200,
+      "hostileFortPower": 6400,
+      "friendlyTowerPower": 1600,
+      "campaignSafetyRatio": 1.2,
+      "campaignDangerWeight": 20,
+      "retreatMorale": 26.60574,
+      "recoveryHealth": 0.9,
+      "recoveryMorale": 75,
+      "recoveryPowerRatio": 0.6,
+      "decisionInterval": 1,
+      "formationEnterCount": 8,
+      "formationStayCount": 6,
+      "housingOrdersPerCycle": 6,
+      "developmentInterval": 4,
+      "cityLimit": 6,
+      "populationPerCity": 35,
+      "reserveUpkeepCycles": 1.2,
+      "campaignCooldown": 10,
+      "siegeLimit": 2,
+      "fortsPerCity": 2
+    },
+    "features": {
+      "formations": true,
+      "militaryPurchases": true,
+      "towerGarrison": true,
+      "towerAwareness": true,
+      "interceptEnemies": true,
+      "defensiveLevy": true,
+      "campaignLevy": true,
+      "safeCampaigns": true,
+      "formationApproach": true,
+      "proactiveHousing": true,
+      "foundCities": true,
+      "fortifyCities": true,
+      "offensiveSiege": true,
+      "territorialWars": true
+    },
+    "logic": {}
+  },
+  "hypothesis": "mutate retreatMorale",
+  "parents": [
+    "evo-g1-c1",
+    "hard-assault"
+  ],
+  "lane": "parameters",
+  "genomeHash": "cd788c610082254d3bd31ab89db95242f460af599394b3db6ed28271cff2b0c0",
+  "generation": 2
+}

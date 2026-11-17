@@ -8,7 +8,7 @@ const NEIGHBORS = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1],
 /** Climate chooses the dry interiors; this land-only ecotone makes their
  * margins readable as steppe/savanna. Its width varies with a correlated field,
  * so it is neither a latitude stripe nor a fixed-width outline. Rivers, lakes,
- * beaches and the authored cliff/apron palettes retain their own boundaries. */
+ * beaches and relief palettes retain their own boundaries. */
 export function applyDesertTransitions(world: World): void {
   const { width, height, tiles } = world;
   const distance = new Uint8Array(tiles.length).fill(255), queue: number[] = [];
@@ -17,7 +17,7 @@ export function applyDesertTransitions(world: World): void {
   for (let cell = 0; cell < tiles.length; cell++) {
     const tile = tiles[cell];
     if (tile.terrain === 'desert' && !tile.beach) { distance[cell] = 0; queue.push(cell); }
-    if (!tile.ridge) continue;
+    if (!tile.relief) continue;
     const x = cell % width, y = Math.floor(cell / width);
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const nx = x + dx, ny = y + dy;

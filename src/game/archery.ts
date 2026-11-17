@@ -1,11 +1,15 @@
 import { decisionDue, type DecisionClock } from './decision-schedule';
-import { areSwordsmenUnlocked, areArchersUnlocked, areSpearmenUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked } from './research';
-import { buildingActivityAvailable } from './building-activity';
+import { rustEngine } from './rust-engine';
+import { isOffensiveMember } from './offensive-native';
+import { UNIT_KIND_CODES, BUILDING_KIND_CODES } from './entity-store';
+import { allocateRetinueFraction, nativeRetinueTargets, nativeRecruitRole, RETINUE_ROLES } from './retinue-native';
+import { areSwordsmenUnlocked, areArchersUnlocked, areSpearmenUnlocked, arePikemenUnlocked, areMusketmenUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked, researchLevel } from './research';
+import { buildingActivityAvailable, isCompositionBuilding } from './building-activity';
 import { constructionEdges } from './builders';
 import { canMove, canWalk, hasStaticPath } from './pathfinding';
 import { nearbyUnits, unitOccupancy } from './spatial';
 import { entityStore } from './entity-store';
-import { SPEARMAN_DEFENSE_MULTIPLIER, SPEARMAN_RANGE } from './spearmen';
+import { structuresOf, STRUCTURE_READY } from './structure-index';
 import { purchasedRetinueSlots } from './retinue-purchases';
 import { leaderRetinueBonus } from './leader-progression';
 import { factionHasDevelopedResource } from './resource-development';
@@ -22,7 +26,9 @@ export function desiredRetinueSize(faction: Faction, leader?: Unit): number {
     + (Number.isFinite(faction.bonusRetinueSlots) ? Math.max(0, Math.floor(faction.bonusRetinueSlots!)) : 0)
     + purchasedRetinueSlots(faction) + leaderRetinueBonus(leader);
 }
-export type RetinueRole = 'warrior' | 'swordsman' | 'spearman' | 'archer' | 'horseman' | 'horseArcher' | 'knight';
+export type RetinueRole = 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'musketman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'fieldCannon';
+/** Pikemen keep the spearman's attack and reach with 50% more defense. */
+export const PIKEMAN_DEFENSE_MULTIPLIER = 1.5;
 export const SWORDSMAN_ATTACK_MULTIPLIER = 2;
 export const HORSEMAN_SPEED_MULTIPLIER = 1.65;
 export const HORSEMAN_ATTACK_MULTIPLIER = 1.5;
@@ -34,97 +40,92 @@ export const horsemanFraction = (faction: Faction): number => areHorsemenUnlocke
 export const mountedFraction = (faction: Faction): number => horsemanFraction(faction) + horseArcherFraction(faction) + knightFraction(faction);
 export const mountedRoleUnlocked = (faction: Pick<Faction, 'research'> | undefined, role: RetinueRole): boolean =>
   role === 'knight' ? areKnightsUnlocked(faction) : role === 'horseArcher' ? areHorseArchersUnlocked(faction) : role === 'horseman' ? areHorsemenUnlocked(faction) : true;
-export const retinueUpkeep = (unit: Pick<Unit, 'kind'>): number => unit.kind === 'knight' ? 2 : unit.kind === 'horseArcher' ? 1.5 : unit.kind === 'horseman' || unit.kind === 'archer' ? 1 : .5;
+const upkeepByKind = Object.fromEntries(Object.entries(UNIT_KIND_CODES).map(([kind, code]) => [kind, rustEngine.retinue_upkeep(code)]));
+const timingByKind = Object.fromEntries(Object.entries(UNIT_KIND_CODES).map(([kind, code]) => [kind, {
+  cooldown: rustEngine.retinue_attack_timing(code, 0), animation: rustEngine.retinue_attack_timing(code, 1),
+}]));
+const RANGER_UPKEEP = rustEngine.exploration_ranger(3, 1, 1);
+const RANGER_FLEE_RADIUS = rustEngine.exploration_ranger(2, 1.8, 1);
+export const retinueUpkeep = (unit: Pick<Unit, 'kind'> & { ranger?: boolean }): number => unit.ranger ? RANGER_UPKEEP : upkeepByKind[unit.kind];
+export const unitAttackTiming = (unit: Pick<Unit, 'kind'>) => timingByKind[unit.kind];
 export const mountedSpeedMultiplier = (kind: Unit['kind']): number => kind === 'knight' ? 1.45 : isMountedKind(kind) ? HORSEMAN_SPEED_MULTIPLIER : 1;
 export const swordsmanFraction = (faction: Faction): number => areSwordsmenUnlocked(faction) ? Math.min(fractionOf(faction.swordsmanFraction), 1 - mountedFraction(faction)) : 0;
 export const archerFraction = (faction: Faction): number => Math.min(fractionOf(faction.archerFraction), 1 - mountedFraction(faction) - swordsmanFraction(faction));
 export const spearmanFraction = (faction: Faction): number => Math.min(fractionOf(faction.spearmanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction)));
+export const pikemanFraction = (faction: Faction): number => arePikemenUnlocked(faction)
+  ? Math.min(fractionOf(faction.pikemanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction) - spearmanFraction(faction))) : 0;
+export const musketmanFraction = (faction: Faction): number => rustEngine.retinue_fraction(faction.musketmanFraction ?? 0,
+  1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction) - spearmanFraction(faction) - pikemanFraction(faction), Number(areMusketmenUnlocked(faction)));
+export const fieldCannonFraction = (faction: Faction): number => rustEngine.retinue_fraction(faction.fieldCannonFraction ?? 0,
+  1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction) - spearmanFraction(faction) - pikemanFraction(faction) - musketmanFraction(faction), Number(researchLevel(faction, 'fieldCannon') > 0));
+export const hasBarracks = (state: GameState, faction: number): boolean =>
+  state.buildings.some(building => building.faction === faction && building.kind === 'barracks' && buildingReady(building));
 export const canRecruitSpearmen = (state: GameState, faction: Faction): boolean =>
   areSpearmenUnlocked(faction) && factionHasDevelopedResource(state, faction.id, 'copper');
 const members = (state: GameState, factionId: number): Unit[] => state.units.filter(unit => unit.faction === factionId
   && unit.hp > 0 && isRetinueMember(unit) && unit.marauderPack === undefined);
-function compositionTargets(faction: Faction | undefined, total: number): Record<RetinueRole, number> {
-  const knight = Math.min(total, Math.round(total * (faction ? knightFraction(faction) : 0)));
-  const horseArcher = Math.min(total - knight, Math.round(total * (faction ? horseArcherFraction(faction) : 0)));
-  const horseman = Math.min(total - knight - horseArcher, Math.round(total * (faction ? horsemanFraction(faction) : 0)));
-  const mounted = knight + horseArcher + horseman;
-  const swordsman = Math.min(total - mounted, Math.round(total * (faction ? swordsmanFraction(faction) : 0)));
-  const archer = Math.min(total - mounted - swordsman, Math.round(total * (faction ? archerFraction(faction) : 0)));
-  const spearman = Math.min(total - mounted - swordsman - archer, Math.round(total * (faction ? spearmanFraction(faction) : 0)));
-  return { archer, spearman, horseman, horseArcher, knight, swordsman, warrior: total - mounted - swordsman - archer - spearman };
+function roleUnlockMask(faction: Faction | undefined): number {
+  const unlocked = [areKnightsUnlocked(faction), areHorseArchersUnlocked(faction), areHorsemenUnlocked(faction),
+    areSwordsmenUnlocked(faction), areArchersUnlocked(faction), areSpearmenUnlocked(faction), arePikemenUnlocked(faction), areMusketmenUnlocked(faction), researchLevel(faction, 'fieldCannon') > 0, true];
+  return unlocked.reduce((mask, allowed, index) => mask | Number(allowed) << index, 0);
 }
-export function retinueComposition(state: GameState, factionId: number): { total: number; horseArchers: number; currentHorseArchers: number; knights: number; currentKnights: number; swordsmen: number; currentSwordsmen: number; archers: number; spearmen: number; horsemen: number; warriors: number; currentHorsemen: number; currentArchers: number; currentSpearmen: number; training: number } {
+function compositionTargets(state: GameState, faction: Faction | undefined, total: number): Record<RetinueRole, number> {
+  return nativeRetinueTargets(state, faction, rustEngine.exploration_ordinary_slots(total, faction?.rangerCompanions ?? 0), roleUnlockMask(faction));
+}
+export function retinueComposition(state: GameState, factionId: number): { total: number; fieldCannons: number; currentFieldCannons: number; horseArchers: number; currentHorseArchers: number; knights: number; currentKnights: number; swordsmen: number; currentSwordsmen: number; archers: number; spearmen: number; pikemen: number; currentPikemen: number; musketmen: number; currentMusketmen: number; horsemen: number; warriors: number; currentHorsemen: number; currentArchers: number; currentSpearmen: number; training: number } {
   const faction = state.factions.find(faction => faction.id === factionId);
   const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === factionId && unit.hp > 0);
   const total = faction ? desiredRetinueSize(faction, leader) : 0;
-  const wanted = compositionTargets(faction, total), soldiers = members(state, factionId);
-  return { total, horseArchers: wanted.horseArcher, knights: wanted.knight, currentHorseArchers: soldiers.filter(u => u.kind === 'horseArcher').length, currentKnights: soldiers.filter(u => u.kind === 'knight').length, swordsmen: wanted.swordsman, currentSwordsmen: soldiers.filter(unit => unit.kind === 'swordsman').length, archers: wanted.archer, spearmen: wanted.spearman, horsemen: wanted.horseman, warriors: wanted.warrior,
+  const wanted = compositionTargets(state, faction, total), soldiers = members(state, factionId).filter(unit => !unit.ranger);
+  return { total, fieldCannons: wanted.fieldCannon, currentFieldCannons: soldiers.filter(unit => unit.kind === 'fieldCannon').length, horseArchers: wanted.horseArcher, knights: wanted.knight, currentHorseArchers: soldiers.filter(u => u.kind === 'horseArcher').length, currentKnights: soldiers.filter(u => u.kind === 'knight').length, swordsmen: wanted.swordsman, currentSwordsmen: soldiers.filter(unit => unit.kind === 'swordsman').length, archers: wanted.archer, spearmen: wanted.spearman, horsemen: wanted.horseman, warriors: wanted.warrior,
     currentHorsemen: soldiers.filter(unit => unit.kind === 'horseman').length,
     currentArchers: soldiers.filter(unit => unit.kind === 'archer').length,
     currentSpearmen: soldiers.filter(unit => unit.kind === 'spearman').length,
+    musketmen: wanted.musketman, currentMusketmen: soldiers.filter(unit => unit.kind === 'musketman').length,
+    pikemen: wanted.pikeman, currentPikemen: soldiers.filter(unit => unit.kind === 'pikeman').length,
     training: soldiers.filter(unit => unit.training).length };
 }
-export function setArcherFraction(state: GameState, range: Building, fraction: number): boolean {
-  const faction = state.factions.find(faction => faction.id === range.faction);
-  if (!buildingActivityAvailable(state, range) || !faction || range.kind !== 'archeryRange' || !buildingReady(range) || !Number.isFinite(fraction)) return false;
-  if (fraction > 0 && !areArchersUnlocked(faction)) return false;
-  faction.archerFraction = Math.round(Math.max(0, Math.min(1 - mountedFraction(faction) - swordsmanFraction(faction), fraction)) * 100) / 100;
-  faction.spearmanFraction = Math.min(fractionOf(faction.spearmanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - faction.archerFraction));
-  scheduleArcheryTraining(state, true);
-  return true;
-}
-export function setSwordsmanFraction(state: GameState, blacksmith: Building, fraction: number): boolean {
-  const faction = state.factions.find(f => f.id === blacksmith.faction);
-  if (!buildingActivityAvailable(state, blacksmith) || !faction || blacksmith.kind !== 'blacksmith' || !buildingReady(blacksmith) || !Number.isFinite(fraction)) return false;
-  if (fraction > 0 && !areSwordsmenUnlocked(faction)) return false;
-  faction.swordsmanFraction = Math.round(Math.max(0, Math.min(1 - mountedFraction(faction), fraction)) * 100) / 100;
-  faction.archerFraction = Math.min(fractionOf(faction.archerFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction)));
-  faction.spearmanFraction = Math.min(fractionOf(faction.spearmanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction)));
-  scheduleArcheryTraining(state, true);
-  return true;
-}
-
-export function setSpearmanFraction(state: GameState, blacksmith: Building, fraction: number): boolean {
-  const faction = state.factions.find(faction => faction.id === blacksmith.faction);
-  if (!buildingActivityAvailable(state, blacksmith) || !faction || blacksmith.kind !== 'blacksmith' || !buildingReady(blacksmith) || !Number.isFinite(fraction)) return false;
-  if (fraction > 0 && !canRecruitSpearmen(state, faction)) return false;
-  const archers = archerFraction(faction);
-  faction.spearmanFraction = Math.round(Math.max(0, Math.min(1 - mountedFraction(faction) - swordsmanFraction(faction), fraction)) * 100) / 100;
-  faction.archerFraction = Math.min(archers, Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - faction.spearmanFraction));
+/** All composition buildings edit the same faction-wide quotas. Training still
+ * takes place at each role's own school, using the normal recruitment rules. */
+export function setRetinueFraction(state: GameState, building: Building, role: RetinueRole, fraction: number): boolean {
+  const faction = state.factions.find(faction => faction.id === building.faction);
+  if (!buildingActivityAvailable(state, building) || !isCompositionBuilding(building) || !faction
+    || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) return false;
+  if (fraction > 0 && (role === 'archer' && !areArchersUnlocked(faction)
+    || role === 'swordsman' && !areSwordsmenUnlocked(faction)
+    || role === 'spearman' && !canRecruitSpearmen(state, faction)
+    || role === 'pikeman' && !arePikemenUnlocked(faction)
+    || role === 'musketman' && !areMusketmenUnlocked(faction)
+    || role === 'fieldCannon' && !researchLevel(faction, 'fieldCannon')
+    || !mountedRoleUnlocked(faction, role))) return false;
+  if (!allocateRetinueFraction(state, faction, role, fraction, [knightFraction(faction), horseArcherFraction(faction),
+    horsemanFraction(faction), swordsmanFraction(faction), archerFraction(faction), spearmanFraction(faction), pikemanFraction(faction), musketmanFraction(faction), fieldCannonFraction(faction)],
+    structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'),
+    roleUnlockMask(faction) & (canRecruitSpearmen(state, faction) ? -1 : ~(1 << RETINUE_ROLES.indexOf('spearman'))))) return false;
   scheduleArcheryTraining(state, true);
   return true;
 }
 
-/** A stable mounts the selected share without creating extra retinue slots. */
-export function setMountedFraction(state: GameState, stable: Building, role: 'horseman' | 'horseArcher' | 'knight', fraction: number): boolean {
-  const faction = state.factions.find(f => f.id === stable.faction);
-  if (!buildingActivityAvailable(state, stable) || !faction || stable.kind !== 'stable' || !buildingReady(stable)
-    || !Number.isFinite(fraction) || fraction < 0 || fraction > 1 || fraction > 0 && !mountedRoleUnlocked(faction, role)) return false;
-  const current = role === 'knight' ? knightFraction(faction) : role === 'horseArcher' ? horseArcherFraction(faction) : horsemanFraction(faction);
-  faction[role === 'knight' ? 'knightFraction' : role === 'horseArcher' ? 'horseArcherFraction' : 'horsemanFraction'] = Math.round(Math.min(1 - mountedFraction(faction) + current, fraction) * 100) / 100;
-  faction.swordsmanFraction = Math.min(fractionOf(faction.swordsmanFraction), 1 - mountedFraction(faction));
-  faction.archerFraction = Math.min(fractionOf(faction.archerFraction), 1 - mountedFraction(faction) - swordsmanFraction(faction));
-  faction.spearmanFraction = Math.min(fractionOf(faction.spearmanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction)));
-  scheduleArcheryTraining(state, true);
-  return true;
-}
-export const setHorsemanFraction = (state: GameState, stable: Building, fraction: number): boolean => setMountedFraction(state, stable, 'horseman', fraction);
-export const setHorseArcherFraction = (state: GameState, stable: Building, fraction: number): boolean => setMountedFraction(state, stable, 'horseArcher', fraction);
-export const setKnightFraction = (state: GameState, stable: Building, fraction: number): boolean => setMountedFraction(state, stable, 'knight', fraction);
+export const setWarriorFraction = (state: GameState, building: Building, fraction: number): boolean => setRetinueFraction(state, building, 'warrior', fraction);
+export const setArcherFraction = (state: GameState, building: Building, fraction: number): boolean => setRetinueFraction(state, building, 'archer', fraction);
+export const setSwordsmanFraction = (state: GameState, building: Building, fraction: number): boolean => setRetinueFraction(state, building, 'swordsman', fraction);
+export const setSpearmanFraction = (state: GameState, building: Building, fraction: number): boolean => setRetinueFraction(state, building, 'spearman', fraction);
+export const setPikemanFraction = (state: GameState, building: Building, fraction: number): boolean => setRetinueFraction(state, building, 'pikeman', fraction);
+export const setMountedFraction = (state: GameState, building: Building, role: 'horseman' | 'horseArcher' | 'knight', fraction: number): boolean => setRetinueFraction(state, building, role, fraction);
+export const setHorsemanFraction = (state: GameState, building: Building, fraction: number): boolean => setMountedFraction(state, building, 'horseman', fraction);
+export const setHorseArcherFraction = (state: GameState, building: Building, fraction: number): boolean => setMountedFraction(state, building, 'horseArcher', fraction);
+export const setKnightFraction = (state: GameState, building: Building, fraction: number): boolean => setMountedFraction(state, building, 'knight', fraction);
 
-const ROLE_STATS: Record<RetinueRole | 'scout', { hp: number; attack: number; defense: number; speed: number; range: number }> = {
-  warrior: { hp: 1, attack: 1, defense: 1, speed: 1, range: 1.1 },
-  swordsman: { hp: 1, attack: SWORDSMAN_ATTACK_MULTIPLIER, defense: 1, speed: 1, range: 1.1 },
-  spearman: { hp: 1, attack: 1, defense: SPEARMAN_DEFENSE_MULTIPLIER, speed: 1, range: SPEARMAN_RANGE },
-  archer: { hp: 2 / 3, attack: .8, defense: .5, speed: 1, range: ARCHER_RANGE },
-  horseman: { hp: 1, attack: HORSEMAN_ATTACK_MULTIPLIER, defense: .75, speed: HORSEMAN_SPEED_MULTIPLIER, range: 1.4 },
-  horseArcher: { hp: .8, attack: .8, defense: .5, speed: HORSEMAN_SPEED_MULTIPLIER, range: 4.5 },
-  knight: { hp: 1.8, attack: 2.5, defense: 2.5, speed: 1.45, range: 1.3 },
-  scout: { hp: 1, attack: 0, defense: 1, speed: SCOUT_SPEED_MULTIPLIER, range: 0 },
-};
+const ROLE_STATS = Object.fromEntries([...RETINUE_ROLES, 'scout'].map((role, index) => [role, {
+  hp: rustEngine.retinue_stat(index, 0), attack: rustEngine.retinue_stat(index, 1), defense: rustEngine.retinue_stat(index, 2),
+  speed: rustEngine.retinue_stat(index, 3), range: rustEngine.retinue_stat(index, 4),
+}])) as Record<RetinueRole | 'scout', { hp: number; attack: number; defense: number; speed: number; range: number }>;
+const roleSchool = (role: RetinueRole, school: Building): boolean =>
+  !!rustEngine.retinue_training_school(RETINUE_ROLES.indexOf(role), BUILDING_KIND_CODES[school.kind]);
 /** Preserve wounds, equipment, squad identity and veterancy across role changes.
  * Scout attack is zero even before the simulation's noncombat dispatch guard. */
 export function setSoldierRole(unit: Unit, role: RetinueRole | 'scout'): void {
+  if (unit.ranger) return;
   const wasScout = unit.kind === 'scout';
   const previous = ROLE_STATS[unit.kind as RetinueRole | 'scout'] ?? ROLE_STATS.warrior;
   const base = unit.warriorStats ??= { hp: (unit.maxHp ?? 100) / previous.hp, attack: unit.attack / (previous.attack || 1), defense: unit.defense / previous.defense, speed: unit.speed / previous.speed };
@@ -134,6 +135,7 @@ export function setSoldierRole(unit: Unit, role: RetinueRole | 'scout'): void {
   unit.maxHp = base.hp * stats.hp; unit.hp = unit.maxHp * health;
   unit.attack = base.attack * stats.attack; unit.defense = base.defense * stats.defense;
   unit.speed = base.speed * stats.speed; unit.range = stats.range;
+  if (role !== 'fieldCannon') delete unit.fieldCannon;
   if (role === 'scout' || wasScout) {
     delete unit.forcedAttack; delete unit.attackReturn; delete unit.target;
     unit.attackTime = 0;
@@ -148,41 +150,44 @@ export function advancedStartingEscortRole(state: GameState, faction: Faction): 
 }
 function recruitRole(state: GameState, faction: Faction, spearsAvailable: boolean): RetinueRole {
   const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === faction.id && unit.hp > 0);
-  const soldiers = members(state, faction.id), wanted = compositionTargets(faction, desiredRetinueSize(faction, leader));
-  const projected = (role: RetinueRole) => soldiers.filter(unit => (unit.training?.role ?? unit.kind) === role).length;
-  for (const role of ['knight', 'horseArcher', 'horseman'] as const) if (mountedRoleUnlocked(faction, role) && projected(role) < wanted[role]
-    && state.buildings.some(building => building.faction === faction.id && building.kind === 'stable' && buildingReady(building))) return role;
-  if (areArchersUnlocked(faction) && projected('archer') < wanted.archer) return 'archer';
-  if (spearsAvailable && state.buildings.some(building => building.faction === faction.id
-    && building.kind === 'blacksmith' && buildingReady(building)) && projected('spearman') < wanted.spearman) return 'spearman';
-  if (areSwordsmenUnlocked(faction) && projected('swordsman') < wanted.swordsman && state.buildings.some(b => b.faction === faction.id && b.kind === 'blacksmith' && buildingReady(b))) return 'swordsman';
-  return 'warrior';
+  const soldiers = members(state, faction.id).filter(unit => !unit.ranger);
+  compositionTargets(state, faction, desiredRetinueSize(faction, leader));
+  return nativeRecruitRole(state, soldiers, structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'), spearsAvailable);
 }
 const clearTrainingPath = (unit: Unit): void => {
   unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.target = undefined; unit.repathAt = 0;
 };
 const nextPlans = new WeakMap<GameState, number>();
-/** One allocator owns all five combat roles, so the building sliders cannot send
+const trainingDeferrals = new WeakMap<Unit, {state: GameState; until: number}>();
+/** Explicit field orders and an unreachable school take priority over retraining. */
+export function interruptOutboundTraining(state: GameState, unit: Unit): void {
+  if (unit.training?.enteredAt !== undefined) return;
+  if (unit.training) { delete unit.training; clearTrainingPath(unit); }
+  trainingDeferrals.set(unit, {state, until: state.time + 30});
+}
+/** One allocator owns combat roles, so the building sliders cannot send
  * the same soldier back and forth to meet conflicting independent quotas. */
 export function scheduleArcheryTraining(state: GameState, immediate = false): void {
   if (!immediate && state.time < (nextPlans.get(state) ?? 0)) return;
   nextPlans.set(state, state.time + 1);
   for (const faction of state.factions) {
-    const schools = state.buildings.filter(building => building.faction === faction.id
-      && (building.kind === 'archeryRange' || building.kind === 'blacksmith' || building.kind === 'stable') && buildingReady(building));
-    const soldiers = members(state, faction.id);
+    const schools = structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry');
+    const soldiers = members(state, faction.id).filter(unit => !unit.ranger);
     // Entered trainees finish safely; only outbound trips can be cancelled.
     for (const unit of soldiers) if (immediate && unit.training && unit.training.enteredAt === undefined) {
       delete unit.training; clearTrainingPath(unit);
     }
-    const wanted = compositionTargets(faction, soldiers.length), projected: Record<RetinueRole, number> = { warrior: 0, swordsman: 0, spearman: 0, archer: 0, horseman: 0, horseArcher: 0, knight: 0 };
+    const wanted = compositionTargets(state, faction, soldiers.length + (faction.rangerCompanions ?? 0)), projected: Record<RetinueRole, number> = { fieldCannon: 0, warrior: 0, swordsman: 0, spearman: 0, pikeman: 0, musketman: 0, archer: 0, horseman: 0, horseArcher: 0, knight: 0 };
     for (const unit of soldiers) projected[(unit.training?.role ?? unit.kind) as RetinueRole]++;
-    for (const role of ['knight', 'horseArcher', 'horseman', 'archer', 'spearman', 'swordsman', 'warrior'] as const) {
-      if (role === 'swordsman' && !areSwordsmenUnlocked(faction) || role === 'archer' && !areArchersUnlocked(faction) || role === 'spearman' && !canRecruitSpearmen(state, faction) || !mountedRoleUnlocked(faction, role)) continue;
-      const classrooms = schools.filter(school => isMountedKind(role) ? school.kind === 'stable' : role === 'spearman' || role === 'swordsman' ? school.kind === 'blacksmith' : role === 'warrior' || school.kind === 'archeryRange');
+    for (const role of ['fieldCannon', 'knight', 'horseArcher', 'horseman', 'archer', 'spearman', 'pikeman', 'musketman', 'swordsman', 'warrior'] as const) {
+      if (role === 'swordsman' && !areSwordsmenUnlocked(faction) || role === 'archer' && !areArchersUnlocked(faction) || role === 'spearman' && !canRecruitSpearmen(state, faction) || role === 'pikeman' && !arePikemenUnlocked(faction) || role === 'musketman' && !areMusketmenUnlocked(faction)
+    || role === 'fieldCannon' && !researchLevel(faction, 'fieldCannon') || !mountedRoleUnlocked(faction, role)) continue;
+      const classrooms = schools.filter(school => roleSchool(role, school));
       let needed = wanted[role] - projected[role];
       if (needed <= 0 || !classrooms.length) continue;
-      const candidates = soldiers.filter(unit => unit.kind !== role && !unit.training && !unit.garrison && !unit.inside && !unit.routed && unit.order !== 'flee')
+      const candidates = soldiers.filter(unit => unit.kind !== role && !unit.training && !unit.garrison && !unit.inside && !unit.routed && unit.order !== 'flee' && !isOffensiveMember(state, unit)
+        && unit.recallIssuedAt === undefined && !unit.forcedAttack
+        && !(trainingDeferrals.get(unit)?.state === state && trainingDeferrals.get(unit)!.until > state.time))
         .sort((a, b) => Math.min(...classrooms.map(school => distance(a, school))) - Math.min(...classrooms.map(school => distance(b, school))) || a.id - b.id);
       for (const unit of candidates) {
         const from = unit.kind as RetinueRole;
@@ -212,9 +217,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
   if (plan.training !== training) { plan.training = training; plan.goal = undefined; }
   const school = entityStore(state).buildings.get(training.range);
   const range = school && school.faction === unit.faction && buildingReady(school) ? school : undefined;
-  const validSchool = range && (isMountedKind(training.role) ? range.kind === 'stable'
-    : training.role === 'spearman' || training.role === 'swordsman' ? range.kind === 'blacksmith'
-    : training.role === 'warrior' ? range.kind === 'stable' || range.kind === 'archeryRange' || range.kind === 'blacksmith' : range.kind === 'archeryRange');
+  const validSchool = range && roleSchool(training.role, range);
   if (!range || !validSchool || !mountedRoleUnlocked(state.factions.find(f => f.id === unit.faction), training.role) || unit.order === 'flee' || training.role === 'swordsman' && !areSwordsmenUnlocked(state.factions.find(f => f.id === unit.faction))) {
     // Hidden trainees share the classroom position. Evacuate them onto distinct
     // clear cells after collapse, waiting safely if a crowd occupies every exit.
@@ -243,6 +246,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
     const exit = edges.find(edge => !occupied.has(Math.floor(edge.y) * state.world.width + Math.floor(edge.x)));
     if (!exit) return true;
     setSoldierRole(unit, training.role);
+    if (training.role === 'fieldCannon') unit.fieldCannon = { nextUpkeepAt: state.time + rustEngine.field_cannon_constant(3), funded: true };
     entityStore(state).units.updateRoles(unit);
     unit.inside = false; unit.x = exit.x; unit.y = exit.y;
     delete unit.training; unit.joiningRetinue = true;
@@ -265,6 +269,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
         .find(edge => hasStaticPath(state, unit, edge, unit.faction));
     }
     if (plan.goal) move(state, unit, plan.goal, dt);
+    else if (plan.sampledAt !== undefined) { interruptOutboundTraining(state, unit); return false; }
   }
   return true;
 }
@@ -273,7 +278,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
  * terrain or walls. A fully blocked archer may defend from its current cell. */
 export function evadeMelee(state: GameState, unit: Unit, dt: number, move: Move,
   hostile: (a: number, b: number) => boolean, visible: (target: Unit) => boolean): boolean {
-  if ((unit.kind !== 'archer' && unit.kind !== 'horseArcher' && unit.kind !== 'slinger') || unit.inside) return false;
+  if ((unit.kind !== 'musketman' && unit.kind !== 'archer' && unit.kind !== 'horseArcher' && unit.kind !== 'slinger') || unit.inside) return false;
   let plan = evasions.get(unit);
   if (!plan) { plan = {}; evasions.set(unit, plan); }
   if (!decisionDue(plan, state.time, unit.id)) {
@@ -282,8 +287,9 @@ export function evadeMelee(state: GameState, unit: Unit, dt: number, move: Move,
     move(state, unit, plan.goal, dt); return true;
   }
   plan.goal = undefined;
-  const threats = nearbyUnits(state, unit, 1.8).filter(other => other.hp > 0 && !other.inside && other.range <= 1.5
-    && hostile(unit.faction, other.faction) && distance(unit, other) < 1.8 && visible(other));
+  const fleeRadius = unit.ranger ? RANGER_FLEE_RADIUS : 1.8;
+  const threats = nearbyUnits(state, unit, fleeRadius).filter(other => other.hp > 0 && !other.inside && other.range <= 1.5
+    && hostile(unit.faction, other.faction) && distance(unit, other) < fleeRadius && visible(other));
   if (!threats.length) return false;
   const occupied = unitOccupancy(state, unit), away = threats.reduce((p, enemy) => ({ x: p.x + unit.x - enemy.x, y: p.y + unit.y - enemy.y }), { x: 0, y: 0 });
   const angle = Math.atan2(away.y, away.x), nearest = Math.min(...threats.map(enemy => distance(unit, enemy)));

@@ -1,0 +1,108 @@
+{
+  "sources": {
+    "src/game/farms.ts": "93544f78661ad92363b6deb9aa743263b20046221c5f377f616bdcb6138357a0",
+    "src/game/farm-parcels.ts": "5c3d9f98c16eac1b9c3dc6ce455772caa36b255e74bc890fdc082bb9de6e5a2d",
+    "src/game/farm-dispatch.ts": "69bc5aa07a6138ad0cd60cb654f91ffe47c5b9c571f54f274c9c7c2bc0db75db",
+    "src/game/wheat-fields.ts": "427ed581b5663c63400440bb5c753cb9afc17cba6047b03610f7d8b2ec698284",
+    "src/game/courier-sleep.ts": "5d983eff08545c28e884a3022f7b2a392375f8e10e215a2a19bf24269953f364",
+    "baselineFarms": "67ea4e13103a4e4ebe600732a0d82b94d9963afb358ec084c99cce9979062f84"
+  },
+  "fixture": "256 tiles in 16 connected parcels; 120 simulated seconds; fixed dt=.05",
+  "scope": "Prior farms.ts vs current collector with the same supporting systems; headless collection only. Long-deadline comparison isolates sweep/cap cost; 30-second samples show queue/spoilage behavior. CPU timings are diagnostic, not FPS.",
+  "results": {
+    "before": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 600,
+      "delivered": 256,
+      "peakVisible": 16,
+      "visibleWorkerSeconds": 323.15,
+      "pickups": 256,
+      "departures": 16,
+      "walkedTiles": 682.77,
+      "movementCalls": 6207,
+      "routeSearches": 65,
+      "cpuMs": 175.53,
+      "cpuSamplesMs": [
+        200.44,
+        175.53,
+        174.36
+      ]
+    },
+    "beforeThirtySecondWindow": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 30,
+      "delivered": 256,
+      "peakVisible": 16,
+      "visibleWorkerSeconds": 325.75,
+      "pickups": 256,
+      "departures": 16,
+      "walkedTiles": 688.49,
+      "movementCalls": 6259,
+      "routeSearches": 65,
+      "cpuMs": 207.37379099999998
+    },
+    "beforeDefaultWindow": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 11,
+      "delivered": 78,
+      "peakVisible": 16,
+      "visibleWorkerSeconds": 237.15,
+      "pickups": 86,
+      "departures": 20,
+      "walkedTiles": 511.83,
+      "movementCalls": 4653,
+      "routeSearches": 64,
+      "cpuMs": 162.4755
+    },
+    "after": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 600,
+      "delivered": 256,
+      "peakVisible": 4,
+      "visibleWorkerSeconds": 183.7,
+      "pickups": 16,
+      "departures": 16,
+      "walkedTiles": 402.38,
+      "movementCalls": 3658,
+      "routeSearches": 10,
+      "cpuMs": 119.85,
+      "cpuSamplesMs": [
+        145.35,
+        119.85,
+        108.75
+      ]
+    },
+    "afterThirtySecondWindow": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 30,
+      "delivered": 160,
+      "peakVisible": 4,
+      "visibleWorkerSeconds": 91.8,
+      "pickups": 10,
+      "departures": 10,
+      "walkedTiles": 200.86,
+      "movementCalls": 1826,
+      "routeSearches": 7,
+      "cpuMs": 102.87812499999973
+    },
+    "afterDefaultWindow": {
+      "plots": 256,
+      "parcels": 16,
+      "deadline": 30,
+      "delivered": 160,
+      "peakVisible": 4,
+      "visibleWorkerSeconds": 91.8,
+      "pickups": 10,
+      "departures": 10,
+      "walkedTiles": 200.86,
+      "movementCalls": 1826,
+      "routeSearches": 7,
+      "cpuMs": 108.47233299999971
+    }
+  }
+}

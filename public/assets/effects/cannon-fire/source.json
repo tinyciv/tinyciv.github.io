@@ -1,0 +1,57 @@
+{
+  "name": "Black-powder cannon plume 1C",
+  "selected_by_user": true,
+  "selected_on": "2026-11-17",
+  "generator": "PixelLab /create-object-pro-flash + /animate-with-text-v3",
+  "native_frame_size": [
+    32,
+    32
+  ],
+  "frame_count": 9,
+  "frame_duration_ms": 90,
+  "duration_ms": 810,
+  "facing": "north",
+  "emission_origin": [
+    16,
+    25
+  ],
+  "view": "high top-down",
+  "isometric": false,
+  "reference": "public/assets/units/field-cannon-simple/idle.png",
+  "sheet": "black-powder.png",
+  "sheet_sha256": "d6929290e022c85abda3350235a00af3c70a5e5493aa652051d8231d27b5f0b2",
+  "processing": "Selected source sheet copied byte-for-byte; original generated frames unchanged. Weapon body remains a separate approved sprite.",
+  "review_source": "scratch/2026-11-17-cannon-fire-review/gallery.html",
+  "source_variant": {
+    "id": "1C",
+    "name": "Black powder",
+    "size": 32,
+    "origin": [
+      16,
+      25
+    ],
+    "style": "A tiny hot white ignition core with a subdued warm yellow edge and an irregular small silver-gray black-powder smoke puff above it. More natural historical cannon effect, muted cream and gray palette, restrained fine detail.",
+    "animation_prompt": "A historical black-powder cannon discharges ONCE: one extremely brief white ignition flicker, followed by a larger irregular dense pale gray powder-smoke plume expanding FORWARD toward the top. Muted light gray and charcoal shadows, slightly natural turbulent pixel clusters, increasingly ragged edges; the smoke thins, fragments and vanishes. Fire lasts only the first frame. No sustained flame, embers or fireball.",
+    "base_prompt": "ONE CANNON MUZZLE-FLASH VISUAL EFFECT ONLY, native 32x32 pixel art on a transparent background. The emission origin is near LOWER CENTER at pixel 16,25; the burst projects UP toward the top of the image. HIGH TOP-DOWN overhead orthographic camera, NOT isometric, no horizon or perspective. Do NOT draw the cannon, wheels, barrel, crew, gun carriage, scenery, grass, floor, shadow, building, burning material, campfire or text. The supplied approved game cannon is ONLY a style reference for pixel density, outlines, muted game palette and overhead camera. Create ONLY the separate tiny discharge effect that will later be drawn in front of its muzzle. This is a fraction-of-a-second gunpowder ignition, not a standing fire or tall vertical flame. Crisp hard pixels, complete effect inside the canvas with transparent outer margin, no antialiasing or blur. A tiny hot white ignition core with a subdued warm yellow edge and an irregular small silver-gray black-powder smoke puff above it. More natural historical cannon effect, muted cream and gray palette, restrained fine detail.",
+    "frame_count_requested": 8,
+    "frame_ms": 90,
+    "generator": "PixelLab API",
+    "view": "high top-down",
+    "isometric": false,
+    "reference": "references/approved-cannon-native16.png",
+    "frames": [
+      "1C/00.png",
+      "1C/01.png",
+      "1C/02.png",
+      "1C/03.png",
+      "1C/04.png",
+      "1C/05.png",
+      "1C/06.png",
+      "1C/07.png",
+      "1C/08.png"
+    ],
+    "sheet": "1C-sheet.png",
+    "gif": "1C-preview.gif",
+    "unique_frames": 9
+  }
+}

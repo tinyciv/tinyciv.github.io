@@ -1,0 +1,110 @@
+{
+  "id": "tutorial",
+  "width": 80,
+  "height": 30,
+  "simulatedSeconds": 0,
+  "wallSeconds": 0.31350304200000007,
+  "bytes": 116571,
+  "cities": [
+    {
+      "id": 1,
+      "faction": 0,
+      "population": 30,
+      "housing": 34,
+      "food": 11.893333333333343
+    },
+    {
+      "id": 122,
+      "faction": 1,
+      "population": 30,
+      "housing": 34,
+      "food": 11.760000000000012
+    }
+  ],
+  "agriculture": {
+    "orchards": 0,
+    "completedDitches": 0,
+    "irrigatedFields": 0,
+    "fields": 128
+  },
+  "iron": [
+    {
+      "faction": 0,
+      "developed": false
+    },
+    {
+      "faction": 1,
+      "developed": false
+    }
+  ],
+  "bundleSha256": "2c607353a77398b97fe7910f823bf3cec0961b13025a472f290cb5e920d1fa27",
+  "wasmSha256": "1dbe7418b041ce7c15e018149cf84a1f8079bc66d7997a7d2a7854ce00d1d2f8",
+  "access": {
+    "remove": [],
+    "landmasses": 4,
+    "regions": 4,
+    "remaining": 4,
+    "unreachable": 0,
+    "starts": [
+      {
+        "x": 20.5,
+        "y": 12.5
+      },
+      {
+        "x": 53.5,
+        "y": 12.5
+      }
+    ]
+  },
+  "streets": {
+    "before": [
+      {
+        "faction": 0,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      },
+      {
+        "faction": 1,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      }
+    ],
+    "after": [
+      {
+        "faction": 0,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      },
+      {
+        "faction": 1,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      }
+    ],
+    "moved": [],
+    "removedRoads": [],
+    "roadsAdded": 4,
+    "farmsMoved": [
+      51
+    ],
+    "farmsCleared": []
+  },
+  "refinementBundleSha256": "8d17d54b9af5f099f7100fabbda4953c133e4f3cbd540236a020ed1f013a666b",
+  "refinementWasmSha256": "e227301ee9127717aca424ccc01d91ad24e95c701702788ff1e69221b2fa908e"
+}

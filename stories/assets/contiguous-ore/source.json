@@ -1,0 +1,148 @@
+{
+  "provider": "PixelLab API v2",
+  "created": "2026-11-13",
+  "purpose": "Visual review; no runtime game renderer changes.",
+  "reference": {
+    "path": "public/assets/resources/resource-objects.png",
+    "stone_rect": [
+      32,
+      0,
+      16,
+      16
+    ],
+    "source_manifest": "public/assets/resources/resource-objects-source.json",
+    "sha256": "c93424d4cc1493ad0032439b7743314630eaf976c7cd5b6a317003506437ee38"
+  },
+  "pipeline": [
+    "Crop the original stone sprite unchanged and provide it as the PixelLab material reference.",
+    "PixelLab generates filled stone surface references; crop their unwanted object rims and resize by nearest neighbor.",
+    "PixelLab /create-tileset generates all 16 connected corner configurations with eroded rounded edges and a low raised rim.",
+    "Chroma-key the generated grass, including exact colors of the generated lower terrain tile.",
+    "PixelLab /generate-image-v2 generates larger continuous bedrock textures; /edit-images-v2 supplies copper orange and dark gray iron mineral flecks. Sparse iron texture edits are supplemented with generated iron fleck pixels from the earlier sheet edit.",
+    "Select generated mineral colors from the edits onto the unchanged stone texture. Mirror generated texture pixels horizontally and vertically to make seamless repetition. Replace only the original solid surface color within the original PixelLab contour; all rim and alpha pixels stay unchanged. No hand-drawn artwork.",
+    "Pack tiles by mask and compose four deposits from corner occupancy. Composite onto an unchanged crop of the game grass."
+  ],
+  "atlas": {
+    "layout": "sample 4x4 masks; full atlas 16 mask columns x 64 phase rows",
+    "phase": "(y mod 8)*8+(x mod 8)",
+    "index": "NW + 2*NE + 4*SW + 8*SE; a corner contributes when rock is present",
+    "tile_origin": "full atlas x=mask*tile_size; y=phase*tile_size; sample x=(mask%4)*tile_size,y=floor(mask/4)*tile_size",
+    "background": "transparent",
+    "rendering": "nearest neighbor"
+  },
+  "candidates": [
+    {
+      "candidate": 1,
+      "tile_size": 16,
+      "mode": "pro",
+      "stone_tileset_id": "786ee807-73d6-4168-89c1-ac0febc392fd",
+      "stone_job_id": "b4d6196c-3d73-4f60-907e-72772fdac419",
+      "stone_surface_job_id": "d10ddca6-392e-46fe-92d3-a23107123a65",
+      "texture_job_id": "a08ba8b7-d5a2-4029-9a4f-4c5a6dcdc577",
+      "ore_edits": {
+        "copper": "d3c0e505-f50b-4c63-afff-06e525093446",
+        "iron": "8cefe073-1609-4587-b932-46bfcb4ebfe3"
+      },
+      "natural_edge_controls": {
+        "raggedness": 0.42,
+        "roundness": 0.8,
+        "boundary_amplitude": 0.17,
+        "boundary_seed": 31,
+        "transition_size": 0.25
+      },
+      "supplemental_iron_sheet_job_id": "4803caa5-6282-49d9-93da-f2017ea97401"
+    },
+    {
+      "candidate": 2,
+      "tile_size": 32,
+      "mode": "pro",
+      "stone_tileset_id": "aaeb60a9-2d55-46a3-bbb9-862b159a46ae",
+      "stone_job_id": "756db026-a8d9-4fd2-b590-d815ef2deb23",
+      "stone_surface_job_id": "381f70d4-db4f-407d-966b-56855bdccd54",
+      "texture_job_id": "42861476-0547-45db-957d-5c385bea52de",
+      "ore_edits": {
+        "copper": "9609d6e2-dcb2-4bf7-93b4-d87811536ff9",
+        "iron": "aedbe6ea-9729-4a27-916a-981b94673622"
+      },
+      "natural_edge_controls": {
+        "raggedness": 0.42,
+        "roundness": 0.8,
+        "boundary_amplitude": 0.17,
+        "boundary_seed": 31,
+        "transition_size": 0.25
+      }
+    },
+    {
+      "candidate": 3,
+      "tile_size": 16,
+      "mode": "standard",
+      "stone_tileset_id": "42293d46-20d8-4b22-a108-9ea178afcb3b",
+      "stone_job_id": "e8cbf3bd-2c40-4756-8530-4e81bea430b5",
+      "stone_surface_job_id": "05d135e1-1b64-4d95-96c6-d4bb99c2f99f",
+      "texture_job_id": "a7ea2cec-e6c3-4b47-b46c-886f1fb5ac81",
+      "ore_edits": {
+        "copper": "2c516c38-61ef-4358-84a7-5ec3723a6bfc",
+        "iron": "243ec5ff-23d9-4137-8661-d8194590f5f8"
+      },
+      "natural_edge_controls": {
+        "raggedness": 0.42,
+        "roundness": 0.8,
+        "boundary_amplitude": 0.17,
+        "boundary_seed": 31,
+        "transition_size": 0.25
+      },
+      "supplemental_iron_sheet_job_id": "ab46f896-29e1-4c6a-b4af-eb8ea5f48523"
+    }
+  ],
+  "files": {
+    "1-copper-autotiles.png": "891458f86d0def051f747ec283cb11cd59174140a7b206dd643029cd7a34e920",
+    "1-copper-blobs.png": "bda709f2d99f5036ad8fb3eac32aeee4fe0a8eef1dfd1634fa2351ce56809e9e",
+    "1-copper-game-scale.png": "bda709f2d99f5036ad8fb3eac32aeee4fe0a8eef1dfd1634fa2351ce56809e9e",
+    "1-copper-texture.png": "4abd3878087afda755ce807dd146e159d7f8db08740684652182d319388b7843",
+    "1-copper.png": "9c8b7525f316584a899fc29e8fdc8cd80c264d8e3e6f42b1833601655756089c",
+    "1-iron-autotiles.png": "31822d81073b8fdeac341c592c1a241c13ef1d980c584a01e9e0946f83c21468",
+    "1-iron-blobs.png": "b32f047f9788e5b365df5e53e839d03565cdd5d7e4da028a7079c6fed9e9a462",
+    "1-iron-game-scale.png": "b32f047f9788e5b365df5e53e839d03565cdd5d7e4da028a7079c6fed9e9a462",
+    "1-iron-texture.png": "81821cc007ab73faea31893416593fd9cc0465dddf6598e4c0b379ff421dd214",
+    "1-iron.png": "96d2646ede90e78a5e41efc6e2abd47d85dee0dfb88b779c04e523c3442b6cde",
+    "1-stone-autotiles.png": "85f2d592e931c2e851705dcfb64c3868e64f13b3e0488a66dd89eca6e5401c33",
+    "1-stone-blobs.png": "c3ded89452065b0ec5d200898628abc9ff2f420dda716acfe23c8d7d22884a44",
+    "1-stone-game-scale.png": "c3ded89452065b0ec5d200898628abc9ff2f420dda716acfe23c8d7d22884a44",
+    "1-stone-texture.png": "16e42d5df373ed63170cfd9c9ae5838588104929415f90dcc80b7db858da7411",
+    "1-stone.png": "9c8b7525f316584a899fc29e8fdc8cd80c264d8e3e6f42b1833601655756089c",
+    "2-copper-autotiles.png": "665bcc051d89bb15dae91ad6c99cddd0e58abf72222c7466a03509548e40e4d5",
+    "2-copper-blobs.png": "c93d56e5bfcca919cfa2162e32c23d3c2a087a0e4b489a33bad17de5758655b8",
+    "2-copper-game-scale.png": "1dcb264e4fb205d78ba1c7be8fb21466b26b5a774d7fa6c42c8f9ba4d6531a3d",
+    "2-copper-texture.png": "d37d6d2fc49b5adeb67e970e8bbb5b51feb3010c96b971930a97bf508eeadeb4",
+    "2-copper.png": "53b46b04e7ccfe9908e12b21d81b677ce74776cb9ff7d55344c5f13c3115e126",
+    "2-iron-autotiles.png": "122d299b1c7f17da801c8dd026a26ed1a27f999b4a7cede1f2567861b056a877",
+    "2-iron-blobs.png": "a52921adae5bb0cffa5854d7466c4f759e3f4acb377f8ce60809cc2d90540ca6",
+    "2-iron-game-scale.png": "063263a84c4b8a04362c42746935bff28d9a31a9e01d917f9093afe6cd5de1bd",
+    "2-iron-texture.png": "7e414547e40fbffb5850c96762b3227bca9c0112793fb5a26cf7602c1412718d",
+    "2-iron.png": "347b19768f9f185f51b405d7f3923933c8d74bcbee5d1f8f97f9259ac9dc56c9",
+    "2-stone-autotiles.png": "580334814215ba2a5ead60d275a3019661fd1f8e70560fcf965bd191d529e86b",
+    "2-stone-blobs.png": "3960540ebe088eb4b91bad3bb83717e0eff2566de756e62cf0dbac79ff5704df",
+    "2-stone-game-scale.png": "e45270ee5f81f38394500761726b7b737d1e4a30fcd1ae7287e37dbe902a51e6",
+    "2-stone-texture.png": "d458bd2fbcb0a098ae8442e885e7ffe892516f16fc8607ddfd488353b1f78231",
+    "2-stone.png": "53b46b04e7ccfe9908e12b21d81b677ce74776cb9ff7d55344c5f13c3115e126",
+    "3-copper-autotiles.png": "cc20c51aeb956b8197d85ff6e62ccb7bf275d43745c990949315857183c7be46",
+    "3-copper-blobs.png": "36890c9205e4f9d22f798205cf0ce9cbad1b43e1cdff993e86951595c67f00e3",
+    "3-copper-game-scale.png": "36890c9205e4f9d22f798205cf0ce9cbad1b43e1cdff993e86951595c67f00e3",
+    "3-copper-texture.png": "5e5ce906d797c30934b002e6628565d7de6888b96638c4b5779543b930e13d3a",
+    "3-copper.png": "03d554fb1a6e03785fd063598f9de273db649f8be767f4cdf910f3ef4787b1d6",
+    "3-iron-autotiles.png": "c2d1f4d20618cad5ffbe06f4bce25b47ea38d99d12263d06d5037cadff46a9ba",
+    "3-iron-blobs.png": "86bd605b4a498d8a90b4c1a44ab08acf38ee46b2ec3899c2e163f03b1d9570f6",
+    "3-iron-game-scale.png": "86bd605b4a498d8a90b4c1a44ab08acf38ee46b2ec3899c2e163f03b1d9570f6",
+    "3-iron-texture.png": "ed780c8a890f7c0a17989926c1e969294bdd539af0f3b9a9e4d7be7cbe0788c0",
+    "3-iron.png": "03d554fb1a6e03785fd063598f9de273db649f8be767f4cdf910f3ef4787b1d6",
+    "3-stone-autotiles.png": "cd0a12a4a2228cfacd943c5675c18b643db3eb824ea68f3682d4391e23a030a8",
+    "3-stone-blobs.png": "3e0f8f905a863c08f8b5544e57fd5df18adc90174e42eaef6dc92e6ce1e38f53",
+    "3-stone-game-scale.png": "3e0f8f905a863c08f8b5544e57fd5df18adc90174e42eaef6dc92e6ce1e38f53",
+    "3-stone-texture.png": "a89532944a676ebbf4fdf18378d37736b0ac385f05f0df3e3e3ab641052d522b",
+    "3-stone.png": "03d554fb1a6e03785fd063598f9de273db649f8be767f4cdf910f3ef4787b1d6",
+    "grass.png": "493f2f9a45b7dd0d4cf2fd2a3467d6adadac1d8ede7da021d615567fc36660e2",
+    "original-copper.png": "85de8f74af9c830a5b85c31e0f1d403f85f4cf7ab7fe2f707ebff9ad5dd3f334",
+    "original-iron.png": "8764af26cb522149e5525dc943524aa1e697353559f1820e492699e74691d9d3",
+    "original-stone.png": "f5e3b146040754056cd6041b22d284d491343cb041c6b65f599019f2d0edf5b4"
+  }
+}

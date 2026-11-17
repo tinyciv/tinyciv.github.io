@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "proposals": [
+    {
+      "hypothesis": "Concentrate small armies but restore a proportional reserve after the army grows; compare direct approaches with standoff behavior",
+      "logic": {
+        "garrison": {
+          "op": "if",
+          "args": [
+            {
+              "op": "le",
+              "args": [
+                {
+                  "fact": "army"
+                },
+                14
+              ]
+            },
+            0,
+            {
+              "op": "ceil",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    {
+                      "fact": "army"
+                    },
+                    0.1
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "features": {
+        "formationApproach": false
+      }
+    }
+  ]
+}

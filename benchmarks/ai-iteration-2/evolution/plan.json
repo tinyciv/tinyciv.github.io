@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "baseline": "hard-assault",
+  "policyFile": "experiments/ai-iteration-2/screening-policies.json",
+  "seed": "iteration-2-evolution",
+  "generations": 3,
+  "population": 3,
+  "archiveSize": 2,
+  "jobs": 4,
+  "maxMatches": 360,
+  "maxWallSeconds": 2400,
+  "screening": {
+    "seconds": 180,
+    "seeds": 3,
+    "scenarios": [
+      "field-battle"
+    ]
+  },
+  "confirmation": {
+    "seconds": 240,
+    "seeds": 12,
+    "scenarios": [
+      "field-battle"
+    ]
+  },
+  "promotion": {
+    "minPositiveSeeds": 5,
+    "alpha": 0.05
+  },
+  "proposalDirectory": "experiments/ai-iteration-2/proposals",
+  "decisions": [
+    "garrison",
+    "retreat",
+    "campaignRank"
+  ],
+  "bounds": {
+    "retreatHealth": [
+      0.25,
+      0.65
+    ],
+    "retreatPowerRatio": [
+      1.2,
+      3
+    ],
+    "garrisonFraction": [
+      0,
+      0.25
+    ],
+    "retreatMorale": [
+      10,
+      50
+    ],
+    "recoveryHealth": [
+      0.65,
+      0.95
+    ],
+    "recoveryMorale": [
+      50,
+      85
+    ],
+    "recoveryPowerRatio": [
+      0.4,
+      1.3
+    ],
+    "formationEnterCount": [
+      6,
+      10,
+      1
+    ],
+    "formationStayCount": [
+      3,
+      6,
+      1
+    ]
+  }
+}

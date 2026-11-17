@@ -1,9 +1,11 @@
 import { buildingPresent, isWallKind, tileAt, type GameState, type Point } from './types';
 import { nearbyBuildings } from './spatial';
+import { mountainLineClear } from './terrain-rays-native';
 
-/** Arrows pass other buildings but not walls, including a diagonal corner.
+/** Arrows pass other buildings but not walls or mountains, including a diagonal corner.
  * The target wall itself can be shot; no wall behind it can be reached. */
 export function arrowLineClear(state: GameState, from: Point, target: Point, targetId?: number): boolean {
+  if (!mountainLineClear(state.world, from, target)) return false;
   const walls = new Set<number>();
   const midpoint = { x: (from.x + target.x) / 2, y: (from.y + target.y) / 2 };
   for (const building of nearbyBuildings(state, midpoint, Math.hypot(target.x - from.x, target.y - from.y) / 2 + 2))

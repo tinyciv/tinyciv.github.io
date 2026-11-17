@@ -1,0 +1,21 @@
+{
+  "generator": "built-in imagegen",
+  "source": "scratch/2026-11-16-exploration/generated-sheet.png",
+  "references": [
+    "public/assets/buildings/wooden-settlement.png",
+    "public/assets/hermit/cabin.png"
+  ],
+  "approved": "All three variants; user 2026-11-16",
+  "nativeDimensions": {
+    "ruins": [
+      32,
+      32
+    ],
+    "hut": [
+      16,
+      16
+    ]
+  },
+  "finishing": "Cropped equal sheet cells, thresholded alpha at 190 to remove transparent glow, registered silhouette, nearest-neighbor reduction. Resampled generated appearance, not native generator output.",
+  "prompt": "scratch/2026-11-16-exploration/prompt.txt"
+}

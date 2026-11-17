@@ -165,7 +165,7 @@ describe('fog of war', () => {
         expect(isExplored(restored, 10.5, 12.5)).toBe(false);
     });
 
-    it('never reveals enemy reservations, active work, paused sites, or their fields', () => {
+    it('reveals scouted enemy construction and remembers its last seen state while hidden', () => {
         const state = fixture(), active = building(35, 14, 12, 1), reserved = building(36, 15, 12, 1), paused = building(37, 16, 12, 1);
         active.construction = { startedAt: 2, duration: 30, waitingForBuilder: false, builderId: 91 };
         reserved.construction = { startedAt: 0, duration: 30, waitingForBuilder: true, builderId: 92 };
@@ -173,18 +173,24 @@ describe('fog of war', () => {
         state.time = 12; entityStore(state).buildings.add(active, reserved, paused);
         state.fields = [{ ...field(100, 14, 12), camp: active.id }];
         expect(isVisible(state, 14.5, 12.5)).toBe(true);
-        for (const site of state.buildings) expect(entityVisible(state, site)).toBe(false);
-        expect(updateFog(state).buildings).toEqual([]);
+        for (const site of state.buildings) expect(entityVisible(state, site)).toBe(true);
+        expect(updateFog(state).buildings.map(b => b.id)).toEqual([active.id, reserved.id, paused.id]);
         expect(updateFog(state).fields).toEqual([]);
-        expect(state.fog!.buildings).toEqual([]);
+        expect(state.fog!.buildings!.map(b => b.id)).toEqual([active.id, reserved.id, paused.id]);
 
         state.units[0].x = 40.5; state.time = 18;
         delete active.construction;
-        expect(updateFog(state).buildings).toEqual([]);
+        active.hp = 25;
+        const remembered = updateFog(state).buildings.find(b => b.id === active.id)!;
+        expect(remembered.construction).toMatchObject({ startedAt: 2, duration: 30 });
+        expect(remembered.hp).toBe(100);
+        expect(entityVisible(state, active)).toBe(false);
         const restored: GameState = JSON.parse(JSON.stringify(state));
-        expect(updateFog(restored).buildings).toEqual([]);
+        expect(updateFog(restored).buildings.find(b => b.id === active.id)).toEqual(remembered);
         restored.units[0].x = 10.5;
-        expect(updateFog(restored).buildings.map(b => b.id)).toEqual([active.id]);
+        expect(updateFog(restored).buildings.map(b => b.id)).toEqual([active.id, reserved.id, paused.id]);
+        expect(updateFog(restored).buildings.find(b => b.id === active.id)).toMatchObject({ hp: 25 });
+        expect(updateFog(restored).buildings.find(b => b.id === active.id)?.construction).toBeUndefined();
         expect(updateFog(restored).fields.map(f => f.id)).toEqual([100]);
         expect(entityVisible(restored, restored.buildings[0])).toBe(true);
     });
@@ -201,7 +207,7 @@ describe('fog of war', () => {
         expect(entityVisible(state, own)).toBe(false);
     });
 
-    it('draws friendly tree orders through unexplored fog without enemy order markers or revealing terrain', () => {
+    it('draws friendly tree orders through unexplored fog and enemy sites only within sight', () => {
         const state = fixture();
         state.world.tiles = Array.from({ length: state.world.width * state.world.height }, () => ({
             terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 3, production: 1, gold: 0, variation: .5,
@@ -219,7 +225,8 @@ describe('fog of war', () => {
         expect(markers[0]).toMatchObject({ x: (40 + .78) * 32, y: (30 + .18) * 32 });
         const buildings = frame.sprites.filter(sprite => sprite.key === 'building');
         expect(buildings.length).toBeGreaterThan(0);
-        expect(buildings.every(sprite => sprite.x === ownSite.x * 32 && sprite.y === ownSite.y * 32)).toBe(true);
+        expect(buildings.some(sprite => sprite.x === ownSite.x * 32 && sprite.y === ownSite.y * 32)).toBe(true);
+        expect(buildings.some(sprite => sprite.x === enemySite.x * 32 && sprite.y === enemySite.y * 32)).toBe(true);
         expect(fog.explored[30 * fog.width + 40]).toBe(0);
     });
 

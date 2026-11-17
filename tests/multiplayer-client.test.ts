@@ -1,3 +1,4 @@
+import { encodeMessage, decodeMessage } from '../src/multiplayer/wire';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MultiplayerClient } from '../src/multiplayer/client';
 import type { GameState, Unit } from '../src/game/types';
@@ -11,15 +12,15 @@ class Socket {
   static instances: Socket[] = [];
   readyState = 0;
   onopen?: () => void;
-  onmessage?: (event: { data: string }) => void;
+  onmessage?: (event: { data: ArrayBuffer }) => void;
   onerror?: () => void;
   onclose?: () => void;
   sent: unknown[] = [];
   constructor(_url: string) { Socket.instances.push(this); }
-  send(data: string): void { this.sent.push(JSON.parse(data)); }
+  send(data: Uint8Array): void { this.sent.push(decodeMessage(data)); }
   close(): void { this.readyState = 3; queueMicrotask(() => this.onclose?.()); }
   open(): void { this.readyState = 1; this.onopen?.(); }
-  receive(message: ServerMessage): void { this.onmessage?.({ data: JSON.stringify(message) }); }
+  receive(message: ServerMessage): void { this.onmessage?.({ data: Uint8Array.from(encodeMessage(message)).buffer }); }
 }
 const room = (phase: LobbyRoom['phase']): LobbyRoom => ({ id: 'ABC', name: 'Test', phase, location: 'Oregon', hostId: 'one', players: [],
   options: { seed: 'same-seed', style: 'pangaea', landformFamily: 'mixed' } });

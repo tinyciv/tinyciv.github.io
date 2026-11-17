@@ -1,0 +1,242 @@
+{
+  "date": "2026-11-13",
+  "purpose": "Packed rock texture with independent transparent ore overlays; review only.",
+  "reference": {
+    "source": "User-supplied rocky terrain screenshot in the conversation",
+    "derivation": "Built-in imagegen tool, screenshot as reference, rock-only texture swatch",
+    "saved_reference": "rock-reference.png",
+    "full_reference_scratch": "scratch/2026-11-13-rock-texture-overlays/refs/rock-reference.png",
+    "imagegen_prompt": "Use case: style-transfer. Input image: the user's attached classic RTS rocky terrain screenshot is the sole visual reference. Create ONE square rock-only material texture swatch matching that screenshot: tightly packed irregular medium gray rough rounded angular rocks, dark narrow charcoal crevices, simple broad light gray faces lit from upper left, old-school low resolution strategy game art. Fill EVERY pixel of the whole square with this rock material. No dirt, no grass, no ground, no terrain boundary, no outer rock pile silhouette, no isolated boulder, no large flat slab, no large star-shaped fissures. Stone size varies naturally, all touch their neighbors closely. About 7 to 9 stones across the entire swatch. Strict orthographic overhead texture. Make the square seamlessly tileable left/right and top/bottom. Keep the treatment simple and readable, without photo grain. No ore yet. No text, no labels, no frame, no display scene or comparison grid. This will be a reference swatch for a 64px game texture."
+  },
+  "provider": "PixelLab API v2 (native textures and ore)",
+  "jobs": [
+    {
+      "name": "1-stone",
+      "job_id": "e64ad429-1e77-4f75-8bae-d1bdbcf0e577",
+      "request": {
+        "description": "Seamlessly repeating square rocky terrain texture matching the supplied screenshot-derived rock material. Tightly packed irregular gray rocks fit against one another, all sizes and rotations, medium gray shaded rounded angular faces separated by narrow charcoal cracks. Simple original RTS style, irregular 6-10 pixel stones; broad light gray faces, clear dark narrow gaps, no microtexture. About 8 rocks across the swatch. Top-down old-school strategy game pixel art. Light from upper left. Texture fills the WHOLE square; stones continue beyond every edge and match perfectly when tiled. No grass, no dirt, no ground, no isolated rock pile, no scene, no frame or square tile border. No large smooth slab; no large star-shaped cracks. No ore yet. Use the reference as the main material and arrangement guide.",
+        "image_size": {
+          "width": 64,
+          "height": 64
+        },
+        "no_background": false,
+        "reference_images": [
+          {
+            "image": {
+              "type": "base64",
+              "base64": "<image bytes>",
+              "format": "png"
+            },
+            "size": {
+              "width": 128,
+              "height": 128
+            },
+            "usage_description": "Rock-only material extracted from user terrain reference: tightly packed rough gray rocks and narrow dark crevices. Reinterpret at native pixel resolution while retaining this appearance."
+          }
+        ],
+        "target_palette": {
+          "colors": [
+            "#252729",
+            "#393d40",
+            "#4c5155",
+            "#646a6c",
+            "#7d8282",
+            "#989b97",
+            "#afb0a7"
+          ]
+        },
+        "seed": 131264
+      }
+    },
+    {
+      "name": "2-stone",
+      "job_id": "b4a02647-62f5-4136-841d-b486e2520862",
+      "request": {
+        "description": "Seamlessly repeating square rocky terrain texture matching the supplied screenshot-derived rock material. Tightly packed irregular gray rocks fit against one another, all sizes and rotations, medium gray shaded rounded angular faces separated by narrow charcoal cracks. Simplified cartoon style, irregular 8-12 pixel stones, fewer larger color clusters and three-shade stone faces, no tiny texture. About 6 rocks across the swatch. Top-down old-school strategy game pixel art. Light from upper left. Texture fills the WHOLE square; stones continue beyond every edge and match perfectly when tiled. No grass, no dirt, no ground, no isolated rock pile, no scene, no frame or square tile border. No large smooth slab; no large star-shaped cracks. No ore yet. Use the reference as the main material and arrangement guide.",
+        "image_size": {
+          "width": 64,
+          "height": 64
+        },
+        "no_background": false,
+        "reference_images": [
+          {
+            "image": {
+              "type": "base64",
+              "base64": "<image bytes>",
+              "format": "png"
+            },
+            "size": {
+              "width": 128,
+              "height": 128
+            },
+            "usage_description": "Rock-only material extracted from user terrain reference: tightly packed rough gray rocks and narrow dark crevices. Reinterpret at native pixel resolution while retaining this appearance."
+          }
+        ],
+        "target_palette": {
+          "colors": [
+            "#252729",
+            "#393d40",
+            "#4c5155",
+            "#646a6c",
+            "#7d8282",
+            "#989b97",
+            "#afb0a7"
+          ]
+        },
+        "seed": 131265
+      }
+    },
+    {
+      "name": "3-stone",
+      "job_id": "faa6be72-02ee-48fc-8d4c-9a1e32802d12",
+      "request": {
+        "description": "Seamlessly repeating square rocky terrain texture matching the supplied screenshot-derived rock material. Tightly packed irregular gray rocks fit against one another, all sizes and rotations, medium gray shaded rounded angular faces separated by narrow charcoal cracks. A little more natural geological shading and detail, 10-18 pixel rocks, restrained texture and broad facets. About 9 rocks across the swatch. Top-down old-school strategy game pixel art. Light from upper left. Texture fills the WHOLE square; stones continue beyond every edge and match perfectly when tiled. No grass, no dirt, no ground, no isolated rock pile, no scene, no frame or square tile border. No large smooth slab; no large star-shaped cracks. No ore yet. Use the reference as the main material and arrangement guide.",
+        "image_size": {
+          "width": 128,
+          "height": 128
+        },
+        "no_background": false,
+        "reference_images": [
+          {
+            "image": {
+              "type": "base64",
+              "base64": "<image bytes>",
+              "format": "png"
+            },
+            "size": {
+              "width": 128,
+              "height": 128
+            },
+            "usage_description": "Rock-only material extracted from user terrain reference: tightly packed rough gray rocks and narrow dark crevices. Reinterpret at native pixel resolution while retaining this appearance."
+          }
+        ],
+        "target_palette": {
+          "colors": [
+            "#252729",
+            "#393d40",
+            "#4c5155",
+            "#646a6c",
+            "#7d8282",
+            "#989b97",
+            "#afb0a7"
+          ]
+        },
+        "seed": 131328
+      }
+    },
+    {
+      "name": "1-copper",
+      "job_id": "ff4e0e9b-e4e6-4bde-ac03-7c52fa33bf32",
+      "request": {
+        "method": "edit_with_text",
+        "edit_images": [
+          {
+            "image": {
+              "type": "base64",
+              "base64": "<image bytes>",
+              "format": "png"
+            },
+            "width": 64,
+            "height": 64
+          }
+        ],
+        "image_size": {
+          "width": 64,
+          "height": 64
+        },
+        "description": "Preserve this gray rock texture EXACTLY: same stones, same pixels, same gray shading, same dark crevices. Add only muted burnt ORANGE copper ore flecks embedded on SOME of the lighter rock FACES, as small irregular 2-4 pixel inclusions, covering about 8 percent of the image. Scatter across the entire tile unevenly, a few small groups, no regular spacing. For iron use clearly darker charcoal mineral specks with small muted steel-gray accents; for copper use burnt orange. Keep at least 90 percent of the original stone surface gray. Not whole colored stones, no jewels, no crystals, no glow, no dirt or grass. This must remain a gray repeating rock texture with small ore speckles. Do not move or redraw rocks.",
+        "no_background": false,
+        "seed": 131211
+      }
+    },
+    {
+      "name": "iron-flecks",
+      "job_id": "c812f631-474a-4ac4-8d52-3f1972d68637",
+      "request": {
+        "description": "A seamless square 64x64 pixel transparent game overlay containing only a natural sparse scatter of about 35 to 45 TINY dark charcoal gray mineral inclusions. Each inclusion is an irregular flat 2-4 pixel patch, with a charcoal core and a small muted medium-gray edge accent. Cover about 8 percent of the canvas; the rest is fully transparent. Spread inclusions unevenly throughout the whole square; occasional pairs or small clusters, no regular grid. These specks will be alpha-composited onto a gray rock terrain texture. Flat embedded mineral chips, not freestanding objects. No boulder, no rock surface, no ground, no frame, no circles, no stars, no glow, no gem crystals, no large main object. Native coarse pixel clusters, simple low detail, neutral dark gray.",
+        "image_size": {
+          "width": 64,
+          "height": 64
+        },
+        "no_background": true,
+        "seed": 131250
+      }
+    }
+  ],
+  "processing": [
+    "Nearest-neighbor reduction of the imagegen reference to 128px for native-pixel PixelLab generation.",
+    "Copper overlay selects only generated orange pixels from the first texture edit; original stone is unchanged.",
+    "Iron overlay is generated directly with alpha transparency.",
+    "Crop 2px unwanted generator frame; nearest-neighbor resize restores source dimensions.",
+    "Copy only the terminal generated pixel rows and columns between opposite borders; preserve the irregular interior without mirroring.",
+    "Reuse the same copper and iron overlays for all three stone textures, scaled by nearest neighbor for the 32px grid.",
+    "Composite for previews. Blob previews reuse only contour alpha from the earlier PixelLab-generated corner sets."
+  ],
+  "candidates": [
+    {
+      "id": 1,
+      "source_size": 64,
+      "texture_size": 64,
+      "art_grid": 16
+    },
+    {
+      "id": 2,
+      "source_size": 64,
+      "texture_size": 64,
+      "art_grid": 16
+    },
+    {
+      "id": 3,
+      "source_size": 128,
+      "texture_size": 128,
+      "art_grid": 32
+    }
+  ],
+  "files": {
+    "1-copper-blobs-native.png": "16501ec98c3e9d9d9f22873f53cffe95a0d749727d3b593f3e1b888a397e2a5a",
+    "1-copper-blobs.png": "16501ec98c3e9d9d9f22873f53cffe95a0d749727d3b593f3e1b888a397e2a5a",
+    "1-copper-overlay.png": "b923b2eb907f5f0750a31839413d1c8c67227bc630462fe2dc34481201a7be92",
+    "1-copper-repeat.png": "ffa07ca7330c55b6ec4c6c6af88e97ed9f7f30cbff875789d59579ce4eed6dd0",
+    "1-copper.png": "4c1e932c0742fa829a7188bfef3c52390191f4ceab7a4038fc8e200e2f0a354d",
+    "1-iron-blobs-native.png": "5bb8fcd5de9e4952081744fdb62d35998b8ef783de03a1a6051c4027d9bcf2b4",
+    "1-iron-blobs.png": "5bb8fcd5de9e4952081744fdb62d35998b8ef783de03a1a6051c4027d9bcf2b4",
+    "1-iron-overlay.png": "28d1c2e1ce35638ac1b60dfa36601064e20ae3ed2c376359dd2d253806a95779",
+    "1-iron-repeat.png": "a940857c2cf6015be32c3a3889ec30bde49528ca0fde9aa9eae8dfc66dcd1025",
+    "1-iron.png": "c7d0ee8f900c551a038740b07850a5d9cb50ffa6fc278a51f913c9645ace5916",
+    "1-stone-blobs-native.png": "7baf2d55919dbda67a67b9f162c031e76e2f5fef9e538a673f7f361e853a70e0",
+    "1-stone-blobs.png": "7baf2d55919dbda67a67b9f162c031e76e2f5fef9e538a673f7f361e853a70e0",
+    "1-stone-repeat.png": "bdddd268f16f67fa70b23cc46d5f432891ca6ef5f5280c8cecba8fe187aae686",
+    "1-stone.png": "7e65fbb692633951f8950ddd0ddb727b11765b852ffdda6bfd003dc369b833eb",
+    "2-copper-blobs-native.png": "0c7570451c3dcb41dcadb5ad80b320b1df9880650f1777bc6fea2b98b57566fa",
+    "2-copper-blobs.png": "0c7570451c3dcb41dcadb5ad80b320b1df9880650f1777bc6fea2b98b57566fa",
+    "2-copper-overlay.png": "b923b2eb907f5f0750a31839413d1c8c67227bc630462fe2dc34481201a7be92",
+    "2-copper-repeat.png": "b7fe6580c1b2bd101a90a2859d46ab70930fabd57e4521f55575f0b7be6e5bad",
+    "2-copper.png": "50149ec29197edb93c6ccc4b20626f3dd562dad628342c0a4a19ad3f3258a536",
+    "2-iron-blobs-native.png": "5081af61ffdf4b5585d61638168aee50649aaa4149c5adbbf41a0be3796ea668",
+    "2-iron-blobs.png": "5081af61ffdf4b5585d61638168aee50649aaa4149c5adbbf41a0be3796ea668",
+    "2-iron-overlay.png": "28d1c2e1ce35638ac1b60dfa36601064e20ae3ed2c376359dd2d253806a95779",
+    "2-iron-repeat.png": "5f7d32ee118ded23c46ff3f00db4fa78c3689759676524feaaf8104756773d68",
+    "2-iron.png": "7fe76193f6da957e90eea097b28f17bbf6e05a30048a0f5a345e7bd97c3d4657",
+    "2-stone-blobs-native.png": "1606da9ccb004c82c3cb284626bfd7e508eb407714bbaa176f5ace74f2ee4e2a",
+    "2-stone-blobs.png": "1606da9ccb004c82c3cb284626bfd7e508eb407714bbaa176f5ace74f2ee4e2a",
+    "2-stone-repeat.png": "f93545e7dadb821b750a71e98484391a8fddb767be61d8744afd563a5d06f67b",
+    "2-stone.png": "8953c873fc670c1a5b95e181e14f71ae8660cb8fdfafba596ae44ec21ac4f2b1",
+    "3-copper-blobs-native.png": "acee9b96d16f48e95014caaae92b407cde9fefe42308539c1aaf3e643924403e",
+    "3-copper-blobs.png": "b0b05b478d1e7df0eaaaf9468e90d5b750bf1756cf8d1d3384d57e2d1511cd78",
+    "3-copper-overlay.png": "25b691763fa067b2c4a788a5e91b29aa4bea4487d16e4af22bcdec04fb52929b",
+    "3-copper-repeat.png": "cd6b14f3dc60dae893115837b0359a3cdb95b324cfc1fb3a7a28a845084d97ad",
+    "3-copper.png": "e96d9b5ca426c7b74ad2d86bc01dd374090600d7430f5b3f0a3fc05f63a784a4",
+    "3-iron-blobs-native.png": "1ef0658471b945257d09aa58db2923ce7fbc1986803c01ac32ad1fa96bc0e4c6",
+    "3-iron-blobs.png": "a4c96ab1b1549eb73f8fc061ea239221419e56dd007d4ec145a947ca485a7cc1",
+    "3-iron-overlay.png": "ff28437120156c9ab84a57fccba795dec690d1ffb2507f3fcba5db4348c6c4f4",
+    "3-iron-repeat.png": "8d3703ebc55d3fe850900e5e9dcee4fd4d495db392c2d3ed948f179f44c7c576",
+    "3-iron.png": "e2ac06fedb372f024565ff0bd991bc99335943b55ddbd1e79efb6c16221114d4",
+    "3-stone-blobs-native.png": "ca6e48726f71a177111f977151a4f5e20477f2bb7ed9ad42824a866200dd26a2",
+    "3-stone-blobs.png": "7a76b04c259c4fef5fa9be2cd498e8b03d44c983bfa998a5a40732a03c33d7db",
+    "3-stone-repeat.png": "ebca2e167eba752fe4cf1288ea814c9fba016d50e9f9690c96d099c38b45d7ab",
+    "3-stone.png": "bcdfa1205403563b35636bba9ffcac23393428a26bc8cdfeef8c9e6fe552903f",
+    "copper-overlay.png": "b923b2eb907f5f0750a31839413d1c8c67227bc630462fe2dc34481201a7be92",
+    "iron-overlay.png": "28d1c2e1ce35638ac1b60dfa36601064e20ae3ed2c376359dd2d253806a95779",
+    "rock-reference.png": "0fbecc89662ea5bb8b4aa7e7f72996a1735b6755ec08c546092974e028e1d57c"
+  }
+}

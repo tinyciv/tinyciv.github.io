@@ -121,20 +121,17 @@ describe('real-time Leader recovery', () => {
     expect(leaderRespawnRemainingSeconds(state, 0, 2000)).toBe(9);
     state.paused = true; updateLeaderRespawns(state, 10_999); expect(getLeader(state)).toBeUndefined();
     updateLeaderRespawns(state, 11_000);
-    expect(getLeader(state)).toMatchObject({ hp: 120, maxHp: 120, attack: 27, kills: 0,
+    expect(getLeader(state)).toMatchObject({ hp: 120, maxHp: 120, attack: 27.75, kills: 0,
       leaderProgression: { level: 3, xp: 75, skillPoints: 1, skills: { brace: 1 } } });
     expect(state.factions[0].leaderRespawn).toBeUndefined(); expect(state.gameOver).toBe(false);
     updateLeaderRespawns(state, 20_000); expect(state.units.filter(unit => unit.kind === 'leader')).toHaveLength(1);
   });
   it.each([true, false])('uses wall time through updateGame when paused=%s at 4x speed', paused => {
     const state = fixture(), leader = getLeader(state)!; state.speed = 4; state.paused = paused; leader.hp = 0;
-    let now = 1000; const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
-    try {
-      recordLeaderDeath(state, leader);
-      now = 10999; updateGame(state, .1, idle); expect(getLeader(state)).toBeUndefined();
-      now = 11000; updateGame(state, .1, idle); expect(getLeader(state)).toBeDefined();
-      expect(state.factions[0].leaderRespawn).toBeUndefined();
-    } finally { clock.mockRestore(); }
+    recordLeaderDeath(state, leader, 1000);
+    updateGame(state, .1, idle, { wallNow: 10_999 }); expect(getLeader(state)).toBeUndefined();
+    updateGame(state, .1, idle, { wallNow: 11_000 }); expect(getLeader(state)).toBeDefined();
+    expect(state.factions[0].leaderRespawn).toBeUndefined();
   });
   it('records an actual combat death and grants fixed XP plus 200 gold without bypassing level thresholds to the victor', () => {
     const state = fixture(), leader = getLeader(state)!;
@@ -142,7 +139,7 @@ describe('real-time Leader recovery', () => {
     state.factions.push({ ...state.factions[0], id: 1, relation: 'war' });
     entityStore(state).units.add(enemy); entityStore(state).buildings.add({ id: 3, kind: 'palace', faction: 1, x: 22, y: 18, hp: 650, maxHp: 650, capacity: 4 });
     leader.leaderProgression!.xp = 95; shot(state, leader, enemy); updateGame(state, .1, idle);
-    expect(leader.leaderProgression).toMatchObject({ level: 1, xp: 6495, skillPoints: 0 });
+    expect(leader.leaderProgression).toMatchObject({ level: 2, xp: 95, skillPoints: 1 });
     expect(state.factions[0].gold).toBe(700); expect(state.factions[1].gold).toBe(300);
     expect(state.factions[1].leaderRespawn).toBeDefined(); expect(state.factions[1].defeated).toBe(false); expect(state.gameOver).toBe(false);
   });
@@ -150,7 +147,7 @@ describe('real-time Leader recovery', () => {
     const state = fixture(), leader = getLeader(state)!;
     const marauder = { ...person(20, 'warrior', 15.5, 15.5, -2), marauderLeader: true };
     entityStore(state).units.add(marauder); shot(state, leader, marauder); updateGame(state, .1, idle);
-    expect(leader.leaderProgression).toMatchObject({ level: 1, xp: 6400, skillPoints: 0 }); expect(state.factions[0].gold).toBe(550);
+    expect(leader.leaderProgression).toMatchObject({ level: 2, xp: 0, skillPoints: 1 }); expect(state.factions[0].gold).toBe(550);
   });
   it('cannot postpone death penalties by repeated death handling, and has no respawn without a city', () => {
     const state = fixture(), leader = getLeader(state)!; leader.hp = 0;

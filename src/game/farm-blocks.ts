@@ -39,24 +39,22 @@ const merge = (target: Bounds, source: Bounds): void => {
  * pass; each candidate then touches at most four existing components.
  * Removals may fragment a field. Only the blocks receiving new plots are
  * checked, keeping demolition and city redevelopment possible. */
-export function farmBlockPlacementQuery(state: GameState, options: FarmBlockQueryOptions = {}): FarmBlockQuery {
-  const { width, height } = state.world, count = width * height, cells = new Set<number>();
+function farmCells(state: GameState): Set<number> {
+  const { width, height } = state.world, cells = new Set<number>();
   for (const farm of state.buildings) if (farm.hp > 0 && isFarmKind(farm.kind)
     && farm.x >= 0 && farm.x < width && farm.y >= 0 && farm.y < height) cells.add(farm.y * width + farm.x);
-  for (const cell of options.removedCells ?? []) cells.delete(cell);
-  let invalidReservation = false;
-  for (const cell of options.addedCells ?? []) {
-    if (!Number.isInteger(cell) || cell < 0 || cell >= count) invalidReservation = true;
-    else cells.add(cell);
-  }
-  const neighbors = (cell: number): number[] => {
-    const x = cell % width, y = Math.floor(cell / width), result: number[] = [];
-    if (x > 0) result.push(cell - 1); if (x + 1 < width) result.push(cell + 1);
-    if (y > 0) result.push(cell - width); if (y + 1 < height) result.push(cell + width);
-    return result;
-  };
-  const componentAt = new Map<number, number>(), components: Bounds[] = [];
-  for (const cell of cells) {
+  return cells;
+}
+const cellNeighbors = (width: number, height: number, cell: number): number[] => {
+  const x = cell % width, y = Math.floor(cell / width), result: number[] = [];
+  if (x > 0) result.push(cell - 1); if (x + 1 < width) result.push(cell + 1);
+  if (y > 0) result.push(cell - width); if (y + 1 < height) result.push(cell + width);
+  return result;
+};
+/** Label connected plots in `seeds` order. Components receive ids from `components.length`. */
+function labelComponents(width: number, height: number, seeds: Iterable<number>, has: (cell: number) => boolean,
+  componentAt: Map<number, number>, components: Bounds[], members?: number[][]): void {
+  for (const cell of seeds) {
     if (componentAt.has(cell)) continue;
     const id = components.length, x = cell % width, y = Math.floor(cell / width);
     const bounds: Bounds = { size: 0, minX: x, maxX: x, minY: y, maxY: y }, queue = [cell];
@@ -64,11 +62,51 @@ export function farmBlockPlacementQuery(state: GameState, options: FarmBlockQuer
     for (let i = 0; i < queue.length; i++) {
       const next = queue[i], nx = next % width, ny = Math.floor(next / width);
       merge(bounds, { size: 1, minX: nx, maxX: nx, minY: ny, maxY: ny });
-      for (const neighbor of neighbors(next)) if (cells.has(neighbor) && !componentAt.has(neighbor)) {
+      for (const neighbor of cellNeighbors(width, height, next)) if (has(neighbor) && !componentAt.has(neighbor)) {
         componentAt.set(neighbor, id); queue.push(neighbor);
       }
     }
+    members?.push(queue);
   }
+}
+
+export function farmBlockPlacementQuery(state: GameState, options: FarmBlockQueryOptions = {}): FarmBlockQuery {
+  const { width, height } = state.world, count = width * height, cells = farmCells(state);
+  for (const cell of options.removedCells ?? []) cells.delete(cell);
+  let invalidReservation = false;
+  for (const cell of options.addedCells ?? []) {
+    if (!Number.isInteger(cell) || cell < 0 || cell >= count) invalidReservation = true;
+    else cells.add(cell);
+  }
+  const componentAt = new Map<number, number>(), components: Bounds[] = [];
+  labelComponents(width, height, cells, cell => cells.has(cell), componentAt, components);
+  return blockQuery(width, height, cell => componentAt.get(cell), components, invalidReservation);
+}
+
+/** One component index for a read-only pass that removes a different single
+ * plot per probe (house redevelopment). Removing a plot can only split its own
+ * block, so each variant relabels that block alone; validation is identical to
+ * farmBlockPlacementQuery(state, { removedCells: new Set([cell]) }). */
+export function farmBlockRemovalQueries(state: GameState): (removedCell: number) => FarmBlockQuery {
+  const { width, height } = state.world, cells = farmCells(state);
+  const componentAt = new Map<number, number>(), components: Bounds[] = [], members: number[][] = [];
+  labelComponents(width, height, cells, cell => cells.has(cell), componentAt, components, members);
+  const base = blockQuery(width, height, cell => componentAt.get(cell), components, false);
+  return removedCell => {
+    const affected = componentAt.get(removedCell);
+    if (affected === undefined) return base;
+    const override = new Map<number, number>(), local = components.slice();
+    const has = (cell: number) => cell !== removedCell && componentAt.get(cell) === affected;
+    labelComponents(width, height, members[affected].filter(cell => cell !== removedCell), has, override, local);
+    return blockQuery(width, height, cell => cell === removedCell ? undefined
+      : componentAt.get(cell) === affected ? override.get(cell) : componentAt.get(cell), local, false);
+  };
+}
+
+function blockQuery(width: number, height: number, componentOf: (cell: number) => number | undefined,
+  components: readonly Bounds[], invalidReservation: boolean): FarmBlockQuery {
+  const neighbors = (cell: number): number[] => cellNeighbors(width, height, cell);
+  const componentAt = { get: componentOf };
   const canAddAll = (points: readonly Point[]): FarmBlockValidation => {
     if (invalidReservation || points.some(point => !Number.isInteger(point.x) || !Number.isInteger(point.y)
       || point.x < 0 || point.y < 0 || point.x >= width || point.y >= height))

@@ -1,0 +1,41 @@
+{
+  "review": "scratch/2026-11-06-pixellab-animations-housing/gallery.html",
+  "approval": "2026-11-06: use skirmisher 1B and militia 2A",
+  "sources": {
+    "Skirmisher.png": "outputs/units/skirmisher-1b",
+    "Militia.png": "outputs/units/militia-2a"
+  },
+  "cellSize": [
+    32,
+    32
+  ],
+  "groundAnchor": [
+    16,
+    23
+  ],
+  "directionOrder": [
+    "S",
+    "SE",
+    "E",
+    "NE",
+    "N",
+    "NW",
+    "W",
+    "SW"
+  ],
+  "columns": [
+    "idle",
+    "walk0",
+    "walk1",
+    "walk2",
+    "walk3",
+    "attack0",
+    "attack1",
+    "attack2",
+    "attack3"
+  ],
+  "attackFrameDurationMs": 70,
+  "worldPixelScale": 1.4,
+  "walking": "Approved upper body and equipment, with original Human-Worker-Cyan ankle/footfall pixels and one-pixel body bob. No scaling or new painted detail.",
+  "factionPalette": "Only exact native turquoise cloth shades are recolored. No added torso overlay."
+}

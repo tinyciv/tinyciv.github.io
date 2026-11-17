@@ -1,7 +1,7 @@
 import { type World, type Point, type CampSize, WATER } from './types';
 export type { CampSize } from './types';
 import { traversable, canTraverseEdge } from './pathfinding';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefFootprintAllowed } from './relief';
 
 export interface CampSizeProfile {
   readonly tierCount:number;
@@ -63,7 +63,7 @@ const noise=(x:number,y:number,s:number)=>{let n=Math.imul(x+s*131,374761393)^Ma
 export function isBuildable(w:World,x:number,y:number,options=optionsOf(w)):boolean {
   const t=w.tiles[y*w.width+x];
   return inside(w,x,y)&&!!t&&!options?.blocked?.has(y*w.width+x)&&!options?.obstacles?.has(y*w.width+x)
-    &&!WATER.has(t.terrain)&&traversable(w,x,y)&&ridgeFootprintAllowed(w,x,y)
+    &&!WATER.has(t.terrain)&&traversable(w,x,y)&&reliefFootprintAllowed(w,x,y)
     &&(options?.preserveTrees===false||t.overlay!=='forest'&&t.overlay!=='jungle');
 }
 /** Multi-source terrain flood; roads use cardinal steps, hostile probes include diagonals. */
@@ -80,7 +80,7 @@ function flood(w:World,blocked:Set<number>,starts:number[],diagonal=false) {
   }return{dist,parent};
 }
 function border(w:World):number[]{
-  // The outer cell is a terrain halo: ridge predicates need real neighbors
+  // The outer cell is a terrain halo: terrain edge predicates need real neighbors
   // beyond the access perimeter, or a cropped flat plateau becomes a cliff.
   const inset=(w as PlanningWorld).campSeedInset??0,l=inset,r=w.width-1-inset,t=inset,b=w.height-1-inset,a:number[]=[];
   for(let x=l;x<=r;x++)a.push(t*w.width+x,b*w.width+x);

@@ -1,3 +1,4 @@
+import { territoryValue } from './territory-cells';
 import { playerFaction } from './player-context';
 import { isForbidden } from './forbidden-zones';
 import { prepareFarmForAutomaticRoad } from './automatic-road-farms';
@@ -7,7 +8,7 @@ import { type Building, type GameState, type Point, type Unit, WATER, buildingRe
 import { hasGateWall, validateNetworkPlacement } from './network-placement';
 import { buildingWithinBorders } from './border-placement';
 import { insideOwnBorders, territory, type Territory } from './borders';
-import { ridgeFootprintAllowed } from './ridges';
+import { reliefFootprintAllowed } from './relief';
 import { resourceBlocksGround } from './resource-terrain';
 import { removeVillageTrailAt } from './village-trails';
 import { simulationReadsActive } from './simulation-reads';
@@ -130,7 +131,7 @@ export function canPlaceRoad(state: GameState, x: number, y: number, faction = p
 }
 function eligible(state: GameState, x: number, y: number): boolean {
   const tile = tileAt(state.world, x, y);
-  if (!tile || WATER.has(tile.terrain) || !ridgeFootprintAllowed(state.world, x, y)) return false;
+  if (!tile || WATER.has(tile.terrain) || !reliefFootprintAllowed(state.world, x, y)) return false;
   // Ambient foot traffic only wears paths into open, bare ground.
   if (tile.overlay !== 'none') return false;
   // Farms are eligible only after a replacement plot is secured by addRoad.
@@ -155,7 +156,7 @@ function addRoad(state: GameState, x: number, y: number, faction: number): boole
   if (!connected || isForbidden(state, x, y, faction) || !buildingWithinBorders(state, 'road', x, y, faction)
     || !validateNetworkPlacement(state, 'road', x, y, faction).ok) return false;
   if (!prepareFarmForAutomaticRoad(state, { x, y })) return false;
-  const road: Building = { id: Math.max(0, ...state.units.map(u => u.id), ...state.buildings.map(b => b.id)) + 1,
+  const road: Building = { id: entityStore(state).allocateId(),
     kind: 'road', faction, x, y, hp: 100, maxHp: 100, capacity: 0 };
   entityStore(state).buildings.add(road);
   const structures = frames.get(state)?.structures;
@@ -220,7 +221,7 @@ export function updateTraffic(state: GameState): boolean {
     extended = false;
     for (let i = pending.length - 1; i >= 0; i--) {
       const { x, y } = pending[i];
-      const owner = borders.owners[y * borders.width + x];
+      const owner = territoryValue(borders, y * borders.width + x);
       // Worn trails must still be claimed when their roads finally connect.
       const faction = owner >= 0 ? owner : undefined;
       if (faction === undefined || !eligible(state, x, y) || !hasNeighboringRoad(state, x, y, { includeConstruction: false }) || !canPlaceRoad(state, x, y, faction, borders)) continue;

@@ -88,10 +88,8 @@ describe('stone deposit plains', () => {
     expect(world.tiles[forest].fertility).toBeCloseTo(.9);
   });
 
-  it.each(['regional', 'mediterranean'] as const)('ships stone on plains through the %s world pipeline', style => {
-    const world = style === 'mediterranean'
-      ? generateWorld('MED-200BC', undefined, undefined, { style: 'mediterranean' })
-      : generateWorld('CROWN');
+  it('ships stone on plains through the world pipeline', () => {
+    const world = generateWorld('CROWN');
     const stones = world.tiles.flatMap((tile, cell) => tile.resource === 'stone' ? [cell] : []);
     expect(stones.length, 'stone remains available on generated maps').toBeGreaterThanOrEqual(4);
     for (const cell of stones) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)

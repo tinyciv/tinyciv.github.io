@@ -1,10 +1,14 @@
 import { simulationReadsActive } from './simulation-reads';
+import { recordBuildingDestruction } from './building-destruction';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { constructionEdges } from './builders';
 import { buildingWorkForbidden } from './forbidden-work';
 import { unitAttackRange } from './combat-range';
 import { entityStore } from './entity-store';
-import { spendGold } from './gold-ledger';
+import { recordGoldOutlay, spendGold } from './gold-ledger';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
+import { applyDefensiveStats } from './wall-stats';
 import { canMove, canWalk, hasStaticPath, invalidateNavigation } from './pathfinding';
 import { playerFaction } from './player-context';
 import { indexedBuilding, nearbyUnits } from './spatial';
@@ -47,6 +51,36 @@ function ownedFortReason(state: GameState, fort: Building): string {
   if (fort.kind !== 'fort' || fort.faction !== playerFaction(state) || !faction || !state.buildings.includes(fort)) return 'Choose your own Fort.';
   if (!leaderNearby(state, fort)) return 'Move your Leader within 3 tiles of the Fort.';
   return '';
+}
+const FORT_UPGRADE_ERRORS = ['', 'Your realm can no longer improve forts.', 'Choose your own Fort.',
+  'Move your Leader within 3 tiles of the Fort.', 'Complete or rebuild the Fort first.', 'Fort fully upgraded.'];
+function fortUpgradeCommand(state: GameState, fort: Building, commit: boolean): Float64Array {
+  const owner = state.factions.find(faction => faction.id === fort.faction);
+  const store = entityStore(state).buildings;
+  const flags = Number(!state.gameOver && !!owner && !owner.defeated)
+    | Number(fort.kind === 'fort' && fort.faction === playerFaction(state) && store.get(fort.id) === fort) << 1
+    | Number(leaderNearby(state, fort)) << 2 | Number(buildingReady(fort) && !fort.fort?.destroyed) << 3;
+  const pointer = rustEngine.sim_fort_upgrade(simCore(state).handle, fort.id, fort.fortLevel ?? 1,
+    owner?.gold ?? 0, fort.hp, fort.maxHp, flags, Number(commit));
+  return new Float64Array(rustEngine.memory.buffer, pointer, 8).slice();
+}
+export function upgradeFortStatus(state: GameState, fort: Building) {
+  const result = fortUpgradeCommand(state, fort, false), nextLevel = result[2] || null;
+  const reason = result[0] === 6 ? `Need ${wholeFortGold(result[3])} gold.` : FORT_UPGRADE_ERRORS[result[0]] ?? 'Fort upgrade unavailable.';
+  return { level: result[1], nextLevel, cost: nextLevel ? result[3] : null, healthMultiplier: result[4], available: result[0] === 0, reason };
+}
+const wholeFortGold = (gold: number): string => gold.toLocaleString('en-US');
+export function upgradeFort(state: GameState, fort: Building): { ok: boolean; message: string } {
+  const status = upgradeFortStatus(state, fort);
+  if (!status.available) return { ok: false, message: status.reason };
+  if (fort.kind === 'fort') applyDefensiveStats(fort, state.factions.find(faction => faction.id === fort.faction));
+  const result = fortUpgradeCommand(state, fort, true);
+  if (result[0]) return { ok: false, message: result[0] === 6 ? `Need ${wholeFortGold(result[3])} gold.` : FORT_UPGRADE_ERRORS[result[0]] ?? 'Fort upgrade unavailable.' };
+  const owner = state.factions.find(faction => faction.id === fort.faction)!;
+  recordGoldOutlay(state, owner, owner.gold - result[7], 'upgrades'); owner.gold = result[7];
+  fort.fortLevel = result[1] as 2; fort.hp = result[5]; fort.maxHp = result[6];
+  markWorldChanged(state.world);
+  return { ok: true, message: `Fort upgraded to level ${fort.fortLevel}: ${result[4]}× base health.` };
 }
 export function upgradeFortBrigadeStatus(state: GameState, fort: Building): { capacity: number; nextCapacity: number | null; cost: number | null; available: boolean; reason: string } {
   const level = fortBrigadeLevel(fort), capacity = fortBrigadeCapacity(fort);
@@ -94,6 +128,7 @@ export function rebuildFort(state: GameState, fort: Building): { ok: boolean; me
 export function preserveDestroyedFort(state: GameState, fort: Building): boolean {
   if (fort.kind !== 'fort' || fort.hp > 0) return false;
   const data = fortState(state, fort);
+  if (!data.destroyed) recordBuildingDestruction(state, fort);
   data.destroyed = true; data.funded = false;
   delete fort.construction; delete fort.repairerId;
   fort.attackCooldown = 0;
@@ -124,10 +159,7 @@ export function updateForts(state: GameState): void {
   const factions = new Map(state.factions.map(faction => [faction.id, faction]));
   const forts = new Map(state.buildings.filter(building => building.kind === 'fort').map(fort => [fort.id, fort]));
   const rosters = new Map<number, Unit[]>();
-  let nextId = 1;
-  for (const building of state.buildings) nextId = Math.max(nextId, building.id + 1);
   for (const unit of state.units) {
-    nextId = Math.max(nextId, unit.id + 1);
     if (unit.kind !== 'skirmisher' || unit.hp <= 0) continue;
     const fort = forts.get(unit.fort ?? -1), faction = fort && factions.get(fort.faction);
     if (!fort || fort.hp <= 0 || fort.faction !== unit.faction || faction?.defeated) { unit.hp = 0; unit.inside = true; continue; }
@@ -148,7 +180,7 @@ export function updateForts(state: GameState): void {
     if (needed <= 0) continue;
     const exits = constructionEdges(state, fort, true).filter(point => !state.units.some(unit => unit.hp > 0 && !unit.inside && distance(point, unit) < .5));
     const count = Math.min(needed, exits.length);
-    for (let i = 0; i < count; i++) makeSkirmisher(state, fort, exits[i], nextId++);
+    for (let i = 0; i < count; i++) makeSkirmisher(state, fort, exits[i], entityStore(state).allocateId());
     data.nextRecruitAt = state.time + (count ? FORT_UPKEEP_INTERVAL : 2);
   }
 }

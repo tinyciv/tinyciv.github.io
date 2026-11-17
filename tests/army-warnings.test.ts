@@ -28,6 +28,35 @@ describe('authoritative army mobilization warnings', () => {
     state.time = 1; updateMarauderFormations(state, () => true);
     expect(state.armyWarnings).toHaveLength(1);
   });
+  it('throttles reforming marauders for 60 seconds even after display events expire or saves reload', () => {
+    let state = armyWarningFixture();
+    updateMarauderFormations(state, () => true);
+    const leader = state.units.find(u=>u.id===100)!;
+    state.time=10; state.marauderPacks![0].campDefense=true; updateMarauderFormations(state,()=>true);
+    expect(leader.infantryFormation?.active).toBe(false);
+    state.time=11; state.marauderPacks![0].campDefense=false; updateMarauderFormations(state,()=>true);
+    expect(leader.infantryFormation?.active).toBe(true); expect(state.nextArmyWarningId).toBe(1);
+    state=JSON.parse(JSON.stringify(state)); state.armyWarnings=[];
+    state.time=59.99; announceArmyMobilization(state,state.units.find(u=>u.id===100)!,'formation');
+    expect(state.armyWarnings).toHaveLength(0);
+    state.time=60; announceArmyMobilization(state,state.units.find(u=>u.id===100)!,'formation');
+    expect(state.armyWarnings).toHaveLength(1); expect(state.nextArmyWarningId).toBe(2);
+  });
+  it('gives separate marauder armies independent warning windows and does not throttle levies', () => {
+    const state=armyWarningFixture(), leader=state.units.find(u=>u.id===100)!;
+    announceArmyMobilization(state,leader,'formation');
+    const other={...leader,id:200,marauderPack:8};
+    state.marauderPacks!.push({...state.marauderPacks![0],id:8,leaderId:200,lastFormationWarningAt:undefined});
+    announceArmyMobilization(state,other,'formation');
+    announceArmyMobilization(state,leader,'levy');
+    expect(state.armyWarnings).toHaveLength(3);
+  });
+  it('does not consume a warning window when the marauders are out of range', () => {
+    const state=armyWarningFixture(), leader=state.units.find(u=>u.id===100)!;
+    leader.x=250; announceArmyMobilization(state,leader,'formation');
+    leader.x=60; announceArmyMobilization(state,leader,'formation');
+    expect(state.armyWarnings).toHaveLength(1);
+  });
   it('announces a paid levy, but not a rejected repeat or a dismissed levy', () => {
     const state = armyWarningFixture();
     expect(levyPopulation(state, 3, 1)).toMatchObject({ ok: true, count: 3 });

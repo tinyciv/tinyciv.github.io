@@ -3,9 +3,9 @@ import { Container, Texture } from 'pixi.js';
 import { PixiScene } from '../src/game/pixi-scene';
 
 function fixture() {
-    const stage = new Container(), renderer = { render: vi.fn() };
+    const root = new Container(), stage = root.addChild(new Container({ isRenderGroup: true })), renderer = { render: vi.fn() };
     const art = { atlasPages: 0, prune: vi.fn(() => []), beginFrame: vi.fn(), flush: vi.fn() };
-    const scene = Object.assign(Object.create(PixiScene.prototype), { stage, renderer, art, sprites: [], shapes: [], shapeKeys: new WeakMap() }) as PixiScene;
+    const scene = Object.assign(Object.create(PixiScene.prototype), { stage: root, world: stage, renderer, art, sprites: [], shapes: [], sharedShapes: [], contexts: new Map(), shapeKeys: new WeakMap() }) as PixiScene;
     const adds = vi.spyOn(stage, 'addChildAt'), removes = vi.spyOn(stage, 'removeChildren');
     return { scene, stage, adds, removes };
 }
@@ -69,5 +69,38 @@ describe('retained Pixi scene membership', () => {
         frame(2); expect(build).toHaveBeenCalledTimes(2);
         scene.beginFrame(); scene.graphics().circle(0, 0, 2).fill('#fff'); scene.finishFrame();
         frame(2); expect(build).toHaveBeenCalledTimes(3);
+    });
+});
+
+describe('busy atlas retention', () => {
+    it('keeps the display list when all excess atlas pages are still active', () => {
+        const { scene, stage, adds, removes } = fixture();
+        const art = scene.art as unknown as { atlasPages: number; prune: ReturnType<typeof vi.fn> };
+        art.atlasPages = 12;
+        scene.beginFrame(); scene.image(Texture.EMPTY, 0, 0, 1, 1); scene.finishFrame();
+        const children = [...stage.children]; adds.mockClear(); removes.mockClear();
+        scene.beginFrame(); scene.image(Texture.EMPTY, 1, 0, 1, 1); scene.finishFrame();
+        expect(stage.children).toEqual(children);
+        expect(adds).not.toHaveBeenCalled(); expect(removes).not.toHaveBeenCalled();
+    });
+
+    it('detaches retained batches before an evicted source is destroyed', () => {
+        const { scene, stage, removes } = fixture();
+        scene.beginFrame(); scene.image(Texture.EMPTY, 0, 0, 1, 1); scene.finishFrame();
+        const source = { destroy: vi.fn(() => expect(stage.children).toHaveLength(0)) };
+        vi.mocked(scene.art.prune).mockImplementationOnce(before => { before?.(); return [source as never]; });
+        scene.beginFrame();
+        expect(removes).toHaveBeenCalledOnce(); expect(source.destroy).toHaveBeenCalledOnce();
+        scene.image(Texture.EMPTY, 1, 0, 1, 1); scene.finishFrame();
+        expect(stage.children).toHaveLength(1);
+    });
+
+    it('moves retained geometry without rebuilding it and resets reused transforms', () => {
+        const { scene } = fixture(), draw = vi.fn(graphics => graphics.circle(0, 0, 100).stroke('#fff'));
+        scene.beginFrame(); const ring = scene.retainedGraphics(['range', 100], draw); ring.position.set(20, 30); scene.finishFrame();
+        scene.beginFrame(); const moved = scene.retainedGraphics(['range', 100], draw); moved.position.set(25, 35); scene.finishFrame();
+        expect(moved).toBe(ring); expect(draw).toHaveBeenCalledOnce();
+        scene.beginFrame(); const plain = scene.graphics();
+        expect([plain.x, plain.y]).toEqual([0, 0]);
     });
 });

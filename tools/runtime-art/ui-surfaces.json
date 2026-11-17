@@ -1,0 +1,144 @@
+[
+  {
+    "source": "assets/ui/main-menu/backdrop-no-world.png",
+    "output": "assets/runtime/ui/main-menu/backdrop-no-world.webp"
+  },
+  {
+    "source": "assets/ui/main-menu/button.png",
+    "output": "assets/runtime/ui/main-menu/button.png"
+  },
+  {
+    "source": "assets/ui/main-menu/button-active.png",
+    "output": "assets/runtime/ui/main-menu/button-active.png"
+  },
+  {
+    "source": "assets/ui/main-menu/title.webp",
+    "output": "assets/runtime/ui/main-menu/title.webp"
+  },
+  {
+    "source": "assets/ui/main-menu/globe-world.webp",
+    "output": "assets/runtime/ui/main-menu/favicon.webp",
+    "width": 64,
+    "height": 64,
+    "resample": "lanczos",
+    "alias": false
+  },
+  {
+    "source": "assets/ui/forged/panel-frame.png",
+    "output": "assets/runtime/ui/forged/panel-frame.png"
+  },
+  {
+    "source": "assets/ui/forged/panel-frame.png",
+    "output": "assets/runtime/ui/forged/panel-frame-hud.webp",
+    "width": 793,
+    "height": 496,
+    "resample": "lanczos",
+    "alias": false
+  },
+  {
+    "source": "assets/ui/forged/minimap-frame.png",
+    "output": "assets/runtime/ui/forged/minimap-frame.webp",
+    "width": 548,
+    "height": 548,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/forged/hotbar-frame.png",
+    "output": "assets/runtime/ui/forged/hotbar-frame.png"
+  },
+  {
+    "source": "assets/ui/forged/retinue-actions-pixel.png",
+    "output": "assets/runtime/ui/forged/retinue-actions-pixel.webp",
+    "width": 240,
+    "height": 120,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/ui/forged/action-symbols-pixel.png",
+    "output": "assets/runtime/ui/forged/action-symbols-pixel.webp",
+    "width": 276,
+    "height": 92,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/ui/forged/action-symbols.png",
+    "output": "assets/runtime/ui/forged/action-symbols.webp",
+    "width": 192,
+    "height": 192,
+    "resample": "lanczos"
+  },
+  {
+    "source": "assets/ui/panels-reference.png",
+    "output": "assets/runtime/ui/retinue-icon.webp",
+    "crop": [
+      1551,
+      598,
+      40,
+      40
+    ],
+    "alias": false
+  },
+  {
+    "source": "assets/ui/resources-reference.png",
+    "output": "assets/runtime/ui/slate.webp",
+    "crop": [
+      1290,
+      300,
+      500,
+      90
+    ],
+    "alias": false
+  },
+  {
+    "source": "assets/ui/city-panel-walnut.png",
+    "output": "assets/runtime/ui/city-panel-walnut.png"
+  },
+  {
+    "source": "assets/ui/walnut/button.png",
+    "output": "assets/runtime/ui/walnut/button.png"
+  },
+  {
+    "source": "assets/ui/walnut/close.png",
+    "output": "assets/runtime/ui/walnut/close.png"
+  },
+  {
+    "source": "assets/ui/reference-buttons/primary.png",
+    "output": "assets/runtime/ui/reference-buttons/primary.png"
+  },
+  {
+    "source": "assets/ui/reference-buttons/compact.png",
+    "output": "assets/runtime/ui/reference-buttons/compact.png"
+  },
+  {
+    "source": "assets/ui/loading/spinner.png",
+    "output": "assets/runtime/ui/loading/spinner.webp"
+  },
+  {
+    "source": "scenarios/age-of-exploration-map.png",
+    "output": "assets/runtime/scenarios/age-of-exploration-map.webp"
+  },
+  {
+    "source": "scenarios/island-deathmatch-map.png",
+    "output": "assets/runtime/scenarios/island-deathmatch-map.webp"
+  },
+  {
+    "source": "scenarios/musketry-deathmatch-map.png",
+    "output": "assets/runtime/scenarios/musketry-deathmatch-map.webp"
+  },
+  {
+    "source": "scenarios/no-mans-land-map.png",
+    "output": "assets/runtime/scenarios/no-mans-land-map.webp"
+  },
+  {
+    "source": "scenarios/sandbox-map.png",
+    "output": "assets/runtime/scenarios/sandbox-map.webp"
+  },
+  {
+    "source": "scenarios/tutorial-map.png",
+    "output": "assets/runtime/scenarios/tutorial-map.webp"
+  },
+  {
+    "source": "assets/puny-world/overworld.png",
+    "output": "assets/runtime/puny-world/overworld.png"
+  }
+]

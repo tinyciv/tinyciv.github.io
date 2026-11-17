@@ -1,7 +1,13 @@
+import { drawMilitaryAcademy } from './military-academy-art';
+import { drawFieldCannon, drawFoundry } from './field-cannon-art';
+import { constructionSiteLayout, drawConstructionSite } from './construction-art';
+import { drawWhalingPost } from './maritime-art';
+import { drawWarship, drawShipyard } from './warship-art';
+import { drawPavedRoad } from './paved-road-art';
 import { drawSupplyDepot } from './supply-depot-art';
 import { drawEngineerEquipment } from './leader-ability-art';
 import { drawObservationCampfire, drawObservationPost } from './observation-post-art';
-import { buildingWidth, buildingHeight, isFarmKind, type Building, type Overlay, type Unit } from './types';
+import { buildingArtTop, buildingWidth, buildingHeight, isFarmKind, type Building, type Overlay, type Unit } from './types';
 import { drawDirtRoad, type RoadLinks } from './road-sprites';
 import { drawPerson } from './unit-sprites';
 import { drawAuxiliary } from './auxiliary-art';
@@ -10,10 +16,14 @@ import { drawFordStones, type FordAxis } from './ford-art';
 import { drawPalace } from './palace-sprite';
 import { drawFort } from './fort-art';
 import { drawPunyWall } from './wall-sprites';
+import { drawStoneBridge } from './stone-bridge-art';
 import { drawPalisade } from './palisade-art';
 import { drawFarmField } from './farm-art';
 import { drawIrrigation } from './irrigation-art';
-import { drawCoveredWell, drawWoodenHouse, drawWoodenTower } from './wooden-building-art';
+import { drawCoveredWell, drawWoodenHouse } from './wooden-building-art';
+import { drawStoneWallTower } from './stone-wall-tower-art';
+import { drawPalisadeTower } from './palisade-tower-art';
+import type { TowerWallKind } from './wall-towers';
 import { drawMonument } from './monument-art';
 import { drawLibrary } from './library-art';
 import { drawVillageTent } from './village-art';
@@ -23,13 +33,16 @@ import { drawBlacksmith } from './blacksmith-art';
 import { drawHealerShack } from './healer-art';
 import { drawStable } from './cavalry-art';
 import { drawBallista } from './siege-art';
+import { drawCannon } from './cannon-art';
 import { drawGuardPost } from './guard-post-art';
 import { drawWildlife } from './wildlife-art';
 import { drawMerchant } from './merchant-art';
 import { HOUSE_WELL_OFFSET } from './house-wells';
-import { drawDock, drawSailboat } from './naval-art';
+import { dockArtBounds, drawDock, drawRowboat, rowboatOccupant } from './naval-art';
 import { dockFootprint } from './dock';
-import { drawLeaderGalley } from './galley-art';
+import { drawLeaderGalley, drawTradingBoat } from './galley-art';
+import { drawBarbarianGalley } from './barbarian-galley-art';
+import { drawBarracks, drawForum, drawColosseum, drawGranary, drawThermalBath } from './civic-art';
 export { buildingArtTop } from './types';
 
 /** Original Puny scenery and buildings, with shared faction-color masks. */
@@ -47,20 +60,31 @@ function tile(c: Ctx, column: number, row: number, x = 0, y = 0, width = 32, hei
   drawPuny(c, column * 16, row * 16, 16, 16, x, y, width, height);
 }
 
-export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number, time: number, color: string, passenger?: Unit): void {
+export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number, time: number, color: string, passenger?: Unit, firearm = false): void {
+  if (unit.kind === 'fieldCannon') { setup(c, x, y, size); drawFieldCannon(c, unit, time); c.restore(); return; }
+  if (unit.aboardRowboat) {
+    if (!unit.inside) {
+      drawRowboat(c,unit,x,y,size);
+      drawUnit(c,rowboatOccupant(unit),
+        x+size*.2,y-size*.03,size*.6,time,color,undefined,firearm);
+    }
+    return;
+  }
   if (unit.kind === 'levyInfantry' || unit.kind === 'skirmisher' || unit.kind === 'supplyCart') {
     setup(c, x, y, size);
     drawAuxiliary(c, unit, time, color);
     c.restore(); return;
   }
-  if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderGalley(c, unit, passenger, x, y, size, time, color); return; }
-  if (unit.aboardRiverTrade) { if (!unit.inside) drawSailboat(c, unit, x, y, size); return; }
-  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'slinger' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
+  if (unit.warship) { if (!unit.inside) drawWarship(c, unit, passenger, x, y, size, time, color, firearm); return; }
+  if (unit.barbarianGalley) { if (!unit.inside) drawBarbarianGalley(c,unit,passenger,x,y,size,time,color,firearm);return; }
+  if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderGalley(c, unit, passenger, x, y, size, time, color, firearm); return; }
+  if (unit.aboardRiverTrade) { if (!unit.inside) drawTradingBoat(c, unit, x, y, size, time); return; }
+  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'pikeman' && unit.kind !== 'musketman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'slinger' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
   setup(c, x, y, size);
   if (unit.observationPost && !unit.observationPost.retreating) drawObservationCampfire(c, time);
   if (unit.kind === 'boar' || unit.kind === 'marshBird') drawWildlife(c, unit, time);
   else if (unit.kind === 'merchant') drawMerchant(c, unit, time);
-  else drawPerson(c, unit, time, color);
+  else drawPerson(c, unit, time, color, firearm);
   if (unit.engineer && !unit.inside) drawEngineerEquipment(c, unit.facing, unit.attackTime > 0);
   c.restore();
 }
@@ -102,36 +126,44 @@ export function drawFoodCrate(c: Ctx, x: number, y: number, size: number): void 
 
 function constructionSite(c: Ctx, b: Building): void {
   const bounds = b.kind === 'dock' ? dockFootprint(b) : { x: 0, y: 0, width: buildingWidth(b), height: buildingHeight(b) };
-  const width = bounds.width * 32, height = bounds.height * 32;
-  // The same four native wooden pegs mark every site from reservation to
-  // completion. The renderer adds a small countdown over the clear interior.
-  for (const x of [3, width - 7]) for (const y of [2, height - 10])
-    drawPuny(c, 22 * 16, 26 * 16 + 8, 3, 8, x + bounds.x * 32, y + bounds.y * 32, 4, 8);
+  drawConstructionSite(c, bounds);
 }
 
-/** Attached wells use their front-left overlay; attached wooden towers use
- * short supports above the wall. Both retain their logical cell and pixel scale. */
-export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: number, time: number, color: string, links: Connections = NO_CONNECTIONS, gate?: Connections, attached = false): void {
+/** Match the displayed artwork, including centered sites and rotated docks. */
+export function buildingImageAnchor(b: Building, attachedWell = false): { x: number; y: number } {
+  if (b.construction && b.kind !== 'well') {
+    const footprint = b.kind === 'dock' ? dockFootprint(b) : { x: 0, y: 0, width: buildingWidth(b), height: buildingHeight(b) };
+    const site = constructionSiteLayout(footprint);
+    return { x: site.x + site.size / 2, y: site.y };
+  }
+  if (b.kind === 'dock') {
+    const bounds = dockArtBounds(b);
+    return { x: (bounds.x + bounds.width / 2) / 32, y: bounds.y / 32 };
+  }
+  return { x: buildingWidth(b) / 2 + (attachedWell ? HOUSE_WELL_OFFSET.x : 0),
+    y: buildingArtTop(b) + (attachedWell ? HOUSE_WELL_OFFSET.y : 0) };
+}
+
+/** Attached wells use their front-left overlay. Watchtowers use the approved
+ * timber artwork unless supported by a completed stone wall. */
+export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: number, time: number, color: string, links: Connections = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind): void {
   // Farms are four real crop plots. Their bookkeeping anchor has no house,
   // tent, or other solid artwork sitting over the middle field.
   if (isFarmKind(b.kind) && !b.construction) return;
   setup(c, x, y, size);
   const overlay = b.kind === 'well' && attached;
   if (overlay) c.translate(HOUSE_WELL_OFFSET.x * 32, HOUSE_WELL_OFFSET.y * 32);
-  if (b.construction) {
+  if (b.construction && b.kind !== 'well') {
     constructionSite(c, b);
     c.restore(); return;
   }
   switch (b.kind) {
     case 'fort':
-      if (b.fort?.destroyed) {
-        for (const dx of [0, 32]) for (const dy of [0, 32]) {
-          c.save(); c.beginPath(); c.rect(dx, dy + 22, 32, 10); c.clip();
-          c.translate(dx, dy); drawPunyWall(c, NO_CONNECTIONS, undefined); c.restore();
-        }
-      } else drawFort(c, 0, 0, 64, color);
+      if (!b.fort?.destroyed) drawFort(c, 0, 0, 96, color, b.fortLevel ?? 1);
       break;
     case 'supplyDepot': drawSupplyDepot(c, 0, 0, 32); break;
+    case 'shipyard': drawShipyard(c, b, 0, 0, 32); break;
+    case 'whalingPost': if (!drawWhalingPost(c)) drawWoodenHouse(c, b, 0, 0, 64, color); break;
     case 'dock': drawDock(c, b, 0, 0, 32); break;
     case 'palace':
       drawPalace(c, 0, 0, 64, color, b.palaceLevel);
@@ -143,7 +175,8 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
       guardTower(c);
       break;
     case 'woodenTower':
-      drawWoodenTower(c, 0, -24, 32, color, attached);
+      if (towerWall === 'wall') drawStoneWallTower(c, 0, 0, 32, color);
+      else drawPalisadeTower(c, 0, 0, 32, color);
       break;
     case 'well':
       drawCoveredWell(c, 0, 0, 32, time, color);
@@ -154,13 +187,22 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
     case 'observationPost': drawObservationPost(c, time, color); break;
     case 'scoutLodge': drawScoutsLodge(c, 0, 0, 32, color); break;
     case 'library': drawLibrary(c, 0, 0, 32, time, color); break;
+    case 'forum': drawForum(c, 0, 0, 32); break;
+    case 'militaryAcademy': drawMilitaryAcademy(c); break;
+    case 'foundry': drawFoundry(c); break;
+    case 'granary': drawGranary(c, 0, 0, 32); break;
+    case 'thermalBath': drawThermalBath(c, 0, 0, 32, time); break;
+    case 'colosseum': drawColosseum(c, 0, 0, 32); break;
+    case 'barracks': drawBarracks(c, 0, 0, 32); break;
     case 'blacksmith': drawBlacksmith(c, 0, 0, 32); break;
     case 'healerShack': drawHealerShack(c, 0, 0, 32); break;
     case 'ballista': drawBallista(c, b, 0, 0, 32, time); break;
+    case 'siegeCannon': drawCannon(c, b, 0, 0, 32, time); break;
     case 'guardPost': drawGuardPost(c, 0, 0, 32, color); break;
-    case 'road': drawDirtRoad(c, links, b.x, b.y, b.roadStyle); break;
+    case 'road': if (!b.roadPaved || !drawPavedRoad(c, links)) drawDirtRoad(c, links, b.x, b.y, b.roadStyle); break;
     case 'irrigation': drawIrrigation(c, 0, 0, 32, time, links); break;
-    case 'bridge': bridge(c, links); break;
+    // For bridges the renderer passes bank sides in the `gate` slot.
+    case 'bridge': if (!drawStoneBridge(c, links, gate)) bridge(c, links); break;
     case 'wall': drawPunyWall(c, links, gate); break;
     case 'palisade': drawPalisade(c, links, gate); break;
     case 'ruin': break; // Unsupported legacy objects are removed during migration.

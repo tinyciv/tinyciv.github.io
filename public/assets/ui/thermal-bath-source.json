@@ -1,0 +1,8 @@
+{
+  "generator": "Built-in imagegen tool",
+  "source": "/Users/ckrapu/.codex/generated_images/01a1e0b0-1cab-75f0-81ae-cb61e798b60c/exec-f0f4ece3-4dbc-4981-ad59-b9215487c804.png",
+  "prompt": "Use case: stylized-concept. Asset type: tiny strategy-game build-menu icon, a clean painterly illustration, not pixel art. One compact ancient Roman THERMAL BATH: a warm pale stone square bathing basin containing turquoise water, a short ochre terracotta roof at the back, and two clearly readable cream steam curls. Center the complete object with generous transparent padding. Warm parchment highlights, dark walnut outlines, muted brass and terracotta, turquoise focal water. Strong simple silhouette readable at 40 pixels. No text, letters, UI frame, people, landscape, grass, checkerboard, glow, extra objects or pixelated sprite style. Genuinely transparent background.",
+  "transparent": true,
+  "pixelProcessing": "None; copied unchanged.",
+  "sha256": "ac5400ea1f9ba82a5ae059800fde4e8111c65be3654f471b4b1f9b9d2afba933"
+}

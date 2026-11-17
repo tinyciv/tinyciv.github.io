@@ -32,7 +32,7 @@ for (const [name, directory] of Object.entries(roots)) {
     export { courierRouteCacheStats } from './src/game/courier-routes.ts';
     ${name === 'current' ? "export { cityOwnershipStats } from './src/game/city-ownership.ts'; export { cityPlanningStats } from './src/game/governor.ts';" : ''}`, resolveDir: directory },
     bundle: true, platform: 'node', format: 'esm', target: 'node20', outfile });
-  const wasm = await readFile(path.join(directory, 'public/wasm/navigation.wasm'));
+  const wasm = await readFile(path.join(directory, 'public/wasm/simulation.wasm'));
   artifacts[name] = { bundleSha256: hash(await readFile(outfile)), wasmSha256: hash(wasm) };
   modules[name] = await import(pathToFileURL(outfile).href);
   await modules[name].installNavigationWasm(wasm);

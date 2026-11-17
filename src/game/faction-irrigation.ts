@@ -1,5 +1,6 @@
 import { IRRIGATION_RADIUS, IRRIGATION_OFFSETS, isFreshwaterSource, irrigationYieldMultiplier } from './irrigation';
 import { cityOwnership } from './city-ownership';
+import { reliefBuildable } from './relief';
 import { buildingHeight, buildingWidth, isFarmKind, tileAt, WATER, type Building, type GameState, type Point } from './types';
 
 /** Reserve new ditches for dense patches of at least six farm plots.
@@ -18,7 +19,7 @@ export function factionIrrigationSites(state: GameState, palace: Building): Poin
   const candidates = new Map<number, { x: number; y: number; coverage: number }>();
   for (const farm of farms) for (const [dx, dy] of IRRIGATION_OFFSETS) {
     const x = farm.x + dx, y = farm.y + dy, tile = tileAt(state.world, x, y);
-    if (!tile || WATER.has(tile.terrain) || tile.ridge && !tile.stair) continue;
+    if (!tile || WATER.has(tile.terrain) || !reliefBuildable(tile)) continue;
     const key = y * state.world.width + x, candidate = candidates.get(key);
     if (candidate) candidate.coverage++;
     else candidates.set(key, { x, y, coverage: 1 });

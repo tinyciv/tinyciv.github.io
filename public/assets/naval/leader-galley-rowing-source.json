@@ -1,0 +1,149 @@
+{
+  "status": "user-selected-1A",
+  "generator": "PixelLab API v2",
+  "camera": "high top-down, not isometric",
+  "scale": 0.85,
+  "topSpeed": 3.375,
+  "recommended": "1A",
+  "assembly": "Copy the original static central hull; retain generated outer oars and foam. Composite original upright rig. No drawn or synthesized animation pixels.",
+  "assets": [
+    {
+      "tag": "1A-N-r2",
+      "variant": "1A",
+      "direction": "N",
+      "size": 32,
+      "frames": 6,
+      "frameSeconds": 0.14,
+      "endpoint": "/edit-animation-v2",
+      "prompt": "High top-down camera, NOT isometric. Preserve this exact existing six-frame wooden galley rowing animation and its framing. Add clearly visible pale cyan and white WATER SPLASHES next to the tips of the paired oars. Show foam splashing outward at the moment the paddles bite and pull through water, then briefly curling and dissolving on recovery. Foam must appear on BOTH sides of the north-facing boat, around all three paddles, outside the wooden hull. Keep every central hull pixel, deck, bow, stern, silhouette, color, position, direction, scale and camera fixed. Keep the rigid wooden oars attached to their rowlocks. Transparent background, including transparent gaps around the foam; no solid water tile, no sail, mast, people, shadows or extra decoration. Restrained natural chunky two-tone foam clusters. Only edit the animation by adding the water splash effect; preserve the existing motion loop.",
+      "replaces": "1A-N",
+      "packagedTag": "1A-N",
+      "coreRegion": [
+        11,
+        0,
+        21,
+        32
+      ]
+    },
+    {
+      "tag": "1A-E",
+      "variant": "1A",
+      "direction": "E",
+      "size": 32,
+      "frames": 6,
+      "frameSeconds": 0.14,
+      "prompt": "High top-down camera, NOT isometric. Seamless loop of this exact E-facing wooden galley hull rowing in place. Animate its three paired rigid oars around fixed rowlocks: catch, sweep aft, lift, recover. Keep the central wooden hull, deck, bow, stern, camera, scale, position and direction absolutely fixed. Preserve the existing warm tan wood and dark outline. No sail, mast or crew: these are separate upright game layers. Restrained natural rowing: small pale cyan-and-cream splashes clustered precisely at the paddle blades during catch and pull. Foam briefly expands and dissolves during recovery. Quiet realistic motion, existing detail and palette. Transparent background, no solid water plane, no land, no shadow, no camera motion or boat translation. Retain visible water splashes around the oars on transparency. Do not crop oars or splashes. Return smoothly to the starting rowing pose.",
+      "packagedTag": "1A-E",
+      "coreRegion": [
+        0,
+        0,
+        32,
+        21
+      ]
+    },
+    {
+      "tag": "1A-S",
+      "variant": "1A",
+      "direction": "S",
+      "size": 32,
+      "frames": 6,
+      "frameSeconds": 0.14,
+      "prompt": "High top-down camera, NOT isometric. Seamless loop of this exact S-facing wooden galley hull rowing in place. Animate its three paired rigid oars around fixed rowlocks: catch, sweep aft, lift, recover. Keep the central wooden hull, deck, bow, stern, camera, scale, position and direction absolutely fixed. Preserve the existing warm tan wood and dark outline. No sail, mast or crew: these are separate upright game layers. Restrained natural rowing: small pale cyan-and-cream splashes clustered precisely at the paddle blades during catch and pull. Foam briefly expands and dissolves during recovery. Quiet realistic motion, existing detail and palette. Transparent background, no solid water plane, no land, no shadow, no camera motion or boat translation. Retain visible water splashes around the oars on transparency. Do not crop oars or splashes. Return smoothly to the starting rowing pose.",
+      "packagedTag": "1A-S",
+      "coreRegion": [
+        11,
+        0,
+        21,
+        32
+      ]
+    },
+    {
+      "tag": "1A-W",
+      "variant": "1A",
+      "direction": "W",
+      "size": 32,
+      "frames": 6,
+      "frameSeconds": 0.14,
+      "prompt": "High top-down camera, NOT isometric. Seamless loop of this exact W-facing wooden galley hull rowing in place. Animate its three paired rigid oars around fixed rowlocks: catch, sweep aft, lift, recover. Keep the central wooden hull, deck, bow, stern, camera, scale, position and direction absolutely fixed. Preserve the existing warm tan wood and dark outline. No sail, mast or crew: these are separate upright game layers. Restrained natural rowing: small pale cyan-and-cream splashes clustered precisely at the paddle blades during catch and pull. Foam briefly expands and dissolves during recovery. Quiet realistic motion, existing detail and palette. Transparent background, no solid water plane, no land, no shadow, no camera motion or boat translation. Retain visible water splashes around the oars on transparency. Do not crop oars or splashes. Return smoothly to the starting rowing pose.",
+      "packagedTag": "1A-W",
+      "coreRegion": [
+        0,
+        0,
+        32,
+        21
+      ]
+    }
+  ],
+  "files": [
+    {
+      "file": "exports/1A-E-hulls.png",
+      "sha256": "1dd258e705bfbe3d0d72cfc1a92f1653ebf2090af641af595b2ae37dc8c60d99"
+    },
+    {
+      "file": "exports/1A-E-rig.png",
+      "sha256": "f41b2f82813e6b37b7d1f80cf26e5db39222c97e58449eb10cd2d6e38f630d65"
+    },
+    {
+      "file": "exports/1A-E.png",
+      "sha256": "6fb68bf3d18bb75bc086bf630ce73ebf91979fe7716bdd9c1be74705aeb9afce"
+    },
+    {
+      "file": "exports/1A-N-hulls.png",
+      "sha256": "8d69cc0d6033d1a288a41f8d20ff3f7d14a61f5137fadcca8b3af3e81c161676"
+    },
+    {
+      "file": "exports/1A-N-rig.png",
+      "sha256": "2457d2b4a9cf0a4cecb684f815da70306e40f8112dc1e56b4c88c89ac4bc79c8"
+    },
+    {
+      "file": "exports/1A-N.png",
+      "sha256": "b510deabd2ace0eec0bbf8ac478eed1f3da656b8de3510a36ebd64be37b805ef"
+    },
+    {
+      "file": "exports/1A-S-hulls.png",
+      "sha256": "fe58b82897f918d1d88b694469f6321ff66d2b848432c4d9379d05ccbbcaee0e"
+    },
+    {
+      "file": "exports/1A-S-rig.png",
+      "sha256": "3c445ca7582f2756e92e61f49e38da958179416e0295c06c778ac1ab28112455"
+    },
+    {
+      "file": "exports/1A-S.png",
+      "sha256": "54b3d443ff87e82bb60d29772e57172282177eb3f2c805aae07e0974f83b45bb"
+    },
+    {
+      "file": "exports/1A-W-hulls.png",
+      "sha256": "a2165928377b069ef3e24d38b358ca0f151f080262d5e347aab5cc1eeacc19a1"
+    },
+    {
+      "file": "exports/1A-W-rig.png",
+      "sha256": "d4534b6c1d99bbd1219cdabe436c62b94698f73406c5b533fbae70d602b3ef0c"
+    },
+    {
+      "file": "exports/1A-W.png",
+      "sha256": "93561077b024beab5e742d835a0748efa8554abfe048cc6ea7a46ca0b671d299"
+    },
+    {
+      "file": "exports/1A-galley-hulls.png",
+      "sha256": "049561d2dd49f065f788f9c35bd98ec2391aa1ecbc197a0e4db3d07ff30f66f1"
+    },
+    {
+      "file": "exports/1A-galley.png",
+      "sha256": "9410430fb855668f51aa2d8ce839169c6f0c905cf1ac6d6873fe993f8ff92c5c"
+    }
+  ],
+  "selection": "1A \u2014 Restrained paddle splashes",
+  "source": "scratch/2026-11-15-galley-paddle-splashes",
+  "cellSize": [
+    32,
+    32
+  ],
+  "rows": [
+    "N",
+    "E",
+    "S",
+    "W"
+  ],
+  "frameCount": 6,
+  "frameSeconds": 0.14
+}

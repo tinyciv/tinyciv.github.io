@@ -20,9 +20,9 @@
 .army-warning[data-edge="true"] .army-warning-bearing { display: block; }
 .army-warning-tooltip {
   position: absolute; box-sizing: border-box; width: 300px; padding: 9px 12px;
-  color: #fff1ce; background: #111d25f5; border: 1px solid #a98b55; border-radius: 6px;
-  box-shadow: 0 3px 12px #0009; font: 17px/20px var(--game-font); text-align: center;
+  font: 17px/20px var(--game-font); text-align: center;
   pointer-events: none; z-index: 1;
 }
+.army-warning-sign.town-icon { width: 26px; height: 26px; background: var(--town-icon) center / contain no-repeat; image-rendering: pixelated; }
 @keyframes army-warning-flash { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .army-warning-sign { animation: none; } }

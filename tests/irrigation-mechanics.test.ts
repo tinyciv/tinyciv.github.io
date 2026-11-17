@@ -71,7 +71,7 @@ describe('irrigation coverage and harvests', () => {
     expect(reads).toBe(1);
     state.time = .1;
     expect(prepareIrrigation(state).coverage).toBe(mask);
-    expect(reads).toBe(2);
+    expect(reads).toBe(1); // Time alone does not change ditch coverage.
   });
 
   it('keeps a crop cell sharing a ditch beside a road and doubles actual new harvests', () => {

@@ -11,6 +11,7 @@ export function multiplayerView(state: GameState, faction: number): GameState {
     return { ...state, units: observationUnitsForViewer(state.units, faction), playerFaction: faction,
       selected: null, selectedType: null, buildMode: null, diplomacy: null,
       armyWarnings: state.armyWarnings?.filter(warning => warning.recipients.includes(faction)),
+      quests: state.quests?.filter(quest => quest.actor === faction),
       victory: state.multiplayer!.winner === faction,
       multiplayer: { ...state.multiplayer!, inputs: {}, controls: { [faction]: { ...control, fog: state.fog } } } };
   });

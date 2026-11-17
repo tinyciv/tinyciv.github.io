@@ -1,3 +1,5 @@
+import { rustEngine } from '../game/rust-engine';
+import { planNativeRivers, riverResistance } from './river-native';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type Tile, type World } from '../game/types';
 import { buildDrainage, type Drainage } from './hydrology';
@@ -72,13 +74,9 @@ function windingDrainage(tiles: Tile[], width: number, height: number, seed: str
   buildDrainage(tiles, width, height);
   const count = tiles.length, directions = new Int32Array(count).fill(-1);
   const distance = new Float64Array(count).fill(Infinity), expanded = new Uint8Array(count);
-  const noise = createNoise2D(environmentRandom(`${seed}:river-route-resistance`)), cost = new Float64Array(count);
+  const cost = riverResistance(width, height, seed, meander);
   const lakeGroup = new Int32Array(count).fill(-1), lakes: number[][] = [];
   for (let cell = 0; cell < count; cell++) {
-    const x = cell % width, y = Math.floor(cell / width);
-    const wx = x + noise(x * .049 + 81, y * .049 - 31) * 5;
-    const wy = y + noise(x * .049 - 54, y * .049 + 92) * 5;
-    cost[cell] = .25 + Math.exp(noise(wx * .12 + 37, wy * .12 - 64) * 3.4 * meander);
     if (tiles[cell].terrain !== 'lake' || lakeGroup[cell] >= 0) continue;
     const group = lakes.length, cells = [cell]; lakeGroup[cell] = group;
     for (let n = 0; n < cells.length; n++) adjacent(cells[n], width, height, next => {
@@ -221,38 +219,15 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
   const { tiles, width, height } = world, count = tiles.length;
   const originalRelief = Uint8Array.from(tiles, tile => Number(!!tile.ridge || !!tile.relief));
   const virtual = planningSurface(world, parameters), drainage = windingDrainage(virtual, width, height, world.seed, parameters.riverMeander);
+  const landCount = tiles.reduce((sum, tile) => sum + Number(!sea(tile)), 0);
+  const developmentScale = Math.min(width, height) < 128 ? Math.min(1, width * height / (128 * 128)) : 1;
+  const target = Math.max(2, Math.round(parameters.riverCount * Math.min(1, landCount / 7000) * developmentScale));
+  const plan = planNativeRivers(world, drainage, target), skeleton = plan.skeleton;
   const parents: number[][] = Array.from({ length: count }, () => []);
   for (let cell = 0; cell < count; cell++) {
-    tiles[cell].drainage = drainage.directions[cell]; tiles[cell].flow = drainage.flow[cell];
     delete tiles[cell].channel; delete tiles[cell].channelWidth; delete tiles[cell].channelNext;
     const next = drainage.directions[cell]; if (next >= 0) parents[next].push(cell);
   }
-  const candidates = tiles.map((tile, cell) => ({ cell, flow: drainage.flow[cell] }))
-    .filter(({ cell, flow }) => !sea(tiles[cell]) && drainage.directions[cell] >= 0
-      && sea(tiles[drainage.directions[cell]]) && flow >= 24)
-    .sort((a, b) => b.flow - a.flow);
-  const landCount = tiles.reduce((sum, tile) => sum + Number(!sea(tile)), 0);
-  // Development maps reserve the same eleven starting settlements in much
-  // less land. Scale their watershed count; normal-sized worlds are unchanged.
-  const developmentScale = Math.min(width, height) < 128 ? Math.min(1, width * height / (128 * 128)) : 1;
-  const target = Math.max(2, Math.round(parameters.riverCount * Math.min(1, landCount / 7000) * developmentScale));
-  const selected = new Uint8Array(count), watershedRoots: number[] = [];
-  for (const { cell } of candidates) {
-    if (watershedRoots.length >= target) break;
-    const near = watershedRoots.some(other => Math.hypot(other % width - cell % width,
-      Math.floor(other / width) - Math.floor(cell / width)) < 9);
-    if (near && watershedRoots.length > 1) continue;
-    watershedRoots.push(cell);
-    const queue = [cell]; selected[cell] = 1;
-    for (let n = 0; n < queue.length; n++) for (const parent of parents[queue[n]]) if (!selected[parent]) {
-      selected[parent] = 1; queue.push(parent);
-    }
-  }
-  // Hillslope runoff stays implicit. Visible channels begin only once enough
-  // discharge has accumulated for a full one-tile river.
-  const skeleton = new Uint8Array(count);
-  for (let cell = 0; cell < count; cell++) if (selected[cell] && drainage.flow[cell] >= RIVER_DISCHARGE.tributary
-    && !sea(tiles[cell])) skeleton[cell] = 1;
   // Every reservoir keeps its one real outlet, including lakes outside the
   // selected major catchments. Marking a lake never replaces its terrain.
   for (let cell = 0; cell < count; cell++) if (tiles[cell].terrain === 'lake') {
@@ -302,7 +277,7 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
       // larger channel nearby. Major reaches never begin or end at a lake.
       const kind = q < RIVER_DISCHARGE.main || lakeMargin[cell] ? 2 : 3;
       channel[cell] = kind;
-      widthTiles[cell] = kind === 2 ? 1 : Math.max(2, Math.min(4, 2 * Math.sqrt(q / RIVER_DISCHARGE.main) * widthScale));
+      widthTiles[cell] = rustEngine.river_channel_width(q, widthScale, lakeMargin[cell]);
       tiles[cell].channel = kind === 2 ? 'tributary' : 'main';
       tiles[cell].channelWidth = widthTiles[cell]; tiles[cell].channelNext = drainage.directions[cell];
     }
@@ -328,7 +303,7 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
         paint(elbow);
       }
       if (channel[cell] === 2) continue;
-      // Quantize the bankfull width to 2–4 map cells. Even widths sit halfway
+      // Quantize the bankfull width to 2–5 map cells. Even widths sit halfway
       // between cell centers; a radius2 disk at an integer center was actually
       // five cells wide, despite being labelled as a four-cell channel.
       const diameter = Math.round(widthTiles[cell]), offset = diameter % 2 ? 0 : .5;
@@ -359,6 +334,13 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
     classify();
     if (pass > 0 && paintedCount === beforePaint) break;
   }
+  for (const cell of plan.cutoffs) {
+    const tile = tiles[cell];
+    if (tile.terrain === 'river') continue;
+    tile.terrain = 'lake'; tile.overlay = 'none'; tile.oxbow = true;
+    delete tile.ridge; delete tile.ridgeTier; delete tile.stair; delete tile.relief;
+    delete tile.palm; delete tile.beach;
+  }
   const finalOrder = graphOrder(tiles);
   for (let n = finalOrder.length - 1; n >= 0; n--) {
     const cell = finalOrder[n], next = tiles[cell].drainage ?? -1;
@@ -377,7 +359,7 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
     diagnostics: { tributaries: channel.filter(kind => kind === 2).length,
       main: channel.filter(kind => kind === 3).length, sources: sources.length,
       confluences: Array.from(channel.keys()).filter(cell => channel[cell] && parents[cell].filter(parent => channel[parent]).length > 1).length,
-      catchments: watershedRoots.length } };
+      catchments: plan.catchments } };
 }
 
 /** Place crossings independently along each tributary, after canyon banks

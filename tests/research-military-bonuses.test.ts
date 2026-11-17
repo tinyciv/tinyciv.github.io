@@ -56,8 +56,8 @@ describe('Reinforced Defenses', () => {
     expect(buildAt(state, 'wall', 12, 10).ok).toBe(true);
     expect(buildAt(state, 'woodenTower', 13, 10).ok).toBe(true);
     const wall = state.buildings.find(b => b.kind === 'wall')!, tower = state.buildings.find(b => b.kind === 'woodenTower')!;
-    expect(wall).toMatchObject({ maxHp: 2925, hp: 2925, defenseBaseMaxHp: 225 });
-    expect(tower).toMatchObject({ maxHp: 780, hp: 780, defenseBaseMaxHp: 600 });
+    expect(wall).toMatchObject({ maxHp: 2925, hp: 1, defenseBaseMaxHp: 225 });
+    expect(tower).toMatchObject({ maxHp: 780, hp: 1, defenseBaseMaxHp: 600 });
   });
 });
 

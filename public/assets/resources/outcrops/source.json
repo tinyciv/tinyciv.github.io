@@ -1,0 +1,172 @@
+{
+  "purpose": "Natural connected resource outcrops and nonblocking decorative loose rocks.",
+  "texture_source": "stories/assets/rock-texture-overlays/source.json",
+  "selected_texture": "1-stone.png (coarse 64px source)",
+  "copper_overlay": "Shared 64px copper overlay",
+  "iron_overlay": "Shared 64px iron overlay",
+  "loose_rocks": {
+    "provider": "PixelLab API v2",
+    "job_id": "88451b27-3a58-4be1-8c28-7a5d0769936e",
+    "request": {
+      "description": "A transparent 64 by 32 pixel sprite sheet, exactly 4 columns and 2 rows of 16 by 16 cells. In the CENTER of each cell place ONE different small natural gray loose stone, all completely separate and surrounded by transparency. Top row: four tiny 3-5 pixel wide pebbles. Bottom row: four 6-9 pixel wide small rocks, each 4-7 pixels tall. Eight stones total, one per cell. Rough rounded angular gray rocks with broad simple light gray top face, medium gray side and dark charcoal outline, lighting from upper left. Old-school strategy game native coarse pixel art, muted gray palette matching the supplied packed rock texture. Irregular natural silhouettes, different widths and facets, some flat chips and some rounded stones. No grass, no dirt, no base, no scene, no text, no grid lines, no large boulders, no shadows outside the sprite. Keep each stone inside its cell with generous transparent padding.",
+      "image_size": {
+        "width": 64,
+        "height": 32
+      },
+      "no_background": true,
+      "reference_images": [
+        {
+          "image": {
+            "type": "base64",
+            "base64": "<image bytes>",
+            "format": "png"
+          },
+          "size": {
+            "width": 64,
+            "height": 64
+          },
+          "usage_description": "Match these gray stone colors, coarse shaded stone faces and pixel scale; create small detached rocks from this material."
+        }
+      ],
+      "seed": 131300
+    },
+    "processing": "Crop the eight alpha components, reduce to tiny 5x4 pebbles / 9x7 rocks by nearest neighbor, center in 16px cells. No painted pixels.",
+    "frames": [
+      {
+        "frame": 0,
+        "source_rect": [
+          9,
+          8,
+          14,
+          12
+        ],
+        "native_size": [
+          5,
+          4
+        ]
+      },
+      {
+        "frame": 1,
+        "source_rect": [
+          22,
+          7,
+          27,
+          12
+        ],
+        "native_size": [
+          4,
+          4
+        ]
+      },
+      {
+        "frame": 2,
+        "source_rect": [
+          35,
+          7,
+          42,
+          13
+        ],
+        "native_size": [
+          5,
+          4
+        ]
+      },
+      {
+        "frame": 3,
+        "source_rect": [
+          49,
+          7,
+          55,
+          13
+        ],
+        "native_size": [
+          4,
+          4
+        ]
+      },
+      {
+        "frame": 4,
+        "source_rect": [
+          6,
+          17,
+          17,
+          27
+        ],
+        "native_size": [
+          8,
+          7
+        ]
+      },
+      {
+        "frame": 5,
+        "source_rect": [
+          20,
+          18,
+          30,
+          27
+        ],
+        "native_size": [
+          8,
+          7
+        ]
+      },
+      {
+        "frame": 6,
+        "source_rect": [
+          33,
+          18,
+          43,
+          27
+        ],
+        "native_size": [
+          8,
+          7
+        ]
+      },
+      {
+        "frame": 7,
+        "source_rect": [
+          47,
+          18,
+          57,
+          27
+        ],
+        "native_size": [
+          8,
+          7
+        ]
+      }
+    ]
+  },
+  "files": {
+    "iron-overlay.png": "28d1c2e1ce35638ac1b60dfa36601064e20ae3ed2c376359dd2d253806a95779",
+    "stone.png": "7e65fbb692633951f8950ddd0ddb727b11765b852ffdda6bfd003dc369b833eb",
+    "copper-overlay.png": "b923b2eb907f5f0750a31839413d1c8c67227bc630462fe2dc34481201a7be92",
+    "loose-rocks.png": "bf67930d6c05724d4c2f966974f3e44fe66b7cda92dec7c807ec3d345884309f"
+  },
+  "mine_door": {
+    "source": "public/assets/resources/resource-objects.png",
+    "source_sha256": "c93424d4cc1493ad0032439b7743314630eaf976c7cd5b6a317003506437ee38",
+    "license_manifest": "public/assets/resources/resource-objects-source.json (copper-mine, Shade MiniWorld, CC0-1.0)",
+    "frame_rect": [
+      3,
+      24,
+      10,
+      8
+    ],
+    "tunnel_rect": [
+      6,
+      28,
+      4,
+      2
+    ],
+    "tunnel_destination_inside_frame": [
+      2,
+      4,
+      6,
+      4
+    ],
+    "processing": "Runtime extraction only: preserve warm timber pixels; remove the old rock surround and gray jambs/sill; extend the original dark tunnel between the posts. Original PNG is unchanged.",
+    "placement": "Native x=3; fit the complete 10x8 frame inside the current contour towards its southern edge. Cache vertical placement with the contour; fully surrounded cells use y=7."
+  }
+}

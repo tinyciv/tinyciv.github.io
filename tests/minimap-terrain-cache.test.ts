@@ -21,6 +21,20 @@ function fixture() {
 }
 
 describe('cached minimap terrain', () => {
+    it('observes only journaled cells for a local terrain appearance change', () => {
+        const { state, renderer, fills } = fixture();
+        let reads = 0;
+        for (const tile of state.world.tiles) {
+            const terrain = tile.terrain;
+            Object.defineProperty(tile, 'terrain', { get() { reads++; return terrain; } });
+        }
+        renderer.prepare(state); fills.length = 0; reads = 0;
+        state.world.tiles[8].beach = true; markWorldChanged(state.world, 'appearance', [8]);
+        renderer.prepare(state);
+        expect(fills).toEqual([{ x: 2, y: 1, color: '#c9b266' }]);
+        expect(reads).toBeLessThan(3);
+    });
+
     it('keeps unchanged terrain pixels on economic revisions and repaints cleared trees', () => {
         const { state, renderer, fills, canvas } = fixture();
         state.world.tiles[8].overlay = 'forest';
@@ -55,5 +69,18 @@ describe('cached minimap terrain', () => {
         renderer.prepare(state);
         expect(gpu.invalidateTerrain).not.toHaveBeenCalled();
         expect(gpu.resetWorld).not.toHaveBeenCalled();
+    });
+
+    it('invalidates separated painted regions without dirtying the GPU chunks between them', () => {
+        const { state, renderer } = fixture();
+        const gpu = { resetWorld: vi.fn(), invalidateTerrain: vi.fn() };
+        Object.assign(renderer, { gpu, terrain: { width: 6 * 32, height: 5 * 32 } });
+        vi.mocked(paintTerrain).mockReturnValueOnce({ x: 0, y: 0, width: 6, height: 5, regions: [
+            { x: 0, y: 0, width: 2, height: 2 }, { x: 4, y: 3, width: 2, height: 2 },
+        ] });
+        renderer.prepare(state);
+        expect(gpu.invalidateTerrain.mock.calls).toEqual([
+            [{ x: 0, y: 0, width: 64, height: 64 }], [{ x: 128, y: 96, width: 64, height: 64 }],
+        ]);
     });
 });

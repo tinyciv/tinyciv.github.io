@@ -1,0 +1,487 @@
+{
+  "id": "age-of-exploration",
+  "width": 320,
+  "height": 280,
+  "simulatedSeconds": 6710.000000005579,
+  "wallSeconds": 40.370369875,
+  "bytes": 4793403,
+  "cities": [
+    {
+      "id": 1,
+      "faction": 0,
+      "population": 221,
+      "housing": 221,
+      "food": 157.74666666666684
+    },
+    {
+      "id": 133,
+      "faction": 1,
+      "population": 269,
+      "housing": 269,
+      "food": 193.79333333333363
+    },
+    {
+      "id": 265,
+      "faction": 2,
+      "population": 205,
+      "housing": 205,
+      "food": 71.31999999999994
+    },
+    {
+      "id": 395,
+      "faction": 3,
+      "population": 355,
+      "housing": 355,
+      "food": 167.62000000000066
+    }
+  ],
+  "agriculture": {
+    "orchards": 0,
+    "completedDitches": 716,
+    "irrigatedFields": 1257,
+    "fields": 1652,
+    "orchardsRemoved": 0,
+    "ditchesOrdered": 182,
+    "farmsOrdered": 0,
+    "simulatedSeconds": 20.00000000007276
+  },
+  "iron": [
+    {
+      "faction": 0,
+      "developed": false
+    },
+    {
+      "faction": 1,
+      "developed": false
+    },
+    {
+      "faction": 2,
+      "developed": false
+    },
+    {
+      "faction": 3,
+      "developed": false
+    }
+  ],
+  "bundleSha256": "0bbd7ad0a355a206980bb4616b7ba88784d8ae00cb2e0027cb959515b49fa11d",
+  "wasmSha256": "6b06e6f0a6077645ab51c4ae1deda07e27216dd0a29f19cff1241bddd4705b8f",
+  "access": {
+    "remove": [],
+    "landmasses": 268,
+    "regions": 268,
+    "remaining": 268,
+    "unreachable": 0,
+    "starts": [
+      {
+        "x": 162.5,
+        "y": 43.5
+      },
+      {
+        "x": 56.5,
+        "y": 123.5
+      },
+      {
+        "x": 96.5,
+        "y": 61.5
+      },
+      {
+        "x": 203.5,
+        "y": 192.5
+      }
+    ]
+  },
+  "refinementBundleSha256": "8d17d54b9af5f099f7100fabbda4953c133e4f3cbd540236a020ed1f013a666b",
+  "refinementWasmSha256": "e227301ee9127717aca424ccc01d91ad24e95c701702788ff1e69221b2fa908e",
+  "layout": {
+    "moved": [],
+    "unmoved": [],
+    "roadsOrdered": 38,
+    "yardsRebuilt": 0,
+    "coastalClaims": 3,
+    "agriculture": {
+      "orchards": 0,
+      "completedDitches": 716,
+      "irrigatedFields": 1257,
+      "fields": 1652,
+      "orchardsRemoved": 0,
+      "ditchesOrdered": 182,
+      "farmsOrdered": 0,
+      "simulatedSeconds": 20.00000000007276
+    },
+    "simulatedSeconds": 230.00000000083674
+  },
+  "equipmentRefresh": {
+    "date": "2026-11-16",
+    "musketmanRange": 6.5,
+    "preservedCannonQuotas": false,
+    "simulationAdvanced": false,
+    "wasmSha256": "6ffd7a916cfc62c6de75a17ad4561b4000ecdeb22213421f02e452c6e6169630"
+  },
+  "attackBalanceRefresh": {
+    "date": "2026-11-16",
+    "musketmenUpdated": 8,
+    "attackMultiplier": 0.75,
+    "baseAttackBefore": 34,
+    "baseAttackAfter": 25.5,
+    "equipmentPreserved": true,
+    "simulationAdvanced": false
+  },
+  "streets": {
+    "before": [
+      {
+        "faction": 0,
+        "blockers": [
+          924,
+          985,
+          993
+        ],
+        "blockedRoads": [],
+        "missingRing": [
+          14558,
+          14559,
+          15519
+        ],
+        "unserved": [
+          1320
+        ],
+        "roadRegions": 5,
+        "expectedRoadRegions": 1
+      },
+      {
+        "faction": 1,
+        "blockers": [
+          923,
+          989,
+          1014
+        ],
+        "blockedRoads": [],
+        "missingRing": [
+          38763,
+          38764,
+          39082,
+          39402
+        ],
+        "unserved": [
+          5765
+        ],
+        "roadRegions": 4,
+        "expectedRoadRegions": 2
+      },
+      {
+        "faction": 2,
+        "blockers": [
+          925,
+          986,
+          1015
+        ],
+        "blockedRoads": [],
+        "missingRing": [
+          18661,
+          18662,
+          18980,
+          19300
+        ],
+        "unserved": [],
+        "roadRegions": 5,
+        "expectedRoadRegions": 2
+      },
+      {
+        "faction": 3,
+        "blockers": [
+          500,
+          928,
+          988,
+          1005
+        ],
+        "blockedRoads": [
+          64515,
+          65155,
+          65156,
+          65157
+        ],
+        "missingRing": [
+          62910,
+          62911
+        ],
+        "unserved": [
+          5756,
+          5762,
+          5768,
+          5776
+        ],
+        "roadRegions": 7,
+        "expectedRoadRegions": 1
+      }
+    ],
+    "after": [
+      {
+        "faction": 0,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      },
+      {
+        "faction": 1,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 2,
+        "expectedRoadRegions": 2
+      },
+      {
+        "faction": 2,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 2,
+        "expectedRoadRegions": 2
+      },
+      {
+        "faction": 3,
+        "blockers": [],
+        "blockedRoads": [],
+        "missingRing": [],
+        "unserved": [],
+        "roadRegions": 1,
+        "expectedRoadRegions": 1
+      }
+    ],
+    "moved": [
+      {
+        "id": 924,
+        "kind": "guardPost",
+        "from": {
+          "x": 158,
+          "y": 45
+        },
+        "to": {
+          "x": 153,
+          "y": 47
+        }
+      },
+      {
+        "id": 985,
+        "kind": "well",
+        "from": {
+          "x": 159,
+          "y": 45
+        },
+        "to": {
+          "x": 153,
+          "y": 49
+        }
+      },
+      {
+        "id": 993,
+        "kind": "house",
+        "from": {
+          "x": 159,
+          "y": 45
+        },
+        "to": {
+          "x": 153,
+          "y": 49
+        }
+      },
+      {
+        "id": 923,
+        "kind": "guardPost",
+        "from": {
+          "x": 43,
+          "y": 121
+        },
+        "to": {
+          "x": 36,
+          "y": 116
+        }
+      },
+      {
+        "id": 989,
+        "kind": "well",
+        "from": {
+          "x": 42,
+          "y": 123
+        },
+        "to": {
+          "x": 38,
+          "y": 128
+        }
+      },
+      {
+        "id": 1014,
+        "kind": "house",
+        "from": {
+          "x": 42,
+          "y": 123
+        },
+        "to": {
+          "x": 38,
+          "y": 128
+        }
+      },
+      {
+        "id": 925,
+        "kind": "guardPost",
+        "from": {
+          "x": 101,
+          "y": 58
+        },
+        "to": {
+          "x": 109,
+          "y": 61
+        }
+      },
+      {
+        "id": 986,
+        "kind": "well",
+        "from": {
+          "x": 100,
+          "y": 60
+        },
+        "to": {
+          "x": 108,
+          "y": 66
+        }
+      },
+      {
+        "id": 1015,
+        "kind": "house",
+        "from": {
+          "x": 100,
+          "y": 60
+        },
+        "to": {
+          "x": 108,
+          "y": 66
+        }
+      },
+      {
+        "id": 500,
+        "kind": "palisade",
+        "from": {
+          "x": 195,
+          "y": 201
+        },
+        "to": {
+          "x": 195,
+          "y": 209
+        }
+      },
+      {
+        "id": 928,
+        "kind": "guardPost",
+        "from": {
+          "x": 190,
+          "y": 196
+        },
+        "to": {
+          "x": 186,
+          "y": 189
+        }
+      },
+      {
+        "id": 988,
+        "kind": "well",
+        "from": {
+          "x": 191,
+          "y": 196
+        },
+        "to": {
+          "x": 187,
+          "y": 187
+        }
+      },
+      {
+        "id": 1005,
+        "kind": "house",
+        "from": {
+          "x": 191,
+          "y": 196
+        },
+        "to": {
+          "x": 187,
+          "y": 187
+        }
+      }
+    ],
+    "removedRoads": [
+      505,
+      953,
+      957,
+      975
+    ],
+    "roadsAdded": 77,
+    "farmsMoved": [
+      3439,
+      3416,
+      2278,
+      2387,
+      2667,
+      3289,
+      3341,
+      3420,
+      3432,
+      46,
+      2001,
+      77,
+      2125,
+      1384,
+      2857,
+      2052,
+      2051,
+      1505,
+      203,
+      2460,
+      2580,
+      1935,
+      3092,
+      1333,
+      2221,
+      2374,
+      186,
+      196,
+      2253,
+      2254,
+      2351,
+      1246,
+      348,
+      1706,
+      1417,
+      2826,
+      341,
+      1163,
+      1651,
+      1645,
+      1819,
+      1919,
+      2010,
+      1603,
+      1694,
+      1633,
+      2451,
+      1783,
+      1789,
+      444,
+      469,
+      1744,
+      2621,
+      1684,
+      2747,
+      3634,
+      1256,
+      451,
+      461,
+      464,
+      1641,
+      479,
+      1217,
+      1156
+    ],
+    "farmsCleared": []
+  }
+}

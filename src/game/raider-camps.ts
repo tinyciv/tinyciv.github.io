@@ -1,4 +1,8 @@
 import { entityStore } from './entity-store';
+import { scenarioStructuresAllowed } from './scenario-access-native';
+import { raiderMayAttack } from './raider-aggression';
+import { playerFaction } from './player-context';
+import { simRandom } from './sim-handle';
 import { banditIntensity, banditPopulationCap, banditSpawnDeadline } from './bandit-intensity';
 import { markWorldChanged } from './world-revisions';
 import { constructionEdges } from './builders';
@@ -42,13 +46,6 @@ function refreshCampRoadStyles(state: GameState): boolean {
   return changed;
 }
 
-function random(state: GameState): number {
-  let value = state.rngState += 0x6D2B79F5;
-  value = Math.imul(value ^ value >>> 15, value | 1);
-  value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-  state.rngState >>>= 0;
-  return ((value ^ value >>> 14) >>> 0) / 4294967296;
-}
 
 export const raiderCampCenter = (camp: RaiderCamp): Point => ({ x: camp.x + camp.width / 2, y: camp.y + camp.height / 2 });
 export function raiderCampActive(state: GameState, camp: RaiderCamp): boolean {
@@ -74,7 +71,7 @@ export function raiderCampRefuge(camp: RaiderCamp): Point {
 }
 
 export function raiderCampWarning(state: GameState, camp: RaiderCamp): boolean {
-  return banditIntensity(state) > 0 && raiderCampActive(state, camp) && camp.nextRaidAt - state.time <= RAIDER_WARNING_SECONDS && state.time <= camp.nextRaidAt;
+  return raiderMayAttack(state, playerFaction(state), camp.id) && raiderCampActive(state, camp) && camp.nextRaidAt - state.time <= RAIDER_WARNING_SECONDS && state.time <= camp.nextRaidAt;
 }
 
 /** Establish the initial population once. Unfilled slots and destroyed camps
@@ -171,7 +168,7 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
     const point = { x, y }, d = Math.min(...origins.map(origin => distance(point, origin))), cell = y * width + x;
     if (d < 21 || d > 65 || !Number.isFinite(travel[cell]) || blocked.has(cell)
       || !isBuildable(state.world, x, y, { preserveTrees: false })) continue;
-    const jitter = random(state);
+    const jitter = simRandom(state);
     candidates.push({ point, score: Math.abs(d - 32) + Math.abs(travel[cell] - 20) * .35 + jitter * 3,
       seed: Math.floor(jitter * 0x7fffffff) });
   }
@@ -180,7 +177,7 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
   const failedSizes = new Set<CampSize>();
   let campId = Math.max(0, ...state.raiderCamps!.map(camp => camp.id),
     ...state.buildings.map(building => building.raiderCamp ?? 0), ...(state.marauderPacks ?? []).map(pack => pack.raiderCamp ?? 0));
-  let nextId = Math.max(0, ...state.units.map(unit => unit.id), ...state.buildings.map(building => building.id));
+  let nextId = entityStore(state).peekId() - 1;
   while (spawned < wanted) {
     const counts: Record<CampSize, number> = { small: 0, medium: 0, large: 0 };
     for (const camp of state.raiderCamps!) if (raiderCampActive(state, camp)) counts[camp.size]++;
@@ -216,13 +213,15 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
           hp, maxHp: hp, armor: kind === 'woodenTower' ? 6 : 2, capacity: 0 };
         pending.push(building); return building;
       };
-      // Narrow dirt roads layered onto palisades retain faction-controlled gates.
-      for (const p of [...layout.walls, ...layout.gates]) add(p.tier === 1 ? 'wall' : 'palisade', p.x, p.y);
+      // Scenarios keep physical openings usable by every Leader. Ordinary
+      // worlds retain their faction-controlled road-and-palisade gates.
+      for (const p of [...layout.walls, ...(state.world.scenario ? [] : layout.gates)]) add(p.tier === 1 ? 'wall' : 'palisade', p.x, p.y);
       const roads = new Map([...layout.paths, ...layout.gates].map(p => [p.y * width + p.x, p]));
       for (const p of roads.values()) add('road', p.x, p.y).roadStyle = 'trail';
       const coreTowers: number[] = [];
       for (const p of layout.towers) { const tower = add('woodenTower', p.x, p.y); if (p.tier === 1) coreTowers.push(tower.id); }
       for (const p of layout.tents) houses.push(add('villageTent', p.x, p.y).id);
+      if (!scenarioStructuresAllowed(state,pending)) continue;
       // Local access can lead into a peninsula whose only exit the camp itself
       // closes. Probe the complete proposed structures before committing them,
       // and preserve the routes of camps already placed during this search.
@@ -233,7 +232,7 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
         && Number.isFinite(travel[camp.gate.y * width + camp.gate.x])).map(camp => camp.gate)];
       if (gates.some(point => !Number.isFinite(connected[point.y * width + point.x]))) continue;
       campId = id; nextId += pending.length;
-      const camp: RaiderCamp = { id, name: NAMES[Math.floor(random(state) * NAMES.length)], size, ...bounds,
+      const camp: RaiderCamp = { id, name: NAMES[Math.floor(simRandom(state) * NAMES.length)], size, ...bounds,
         gate: { x: gate.x, y: gate.y }, gates: layout.gates.map(({ x, y }) => ({ x, y })),
         signs: layout.signs.map(({ x, y }) => ({ x, y })), houses, coreTowers,
         refuge: { x: layout.refuge.x + .5, y: layout.refuge.y + .5 }, tentCapacity: houses.length,

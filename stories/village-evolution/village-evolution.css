@@ -1,0 +1,19 @@
+/* Village evolution stories. All text uses Pixel Operator. */
+.ve-root { font-family: 'Pixel Operator', monospace; font-size: 16px; color: #f3ecd2; background: #101614; padding: 12px; display: inline-flex; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 10px; min-width: 600px; }
+.ve-title { font-size: 20px; line-height: 1.1; }
+.ve-subtitle { font-size: 14px; opacity: .8; }
+.ve-progress { font-size: 16px; color: #d6c48f; }
+.ve-progress[data-error] { color: #ff9c86; }
+.ve-live { position: relative; overflow: hidden; background: #000; }
+.ve-strip { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.ve-grid { display: grid; grid-template-columns: max-content repeat(5, max-content); gap: 8px 8px; align-items: start; }
+.ve-row-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 18px; text-align: center; align-self: center; }
+.ve-frame { margin: 0; display: flex; flex-direction: column; gap: 4px; background: #1b2420; padding: 6px; }
+.ve-frame canvas { display: block; image-rendering: pixelated; }
+.ve-frame figcaption { display: flex; flex-direction: column; gap: 1px; font-size: 14px; line-height: 16px; }
+.ve-frame figcaption span:first-child { font-size: 16px; color: #ffe2a0; }
+
+.ve-ui { display: inline-flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.ve-ui-world { position: relative; }
+.ve-ui-panel-host { position: absolute; inset: 0; pointer-events: none; }
+.ve-ui-panel-host > * { pointer-events: auto; }

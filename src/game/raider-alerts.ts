@@ -1,4 +1,5 @@
 import { canRallyFromRout } from './battle-morale';
+import { provokeRaiderCamp, raiderCanTarget } from './raider-aggression';
 import { entityStore } from './entity-store';
 import { isRaiderEnemyFaction } from './raid-targeting';
 import { releaseRaiderReserve } from './raider-activity';
@@ -24,6 +25,7 @@ export function notifyRaiderAttack(state: GameState, victim: Unit | Building,
   if (!frame) { frame = { alerts: new WeakMap(), nextByGroup: new Map() }; alarms.set(state, frame); }
   const pack = 'marauderPack' in victim ? state.marauderPacks?.find(pack => pack.id === victim.marauderPack) : undefined;
   const camp = 'capacity' in victim ? victim.raiderCamp : pack?.raiderCamp;
+  if (camp !== undefined) provokeRaiderCamp(state, camp, attacker.faction);
   const key = camp !== undefined ? `camp:${camp}` : `pack:${pack?.id ?? victim.id}`;
   if (state.time < (frame.nextByGroup.get(key) ?? -Infinity)) return 0;
   frame.nextByGroup.set(key, state.time + ALARM_INTERVAL);
@@ -33,7 +35,7 @@ export function notifyRaiderAttack(state: GameState, victim: Unit | Building,
   let responding = 0;
   for (const unit of state.units) {
     if (unit.hp <= 0 || unit.faction !== -2 || unit.marauderPack === undefined || unit.order === 'flee' || unit.routed
-      || !canRallyFromRout(state, unit) || unit.marauderRetreating || distance(unit, heardAt) > RAIDER_ALARM_RADIUS
+      || !raiderCanTarget(state, unit, attacker.faction) || !canRallyFromRout(state, unit) || unit.marauderRetreating || distance(unit, heardAt) > RAIDER_ALARM_RADIUS
       || unit.marauderLeader && unit.hp <= (unit.maxHp ?? 100) * .45) continue;
     if (unit.inside && !releaseRaiderReserve(state, unit)) continue;
     const old = frame.alerts.get(unit);

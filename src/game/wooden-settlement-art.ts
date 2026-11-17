@@ -1,3 +1,4 @@
+import { runtimeArtUrl } from './runtime-art';
 import { loadPunyWorld, punyWorldPixels, type PunyPixels } from './puny-world';
 import { NATIVE_BUILDINGS, recolorPunyBuildingPixels } from './puny-building-art';
 
@@ -45,7 +46,7 @@ function normalizedColor(color: string): string {
 /** Use the matching Puny keep pixels for faction shading. The approved 4B
  * geometry matches that keep exactly; only the reviewed thatch mask is tinted. */
 export function recolorWoodenSettlementPixels(source: PunyPixels, atlas: PunyPixels, color: string): PunyPixels {
-    if (source.width !== 32 || source.height !== 32) throw new RangeError('Invalid wooden settlement cell.');
+    if (source.width !== 32 || source.height !== 32) throw new RangeError('Invalid wooden town cell.');
     const data = new Uint8ClampedArray(source.data);
     const target = recolorPunyBuildingPixels(atlas, NATIVE_BUILDINGS.palace.rect, normalizedColor(color));
     for (const pixel of WOODEN_SETTLEMENT_ROOF_PIXELS) {
@@ -61,9 +62,9 @@ const sprites = new Map<string, HTMLCanvasElement>();
 export function loadWoodenSettlementArt(): Promise<void> {
     return loading ??= (async () => {
         await loadPunyWorld();
-        const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/buildings/wooden-settlement.png`;
+        const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/buildings/wooden-settlement.png`);
         await image.decode();
-        if (image.naturalWidth !== 32 || image.naturalHeight !== 32) throw new Error('Invalid wooden settlement artwork.');
+        if (image.naturalWidth !== 32 || image.naturalHeight !== 32) throw new Error('Invalid wooden town artwork.');
         const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32;
         const c = canvas.getContext('2d')!; c.drawImage(image, 0, 0);
         source = { width: 32, height: 32, data: c.getImageData(0, 0, 32, 32).data };
