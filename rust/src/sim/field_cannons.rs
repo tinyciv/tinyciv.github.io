@@ -509,7 +509,7 @@ mod tests {
         let input = engine.grid_input(rows.len() / 4);
         unsafe { std::ptr::copy_nonoverlapping(rows.as_ptr(), input, rows.len()); }
         engine.grid_patch(grid, rows.len() / 4);
-        engine.actor(1, 3.5, 2.5, u::FIELD_CANNON, 0.0, 200.0, 0, f64::NAN, 0, 0.0, Some(19), false);
+        engine.actor(1, 3.5, 2.5, crate::movement::FIELD_CANNON, 0.0, 200.0, 0, f64::NAN, 0, 0.0, Some(19), false);
         let navigation = Navigation { engine: handle, grid, blockers: 0, forbidden: 0, width, height, revision: 0 };
         let mut state = FieldCannons::default();
         state.navigation(0, navigation);

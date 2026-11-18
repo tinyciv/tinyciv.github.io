@@ -112,8 +112,18 @@ impl Fisheries {
                 if let Some(ids)=self.whale_at.get(&c){for id in ids{field.whales.entry(*id).or_insert((dist,c));}}
             }
             if dist>=range{continue;}
-            for d in 0..4{let Some(n)=self.neighbor(c,d)else{continue;};if field.distance.contains_key(&n)||!self.turnable(n,kind){continue;}
-                field.previous.insert(n,c);field.distance.insert(n,dist+1);field.queue.push_back(n);
+            for direction in 0..4 {
+                let Some(next) = self.neighbor(c, direction) else { continue; };
+                if field.distance.contains_key(&next) { continue; }
+                // A channel can admit a straight leg even where a full turn
+                // will not fit. The local pose planner handles the turns.
+                let angle = if direction % 2 == 0 { std::f64::consts::FRAC_PI_2 } else { 0.0 };
+                let (from_x, from_y) = self.point(c);
+                let (to_x, to_y) = self.point(next);
+                if !self.pose(from_x, from_y, angle, kind) || !self.pose(to_x, to_y, angle, kind) { continue; }
+                field.previous.insert(next, c);
+                field.distance.insert(next, dist + 1);
+                field.queue.push_back(next);
             }
         }self.fields.insert(key,field);
     }

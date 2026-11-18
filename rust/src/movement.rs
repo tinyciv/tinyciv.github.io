@@ -11,7 +11,7 @@ const WALL_PATROL: u32 = 4;
 const INSIDE: u32 = 8;
 const HUMAN_CONTROLLED: u32 = 16;
 const VESSEL_OR_PASSENGER: u32 = 32;
-const FIELD_CANNON: u32 = 18;
+pub(crate) const FIELD_CANNON: u32 = 18;
 const DIRECTIONS: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
 
 // Kind codes: other/wildlife=0, worker=1, scout=2, merchant=3, supplyCart=4,
