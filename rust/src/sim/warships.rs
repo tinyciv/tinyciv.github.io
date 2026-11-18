@@ -719,7 +719,7 @@ mod navigation_tests {
     use super::*;
     fn water(width:i32,height:i32,open:impl Fn(i32,i32)->bool)->Warships {
         let mut net=Warships{width,height,..Default::default()};
-        for y in 0..height{for x in 0..width{net.grid.push(u8::from(open(x,y)));}}
+        for y in 0..height{for x in 0..width{net.grid.push(u16::from(open(x,y)));}}
         net
     }
     fn verify(net:&Warships,start:(f64,f64),angle:f64,route:&VecDeque<Waypoint>){
