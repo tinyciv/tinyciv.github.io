@@ -1,4 +1,5 @@
-import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE, WATCHTOWER_MAINTENANCE } from '../game/maintenance';
+import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE, WATCHTOWER_MAINTENANCE, type townBuildTerms } from '../game/maintenance';
+import { ECONOMY_INTERVAL } from '../game/economy-constants';
 import { GUARD_POST_UPKEEP } from '../game/guard-posts';
 import { FORT_UPKEEP } from '../game/forts';
 import { OBSERVATION_POST_UPKEEP } from '../game/observation-posts';
@@ -18,6 +19,10 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   foundry: 'Equips field cannon. Upkeep: 200 gold / 30s.',
   thermalBath: 'Build over a mud pool. Adds 30% house capacity to the nearest friendly town, rounded to whole residents. Does not stack.',
   house: 'Adds housing so this city can grow.',
+  apartments: 'Dense housing for a growing city.',
+  hospital: 'Heals friendly people nearby.',
+  factory: 'Increases your realm’s gold output.',
+  goldMine: 'Control with troops to earn a share of world gold output.',
   palisade: 'A wooden barrier that blocks enemies; roads make gates.',
   wall: 'A strong stone barrier; replacing a palisade credits its cost.',
   tower: 'Fires at nearby enemy units and buildings; benefits from supporting stone walls.',
@@ -48,9 +53,16 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
 export function actionTooltip(description: string, cost: string | number = 0, cooldown = 0, extra = ''): string {
   return `${description}\nCost: ${typeof cost === 'number' ? `${Math.round(cost)} gold` : cost} · Cooldown: ${cooldown ? `${Math.ceil(cooldown)}s` : 'None'}${extra ? `\n${extra}` : ''}`;
 }
-export function buildTooltip(kind: Exclude<BuildSelection, 'clearTrees'>, gold: number, seconds: number, upkeepMultiplier = 1): string {
+type TownBuildTerms = ReturnType<typeof townBuildTerms>;
+
+export function townBuildDetails({ upkeep, residents }: TownBuildTerms): string {
+  return `${upkeep} gold / ${ECONOMY_INTERVAL}s upkeep${residents ? ` · ${residents} residents in your first new town` : ''}`;
+}
+
+export function buildTooltip(kind: Exclude<BuildSelection, 'clearTrees'>, gold: number, seconds: number, upkeepMultiplier = 1, town?: TownBuildTerms): string {
   const perTile = ['road', 'bridge', 'wall', 'palisade', 'irrigation', 'camp'].includes(kind) ? ' / tile' : '';
   const cost = `${Math.round(gold)} gold${perTile}${kind === 'observationPost' ? ' + 1 population' : ''}`;
+  if (kind === 'palace' && town) return actionTooltip(BUILD_DESCRIPTIONS.palace, cost, 0, `Build time: ${Math.round(seconds)}s · ${townBuildDetails(town)}`);
   const upkeep = ({ palace: SETTLEMENT_MAINTENANCE, woodenTower: WATCHTOWER_MAINTENANCE, tower: WATCHTOWER_MAINTENANCE,
     guardPost: GUARD_POST_UPKEEP, fort: FORT_UPKEEP, observationPost: OBSERVATION_POST_UPKEEP, ...BUILDING_UPKEEP } as Partial<Record<BuildSelection, number>>)[kind];
   return actionTooltip(BUILD_DESCRIPTIONS[kind], cost, 0, `Build time: ${Math.round(seconds)}s${upkeep ? ` · Upkeep: ${Math.round(upkeep * upkeepMultiplier * 100) / 100} gold${perTile} / 30s${kind === 'palace' ? ', rising with each town' : ''}` : ''}`);

@@ -30,7 +30,7 @@ export function importImmigrant(state: GameState, palace: Building): { ok: boole
   if (!status.available) return { ok: false, message: status.reason };
   const faction = state.factions.find(candidate => candidate.id === palace.faction)!;
   synchronizeFarms(state);
-  const home = state.buildings.find(building => building.kind === 'house' && building.faction === palace.faction
+  const home = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === palace.faction
     && buildingReady(building) && (building.residents ?? 0) < building.capacity
     && governingPalace(state, { x: building.x + .5, y: building.y + .5 }, palace.faction)?.id === palace.id);
   spendGold(state, faction, IMMIGRANT_COST, 'immigration');

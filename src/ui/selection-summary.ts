@@ -8,13 +8,14 @@ import { playerFaction } from '../game/player-context';
 import { buildingReady, buildingWidth, buildingHeight, isFarmKind, isRetinueMember, unitMaxHp, type Building, type GameState, type Unit } from '../game/types';
 import { entityVisible } from '../game/fog';
 import { factionColor } from '../game/faction-colors';
-import { attackDamage, unitAttack, unitDamageTakenMultiplier, unitDefense, veterancy, VETERANCY_KILLS, VETERANCY_NAMES } from '../game/veterancy';
+import { attackDamage, hasUnpaidUpkeep, unitAttack, unitDamageTakenMultiplier, unitDefense, veterancy, VETERANCY_KILLS, VETERANCY_NAMES } from '../game/veterancy';
 import { RETINUE_SQUAD_SIZE } from '../game/retinue-squads';
 import { woodenTowerAttack, WOODEN_TOWER_RANGE } from '../game/tower-combat';
 import { RAIDER_COLOR } from '../game/raider-camps';
 import { nativeHouseTier } from '../game/puny-building-art';
 import { houseLevel, WELL_RADIUS } from '../game/wells';
 import { constructionProgress } from '../game/construction-cancellation';
+import { constructionHead } from '../game/bridge-construction';
 import { IRRIGATION_RADIUS } from '../game/irrigation';
 import { MONUMENT_CULTURE_PER_SECOND } from '../game/culture';
 import { guardPostCapacity, guardPostUpkeep, GUARD_POST_UPKEEP_INTERVAL } from '../game/guard-posts';
@@ -29,7 +30,6 @@ import { isKeep, settlementLabel } from '../game/settlement-upgrades';
 import { buildingArmor, isDefensiveBuilding } from '../game/defense-equipment';
 import { HEALER_SHACK_RADIUS, HEALER_SHACK_MULTIPLIER } from '../game/healer-shack';
 import { multiplierPercent, wholeNumber } from './number-format';
-import { soilFertility } from '../game/fertility';
 import { cityGranary, granaryCity, granaryYieldMultiplier, GRANARY_RADIUS } from '../game/granaries-native';
 import { thermalBathCity, thermalBathCityMultiplier } from '../game/thermal-baths-native';
 import { WHALING_RANGE } from '../game/fishing';
@@ -47,7 +47,6 @@ export interface SelectionSummary {
   showCombatStats: boolean;
   attack: number;
   defense: number;
-  fertility?: number;
   title: string;
   hint?: string;
 }
@@ -81,7 +80,7 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   if (unit.kind === 'horseman') details.push('65% faster · 50% greater base attack', 'Running charge · Area damage');
   if (unit.kind === 'swordsman') details.push('Twice spearman base attack', 'Lower defense than spearmen');
   if (unit.kind === 'spearman') details.push('50% greater base defense', 'Thrusts pierce up to two additional enemies');
-  if (unit.kind === 'fieldCannon') details.push('Half infantry speed · Off-road speed 20%', 'Range 18 · Siege cannon damage · Splash 2 tiles, including friendlies', 'Upkeep 200 gold / 30s', ...(unit.fieldCannon?.funded === false ? ['Unpaid upkeep · Movement and firing suspended'] : []));
+  if (unit.kind === 'fieldCannon') details.push('Half infantry speed · Off-road speed 20%', 'Range 18 · Siege cannon damage · Splash 2 tiles, including friendlies', 'Upkeep 200 gold / 30s', ...(hasUnpaidUpkeep(unit) ? ['Unpaid upkeep · Half attack and defense'] : []));
   if (unit.kind === 'musketman') details.push('Heavy musket volleys · one shot every 2.5 seconds', 'Upkeep: 2 gold / 30s · no Fletching bonus');
   if (unit.kind === 'pikeman') details.push('Spearman attack, 50% more defense and 25% more reach', 'Thrusts pierce up to two enemies behind and knock them back');
   if (unit.kind === 'scout') details.push('Automatically maps unexplored land', 'Avoids combat', 'Independent of the retinue');
@@ -126,7 +125,6 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
 
 function buildingSummary(state: GameState, building: Building): SelectionSummary {
   const ready = buildingReady(building);
-  const fertility = soilFertility(state.world, building.x, building.y) || undefined;
   const owner = state.factions.find(faction => faction.id === building.faction);
   const gate = ready && (building.kind === 'wall' || building.kind === 'palisade')
     && state.buildings.some(other => other.kind === 'road' && other.hp > 0 && other.x === building.x && other.y === building.y);
@@ -139,14 +137,26 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
   if (isFarmKind(building.kind) && building.farmFallow) name += ' · Fallow';
   if (building.kind === 'fort') name = `${fortName(building)} · Level ${building.fortLevel ?? 1}${building.fort?.destroyed ? ' · Foundation' : ''}`;
   const details = [name];
+  if (building.kind === 'goldMine') {
+    details.push(owner?.name ?? 'Neutral');
+    if (building.mineContested) details.push('Contested');
+    if ((building.mineCaptureFaction ?? -1) >= 0) {
+      const challenger = state.factions.find(faction => faction.id === building.mineCaptureFaction);
+      details.push(`${challenger?.name ?? 'Claim'} ${Math.floor((building.mineCaptureProgress ?? 0) / 12 * 100)}%`);
+    }
+  }
+  if (building.kind === 'hospital') details.push('Heals friendly people nearby');
+  if (building.kind === 'factory') details.push('Increases your realm’s gold output');
   if (ready && building.kind === 'road' && building.roadPaved) details.push('25% faster than dirt roads');
-  if (fertility !== undefined) details.push(`Soil fertility ${multiplierPercent(fertility)}`);
   if (building.kind === 'fort') details.push(building.fort?.destroyed ? `Rebuild for ${wholeNumber((building.fort.initialGold ?? FORT_GOLD) / 2)} gold` : 'Fires at two targets · Expands borders', '20 gold every 30s');
   if (building.kind === 'supplyDepot') details.push('Sends one supply cart every 30s', 'Heals the Leader and friendly units within 8 tiles by up to 10 HP');
   if (building.cityName) details.push(building.cityName);
-  if (building.capacity) details.push(`Residents ${building.residents ?? 0}/${building.capacity}`);
+  if (building.capacity) {
+    const residents = building.kind === 'palace' ? building.unhousedResidents : building.residents;
+    details.push(`Residents ${residents ?? 0}/${building.capacity}`);
+  }
   if (building.construction) {
-    const work = building.construction, progress = constructionProgress(state, building);
+    const head = constructionHead(state, building), work = head.construction!, progress = constructionProgress(state, head);
     details.push(`Construction ${Math.floor(progress * 100)}%`);
     details.push(work.waitingForBuilder ? work.builderId === undefined ? 'Awaiting builder' : 'Builder en route'
       : `${Math.max(0, Math.ceil(work.duration * (1 - progress)))}s remaining`);
@@ -221,7 +231,7 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
     attack: ready && (building.kind === 'woodenTower' || building.kind === 'tower' || building.kind === 'fort' || isKeep(building))
       ? attackDamage(woodenTowerAttack(building, owner), 0) * achievementEffect(owner, AchievementEffect.homelandDamage, 1,
         Number(culturalHomeGround(state, owner, { x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 }))) : 0,
-    defense: buildingArmor(building, owner), fertility, title: details.join(' · '),
+    defense: buildingArmor(building, owner), title: details.join(' · '),
     hint: ready && building.kind === 'dock' && building.faction === playerFaction(state)
       ? building.dockBoatLaunched ? 'Right-click your galley to board.' : 'Waiting for a clear water berth to launch.' : undefined,
   };

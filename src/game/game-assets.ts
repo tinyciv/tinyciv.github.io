@@ -3,6 +3,7 @@ import { loadFieldCannonArt } from './field-cannon-art';
 import { loadCannonFireArt } from './cannon-fire-art';
 import { loadShellImpactArt } from './shell-impact-art';
 import { loadExplorationArt } from './exploration-art';
+import { loadRefugeeArt } from './refugee-art';
 import { loadPavedRoadArt } from './paved-road-art';
 import { loadLoyaltyArt } from './loyalty-art';
 import { loadHandcartArt } from './handcart-art';
@@ -56,6 +57,7 @@ export function loadGameAssets(renderer: Renderer): Promise<void>[] {
     loadCannonFireArt(),
     loadShellImpactArt(),
     loadExplorationArt(),
+    loadRefugeeArt(),
     loadPavedRoadArt(),
     loadLoyaltyArt(),
     loadHandcartArt(),

@@ -16,6 +16,7 @@ const HUNTABLE: u32 = 8;
 const OBSERVABLE: u32 = 16;
 const PROTECTED: u32 = 32;
 const ROUTE: u32 = 64;
+const CANNONBALL: u32 = 5;
 
 #[derive(Component)]
 struct Flight {
@@ -48,7 +49,7 @@ pub fn duration_for_kind(start_x: f64, start_y: f64, end_x: f64, end_y: f64, kin
 
 impl Flight {
     fn line_mode(&self) -> u32 {
-        if (self.kind == 1 || self.kind == 2) && !self.tower_arrow || matches!(self.kind, 3 | 4 | 5) { 2 } else { 1 }
+        if (self.kind == 1 || self.kind == 2) && !self.tower_arrow || matches!(self.kind, 3 | 4 | CANNONBALL) { 2 } else { 1 }
     }
     fn potential_impact(&self, dt: f64) -> u32 {
         if minimum(1.0, (self.elapsed + dt) / self.duration) < 1.0 { 0 } else { self.line_mode() }
@@ -66,7 +67,7 @@ fn advance_flights(rows: Res<Rows>, step: Res<Step>, terrain: Res<MountainTerrai
         if target.facts & EXISTS == 0
             || !(target.facts & HOSTILE != 0 || !building && target.facts & HUNTABLE != 0 && flight.faction >= 0.0)
             || !building && target.facts & OBSERVABLE == 0
-            || building && (target.facts & PROTECTED != 0 || flight.kind == 5 && target.facts & ROUTE != 0) {
+            || building && (target.facts & PROTECTED != 0 || flight.kind == CANNONBALL && target.facts & ROUTE != 0) {
             flight.status = 0;
             continue;
         }
@@ -81,7 +82,7 @@ fn advance_flights(rows: Res<Rows>, step: Res<Step>, terrain: Res<MountainTerrai
         if let Some(entry) = terrain.0.first_blocked(flight.x, flight.y, next_x, next_y, false) {
             flight.x += (next_x - flight.x) * entry;
             flight.y += (next_y - flight.y) * entry;
-            if flight.kind == 5 {
+            if flight.kind == CANNONBALL {
                 flight.shell_landing = Some((flight.x, flight.y, false));
                 flight.status = 4;
             } else { flight.status = 0; }
@@ -89,7 +90,7 @@ fn advance_flights(rows: Res<Rows>, step: Res<Step>, terrain: Res<MountainTerrai
         }
         flight.x = next_x; flight.y = next_y;
         flight.status = if progress < 1.0 { 1 } else { flight.line_mode() + 1 };
-        if flight.kind == 5 && progress >= 1.0 { flight.shell_landing = Some((flight.end_x, flight.end_y, true)); }
+        if flight.kind == CANNONBALL && progress >= 1.0 { flight.shell_landing = Some((flight.end_x, flight.end_y, true)); }
     }
 }
 
@@ -222,8 +223,12 @@ impl ProjectileEngine {
         self.event = if !pending || !clear || hp <= 0.0 {
             [0.0, hp, hp]
         } else {
-            let damage = if facts & BUILDING != 0 { flight.damage }
-                else { combat::incoming_damage(kills, flight.damage) / infantry_multiplier };
+            let damage = if facts & BUILDING != 0 {
+                flight.damage
+            } else {
+                let multiplier = if flight.kind == CANNONBALL { combat::CANNON_UNIT_DAMAGE_MULTIPLIER } else { 1.0 };
+                combat::incoming_damage(kills, flight.damage * multiplier) / infantry_multiplier
+            };
             let next_hp = maximum(0.0, hp - damage);
             [if next_hp <= 0.0 { 2.0 } else { 1.0 }, hp, next_hp]
         };
@@ -333,6 +338,9 @@ mod tests {
         let mut engine = ProjectileEngine::default(); let mut row = shot(1.0, 0.0, 0.01); row[5] = 100.0;
         import(&mut engine, &[row], 0.02); engine.advance(0, 1); engine.impact(0, true, 100.0, 500.0, 2.0);
         assert_eq!(engine.event, [1.0, 100.0, 92.5]);
+        row[6] = CANNONBALL as f64;
+        import(&mut engine, &[row], 0.02); engine.advance(0, 1); engine.impact(0, true, 100.0, 500.0, 2.0);
+        assert_eq!(engine.event, [1.0, 100.0, 96.25]);
         row[15] = (EXISTS | HOSTILE | BUILDING) as f64;
         import(&mut engine, &[row], 0.02); engine.advance(0, 1); engine.impact(0, true, 100.0, 500.0, 2.0);
         assert_eq!(engine.event, [2.0, 100.0, 0.0]);

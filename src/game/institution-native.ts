@@ -2,7 +2,7 @@ import { rustEngine } from './rust-engine';
 import { simCore } from './sim-handle';
 import type { BuildingKind, GameState } from './types';
 
-export const INSTITUTION_KIND = { granary: 0, barracks: 1, forum: 2 } as const;
+export const INSTITUTION_KIND = { granary: 0, barracks: 1, forum: 2, hospital: 3, apartments: 4, factory: 5 } as const;
 export type InstitutionKind = keyof typeof INSTITUTION_KIND;
 export const INSTITUTION_COST = Object.freeze(Object.fromEntries(Object.entries(INSTITUTION_KIND)
   .map(([name, code]) => [name, rustEngine.ai_investment_constant(code, 0)]))) as Readonly<Record<InstitutionKind, number>>;

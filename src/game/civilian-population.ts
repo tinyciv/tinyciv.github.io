@@ -38,7 +38,7 @@ export function recordCivilianCasualty(state: GameState, unit: Unit): boolean {
   const city = workerHomeCity(state, unit), before = city && civilianCityPopulations(state).get(city.id);
   if (city && before === 0) return false;
   const ownership = cityOwnership(state);
-  const house = state.buildings.find(building => building.kind === 'house' && building.faction === unit.faction && buildingReady(building)
+  const house = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === unit.faction && buildingReady(building)
     && (building.residents ?? 0) > 0 && (!city || ownership.building(building)?.id === city.id));
   if (house) house.residents!--;
   else if (city && (city.unhousedResidents ?? 0) > 0) city.unhousedResidents!--;

@@ -30,7 +30,7 @@ export function recordRetinuePopulationLoss(state: GameState, unit: Unit): void 
   // there, rather than to the new city it happens to be passing or defending.
   const city = home ? nearest(palaces, { x: home.x + buildingWidth(home) / 2, y: home.y + buildingHeight(home) / 2 })
     : [...palaces].sort((a, b) => a.id - b.id)[0];
-  const residents = state.buildings.filter(building => building.kind === 'house' && building.faction === unit.faction
+  const residents = state.buildings.filter(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === unit.faction
     && buildingReady(building) && (building.residents ?? 0) > 0);
   const localHouse = residents.find(house => nearest(palaces, { x: house.x + .5, y: house.y + .5 })?.id === city?.id);
   if (localHouse) localHouse.residents!--;

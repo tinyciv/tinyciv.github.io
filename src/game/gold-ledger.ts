@@ -5,7 +5,7 @@ export type { GoldInputCategory, GoldOutlayCategory } from './types';
 
 export const GOLD_FLOW_WINDOW = 60;
 const inputLabels: Readonly<Record<GoldInputCategory, string>> = {
-  taxes: 'Taxes', trade: 'Trade', mining: 'Mining', loot: 'Loot', treasure: 'Treasure', refunds: 'Refunds', transfers: 'Transfers', other: 'Other',
+  taxes: 'Taxes', trade: 'Trade', mining: 'Mining', loot: 'Loot', treasure: 'Treasure', refunds: 'Refunds', transfers: 'Transfers', other: 'Other', controlMines: 'Gold mines',
 };
 const outlayLabels: Readonly<Record<GoldOutlayCategory, string>> = {
   construction: 'Construction', settlements: 'Town upkeep', defenses: 'Defenses', army: 'Army', science: 'Science',
@@ -44,7 +44,9 @@ function bucket(state: Clock, faction: Faction): GoldLedgerEntry {
 export function recordGoldInput(state: Clock, faction: Faction, amount: number, category: GoldInputCategory): void {
   if (!positive(amount) || !Number.isFinite(state.time)) return;
   if ('world' in state && 'rngState' in state)
-    rustEngine.sim_campaign_income(simCore(state as GameState).handle, faction.id, amount, inputCategories.indexOf(category));
+    rustEngine.sim_campaign_income(simCore(state as GameState).handle, faction.id, amount, inputCategories.indexOf(category === 'controlMines' ? 'mining' : category));
+  if ('world' in state && !['refunds', 'transfers', 'controlMines'].includes(category))
+    rustEngine.sim_civic_income(simCore(state as GameState).handle, amount);
   const inputs = bucket(state, faction).inputs; inputs[category] = (inputs[category] ?? 0) + amount;
 }
 export function recordGoldOutlay(state: Clock, faction: Faction, amount: number, category: GoldOutlayCategory): void {

@@ -1,4 +1,4 @@
-import { buildingHeight, buildingWidth, type Building, type FarmFieldMemory } from './types';
+import { buildingHeight, buildingReady, buildingWidth, type Building, type FarmFieldMemory } from './types';
 import type { FogView } from './fog';
 
 export type BuildingIndex = ReadonlyMap<string, readonly Building[]>;
@@ -52,7 +52,7 @@ export class PresentationIndex {
             for (let i = 0; i < fog.buildings.length; i++) {
                 const building = fog.buildings[i];
                 this.order.set(building, i);
-                if (building.hp > 0 && (building.kind === 'road' || building.kind === 'bridge'))
+                if ((building.kind === 'road' || building.kind === 'bridge') && buildingReady(building))
                     this.roads.add(building.y * fog.width + building.x);
                 const key = cellKey(Math.floor(building.x / 8), Math.floor(building.y / 8));
                 const bucket = this.buckets.get(key);

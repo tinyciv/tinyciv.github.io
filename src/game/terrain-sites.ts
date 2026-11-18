@@ -14,7 +14,7 @@ export function settlementTerrainMask(world: World): Uint8Array {
   const input = new Float64Array(rustEngine.memory.buffer, pointer, count);
   world.tiles.forEach((tile, cell) => {
     const flags = reliefFlags(tile);
-    input[cell] = (flags & 2 ? 0 : flags & 1 ? 1 : 2)
+    input[cell] = (tile.ridge ? 1 : flags & 2 ? 0 : flags & 1 ? 1 : 2)
       | Number(WATER.has(tile.terrain) || !!tile.creek || !!tile.waterfall || tile.overlay === 'volcano' || tile.overlay === 'glacier') << 2;
   });
   const result = rustEngine.terrain_sites_calculate(world.width, world.height);

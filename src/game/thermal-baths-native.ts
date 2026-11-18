@@ -8,7 +8,7 @@ export const THERMAL_BATH_GOLD = rustEngine.thermal_bath_constant(0);
 export const THERMAL_BATH_UPKEEP = rustEngine.thermal_bath_constant(1);
 export const THERMAL_BATH_HP = rustEngine.thermal_bath_constant(2);
 const networks = new SimSlot<NativeThermalBaths>();
-const relevant = (b: Building): boolean => b.kind === 'palace' || b.kind === 'house' || b.kind === 'thermalBath';
+const relevant = (b: Building): boolean => b.kind === 'palace' || b.kind === 'house' || b.kind === 'apartments' || b.kind === 'thermalBath';
 
 /** Transport only. Native assignment maps change on site lifecycle edits;
  * ordinary capacity reads never rebuild or scan the building roster. */

@@ -1,5 +1,5 @@
 /* Account screens reuse the approved menu plates and the existing scene. */
-.frontend-account.menu-sheet{top:296px;width:382px;max-height:min(622px,calc(var(--menu-visible-height,941px) - 312px));padding:18px 22px;container-type:inline-size}
+.frontend-account.menu-sheet{padding:18px 22px;container-type:inline-size}
 .frontend-account>header{margin-bottom:10px}
 .frontend .frontend-account h1{font-size:32px}
 .account-intro{margin:0 0 16px;color:#d5c8a7;font-size:20px;line-height:1.2}
@@ -27,7 +27,5 @@
 .account-notice{margin:14px 0 0;padding:9px 10px;border-left:2px solid #d3a24f;background:#14120fbf;color:#f0c977;font-size:18px;line-height:1.25;overflow-wrap:anywhere}
 .account-notice:empty{display:none}
 .frontend .frontend-account .account-guest{margin-top:14px}
-.frontend-main>.menu-account{position:absolute;right:0;top:-42px}
-.is-compact .frontend-account{max-height:none}
+.frontend-main>.menu-account{max-width:100%;overflow-wrap:anywhere;text-shadow:1px 1px #17130b}
 .frontend.is-compact .frontend-account .account-plate{height:44px;aspect-ratio:auto;padding:0 12px 2px 15%;font-size:clamp(16px,6.6cqi,22px)}
-.is-compact .frontend-main>.menu-account{position:static;display:block;margin:0 9px 14px auto}

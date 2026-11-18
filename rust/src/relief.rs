@@ -4,6 +4,8 @@ use bevy_ecs::prelude::*;
 use std::collections::VecDeque;
 #[path = "relief_shapes.rs"]
 mod shapes;
+#[path = "ledges.rs"]
+mod ledges;
 
 pub const STRIDE: usize = 8;
 pub const WALK: u32 = 1;
@@ -34,13 +36,13 @@ struct Settings {
 impl Default for Settings {
     fn default() -> Self { Self { width: 0, height: 0, seed: 0, coverage: 0.09, mountains: 0.30, hill_size: 1.0, clustering: 0.85, spacing: 1.0, clumps: 0.27, strings: 0.21, length_min: 20.0, length_max: 56.0, breadth: 4.3, bend: 0.6 } }
 }
-fn hash(seed: u32, x: i32, y: i32) -> f64 {
+pub(crate) fn hash(seed: u32, x: i32, y: i32) -> f64 {
     let mut n = seed ^ (x as u32).wrapping_mul(0x1f123bb5) ^ (y as u32).wrapping_mul(0x5f356495);
     n = (n ^ (n >> 16)).wrapping_mul(0x7feb352d); n = (n ^ (n >> 15)).wrapping_mul(0x846ca68b);
     ((n ^ (n >> 16)) as f64) / 4294967296.0
 }
 fn smooth(v: f64) -> f64 { let v = v.clamp(0.0,1.0); v * v * (3.0 - 2.0 * v) }
-fn noise(seed: u32, x: f64, y: f64) -> f64 {
+pub(crate) fn noise(seed: u32, x: f64, y: f64) -> f64 {
     let ix = x.floor() as i32; let iy = y.floor() as i32; let u = smooth(x - x.floor()); let v = smooth(y - y.floor());
     let a = hash(seed,ix,iy) * (1.0-u) + hash(seed,ix+1,iy)*u;
     let b = hash(seed,ix,iy+1) * (1.0-u) + hash(seed,ix+1,iy+1)*u;
@@ -208,12 +210,22 @@ fn generate(settings: Res<Settings>, input: Res<Input>, mut generated: ResMut<Ge
     }
 }
 
-pub struct Relief { world: World, schedule: Schedule }
+pub struct Relief { world: World, schedule: Schedule, ledge_schedule: Schedule }
 impl Default for Relief {
-    fn default()->Self{let mut world=World::new();world.init_resource::<Input>();world.init_resource::<Generated>();world.init_resource::<Settings>();let mut schedule=Schedule::default();schedule.add_systems(generate);Self{world,schedule}}
+    fn default()->Self{
+        let mut world=World::new();world.init_resource::<Input>();world.init_resource::<Generated>();world.init_resource::<Settings>();
+        let mut schedule=Schedule::default();schedule.add_systems(generate);
+        let mut ledge_schedule = Schedule::default();ledge_schedule.add_systems(ledges::generate_ledges);
+        Self{world,schedule,ledge_schedule}
+    }
 }
 impl Relief {
     pub fn prepare(&mut self,length:usize)->*mut f64{let mut input=self.world.resource_mut::<Input>();input.0.clear();input.0.resize(length,0.0);input.0.as_mut_ptr()}
+    pub fn ledges(&mut self, width: usize, height: usize, seed: u32, coverage: f64) -> *const f64 {
+        self.world.insert_resource(ledges::LedgeSettings { width, height, seed, coverage });
+        self.ledge_schedule.run(&mut self.world);
+        self.world.resource::<Generated>().0.as_ptr()
+    }
     /// Art supplies its chosen rectangles; native policy blocks only the
     /// smallest grid cells enclosing those visible silhouettes. Region IDs
     /// continue to describe geology, without becoming invisible movement walls.

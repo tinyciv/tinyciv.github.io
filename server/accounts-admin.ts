@@ -40,6 +40,7 @@ async function configure(): Promise<void> {
     user: master.username, password: master.password, max: 1, connectionTimeoutMillis: 10000,
     ssl: { ca: readFileSync(new URL('./rds-ca.pem', import.meta.url), 'utf8'), rejectUnauthorized: true } });
   const client = await pool.connect();
+  let analytics: { gameKey: string; secretKey: string; adminUserIds: string[] };
   try {
     await client.query('BEGIN');
     await client.query("SELECT pg_advisory_xact_lock(872191024)");
@@ -48,6 +49,7 @@ async function configure(): Promise<void> {
     await client.query(`ALTER ROLE tinyciv_app PASSWORD ${escapeLiteral(app.password)}`);
     await client.query(`GRANT CONNECT ON DATABASE tinyciv TO tinyciv_app`);
     await client.query(SCHEMA);
+    analytics = await analyticsConfiguration(client);
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); await pool.end(); }
@@ -57,7 +59,60 @@ async function configure(): Promise<void> {
   execFileSync('chown', ['root:btv', target + '.next']);
   chmodSync(target + '.next', 0o640);
   renameSync(target + '.next', target);
+  writeAnalyticsConfiguration(analytics!);
   console.log('Account schema and restricted application credentials configured.');
+}
+
+/** Optional secret container is managed by Terraform; its value is never logged. */
+async function analyticsConfiguration(database: Pick<Pool, 'query'>): Promise<{ gameKey: string; secretKey: string; adminUserIds: string[] }> {
+  let input;
+  try { input = JSON.parse(aws('secretsmanager', 'get-secret-value', '--secret-id', 'tinyciv/accounts/analytics').SecretString); }
+  catch (error) {
+    if (String((error as { stderr?: Buffer }).stderr ?? '').includes('ResourceNotFoundException')) {
+      // An empty/new secret disables GA forwarding and owner access until populated.
+      input = { gameKey: '', secretKey: '', adminUserIds: [] };
+    } else throw error;
+  }
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || typeof input.gameKey !== 'string' || typeof input.secretKey !== 'string'
+    || !((!input.gameKey && !input.secretKey) || /^[a-f0-9]{32}$/.test(input.gameKey) && /^[a-f0-9]{32,64}$/.test(input.secretKey))
+    || input.adminUserIds !== undefined && !Array.isArray(input.adminUserIds)
+    || input.adminEmails !== undefined && !Array.isArray(input.adminEmails))
+    throw new Error('Invalid analytics configuration.');
+  input.adminUserIds ??= []; input.adminEmails ??= [];
+  if (input.adminUserIds.length > 20 || input.adminEmails.length > 20
+    || input.adminUserIds.some((id: unknown) => typeof id !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id)))
+    throw new Error('Invalid analytics configuration.');
+  const emails = [...new Set<string>(input.adminEmails.map((email: unknown) => {
+    const normalized = normalizedEmail(email);
+    if (!normalized) throw new Error('Invalid dashboard account email.');
+    return normalized;
+  }))];
+  if (emails.length) {
+    const result = await database.query('SELECT id FROM accounts.users WHERE email=ANY($1::text[])', [emails]);
+    // Do not leave an email allowlist that could grant a future registration access.
+    if (result.rows.length !== emails.length) throw new Error('Create the requested dashboard game accounts first.');
+    input.adminUserIds.push(...result.rows.map(row => row.id));
+  }
+  return { gameKey: input.gameKey, secretKey: input.secretKey, adminUserIds: [...new Set<string>(input.adminUserIds)] };
+}
+function writeAnalyticsConfiguration(input: { gameKey: string; secretKey: string; adminUserIds: string[] }): void {
+  const target = '/etc/btv-analytics.json';
+  writeFileSync(target + '.next', JSON.stringify({ gameKey: input.gameKey, secretKey: input.secretKey,
+    adminUserIds: input.adminUserIds }), { mode: 0o600 });
+  execFileSync('chown', ['root:btv', target + '.next']); chmodSync(target + '.next', 0o640);
+  renameSync(target + '.next', target);
+}
+
+async function analyticsAccount(): Promise<void> {
+  const email = normalizedEmail(JSON.parse(readFileSync(0, 'utf8')).email);
+  if (!email) throw new Error('A valid account email is required.');
+  const pool = accountDatabase();
+  try {
+    const result = await pool.query('SELECT id FROM accounts.users WHERE email=$1', [email]);
+    if (!result.rows.length) throw new Error('Create a game account first.');
+    console.log(JSON.stringify({ userId: result.rows[0].id }));
+  } finally { await pool.end(); }
 }
 
 async function importUser(): Promise<void> {
@@ -87,12 +142,26 @@ async function inspect(): Promise<void> {
   } finally { await pool.end(); }
 }
 
+/** Operator-only output; feedback and account details never enter service logs. */
+async function feedback(): Promise<void> {
+  const pool = accountDatabase();
+  try {
+    const result = await pool.query(`SELECT f.id, f.created_at AS "createdAt", f.user_id AS "userId",
+      u.display_name AS "displayName", u.email, f.visitor_id AS "visitorId", f.message, f.context
+      FROM accounts.feedback f LEFT JOIN accounts.users u ON u.id=f.user_id
+      ORDER BY f.created_at DESC LIMIT 50`);
+    console.log(JSON.stringify(result.rows));
+  } finally { await pool.end(); }
+}
+
 try {
   const command = process.argv[2];
   if (command === 'configure') await configure();
   else if (command === 'import-user') await importUser();
   else if (command === 'inspect') await inspect();
-  else throw new Error('Expected configure, import-user or inspect.');
+  else if (command === 'feedback') await feedback();
+  else if (command === 'analytics-account') await analyticsAccount();
+  else throw new Error('Expected configure, import-user, inspect, feedback or analytics-account.');
 } catch {
   // CLI errors can contain database credentials or secret values. Report only
   // a generic failure; no secret-bearing objects or SQL statements are logged.

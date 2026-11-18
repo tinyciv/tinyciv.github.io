@@ -12,6 +12,7 @@ import { buildingWorkForbidden } from './forbidden-work';
 import { buildingOverlapsVillageBorders } from './border-placement';
 import { entityStore } from './entity-store';
 import { solidBuildingAt, structuresOf, STRUCTURE_READY } from './structure-index';
+import { hermitCabinOverlaps } from './placement-occupancy';
 import { cityResidents } from './cities';
 import { markWorldChanged } from './world-revisions';
 import { constructionEdges } from './builders';
@@ -427,7 +428,7 @@ export function recordMerchantRoad(state: GameState, merchant: Unit, _from?: Poi
   const tile = tileAt(state.world, x, y);
   if (!tile || isForbidden(state, x, y, merchant.faction) || WATER.has(tile.terrain) || !reliefFootprintAllowed(state.world, x, y)
     || ['volcano', 'glacier'].includes(tile.overlay)) return false;
-  if (solidBuildingAt(state, x, y)) return false;
+  if (hermitCabinOverlaps(state, x, y) || solidBuildingAt(state, x, y)) return false;
   if (!validateNetworkPlacement(state, 'road', x, y, merchant.faction).ok) return false;
   if (!prepareFarmForAutomaticRoad(state, { x, y })) return false;
   entityStore(state).buildings.add({ id: nextId(state), kind: 'road', faction: merchant.faction, x, y, hp: 100, maxHp: 100, capacity: 0 });

@@ -1,5 +1,7 @@
 import { createNoise2D } from 'simplex-noise';
 import { reliefEdgeAllowed, reliefGroundWalkable, reliefLevel, reliefAllowsTrees } from '../game/relief';
+import { STAIR_UP } from '../game/ridges';
+import { rustEngine } from '../game/rust-engine';
 import { WATER, type Tile, type World } from '../game/types';
 import { terrainYields } from './generator';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
@@ -83,17 +85,11 @@ export function createTerrainEnvironment(tiles: Tile[], width: number, height: n
   return { ruggedness, moisture, woodland, orientation };
 }
 
-/** Forest regions contain a mesh of trees and open ground, including grassy
- * hills. Every tree touches a traversable opening, and no 2×2 square is
- * solid canopy. Rocky mountain cores remain clear. */
+/** Transport regional habitat and walkable edges to the native stand planner. */
 export function applyTerrainEcology(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): void {
   const { width, height, tiles } = world, fields = createTerrainEnvironment(tiles, width, height, world.seed, parameters);
   const clear = new Uint8Array(tiles.length), spawns = [...world.spawns, ...(world.secondarySpawns ?? [])];
-  const ground = new Uint8Array(tiles.length), trees = new Uint8Array(tiles.length);
-  const random = randomStream(`${world.seed}:open-woodland`);
-  // One rank per cell, including ineligible ground, keeps the pattern stable
-  // when a nearby clearing or access constraint changes.
-  const rank = Float32Array.from(tiles, () => random());
+  const ground = new Uint8Array(tiles.length);
   for (const spawn of spawns) {
     const cx = Math.floor(spawn.x), cy = Math.floor(spawn.y);
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
@@ -103,37 +99,38 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
   }
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const cell = y * width + x, tile = tiles[cell];
-    if (tile.marsh) { tile.biome = 'wetland'; tile.moisture = Math.max(.9, tile.moisture); continue; }
-    if (WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
-    ground[cell] = Number(reliefGroundWalkable(world, x, y));
-    const eligible = ground[cell] && reliefAllowsTrees(tile) && !clear[cell] && !tile.beach && !tile.palm;
-    const dry = tile.terrain === 'desert';
-    // Sandy regions retain open desert, with a few groves along wetter pockets.
-    const threshold = parameters.forestThreshold + (dry ? .14 : 0);
-    const suitability = fields.woodland[cell] - threshold;
-    // Wet, sheltered woodland has more trees, but even its core is perforated.
-    const occupancy = .58 + Math.min(.10, Math.max(0, suitability) * .4);
-    trees[cell] = Number(eligible && suitability > 0 && (!dry || fields.moisture[cell] > .43) && rank[cell] < occupancy);
-  }
-  for (let y = 0; y < height - 1; y++) for (let x = 0; x < width - 1; x++) {
-    const cell = y * width + x, square = [cell, cell + 1, cell + width, cell + width + 1];
-    if (square.every(next => trees[next])) {
-      // Remove the least favored tree, rather than repeatedly clearing the
-      // same corner and producing a visible grid of gaps.
-      const opening = square.reduce((a, b) => rank[a] > rank[b] ? a : b);
-      trees[opening] = 0;
+    if (tile.stair) {
+      const up = STAIR_UP[tile.stair];
+      for (const step of [-1, 0, 1]) {
+        const nx = x + up.x * step, ny = y + up.y * step;
+        if (nx >= 0 && ny >= 0 && nx < width && ny < height) clear[ny * width + nx] = 1;
+      }
     }
+    if (tile.marsh || WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
+    ground[cell] = Number(reliefGroundWalkable(world, x, y));
   }
-  const candidates = Array.from(trees.keys()).filter(cell => trees[cell]).sort((a, b) => rank[b] - rank[a]);
-  for (const cell of candidates) {
-    const x = cell % width, y = Math.floor(cell / width);
-    const hasOpening = CARDINAL.some(([dx, dy]) => {
+  const pointer = rustEngine.woodland_input(tiles.length);
+  const input = new Float64Array(rustEngine.memory.buffer, pointer, tiles.length * 2);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const cell = y * width + x, tile = tiles[cell];
+    if (!ground[cell] || !reliefAllowsTrees(tile) || clear[cell] || tile.beach || tile.palm || tile.mountainPass) continue;
+    const dry = tile.terrain === 'desert';
+    // Limit desert groves to the wetter pockets.
+    const suitability = fields.woodland[cell] - parameters.forestThreshold - (dry ? .14 : 0);
+    if (suitability <= 0 || (dry && fields.moisture[cell] <= .43)) continue;
+    let edges = 0;
+    for (let direction = 0; direction < CARDINAL.length; direction++) {
+      const [dx, dy] = CARDINAL[direction];
       const nx = x + dx, ny = y + dy, next = ny * width + nx;
-      return nx >= 0 && ny >= 0 && nx < width && ny < height && ground[next] && !trees[next]
-        && reliefEdgeAllowed(world, { x, y }, { x: nx, y: ny });
-    });
-    if (!hasOpening) trees[cell] = 0;
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && ground[next]
+        && reliefEdgeAllowed(world, { x, y }, { x: nx, y: ny })) edges |= 1 << direction;
+    }
+    input[cell * 2] = suitability;
+    input[cell * 2 + 1] = edges;
   }
+  const seed = Math.floor(randomStream(`${world.seed}:woodland-stands`)() * 0x100000000);
+  const output = rustEngine.woodland_generate(width, height, seed, parameters.forestPatchScale);
+  const trees = new Uint8Array(rustEngine.memory.buffer, output, tiles.length);
   for (let cell = 0; cell < tiles.length; cell++) {
     const tile = tiles[cell];
     if (tile.marsh) { tile.biome = 'wetland'; tile.moisture = Math.max(.9, tile.moisture); continue; }

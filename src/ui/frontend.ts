@@ -7,6 +7,7 @@ import type { AdvancedStartPhase } from '../game/advanced-start';
 import { SCENARIOS, type ScenarioId } from '../game/scenario-content';
 import { AccountScreen, isAccountView, type AccountView } from './account-screen';
 import type { AccountUser } from '../account/client';
+import { FeedbackDialog } from './feedback-dialog';
 import { AUTOSAVE_ID, type StoredGameSummary } from '../game/game-storage';
 import './frontend.css';
 import './world-generation.css';
@@ -20,6 +21,7 @@ export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: numb
 export type FrontendAction =
   | { type: 'account-submit'; mode: 'login' | 'create-account'; email: string; password: string }
   | { type: 'account-logout' }
+  | { type: 'feedback-submit'; message: string; signedIn: boolean }
   | { type: 'resume' | 'saves' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
   | { type: 'save'; name: string }
   | { type: 'load'; id: string }
@@ -37,9 +39,8 @@ const START_TITLES = ['A young town of 20 people and your Leader.',
   '250 population, half the research tree, houses in blocks with wells, and 12 retinue.',
   '250 population, every technology researched, every building, and 12 retinue.'];
 const freshSeed = () => `TinyCiv-${Math.floor(Math.random() * 900000 + 100000)}`;
-/** The menu and world-generation art use 1672 × 941 scenes. */
+/** World generation aligns its controls with a 1672 × 941 illustration. */
 const SCENE_WIDTH = 1672, SCENE_HEIGHT = 941;
-const SCENE_CONTENT_HEIGHT = 880;
 const CREDITS: [string, string][] = [
   ['Puny World, Puny Characters and Miniworld', 'Shade (Merchant Shade), with octoshrimpy · CC0'],
   ['Tiny Overworld hills and mountains', 'Luis Zuno (ansimuz)'],
@@ -80,20 +81,27 @@ export class Frontend {
   private lobbySignature = '';
   private hallOfFame: HallOfFameEntry[] = [];
   private readonly content: HTMLElement;
+  private readonly feedback: FeedbackDialog;
   private readonly account = new AccountScreen();
   private accountUser: AccountUser | null = null;
   private accountBusy = false;
-  private compact = false;
   private layoutKey = '';
   constructor(readonly element: HTMLElement, private readonly action: (action: FrontendAction) => void) {
     element.className = 'frontend'; element.setAttribute('role', 'dialog'); element.setAttribute('aria-modal', 'true');
     element.setAttribute('aria-labelledby', 'frontend-title');
-    const backdrop = document.createElement('div');
-    backdrop.className = 'menu-scene menu-back'; backdrop.setAttribute('aria-hidden', 'true');
-    backdrop.innerHTML = '<img class="menu-backdrop" src="/assets/runtime/ui/main-menu/backdrop-no-world.webp" alt="" draggable="false">';
+    const backdrop = document.createElement('picture');
+    backdrop.className = 'menu-back'; backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.innerHTML = `
+      <source media="(max-aspect-ratio: 3/4)" srcset="/assets/ui/main-menu/centered-backdrop-portrait.webp">
+      <img src="/assets/ui/main-menu/centered-backdrop.webp" alt="" draggable="false">
+    `;
     this.content = document.createElement('div');
-    this.content.className = 'menu-scene menu-front';
+    this.content.className = 'menu-front';
     element.replaceChildren(backdrop, this.content);
+    this.feedback = new FeedbackDialog(element, message => this.action({ type: 'feedback-submit', message, signedIn: this.accountUser !== null }), () => {
+      this.content.inert = false;
+      this.content.querySelector<HTMLButtonElement>('[data-frontend-action="help"]')?.focus({ preventScroll: true });
+    });
     addEventListener('resize', () => { if (this.active) this.layout(); });
     element.addEventListener('click', event => this.click(event));
     element.addEventListener('submit', event => this.submit(event));
@@ -145,7 +153,10 @@ export class Frontend {
   get active(): boolean { return !this.element.hidden; }
   get currentView(): FrontendView { return this.view; }
   setSession(resumable: boolean, online = false): void { this.resumable = resumable; this.online = online; }
-  setAccount(user: AccountUser | null): void { this.accountUser = user; if (this.active) this.render(); }
+  setAccount(user: AccountUser | null): void { this.accountUser = user; this.feedback.setAccount(user); if (this.active) this.render(); }
+  openFeedback(): void { this.content.inert = true; this.feedback.open(this.accountUser); }
+  setFeedbackBusy(busy: boolean): void { this.feedback.setBusy(busy); }
+  setFeedbackResult(message: string, success = false): void { this.feedback.result(message, success); }
   setAccountBusy(busy: boolean): void {
     this.accountBusy = busy;
     this.element.querySelectorAll<HTMLButtonElement>('.account-submit,[data-frontend-action="account-logout"]').forEach(button => button.disabled = busy);
@@ -167,37 +178,28 @@ export class Frontend {
   setHallOfFame(entries: HallOfFameEntry[]): void { this.hallOfFame = entries; if (this.view === 'fame' && this.active) this.render(); }
   show(view: FrontendView = 'main'): void {
     if (isAccountView(this.view)) this.account.rememberEmail(this.element.querySelector('[data-form="account"]'));
-    if (this.view !== view) this.account.clearMessage();
+    if (this.view !== view) {
+      this.account.clearMessage();
+      this.content.scrollTop = 0;
+    }
     if (['options', 'controls'].includes(view) && !['options', 'controls'].includes(this.view)) this.returnView = this.view;
     this.view = view; this.element.hidden = false; this.render(); this.layout();
     this.element.querySelector<HTMLElement>(isAccountView(view) ? '[name="account-email"]' : view === 'single' ? '.worldgen-back' : view === 'scenarios' ? '[data-select-scenario][aria-pressed="true"]' : 'button:not(:disabled),input:not(:disabled)')?.focus({ preventScroll: true });
   }
-  hide(): void { this.element.hidden = true; }
-  /** Fit the original static scene; narrow screens stack the menu instead. */
+  hide(): void { this.feedback.close(); this.element.hidden = true; }
+  /** Select compact controls and fit the illustrated world generation screen. */
   private layout(): void {
-    const width = innerWidth, height = innerHeight, key = `${this.view}:${width}x${height}@${devicePixelRatio}`;
+    const width = innerWidth, height = innerHeight, key = `${this.view}:${width}x${height}`;
     if (key === this.layoutKey) return;
     this.layoutKey = key;
-    this.compact = width < 720 || width / height < 1.15 || this.view === 'scenarios' && width < 1100;
-    this.element.classList.toggle('is-compact', this.compact);
-    // Keep every menu option within the original button panel.
-    const count = this.menuItems().length;
-    this.element.style.setProperty('--menu-button-height', `${Math.min(66, (516 - (count - 1) * 9) / count)}px`);
+    const compact = width < 720 || width / height < 1.15 || this.view === 'scenarios' && width < 1100;
+    this.element.classList.toggle('is-compact', compact);
     if (this.view === 'single') {
       const scale = Math.min(width / SCENE_WIDTH, height / SCENE_HEIGHT);
       this.element.style.setProperty('--worldgen-scale', String(scale));
       this.element.style.setProperty('--worldgen-x', `${(width - SCENE_WIDTH * scale) / 2}px`);
       this.element.style.setProperty('--worldgen-y', `${(height - SCENE_HEIGHT * scale) / 2}px`);
-      return;
     }
-    if (this.compact) return;
-    const scale = this.view === 'scenarios' ? Math.min(width / SCENE_WIDTH, height / SCENE_HEIGHT)
-      : Math.min(Math.max(width / SCENE_WIDTH, height / SCENE_HEIGHT), height / SCENE_CONTENT_HEIGHT);
-    const x = this.view === 'scenarios' ? (width - SCENE_WIDTH * scale) / 2
-      : SCENE_WIDTH * scale > width ? Math.max(width - SCENE_WIDTH * scale, -40 * scale) : 0;
-    this.element.style.setProperty('--menu-scale', String(scale));
-    this.element.style.setProperty('--menu-visible-height', `${height / scale}px`);
-    this.element.style.setProperty('--menu-x', `${x}px`);
   }
   loading(title: string, _status: string, progress?: number, cancellable = false): void {
     const reuse = this.view === 'loading' && this.cancellableLoading === cancellable
@@ -328,6 +330,7 @@ export class Frontend {
     if (button.dataset.room) { this.selectedRoom = button.dataset.room; this.render(); return; }
     if (button.dataset.saveId) { if (!this.savesBusy) this.action({ type: 'load', id: button.dataset.saveId }); return; }
     const action = button.dataset.frontendAction;
+    if (action === 'help') { this.openFeedback(); return; }
     if (action === 'back') { this.back(); return; }
     if (action === 'join') { const form = this.element.querySelector<HTMLFormElement>('[data-form="server"]'); if (form) this.readProfile(form); this.action({ type: 'join', roomId: this.selectedRoom, name: this.name, color: this.color }); return; }
     if (action === 'fullscreen') { this.action({ type: 'settings', settings: { fullscreen: !document.fullscreenElement } }); return; }
@@ -411,8 +414,9 @@ export class Frontend {
     } else items.push(['New Game', 'data-view="single"'], ['Quick Start', 'data-frontend-action="quick"'],
       ['Load Game', 'data-frontend-action="saves"']);
     if (!this.online) items.push(['Scenarios', 'data-view="scenarios"']);
-    items.push(['Hall of Fame', 'data-view="fame"'], ['Preferences', 'data-view="options"'],
-      this.online ? ['Controls', 'data-view="controls"'] : ['Multiplayer', 'data-frontend-action="multiplayer"'], ['Credits', 'data-view="credits"']);
+    items.push(['Preferences', 'data-view="options"'],
+      this.online ? ['Controls', 'data-view="controls"'] : ['Multiplayer', 'data-frontend-action="multiplayer"']);
+    items.push(['Help', 'data-frontend-action="help"']);
     if (!this.accountUser) items.push(['Sign in / Create account', 'data-view="login"']);
     return items;
   }
@@ -453,7 +457,7 @@ export class Frontend {
     if (this.view === 'loading') body = `<div class="frontend-loading"><span class="frontend-loading-spinner" aria-hidden="true"></span><progress aria-label="Loading progress" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress><output class="frontend-loading-percent" aria-hidden="true">${this.progress === undefined ? '' : `${Math.round(this.progress * 100)}%`}</output></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
     if (this.view === 'error') body = `<div class="frontend-error-actions"><button class="primary" data-frontend-action="retry">Retry</button>${this.canReturnFromError ? '<button data-frontend-action="main">Main menu</button>' : ''}</div>`;
     const heading = this.view === 'main'
-      ? '<h1 id="frontend-title" class="menu-title"><img src="/assets/runtime/ui/main-menu/title.webp" alt="TinyCiv" draggable="false"></h1>'
+      ? '<h1 id="frontend-title" class="menu-title"><span>TinyCiv</span></h1>'
       : this.view === 'single' ? '<header class="worldgen-heading"><span class="worldgen-brand" aria-label="TinyCiv">TinyCiv</span><h1 id="frontend-title">World Generation</h1></header>'
       : this.view === 'loading' ? `<h1 id="frontend-title" class="frontend-loading-accessible">${escape(this.loadingTitle)}</h1>`
       : `<header><h1 id="frontend-title">${escape(title[this.view])}</h1>${this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>`;

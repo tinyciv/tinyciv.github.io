@@ -167,7 +167,7 @@ function cityPopulations(state: GameState, cities: Map<number, Building[]>): Map
     remaining.set(city.faction, (remaining.get(city.faction) ?? 0) - count);
     populations.set(city.id, (populations.get(city.id) ?? 0) + count);
   };
-  for (const house of state.buildings) if (house.kind === 'house' && buildingReady(house))
+  for (const house of state.buildings) if ((house.kind === 'house' || house.kind === 'apartments') && buildingReady(house))
     add(nearestCity(cities.get(house.faction) ?? [], center(house)), Math.min(house.capacity, house.residents ?? 0));
   for (const list of cities.values()) for (const palace of list) add(palace, palace.unhousedResidents ?? 0);
   for (const [faction, list] of cities) {
@@ -219,7 +219,7 @@ export function recordGuardCasualty(state: GameState, unit: Unit): boolean {
   const palaces = state.buildings.filter(building => building.kind === 'palace' && building.faction === unit.faction && buildingReady(building));
   const city = palaces.find(palace => palace.id === unit.guardCity) ?? nearestCity(palaces, unit);
   if (city) {
-    const house = state.buildings.filter(building => building.kind === 'house' && building.faction === unit.faction && buildingReady(building)
+    const house = state.buildings.filter(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === unit.faction && buildingReady(building)
       && (building.residents ?? 0) > 0 && nearestCity(palaces, center(building))?.id === city.id)
       .sort((a, b) => distance(a, unit) - distance(b, unit) || a.id - b.id)[0];
     if (house) house.residents = Math.max(0, (house.residents ?? 0) - 1);

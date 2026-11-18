@@ -114,7 +114,8 @@ resource "aws_iam_role_policy" "database_management" {
         Action = "secretsmanager:GetSecretValue"
         Resource = [
           aws_db_instance.accounts.master_user_secret[0].secret_arn,
-          aws_secretsmanager_secret.database_application.arn
+          aws_secretsmanager_secret.database_application.arn,
+          aws_secretsmanager_secret.analytics.arn
         ]
       },
       {

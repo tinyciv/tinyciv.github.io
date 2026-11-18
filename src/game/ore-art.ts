@@ -1,15 +1,20 @@
 import palettes from './relief-palettes.json';
+import { loadReliefSheet, reliefImage } from './relief-art';
 export type OreMaterial = 'copper' | 'iron' | 'gold';
 export type OrePalette = keyof typeof palettes;
 export interface OreClumpArt {
   anchor: number; x: number; y: number; width: number; height: number;
-  family: 0 | 1 | 2; variant: 0 | 1; material: OreMaterial; palette: OrePalette;
+  family: 0 | 1 | 2; variant: 0 | 1; material: OreMaterial | 'stone'; palette: OrePalette;
   /** Explored cells inside the clump's bounding rectangle, in row order. */
   visible: readonly number[]; developed: boolean;
 }
-interface Sprite { image: HTMLCanvasElement; door: { x: number; y: number; width: number; height: number } }
+type MineDoor = { x: number; y: number; width: number; height: number };
+interface Sprite { image: HTMLCanvasElement; door?: MineDoor }
 export const ORE_VISUAL_SCALE = 1.5;
 const sizes = [[16, 16], [32, 32], [48, 32]];
+// Atlas B's bare mountain row provides complete, unmineralized stone silhouettes.
+const QUARRY_SHEET = 1;
+const QUARRY_SLOTS = [[12, 14], [12, 14], [13, 15]] as const;
 const originals: HTMLCanvasElement[][] = [];
 const pictures = new Map<string, Sprite>();
 const artKeys = new WeakMap<OreClumpArt, string>();
@@ -25,7 +30,7 @@ const sourceKey = (art: OreClumpArt): string => art.material === 'iron' ? `${art
   : `${art.family}:${art.variant}:${art.material}:${art.palette}`;
 export function loadOreArt(): Promise<void> {
   // tools/runtime-art/ore.mjs bakes the former Canvas crop and rasterization.
-  return loading ??= Promise.all([0, 1, 2].map(async family => {
+  return loading ??= Promise.all([loadReliefSheet(QUARRY_SHEET), ...[0, 1, 2].map(async family => {
     const image = new Image(); image.src = `${import.meta.env.BASE_URL}assets/runtime/game/ore-${family + 1}.webp`; await image.decode();
     const [w, h] = sizes[family];
     if (image.naturalWidth !== w * 3 || image.naturalHeight !== h * 2) throw new Error(`Invalid ore atlas ${family}`);
@@ -34,9 +39,9 @@ export function loadOreArt(): Promise<void> {
       out.getContext('2d', { willReadFrequently: true })!.drawImage(image, slot % 3 * w, Math.floor(slot / 3) * h, w, h, 0, 0, w, h);
       return out;
     });
-  })).then(() => undefined);
+  })]).then(() => undefined);
 }
-function doorPosition(image: HTMLCanvasElement, family: number): Sprite['door'] {
+function doorPosition(image: HTMLCanvasElement, family: number): MineDoor {
   const { width: w, height: h } = image, width = family === 0 ? 6 : 10, height = family === 0 ? 5 : 8;
   const data = image.getContext('2d')!.getImageData(0, 0, w, h).data;
   let best = -Infinity, position = { x: Math.floor((w - width) / 2), y: h - height - 2, width, height };
@@ -57,6 +62,11 @@ function doorPosition(image: HTMLCanvasElement, family: number): Sprite['door'] 
 }
 function sprite(art: OreClumpArt): Sprite | undefined {
   const key = sourceKey(art), cached = pictures.get(key); if (cached) return cached;
+  if (art.material === 'stone') {
+    const image = reliefImage(QUARRY_SHEET, QUARRY_SLOTS[art.family][art.variant], art.palette);
+    if (!image) return;
+    const result = { image }; pictures.set(key, result); return result;
+  }
   const iron = art.material === 'iron', family = iron ? art.family === 2 ? 2 : 1 : art.family;
   const variant = art.variant, palette = iron ? 'grassland' : art.palette;
   const slot = variant * 3 + ['copper', 'iron', 'gold'].indexOf(art.material), original = originals[family]?.[slot]; if (!original) return;
@@ -87,19 +97,20 @@ export function oreArtKey(art: OreClumpArt): string {
   return key;
 }
 /** Cached by NativeArt. No pixel work or doorway fitting occurs on cache hits. */
-export function drawOreClump(c: CanvasRenderingContext2D, art: OreClumpArt, door?: HTMLCanvasElement, x = 0, y = 0, size = 32): void {
+export function drawOreClump(c: CanvasRenderingContext2D, art: OreClumpArt, door?: HTMLCanvasElement, x = 0, y = 0, size = 32,
+  visualScale = ORE_VISUAL_SCALE): void {
   const picture = sprite(art); if (!picture) return;
   c.save(); c.imageSmoothingEnabled = false; c.beginPath();
   for (const cell of art.visible) c.rect(x + cell % art.width * size, y + Math.floor(cell / art.width) * size, size, size);
-  const nativePixel = size / 16 * ORE_VISUAL_SCALE;
-  // Fit each iron silhouette into smaller deposits without clipping its
+  const nativePixel = size / 16 * visualScale;
+  // Fit each irregular deposit's silhouette without clipping its
   // peaks or stretching it into the footprint's rectangular shape.
-  const pixel = art.material === 'iron' ? Math.min(nativePixel,
+  const pixel = art.material === 'iron' || art.material === 'stone' ? Math.min(nativePixel,
     art.width * size / picture.image.width, art.height * size / picture.image.height) : nativePixel;
   const width = picture.image.width * pixel, height = picture.image.height * pixel;
   const left = x + (art.width * size - width) / 2, top = y + art.height * size - height;
   c.clip(); c.drawImage(picture.image, left, top, width, height);
-  if (art.developed && door) {
+  if (art.developed && door && picture.door) {
     const fitted = picture.door;
     c.drawImage(door, left + fitted.x * pixel, top + fitted.y * pixel, fitted.width * pixel, fitted.height * pixel);
   }

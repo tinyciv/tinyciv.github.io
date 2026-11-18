@@ -14,7 +14,8 @@ export function planHermitHomes(state: GameState): Hermit[] {
     const values: number[] = [world.width, world.height, seed >>> 0, buildings.length, capital?.x ?? -1, capital?.y ?? -1];
     world.tiles.forEach((tile, i) => {
         const walk = traversable(world, i % world.width, Math.floor(i / world.width));
-        const flags = Number(tile.overlay !== 'none') | Number(!!tile.ridge) << 1 | Number(!!tile.stair) << 2 | Number(tile.terrain === 'river') << 3 | Number(!!tile.palm) << 4;
+        const flags = Number(tile.overlay !== 'none') | Number(!!tile.ridge) << 1 | Number(!!tile.stair) << 2
+            | Number(tile.terrain === 'river') << 3 | Number(!!tile.palm) << 4 | Number(!!tile.resource) << 5;
         values.push(flags, territoryValue(borders, i), edges[i], Number(walk));
     });
     for (const b of buildings)

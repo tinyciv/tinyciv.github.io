@@ -3,11 +3,12 @@
   "createdOn": "2026-11-17",
   "terrain": "plains",
   "authorization": "User requested shorter sparser plains set and direct integration.",
-  "design": "Native16 low fans,5-6px tall with3-4 blades; rendered at about28% grassland clump density.",
-  "processing": "Unchanged generated PNG sheets copied from scratch; no pixel painting,resampling or recoloring.",
+  "design": "Native16 low fans,5\u20136px tall with3\u20134 blades; about28% grassland clump density.",
+  "processing": "Unchanged generated native16 frames packed into row atlases. Reviewed calm-frame timing for3 loops; no resampling, recoloring or pixel painting.",
   "variants": [
     {
       "id": "P1",
+      "label": "Low olive",
       "file": "1.png",
       "size": [
         16,
@@ -21,18 +22,21 @@
         1.0
       ],
       "source": "scratch/2026-11-17-plains-breeze/P1/sheet.png",
-      "sha256": "fc903d5ec934723251706801bafb6877bc0e5c30c8c876d2a12b6c7e26ddc7e7",
-      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS FAN. Native 16x16 pixel art on a transparent background. The silhouette is a WIDE SHALLOW HORIZONTAL ARC, twice as wide as tall: 12 to 14 pixels WIDE, only 5 to 7 pixels HIGH. Grass blades curve outward mostly SIDEWAYS, only slightly upward. Roots at row14 and highest tips around row8. The entire upper HALF of the canvas is EMPTY TRANSPARENT AIR. Keep individual blades short, about4 to6 pixels long. Only FOUR short soft broad olive-green blades with muted yellow-green tips. A shallow fan, two blades curve mostly left, two right. Very simple chunky connected pixels and low contrast, no seed heads. HIGH TOP-DOWN overhead orthographic camera, NOT isometric. Use the supplied APPROVED EXISTING GAME SHORT GRASS as grounding for native pixel density, leaf material, shallow size and upper-left lighting. NEW plains grass should be HALF AS LUSH and visibly SHORTER than the medium grassland clumps, a few low blades with large transparent gaps. It repeats sparsely on muted golden #c4b253 plains ground. Restrained earthy olive and straw, no neon greens, white or bright cream. Tiny subtle root cluster, no dark mound or heavy outline. Transparent background and air between blades; no ground tile, soil slab, rocks, flowers, seeds, crop heads, bush, fern, tall vertical stalk, shadow, border, scenery, blur, antialiasing or dithering. Never zoom the fan up vertically to fill the square canvas. All pixels inside this fixed native16 canvas.",
+      "sha256": "f6cfd994625c06abecfd6332f8a403a77efb04d3a56379027f3eaad82ef081e8",
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS FAN. Native 16x16 pixel art on a transparent background. The silhouette is a WIDE SHALLOW HORIZONTAL ARC, twice as wide as tall: 12 to 14 pixels WIDE, only 5 to 7 pixels HIGH. Grass blades curve outward mostly SIDEWAYS, only slightly upward. Roots at row14 and highest tips around row8. The entire upper HALF of the canvas is EMPTY TRANSPARENT AIR. Keep individual blades short, about4 to6 pixels long. Only FOUR short soft broad olive-green blades with muted olive tips. A shallow fan, two blades curve mostly left, two right. Very simple chunky connected pixels and low contrast, no seed heads. HIGH TOP-DOWN overhead orthographic camera, NOT isometric. Use the supplied APPROVED EXISTING GAME SHORT GRASS as grounding for native pixel density, leaf material, shallow size and upper-left lighting. NEW plains grass should be HALF AS LUSH and visibly SHORTER than the medium grassland clumps, a few low blades with large transparent gaps. It repeats sparsely on muted golden #c4b253 plains ground. Restrained earthy olive and straw, no neon greens, white or bright cream. Tiny subtle root cluster, no dark mound or heavy outline. Transparent background and air between blades; no ground tile, soil slab, rocks, flowers, seeds, crop heads, bush, fern, tall vertical stalk, shadow, border, scenery, blur, antialiasing or dithering. Never zoom the fan up vertically to fill the square canvas. All pixels inside this fixed native16 canvas. EVERY blade is a flat dull olive green, almost the same value from root to tip. NO highlights, white pixels, cream, yellow glowing tips or flowers. The subject is FOUR subtle curved short grass blades, NOT two pale petals or a white V. Use ONLY the supplied earthy olive palette. Lightest allowed value is subdued olive #a49c54.",
       "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation.",
       "baseBounds": [
-        2,
+        3,
         11,
-        14,
+        13,
         16
-      ]
+      ],
+      "row": 0,
+      "runtimeId": "plains-1"
     },
     {
       "id": "P2",
+      "label": "Dry straw",
       "file": "2.png",
       "size": [
         16,
@@ -54,10 +58,13 @@
         10,
         14,
         16
-      ]
+      ],
+      "row": 1,
+      "runtimeId": "plains-2"
     },
     {
       "id": "P3",
+      "label": "Fine stubble",
       "file": "3.png",
       "size": [
         16,
@@ -79,7 +86,233 @@
         11,
         14,
         16
-      ]
+      ],
+      "row": 2,
+      "runtimeId": "plains-3"
+    },
+    {
+      "id": "P4",
+      "label": "Forked stubble",
+      "runtimeId": "plains-4",
+      "row": 3,
+      "file": "4.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 17,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P4/sheet.png",
+      "sha256": "aeae0393fa55de0b582690e267f85d74b6705ce707ed48f3799ce8f091129ce6",
+      "baseBounds": [
+        2,
+        10,
+        13,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. Only THREE tiny forked dry grass blades in a lopsided short clump, each blade splits into a subtle V at its very end. Unequal stem lengths, two lean left and one right. A compact airy width9 to11 pixels and height4 to5. Tiny root, no seeds, pale tips or flowers. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation.",
+      "playbackFrames": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "motionSelection": "Reviewed calm PixelLab poses in a slow3.06s forward/back loop; exact generated pixels retained."
+    },
+    {
+      "id": "P5",
+      "label": "Flat crabgrass",
+      "runtimeId": "plains-5",
+      "row": 4,
+      "file": "5.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 10,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P5/sheet.png",
+      "sha256": "4e557a426ca9266069fb3aece2e91926d48c194a7eb9d646708e755c8b0a2cc1",
+      "baseBounds": [
+        1,
+        12,
+        15,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. Only FOUR low leaves stretch almost HORIZONTALLY outward from a tiny center root, two left and two right. Flat side-spreading shallow crescent, width12 to14 pixels and height4 to6. Leaves have gently hooked ends. Nearly empty center above roots, no tall middle stalk. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "TINY HORIZONTAL TIP TWITCH of this exact SHORT LOW GRASS. The ENTIRE sprite always stays below row11 in the native16x16 canvas; ALL rows above11 remain completely EMPTY TRANSPARENT in EVERY frame. MAXIMUM grass height is5 pixels, NEVER taller. Blade bodies, width, root pixels, leaf count and LOW SHALLOW pose stay IDENTICAL to reference. Only the last tip pixel of each short blade gently nudges ONE PIXEL SIDEWAYS then returns, twice. No growing, sprouting, lengthening, unrolling, straightening upward, upright stalks, seeds, flowers, vertical bounce, whole body sway or camera movement. KEEP SHORT GRASS SHORT throughout; do not animate a tall plant. Fixed high top-down orthographic non-isometric camera. Exact reference palette and transparency. First and last frames match reference."
+    },
+    {
+      "id": "P6",
+      "label": "Twin stubbles",
+      "runtimeId": "plains-6",
+      "row": 5,
+      "file": "6.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 14,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P6/sheet.png",
+      "sha256": "1654703eff62a68f3a42cb3d77d70e5eb318750c3fb862ecaab3523d51d2ac81",
+      "baseBounds": [
+        2,
+        11,
+        13,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. TWO TINY SEPARATE GRASS STUBBLES side by side, each with only TWO short slightly curved blades. LEFT pair height5 pixels, RIGHT pair height3 pixels. Two separate root points with a THREE PIXEL empty transparent gap between pairs. Total width12 to14. No joining mound or ground patch. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "TINY HORIZONTAL TIP TWITCH of this exact SHORT LOW GRASS. The ENTIRE sprite always stays below row10 in the native16x16 canvas; ALL rows above10 remain completely EMPTY TRANSPARENT in EVERY frame. MAXIMUM grass height is6 pixels, NEVER taller. Blade bodies, width, root pixels, leaf count and LOW SHALLOW pose stay IDENTICAL to reference. Only the last tip pixel of each short blade gently nudges ONE PIXEL SIDEWAYS then returns, twice. No growing, sprouting, lengthening, unrolling, straightening upward, upright stalks, seeds, flowers, vertical bounce, whole body sway or camera movement. KEEP SHORT GRASS SHORT throughout; do not animate a tall plant. Fixed high top-down orthographic non-isometric camera. Exact reference palette and transparency. First and last frames match reference."
+    },
+    {
+      "id": "P7",
+      "label": "Bent sage",
+      "runtimeId": "plains-7",
+      "row": 6,
+      "file": "7.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 14,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P7/sheet.png",
+      "sha256": "19459e037ce635e0493eca088b41f2b85fc0f559ff8de85cf9c955197a74e54b",
+      "baseBounds": [
+        3,
+        10,
+        12,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. Only THREE thin short sage-olive grass blades, all curve softly LEFT from a tiny root on the RIGHT. The longest leaf makes a small arch while other two stay lower. Airy asymmetric one-sided silhouette, width10 to12 pixels and height5 to7. No flowers, seeds or broad foliage. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "TINY HORIZONTAL TIP TWITCH of this exact SHORT LOW GRASS. The ENTIRE sprite always stays below row9 in the native16x16 canvas; ALL rows above9 remain completely EMPTY TRANSPARENT in EVERY frame. MAXIMUM grass height is7 pixels, NEVER taller. Blade bodies, width, root pixels, leaf count and LOW SHALLOW pose stay IDENTICAL to reference. Only the last tip pixel of each short blade gently nudges ONE PIXEL SIDEWAYS then returns, twice. No growing, sprouting, lengthening, unrolling, straightening upward, upright stalks, seeds, flowers, vertical bounce, whole body sway or camera movement. KEEP SHORT GRASS SHORT throughout; do not animate a tall plant. Fixed high top-down orthographic non-isometric camera. Exact reference palette and transparency. First and last frames match reference."
+    },
+    {
+      "id": "P8",
+      "label": "Dry cut stems",
+      "runtimeId": "plains-8",
+      "row": 7,
+      "file": "8.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 15,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P8/sheet.png",
+      "sha256": "b98d4bfcab1625f193904c3bd25f990b817a42ffe8581325ee4b57e7883ba196",
+      "baseBounds": [
+        1,
+        11,
+        14,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. FIVE SHORT UPRIGHT DRY GRASS STUBS spread across a LOW WIDE CUT GRASS PATCH. Blunt ragged cut ends at unequal heights, one or two pixels thick, subtle outward lean. Height5 to6 pixels and width11 to12. A few short stubble stems, not a growing leafy fan, no flowers or seed heads. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation."
+    },
+    {
+      "id": "P9",
+      "label": "Low curled tuft",
+      "runtimeId": "plains-9",
+      "row": 8,
+      "file": "9.png",
+      "size": [
+        16,
+        16
+      ],
+      "sheetFrameCount": 17,
+      "frameCount": 17,
+      "frameDurationMs": 180,
+      "anchor": [
+        0.5,
+        1.0
+      ],
+      "source": "scratch/2026-11-17-meadow-diversity/P9/sheet.png",
+      "sha256": "6efc4646f851f952e0fcce88028c2db837ac90f34e1cab891d54e9075f43c253",
+      "baseBounds": [
+        2,
+        10,
+        14,
+        16
+      ],
+      "prompt": "ONE VERY SHORT SPARSE PLAINS GRASS SPRITE, native16x16 transparent pixel art. Only FOUR short thin olive leaves bend RIGHT in little hooked curves from one tiny root at the LEFT. Two longer low leaves nearly horizontal, two shorter behind. An open sideways wind-combed shape, width11 to13 pixels and height4 to6. No upright center spike, flowers or seeds. A WIDE SHALLOW shape confined to the LOWER HALF of the canvas, EMPTY transparent upper half. Roots at row14 to15; tallest tips near row9 or lower. The blades must stay visibly SHORTER than medium grassland grass. Camera HIGH TOP-DOWN overhead orthographic, NOT isometric. Use the supplied EXISTING GAME GRASS reference for the established pixel size, restrained leaf shading and material palette ONLY. Create the explicitly described NEW SILHOUETTE rather than copying the reference arrangement. Moderate contrast against #c4b253 golden plains. Use ONLY the supplied muted earthy palette. Tiny subtle roots and transparent spaces between blades. No white, cream, glowing highlights, neon greens, flowers, large seed heads, bushes, fern fronds, soil, ground tile, shadow, borders, scenery, lettering, blur, antialiasing or disconnected noise. Keep the complete silhouette visible inside its fixed canvas. Crisp connected pixels; transparent background.",
+      "animationPrompt": "GENTLE BREEZE LOOP. High top-down fixed orthographic camera, NOT isometric. This exact small GRASS tuft slowly sways a little to the right, returns softly upright, a little left, then returns to the exact original pose. Blade TIPS bend sideways only ONE native pixel, at most two on the longest blades. Lower stem bases and roots remain fixed to the same pixels; grass never slides or bobs. Upper blades bend with their own connected leaves, flexible soft arcs; tiny differences in timing between blades. Mild calm breeze, no violent gusts. Preserve the exact blade count, tuft height, footprint, colors, pixel clusters and transparent gaps. No growing, flowering, morphing, squash/stretch, shaking, sparkling, color flicker, new objects, detached leaves, background or camera motion. All pixels inside the original canvas, transparent background. Start and end in the same reference pose for a seamless repeating animation.",
+      "playbackFrames": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "motionSelection": "Reviewed calm PixelLab poses in a slow3.06s forward/back loop; exact generated pixels retained."
     }
-  ]
+  ],
+  "diversifiedOn": "2026-11-17",
+  "variantCount": 9,
+  "atlas": {
+    "file": "variants.png",
+    "size": [
+      272,
+      144
+    ],
+    "frameSize": [
+      16,
+      16
+    ],
+    "columns": 17,
+    "rows": 9,
+    "sha256": "53873e8672fca77fed18422241483aba88f047953f42b904fda74fa4246d769a"
+  }
 }

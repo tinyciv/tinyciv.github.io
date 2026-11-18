@@ -5,13 +5,13 @@ import { scatterDesertStones } from './desert-stones';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type Overlay, type Point, type Terrain, type Tile, type World } from '../game/types';
 import { EARTH_SAMPLES } from './data/earth-samples';
-import { applyReliefFootprints, generateRelief } from './relief-native';
+import { generateLedges } from './ledges-native';
 import { reliefBuildable, reliefFlags } from '../game/relief';
 import { settlementTerrainMask } from '../game/terrain-sites';
 import { addOffshoreIslands, createLandformProfile, landformDensity, type LandformProfile } from './islands';
 import { assignTreeClimate } from './tree-climate';
 import { OPPOSING_FACTION_COUNT } from '../game/civilizations';
-import { DEFAULT_WORLD_STYLE, LANDFORM_KINDS, resolveLandscapeParameters, WORLD_GENERATION_STYLES,
+import { DEFAULT_WORLD_STYLE, LANDFORM_KINDS, LEDGES_ENABLED, resolveLandscapeParameters, WORLD_GENERATION_STYLES,
   type LandformFamily, type LandscapeParameters, type WorldGenerationOptions, type WorldGenerationStyle } from './options';
 import { placeFreshwaterLakes, placeLandformLakes } from './lakes';
 import { applyLandformHeights, createLandformPlan, shapeLandformCoasts } from './landforms';
@@ -310,9 +310,8 @@ export function settlements(tiles: Tile[], width: number, height: number, random
   if (component.length < Math.min(1200, width * height * 0.16)) return empty;
   const members = new Set(component);
   const placement = settlementTerrainMask(world ?? { width, height, tiles, seed: 'settlement-sites', source: 'generated', spawns: [], revision: 0 });
-  // Match the palace ring plus all four houses and their walking lanes. The
-  // old 5×5 core could fit a palace beside hill country while pushing its full town
-  // ten tiles away. Compact development maps retain the flexible town planner.
+  // Match the palace ring plus all four houses and their walking lanes.
+  // Compact development maps retain the flexible town planner.
   const townFootprint: Point[] = [];
   for (let dy = -3; dy <= 4; dy++) for (let dx = -3; dx <= 4; dx++) {
     if (dx >= -1 && dx <= 2 && dy >= -1 && dy <= 2
@@ -529,7 +528,7 @@ export interface WorldGenerationProgress {
 }
 
 function* generateAttempt(seed: string, width: number, height: number, attempt: number, style: WorldGenerationStyle,
-  parameters: LandscapeParameters, landformFamily: LandformFamily, riverDeltas: boolean, includeSettlements: boolean, oceanChannelWidth = 0): Generator<WorldGenerationProgress, World> {
+  parameters: LandscapeParameters, landformFamily: LandformFamily, options: WorldGenerationOptions): Generator<WorldGenerationProgress, World> {
   const checkpoint = (progress: number, phase: string): WorldGenerationProgress => ({ progress, phase, attempt: attempt + 1 });
   yield checkpoint(0, 'Shaping land');
   // Development maps still hold every starting city. Scale the waterways
@@ -557,6 +556,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
     largeChance: profile.style === 'pangaea' ? .15 : .4,
     size: (.8 + profileRandom() * .7) * parameters.islandSize,
   });
+  const oceanChannelWidth = options.oceanChannelWidth ?? 0;
   if (oceanChannelWidth > 0) applyScenarioOceanChannel(land, width, height, oceanChannelWidth);
   const plan = !profile.compact ? createLandformPlan(seed, width, height, land, landformFamily, parameters) : undefined;
   if (plan) shapeLandformCoasts(land, width, height, plan);
@@ -608,7 +608,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   yield checkpoint(.47, 'Forming wetlands');
   // Sediment builds coastal wetlands only after the upstream landforms and
   // channel network are complete. Settlement and beach placement respect them.
-  world.riverDeltas = riverDeltas ? generateRiverDeltas(world) : [];
+  world.riverDeltas = options.riverDeltas === false ? [] : generateRiverDeltas(world);
   // Refresh base yields after waterways are carved, adding riverside fertility.
   for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
     const i = y * width + x, tile = tiles[i];
@@ -622,38 +622,29 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   // Starting-site selection must see the polar climate, not terrain that
   // will subsequently turn into the middle of a snowfield.
   applyTundra(world, parameters);
-  yield checkpoint(.56, 'Raising hills');
-  // Rivers, creeks, lakes and wetlands are final exclusions. Rust selects
-  // connected hill/mountain regions only on the remaining dry ground.
-  generateRelief(world, plan, parameters);
-  applyReliefFootprints(world);
   yield checkpoint(.68, 'Finding city sites');
   const minimumFactionDistance = width >= DEFAULT_WORLD_WIDTH && height >= DEFAULT_WORLD_HEIGHT ? MIN_FACTION_START_DISTANCE : 0;
   world.minimumFactionStartDistance = minimumFactionDistance || undefined;
   // Starting town footprints must stay on buildable low ground.
-  const sites = includeSettlements ? settlements(tiles, width, height, random, parameters, minimumFactionDistance, world)
-    : { capitals: [], secondary: [] };
+  const sites = options.settlements === false ? { capitals: [], secondary: [] }
+    : settlements(tiles, width, height, random, parameters, minimumFactionDistance, world);
   world.spawns = sites.capitals;
   world.secondarySpawns = sites.secondary;
-  yield checkpoint(.78, 'Growing woodland');
   addCoastalBeaches(world, attempt, parameters);
   applyDesertTransitions(world);
+  // Plant after the final waterways and coast features so their banks leave
+  // the same walkable woodland gaps as ordinary terrain.
+  applyTundra(world, parameters);
+  generateWorldFeatures(world);
+  if (options.ledges ?? LEDGES_ENABLED) generateLedges(world, parameters.reliefCoverage);
+  yield checkpoint(.78, 'Growing woodland');
   applyTerrainEcology(world, parameters);
   assignTreeClimate(world, parameters);
   applySoilFertility(world);
-  // Complete polar/soil policy before the native landscape pass. The new
-  // water and lowlands then participate in normal resources and pathing.
-  applyTundra(world, parameters);
-  if (generateWorldFeatures(world)) {
-    assignTreeClimate(world, parameters);
-    applySoilFertility(world);
-    applyReliefFootprints(world);
-  }
   yield checkpoint(.88, 'Placing resources');
   assignRegionalResources(world);
   applyStonePlains(world);
   scatterDesertStones(world);
-  applyReliefFootprints(world);
   yield checkpoint(1, 'Terrain ready');
   return world;
 }
@@ -672,7 +663,7 @@ function* generateWorldSteps(seed: string, width?: number, height?: number,
     throw new RangeError('World dimensions must be integers between 24 and 512 tiles.');
   }
   for (let attempt = 0; attempt < 20; attempt++) {
-    const world = yield* generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options.riverDeltas !== false, options.settlements !== false, options.oceanChannelWidth);
+    const world = yield* generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options);
     if (options.settlements === false || world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) return world;
   }
   throw new Error(`Could not find ${OPPOSING_FACTION_COUNT + 1} connected capitals and ${OPPOSING_FACTION_COUNT} second cities for seed "${seed}".`);

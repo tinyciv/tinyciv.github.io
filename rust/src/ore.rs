@@ -1,4 +1,4 @@
-//! Complete mineral outcrops beside relief. Placement and mining yields run
+//! Complete mineral outcrops on exposed ground. Placement and mining yields run
 //! in a Bevy world; the host mirrors footprints and renders approved sprites.
 use bevy_ecs::prelude::*;
 use std::collections::VecDeque;
@@ -6,15 +6,15 @@ use std::collections::VecDeque;
 const WALK: u32 = 1;
 const ELIGIBLE: u32 = 2;
 const TREE: u32 = 4;
+const SPAWN: u32 = 8;
 // Resource codes: none, clay, copper, iron, gold, stone, salt, olives, fish.
 // Bit 1: solid for everyone; bit 2: restricted to the assigned salt crew.
 pub fn ground_policy(resource: u32) -> u32 {
     match resource { 2..=5 => 1, 6 => 2, _ => 0 }
 }
-/// The tall three-wide outcrop reserves its artwork, but only its front row
-/// is solid. Soldiers can pass behind the peaks using the ordinary walk graph.
-pub fn footprint_ground_policy(resource: u32, width: u32, height: u32, row: u32) -> u32 {
-    if (2..=4).contains(&resource) && width == 3 && height == 3 && row < 2 { 0 }
+/// Ore peaks overhang walkable ground north of the deposit's solid front row.
+pub fn footprint_ground_policy(resource: u32, behind_front: bool) -> u32 {
+    if behind_front && (2..=4).contains(&resource) { 0 }
     else { ground_policy(resource) }
 }
 pub fn work_access(resource: u32, phase: u32, worker: bool) -> bool {
@@ -127,58 +127,63 @@ fn generate(settings: Res<Settings>, input: Res<Input>, mut output: ResMut<Outpu
     if n == 0 || input.0.len() < n * 4 { return; }
     let data = &input.0;
     let mut flags: Vec<u32> = (0..n).map(|c| data[c * 4] as u32).collect();
-    let relief: Vec<bool> = (0..n).map(|c| data[c * 4 + 1] != 0.0).collect();
     // Tutorial outcrops must be reachable from a founding city, rather than
     // occupying an attractive but inaccessible offshore island.
     let mut reachable=vec![!s.tutorial;n];let mut access=VecDeque::new();
     if s.tutorial {
-        for cell in 0..n {if flags[cell]&8!=0 {reachable[cell]=true;access.push_back(cell);}}
+        for cell in 0..n {if flags[cell]&SPAWN!=0 {reachable[cell]=true;access.push_back(cell);}}
         while let Some(cell)=access.pop_front(){adjacent(cell,w,h,|next|{
             if !reachable[next]&&flags[next]&WALK!=0 {reachable[next]=true;access.push_back(next);}
         });}
     }
-    let mut distance = vec![u8::MAX; n]; let mut queue = VecDeque::new();
-    for cell in 0..n { if relief[cell] { distance[cell] = 0; queue.push_back(cell); } }
-    while let Some(cell) = queue.pop_front() {
-        let d = distance[cell] + 1; if d > 5 { continue; }
-        adjacent(cell, w, h, |next| { if distance[next] > d { distance[next] = d; queue.push_back(next); } });
-    }
-    let mut candidates: Vec<usize> = (0..n).filter(|c| reachable[*c]&&flags[*c] & ELIGIBLE != 0 && (s.tutorial||distance[*c] <= 3)).collect();
-    candidates.sort_unstable_by_key(|c| (if s.tutorial {distance[*c].min(12)} else {0},hash(s.seed, *c, 17)));
+    let mut candidates: Vec<_> = (0..n).filter(|&cell| reachable[cell] && flags[cell] & ELIGIBLE != 0)
+        .map(|cell| {
+            let random = f64::from(hash(s.seed, cell, 17)) / 4294967296.0;
+            let elevation = data[cell * 4 + 1].clamp(0.0, 1.0);
+            (random - elevation * 0.2, cell)
+        }).collect();
+    candidates.sort_unstable_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     let dry = (0..n).filter(|c| data[c * 4 + 3] != 0.0).count();
     let desired = if s.tutorial {[2,2,0]} else {[(dry / 1600).max(1), (dry / 1900).max(1), (dry / 2800).max(1)]};
     let mut counts = [0usize; 3];
     let mut excluded = vec![false; n]; let mut group = s.first_group;
+    // Each footprint searches the sorted list once. Tutorial halves have
+    // separate cursors so the first half cannot consume the other's sites.
+    let mut cursors = [0; 3];
     for round in 0..*desired.iter().max().unwrap() { for kind in 1..=3 {
         let k = kind - 1; if counts[k] >= desired[k] { continue; }
         let wanted = (round + kind - 1) % 3;
         // Search suitable sites for the requested family before accepting a
         // smaller fallback. Narrow shoulders must not suppress every wide rib.
-        'families: for family in if s.tutorial {vec![0]} else {vec![wanted,(wanted+1)%3,(wanted+2)%3]} {
+        let families = [wanted, (wanted + 1) % 3, (wanted + 2) % 3];
+        'families: for &family in if s.tutorial { &[0][..] } else { &families[..] } {
             let (width, height) = match family { 0 => (2, 2), 1 => (3, 3), _ => (5, 3) };
-            for &start in &candidates {
+            let cursor = &mut cursors[if s.tutorial { round } else { family }];
+            while let Some(&(_, start)) = candidates.get(*cursor) {
+                *cursor += 1;
                 if excluded[start] || flags[start] & ELIGIBLE == 0 { continue; }
                 let x = start % w; let y = start / w;
                 if s.tutorial&&((x>=w/2)as usize!=round||x+width>=w/2&&round==0) {continue;}
                 if x + width >= w || y + height >= h { continue; }
-                let mut cells = Vec::with_capacity(width * height); let mut touches = false; let mut okay = true;
+                let mut cells = Vec::with_capacity(width * height); let mut okay = true;
                 for dy in 0..height { for dx in 0..width {
                     let cell = (y + dy) * w + x + dx; cells.push(cell);
-                    okay &= reachable[cell]&&!excluded[cell] && flags[cell] & ELIGIBLE != 0 && (s.tutorial||distance[cell] <= width.max(height) as u8)
+                    okay &= reachable[cell]&&!excluded[cell] && flags[cell] & ELIGIBLE != 0
                         && data[cell * 4 + 2] == data[start * 4 + 2];
-                    touches |= distance[cell] == 1;
                 }}
                 // Keep a flat southern approach for mine roads and workers.
                 for dx in 0..width { let front = (y + height) * w + x + dx; okay &= flags[front] & ELIGIBLE != 0; }
+                if !okay { continue; }
+                let front = y + height - 1;
                 let blocking: Vec<_> = cells.iter().copied().filter(|cell| footprint_ground_policy(
-                    kind as u32 + 1, width as u32, height as u32, (cell / w - y) as u32) != 0).collect();
-                if !okay || !s.tutorial&&!touches || !connected(&blocking, &flags, w, h) { continue; }
+                    kind as u32 + 1, cell / w < front) != 0).collect();
+                if !connected(&blocking, &flags, w, h) { continue; }
                 for &cell in &cells {
                     let at = cell * 8;
                     output.0[at..at + 8].copy_from_slice(&[kind as f64, group as f64, start as f64, family as f64,
                         (hash(s.seed, start, 43) & 1) as f64, width as f64, height as f64, 0.0]);
                     flags[cell] &= !(ELIGIBLE | TREE);
-                    if footprint_ground_policy(kind as u32 + 1, width as u32, height as u32, (cell / w - y) as u32) != 0 {
+                    if footprint_ground_policy(kind as u32 + 1, cell / w < front) != 0 {
                         flags[cell] &= !WALK;
                     }
                     let cx = cell % w; let cy = cell / w;

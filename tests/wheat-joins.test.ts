@@ -49,8 +49,8 @@ describe('approved wheat field art', () => {
 });
 
 describe('connected wheat appearance', () => {
-  it.each([0, 1, 2])('joins stage %s while ignoring diagonals until both cardinal neighbors exist', stage => {
-    const overrides = { wheatRipe: stage === 2, nextHarvest: stage === 0 ? 150 : 120 };
+  it.each([0, 1, 2, 3])('joins stage %s while ignoring diagonals until both cardinal neighbors exist', stage => {
+    const overrides = { wheatRipe: stage === 3, nextHarvest: [150, 141, 120, 120][stage] };
     const center = plot(2, 2, overrides), north = plot(2, 1, overrides), east = plot(3, 2, overrides), northeast = plot(3, 1, overrides);
     expect(wheatJoinMask(center, 90, lookup([northeast]))).toBe(0);
     expect(wheatJoinMask(center, 90, lookup([north, northeast]))).toBe(N);
@@ -82,30 +82,29 @@ describe('connected wheat appearance', () => {
     expect(wheatJoinMask(green, 90, lookup([neighbor]), () => 60)).toBe(0);
   });
 
-  it('separates all three stages and their outside boundaries while sharing identical green pixels', () => {
+  it('separates all four stages and their outside boundaries while sharing identical green pixels', () => {
     const growing = plot(2, 2, { wheatRipe: false }), ripe = plot(3, 2, { food: 1 });
-    const keys = [60, 90, 120].map(time => fieldKey(growing, time, E));
-    expect(new Set(keys).size).toBe(3);
-    for (const time of [60, 90, 120]) expect(fieldKey(growing, time, E)).not.toBe(fieldKey(growing, time, E | S));
-    expect(fieldKey(growing, 70, E)).toBe(fieldKey(growing, 90, E));
+    const times = [60, 67, 90, 120];
+    expect(new Set(times.map(time => fieldKey(growing, time, E))).size).toBe(4);
+    for (const time of times) expect(fieldKey(growing, time, E)).not.toBe(fieldKey(growing, time, E | S));
+    expect(fieldKey(growing, 75, E)).toBe(fieldKey(growing, 90, E));
     expect(fieldKey(growing, 99, E)).toBe(fieldKey(ripe, 90, E));
     expect(fieldKey(growing, 120, E)).toBe(fieldKey(ripe, 90, E));
   });
 
-  it('shares identical crop textures across locations for all three stages', () => {
+  it('shares identical field textures across locations for all four stages', () => {
     const left = plot(1, 1, { wheatRipe: false, nextHarvest: 60 }), right = { ...left, x: 2 };
-    expect(fieldKey(left, 0, 255)).toBe(fieldKey(right, 0, 255));
-    expect(fieldKey(left, 15, 255)).toBe(fieldKey(right, 15, 255));
-    expect(fieldKey(left, 60, 255)).toBe(fieldKey(right, 60, 255));
+    for (const time of [0, 6, 15, 60]) expect(fieldKey(left, time, 255)).toBe(fieldKey(right, time, 255));
   });
 });
 
-describe('seedling and green crop art', () => {
+describe('bare soil and early crop art', () => {
+  const soil = punyAtlas(new URL('../public/assets/farms/turned-loam-joins.png', import.meta.url));
   const seedlings = punyAtlas(new URL('../public/assets/pixelhole-overworld/Seedling-Wheat-Joins.png', import.meta.url));
   const green = punyAtlas(new URL('../public/assets/pixelhole-overworld/Green-Wheat-Joins.png', import.meta.url));
   const cellPixel = (sheet: typeof seedlings, mask: number, x: number, y: number) => pixel(sheet, (mask & 15) * 16 + x, (mask >> 4) * 16 + y);
 
-  it.each([['seedlings', seedlings], ['green', green]] as const)('fills %s patch interiors and removes their shared dividing edges', (_name, sheet) => {
+  it.each([['soil', soil], ['seedlings', seedlings], ['green', green]] as const)('fills %s patch interiors and removes their shared dividing edges', (_name, sheet) => {
     expect([sheet.width, sheet.height]).toEqual([256, 256]);
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       expect(cellPixel(sheet, 255, x, y)[3]).toBe(255);
@@ -133,7 +132,7 @@ describe('seedling and green crop art', () => {
     });
   });
 
-  it.each([['seedlings', seedlings], ['green', green]] as const)('preserves missing diagonal corners in %s while joining both cardinal sides', (_name, sheet) => {
+  it.each([['soil', soil], ['seedlings', seedlings], ['green', green]] as const)('preserves missing diagonal corners in %s while joining both cardinal sides', (_name, sheet) => {
     expect(cellPixel(sheet, N | E, 15, 0)[3]).toBe(0);
     expect(cellPixel(sheet, N | E | NE, 15, 0)[3]).toBe(255);
     // Both shared seams remain solid away from the missing corner.

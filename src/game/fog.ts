@@ -47,7 +47,8 @@ export interface FogView {
 // sight samples, so disabling it restores fog and does not suppress hidden raids.
 const revealedMaps = new WeakSet<GameState>();
 const revealedViews = new WeakMap<GameState, { view: FogView; time: number; buildings: readonly Building[]; buildingRevision?: number; fields?: FarmField[] }>();
-export const isMapRevealed = (state: GameState): boolean => !state.multiplayer && (state.world.scenario === 'tutorial' || revealedMaps.has(state));
+const revealedScenarios = new Set<GameState['world']['scenario']>(['tutorial', 'island-deathmatch', 'musketry-deathmatch']);
+export const isMapRevealed = (state: GameState): boolean => !state.multiplayer && (revealedScenarios.has(state.world.scenario) || revealedMaps.has(state));
 export function setMapRevealed(state: GameState, enabled: boolean): void {
     if (enabled && !state.multiplayer) revealedMaps.add(state); else revealedMaps.delete(state);
     revealedViews.delete(state);
@@ -71,7 +72,7 @@ function revealedFog(state: GameState): FogView {
 interface SightRecord { source: SightSource; key: string }
 interface CachedFog extends FogView {
     sampledAt?: number; rememberedAt?: number; sampledStore?: EntityStore;
-    rememberedBuildings?: number;
+    rememberedBuildings?: number; rememberedSight?: number;
     memorySignature: string; persisted: NonNullable<GameState['fog']>;
     sourceRecords: SightRecord[]; sourceScratch: SightRecord[]; sourceEntities: WeakMap<object, SightRecord>;
     buildingMemories: Map<number, Building>; fieldMemories: Map<number, FarmFieldMemory>;
@@ -574,7 +575,10 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     const sampleSight = !retained || previous.sampledAt === undefined || state.time < previous.sampledAt
         || state.paused && previous.worldRevision !== worldRevision
         || state.time + 1e-9 >= previous.sampledAt + FOG_SAMPLE_INTERVAL;
-    const sampleMemories = remember && (!retained || previous.rememberedBuildings !== store?.buildings.revision
+    // Sight-only queries can advance visibility ahead of the periodic memory
+    // sample. Capture every newly observed structure before sight moves on.
+    const sampleMemories = remember && (sampleSight || !retained || previous.rememberedSight !== previous.revision
+        || previous.rememberedBuildings !== store?.buildings.revision
         || previous.rememberedAt === undefined || state.time < previous.rememberedAt
         || state.time + 1e-9 >= previous.rememberedAt + FOG_SAMPLE_INTERVAL);
     if (!sampleSight && !sampleMemories) { previous!.presentationTime = state.time; return previous!; }
@@ -717,7 +721,9 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
         if (fieldsChanged) fog.fields = [...fieldMemories.values()];
         if (!replicatedFog.has(state)) persisted.fields = fog.fields;
     }
-    if (trusted && sampleMemories) { fog.rememberedAt = state.time; fog.rememberedBuildings = store!.buildings.revision; }
+    if (trusted && sampleMemories) {
+        fog.rememberedAt = state.time; fog.rememberedBuildings = store!.buildings.revision; fog.rememberedSight = fog.revision;
+    }
     // An explicit/editor query is a new live observation; it must not leave a
     // trusted timestamp behind for a subsequently resumed simulation.
     if (!trusted) { fog.sampledAt = undefined; fog.rememberedAt = undefined; fog.sampledStore = undefined; }

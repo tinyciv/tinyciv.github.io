@@ -20,6 +20,9 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
   { kind: 'foundry', key: 'f', label: 'Foundry' },
   { kind: 'siegeCannon', key: 'n', label: 'Siege cannon' },
   { kind: 'house', key: 'h', label: 'House' },
+  { kind: 'apartments', key: 'a', label: 'Apartments' },
+  { kind: 'hospital', key: 'd', label: 'Hospital' },
+  { kind: 'factory', key: 'f', label: 'Factory' },
   { kind: 'bridge', key: 'v', label: 'Bridge' },
   { kind: 'dock', key: 't', label: 'Dock' },
   { kind: 'whalingPost', key: 'w', label: 'Whaling post' },
@@ -58,6 +61,7 @@ export function supportsBuildStroke(kind: BuildSelection): boolean {
 
 export function buildLabel(kind: BuildSelection): string {
   if (kind === 'clearTrees') return 'Clear trees';
+  if (kind === 'goldMine') return 'Gold mine';
   const site = Object.values(SITE_DEFINITIONS).find(site => site.building === kind);
   if (site) return site.label;
   return BUILD_OPTIONS.find(option => option.kind === kind)?.label ?? kind.charAt(0).toUpperCase() + kind.slice(1);

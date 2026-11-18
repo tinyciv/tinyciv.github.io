@@ -1,3 +1,4 @@
+import { buildingFollowsTerritory } from './building-targeting';
 import { invalidateScheduledHarvests } from './farms';
 import { BUILDING_KIND_CODES, entityStore } from './entity-store';
 import { rustEngine } from './rust-engine';
@@ -21,7 +22,7 @@ function cityMembers(state: GameState, palace: Building): Building[] {
   for (const offer of state.palaceCaptures ?? []) if (offer.faction === palace.faction && !origins.some(other => other.id === offer.palaceId))
     origins.push({ id: offer.palaceId, x: offer.x + 1, y: offer.y + 1 });
   return state.buildings.filter(building => {
-    if (building.faction !== palace.faction || building.hp <= 0 || building.kind === 'palace') return false;
+    if (!buildingFollowsTerritory(building) || building.faction !== palace.faction || building.hp <= 0 || building.kind === 'palace') return false;
     const point = center(building);
     let best = Infinity, owner = -1;
     for (const origin of origins) {
@@ -57,7 +58,7 @@ export function captureOffer(state: GameState, palace: Building): CaptureOffer {
   const buildings = cityMembers(state, palace).filter(building => !isWallKind(building.kind) && building.kind !== 'fort');
   const faction = state.factions.find(other => other.id === palace.faction);
   let unhousedResidents = Math.max(0, palace.unhousedResidents ?? 0);
-  let residents = buildings.reduce((sum, building) => sum + (building.kind === 'house' && buildingReady(building)
+  let residents = buildings.reduce((sum, building) => sum + ((building.kind === 'house' || building.kind === 'apartments') && buildingReady(building)
     ? Math.min(building.capacity, Math.max(0, building.residents ?? 0)) : 0), unhousedResidents);
   if (state.villages?.some(v => v.campId === palace.id && v.secededCity)) {
     const overflow = Math.max(0, (faction?.population ?? 0) - residents);
@@ -76,7 +77,7 @@ export function transferCapturedCity(state: GameState, offer: CaptureOffer, pala
   const captured = new Set(offer.buildingIds), workers = new Set(offer.workerIds);
   for (const building of state.buildings) {
     // Fort ownership and foundations are permanent even when surrounding cities fall.
-    if (building.kind === 'fort' || !captured.has(building.id) || building.faction !== offer.faction || building.hp <= 0) continue;
+    if (!buildingFollowsTerritory(building) || building.kind === 'fort' || !captured.has(building.id) || building.faction !== offer.faction || building.hp <= 0) continue;
     // An unstarted defense order is cancelled when the city falls.
     if (defensive(building) && !state.villages?.some(v => v.faction === offer.faction && v.secededCity)) { building.hp = 0; continue; }
     building.faction = palace.faction;

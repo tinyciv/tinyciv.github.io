@@ -1,3 +1,5 @@
+import { TELEMETRY_SCHEMA } from '../telemetry/schema';
+
 export const SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS accounts;
 CREATE TABLE IF NOT EXISTS accounts.users (
@@ -26,6 +28,17 @@ CREATE TABLE IF NOT EXISTS accounts.auth_limits (
   reset_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS auth_limits_expiry ON accounts.auth_limits(reset_at);
+CREATE TABLE IF NOT EXISTS accounts.feedback (
+  id uuid PRIMARY KEY,
+  user_id uuid REFERENCES accounts.users(id) ON DELETE SET NULL,
+  visitor_id varchar(80) NOT NULL CHECK (visitor_id ~ '^[A-Za-z0-9_-]{1,80}$'),
+  message text NOT NULL CHECK (length(message) BETWEEN 1 AND 4000 AND octet_length(message) <= 16000),
+  context jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(context) = 'object' AND octet_length(context::text) <= 4096),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS feedback_created ON accounts.feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS feedback_user ON accounts.feedback(user_id, created_at DESC);
+${TELEMETRY_SCHEMA}
 REVOKE ALL ON SCHEMA accounts FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA accounts FROM PUBLIC;
 GRANT USAGE ON SCHEMA accounts TO tinyciv_app;

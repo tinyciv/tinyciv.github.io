@@ -16,7 +16,8 @@ import { withSimulationReads } from './simulation-reads';
 import { reliefLevel } from './relief';
 import { observeScalars, type ScalarObserver } from './scalar-observer';
 import { tileAt,WATER } from './types';
-import { refreshIndexedUnit, nearbyUnits } from './spatial';
+import { earlyCombatUnits, refreshIndexedUnit, withEarlyCombatQueries } from './spatial';
+import { settlements } from './settlement-bridge';
 import { refreshFogUnit, entityVisible } from './fog';
 import { refreshWaterTraffic } from './water-traffic';
 import { recordGoldInput, spendGold } from './gold-ledger';
@@ -27,14 +28,16 @@ import { buildingWidth, buildingHeight, buildingReady, type GameState, type Unit
 
 export const SHIP_CLASSES: readonly WarshipClass[] = ['warGalley', 'caravel', 'frigate'];
 export const NAVAL_WEAPONS: readonly NavalWeapon[] = ['empty', 'ballista', 'cannon'];
-export const MARINE_TYPES: readonly MarineType[] = ['warrior', 'spearman', 'archer', 'musketman'];
+export const MARINE_TYPES: readonly MarineType[] = ['archer', 'musketman'];
 export const SHIP_LABELS = { warGalley: 'War galley', caravel: 'Caravel', frigate: 'Frigate' } as const;
 export const WEAPON_LABELS = { empty: 'Empty', ballista: 'Ballista', cannon: 'Cannon' } as const;
 export const SHIP_BUILD_GOLD = rustEngine.naval_constant(0, 0);
 export const SHIP_UPKEEP = rustEngine.naval_constant(1, 0);
 export const SHIP_BOUNTY = rustEngine.naval_constant(2, 0);
 const STRIDE = 68;
-const TECHS: readonly ResearchBranchId[] = ['sailing', 'lateenSails', 'navalEngineering', 'siegeEngines', 'gunpowder', 'archeryRange', 'militaryTactics'];
+// Allow movement between one-second observations and include offset gun mounts.
+const SHORE_OBSERVATION_RADIUS = 28;
+const TECHS: readonly ResearchBranchId[] = ['sailing', 'lateenSails', 'navalEngineering', 'siegeEngines', 'gunpowder', 'archeryRange'];
 const ERRORS = ['', 'A shipyard needs a city of at least 100 people.', 'Only one shipyard per city.',
   'A shipyard needs a clear 3×3 area of flat, dry land.', 'Move your Leader within 3 tiles of your completed shipyard.',
   'Research the technologies required by this ship, weapon or marine type.', 'This shipyard already supports a warship.',
@@ -43,13 +46,13 @@ const ERRORS = ['', 'A shipyard needs a city of at least 100 people.', 'Only one
   'A living Leader is required.', 'Board this warship with your Leader first.',
   'Disembark from your current boat before boarding another.', 'This warship already has a Leader aboard.',
   'Wait for this warship to finish building.', 'Cast anchor before going ashore or calling reinforcements.',
-  'Wait for boarding combat to end.', 'Bring your Leader aboard or within 3 tiles of this warship’s landing point.',
+  '', 'Bring your Leader aboard or within 3 tiles of this warship’s landing point.',
   'Raise anchor before sailing.', 'Choose navigable water for this warship.', 'Choose your own surviving warship.',
   'Build a warship at this shipyard before refitting.', 'Refitting cannot change the hull. Select this warship’s current class.',
   'Research Sailing before building warships.', 'Research Lateen Sails for caravels and frigates.',
   'Research Naval Engineering for frigates.', 'Research Siege Engines before mounting ballistae or cannons.',
   'Research Gunpowder for cannons and musket marines.', 'Research Archery for archer marines.',
-  'Research Military Tactics for spear marines.', 'Choose a valid ship class, weapon and marine type.',
+  '', 'Choose a valid ship class, weapon and marine type.',
   'Remove weapons from mounts this hull does not support.', 'Complete the shipyard before building or refitting.',
   'Place at least one shipyard edge beside coastal water.', 'Your Leader is already aboard this warship.',
   'Equip a ranged weapon or ranged marines to attack from this ship.', 'Choose a visible enemy unit to attack.',
@@ -66,6 +69,25 @@ export interface NavalCombat {
 function technologyMask(state: GameState, faction: number): number {
   const owner = state.factions.find(f => f.id === faction);
   return TECHS.reduce((mask, branch, i) => mask | Number(researchLevel(owner, branch) > 0) << i, 0);
+}
+function shipRow(state: GameState, ship: Unit, control?: InputState): number[] {
+  const w = ship.warship!;
+  const forward = control ? Number(control.up) - Number(control.down) : 0;
+  const turn = control ? Number(control.right || control.turnRight) - Number(control.left || control.turnLeft) : 0;
+  const row = Array<number>(STRIDE).fill(0);
+  row[0] = ship.id; row[1] = SHIP_CLASSES.indexOf(w.class); row[2] = ship.faction; row[3] = ship.x; row[4] = ship.y;
+  row[5] = ship.facing; row[6] = ship.hp; row[7] = w.speed; row[8] = w.kills; row[9] = MARINE_TYPES.indexOf(w.marine);
+  row[10] = w.crewHp; row[11] = Number(w.anchored); row[12] = w.readyAt; row[13] = w.nextUpkeepAt; row[14] = Number(w.funded);
+  for (let i = 0; i < 4; i++) row[15 + i] = NAVAL_WEAPONS.indexOf(w.weapons[i] ?? 'empty');
+  for (let i = 0; i < 12; i++) {
+    const gun = w.guns?.[i], at = 31 + i * 3;
+    row[at] = gun?.target ?? -1; row[at + 1] = gun?.facing ?? ship.facing; row[at + 2] = gun?.firedAt ?? -1000;
+  }
+  row[19] = w.yard; row[20] = ship.destination?.x ?? NaN; row[21] = ship.destination?.y ?? NaN;
+  row[22] = forward; row[23] = turn; row[24] = Number(!!forward || !!turn || !!control?.up && !!control?.down);
+  row[25] = w.lastAttacker; row[26] = Number(w.rewarded); row[30] = w.lastAttackerShip ?? -1; row[29] = Number(!isHumanFaction(state, ship.faction));
+  row[67] = w.attackTarget ?? -1;
+  return row;
 }
 export const warships = (state: GameState): readonly Unit[] => entityStore(state).units.query('vessel').filter(u => !!u.warship);
 export const shipyardWarship = (state: GameState, yard: Building): Unit | undefined => warships(state).find(s => s.hp > 0 && s.warship!.yard === yard.id);
@@ -114,7 +136,8 @@ class NavalBridge implements ScalarObserver {
       const x = i % width, y = Math.floor(i / width);
       const tile=tileAt(state.world,x,y);
       this.base[i] = (navigableWaterCell(state.world, x, y) ? 1 : traversable(state.world, x, y) ? 2 : 0)
-        + reliefLevel(tile) * 4 + (tile?.terrain==='coast'?128:0);
+        + reliefLevel(tile) * 4 + (tile?.terrain==='coast'?128:0)
+        + (tile?.terrain==='coast'||tile?.terrain==='ocean'?256:0);
       if (!full) cells.add(i);
     };
     if (full) for (let i = 0; i < this.base.length; i++) sample(i);
@@ -145,59 +168,57 @@ class NavalBridge implements ScalarObserver {
     const ships = warships(state); if (!ships.length) return;
     if (dt>0 && combat && state.time>=this.nextTargets) {
       this.nextTargets=state.time+1; this.targets=[];
-      for (const ship of ships) {
-        const nearby = new Map(nearbyUnits(state,ship,17).map(unit=>[unit.id,unit]));
-        const ordered = this.store.units.get(ship.warship!.attackTarget ?? -1); if (ordered) nearby.set(ordered.id,ordered);
-        for (const unit of nearby.values()) if (!unit.warship && !unit.inside && unit.hp>0 && atWar(state,ship.faction,unit.faction)) {
-          this.targets.push({ship:ship.id,unit:unit.id,...combat.observe(ship,unit)});
+      withEarlyCombatQueries(state, () => {
+        for (const ship of ships) {
+          const nearby = new Map(earlyCombatUnits(state, ship, SHORE_OBSERVATION_RADIUS).map(unit => [unit.id, unit]));
+          const observeTarget = (id: number | undefined): void => {
+            const unit = this.store.units.get(id ?? -1);
+            if (unit) nearby.set(unit.id, unit);
+          };
+          observeTarget(ship.warship!.attackTarget);
+          for (const gun of ship.warship!.guns ?? []) observeTarget(gun.target);
+          for (const unit of nearby.values()) if (!unit.warship && !unit.inside && unit.hp > 0 && atWar(state, ship.faction, unit.faction)) {
+            this.targets.push({ ship: ship.id, unit: unit.id, ...combat.observe(ship, unit) });
+          }
         }
-      }
+      });
     }
     this.geometry(state);
     rustEngine.sim_naval_terrain(this.handle, mountainTerrainHandle(state.world));
     const values: number[] = [];
-    for (const ship of ships) {
-      const w = ship.warship!, control = ship.sailboat?.passenger !== undefined ? inputFor(ship.faction) : undefined;
-      const forward = control ? Number(control.up) - Number(control.down) : 0;
-      const turn = control ? Number(control.right || control.turnRight) - Number(control.left || control.turnLeft) : 0;
-      const row = Array<number>(STRIDE).fill(0);
-      row[0] = ship.id; row[1] = SHIP_CLASSES.indexOf(w.class); row[2] = ship.faction; row[3] = ship.x; row[4] = ship.y;
-      row[5] = ship.facing; row[6] = ship.hp; row[7] = w.speed; row[8] = w.kills; row[9] = MARINE_TYPES.indexOf(w.marine);
-      row[10] = w.crewHp; row[11] = Number(w.anchored); row[12] = w.readyAt; row[13] = w.nextUpkeepAt; row[14] = Number(w.funded);
-      for (let i = 0; i < 4; i++) row[15 + i] = NAVAL_WEAPONS.indexOf(w.weapons[i] ?? 'empty');
-      for (let i = 0; i < 12; i++) {
-        const gun = w.guns?.[i], at = 31 + i * 3;
-        row[at] = gun?.target ?? -1; row[at + 1] = gun?.facing ?? ship.facing; row[at + 2] = gun?.firedAt ?? -1000;
-      }
-      row[19] = w.yard; row[20] = ship.destination?.x ?? NaN; row[21] = ship.destination?.y ?? NaN;
-      row[22] = forward; row[23] = turn; row[24] = Number(!!forward || !!turn || !!control?.up && !!control?.down);
-      row[25] = w.lastAttacker; row[26] = Number(w.rewarded); row[30] = w.lastAttackerShip ?? -1; row[29] = Number(!isHumanFaction(state, ship.faction));
-      row[67] = w.attackTarget ?? -1; values.push(...row);
+    for (const ship of ships) values.push(...shipRow(state, ship, ship.sailboat?.passenger !== undefined ? inputFor(ship.faction) : undefined));
+    if (dt <= 0) {
+      this.input(values);
+      rustEngine.sim_naval_step(this.handle, ships.length, 0, 0, state.time, dt, 0, 0);
+      return;
     }
-    for (const f of state.factions) values.push(f.id, f.gold, technologyMask(state, f.id), f.whalingUntil ?? 0);
-    let relations = 0;
-    const factions = new Set([...state.factions.map(f=>f.id),...ships.map(s=>s.faction)]);
-    for (const target of this.targets) { const unit=this.store.units.get(target.unit); if (unit) factions.add(unit.faction); }
-    for (const a of factions) for (const b of factions) if (a !== b && atWar(state,a,b)) { values.push(a,b); relations++; }
+    const factions = new Map(state.factions.map(faction => [faction.id, faction]));
+    for (const faction of state.factions) {
+      const flags = Number(faction.relation === 'war') | (state.multiplayer && isHumanFaction(state, faction.id) ? 2 : 0);
+      values.push(faction.id, faction.gold, flags, faction.whalingUntil ?? 0);
+    }
     let targets=0;
-    if (dt>0 && combat) for (const target of this.targets) {
+    if (combat) for (const target of this.targets) {
       const unit=this.store.units.get(target.unit); if (!unit) continue;
       values.push(target.ship,unit.id,unit.x,unit.y,unit.faction,unit.hp,target.defense,Number(target.eligible && !unit.inside && unit.embarkedOn===undefined)); targets++;
     }
     const yards = this.store.buildings.query('shipyard').filter(yard => buildingReady(yard) && yard.hp > 0);
     values.push(yards.length);
     for (const yard of yards) values.push(yard.faction,yard.x,yard.y);
+    const villages = state.villages ?? [];
+    for (const village of villages) values.push(village.faction);
+    const settlementHandle = villages.length ? settlements(state).hostilityHandle() : 0;
     this.input(values);
-    const pointer = rustEngine.sim_naval_step(this.handle, ships.length, state.factions.length, relations,targets,state.time,dt);
+    const pointer = rustEngine.sim_naval_step(this.handle, ships.length, state.factions.length, targets, state.time, dt,
+      Number(!!state.diplomacyState), settlementHandle);
     // Copy before effects can call another engine and grow WASM memory.
     const output = new Float64Array(rustEngine.memory.buffer,pointer,rustEngine.sim_naval_output_length(this.handle)).slice();
-    if (dt <= 0) return;
     for (let i = 0; i < output[0]; i++) {
       const r = output.subarray(2 + i * STRIDE), ship = this.store.units.get(r[0]); if (!ship?.warship) continue;
       const w = ship.warship, previous = { x: ship.x, y: ship.y, hp: ship.hp };
       ship.x = r[3]; ship.y = r[4]; ship.facing = r[5]; ship.hp = r[6]; w.speed = r[7]; w.kills = r[8]; w.crewHp = r[10];
       w.anchored = !!r[11]; w.nextUpkeepAt = r[13]; w.funded = !!r[14]; w.lastAttacker = r[25]; w.rewarded = !!r[26];
-      w.boarding = r[27] < 0 ? undefined : r[27]; w.target = r[29] < 0 ? undefined : r[29]; w.lastAttackerShip = r[30] < 0 ? undefined : r[30];
+      w.lastAttackerShip = r[30] < 0 ? undefined : r[30];
       w.guns ??= Array.from({ length: 12 }, () => ({ facing: ship.facing }));
       for (let slot = 0; slot < 12; slot++) {
         const at = 31 + slot * 3, gun = w.guns[slot], target = this.store.units.get(r[at]);
@@ -222,7 +243,7 @@ class NavalBridge implements ScalarObserver {
     }
     const start = 2 + output[0] * STRIDE;
     for (let i = 0; i < output[1]; i++) {
-      const at = start + i * 3, faction = state.factions.find(f => f.id === output[at]); if (!faction) continue;
+      const at = start + i * 3, faction = factions.get(output[at]); if (!faction) continue;
       if (output[at + 1]) spendGold(state, faction, output[at + 1], 'army');
       if (output[at + 2]) { faction.gold += output[at + 2]; recordGoldInput(state, faction, output[at + 2], 'loot'); }
     }
@@ -236,6 +257,12 @@ class NavalBridge implements ScalarObserver {
     this.sync(state, 0); this.geometry(state); this.input(values);
     const pointer = rustEngine.sim_naval_command(this.handle, mode);
     return new Float64Array(rustEngine.memory.buffer, pointer, 5).slice();
+  }
+  preview(state: GameState, mode: number, ship: Unit, values: readonly number[]): number {
+    this.geometry(state);
+    this.input([...shipRow(state, ship), ...values]);
+    const pointer = rustEngine.sim_naval_preview(this.handle, mode);
+    return new Float64Array(rustEngine.memory.buffer, pointer, 1)[0];
   }
 }
 function network(state: GameState): NavalBridge {
@@ -262,7 +289,7 @@ function context(state: GameState, ship?: Unit, yard?: Building, point?: Point, 
     city ? citySummariesForFaction(state, faction).find(c => c.palace.id === city.id)?.population ?? 0 : 0,
     0, Number(!!yard && buildingReady(yard)), Number(!!yard && buildingActivityAvailable(state, yard)),
     state.factions.find(f => f.id === faction)?.gold ?? 0, technologyMask(state, faction), SHIP_CLASSES.indexOf(w?.class ?? 'warGalley'),
-    MARINE_TYPES.indexOf(w?.marine ?? 'warrior'), ...Array.from({ length: 4 }, (_, i) => NAVAL_WEAPONS.indexOf(w?.weapons[i] ?? 'empty')),
+    MARINE_TYPES.indexOf(w?.marine ?? 'archer'), ...Array.from({ length: 4 }, (_, i) => NAVAL_WEAPONS.indexOf(w?.weapons[i] ?? 'empty')),
     leader?.x ?? NaN, leader?.y ?? NaN, point?.x ?? NaN, point?.y ?? NaN, state.time, leader?.id ?? -1, leader?.embarkedOn ?? -1, ship?.sailboat?.passenger ?? -1, leader?.hp ?? 0];
 }
 /** Actual faction walking facts include open gates, ruins and elevated banks;
@@ -337,12 +364,21 @@ export function warshipAction(state: GameState, ship: Unit, action: 'anchor' | '
 }
 export function warshipActionAvailable(state: GameState, ship: Unit, action: 'anchor' | 'land' | 'reinforce'): boolean {
   if (!ship.warship || ship.hp <= 0) return false;
-  return network(state).command(state, { anchor: 3, land: 4, reinforce: 6 }[action], [...context(state, ship),...shoreFacts(state,ship)])[0] === 0;
+  return network(state).preview(state, { anchor: 3, land: 4, reinforce: 6 }[action], ship, [...context(state, ship), ...shoreFacts(state, ship)]) === 0;
 }
 export function warshipMove(state: GameState, ship: Unit, point: Point): Result {
   const r = network(state).command(state, 7, context(state, ship, undefined, point));
   if (r[0]) return { ok: false, message: navalError(r[0]) };
   ship.warship!.attackTarget=undefined; ship.destination = { x: r[1], y: r[2] }; return { ok: true, message: 'Sailing.' };
+}
+/** Read only when a diagnostic asks; ordinary simulation does not sample paths. */
+export function warshipPathStatus(state: GameState, ship: Unit) {
+  const pointer=rustEngine.sim_naval_path_status(simCore(state).handle,ship.id);
+  const row=new Float64Array(rustEngine.memory.buffer,pointer,16).slice();
+  return { geometryRevision:row[0], routeLength:row[1], nextPlan:row[2],
+    search:Number.isFinite(row[3]) ? { nodes:row[3], frontier:row[4], origin:{x:row[5],y:row[6]},
+      angle:row[7], goal:{x:row[8],y:row[9]} } : null,
+    position:{x:row[10],y:row[11]}, facing:row[12], speed:row[13], validPose:!!row[14], manual:!!row[15] };
 }
 export function warshipAttack(state: GameState,ship: Unit,target: Unit): Result {
   if (!ship.warship || ship.faction!==playerFaction(state)) return {ok:false,message:navalError(22)};
@@ -457,4 +493,24 @@ export function prepareScenarioFleet(state: GameState, place: (faction: number, 
   return ready;
 }
 
-export function fleetUpkeep(state: GameState, faction: number): number { return rustEngine.naval_fleet_upkeep(warships(state).filter(s => s.faction === faction && s.hp > 0).length); }
+/** Finish the offline starter fleet on the actual post-construction waterways. */
+export function positionScenarioFleet(state: GameState) {
+  const store = entityStore(state);
+  return warships(state).filter(ship => ship.hp > 0).map(ship => {
+    const yard = store.buildings.get(ship.warship!.yard);
+    if (!yard) throw new Error(`Starting warship ${ship.id} has no shipyard.`);
+    const [error, x, y, facing, turningArea] = network(state).command(state, 14, context(state, ship, yard));
+    if (error) throw new Error(`No broad starting waterway for ${ship.warship!.name}.`);
+    Object.assign(ship, { x, y, facing, destination: undefined, moving: false });
+    Object.assign(ship.warship!, { speed: 0, anchored: false, shore: undefined });
+    refreshIndexedUnit(state, ship);
+    refreshWaterTraffic(state, ship);
+    refreshFogUnit(state, ship);
+    return { id: ship.id, faction: ship.faction, x, y, facing, turningArea };
+  });
+}
+
+export function fleetUpkeep(state: GameState, faction: number): number {
+  const fleet = entityStore(state).units.queryFaction('vessel', faction);
+  return rustEngine.naval_fleet_upkeep(fleet.filter(ship => ship.warship && ship.hp > 0).length);
+}

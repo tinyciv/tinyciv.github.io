@@ -22,6 +22,11 @@ scripts/*
 !scripts/startup-building-preview.mjs
 !scripts/startup-cannon-fire-preview.mjs
 !scripts/startup-shell-impact-preview.mjs
+!scripts/startup-meadow-preview.mjs
+!scripts/startup-analytics-preview.mjs
+!scripts/startup-feedback-preview.mjs
+!scripts/startup-civic-preview.mjs
+!scripts/startup-civic-art-gallery.mjs
 !scripts/frozen.mjs
 !scripts/world.mjs
 !scripts/benchmark-faction-ai.mjs

@@ -60,3 +60,13 @@ export const Loading: StoryObj<Args> = {
 export const Login: StoryObj<Args> = { ...Menu, args: { view: 'login' } };
 export const CreateAccount: StoryObj<Args> = { ...Menu, args: { view: 'create-account' } };
 export const ResetPassword: StoryObj<Args> = { ...Menu, args: { view: 'forgot-password' } };
+
+/** The real text popup; no game or feedback request runs in the preview. */
+export const HelpFeedback: StoryObj<Args> = {
+  render: () => {
+    const host = document.createElement('div');
+    const frontend = new Frontend(host, () => {});
+    requestAnimationFrame(() => { frontend.show('main'); frontend.openFeedback(); host.dataset.ready = 'true'; });
+    return host;
+  },
+};

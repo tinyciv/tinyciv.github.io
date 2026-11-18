@@ -127,7 +127,7 @@ export function scenarioPlan(id: ScenarioId, seed: string = id): ScenarioPlan {
         startingResearch.add(id);
         for (const prerequisite of RESEARCH_BRANCHES.find(branch => branch.id === id)!.prerequisites) include(prerequisite);
       };
-      if (island) for (const tech of ['sailing','whaling','woodenTower','monument','blacksmith','siegeEngines'] as const) include(tech);
+      if (island) for (const tech of ['sailing','whaling','woodenTower','monument','blacksmith','archeryRange','siegeEngines'] as const) include(tech);
       return {world,buildings,ships,gold,food,population,researchLevel,banditIntensity,startingResearch:[...startingResearch],
         musketFraction:musket?values[cursor++]:undefined,startingCannons:musket?values[cursor++]:undefined,completeLayouts:musket?!!values[cursor++]:undefined};
     }

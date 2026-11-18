@@ -258,7 +258,7 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
 }
 
 export function isHouseEnclosed(state: GameState, house: Building, enclosures = palaceEnclosures(state)): boolean {
-  if (house.kind !== 'house' || !buildingReady(house)) return false;
+  if (house.kind !== 'house' && house.kind !== 'apartments' || !buildingReady(house)) return false;
   const cells = enclosures.byFaction.get(house.faction);
   if (!cells) return false;
   for (let dy = 0; dy < buildingHeight(house); dy++) for (let dx = 0; dx < buildingWidth(house); dx++) {

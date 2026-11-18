@@ -3,7 +3,7 @@ import { SIM_ENGINE, SimSlot, simCore, type SimCore } from './sim-handle';
 import { entityStore, type EntityStore } from './entity-store';
 import { battleSupport } from './battle-support-native';
 import { mountainLineClear, mountainTerrainHandle } from './terrain-rays-native';
-import { nearbyBuildings, nearbyUnits } from './spatial';
+import { earlyCombatBuildings, earlyCombatUnits, withEarlyCombatQueries } from './spatial';
 import { publishShellImpacts, recordProjectileShellLanding } from './shell-impacts-native';
 import { buildingWidth, buildingHeight, type Building, type GameState, type Point, type Projectile, type Unit } from './types';
 
@@ -119,9 +119,13 @@ const batches = new SimSlot<ProjectileBatch>();
 
 function cannonSplash(state: GameState, projectile: Projectile, directTarget: number, hooks: ProjectileHooks): void {
   const candidates: (Building | Unit)[] = [
-    ...nearbyBuildings(state, projectile.end, 2), ...nearbyUnits(state, projectile.end, 2),
-  ].filter(target => mountainLineClear(state.world, projectile.end, 'capacity' in target
-    ? { x: target.x + buildingWidth(target) / 2, y: target.y + buildingHeight(target) / 2 } : target));
+    ...earlyCombatBuildings(state, projectile.end, 2), ...earlyCombatUnits(state, projectile.end, 2),
+  ].filter(target => {
+    const point = 'capacity' in target
+      ? { x: target.x + buildingWidth(target) / 2, y: target.y + buildingHeight(target) / 2 } : target;
+    return Math.abs(point.x - projectile.end.x) <= 2 && Math.abs(point.y - projectile.end.y) <= 2
+      && mountainLineClear(state.world, projectile.end, point);
+  });
   const targets = new Map(candidates.map(target => [target.id, target]));
   const output = battleSupport(state, 3, projectile.end, projectile.faction, directTarget,
     candidates.map(target => ({ target, damage: projectile.damage, hostile: hooks.hostile(projectile.faction, target.faction),
@@ -138,6 +142,10 @@ export const projectileDuration = (from: Point, end: Point): number => rustEngin
  * stop at every potential impact so subsequent observations see earlier deaths,
  * captures, allegiance changes, and removal of palace defenses immediately. */
 export function advanceProjectiles(state: GameState, dt: number, hooks: ProjectileHooks): void {
+  withEarlyCombatQueries(state, () => advanceProjectileBatch(state, dt, hooks));
+}
+
+function advanceProjectileBatch(state: GameState, dt: number, hooks: ProjectileHooks): void {
   const projectiles = state.projectiles ?? [], count = projectiles.length;
   const store = entityStore(state);
   let batch = batches.get(state);

@@ -8,14 +8,14 @@ use super::kinds::building as b;
 const OFFER: u8 = 0; const ACTIVE: u8 = 1; const READY: u8 = 2; const COMPLETE: u8 = 3; const FAILED: u8 = 4;
 const POST: u8 = 0; const ROAD: u8 = 1; const CAMP: u8 = 2; const VOYAGE: u8 = 3;
 const PALISADE: u8 = 4; const SETTLEMENT: u8 = 5; const FARMS: u8 = 6; const COLONY: u8 = 7;
-pub const GOLD: [f64; 8] = [600.0, 1200.0, 1800.0, 1000.0, 900.0, 1200.0, 700.0, 2400.0];
+pub const GOLD: [f64; 8] = [600.0, 0.0, 1800.0, 1000.0, 900.0, 1200.0, 700.0, 2400.0];
 pub const FOOD: [f64; 8] = [0.0, 0.0, 300.0, 200.0, 200.0, 400.0, 500.0, 1000.0];
 pub const RELATIONS: [f64; 8] = [35.0, 0.0, 0.0, 35.0, 45.0, 40.0, 35.0, 55.0];
 
 #[derive(Clone, Default)]
 struct Tile { kind: u8, walk: bool, edges: u16, owner: i32 }
 #[derive(Clone, Default)]
-struct Building { id: i64, kind: u32, faction: i32, x: i32, y: i32, ready: bool, camp: i32, population: f64, village: i32, seen: u32 }
+struct Building { id: i64, kind: u32, faction: i32, x: i32, y: i32, ready: bool, camp: i32, population: f64, village: i32, seen: u32, road_build_gold: f64 }
 #[derive(Clone, Default)]
 struct Village { id: i32, faction: i32, camp: i64, unit: i64, x: f64, y: f64, ux: f64, uy: f64, seen: u32, useen: u32, hostile: u32, friendly: u32 }
 #[derive(Clone, Default)]
@@ -26,19 +26,24 @@ struct Leader { x: f64, y: f64, alive: bool, ashore: bool, embarked: bool }
 struct Field { id: i64, camp: i64, faction: i32, x: i32, y: i32 }
 #[derive(Clone)]
 struct Post { id: i64, faction: i32, x: i32, y: i32, active: bool }
+#[derive(Default)]
+struct RoadRoute { complete: bool, new_segments: Vec<i64>, paid_gold: f64 }
 #[derive(Component, Clone)]
 pub struct Quest {
     actor: i32, kind: u8, state: u8, giver_kind: u8, giver: i64, village: i32, giver_faction: i32,
     gx: f64, gy: f64, discovered: bool, x: f64, y: f64, radius: f64,
     target: i64, capital: i64, land: i32, minimum: i64, since: f64, post: i64,
-    progress: f64, needed: f64, reason: u8, accepted: f64, area: Vec<usize>, baseline: Vec<i64>, targets: Vec<i64>,
+    progress: f64, needed: f64, reason: u8, road_reward: f64, area: Vec<usize>, baseline: Vec<i64>, targets: Vec<i64>,
 }
 impl Quest {
     fn base(actor: i32, kind: u8, giver_kind: u8, giver: i64, village: i32, faction: i32, gx: f64, gy: f64) -> Self {
         Self { actor, kind, state: OFFER, giver_kind, giver, village, giver_faction: faction, gx, gy,
             discovered: false, x: gx, y: gy, radius: 0.0, target: -1, capital: -1, land: -1,
-            minimum: 0, since: -1.0, post: -1, progress: 0.0, needed: 1.0, reason: 0, accepted: -1.0,
+            minimum: 0, since: -1.0, post: -1, progress: 0.0, needed: 1.0, reason: 0, road_reward: 0.0,
             area: Vec::new(), baseline: Vec::new(), targets: Vec::new() }
+    }
+    fn gold(&self) -> f64 {
+        if self.kind == ROAD { self.road_reward } else { GOLD[self.kind as usize] }
     }
 }
 #[derive(Resource, Default)]
@@ -49,7 +54,7 @@ pub struct Quests {
     leaders: BTreeMap<i32, Leader>, humans: BTreeMap<i32, (u32, bool)>, combatants: Vec<(i32, f64, f64)>,
     capitals: BTreeMap<i32, i64>, visited: BTreeMap<i32, BTreeSet<i32>>, deaths: BTreeMap<i64, i32>,
     now: f64, next_id: i64, topology: u64, next_check: f64, enclosure_cache: BTreeMap<(i32, i32), (u64, bool, BTreeSet<usize>)>,
-    route_cache: BTreeMap<(i32, i64), (u64, bool, Vec<i64>)>, occupied: BTreeSet<usize>,
+    route_cache: BTreeMap<(i32, i64), RoadRoute>, occupied: BTreeSet<usize>,
     access: BTreeSet<(i32,i32)>,
 }
 fn bit(actor: i32) -> u32 { if (0..31).contains(&actor) { 1 << actor } else { 0 } }
@@ -118,7 +123,7 @@ impl Quests {
         if self.input.len() < 10 || self.tiles.is_empty() { return; }
         let data = std::mem::take(&mut self.input); self.now = data[0]; self.next_id = data[1] as i64;
         let counts: Vec<usize> = data[2..10].iter().map(|n| *n as usize).collect();
-        let strides = [3, 12, 5, 10, 5, 5, 7, 3];
+        let strides = [3, 12, 5, 11, 5, 5, 7, 3];
         if 10 + counts.iter().zip(strides).map(|(n, s)| n * s).sum::<usize>() != data.len() { self.input = data; return; }
         let mut at = 10; self.humans.clear(); self.villages.clear(); self.hermits.clear(); self.posts.clear(); self.fields.clear(); self.leaders.clear(); self.combatants.clear();
         for _ in 0..counts[0] { let r = &data[at..at+3]; at += 3; self.humans.insert(r[0] as i32, (r[1] as u32, r[2] != 0.0)); }
@@ -128,8 +133,8 @@ impl Quests {
         let mut structures = BTreeMap::new(); let mut signature = 17u64;
         for village in &self.villages { signature=signature.wrapping_mul(31).wrapping_add(village.friendly as u64).wrapping_add(village.hostile as u64); }
         self.occupied.clear();
-        for _ in 0..counts[3] { let r = &data[at..at+10]; at += 10;
-            let building = Building { id:r[0] as i64,kind:r[1] as u32,faction:r[2] as i32,x:r[3] as i32,y:r[4] as i32,ready:r[5] != 0.0,camp:r[6] as i32,population:r[7],village:r[8] as i32,seen:r[9] as u32 };
+        for _ in 0..counts[3] { let r = &data[at..at+11]; at += 11;
+            let building = Building { id:r[0] as i64,kind:r[1] as u32,faction:r[2] as i32,x:r[3] as i32,y:r[4] as i32,ready:r[5] != 0.0,camp:r[6] as i32,population:r[7],village:r[8] as i32,seen:r[9] as u32,road_build_gold:r[10] };
             for value in [building.id, building.kind as i64, building.faction as i64, building.x as i64, building.y as i64, building.ready as i64] {
                 signature = signature.wrapping_mul(31).wrapping_add(value as u64);
             }
@@ -221,10 +226,16 @@ impl Quests {
             _ => false,
         }
     }
-    fn route(&mut self, q: &Quest) -> (bool,Vec<i64>) {
-        let key=(q.actor,q.giver);
-        if let Some((revision,ok,path))=self.route_cache.get(&key) {if *revision==self.topology{return(*ok,path.clone());}}
-        let Some(capital)=self.buildings.get(&q.capital) else{return(false,Vec::new());};
+    fn route(&mut self, q: &Quest) -> &RoadRoute {
+        let key = (q.actor, q.giver);
+        if !self.route_cache.contains_key(&key) {
+            let route = self.find_road_route(q);
+            self.route_cache.insert(key, route);
+        }
+        &self.route_cache[&key]
+    }
+    fn find_road_route(&self, q: &Quest) -> RoadRoute {
+        let Some(capital)=self.buildings.get(&q.capital) else { return RoadRoute::default(); };
         let mut roads=BTreeMap::new();
         for b in self.buildings.values().filter(|b|b.ready&&b::route(b.kind)&&(b.faction==q.actor||b.faction<0)) {
             if let Some(cell)=self.cell(b.x as f64,b.y as f64){roads.insert(cell,b.id);}
@@ -238,9 +249,24 @@ impl Quests {
         while let Some(cell)=queue.pop_front(){let p=self.point(cell);if(p.0-q.x).hypot(p.1-q.y)<=2.0{end=Some(cell);break;}
             for next in self.cardinal(cell){if roads.contains_key(&next)&&!parent.contains_key(&next){parent.insert(next,cell);queue.push_back(next);}}
         }
-        let mut path=Vec::new();if let Some(mut cell)=end{loop{if let Some(&id)=roads.get(&cell){if id>=q.minimum{path.push(id);}}
-            let previous=parent[&cell];if previous==cell{break;}cell=previous;}}
-        let ok=end.is_some()&&!path.is_empty();self.route_cache.insert(key,(self.topology,ok,path.clone()));(ok,path)
+        let mut route = RoadRoute::default();
+        if let Some(mut cell) = end {
+            loop {
+                let id = roads[&cell];
+                if id >= q.minimum {
+                    route.new_segments.push(id);
+                    let segment = &self.buildings[&id];
+                    if segment.faction == q.actor {
+                        route.paid_gold += segment.road_build_gold;
+                    }
+                }
+                let previous = parent[&cell];
+                if previous == cell { break; }
+                cell = previous;
+            }
+            route.complete = !route.new_segments.is_empty();
+        }
+        route
     }
     fn enclosed(&mut self, q:&Quest)->bool{
         let key=(q.actor,q.village);
@@ -308,7 +334,10 @@ impl Quests {
                 if let Some(p)=candidate{if p.id!=q.post{q.post=p.id;q.since=self.now;}q.progress=(self.now-q.since).clamp(0.0,180.0);complete=q.progress>=180.0;}
                 else{q.post=-1;q.since=-1.0;q.progress=0.0;}}
             ROAD=>{if !self.buildings.get(&q.capital).is_some_and(|b|b.faction==q.actor&&b.ready){q.state=FAILED;q.reason=2;return;}
-                complete=self.route(q).0;q.progress=complete as u8 as f64;}
+                let route = self.route(q);
+                complete = route.complete;
+                q.progress = complete as u8 as f64;
+                q.road_reward = 2.0 * route.paid_gold;}
             CAMP=>{if self.buildings.values().any(|b|b.camp==q.target as i32&&b.seen&bit(q.actor)!=0){q.radius=0.0;}
                 if q.targets.iter().any(|id|self.deaths.get(id).is_some_and(|&actor|actor!=q.actor)){q.state=FAILED;q.reason=3;return;}
                 let remaining=self.buildings.values().filter(|b|b.camp==q.target as i32&&camp_target(b.kind)).count();
@@ -428,7 +457,7 @@ pub fn update(world:&mut World)->*const f64{
                 for mut q in offers{if !engine.target_for(&mut q){continue;}
                     // Already enclosed/connected places do not create trivial requests.
                     if kind==PALISADE&&engine.enclosed(&q){continue;}
-                    if kind==ROAD&&engine.route(&q).0{continue;}
+                    if kind==ROAD&&engine.route(&q).complete{continue;}
                     q.discovered=true;let entity=world.spawn(q).id();engine.records.insert((actor,kind),entity);break;}
             }
         }
@@ -441,7 +470,7 @@ fn publish(world:&World,engine:&mut Quests)->*const f64{
         let mask=engine.records.values().filter_map(|&e|world.get::<Quest>(e)).filter(|other|other.actor==q.actor&&other.state==COMPLETE).fold(0u32,|mask,q|mask|1<<q.kind);
         let(x,y)=if q.kind==CAMP&&q.radius>0.0{((q.x/16.0).floor()*16.0+8.0,(q.y/16.0).floor()*16.0+8.0)}else{(q.x,q.y)};
         engine.output.extend_from_slice(&[q.actor as f64,q.kind as f64,q.state as f64,q.giver_kind as f64,q.giver as f64,q.village as f64,q.giver_faction as f64,q.gx,q.gy,
-            q.discovered as u8 as f64,x,y,q.radius,q.target as f64,q.progress,q.needed,q.reason as f64,q.land as f64,GOLD[q.kind as usize],FOOD[q.kind as usize],RELATIONS[q.kind as usize],mask as f64,q.area.len()as f64]);
+            q.discovered as u8 as f64,x,y,q.radius,q.target as f64,q.progress,q.needed,q.reason as f64,q.land as f64,q.gold(),FOOD[q.kind as usize],RELATIONS[q.kind as usize],mask as f64,q.area.len()as f64]);
         engine.output.extend(q.area.iter().map(|&i|i as f64));
     }engine.output.as_ptr()
 }
@@ -457,7 +486,7 @@ pub fn command(world:&mut World,actor:i32,kind:u8,mode:u32)->*const f64{
         let near=engine.leaders.get(&actor).is_some_and(|l|l.alive&&l.ashore&&live_giver.is_some_and(|(x,y,_)|(l.x-x).hypot(l.y-y)<=4.0));
         if !near{output[0]=2.0;engine.output=output;return engine.output.as_ptr();}
         if mode==1&&q.state==OFFER{
-            q.minimum=engine.next_id;q.accepted=engine.now;
+            q.minimum=engine.next_id;
             if kind==FARMS{q.baseline=engine.fields.iter().filter(|f|engine.cell(f.x as f64,f.y as f64).is_some_and(|i|q.area.contains(&i))).map(|f|f.id).collect();}
             if kind==VOYAGE&&engine.visited.get(&actor).is_some_and(|v|v.contains(&q.land))&&!engine.target_for(&mut q){output[0]=4.0;engine.output=output;return engine.output.as_ptr();}
             if kind==CAMP{q.targets=engine.buildings.values().filter(|b|b.camp==q.target as i32&&camp_target(b.kind)).map(|b|b.id).collect();q.needed=q.targets.len()as f64;}
@@ -465,11 +494,11 @@ pub fn command(world:&mut World,actor:i32,kind:u8,mode:u32)->*const f64{
         }else if mode==2{
             engine.progress(&mut q);
             if q.state!=READY{output[0]=3.0;}else{
-                q.state=COMPLETE;output[0]=0.0;output[1]=GOLD[kind as usize];output[2]=FOOD[kind as usize];output[3]=RELATIONS[kind as usize];
+                q.state=COMPLETE;output[0]=0.0;output[1]=q.gold();output[2]=FOOD[kind as usize];output[3]=RELATIONS[kind as usize];
                 output[4]=(1u32<<kind)as f64;output[5]=q.village as f64;output[6]=engine.villages.iter().find(|v|v.id==q.village).map_or(-1.0,|v|v.camp as f64);
                 let mut gifts=Vec::new();
                 if kind==POST{gifts.push([2.0,q.post as f64,q.giver_faction as f64,q.village as f64]);}
-                if kind==ROAD{for id in engine.route(&q).1{gifts.push([0.0,id as f64,-1.0,-1.0]);}}
+                if kind==ROAD{for &id in &engine.route(&q).new_segments{gifts.push([0.0,id as f64,-1.0,-1.0]);}}
                 if kind==PALISADE{for b in engine.buildings.values().filter(|b|b.id>=q.minimum&&b.faction==actor&&b.ready&&(b::wall(b.kind)||b::route(b.kind))){
                     if engine.cell(b.x as f64,b.y as f64).is_some_and(|i|q.area.contains(&i)){gifts.push([0.0,b.id as f64,q.giver_faction as f64,q.village as f64]);}}}
                 if kind==FARMS{for f in engine.fields.iter().filter(|f|f.faction==actor&&!q.baseline.contains(&f.id)){
@@ -506,7 +535,7 @@ pub fn snapshot(world:&World)->Vec<f64>{
     out.push(engine.deaths.len()as f64);for(&id,&a)in &engine.deaths{out.extend_from_slice(&[id as f64,a as f64]);}
     out.push(engine.records.len()as f64);for &e in engine.records.values(){let q=world.get::<Quest>(e).unwrap();out.extend_from_slice(&[
         q.actor as f64,q.kind as f64,q.state as f64,q.giver_kind as f64,q.giver as f64,q.village as f64,q.giver_faction as f64,q.gx,q.gy,q.discovered as u8 as f64,
-        q.x,q.y,q.radius,q.target as f64,q.capital as f64,q.land as f64,q.minimum as f64,q.since,q.post as f64,q.progress,q.needed,q.reason as f64,q.accepted]);
+        q.x,q.y,q.radius,q.target as f64,q.capital as f64,q.land as f64,q.minimum as f64,q.since,q.post as f64,q.progress,q.needed,q.reason as f64,q.road_reward]);
         for list in [&q.area.iter().map(|&i|i as i64).collect::<Vec<_>>(),&q.baseline,&q.targets]{out.push(list.len()as f64);out.extend(list.iter().map(|&i|i as f64));}
     }out
 }
@@ -521,7 +550,7 @@ pub fn restore(world:&mut World,data:&[f64])->bool{
             let mut lists=Vec::new();for _ in 0..3{let n=count(data,&mut at)?;lists.push(take(data,&mut at,n)?.iter().map(|v|*v as i64).collect::<Vec<_>>());}
             quests.push(Quest{actor:r[0]as i32,kind:r[1]as u8,state:r[2]as u8,giver_kind:r[3]as u8,giver:r[4]as i64,village:r[5]as i32,giver_faction:r[6]as i32,
                 gx:r[7],gy:r[8],discovered:r[9]!=0.0,x:r[10],y:r[11],radius:r[12],target:r[13]as i64,capital:r[14]as i64,land:r[15]as i32,minimum:r[16]as i64,
-                since:r[17],post:r[18]as i64,progress:r[19],needed:r[20],reason:r[21]as u8,accepted:r[22],area:lists[0].iter().map(|&i|i as usize).collect(),baseline:lists[1].clone(),targets:lists[2].clone()});
+                since:r[17],post:r[18]as i64,progress:r[19],needed:r[20],reason:r[21]as u8,road_reward:r[22],area:lists[0].iter().map(|&i|i as usize).collect(),baseline:lists[1].clone(),targets:lists[2].clone()});
         }(at==data.len()).then_some((engine,quests))})();
     let Some((mut engine,quests))=parsed else{return false;};
     let old:Vec<_>=world.resource::<Quests>().records.values().copied().collect();for e in old{world.despawn(e);}

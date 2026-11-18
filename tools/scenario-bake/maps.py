@@ -29,6 +29,28 @@ def tiles(saved):
             yield tile
 
 
+def is_cliff(terrain, cell, width, height):
+    tile = terrain[cell]
+    if tile.get('waterfall'):
+        return True
+    ridge = tile.get('ridge')
+    if not ridge or tile.get('stair'):
+        return False
+    tier = tile.get('ridgeTier', 1)
+    x, y = cell % width, cell // width
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if not (dx or dy):
+                continue
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < width and 0 <= ny < height):
+                return True
+            neighbor = terrain[ny * width + nx]
+            if neighbor.get('ridge') != ridge or neighbor.get('ridgeTier', 1) < tier:
+                return True
+    return False
+
+
 def render(scenario):
     saved = json.loads(gzip.decompress((ROOT / 'public/scenarios' / f'{scenario}.json.gz').read_bytes()))
     state = saved['state']
@@ -36,12 +58,11 @@ def render(scenario):
     width, height = world['width'], world['height']
     scale = max(3, min(10, 1200 // width))
     image = Image.new('RGB', (width, height))
-    for index, tile in enumerate(tiles(saved)):
+    terrain = list(tiles(saved))
+    for index, tile in enumerate(terrain):
         color = COLORS.get(tile['terrain'], '#849858')
-        if tile.get('relief') == 'mountains':
+        if is_cliff(terrain, index, width, height):
             color = '#807d73'
-        elif tile.get('relief') == 'hills':
-            color = '#8d9067'
         elif tile.get('overlay') in {'forest', 'jungle'}:
             color = '#446647'
         elif tile.get('marsh'):

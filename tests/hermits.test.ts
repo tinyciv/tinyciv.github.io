@@ -6,7 +6,7 @@ import { initializeHermits, hermitAvailable, hermitAt, hermitPosition, askHermit
 import { territory, UNCLAIMED } from '../src/game/borders';
 import { updateFog } from '../src/game/fog';
 import { applyGameCommand } from '../src/multiplayer/commands';
-import { hasStaticPath } from '../src/game/pathfinding';
+import { canMove, canWalk, hasStaticPath } from '../src/game/pathfinding';
 function fixture(): GameState {
     return { world: { width: 160, height: 160, seed: 'treasure-seed', source: 'test', spawns: [],
         tiles: Array.from({ length: 160 * 160 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .5, food: 2, production: 1, gold: 0, variation: .3 })) },
@@ -37,7 +37,11 @@ describe('hermits', () => {
    expect(hasStaticPath(a,a.units[0],hermitPosition(h),0)).toBe(true);
   }
   expect(a.units).toHaveLength(1); expect(a.buildings).toHaveLength(2);
-  a.hermits![0].status='gone'; const count=a.hermits!.length; initializeHermits(a);
+  const cabin = a.hermits![0], center = { x: cabin.x + .5, y: cabin.y + .5 };
+  expect(canWalk(a, center.x, center.y, 0)).toBe(false);
+  expect(canMove(a, { x: center.x - 1, y: center.y }, center, 0)).toBe(false);
+  cabin.status='gone'; const count=a.hermits!.length; initializeHermits(a);
+  expect(canWalk(a, center.x, center.y, 0)).toBe(false);
   expect(a.hermits!.length).toBe(count); expect(a.hermits![0].status).toBe('gone');
  });
  it('requires a living nearby leader and 25 gold; hints do not reveal terrain', () => {

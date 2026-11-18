@@ -43,7 +43,7 @@ function connectedTowns(world: World): void {
 describe('explicit world generation styles', () => {
   it.each(['CROWN', '42', 'first-light'])('makes distinct continent, supercontinent, and branching-island geographies for %s', seed => {
     const proceduralStyles = WORLD_GENERATION_STYLES;
-    const worlds = proceduralStyles.map(style => generateWorld(seed, 274, 216, { style }));
+    const worlds = proceduralStyles.map(style => generateWorld(seed, 274, 216, { style, ledges: false }));
     const [continents, pangaea, fractal] = worlds.map(landmasses);
     expect(continents[1].length).toBeGreaterThan(4000);
     expect(continents[0].length / continents.reduce((sum, mass) => sum + mass.length, 0)).toBeLessThan(.85);
@@ -53,13 +53,8 @@ describe('explicit world generation styles', () => {
       const world = worlds[n];
       expect(world.generationStyle).toBe(proceduralStyles[n]);
       expect(world.tiles.some(tile => 'hill' in tile), 'No gentle-hill elevation fields').toBe(false);
-      expect(world.tiles.some(tile => tile.relief), 'Native hill and mountain regions remain').toBe(true);
-      expect(world.tiles.some(tile => tile.ridge || tile.stair), 'Retired ledge metadata is absent').toBe(false);
-      for (const tile of world.tiles.filter(tile => tile.relief)) {
-        expect(tile.reliefRegion).toBeGreaterThan(0);
-        expect([0, 5, 7]).toContain(tile.reliefFlags);
-        expect([0, 1, 2]).toContain(tile.reliefLevel);
-      }
+      expect(world.tiles.some(tile => tile.relief || tile.hillBiome || tile.mountainPass)).toBe(false);
+      expect(world.tiles.some(tile => tile.ridge || tile.stair)).toBe(false);
       expect(world.spawns).toHaveLength(STARTING_FACTION_COUNT); expect(world.secondarySpawns).toHaveLength(OPPOSING_FACTION_COUNT);
       const mainland = new Set(landmasses(world)[0]);
       for (const town of [...world.spawns, ...world.secondarySpawns!])

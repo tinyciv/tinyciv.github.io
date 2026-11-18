@@ -56,9 +56,19 @@ export async function captureCannonFirePreview(page) {
     renderer.draw(state, 0);
   });
   await page.screenshot({ path: 'output/startup/cannon-black-powder-east.png' });
-  const frozen = await page.evaluate(() => {
-    const { state, time } = window.__cannonFireReview;
+  const frozen = await page.evaluate(async () => {
+    const { state, renderer, cannon, time } = window.__cannonFireReview;
+    const { selectionSummary } = await import('/src/ui/selection-summary.ts');
+    state.selected = cannon.id; state.selectedType = 'unit';
+    cannon.fieldCannon = { ...cannon.fieldCannon, funded: true, shotAt: undefined };
+    const paid = selectionSummary(state);
+    cannon.fieldCannon.funded = false;
+    const unpaid = selectionSummary(state);
+    if (!paid || !unpaid || unpaid.attack !== paid.attack / 2 || unpaid.defense !== paid.defense / 2)
+      throw new Error('Unpaid field cannons must show half attack and defense');
+    renderer.draw(state, 0);
     return state.paused && state.time === time;
   });
   if (!frozen) throw new Error('Cannon firing preview must remain frozen');
+  await page.screenshot({ path: 'output/startup/field-cannon-unpaid-upkeep.png' });
 }

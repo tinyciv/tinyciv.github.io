@@ -24,13 +24,13 @@ function fixture(): GameState {
 }
 
 describe('wilderness treasure', () => {
-    it('doubles the chest target on open maps with enough valid wilderness', () => {
+    it('halves the chest target on open maps with enough valid wilderness', () => {
         const state = fixture(), tile = state.world.tiles[0];
         state.world.width = 96; state.world.height = 96;
         state.world.tiles = Array.from({length:96*96}, () => ({...tile}));
         entityStore(state).buildings.replace([state.buildings[0]]); state.raiderCamps = [];
         initializeTreasureChests(state);
-        expect(state.treasures).toHaveLength(28); // Former target: 14.
+        expect(state.treasures).toHaveLength(14);
     });
 
     it('recognizes existing groves, passes and lake shores without inventing landmarks on empty plains', () => {
@@ -87,7 +87,7 @@ describe('wilderness treasure', () => {
         state.world.revision = 1;
         initializeTreasureChests(state);
         expect(state.rngState).toBe(rng);
-        expect(state.treasures!.length).toBeGreaterThan(0); expect(state.treasures!.length).toBeLessThanOrEqual(10);
+        expect(state.treasures!.length).toBeGreaterThan(0); expect(state.treasures!.length).toBeLessThanOrEqual(5);
         const reachable = travelTimeMap(state, state.units[0], 0, 1, Infinity);
         for (const chest of state.treasures!) {
             const cell = chest.y * 64 + chest.x;

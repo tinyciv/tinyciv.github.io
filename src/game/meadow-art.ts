@@ -1,34 +1,60 @@
 import { runtimeArtUrl } from './runtime-art';
-import type { Tile, World } from './types';
+import { ridgeIsLedge } from './ridges';
+import { tileAt, type Tile, type World } from './types';
 
 export type MeadowBiome = 'grassland' | 'plains';
-export type MeadowVariant = 'grassland-short' | 'grassland-medium' | 'grassland-tall' | 'plains-1' | 'plains-2' | 'plains-3';
+export type MeadowVariant = 'grassland-short' | 'grassland-medium' | 'grassland-tall'
+    | `grassland-${4 | 5 | 6 | 7 | 8 | 9}` | `plains-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`;
 export interface MeadowSprite {
     biome: MeadowBiome;
     file: string;
+    /** Native 16px animation row in the biome's shared atlas. */
+    row: number;
+    /** Vertical root footing within the native frame. */
+    anchorY: number;
     frameWidth: number;
     frameCount: number;
     frameDurationMs: number;
 }
+const sprite = (biome: MeadowBiome, row: number, frameCount = 17, anchorY = 1): Readonly<MeadowSprite> => ({
+    biome, file: `${biome}/variants.png`, row, anchorY, frameWidth: 16, frameCount, frameDurationMs: 180,
+});
 export const MEADOW_SPRITES: Readonly<Record<MeadowVariant, Readonly<MeadowSprite>>> = {
-    'grassland-short': { biome: 'grassland', file: 'grassland/short.png', frameWidth: 16, frameCount: 15, frameDurationMs: 180 },
-    'grassland-medium': { biome: 'grassland', file: 'grassland/medium.png', frameWidth: 16, frameCount: 16, frameDurationMs: 180 },
-    'grassland-tall': { biome: 'grassland', file: 'grassland/tall.png', frameWidth: 16, frameCount: 17, frameDurationMs: 180 },
-    'plains-1': { biome: 'plains', file: 'plains/1.png', frameWidth: 16, frameCount: 17, frameDurationMs: 180 },
-    'plains-2': { biome: 'plains', file: 'plains/2.png', frameWidth: 16, frameCount: 17, frameDurationMs: 180 },
-    'plains-3': { biome: 'plains', file: 'plains/3.png', frameWidth: 16, frameCount: 17, frameDurationMs: 180 },
+    'grassland-short': sprite('grassland', 0, 15),
+    'grassland-medium': sprite('grassland', 1, 16),
+    'grassland-tall': sprite('grassland', 2),
+    'grassland-4': sprite('grassland', 3, 17, 15 / 16),
+    'grassland-5': sprite('grassland', 4, 17, 15 / 16),
+    'grassland-6': sprite('grassland', 5, 16),
+    'grassland-7': sprite('grassland', 6, 16, 15 / 16),
+    'grassland-8': sprite('grassland', 7, 16),
+    'grassland-9': sprite('grassland', 8, 16),
+    'plains-1': sprite('plains', 0),
+    'plains-2': sprite('plains', 1),
+    'plains-3': sprite('plains', 2),
+    'plains-4': sprite('plains', 3),
+    'plains-5': sprite('plains', 4, 10),
+    'plains-6': sprite('plains', 5, 14),
+    'plains-7': sprite('plains', 6, 14),
+    'plains-8': sprite('plains', 7, 15),
+    'plains-9': sprite('plains', 8),
 };
 const images = new Map<MeadowVariant, HTMLImageElement>();
+const variants = Object.entries(MEADOW_SPRITES) as [MeadowVariant, Readonly<MeadowSprite>][];
 let loading: Promise<void> | undefined;
 
 export function loadMeadowArt(): Promise<void> {
-    return loading ??= Promise.all((Object.entries(MEADOW_SPRITES) as [MeadowVariant, MeadowSprite][]).map(async ([variant, spec]) => {
+    return loading ??= Promise.all([...new Set(variants.map(([, spec]) => spec.file))].map(async file => {
         const image = new Image();
-        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/vegetation/meadow/${spec.file}`);
+        image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/vegetation/meadow/${file}`);
         await image.decode();
-        if (image.height !== 16 || image.width < spec.frameWidth * spec.frameCount || image.width % spec.frameWidth)
-            throw new Error(`Invalid meadow sheet: ${spec.file}`);
-        images.set(variant, image);
+        for (const [variant, spec] of variants) {
+            if (spec.file !== file) continue;
+            if (image.height < (spec.row + 1) * 16 || image.height % 16
+                || image.width < spec.frameWidth * spec.frameCount || image.width % spec.frameWidth)
+                throw new Error(`Invalid meadow atlas: ${file}`);
+            images.set(variant, image);
+        }
     })).then(() => undefined);
 }
 
@@ -47,7 +73,11 @@ export interface MeadowTuft {
     variant: MeadowVariant;
     phase: number;
 }
+export const MEADOW_TUFT_SCALE = .7;
+const MEADOW_DENSITY_SCALE = .7;
 const NONE: readonly MeadowTuft[] = Object.freeze([]);
+const NEW_GRASSLAND_VARIANTS: readonly MeadowVariant[] = ['grassland-4', 'grassland-5', 'grassland-6', 'grassland-7', 'grassland-8', 'grassland-9'];
+const PLAINS_VARIANTS: readonly MeadowVariant[] = ['plains-1', 'plains-2', 'plains-3', 'plains-4', 'plains-5', 'plains-6', 'plains-7', 'plains-8', 'plains-9'];
 const hash = (x: number, y: number, salt: number): number => {
     let value = Math.imul(x + salt * 317, 0x1f123bb5) ^ Math.imul(y + salt * 117, 0x5f356495);
     value = Math.imul(value ^ value >>> 16, 0x45d9f3b);
@@ -59,7 +89,7 @@ const hash = (x: number, y: number, salt: number): number => {
  * the renderer's existing occupancy indices before these placements are used. */
 export function meadowBiome(tile: Tile): MeadowBiome | undefined {
     if ((tile.terrain !== 'grassland' && tile.terrain !== 'plains') || tile.overlay !== 'none'
-        || tile.creek || tile.beach || tile.relief || tile.marsh || tile.palm || tile.resource
+        || tile.creek || tile.beach || tile.relief || tile.stair || tile.waterfall || tile.marsh || tile.palm || tile.resource
         || tile.geothermal || tile.villageTrail || tile.desertStone !== undefined) return undefined;
     return tile.terrain;
 }
@@ -72,14 +102,16 @@ export function meadowTufts(tile: Tile, x: number, y: number): readonly MeadowTu
     const salt = Math.floor(tile.variation * 0xffffff) >>> 0;
     const cluster = (Math.sin(x * .28 + Math.sin(y * .25) * 1.8) + Math.sin(y * .39 - x * .11)
         + Math.sin(x * .71 + y * .31) * .36 + 2.36) / 4.72;
-    const chance = (biome === 'grassland' ? .72 : .6) * (.12 + cluster * 1.28);
+    const chance = (biome === 'grassland' ? .72 : .6) * (.12 + cluster * 1.28) * (2 / 3) * MEADOW_DENSITY_SCALE;
     const tufts: MeadowTuft[] = [];
     for (let slot = 0; slot < (biome === 'grassland' ? 3 : 1); slot++) {
         if (hash(x, y, salt + slot * 13 + 15) > chance) continue;
         const variety = hash(x, y, salt + slot * 11 + 37);
         const variant: MeadowVariant = biome === 'plains'
-            ? variety < 1 / 3 ? 'plains-1' : variety < 2 / 3 ? 'plains-2' : 'plains-3'
-            : variety < .2 ? 'grassland-short' : variety < .8 ? 'grassland-medium' : 'grassland-tall';
+            ? PLAINS_VARIANTS[Math.floor(variety * PLAINS_VARIANTS.length)]!
+            : variety < .1 ? 'grassland-short' : variety < .25 ? 'grassland-medium' : variety < .35 ? 'grassland-tall'
+                : NEW_GRASSLAND_VARIANTS[Math.min(NEW_GRASSLAND_VARIANTS.length - 1,
+                    Math.floor((variety - .35) / .65 * NEW_GRASSLAND_VARIANTS.length))]!;
         tufts.push({ x: .35 + hash(x, y, salt + slot * 7 + 5) * .3,
             y: .69 + hash(x, y, salt + slot * 5 + 9) * .26, variant,
             phase: (hash(x, y, salt + slot * 17 + 23) * .38 + x * .026 - y * .012 + 10000) % 1 });
@@ -87,19 +119,40 @@ export function meadowTufts(tile: Tile, x: number, y: number): readonly MeadowTu
     return tufts.length ? tufts : NONE;
 }
 
-/** Placement work is bounded to newly viewed cells. Eligibility is cheap and
- * re-read so clearing trees or replacing terrain never leaves stale foliage. */
+/** The full animation frame can extend past its root tile. Check it once per
+ * placement so every pose keeps ledges and ramps clear. */
+function meadowFits(world: World, x: number, y: number, tuft: MeadowTuft): boolean {
+    const left = x + tuft.x - .5 * MEADOW_TUFT_SCALE;
+    const top = y + tuft.y - MEADOW_SPRITES[tuft.variant].anchorY * MEADOW_TUFT_SCALE;
+    const right = left + MEADOW_TUFT_SCALE, bottom = top + MEADOW_TUFT_SCALE;
+    for (let row = Math.floor(top); row < bottom; row++) for (let col = Math.floor(left); col < right; col++) {
+        const tile = tileAt(world, col, row);
+        if (tile && (tile.stair || tile.waterfall || (tile.ridge && ridgeIsLedge(world, col, row)))) return false;
+    }
+    return true;
+}
+
+/** Recheck tile eligibility each draw. Cache animation footprints until the
+ * terrain geometry changes, then refresh visible cells on demand. */
 export class MeadowPlacementCache {
     private world?: World;
+    private tiles?: World['tiles'];
+    private geometry?: number;
     private cells: ({ terrain: Tile['terrain']; variation: number; tufts: readonly MeadowTuft[] } | undefined)[] = [];
 
-    get(world: World, x: number, y: number): readonly MeadowTuft[] {
-        if (this.world !== world) { this.world = world; this.cells = new Array(world.width * world.height); }
+    get(world: World, x: number, y: number, geometry: number): readonly MeadowTuft[] {
+        if (this.world !== world || this.tiles !== world.tiles || this.geometry !== geometry) {
+            this.world = world;
+            this.tiles = world.tiles;
+            this.geometry = geometry;
+            this.cells = [];
+        }
         const cell = y * world.width + x, tile = world.tiles[cell];
         if (!tile || !meadowBiome(tile)) return NONE;
         const old = this.cells[cell];
         if (old && old.terrain === tile.terrain && old.variation === tile.variation) return old.tufts;
-        const tufts = meadowTufts(tile, x, y);
+        const candidates = meadowTufts(tile, x, y);
+        const tufts = candidates.length ? candidates.filter(tuft => meadowFits(world, x, y, tuft)) : NONE;
         this.cells[cell] = { terrain: tile.terrain, variation: tile.variation, tufts };
         return tufts;
     }

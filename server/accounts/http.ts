@@ -3,6 +3,7 @@ import { isIP } from 'node:net';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { accountDatabase, accountsConfigured } from './database';
 import { HashingBusy, hashPassword, validPassword, verifyPassword } from './password';
+import { feedbackInput } from './feedback';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 export function normalizedEmail(value: unknown): string | undefined {
@@ -45,7 +46,7 @@ async function rateLimit(request: IncomingMessage, scope: string, email?: string
         attempts = CASE WHEN accounts.auth_limits.reset_at <= now() THEN 1 ELSE accounts.auth_limits.attempts + 1 END,
         reset_at = CASE WHEN accounts.auth_limits.reset_at <= now() THEN now() + interval '15 minutes' ELSE accounts.auth_limits.reset_at END
       RETURNING attempts`, [digest(key)]);
-    if (result.rows[0].attempts > (scope === 'register' ? 5 : 15)) throw new AccountError(429, 'Too many attempts. Try again in 15 minutes.');
+    if (result.rows[0].attempts > (scope === 'register' || scope === 'feedback' ? 5 : 15)) throw new AccountError(429, 'Too many attempts. Try again in 15 minutes.');
   }
 }
 
@@ -69,9 +70,9 @@ async function newSession(userId: string): Promise<string> {
 
 export async function handleAccountRequest(request: IncomingMessage, response: ServerResponse, origins: Set<string>): Promise<boolean> {
   const path = request.url?.split('?')[0];
-  if (!path?.startsWith('/api/auth/') && path !== '/api/account') return false;
+  if (!path?.startsWith('/api/auth/') && path !== '/api/account' && path !== '/api/feedback') return false;
   try {
-    if (!accountsConfigured()) throw new AccountError(503, 'Accounts are unavailable. Try again later.');
+    if (!accountsConfigured()) throw new AccountError(503, path === '/api/feedback' ? 'Feedback is unavailable. Your message has not been sent. Try again later.' : 'Accounts are unavailable. Try again later.');
     const origin = request.headers.origin;
     if (origin && !origins.has(origin)) throw new AccountError(403, 'This site is not allowed.');
     if (request.method === 'OPTIONS') {
@@ -79,6 +80,18 @@ export async function handleAccountRequest(request: IncomingMessage, response: S
       response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
         'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '600' }).end();
       return true;
+    }
+    if (path === '/api/feedback' && request.method === 'POST') {
+      const input = feedbackInput(await body(request), request.headers['user-agent']);
+      if (!input) throw new AccountError(400, 'Enter feedback of 1 to 4000 characters.');
+      // A supplied session must be valid. Guest reports use a pseudonymous ID;
+      // account IDs and contact details always come from the verified session.
+      const user = request.headers.authorization ? await signedIn(request) : undefined;
+      await rateLimit(request, 'feedback', user?.id);
+      await accountDatabase().query(`INSERT INTO accounts.feedback(id,user_id,visitor_id,message,context)
+        VALUES ($1,$2,$3,$4,$5::jsonb) ON CONFLICT(id) DO NOTHING`,
+      [input.id, user?.id ?? null, input.visitorId, input.message, JSON.stringify(input.context)]);
+      send(response, 201, { ok: true }); return true;
     }
     if (request.method === 'POST' && (path === '/api/auth/login' || path === '/api/auth/register')) {
       const input = await body(request), email = normalizedEmail(input.email);
@@ -138,7 +151,7 @@ export async function handleAccountRequest(request: IncomingMessage, response: S
     const status = error instanceof AccountError ? error.status : error instanceof HashingBusy ? 429 : 503;
     if (status === 429) response.setHeader('Retry-After', '900');
     // Passwords, request bodies, hashes, tokens and pg errors never enter logs.
-    send(response, status, { error: error instanceof AccountError || error instanceof HashingBusy ? error.message : 'Accounts are unavailable. Try again later.' });
+    send(response, status, { error: error instanceof AccountError || error instanceof HashingBusy ? error.message : path === '/api/feedback' ? 'Feedback is unavailable. Your message has not been confirmed. Try again.' : 'Accounts are unavailable. Try again later.' });
     return true;
   }
 }

@@ -4,6 +4,7 @@
 use bevy_ecs::prelude::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
+use super::vessel_navigation::{delta, Plan, Search, VesselGeometry, Waypoint};
 
 const STOCK: f64 = 160.0;
 const CATCH: f64 = 20.0;
@@ -29,6 +30,13 @@ struct Vessel {
 struct Site { id: i64, kind: u32, faction: i32, city: i64, ready: bool, tech: bool, home: (f64,f64), active: bool }
 #[derive(Default)]
 struct Field { previous: BTreeMap<usize,usize>, distance: BTreeMap<usize,u16>, queue: VecDeque<usize>, fish: BTreeMap<i64,(u16,usize)>, whales: BTreeMap<i64,(u16,usize)> }
+struct Yielding { other: i64, origin: (f64,f64), direction: (f64,f64), until: f64, refreshed: bool }
+struct Maneuver { target: usize, route: VecDeque<Waypoint>, yielding: Option<Yielding> }
+struct ManeuverJob { target: usize, kind: u32, search: Search }
+const MANEUVER_SLOTS: usize = 4;
+const MANEUVER_SLICE: usize = 32;
+const MANEUVER_LIMIT: usize = 4096;
+const MANEUVER_LOOKAHEAD: usize = 8;
 #[derive(Resource, Default)]
 pub struct Fisheries {
     input: Vec<f64>, output: Vec<f64>, width: usize, height: usize,
@@ -37,6 +45,30 @@ pub struct Fisheries {
     replacements: BTreeMap<i64,f64>, buffs: BTreeMap<i32,f64>,
     blockers: BTreeMap<(i32,i32),Vec<[f64;5]>>, boat_buckets: BTreeMap<(i32,i32),Vec<usize>>, initialized: bool, next_tick: f64, geometry_output: bool,
     world_islands_applied: bool,
+    boat_indices: BTreeMap<i64,usize>,
+    maneuvers: BTreeMap<i64,Maneuver>, requests: BTreeMap<i64,usize>, waiting: VecDeque<i64>,
+    maneuver_jobs: BTreeMap<i64,ManeuverJob>, maneuver_queue: VecDeque<i64>,
+    yield_cooldowns: BTreeMap<i64,f64>, debug: Vec<f64>,
+}
+/// Coarse voyage fields select resources. Only this local pose planner decides
+/// how a rectangular hull turns, backs out of a berth or passes other traffic.
+struct FisheryGeometry<'a> { net: &'a Fisheries, boats: &'a [Vessel], own: i64, kind: u32, origin: (f64,f64) }
+impl VesselGeometry for FisheryGeometry<'_> {
+    fn in_bounds(&self,x:f64,y:f64)->bool {
+        self.net.cell(x,y).is_some() && (x-self.origin.0).abs()<=8.0 && (y-self.origin.1).abs()<=8.0
+    }
+    fn pose(&self,x:f64,y:f64,angle:f64)->bool {
+        self.net.pose(x,y,angle,self.kind) && self.net.traffic(x,y,angle,self.kind,self.own,self.boats)
+    }
+    fn segment_clear(&self,from:(f64,f64),to:(f64,f64),angle:f64)->bool {
+        let steps=((to.0-from.0).hypot(to.1-from.1)/0.15).ceil().max(1.0)as usize;
+        let mut previous=from;
+        for i in 1..=steps {
+            let t=i as f64/steps as f64;let point=(from.0+(to.0-from.0)*t,from.1+(to.1-from.1)*t);
+            if !self.pose(point.0,point.1,angle)||!self.net.edge_clear(previous,point){return false;}
+            previous=point;
+        }true
+    }
 }
 impl Fisheries {
     pub fn input(&mut self,n:usize)->*mut f64 { self.input.resize(n,0.0);self.input.as_mut_ptr() }
@@ -48,6 +80,17 @@ impl Fisheries {
         if self.edges.get(c).copied().unwrap_or(0)&(1<<d)==0{return None;}
         let n=c as isize+[-(self.width as isize),1,self.width as isize,-1][d];
         (n>=0&&(n as usize)<self.edges.len()).then_some(n as usize)
+    }
+    fn edge_clear(&self,from:(f64,f64),to:(f64,f64))->bool {
+        let Some(a)=self.cell(from.0,from.1)else{return false;};let Some(b)=self.cell(to.0,to.1)else{return false;};
+        if a==b{return true;}
+        let dx=to.0.floor()as i32-from.0.floor()as i32;let dy=to.1.floor()as i32-from.1.floor()as i32;
+        if dx.abs()>1||dy.abs()>1{return false;}
+        let horizontal=if dx>0{1}else{3};let vertical=if dy>0{2}else{0};
+        if dx==0{return self.neighbor(a,vertical)==Some(b);}
+        if dy==0{return self.neighbor(a,horizontal)==Some(b);}
+        self.neighbor(a,horizontal).and_then(|c|self.neighbor(c,vertical))==Some(b)
+            &&self.neighbor(a,vertical).and_then(|c|self.neighbor(c,horizontal))==Some(b)
     }
     fn pose(&self,x:f64,y:f64,a:f64,kind:u32)->bool {
         let half=if kind==0{0.98}else{1.48};let(c,s)=(a.cos(),a.sin());
@@ -80,7 +123,7 @@ impl Fisheries {
         if !returning{result.make_contiguous().reverse();}result
     }
     fn index_boats(&mut self,boats:&[Vessel]) {
-        self.boat_buckets.clear();for(i,b)in boats.iter().enumerate(){if b.hp>0.0{self.boat_buckets.entry(((b.x/8.0).floor()as i32,(b.y/8.0).floor()as i32)).or_default().push(i);}}
+        self.boat_buckets.clear();self.boat_indices.clear();for(i,b)in boats.iter().enumerate(){if b.hp>0.0{self.boat_indices.insert(b.id,i);self.boat_buckets.entry(((b.x/8.0).floor()as i32,(b.y/8.0).floor()as i32)).or_default().push(i);}}
     }
     fn traffic(&self,x:f64,y:f64,a:f64,kind:u32,own:i64,boats:&[Vessel])->bool{
         let half=if kind==0{0.5}else{1.0};let radius=0.49;
@@ -100,19 +143,125 @@ impl Fisheries {
             if bucket.iter().any(|b|intersects(b[0],b[1],b[2],b[3],b[4])){return false;}
         }}}true
     }
-    fn detour(&self,b:&Vessel,boats:&[Vessel],budget:&mut usize)->Option<VecDeque<usize>> {
-        let start=self.cell(b.x,b.y)?;let targets:BTreeSet<usize>=b.route.iter().take(5).copied().filter(|c|*c!=start).collect();
-        let mut queue=VecDeque::from([start]);let mut prev=BTreeMap::from([(start,start)]);let(sx,sy)=self.point(start);let mut work=0;
-        while let Some(c)=queue.pop_front(){if *budget==0||work>=128{break;}*budget-=1;work+=1;
-            if targets.contains(&c){let mut route=VecDeque::new();let mut p=c;while p!=start{route.push_front(p);p=prev[&p];}
-                let offset=b.route.iter().position(|p|*p==c)?;route.extend(b.route.iter().skip(offset+1).copied());return Some(route);
+    fn request_maneuver(&mut self,b:&mut Vessel,now:f64) {
+        if now<b.next_plan||self.requests.contains_key(&b.id)||self.maneuver_jobs.contains_key(&b.id){return;}
+        b.next_plan=now+1.0;
+        if let Some(target)=b.route.iter().take(MANEUVER_LOOKAHEAD).last().copied(){
+            self.requests.insert(b.id,target);self.waiting.push_back(b.id);
+        }
+    }
+    fn yield_for(&mut self,b:&Vessel,boats:&[Vessel],now:f64)->bool {
+        let Some(goal)=b.route.iter().take(MANEUVER_LOOKAHEAD).last().map(|c|self.point(*c))else{return false;};
+        let length=(goal.0-b.x).hypot(goal.1-b.y);if length<0.01{return false;}
+        let direction=((goal.0-b.x)/length,(goal.1-b.y)/length);let sector=((b.x/8.0).floor()as i32,(b.y/8.0).floor()as i32);
+        let mut candidates=BTreeSet::new();
+        for dy in -1..=1{for dx in -1..=1{if let Some(bucket)=self.boat_buckets.get(&(sector.0+dx,sector.1+dy)){
+            for i in bucket{let other=&boats[*i];let offset=(other.x-b.x,other.y-b.y);
+                let ahead=offset.0*direction.0+offset.1*direction.1;let side=offset.0*direction.1-offset.1*direction.0;
+                if other.id!=b.id&&other.hp>0.0&&ahead>0.0&&ahead<6.0&&side.abs()<1.5{candidates.insert(other.id);}
             }
-            for d in 0..4{let Some(p)=self.neighbor(c,d)else{continue;};if prev.contains_key(&p)||!self.turnable(p,b.kind){continue;}
-                let(x,y)=self.point(p);if (x-sx).abs()>5.0||(y-sy).abs()>5.0{continue;}
-                let angle=[-std::f64::consts::FRAC_PI_2,0.0,std::f64::consts::FRAC_PI_2,std::f64::consts::PI][d];
-                if !self.traffic(x,y,angle,b.kind,b.id,boats){continue;}prev.insert(p,c);queue.push_back(p);
+        }}}
+        for id in candidates {
+            let Some(other)=self.boat_indices.get(&id).and_then(|i|boats.get(*i))else{continue;};
+            let yielding=if b.kind!=other.kind{if b.kind==0{b}else{other}}
+                else if b.id>other.id{b}else{other};
+            if !matches!(yielding.phase,0|1|3)||self.maneuvers.contains_key(&yielding.id)
+                ||self.yield_cooldowns.get(&yielding.id).is_some_and(|until|now<*until){continue;}
+            let priority=if yielding.id==b.id{other}else{b};
+            let own_direction=yielding.route.front().map(|cell|self.point(*cell)).map(|p|(p.0-yielding.x,p.1-yielding.y))
+                .filter(|p|p.0.hypot(p.1)>0.05).unwrap_or(direction);
+            let size=own_direction.0.hypot(own_direction.1);let own_direction=(own_direction.0/size,own_direction.1/size);
+            let geometry=FisheryGeometry{net:self,boats,own:yielding.id,kind:yielding.kind,origin:(yielding.x,yielding.y)};
+            let mut destination=None;
+            'offsets:for amount in [1.25,0.75,0.5,0.25,0.125]{for sign in [1.0,-1.0]{
+                let point=(yielding.x-own_direction.1*amount*sign,yielding.y+own_direction.0*amount*sign);
+                if geometry.segment_clear((yielding.x,yielding.y),point,yielding.angle){destination=Some(point);break 'offsets;}
+            }}
+            let Some(point)=destination else{continue;};let target=yielding.route.front().copied().unwrap_or(yielding.home);
+            let priority_direction=priority.route.iter().take(MANEUVER_LOOKAHEAD).last().map(|cell|self.point(*cell))
+                .map(|p|(p.0-priority.x,p.1-priority.y)).filter(|p|p.0.hypot(p.1)>0.05).unwrap_or(direction);
+            let size=priority_direction.0.hypot(priority_direction.1);let priority_direction=(priority_direction.0/size,priority_direction.1/size);
+            self.requests.remove(&yielding.id);
+            if self.maneuver_jobs.remove(&yielding.id).is_some(){self.maneuver_queue.retain(|id|*id!=yielding.id);}
+            self.maneuvers.insert(yielding.id,Maneuver{target,route:VecDeque::from([Waypoint{x:point.0,y:point.1,angle:yielding.angle,drive:2.0}]),
+                yielding:Some(Yielding{other:priority.id,origin:(yielding.x,yielding.y),direction:priority_direction,until:now+8.0,refreshed:false})});
+            self.yield_cooldowns.insert(yielding.id,now+12.0);
+            return yielding.id==b.id;
+        }false
+    }
+    fn plan_maneuvers(&mut self,boats:&[Vessel],budget:&mut usize,now:f64) {
+        let mut examined=0;
+        while self.maneuver_jobs.len()<MANEUVER_SLOTS&&examined<MANEUVER_SLOTS {
+            let Some(id)=self.waiting.pop_front()else{break;};examined+=1;
+            let Some(target)=self.requests.remove(&id)else{continue;};
+            if self.maneuver_jobs.contains_key(&id){continue;}
+            let Some(b)=self.boat_indices.get(&id).and_then(|i|boats.get(*i))else{continue;};
+            if !b.route.iter().take(MANEUVER_LOOKAHEAD).any(|c|*c==target){continue;}
+            if self.yield_for(b,boats,now){continue;}
+            // A fixed fifth waypoint may itself lie inside a ship or a
+            // neighboring fisher's mooring. Continue past it to the farthest
+            // currently clear pose, keeping the whole search local and bounded.
+            let Some(target)=b.route.iter().take(MANEUVER_LOOKAHEAD).copied().rev().find(|cell|{
+                let(x,y)=self.point(*cell);
+                (x-b.x).hypot(y-b.y)<=8.0+1e-7&&(0..=8).any(|heading|{
+                    let angle=if heading==8{b.angle}else{heading as f64*std::f64::consts::FRAC_PI_4};
+                    self.pose(x,y,angle,b.kind)&&self.traffic(x,y,angle,b.kind,b.id,boats)
+                })
+            })else{continue;};
+            self.maneuver_jobs.insert(id,ManeuverJob{target,kind:b.kind,
+                search:Search::new((b.x,b.y),b.angle,self.point(target),0).with_limit(MANEUVER_LIMIT).with_lateral()});
+            self.maneuver_queue.push_back(id);
+        }
+        // Four retained searches bound aggregate memory. Rotate their slices;
+        // a crowded old harbor cannot consume every later boat's search budget.
+        for _ in 0..self.maneuver_queue.len().min(MANEUVER_SLOTS) {
+            if *budget==0{break;}let Some(id)=self.maneuver_queue.pop_front()else{break;};
+            let Some(mut job)=self.maneuver_jobs.remove(&id)else{continue;};
+            let Some(b)=self.boat_indices.get(&id).and_then(|i|boats.get(*i))else{continue;};
+            if !b.route.iter().take(MANEUVER_LOOKAHEAD).any(|c|*c==job.target){continue;}
+            let geometry=FisheryGeometry{net:self,boats,own:id,kind:job.kind,origin:job.search.origin};
+            let slice=MANEUVER_SLICE.min(*budget);let result=job.search.advance(&geometry,slice);*budget-=slice;
+            match result {
+                Plan::Pending=>{self.maneuver_jobs.insert(id,job);self.maneuver_queue.push_back(id);},
+                Plan::Found(route)=>{self.maneuvers.insert(id,Maneuver{target:job.target,route,yielding:None});},
+                Plan::Failed=>{},
             }
-        }None
+        }
+    }
+    fn advance_maneuver(&mut self,b:&mut Vessel,boats:&[Vessel],elapsed:f64,now:f64)->bool {
+        let Some(mut plan)=self.maneuvers.remove(&b.id)else{
+            return self.requests.contains_key(&b.id)||self.maneuver_jobs.contains_key(&b.id);
+        };
+        if plan.yielding.is_none()&&!b.route.iter().take(MANEUVER_LOOKAHEAD).any(|c|*c==plan.target){return false;}
+        let geometry=FisheryGeometry{net:self,boats,own:b.id,kind:b.kind,origin:(b.x,b.y)};
+        let mut blocked=false;
+        if let Some(point)=plan.route.front().copied(){
+            let gap=(point.x-b.x).hypot(point.y-b.y);let change=delta(b.angle,point.angle);
+            if point.drive==0.0||change.abs()>0.02 {
+                let angle=b.angle+change.clamp(-1.6*elapsed,1.6*elapsed);
+                if geometry.turn_clear(b.x,b.y,b.angle,angle){b.angle=angle;}else{blocked=true;}
+                if !blocked&&point.drive==0.0&&delta(b.angle,point.angle).abs()<0.001{b.angle=point.angle;plan.route.pop_front();}
+            }else if gap<0.001{b.x=point.x;b.y=point.y;plan.route.pop_front();}
+            else{
+                let top=speed(*self.buffs.get(&b.faction).unwrap_or(&0.0),now,if b.kind==0{3.3}else{2.7});
+                let distance=(top*elapsed*if point.drive<0.0{0.65}else{1.0}).min(gap);
+                let next=(b.x+(point.x-b.x)/gap*distance,b.y+(point.y-b.y)/gap*distance);
+                if geometry.segment_clear((b.x,b.y),next,b.angle){b.x=next.0;b.y=next.1;b.moving=true;}
+                else{blocked=true;}
+            }
+        }
+        if blocked{self.request_maneuver(b,now);return true;}
+        if plan.route.is_empty(){
+            if let Some(yielding)=plan.yielding.as_mut(){
+                let other=self.boat_indices.get(&yielding.other).and_then(|i|boats.get(*i));
+                if !yielding.refreshed{if let Some(other)=other{if let Some(job)=self.maneuver_jobs.get_mut(&other.id){
+                    job.search=Search::new((other.x,other.y),other.angle,job.search.goal,0).with_limit(MANEUVER_LIMIT).with_lateral();
+                }}yielding.refreshed=true;}
+                let ahead=other.map(|other|(other.x-yielding.origin.0)*yielding.direction.0+(other.y-yielding.origin.1)*yielding.direction.1);
+                if now<yielding.until&&ahead.is_some_and(|distance|distance<3.5){self.maneuvers.insert(b.id,plan);}
+            }else{while let Some(cell)=b.route.pop_front(){if cell==plan.target{break;}}}
+        }else{self.maneuvers.insert(b.id,plan);}
+        true
     }
     pub fn placement(&self,x:f64,y:f64)->bool {
         (0..2).any(|i|[(x+i as f64+0.5,y-0.5),(x+i as f64+0.5,y+2.5),(x-0.5,y+i as f64+0.5),(x+2.5,y+i as f64+0.5)]
@@ -221,6 +370,7 @@ pub fn commit(world:&mut World,mode:u32,count:usize,width:usize,height:usize,see
 fn restore(world:&mut World,n:&mut Fisheries){
     for e in n.zones.values().chain(n.whales.values()).chain(n.boats.values()){world.despawn(*e);}
     n.zones.clear();n.whales.clear();n.boats.clear();n.buffs.clear();n.replacements.clear();n.fields.clear();
+    n.maneuvers.clear();n.requests.clear();n.waiting.clear();n.maneuver_jobs.clear();n.maneuver_queue.clear();n.yield_cooldowns.clear();
     let r=n.input.clone();if r.len()<8{return;}
     let(zones,boats,whales,buffs,replacements)=(r[1]as usize,r[2]as usize,r[3]as usize,r[5]as usize,r[6]as usize);n.next_tick=r[7];let mut p=8;
     for _ in 0..zones{let id=r[p]as i64;let length=r[p+4]as usize;let z=Fishery{id,stock:r[p+1],capacity:r[p+2],collapsed:r[p+3]!=0.0,cells:r[p+5..p+5+length].iter().map(|v|*v as usize).collect::<Vec<_>>().into()};p+=5+length;let e=world.spawn(z).id();n.zones.insert(id,e);}
@@ -249,17 +399,30 @@ fn maintain(world:&mut World,n:&mut Fisheries,now:f64,boats:&mut Vec<Vessel>){
             while let Some(p)=queue.pop_front(){if p==c{connected=true;break;}if seen.len()>180{break;}for d in 0..4{if let Some(q)=n.neighbor(p,d){if seen.insert(q){queue.push_back(q);}}}}
             if connected{home=Some(c);break 'search;}
         }}}
-        if let Some(home)=home{let(x,y)=n.point(home);let id=-(site.id+1);let b=Vessel{id,kind:site.kind,site:site.id,city:site.city,faction:site.faction,x,y,angle:-std::f64::consts::FRAC_PI_2,hp:if site.kind==0{80.0}else{150.0},phase:0,cargo:0.0,until:now,home,target:-1,moving:false,next_plan:now,route:VecDeque::new()};let e=world.spawn(b.clone()).id();n.boats.insert(id,e);boats.push(b);n.boat_buckets.entry(((x/8.0).floor()as i32,(y/8.0).floor()as i32)).or_default().push(boats.len()-1);}
+        if let Some(home)=home{let(x,y)=n.point(home);let id=-(site.id+1);let b=Vessel{id,kind:site.kind,site:site.id,city:site.city,faction:site.faction,x,y,angle:-std::f64::consts::FRAC_PI_2,hp:if site.kind==0{80.0}else{150.0},phase:0,cargo:0.0,until:now,home,target:-1,moving:false,next_plan:now,route:VecDeque::new()};let e=world.spawn(b.clone()).id();n.boats.insert(id,e);boats.push(b);n.boat_indices.insert(id,boats.len()-1);n.boat_buckets.entry(((x/8.0).floor()as i32,(y/8.0).floor()as i32)).or_default().push(boats.len()-1);}
     }
     for b in boats{if let Some(s)=n.sites.get(&b.site){b.city=s.city;}}
+    let alive=&n.boat_indices;
+    n.maneuvers.retain(|id,_|alive.contains_key(id));n.requests.retain(|id,_|alive.contains_key(id));
+    n.maneuver_jobs.retain(|id,_|alive.contains_key(id));
+    n.yield_cooldowns.retain(|id,_|alive.contains_key(id));
+    let requests=&n.requests;n.waiting.retain(|id|requests.contains_key(id));
+    let jobs=&n.maneuver_jobs;n.maneuver_queue.retain(|id|jobs.contains_key(id));
 }
 fn choose(n:&Fisheries,b:&Vessel,zones:&[Fishery],zone_index:&BTreeMap<i64,usize>,whales:&[Whale],whale_index:&BTreeMap<i64,usize>,now:f64)->Option<(i64,usize)>{
     let field=n.fields.get(&(b.home,b.kind))?;if !field.queue.is_empty(){return None;}
-    let candidates=if b.kind==0{&field.fish}else{&field.whales};
-    candidates.iter().filter(|(id,_)|if b.kind==0{
-        zone_index.get(id).is_some_and(|i|!zones[*i].collapsed&&zones[*i].stock>0.0)
-    }else{whale_index.get(id).is_some_and(|i|now>=whales[*i].ready)})
-        .min_by_key(|(id,(distance,cell))|(*distance,**id,*cell)).map(|(id,(_,cell))|(*id,*cell))
+    if b.kind==0{return field.fish.iter().filter(|(id,_)|
+        zone_index.get(id).is_some_and(|i|!zones[*i].collapsed&&zones[*i].stock>0.0))
+        .min_by_key(|(id,(distance,cell))|(*distance,**id,*cell)).map(|(id,(_,cell))|(*id,*cell));}
+    // Compare the whole voyage with a resource's short recovery wait. Filtering
+    // readiness first sent a boat across the map when its nearby whale needed
+    // only another fraction of a second, creating unnecessary harbor traffic.
+    let velocity=speed(*n.buffs.get(&b.faction).unwrap_or(&0.0),now,2.7);
+    let selected=field.whales.iter().filter_map(|(id,(distance,cell))|{
+        let whale=whales.get(*whale_index.get(id)?)?;
+        Some((*id,*cell,*distance as f64*2.0+(whale.ready-now).max(0.0)*velocity,whale.ready))
+    }).min_by(|a,b|a.2.total_cmp(&b.2).then(a.0.cmp(&b.0)).then(a.1.cmp(&b.1)))?;
+    (now+1e-7>=selected.3).then_some((selected.0,selected.1))
 }
 
 fn publish(n:&mut Fisheries,zones:&[Fishery],whales:&[Whale],boats:&[Vessel],events:&[[f64;5]])->*const f64{
@@ -286,6 +449,7 @@ pub fn step(world:&mut World,now:f64,dt:f64)->*const f64{
                     for z in &mut zones{recover(z,1.0);}n.next_tick+=1.0;
                     maintain(world,&mut n,clock,&mut boats);
                 }
+                n.plan_maneuvers(&boats,&mut budget,clock);
                 // Shared fields retain partially filled queues, so large oceans
                 // never cause an unbounded flood fill on a dispatch frame.
                 let keys:BTreeSet<_>=boats.iter().map(|b|(b.home,b.kind)).collect();for(home,kind)in keys{n.field(home,kind,&mut budget);}
@@ -293,20 +457,33 @@ pub fn step(world:&mut World,now:f64,dt:f64)->*const f64{
                     if b.phase==0&&clock>=b.next_plan&&n.sites.get(&b.site).is_some_and(|s|s.tech){
                         b.next_plan=clock+1.0;if let Some((target,end))=choose(&n,&b,&zones,&zone_index,&whales,&whale_index,clock){b.target=target;b.route=n.path(b.home,b.kind,end,false);b.phase=1;}
                     }
-                    if matches!(b.phase,1|3){
+                    let maneuver=n.advance_maneuver(&mut b,&boats,elapsed,clock);
+                    if matches!(b.phase,1|3)&&!maneuver{
                         if let Some(&goal)=b.route.front(){let(gx,gy)=n.point(goal);let gap=(gx-b.x).hypot(gy-b.y);
                             if gap<0.025{b.x=gx;b.y=gy;b.route.pop_front();}
-                            else{let desired=(gy-b.y).atan2(gx-b.x);let delta=(desired-b.angle).sin().atan2((desired-b.angle).cos());let a=b.angle+delta.clamp(-1.6*elapsed,1.6*elapsed);
-                                if n.pose(b.x,b.y,a,b.kind)&&n.traffic(b.x,b.y,a,b.kind,b.id,&boats){b.angle=a;}
-                                else if clock>=b.next_plan{b.next_plan=clock+1.0;if let Some(route)=n.detour(&b,&boats,&mut budget){b.route=route;}}
-                                if delta.abs()<0.06{let top=speed(*n.buffs.get(&b.faction).unwrap_or(&0.0),clock,if b.kind==0{3.3}else{2.7});let step=(top*elapsed).min(gap);let(x,y)=(b.x+(gx-b.x)/gap*step,b.y+(gy-b.y)/gap*step);
-                                    let edge_ok=n.cell(b.x,b.y).zip(n.cell(x,y)).is_some_and(|(a,c)|a==c||(0..4).any(|d|n.neighbor(a,d)==Some(c)));
-                                    if edge_ok&&n.pose(x,y,b.angle,b.kind)&&n.traffic(x,y,b.angle,b.kind,b.id,&boats){b.x=x;b.y=y;b.moving=true;}
-                                    else if clock>=b.next_plan{b.next_plan=clock+1.0;if let Some(route)=n.detour(&b,&boats,&mut budget){b.route=route;}}
+                            else{let bearing=(gy-b.y).atan2(gx-b.x);let reverse=delta(b.angle,bearing+std::f64::consts::PI).abs()+0.001<delta(b.angle,bearing).abs();
+                                let desired=bearing+if reverse{std::f64::consts::PI}else{0.0};let change=delta(b.angle,desired);let a=b.angle+change.clamp(-1.6*elapsed,1.6*elapsed);
+                                let turn_clear={let geometry=FisheryGeometry{net:&n,boats:&boats,own:b.id,kind:b.kind,origin:(b.x,b.y)};
+                                    geometry.turn_clear(b.x,b.y,b.angle,a)};
+                                if turn_clear{b.angle=a;}else{n.request_maneuver(&mut b,clock);}
+                                if change.abs()<0.06{let top=speed(*n.buffs.get(&b.faction).unwrap_or(&0.0),clock,if b.kind==0{3.3}else{2.7});let distance=(top*elapsed*if reverse{0.65}else{1.0}).min(gap);let(x,y)=(b.x+(gx-b.x)/gap*distance,b.y+(gy-b.y)/gap*distance);
+                                    let clear={let geometry=FisheryGeometry{net:&n,boats:&boats,own:b.id,kind:b.kind,origin:(b.x,b.y)};
+                                        geometry.segment_clear((b.x,b.y),(x,y),b.angle)};
+                                    if clear{b.x=x;b.y=y;b.moving=true;}
+                                    else{n.request_maneuver(&mut b,clock);}
                                 }
                             }
                         }else if b.phase==3&&(n.point(b.home).0-b.x).hypot(n.point(b.home).1-b.y)>0.05{
-                            if clock>=b.next_plan{b.next_plan=clock+1.0;if let Some(c)=n.cell(b.x,b.y){b.route=n.path(b.home,b.kind,c,true);}}
+                            if clock>=b.next_plan{
+                                if let Some(c)=n.cell(b.x,b.y){b.route=n.path(b.home,b.kind,c,true);}
+                                // A valid pushed/yielded hull pose need not have
+                                // a turnable integer-cell center in the shared
+                                // field. Rejoin the exact berth with the same
+                                // bounded pose planner instead of retrying an
+                                // empty coarse path forever.
+                                if b.route.is_empty(){b.route.push_back(b.home);n.request_maneuver(&mut b,clock);}
+                                else{b.next_plan=clock+1.0;}
+                            }
                         }else{b.phase=if b.phase==1{2}else{4};b.until=clock+if b.phase==2{if b.kind==0{6.0}else{8.0}}else{3.0};}
                     }
                     if b.phase==2&&clock>=b.until{
@@ -337,6 +514,30 @@ pub fn push(world:&mut World,id:i64,x:f64,y:f64){
     world.resource_scope(|world,n:Mut<Fisheries>|{
         if let Some(e)=n.boats.get(&id){if let Some(mut b)=world.get_mut::<Vessel>(*e){b.x=x;b.y=y;b.route.clear();b.phase=3;b.next_plan=0.0;}}
     });
+}
+
+/// On-demand diagnostics only; the frame loop never samples or publishes it.
+pub fn status(world:&mut World,id:i64)->*const f64 {
+    world.resource_scope(|world,mut n:Mut<Fisheries>|{
+        let boats:Vec<_>=n.boats.values().filter_map(|entity|world.get::<Vessel>(*entity).cloned()).collect();
+        n.index_boats(&boats);n.debug.resize(20,-1.0);n.debug.fill(-1.0);
+        if let Some(b)=n.boat_indices.get(&id).and_then(|i|boats.get(*i)){
+            let job=n.maneuver_jobs.get(&id);let plan=n.maneuvers.get(&id);
+            let goal=job.map(|job|job.search.goal).or_else(||plan.map(|plan|n.point(plan.target)))
+                .or_else(||n.requests.get(&id).map(|cell|n.point(*cell)))
+                .or_else(||b.route.front().map(|cell|n.point(*cell))).unwrap_or((b.x,b.y));
+            let(visited,frontier)=job.map(|job|job.search.progress()).unwrap_or((0,0));
+            let shore=n.pose(b.x,b.y,b.angle,b.kind);let traffic=n.traffic(b.x,b.y,b.angle,b.kind,id,&boats);
+            let goal_shore=(0..8).any(|heading|n.pose(goal.0,goal.1,heading as f64*std::f64::consts::FRAC_PI_4,b.kind));
+            let goal_traffic=(0..8).any(|heading|{let angle=heading as f64*std::f64::consts::FRAC_PI_4;
+                n.pose(goal.0,goal.1,angle,b.kind)&&n.traffic(goal.0,goal.1,angle,b.kind,id,&boats)});
+            let row=[id as f64,b.phase as f64,b.x,b.y,b.angle,b.route.len()as f64,n.requests.contains_key(&id)as u8 as f64,
+                job.is_some()as u8 as f64,visited as f64,frontier as f64,goal.0,goal.1,plan.map_or(0,|plan|plan.route.len())as f64,
+                shore as u8 as f64,traffic as u8 as f64,goal_shore as u8 as f64,goal_traffic as u8 as f64,
+                plan.is_some_and(|plan|plan.yielding.is_some())as u8 as f64,n.maneuver_jobs.len()as f64,n.waiting.len()as f64];
+            n.debug.copy_from_slice(&row);
+        }n.debug.as_ptr()
+    })
 }
 
 /// Offline authoring only: split ordinary water districts around an atoll.
@@ -429,4 +630,79 @@ pub fn scenario_whales(world:&mut World)->u32 {
         for(i,(x,y))in selected.iter().copied().enumerate(){let id=i as i64+1;let entity=world.spawn(Whale{id,x,y,ready:0.0}).id();n.whales.insert(id,entity);}
         n.fields.clear();index_resources(world,&mut n);selected.len()as u32
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn whaler_waits_for_a_nearby_renewal_instead_of_crossing_the_map() {
+        let mut n=Fisheries::default();let mut field=Field::default();
+        field.whales.insert(1,(14,10));field.whales.insert(2,(55,20));n.fields.insert((0,1),field);
+        let b=Vessel{id:-1,kind:1,site:1,city:1,faction:0,x:0.5,y:0.5,angle:0.0,hp:150.0,phase:0,cargo:0.0,until:0.0,
+            home:0,target:-1,moving:false,next_plan:0.0,route:VecDeque::new()};
+        let whales=vec![Whale{id:1,x:0.0,y:0.0,ready:32.6},Whale{id:2,x:0.0,y:0.0,ready:0.0}];
+        let indices=BTreeMap::from([(1,0),(2,1)]);
+        assert_eq!(choose(&n,&b,&[],&BTreeMap::new(),&whales,&indices,32.1),None);
+        assert_eq!(choose(&n,&b,&[],&BTreeMap::new(),&whales,&indices,32.6),Some((1,10)));
+    }
+
+    #[test]
+    fn displaced_fisher_returns_when_its_cell_is_outside_the_coarse_field() {
+        let mut world=World::new();let mut n=Fisheries::default();n.width=12;n.height=20;n.edges=vec![0;240];
+        for y in 1..19{for x in 4..8{let cell=y*12+x;
+            for(d,(dx,dy))in[(0,-1),(1,0),(0,1),(-1,0)].into_iter().enumerate(){
+                let(px,py)=(x as i32+dx,y as i32+dy);
+                if (4..8).contains(&px)&&(1..19).contains(&py){n.edges[cell]|=1<<d;}
+            }
+        }}
+        let home=10*12+6;
+        let b=Vessel{id:-2,kind:0,site:1,city:100,faction:0,x:7.243,y:8.599,angle:-std::f64::consts::FRAC_PI_2,
+            hp:80.0,phase:3,cargo:20.0,until:0.0,home,target:-1,moving:false,next_plan:0.0,route:VecDeque::new()};
+        assert!(n.pose(b.x,b.y,b.angle,b.kind));assert!(!n.turnable(n.cell(b.x,b.y).unwrap(),0));
+        n.sites.insert(1,Site{id:1,kind:0,faction:0,city:100,ready:true,tech:true,home:(6.5,10.5),active:true});
+        n.boats.insert(b.id,world.spawn(b).id());n.initialized=true;world.insert_resource(n);
+        let mut delivered=false;
+        for tick in 1..=300{
+            step(&mut world,tick as f64*0.1,0.1);let n=world.resource::<Fisheries>();let events=n.output[4]as usize;
+            delivered|=n.output[n.output.len()-events*5..].chunks_exact(5).any(|r|r[2]==0.0&&r[3]>0.0);
+            for entity in n.boats.values(){let b=world.get::<Vessel>(*entity).unwrap();assert!(n.pose(b.x,b.y,b.angle,b.kind));}
+        }
+        assert!(delivered,"a safe off-center return pose must rejoin its exact home berth");
+    }
+
+    #[test]
+    fn whaler_and_fisher_repeat_voyages_past_a_narrow_harbor_jetty() {
+        let mut world=World::new();let(mut n,width,height)=(Fisheries::default(),24,32);
+        n.width=width;n.height=height;n.edges=vec![0;width*height];
+        // The Island Deathmatch failure: a four-tile channel and an offset
+        // jetty leave room to back out and turn between cell centers, but not
+        // to rotate a whaler through every intermediate angle at its berth.
+        let water=|x:usize,y:usize| (y<8||(7..=10).contains(&x)&&y<30)&&!(x==9&&y==16);
+        for y in 0..height{for x in 0..width{if !water(x,y){continue;}
+            for(d,(dx,dy))in[(0,-1),(1,0),(0,1),(-1,0)].into_iter().enumerate(){
+                let(px,py)=(x as i32+dx,y as i32+dy);
+                if px>=0&&py>=0&&(px as usize)<width&&(py as usize)<height&&water(px as usize,py as usize){n.edges[y*width+x]|=1<<d;}
+            }
+        }}
+        let cells:Vec<_>=(0..width*height).filter(|i|n.edges[*i]!=0).collect();
+        let zone=world.spawn(Fishery{id:1,cells:cells.into(),stock:STOCK,capacity:STOCK,collapsed:false}).id();n.zones.insert(1,zone);
+        let whale=world.spawn(Whale{id:2,x:8.5,y:2.5,ready:0.0}).id();n.whales.insert(2,whale);
+        for(id,kind,home)in[(1,1,(10.5,18.5)),(2,0,(10.5,16.5))]{n.sites.insert(id,Site{id,kind,faction:0,city:100,ready:true,tech:true,home,active:true});}
+        n.initialized=true;index_resources(&world,&mut n);world.insert_resource(n);
+        let(mut whaling_receipts,mut fishing_receipts)=(0,0);
+        for tick in 1..=3000 {
+            step(&mut world,tick as f64*0.1,0.1);
+            let n=world.resource::<Fisheries>();let events=n.output[4]as usize;
+            for row in n.output[n.output.len()-events*5..].chunks_exact(5){
+                if row[3]>0.0{if row[2]==1.0{whaling_receipts+=1;}else{fishing_receipts+=1;}}
+            }
+            for entity in n.boats.values(){let b=world.get::<Vessel>(*entity).unwrap();
+                assert!(n.pose(b.x,b.y,b.angle,b.kind),"vessel {} clipped shore or jetty at {}",b.id,tick);
+            }
+        }
+        assert!(whaling_receipts>=2,"whaler must leave its berth again after unloading; received {whaling_receipts}");
+        assert!(fishing_receipts>=2,"harbor maneuvers must leave the fishing traffic operating");
+    }
 }

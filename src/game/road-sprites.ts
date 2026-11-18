@@ -1,5 +1,5 @@
 import { punyWorldPixels } from './puny-world';
-import type { RoadStyle } from './types';
+import { buildingReady, isFord, tileAt, type Building, type RoadStyle, type World } from './types';
 
 export interface RoadLinks {
   north: boolean; east: boolean; south: boolean; west: boolean;
@@ -34,8 +34,38 @@ export function pavedRoadHalfWidth(links: RoadLinks, x: number, y: number): numb
 type Point = readonly [number, number];
 const fields = new Map<number, Float32Array>();
 const surfaces = new Map<string, HTMLCanvasElement>();
-const maskOf = (links: RoadLinks) => Number(links.north) | Number(links.east) << 1 | Number(links.south) << 2 | Number(links.west) << 3
+export const roadLinkMask = (links: RoadLinks) => Number(links.north) | Number(links.east) << 1 | Number(links.south) << 2 | Number(links.west) << 3
   | Number(!!links.northeast) << 4 | Number(!!links.southeast) << 5 | Number(!!links.southwest) << 6 | Number(!!links.northwest) << 7;
+
+const ROAD_EXITS = [
+  ['north', 0, -1], ['east', 1, 0], ['south', 0, 1], ['west', -1, 0],
+  ['northeast', 1, -1, 'east', 'north'], ['southeast', 1, 1, 'east', 'south'],
+  ['southwest', -1, 1, 'west', 'south'], ['northwest', -1, -1, 'west', 'north'],
+] as const;
+
+export function roadConnections(road: Building, occupants: (x: number, y: number) => readonly Building[], world?: World): RoadLinks {
+  const links: RoadLinks = { north: false, east: false, south: false, west: false };
+  if (road.roadPaved) links.pavedEnds = 0;
+  ROAD_EXITS.forEach(([side, dx, dy, horizontal, vertical], bit) => {
+    const x = road.x + dx, y = road.y + dy, neighbors = occupants(x, y);
+    // A cardinal elbow already joins these tiles. Only expose a corner
+    // when it is the actual link, keeping bends and junctions narrow.
+    if (horizontal && vertical) {
+      if (!links[horizontal] && !links[vertical] && neighbors.some(other => other.kind === 'road')) links[side] = true;
+    } else {
+      links[side] = neighbors.some(other => other.kind === 'road' || other.kind === 'bridge') || !!world && isFord(tileAt(world, x, y));
+    }
+    if (road.roadPaved && links[side] && !neighbors.some(other => other.kind === 'road' && other.roadPaved && buildingReady(other)))
+      links.pavedEnds! |= 1 << bit;
+  });
+  return links;
+}
+
+/** Test the road's footprint at a pixel on the 32px ground plane. */
+export function roadCoversPixel(links: RoadLinks, road: Pick<Building, 'roadPaved' | 'roadStyle'>, x: number, y: number): boolean {
+  const halfWidth = road.roadPaved ? pavedRoadHalfWidth(links, x, y) : road.roadStyle === 'trail' ? TRAIL_HALF_WIDTH : ROAD_HALF_WIDTH;
+  return roadDistanceField(roadLinkMask(links))[y * 32 + x] <= halfWidth;
+}
 
 /** Stable scenery variation, shared by both Canvas and the world atlas cache.
  * A bounded variant set avoids baking a separate texture for every map cell. */
@@ -46,7 +76,7 @@ export function trailArtVariant(worldX: number, worldY: number): number {
 }
 
 export function dirtRoadArtKey(links: RoadLinks, worldX: number, worldY: number, style: RoadStyle = 'road'): string {
-  return `${style}:${maskOf(links)}${style === 'trail' ? `:${trailArtVariant(worldX, worldY)}` : ''}`;
+  return `${style}:${roadLinkMask(links)}${style === 'trail' ? `:${trailArtVariant(worldX, worldY)}` : ''}`;
 }
 
 const TRAIL_BENDS: readonly Point[] = [[-4, -2], [-2, 4], [3, 1], [0, -4], [4, -4], [-3, 0], [2, -2], [0, 3]];
@@ -106,7 +136,7 @@ export function roadDistanceField(mask: number): Float32Array {
 
 export function rasterDirtRoad(links: RoadLinks, atlas: { width: number; data: Uint8ClampedArray }, style: RoadStyle = 'road', variant = 0, paved = false): Uint8ClampedArray {
     const pixels = new Uint8ClampedArray(32 * 32 * 4);
-    const mask = maskOf(links), field = roadDistanceField(mask);
+  const mask = roadLinkMask(links), field = roadDistanceField(mask);
     const junction = (mask.toString(2).match(/1/g)?.length ?? 0) > 2;
     variant &= TRAIL_ART_VARIANTS - 1;
     const trail = style === 'trail', flip = variant & 8 ? -1 : 1;

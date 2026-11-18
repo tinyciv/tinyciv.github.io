@@ -2,7 +2,7 @@
 //! faction-pair relationships are resident ECS components; the host only
 //! supplies observations and applies the resulting world/economy events.
 use bevy_ecs::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const PEACE: u32 = 1;
 pub const PACT: u32 = 2;
@@ -112,6 +112,7 @@ struct Evaluation { error: u32, score: f64, reasons: u32, counter: f64 }
 pub struct Diplomacy {
     pub input: Vec<f64>, pub output: Vec<f64>,
     accounts: BTreeMap<i32, Entity>, pairs: BTreeMap<(i32, i32), Entity>,
+    wars: BTreeMap<i32, BTreeSet<i32>>,
     offers: BTreeMap<u32, Offer>, cities: BTreeMap<i64, City>, technologies: Vec<Technology>,
     events: Vec<[f64; 5]>, history: Vec<[f64; 6]>, next_id: u32, revision: u32, now: f64,
     /// Explicit headless combat fixture only; normal worlds leave this unset.
@@ -120,6 +121,27 @@ pub struct Diplomacy {
 fn key(a: i32, b: i32) -> (i32, i32) { (a.min(b), a.max(b)) }
 fn amount(v: f64) -> f64 { if v.is_finite() { v.max(0.0) } else { 0.0 } }
 impl Diplomacy {
+    /// Offline authoring resets the resident relationships, rather than only
+    /// the host's published snapshot. Ordinary loads never call this command.
+    pub fn initialize_scenario(&mut self, world: &mut World, scenario: u32) -> bool {
+        if scenario > 5 || self.accounts.is_empty() { return false; }
+        let war = matches!(scenario, 1 | 2 | 3 | 5);
+        let pairs: Vec<_> = self.pairs.keys().copied().filter(|&(a, b)|
+            self.accounts.get(&a).and_then(|e| world.get::<Account>(*e)).is_some_and(|f| f.active)
+            && self.accounts.get(&b).and_then(|e| world.get::<Account>(*e)).is_some_and(|f| f.active)).collect();
+        if war && pairs.is_empty() { return false; }
+        // Walk the existing pair index once; do not rebuild a cross product of
+        // units, cities, or factions during finalization.
+        for (a, b) in pairs { self.put(world, Relationship::new(a, b, war, self.now)); }
+        for &entity in self.accounts.values() {
+            let mut account = world.get_mut::<Account>(entity).unwrap();
+            account.fatigue = 0.0;
+            account.aid_city = -1; account.aid_ally = -1; account.aid_until = 0.0;
+        }
+        self.offers.clear(); self.events.clear(); self.history.clear(); self.match_pair = None;
+        self.revision = self.revision.wrapping_add(1);
+        true
+    }
     pub fn configure_match(&mut self, world: &mut World, a: i32, b: i32) -> bool {
         if a == b || self.account(world,a).is_none_or(|f|f.human||!f.active)
             || self.account(world,b).is_none_or(|f|f.human||!f.active) { return false; }
@@ -137,9 +159,22 @@ impl Diplomacy {
     fn account(&self, world: &World, id: i32) -> Option<Account> { world.get::<Account>(*self.accounts.get(&id)?).cloned() }
     fn pair(&self, world: &World, a: i32, b: i32) -> Option<Relationship> { world.get::<Relationship>(*self.pairs.get(&key(a,b))?).cloned() }
     fn put(&mut self, world: &mut World, pair: Relationship) {
-        let k = (pair.a, pair.b);
-        if let Some(&entity) = self.pairs.get(&k) { *world.get_mut::<Relationship>(entity).unwrap() = pair; }
-        else { self.pairs.insert(k, world.spawn(pair).id()); }
+        let (a, b, war) = (pair.a, pair.b, pair.war);
+        let was_at_war = if let Some(&entity) = self.pairs.get(&(a, b)) {
+            let mut previous = world.get_mut::<Relationship>(entity).unwrap();
+            let was_at_war = previous.war;
+            *previous = pair;
+            was_at_war
+        } else {
+            self.pairs.insert((a, b), world.spawn(pair).id());
+            false
+        };
+        if war != was_at_war {
+            for (faction, enemy) in [(a, b), (b, a)] {
+                if war { self.wars.entry(faction).or_default().insert(enemy); }
+                else if let Some(enemies) = self.wars.get_mut(&faction) { enemies.remove(&enemy); }
+            }
+        }
     }
     fn event(&mut self, kind: u32, a: i32, b: i32, value: f64, extra: f64) {
         self.events.push([kind as f64, a as f64, b as f64, value, extra]);
@@ -406,8 +441,8 @@ impl Diplomacy {
         let Some(c) = self.cities.get(&city) else { return CITY; };
         if !f.active || f.human || c.owner != ally { return INVALID; }
         if self.pair(world, helper, ally).is_none_or(|p| p.war || p.alliance <= self.now) { return ALLIED; }
-        let common_war = self.accounts.keys().any(|&enemy| self.pair(world,helper,enemy).is_some_and(|p|p.war)
-            && self.pair(world,ally,enemy).is_some_and(|p|p.war));
+        let common_war = self.wars.get(&helper).zip(self.wars.get(&ally)).is_some_and(|(own, allied)|
+            own.intersection(allied).any(|enemy| self.accounts.contains_key(enemy)));
         let home_alarm = self.cities.values().any(|c|c.owner==helper&&c.attacked>self.now-15.0);
         let reachable_distance = self.cities.values().filter(|c|c.owner==helper)
             .map(|home|(home.x-c.x).hypot(home.y-c.y)).fold(f64::INFINITY,f64::min);
@@ -435,10 +470,12 @@ impl Diplomacy {
         let keys:Vec<_>=self.pairs.keys().copied().collect();
         for (a,b) in keys {
             let mut p=self.pair(world,a,b).unwrap();
-            let Some(fa)=self.account(world,a)else{continue;};let Some(fb)=self.account(world,b)else{continue;};
-            if !fa.active||!fb.active {
+            let Some(fa)=self.accounts.get(&a).and_then(|&entity|world.get::<Account>(entity))else{continue;};
+            let Some(fb)=self.accounts.get(&b).and_then(|&entity|world.get::<Account>(entity))else{continue;};
+            let (a_active,b_active,a_human,b_human)=(fa.active,fb.active,fa.human,fb.human);
+            if !a_active||!b_active {
                 if p.war||p.flags(now)!=0||p.payment_end>0.0 {p.war=false;p.truce=0.0;p.pact=0.0;p.trade=0.0;p.access=0.0;p.alliance=0.0;p.payment_end=0.0;self.put(world,p);self.event(13,a,b,0.0,0.0);}
-                self.offers.retain(|_,o|o.from!=a&&o.to!=a||fa.active);self.offers.retain(|_,o|o.from!=b&&o.to!=b||fb.active);continue;
+                self.offers.retain(|_,o|o.from!=a&&o.to!=a||a_active);self.offers.retain(|_,o|o.from!=b&&o.to!=b||b_active);continue;
             }
             let elapsed=(now-p.last_tick).max(0.0);p.last_tick=now;
             let mut expired_flags=0;
@@ -474,7 +511,7 @@ impl Diplomacy {
             if self.match_pair.is_none()&&due&&p.contact&&now>=p.next_offer&&!self.offers.values().any(|o|key(o.from,o.to)==(a,b)) {
                 // Alternate initiative deterministically; human factions never
                 // negotiate on behalf of their player.
-                let (from,to)=if fa.human{(b,a)}else if fb.human||((now/8.0) as i64+a as i64)%2==0{(a,b)}else{(b,a)};
+                let (from,to)=if a_human{(b,a)}else if b_human||((now/8.0) as i64+a as i64)%2==0{(a,b)}else{(b,a)};
                 if self.account(world,from).unwrap().human{continue;}
                 let initiator=self.account(world,from).unwrap();let side=p.side(from);
                 let expansionist=super::ai_policy::policy(world,from).has(super::ai_policy::TERRITORIAL_WARS);
@@ -504,7 +541,7 @@ impl Diplomacy {
         let helpers: Vec<_> = self.accounts.keys().copied().collect();
         for helper in helpers {
             let f=self.account(world,helper).unwrap();
-            if !self.pairs.keys().any(|&(a,b)|(a==helper||b==helper)&&self.pair(world,a,b).is_some_and(|p|p.war)) {
+            if self.wars.get(&helper).is_none_or(BTreeSet::is_empty) {
                 world.get_mut::<Account>(self.accounts[&helper]).unwrap().fatigue=(f.fatigue-elapsed*0.05).max(0.0);
             }
             if f.human || !f.active {continue;}
@@ -557,6 +594,12 @@ impl Diplomacy {
         for p in pairs{d.put(world,p);}for f in accounts{d.accounts.insert(f.id,world.spawn(f).id());}
         world.insert_resource(d);true
     }
+}
+
+pub fn war_between(world: &World, a: i32, b: i32) -> Option<bool> {
+    let diplomacy = world.resource::<Diplomacy>();
+    let entity = *diplomacy.pairs.get(&key(a, b))?;
+    world.get::<Relationship>(entity).map(|relationship| relationship.war)
 }
 
 pub fn sync(world:&mut World,now:f64){world.resource_scope(|world,mut d:Mut<Diplomacy>|d.sync(world,now));}

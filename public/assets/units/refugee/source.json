@@ -1,0 +1,64 @@
+{
+  "generator": "PixelLab generate-image-v2 and transfer-outfit-v2",
+  "source": "public/assets/puny-world/characters/Human-Worker-Cyan.png",
+  "appearance": "Expressive Puny proportions, dusty blue hood and light tan tunic, simple dark shoes, round ochre cloth bundle over one shoulder.",
+  "appearanceJobId": "73fe75cc-e2a1-4008-8273-2dbcff064866",
+  "appearancePrompt": "Tiny ancient civilian refugee, clearly a traveler on foot with belongings. No tools, armor, weapons, text, border or ground. High top-down 3/4 orthographic camera, NOT isometric. Crisp native pixel art with sparse color patches, dark outlines and transparent background. Single entire centered figure standing facing SOUTH (toward bottom edge) in a 16x16 cell. Occupy at most 14 pixels of height. Expressive Puny proportions, dusty blue hood and light tan tunic, simple dark shoes, round ochre cloth bundle over one shoulder.",
+  "motionPrompt": "Tiny ancient civilian refugee, clearly a traveler on foot with belongings. No tools, armor, weapons, text, border or ground. High top-down 3/4 orthographic camera, NOT isometric. Crisp native pixel art with sparse color patches, dark outlines and transparent background. Transfer the entire refugee outfit and luggage from the first reference. Expressive Puny proportions, dusty blue hood and light tan tunic, simple dark shoes, round ochre cloth bundle over one shoulder. All 5 input worker poses and output frames face the specified direction. Transfer the costume onto each exact facing and stance. First pose is idle, following four poses form a compact walk cycle with alternating steps, subtle bobbing and steady luggage. Rear views show the back of the head and luggage. Profile views show one cheek. Preserve existing compact 14-pixel body height, source walking poses, foot location, native Puny silhouette and transparent 32x32 canvas padding. Change outfit fully from cyan worker to travel clothes in the reference.",
+  "directions": [
+    {
+      "direction": "south",
+      "jobId": "60d0b172-20d1-47ba-8772-4a3b81188814",
+      "seed": 261117230
+    },
+    {
+      "direction": "southeast",
+      "jobId": "8e5b39e1-5274-41e3-b6fd-044a758b1ef8",
+      "seed": 261117231
+    },
+    {
+      "direction": "east",
+      "jobId": "e99f8564-b2a8-4c5c-99fe-b8f105aac1f3",
+      "seed": 261117232
+    },
+    {
+      "direction": "northeast",
+      "jobId": "e090609d-8194-4880-9707-93ae9e325fe0",
+      "seed": 261117233
+    },
+    {
+      "direction": "north",
+      "jobId": "c5945ac3-8bd8-4e54-aa1b-9e2b0f7412fc",
+      "seed": 261117234
+    },
+    {
+      "direction": "northwest",
+      "jobId": "2eb8a312-6c84-4e0a-a002-bdf7cf5c6ccd",
+      "seed": 261117235
+    },
+    {
+      "direction": "west",
+      "jobId": "84bb1bdc-f130-43c5-aea5-a89e81d56159",
+      "seed": 261117236
+    },
+    {
+      "direction": "southwest",
+      "jobId": "c424d2b1-7ef4-4856-a04a-70bf280d47c6",
+      "seed": 261117237
+    }
+  ],
+  "frameSize": [
+    16,
+    16
+  ],
+  "columns": [
+    "idle",
+    "walk1",
+    "walk2",
+    "walk3",
+    "walk4"
+  ],
+  "walkFps": 9,
+  "processing": "Cropped transparent 32px source padding. Packed the generated quantized frames without resampling.",
+  "sha256": "3e9807e8aa5bb6d62a69619b06c8c732dcd95995cf5e166065e166a619b14704"
+}

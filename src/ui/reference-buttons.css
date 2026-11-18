@@ -95,8 +95,8 @@
 .game-area .build-panel.is-building-menu {
   right: 16px;
   bottom: 104px;
-  width: min(300px, calc(100vw / var(--hud-scale) - 24px));
-  max-height: calc((100dvh - 64px) / var(--hud-scale) - 104px);
+  width: min(300px, calc(100cqw / var(--hud-scale) - 24px));
+  max-height: calc((100cqh - 64px) / var(--hud-scale) - 104px);
   padding: 28px 9px 10px;
   border: 4px solid transparent;
   border-image: var(--command-button-art) 9 fill / 4px / 0 stretch;
@@ -157,21 +157,23 @@
 }
 
 /* Reserve a full command row next to the existing hotbar and leader rail. */
-@media (min-width: 761px) and (pointer: fine) {
-  .game-area .hotbar { right: calc(var(--command-width) + 86px); }
-  .game-area .leader-xp { right: calc(var(--command-width) + 96px); }
-}
-@media (min-width: 761px) and (max-width: 900px) and (pointer: fine) {
-  .game-area .hotbar { right: 10px; }
-  .game-area .special-actions { bottom: 114px; }
-  .game-area .build-panel,
-  .game-area .build-panel.is-building-menu { bottom: 196px; max-height: calc((100dvh - 64px) / var(--hud-scale) - 196px); }
-}
-@media (max-width: 760px) and (pointer: fine) {
-  .game-area .hotbar { bottom: 214px; }
-  .game-area .leader-xp { bottom: 312px; }
-  .game-area .build-panel,
-  .game-area .build-panel.is-building-menu { bottom: 360px; max-height: calc((100dvh - 52px) / var(--hud-scale) - 360px); }
+@media (pointer: fine) {
+  @container game-area (width > 760px) {
+    .game-area .hotbar { right: calc(var(--command-width) + 86px); }
+    .game-area .leader-xp { right: calc(var(--command-width) + 96px); }
+  }
+  @container game-area (760px < width <= 900px) {
+    .game-area .hotbar { right: 10px; }
+    .game-area .special-actions { bottom: 114px; }
+    .game-area .build-panel,
+    .game-area .build-panel.is-building-menu { bottom: 196px; max-height: calc((100cqh - 64px) / var(--hud-scale) - 196px); }
+  }
+  @container game-area (max-width: 760px) {
+    .game-area .hotbar { bottom: 214px; }
+    .game-area .leader-xp { bottom: 312px; }
+    .game-area .build-panel,
+    .game-area .build-panel.is-building-menu { bottom: 360px; max-height: calc((100cqh - 52px) / var(--hud-scale) - 360px); }
+  }
 }
 
 /* Keep touch targets at least 44px while retaining the same four-column row. */
@@ -180,7 +182,7 @@
     transform: none;
     right: max(6px, env(safe-area-inset-right));
     bottom: max(6px, env(safe-area-inset-bottom));
-    width: min(336px, calc(100vw - 12px));
+    width: min(336px, calc(100cqw - 12px));
     height: 52px;
   }
   .game-area .special-actions button { min-height: 44px; }
@@ -197,8 +199,8 @@
     transform: none;
     right: max(6px, env(safe-area-inset-right));
     bottom: max(158px, calc(152px + env(safe-area-inset-bottom)));
-    width: min(336px, calc(100vw - 12px));
-    max-height: calc(100dvh - 216px);
+    width: min(336px, calc(100cqw - 12px));
+    max-height: calc(100cqh - 216px);
     padding: 46px 8px 10px;
   }
   .game-area .build-actions button { min-height: 44px; padding: 4px 14px 4px 4px; }
@@ -208,5 +210,5 @@
   .game-area .hotbar { right: 8px; width: calc((100% - 16px) / .7); bottom: 206px; }
   .game-area .leader-xp { left: 16px; right: 8px; bottom: 258px; }
   .game-area .build-panel,
-  .game-area .build-panel.is-building-menu { bottom: 296px; max-height: calc(100dvh - 354px); }
+  .game-area .build-panel.is-building-menu { bottom: 296px; max-height: calc(100cqh - 354px); }
 }

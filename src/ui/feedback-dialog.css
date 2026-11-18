@@ -1,0 +1,18 @@
+.frontend-feedback-backdrop{position:absolute;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:#0b0d0bcb;pointer-events:auto}
+.frontend-feedback-backdrop[hidden]{display:none}
+.frontend .feedback-dialog.menu-sheet{position:static;width:min(560px,100%);max-height:calc(100dvh - 40px);margin:0;padding:24px;overflow:auto}
+.frontend .feedback-dialog>header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.frontend .feedback-dialog h1{font-size:32px}
+.feedback-form.frontend-form{gap:12px}
+.feedback-form label{font-size:22px}
+.frontend .feedback-form textarea{display:block;width:100%;min-height:150px;resize:vertical;border:2px solid #7c6a45;border-radius:4px;background:#13120f;color:#eedfba;padding:10px 12px;font:22px/1.25 var(--game-font)}
+.frontend .feedback-form textarea:focus-visible{outline:2px solid #f7dfa0;outline-offset:3px}
+.feedback-form textarea[readonly]{opacity:.75}
+.feedback-identity{margin:0;color:#b9b195;font:18px/1.25 var(--game-font)}
+.feedback-status{margin:0;color:#f0c977;white-space:pre-wrap;overflow-wrap:anywhere;font:20px/1.25 var(--game-font)}
+.feedback-status:empty{display:none}
+.frontend .feedback-dialog .feedback-plate{border:0;border-radius:0;box-shadow:none;background:url('/assets/runtime/ui/main-menu/button.png') center/100% 100% no-repeat;text-align:center;padding:12px 24px;font:700 23px/1 var(--game-font);color:#f2e4ba}
+.frontend .feedback-dialog .feedback-plate:hover:not(:disabled),.frontend .feedback-dialog .feedback-plate:focus-visible{background:url('/assets/runtime/ui/main-menu/button-active.png') center/100% 100% no-repeat}
+.frontend .feedback-dialog .feedback-close{flex:none;padding:10px 20px;font-size:20px}
+.feedback-send{justify-self:start;min-width:210px}
+@media(max-width:480px){.frontend-feedback-backdrop{padding:14px}.frontend .feedback-dialog.menu-sheet{max-height:calc(100dvh - 28px);padding:18px}.frontend .feedback-dialog h1{font-size:28px}.frontend .feedback-dialog>header{gap:12px}.frontend .feedback-dialog .feedback-close{padding:10px 16px}}

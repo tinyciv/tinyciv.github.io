@@ -7,7 +7,7 @@ import { entityStore } from './entity-store';
 import { createNetworkPlacementQuery, validateNetworkPlacement, MIN_GATE_SPACING, MIN_ROAD_JUNCTION_SPACING } from './network-placement';
 import { canTraverseEdge, canWalk, hasStaticPath, invalidateNavigation, terrainNavigationEdges, withNavigationFrame } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
-import { placementOccupancy } from './placement-occupancy';
+import { hermitCabinOverlaps, placementOccupancy } from './placement-occupancy';
 import { simulationReadsActive } from './simulation-reads';
 import { southernResourceCell } from './resource-worksite';
 import { removeVillageTrailAt } from './village-trails';
@@ -45,7 +45,7 @@ export function resourceRoadTileReady(state: GameState, faction: number, point: 
 
 function terrainCanReceiveRoad(state: GameState, faction: number, x: number, y: number, occupants: readonly Building[], reservationsChecked = false, walkabilityChecked = false): boolean {
   const tile = tileAt(state.world, x, y);
-  if (!tile || WATER.has(tile.terrain) || tile.resource || tile.farm !== undefined
+  if (!tile || WATER.has(tile.terrain) || tile.resource && tile.oreAnchor === undefined || tile.farm !== undefined || hermitCabinOverlaps(state, x, y)
     || !reliefFootprintAllowed(state.world, x, y) || !walkabilityChecked && !canWalk(state, x + .5, y + .5, faction, undefined, true)) return false;
   // Access roads preserve crops and trees. They do not demolish structures,
   // relocate farms, open new gates, or build new crossings over water.

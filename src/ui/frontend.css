@@ -1,21 +1,60 @@
-/* Original brass menu scene, with both world layers removed. */
-.frontend{position:fixed;z-index:20;inset:0;overflow:hidden;background:#1c1c1c;font-family:var(--game-font);color:#ebdbb5;overscroll-behavior:contain;--menu-scale:1;--menu-x:0px}
+.frontend{position:fixed;z-index:20;inset:0;overflow:hidden;background:#262420;font-family:var(--game-font);color:#ebdbb5;overscroll-behavior:contain}
 .frontend *,.frontend *::before,.frontend *::after{box-sizing:border-box}
-.menu-scene{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;transform:translateX(var(--menu-x)) scale(var(--menu-scale))}
-.menu-back{z-index:0;pointer-events:none}
-.menu-backdrop{display:block;width:100%;height:100%;user-select:none;-webkit-mask-image:linear-gradient(to left,transparent,#000 18px);mask-image:linear-gradient(to left,transparent,#000 18px)}
-.menu-front{z-index:2;pointer-events:none}
-.menu-front>*{pointer-events:auto}
-.menu-title{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.menu-title img{display:block;width:100%;height:auto}
+.menu-back{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.menu-back img{display:block;width:100%;height:100%;object-fit:cover;user-select:none}
+.menu-front{position:relative;z-index:2}
+.frontend:not(.is-world-generation)>.menu-front{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  overflow:auto;
+  padding:clamp(12px,2.6dvh,28px) clamp(14px,2.4vw,32px);
+  scrollbar-gutter:stable both-edges;
+  scrollbar-width:thin;
+  scrollbar-color:#a88a51 #141311;
+}
+.menu-front>.frontend-panel{flex:none;margin:auto}
 
-/* Brass plates over the original menu panel. */
-.frontend-main{position:absolute;left:197px;top:340px;width:366px}
-.menu-buttons{display:grid;grid-auto-rows:var(--menu-button-height,66px);row-gap:9px}
-.frontend .frontend-main .menu-button{height:var(--menu-button-height,66px)}
-.frontend .frontend-main .menu-button[data-view="login"]{font-size:24px}
+/* The title and stack share an axis, independent of the backdrop crop. */
+.frontend-main{
+  display:grid;
+  justify-items:center;
+  gap:clamp(12px,2dvh,20px);
+  width:min(600px,100%,80dvh);
+}
+.frontend .menu-title{
+  display:grid;
+  place-items:center;
+  width:100%;
+  aspect-ratio:1040/272;
+  container-type:inline-size;
+  background:url('/assets/ui/main-menu/title-plaque.webp') center/100% 100% no-repeat;
+  color:#8d130b;
+  text-shadow:0 1px #ffe6a6,0 -1px #5b120a;
+}
+.menu-title span{font-size:22.8cqi;line-height:1;letter-spacing:.015em;white-space:nowrap}
+.frontend-main .menu-buttons{
+  display:grid;
+  width:min(78%,440px);
+  container-type:inline-size;
+  grid-auto-rows:minmax(clamp(42px,5.45dvh,60px),auto);
+  gap:clamp(6px,1.2dvh,10px);
+}
 .frontend .menu-button{position:relative;isolation:isolate;display:flex;align-items:center;min-width:0;min-height:0;height:66px;margin:0;padding:0 14px 3px 76px;border:0;background:none;box-shadow:none;color:#f2e4ba;font:700 40px/1 var(--game-font);letter-spacing:.5px;text-align:left;white-space:nowrap;overflow:visible;cursor:pointer;text-shadow:2px 2px 0 #18150d,0 0 8px #0009}
+.frontend .frontend-main .menu-button{
+  height:auto;
+  padding:2px 10px 4px 20%;
+  font-size:clamp(20px,8.5cqi,36px);
+  letter-spacing:.3px;
+  white-space:normal;
+}
+.frontend .frontend-main .menu-button[data-view="login"]{font-size:clamp(16px,5.8cqi,26px)}
 .frontend .menu-button::before,.frontend .menu-button::after{content:'';position:absolute;inset:-9px;z-index:-1;background:url('/assets/runtime/ui/main-menu/button.png') 0 0/100% 100% no-repeat}
+.frontend-main .menu-button::before,.frontend-main .menu-button::after{inset:-6px -8px}
 .frontend .menu-button::after{background-image:url('/assets/runtime/ui/main-menu/button-active.png');opacity:0;transition:opacity .12s}
 /* One lit plate: the hovered one, else keyboard focus, else the first (as in the art). */
 .frontend .menu-button:focus-visible{outline:none}
@@ -26,16 +65,22 @@
 .frontend .menu-button:active:not(:disabled)>span{transform:translateY(1px)}
 .frontend .menu-button:disabled{opacity:1;cursor:default;color:#9b957f;text-shadow:2px 2px 0 #14120c}
 .frontend .menu-button:disabled::before{filter:saturate(.45) brightness(.78)}
-.frontend-main>.frontend-hint{margin:14px 4px 0;font-size:20px;color:#c9c1a4}
-.frontend-main>.frontend-status{margin:12px 4px 0;font-size:20px}
+.frontend-main>:is(.frontend-hint,.frontend-status){margin:0;text-align:center;text-shadow:1px 1px #17130b}
+@media(max-width:600px){
+  .frontend-main .menu-buttons{width:min(100%,400px)}
+}
+@media(max-aspect-ratio:3/4){
+  .frontend-main{width:min(92%,600px)}
+  .frontend-main .menu-buttons{width:min(82%,440px)}
+}
 
-/* Sub-views: a riveted dark sheet over the button column. */
-.menu-sheet{position:absolute;left:190px;top:304px;width:382px;max-height:626px;overflow:auto;padding:20px 20px 22px;background:linear-gradient(#2e2d29f5,#1c1b18f5);border:3px solid #b48a45;border-radius:8px;box-shadow:inset 0 0 0 2px #4b3a1c,inset 0 3px 0 2px #e6c47a26,0 10px 24px #000c;font-size:21px;scrollbar-width:thin;scrollbar-color:#a88a51 #141311}
+/* Submenus sit over the same center panel. */
+.menu-sheet{width:382px;max-width:100%;max-height:100%;overflow:auto;padding:20px 20px 22px;background:linear-gradient(#2e2d29f5,#1c1b18f5);border:3px solid #b48a45;border-radius:8px;box-shadow:inset 0 0 0 2px #4b3a1c,inset 0 3px 0 2px #e6c47a26,0 10px 24px #000c;font-size:21px;scrollbar-width:thin;scrollbar-color:#a88a51 #141311}
 .menu-sheet .frontend-hint{margin:6px 0}
 .menu-sheet .frontend-form{gap:12px}
 .frontend-servers.menu-sheet,.frontend-lobby.menu-sheet{width:900px}
 .frontend-controls.menu-sheet{width:620px}
-.frontend-scenarios.menu-sheet{width:1210px;height:610px;max-height:calc(var(--menu-visible-height,941px) - 320px);overflow:hidden;display:flex;flex-direction:column}
+.frontend-scenarios.menu-sheet{width:1210px;height:610px;overflow:hidden;display:flex;flex-direction:column}
 .frontend-scenarios>header{flex:none}
 .scenario-browser{display:grid;grid-template-columns:340px minmax(0,1fr);flex:1;min-height:0;gap:28px}
 .scenario-list.menu-buttons{display:flex;flex-direction:column;align-items:stretch;gap:14px;overflow:auto;min-height:0;padding:9px 15px 14px 9px;border-right:1px solid #7e6a47;scrollbar-width:thin;scrollbar-color:#a88a51 #141311;overscroll-behavior:contain}
@@ -138,8 +183,6 @@ dl.frontend-controls dd{margin:0;color:#cfc7aa;min-width:0;overflow-wrap:anywher
 .credits-list dt:first-child{margin-top:0}
 .credits-list dd{margin:0;color:#cfc7aa;font-size:17px}
 
-/* Loading and errors share the sheet, a little lower in the column. */
-.frontend-loading.menu-sheet,.frontend-error.menu-sheet{top:520px}
 section.frontend-loading>button{display:block;margin:16px auto 0;text-align:center}
 div.frontend-loading{display:grid;justify-items:center;gap:12px;padding:0}
 .frontend-loading-spinner{display:block;width:64px;height:64px;background:url('/assets/runtime/ui/loading/spinner.webp') 0 0/1024px 64px no-repeat;image-rendering:pixelated;animation:frontend-spinner 1s steps(16) infinite}
@@ -153,18 +196,9 @@ div.frontend-loading{display:grid;justify-items:center;gap:12px;padding:0}
 .game-area.frontend-active :is(.resource-bar,.hud,.selection-panel,#paused,#build-status,#tile-tooltip,#leader-action-feedback){visibility:hidden}
 .game-area.frontend-active #world{cursor:default}
 
-/* Compact: title plate, plates and sheets stacked in normal flow. */
-.frontend.is-compact{overflow:auto;padding:16px;background:radial-gradient(120% 80% at 50% 0,#3a3833,#1c1c1c 70%)}
-.is-compact .menu-back{display:none}
-.is-compact .menu-front{position:static;width:auto;height:auto;transform:none}
-.is-compact .frontend-panel{position:static;width:min(100%,560px);max-height:none;margin:0 auto}
-.is-compact .frontend-main{width:min(100%,420px)}
-.is-compact .menu-title{position:static;width:auto;height:auto;margin:0 0 18px;overflow:visible;clip-path:none}
-.is-compact .menu-buttons{grid-auto-rows:auto;row-gap:12px;padding:0 9px}
-.frontend.is-compact .menu-button{height:auto;aspect-ratio:366/66;padding:0 10px 2px 20.8%;font-size:clamp(22px,7.4vw,34px)}
-.frontend.is-compact .frontend-main .menu-button[data-view="login"]{font-size:clamp(18px,5.6vw,24px)}
-.is-compact .menu-sheet{font-size:18px}
-.is-compact .frontend-scenarios.menu-sheet{width:min(100%,900px);height:calc(100dvh - 32px);max-height:none;min-height:450px;padding:16px}
+/* Compact submenu controls. */
+.is-compact .menu-sheet{max-width:min(100%,560px);font-size:18px}
+.is-compact .frontend-scenarios.menu-sheet{max-width:min(100%,900px);height:100%;min-height:450px;padding:16px}
 .is-compact .scenario-browser{grid-template-columns:minmax(130px,32%) minmax(0,1fr);gap:15px}
 .is-compact .scenario-list.menu-buttons{padding:9px 12px 9px 5px;gap:12px}
 .frontend.is-compact .scenario-choice.menu-button{aspect-ratio:auto;min-height:58px;padding:12px 8px 12px 18%;font-size:clamp(18px,3.4vw,26px)}

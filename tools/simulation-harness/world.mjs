@@ -108,6 +108,8 @@ export function snapshot(engine, state, t, counters) {
       family: row?.family ?? null };
   });
   const nav = engine.navigationWasmStatus();
+  const workerActors = engine.entityStore(state).units.query('unit').filter(unit => unit.kind === 'worker' && unit.hp > 0).length;
+  const workerJobs = state.units.filter(unit => unit.kind === 'worker' && unit.hp > 0).length;
   const other = {
     projectilesFired: sortObject(Object.fromEntries(Object.entries(counters.projectilesFired).filter(([f]) => Number(f) < 0))),
     deaths: sortObject(Object.fromEntries(Object.entries(counters.deaths).filter(([f]) => Number(f) < 0))),
@@ -122,6 +124,7 @@ export function snapshot(engine, state, t, counters) {
     buildingsReady: state.buildings.filter(b => b.hp > 0 && engine.buildingReady(b)).length,
     buildingsConstruction: state.buildings.filter(b => b.hp > 0 && !engine.buildingReady(b)).length,
     units: state.units.filter(u => u.hp > 0).length,
+    workerActors, dormantWorkers: workerJobs - workerActors,
     soldiers: state.units.filter(u => u.hp > 0 && u.faction >= 0 && SOLDIERS.has(u.kind)).length,
     hostileUnits: state.units.filter(u => u.hp > 0 && u.faction === -2).length,
     territoryCells: sum(Object.values(territoryCells), v => v),

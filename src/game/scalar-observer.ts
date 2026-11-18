@@ -7,8 +7,18 @@ export interface ScalarObserver {
 interface Slot {
   get: () => unknown;
   listeners: WeakRef<ScalarObserver>[];
+  hide: () => void;
 }
 const slots = new WeakMap<object, Map<string, Slot>>();
+
+/** Preserve an observed setter when removing an optional serialized field. */
+export function clearObservedScalar(target: object, key: string): void {
+  const record = target as Record<string, unknown>, slot = slots.get(target)?.get(key);
+  if (slot && Object.getOwnPropertyDescriptor(target, key)?.get === slot.get) {
+    record[key] = undefined;
+    slot.hide();
+  } else delete record[key];
+}
 
 export function observeScalars(target: object, keys: readonly string[], observer: ScalarObserver): void {
   let properties = slots.get(target);
@@ -25,7 +35,9 @@ export function observeScalars(target: object, keys: readonly string[], observer
       const listeners = slot?.listeners ?? [];
       let enumerable = descriptor?.enumerable ?? false;
       const get = () => value;
-      slot = { get, listeners };
+      slot = { get, listeners, hide() {
+        if (enumerable) { enumerable = false; Object.defineProperty(target, key, { enumerable: false }); }
+      } };
       properties.set(key, slot);
       Object.defineProperty(target, key, { configurable: true, enumerable,
         get, set(next: unknown) {

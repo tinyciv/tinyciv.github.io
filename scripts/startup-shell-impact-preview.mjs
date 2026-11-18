@@ -8,6 +8,8 @@ export async function captureShellImpactPreview(page) {
     const { Renderer } = await import('/src/game/renderer.ts');
     const { NativeArt } = await import('/src/game/native-art.ts');
     const { loadShellImpactArt, shellImpactImage, shellImpactFrame } = await import('/src/game/shell-impact-art.ts');
+    const { advanceProjectiles } = await import('/src/game/projectile-native.ts');
+    const { buildingWidth, buildingHeight } = await import('/src/game/types.ts');
     const { canWalk } = await import('/src/game/pathfinding.ts');
     const { setMapRevealed } = await import('/src/game/fog.ts');
     if (window.__game) window.__game.state.paused = true;
@@ -16,6 +18,27 @@ export async function captureShellImpactPreview(page) {
     const time = state.time;
     const cannon = state.units.find(unit => unit.faction === 0 && unit.kind === 'fieldCannon' && unit.hp > 0);
     if (!cannon) throw new Error('Shell impact preview requires a field cannon');
+    // Exercise the production native landing transport on this detached frozen
+    // fixture. Block damage so no unit/building health or game clock changes.
+    const target = state.buildings.find(building => building.kind === 'militaryAcademy' && building.faction === 0);
+    if (!target) throw new Error('Shell landing verification requires an existing academy');
+    const hp = target.hp, end = { x: target.x + buildingWidth(target) / 2, y: target.y + buildingHeight(target) / 2 };
+    const start = { x: end.x - .25, y: end.y };
+    const shot = { kind: 'cannonball', attacker: cannon.id, faction: 1, target: target.id, damage: 20,
+      start, end, ...start, elapsed: 0, duration: .05 };
+    const hooks = { target: id => id === target.id ? target : undefined,
+      hostile: () => true, huntable: () => false, observable: () => true, protected: () => false,
+      clear: () => false, defense: () => 1, hit: () => { throw new Error('Frozen landing verification must not deal damage'); } };
+    state.projectiles = [{ ...shot }]; advanceProjectiles(state, .1, hooks);
+    const landed = state.shellImpacts?.[0];
+    if (state.projectiles.length || state.shellImpacts?.length !== 1 || !landed
+      || landed.x !== end.x || landed.y !== end.y || landed.renderDepth !== target.y + buildingHeight(target) + .001)
+      throw new Error('One real shell arrival must publish one centered native effect above its target building');
+    advanceProjectiles(state, .1, hooks);
+    state.projectiles = [{ ...shot, kind: 'arrow' }]; advanceProjectiles(state, .1, hooks);
+    state.projectiles = [{ ...shot }]; advanceProjectiles(state, .1, { ...hooks, target: () => undefined });
+    if (state.shellImpacts.length !== 1 || state.shellImpacts[0].id !== landed.id || target.hp !== hp || state.time !== time)
+      throw new Error('Empty frames, arrows and canceled flights must not duplicate shell explosions or change health/time');
     let position;
     for (const [dx, dy] of [[3, 0], [2, 2], [0, 3], [-3, 0], [0, -3]]) {
       const x = Math.floor(cannon.x) + dx + .5, y = Math.floor(cannon.y) + dy + .5;

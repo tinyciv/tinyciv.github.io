@@ -6,7 +6,6 @@ import { warshipGunPoint } from './warship-layout';
 import type { ShipSinking } from './types';
 import { pavedRoadArtRevision } from './paved-road-art';
 import { handcartPose, handcartSheet } from './handcart-art';
-import { reliefImage, type ReliefStamp } from './relief-art';
 import { galleyScale } from './galley-footprint';
 import { buildingDestructionImage } from './building-destruction-art';
 import { silhouetteOutline } from './silhouette-outline';
@@ -16,11 +15,13 @@ import { CanvasSource, ImageSource, Rectangle, Texture, type TextureSource } fro
 import { buildingArtTop, buildingHeight, buildingWidth, type Building, type FarmField, type Tile, type Unit } from './types';
 import { drawBuilding, drawOverlay, drawUnit, NO_CONNECTIONS, type Connections } from './sprites';
 import { factionSheet, personFrame } from './unit-sprites';
+import { refugeeFrame, refugeeImage, REFUGEE_BOUNDS } from './refugee-art';
 import { auxiliaryArtKey } from './auxiliary-art';
 import { wildlifeFrame, wildlifeImage } from './wildlife-art';
 import { merchantFrame, merchantImage } from './merchant-art';
 import { drawFarmField, fieldStage, orchardAppearance } from './farm-art';
 import { drawVegetation, vegetationArtBounds, vegetationVariant } from './vegetation-art';
+import type { MarshRushPlacement } from './marsh-rush-placement';
 import { nativeHouseTier } from './puny-building-art';
 import { nativeHouseVariant } from './house-variant-art';
 import type { TowerWallKind } from './wall-towers';
@@ -44,7 +45,7 @@ import { damageMaskSheet, deathAnimationFrame, deathAnimationImage, decayAnimati
 import { MUSKETMAN_BOUNDS, musketmanPose, musketmanSheet, musketmanDeathPose } from './musketman-art';
 import { PIKEMAN_BOUNDS, pikemanPose, pikemanSheet } from './pikeman-art';
 import { BRIGAND_BOUNDS, brigandPose, brigandSheet, brigandDeathPose, usesBrigandArt } from './brigand-art';
-import { meadowImage, type MeadowVariant } from './meadow-art';
+import { MEADOW_SPRITES, meadowImage, type MeadowVariant } from './meadow-art';
 
 export interface ArtBounds { x: number; y: number; width: number; height: number }
 export interface BakedArt extends ArtBounds { texture: Texture; overlays?: BakedArt[]; rotation?: number; rotationPivot?: { x: number; y: number } }
@@ -76,6 +77,7 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
     if (unit.kind === 'spearman') return `spearman:${spearmanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
     if (unit.kind === 'boar' || unit.kind === 'marshBird') { const { row, frame } = wildlifeFrame(unit, time); return `${unit.kind}:${row}:${frame}`; }
     if (unit.kind === 'merchant') { const { row, column } = merchantFrame(unit, time); return `merchant:${row}:${column}:${!!unit.inside}`; }
+    if (unit.explorationRefugee) return `refugee:${refugeeFrame(unit, time).join(':')}:${!!unit.inside}`;
     if (!['leader', 'warrior', 'swordsman', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'slinger', 'worker'].includes(unit.kind)) return `empty:${unit.kind}`;
     const { role, row, frame } = personFrame(unit, time, firearm);
     return `person:${role}:${row}:${frame}:${color}:${armorVisualLevel(unit.armorLevel)}:${(unit.cargo ?? 0) > 0}:${!!unit.inside}:${!!unit.engineer}`;
@@ -85,7 +87,7 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
 export const ANIMATED_BUILDING_KINDS: ReadonlySet<Building['kind']> = new Set(['observationPost', 'ballista', 'siegeCannon', 'library', 'thermalBath', 'irrigation']);
 
 export function buildingKey(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind): string {
-    if (b.construction && b.kind !== 'well') return `construction:${buildingWidth(b)}:${buildingHeight(b)}${b.kind === 'dock' ? `:dock:${b.dockFacing ?? 2}` : ''}`;
+    if (b.construction && b.kind !== 'well' && b.kind !== 'road') return `construction:${buildingWidth(b)}:${buildingHeight(b)}${b.kind === 'dock' ? `:dock:${b.dockFacing ?? 2}` : ''}`;
     const phase = b.kind === 'observationPost' ? Math.floor(time * 4) % 2 : b.kind === 'ballista' ? Object.values(ballistaFrame(b, time)).join(':')
         : b.kind === 'siegeCannon' ? Object.values(cannonFrame(b, time)).join(':')
         : b.kind === 'library' ? Math.floor(time * 5) % 4 : b.kind === 'thermalBath' ? thermalBathFrame(time) : b.kind === 'irrigation' ? Math.floor(time * 3) % 4 : 0;
@@ -151,7 +153,6 @@ export class NativeArt {
     }
     get(key: string, bounds: ArtBounds, draw: (c: CanvasRenderingContext2D) => void): BakedArt { return this.paint(key, bounds, draw); }
 
-    boardingPlank(image: HTMLImageElement, length: number): BakedArt { return this.image(image, [0, 0, image.width, image.height], { x: 0, y: -32, width: length * 32, height: 64 }); }
 
     tradingBoat(boat: Pick<Unit, 'facing' | 'moving'>, time: number, mask = false): BakedArt {
         const pose = galleyPose(boat, time), size = TRADING_BOAT_SCALE;
@@ -240,7 +241,7 @@ export class NativeArt {
                     overlays.push({ ...art, x: 16 + p.x * 32 + (art.x - 16) * size,
                         y: 16 + p.y * 32 + (art.y - 27.2) * size, width: art.width * size, height: art.height * size });
                 };
-                for (let i = w.boarding !== undefined && (w.marine === 'warrior' || w.marine === 'spearman') ? Math.min(2, Math.ceil(w.crewHp / 100)) : 0; i < Math.ceil(w.crewHp / 100); i++) addPerson({ ...unit, kind: w.marine }, i % 2 ? .65 : -.65, (Math.floor(i / 2) - 1.5) * .7, .8, 4+i);
+                for (let i = 0; i < Math.ceil(w.crewHp / 100); i++) addPerson({ ...unit, kind: w.marine }, i % 2 ? .65 : -.65, (Math.floor(i / 2) - 1.5) * .7, .8, 4+i);
                 if (effect?.passenger) addPerson(effect.passenger, 0, -1.55, .9);
                 return { ...hull, rotation: unit.facing + Math.PI / 2, rotationPivot: { x: 16, y: 16 }, overlays };
             }
@@ -307,6 +308,10 @@ export class NativeArt {
                 const { row, column } = merchantFrame(unit, time);
                 return this.image(effectSheet(merchantImage()!, effect?.damageMask), [column * 32, row * 32, 32, 32], { x: -8, y: -8, width: 48, height: 48 });
             }
+            if (unit.explorationRefugee) {
+                const sheet = refugeeImage();
+                if (sheet) return this.image(effectSheet(sheet, effect?.damageMask), refugeeFrame(unit, time), REFUGEE_BOUNDS);
+            }
             if (['leader', 'warrior', 'swordsman', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'slinger', 'worker'].includes(unit.kind)) {
                 const { role, row, frame } = personFrame(unit, time, effect?.firearm), sheet = factionSheet(role, color, unit.armorLevel);
                 if (sheet) {
@@ -349,12 +354,6 @@ export class NativeArt {
         const image = shellImpactImage();
         return image && this.image(image, [frame * SHELL_IMPACT_FRAME_SIZE, 0, SHELL_IMPACT_FRAME_SIZE, SHELL_IMPACT_FRAME_SIZE], SHELL_IMPACT_BOUNDS);
     }
-    relief(stamp: ReliefStamp): BakedArt | undefined {
-        const image = reliefImage(stamp.style, stamp.slot, stamp.palette);
-        // Stamp geometry permits horizontal compression without shrinking
-        // height. The entire source frame is sampled; no edges are clipped.
-        return image && this.image(image, [0, 0, image.width, image.height], { x: 0, y: 0, width: 32, height: 32 * stamp.height / stamp.width });
-    }
     private image(image: HTMLImageElement | HTMLCanvasElement, rect: [number, number, number, number], bounds: ArtBounds): BakedArt {
         let entry = this.images.get(image);
         if (!entry) {
@@ -384,10 +383,11 @@ export class NativeArt {
             { x, y, width: buildingWidth(b) * 32 - x, height: bottom - y + (attached && b.kind === 'well' ? 8 : 0) },
             c => drawBuilding(c, b, 0, 0, 32, time, color, links, gate, attached, towerWall));
     }
-    vegetation(tile: Tile): BakedArt {
-        const source = vegetationVariant(tile);
-        return this.paint(`tree:${source?.sheet}:${source?.x}:${source?.y}`, vegetationArtBounds(tile),
-            c => drawVegetation(c, tile, 0, 0, 32));
+    vegetation(tile: Tile, rush?: MarshRushPlacement): BakedArt {
+        const source = vegetationVariant(tile, rush);
+        const shoots = rush && (rush.left || rush.right) ? `:${Number(rush.left)}:${Number(rush.right)}:${rush.shootVariant}` : '';
+        return this.paint(`vegetation:${source?.sheet}:${source?.x}:${source?.y}${shoots}`, vegetationArtBounds(tile, 32, rush, source),
+            c => drawVegetation(c, tile, 0, 0, 32, rush), source?.sheet === 'rushes' ? .5 : undefined);
     }
     /** Every tuft of one pose shares its sheet texture and fixed native bounds. */
     meadow(variant: MeadowVariant, frame: number): BakedArt | undefined {
@@ -397,7 +397,9 @@ export class NativeArt {
         const image = meadowImage(variant);
         if (!image) return undefined;
         if (!frames) { frames = []; this.meadowFrames.set(variant, frames); }
-        return frames[frame] = this.image(image, [frame * 16, 0, 16, 16], { x: -16, y: -32, width: 32, height: 32 });
+        const spec = MEADOW_SPRITES[variant];
+        return frames[frame] = this.image(image, [frame * spec.frameWidth, spec.row * 16, spec.frameWidth, 16],
+            { x: -16, y: -32 * spec.anchorY, width: 32, height: 32 });
     }
     resource(resource: ResourceCellArt): BakedArt {
         return this.paint(`resource:${resourceObjectKey(resource)}`, resourceObjectBounds(resource),

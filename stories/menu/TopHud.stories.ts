@@ -23,7 +23,7 @@ export const NeedsLibrary: StoryObj<Args> = {
     host.className = 'game-area';
     host.style.background = '#101719';
     const label = args.activeResearch ? 'Metal tools' : 'Build a library';
-    const progress = args.activeResearch ? 47 : 0;
+    const status = args.activeResearch ? `${label} · 110 game seconds remaining` : label;
     const researchIcon = args.activeResearch ? 'metalTools' : 'woodenTower';
     const diplomacy = args.diplomacyOffers > 0 ? `Diplomacy (${args.diplomacyOffers})` : 'Diplomacy';
     host.innerHTML = `<header class="resource-bar" aria-label="Resources">
@@ -33,10 +33,10 @@ export const NeedsLibrary: StoryObj<Args> = {
         <div class="resource population" title="Population / housing"><img class="resource-icon" src="/assets/runtime/ui/resources/population.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="population">20</strong><span id="capacity">/ 20</span></div></div>
         <div class="resource culture" aria-label="Culture"><img id="culture-icon" class="resource-icon" src="/assets/runtime/ui/resources/culture.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="culture">7</strong><span id="culture-next"></span><span id="culture-rate">(+6)</span></div></div>
       </div>
-      <div id="research-toolbar" class="research-toolbar${args.activeResearch ? '' : ' is-inactive'}" aria-label="${label}" title="${label}">
+      <div id="research-toolbar" class="research-toolbar" role="group" aria-label="${status}" title="${status}">
         <img class="research-toolbar-icon" alt="" data-research="${researchIcon}" src="/assets/runtime/ui/research/forged/${researchIcon}.webp">
-        <span class="research-toolbar-copy"><strong class="research-toolbar-name">${label}</strong><span class="research-toolbar-track" role="progressbar" aria-label="Current research progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></span></span>
-        <span class="research-toolbar-percent">${args.activeResearch ? `${progress}%` : ''}</span>
+        <strong class="research-toolbar-name">${label}</strong>
+        ${args.activeResearch ? '<span class="research-toolbar-eta" aria-hidden="true">110s</span>' : ''}
       </div>
       <div class="time-controls">
         <button type="button" id="diplomacy-menu" aria-haspopup="dialog">${diplomacy}</button>

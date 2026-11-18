@@ -7,6 +7,7 @@ import { unitAttackRange } from './combat-range';
 import { entityStore } from './entity-store';
 import { recordGoldOutlay, spendGold } from './gold-ledger';
 import { rustEngine } from './rust-engine';
+import { clearObservedScalar } from './scalar-observer';
 import { simCore } from './sim-handle';
 import { applyDefensiveStats } from './wall-stats';
 import { canMove, canWalk, hasStaticPath, invalidateNavigation } from './pathfinding';
@@ -130,7 +131,7 @@ export function preserveDestroyedFort(state: GameState, fort: Building): boolean
   const data = fortState(state, fort);
   if (!data.destroyed) recordBuildingDestruction(state, fort);
   data.destroyed = true; data.funded = false;
-  delete fort.construction; delete fort.repairerId;
+  clearObservedScalar(fort, 'construction'); delete fort.repairerId;
   fort.attackCooldown = 0;
   entityStore(state).buildings.updateRoles(fort);
   for (const unit of state.units) if (unit.fort === fort.id) { unit.hp = 0; unit.inside = true; unit.target = undefined; }

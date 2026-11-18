@@ -783,7 +783,7 @@ fn changed_row(id: i64, site: &Site, aff: &Affiliation, village: Option<&Village
 pub struct SettlementEngine {
     world: World, schedule: Schedule,
     factions_input: Vec<f64>, upsert_input: Vec<f64>, civic_input: Vec<f64>, results_input: Vec<f64>, plan_input: Vec<f64>, import_input: Vec<f64>,
-    header: [f64; HEADER], export: Vec<f64>, hostility_output: Vec<f64>,
+    header: [f64; HEADER], export: Vec<f64>, hostility_output: Vec<f64>, affiliation_io: Vec<f64>,
 }
 
 impl SettlementEngine {
@@ -801,7 +801,7 @@ impl SettlementEngine {
             village_stage, village_adoption, village_growth, village_recruit, ai_village_diplomacy, refresh_claims, publish).chain());
         Self { world, schedule, factions_input: Vec::new(), upsert_input: Vec::new(), civic_input: Vec::new(), results_input: Vec::new(),
             plan_input: vec![0.0; (plan::PATCH * plan::PATCH) as usize], import_input: Vec::new(), header: [0.0; HEADER],
-            export: Vec::new(), hostility_output: Vec::new() }
+            export: Vec::new(), hostility_output: Vec::new(), affiliation_io: Vec::new() }
     }
     fn entity(&self, id: i64) -> Option<Entity> { self.world.resource::<Index>().by_id.get(&id).copied() }
     fn village_entity(&mut self, village_id: i32) -> Option<Entity> {
@@ -1143,6 +1143,8 @@ impl SettlementEngine {
         [1.0, OK as f64, cost, 1.0]
     }
     fn refresh_hostility_now(&mut self) {
+        let hostility = self.world.resource::<Hostility>();
+        if !hostility.dirty && hostility.seen_factions == self.world.resource::<Factions>().revision { return; }
         let mut system = IntoSystem::into_system(refresh_hostility);
         system.initialize(&mut self.world);
         let _ = system.run((), &mut self.world);
@@ -1198,14 +1200,47 @@ impl SettlementEngine {
     }
     pub fn civ_affiliation(&mut self, target: i32, requester: i32) -> f64 {
         let Some(slot) = self.world.resource::<Factions>().slot(requester) else { return 0.0; };
-        let entities: Vec<Entity> = self.world.resource::<Index>().by_id.values().copied().collect();
+        let cities = self.world.resource::<Index>().by_id.values().filter_map(|&entity| {
+            let site = self.world.get::<Site>(entity).unwrap();
+            (site.kind == CITY && site.owner == target && site.live()).then_some((entity, site.population))
+        }).collect::<Vec<_>>();
+        self.city_affiliation(slot, &cities)
+    }
+
+    pub fn civ_affiliations_input(&mut self, count: usize) -> *mut f64 {
+        Self::grow(&mut self.affiliation_io, count * 2)
+    }
+
+    /// Share one city scan across all observations. Keep ID and pair order so
+    /// both sums and lazy affiliation initialization match individual reads.
+    pub fn civ_affiliations(&mut self, count: usize) -> *const f64 {
+        let mut cities_by_owner: BTreeMap<i32, Vec<(Entity, f64)>> = BTreeMap::new();
+        for &entity in self.world.resource::<Index>().by_id.values() {
+            let site = self.world.get::<Site>(entity).unwrap();
+            if site.kind == CITY && site.live() {
+                cities_by_owner.entry(site.owner).or_default().push((entity, site.population));
+            }
+        }
+        let mut rows = std::mem::take(&mut self.affiliation_io);
+        for index in 0..count {
+            let target = rows[index * 2] as i32;
+            let requester = rows[index * 2 + 1] as i32;
+            let slot = self.world.resource::<Factions>().slot(requester);
+            rows[index] = match (slot, cities_by_owner.get(&target)) {
+                (Some(slot), Some(cities)) => self.city_affiliation(slot, cities),
+                _ => 0.0,
+            };
+        }
+        self.affiliation_io = rows;
+        self.affiliation_io.as_ptr()
+    }
+
+    fn city_affiliation(&mut self, slot: usize, cities: &[(Entity, f64)]) -> f64 {
         let (mut weighted, mut weights, mut plain, mut count) = (0.0, 0.0, 0.0, 0.0);
-        for entity in entities {
-            let site = self.world.get::<Site>(entity).unwrap().clone();
-            if site.kind != CITY || site.owner != target || !site.live() { continue; }
+        for &(entity, population) in cities {
             self.ensure_engine_slot(entity, slot);
             let value = self.world.get::<Affiliation>(entity).unwrap().value[slot];
-            weighted += value * site.population.max(0.0); weights += site.population.max(0.0); plain += value; count += 1.0;
+            weighted += value * population.max(0.0); weights += population.max(0.0); plain += value; count += 1.0;
         }
         if weights > 0.0 { weighted / weights } else if count > 0.0 { plain / count } else { 0.0 }
     }
@@ -1375,6 +1410,11 @@ impl SettlementEngine {
         self.hostility_output.as_ptr()
     }
     pub fn hostility_revision(&mut self) -> f64 { self.refresh_hostility_now(); self.world.resource::<Hostility>().revision as f64 }
+    pub fn with_hostility<R>(&mut self, read: impl FnOnce(&dyn Fn(i32, i32) -> bool) -> R) -> R {
+        self.refresh_hostility_now();
+        let hostility = self.world.resource::<Hostility>();
+        read(&|a, b| hostility.hostile(a, b))
+    }
 
     // ------------------------------------------------------------ snapshot
     pub fn export(&mut self) -> usize {

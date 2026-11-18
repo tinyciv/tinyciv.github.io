@@ -1,6 +1,8 @@
 /** Small shared UI frames, independent of the static construction pegs. */
 export const CONSTRUCTION_TIMER_STEPS = 64;
 export const CONSTRUCTION_TIMER_RADIUS = 6;
+export const BRIDGE_CONSTRUCTION_BAR_WIDTH = 28;
+export const BRIDGE_CONSTRUCTION_BAR_Y = 8;
 
 /** Remaining work drains clockwise from twelve o'clock. No hands or text. */
 export function drawConstructionTimer(c: CanvasRenderingContext2D, frame: number): void {
@@ -16,5 +18,15 @@ export function drawConstructionTimer(c: CanvasRenderingContext2D, frame: number
     }
     c.beginPath(); c.arc(0, 0, radius, 0, Math.PI * 2);
     c.strokeStyle = '#44392a'; c.lineWidth = 1; c.stroke();
+    c.restore();
+}
+
+export function drawBridgeConstructionBar(c: CanvasRenderingContext2D, frame: number): void {
+    const left = -BRIDGE_CONSTRUCTION_BAR_WIDTH / 2, top = BRIDGE_CONSTRUCTION_BAR_Y;
+    const progress = 1 - frame / CONSTRUCTION_TIMER_STEPS;
+    c.save();
+    c.fillStyle = '#44392a'; c.fillRect(left, top, BRIDGE_CONSTRUCTION_BAR_WIDTH, 4);
+    c.fillStyle = '#302b25'; c.fillRect(left + 1, top + 1, BRIDGE_CONSTRUCTION_BAR_WIDTH - 2, 2);
+    c.fillStyle = '#e7d4a0'; c.fillRect(left + 1, top + 1, Math.round((BRIDGE_CONSTRUCTION_BAR_WIDTH - 2) * progress), 2);
     c.restore();
 }

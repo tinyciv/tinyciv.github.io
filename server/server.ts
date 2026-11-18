@@ -1,6 +1,7 @@
 import { encodeMessage, decodeMessage } from '../src/multiplayer/wire';
 import { createServer } from 'node:http';
 import { handleAccountRequest } from './accounts/http';
+import { handleTelemetryRequest } from './telemetry/http';
 import { accountsConfigured, accountsHealthy } from './accounts/database';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
@@ -169,6 +170,7 @@ const server = createServer(async (request, response) => {
   response.setHeader('Vary', 'Origin');
   response.setHeader('Cache-Control', 'no-store'); response.setHeader('Content-Type', 'application/json');
   const path = request.url?.split('?')[0];
+  if (await handleTelemetryRequest(request, response, origins)) return;
   if (await handleAccountRequest(request, response, origins)) return;
   if (request.method === 'GET' && (path === '/health' || path === '/api/health')) {
     const accounts = await accountsHealthy();

@@ -1,11 +1,11 @@
 import { playerFaction } from './player-context';
 import { entityStore } from './entity-store';
 import { BUILDABLE_KINDS, type Point, type Building, type BuildSelection, type GameState, buildingKindForSelection, isFord, isWallKind, tileAt, WATER } from './types';
-import { BUILD_COSTS, buildAt, buildCostAt, validateBuildAt, withConstructionBatch } from './simulation';
+import { BUILD_COSTS, buildAt, buildBridgeSpan, buildCostAt, validateBuildAt, withConstructionBatch } from './simulation';
 import { hasNeighboringRoad } from './traffic';
 import { hasGateWall } from './network-placement';
 import { queueConstruction } from './structures';
-import { bridgeStroke } from './bridge-spans';
+import { bridgeStroke, type BridgeSpan } from './bridge-spans';
 import { createIrrigationConnectionQuery, isFreshwaterSource } from './irrigation';
 import { farmAt, planRoadFarmRelocation, planWallFarmRelocation, previewFarmRelocation } from './farm-relocation';
 import { constructionPreviewContext, rememberConstructionPreview, constructionFunds, sameConstructionFunds, constructionQuoteAffordable, constructionDisplayReadsActive } from './construction-preview-cache';
@@ -35,6 +35,7 @@ export interface ConstructionPlan {
   skipped: number;
   cost: number;
   costs: { production: number; food: number; gold: number };
+  bridgeSpans?: readonly BridgeSpan[];
 }
 const commitContexts = new WeakMap<ConstructionPlan, object>();
 /** Reserve each eligible cell independently; a gap never seeds a new road island. */
@@ -167,7 +168,7 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
     const rejected = cells.filter(cell => !cell.ok);
     if (kind === 'bridge' && rejected.length) return rejectAll(rejected[0].message);
     const plan = { ok: tiles.length > 0 || rejected.length === 0, message: rejected[0]?.message ?? '',
-      tiles, cells, skipped: rejected.length, cost: costs.gold, costs };
+      tiles, cells, skipped: rejected.length, cost: costs.gold, costs, ...(crossing && { bridgeSpans: crossing.spans }) };
     return plan;
     } finally { if (lightweightIrrigation) virtual.factions = factions; }
   });
@@ -187,6 +188,12 @@ function buildStrokeInBatch(state: GameState, selection: BuildSelection, points:
   if (['road', 'wall', 'palisade', 'bridge', 'irrigation'].includes(selection)
     && commitContexts.get(plan) !== constructionPreviewContext(state)) plan = planConstructionUncached(state, selection, points);
   if (!plan.ok) return { ok: false, message: plan.message, placed: 0, skipped: plan.skipped };
+  if (kind === 'bridge') {
+    const faction = playerFaction(state), width = state.world.width;
+    const pending = new Set(plan.tiles.map(tile => tile.y * width + tile.x));
+    for (const span of plan.bridgeSpans ?? []) buildBridgeSpan(state, faction, span, pending);
+    return { ok: true, message: plan.message, placed: plan.tiles.length, skipped: plan.skipped };
+  }
   let placed = 0, skipped = plan.skipped, message = plan.message;
   const reservedTiles = kind === 'wall' || kind === 'palisade' || kind === 'road' ? new Set(plan.cells.map(cell => cell.y * state.world.width + cell.x)) : undefined;
   for (const tile of plan.tiles) {

@@ -3,7 +3,7 @@
 use bevy_ecs::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use super::entities::EntityTables;
-use super::kinds::building::{self, HOUSE, PALACE, THERMAL_BATH};
+use super::kinds::building::{self, HOUSE, APARTMENTS, PALACE, THERMAL_BATH};
 
 pub const GOLD: f64 = 300.0;
 pub const UPKEEP: f64 = 3.0;
@@ -98,13 +98,13 @@ pub fn remove(world: &mut World, id: i64) {
     });
 }
 pub fn upsert(world: &mut World, id: i64, kind: u32, faction: i32, x: f64, y: f64, flags: u32) {
-    if !matches!(kind, PALACE | HOUSE | THERMAL_BATH) { remove(world, id); return; }
+    if !matches!(kind, PALACE | HOUSE | APARTMENTS | THERMAL_BATH) { remove(world, id); return; }
     let Some((entity, _)) = world.resource::<EntityTables>().buildings.locate(id) else { return; };
     let site = BathSite { entity, id, kind, faction, x, y, flags };
     if world.resource::<ThermalBaths>().sites.get(&id) == Some(&site) { return; }
     world.entity_mut(entity).insert(site);
     let mut network = world.resource_mut::<ThermalBaths>();
     network.towns.remove(&id); network.baths.remove(&id); network.houses.remove(&id);
-    match kind { PALACE => { network.towns.insert(id); }, THERMAL_BATH => { network.baths.insert(id); }, HOUSE => { network.houses.insert(id); }, _ => {} }
+    match kind { PALACE => { network.towns.insert(id); }, THERMAL_BATH => { network.baths.insert(id); }, HOUSE | APARTMENTS => { network.houses.insert(id); }, _ => {} }
     network.sites.insert(id, site); network.dirty = true;
 }

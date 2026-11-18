@@ -143,7 +143,7 @@ describe('correlated terrain ecology', () => {
     expectOpenWoodland(saturated);
   });
 
-  it('produces open woodland and wooded uplands throughout all three production geographies', () => {
+  it('produces open woodland and keeps cliff faces clear in all three production geographies', () => {
     for (const style of ['continents', 'pangaea', 'fractal'] as const) {
       const world = generateWorld('BTV-world-modes-review', 274, 216, { style });
       const land = world.tiles.filter(tile => !WATER.has(tile.terrain));
@@ -153,7 +153,9 @@ describe('correlated terrain ecology', () => {
       expect(forests.length / land.length).toBeGreaterThan(.15);
       expect(forests.length / land.length).toBeLessThan(.32);
       expectOpenWoodland(world);
-      for (const relief of ['hills', 'mountains']) expect(forests.some(tile => tile.relief === relief && tile.ridge)).toBe(true);
+      world.tiles.forEach((tile, i) => {
+        if (tile.ridge && ridgeIsLedge(world, i % world.width, Math.floor(i / world.width))) expect(tile.overlay).toBe('none');
+      });
       for (const spawn of [...world.spawns, ...world.secondarySpawns!]) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
         expect(world.tiles[(Math.floor(spawn.y) + dy) * world.width + Math.floor(spawn.x) + dx].overlay).toBe('none');
     }

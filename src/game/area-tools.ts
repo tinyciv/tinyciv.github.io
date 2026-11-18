@@ -1,8 +1,9 @@
+import { rustEngine } from './rust-engine';
+import { BUILDING_KIND_CODES, entityStore } from './entity-store';
 import { playerFaction } from './player-context';
 import { type Building, type GameState, type Point, buildingWidth, buildingHeight, tileAt } from './types';
 import { cancelConstruction, refreshAfterBuildingRemoval } from './simulation';
 import { prepareConstructionCancellation, removeBuildings } from './construction-cancellation';
-import { clearBuildingFootprint } from './construction-clearance';
 import { pauseCityConstruction } from './governor';
 import { territory } from './borders';
 import { buildingWithinBorders } from './property-territory';
@@ -41,6 +42,7 @@ export function buildingsInArea(state: GameState, start: Point, end: Point, fact
   if (!bounds) return [];
   const borders = includeTerritory ? territory(state) : undefined;
   return state.buildings.filter(building => {
+    if (!rustEngine.civic_building_removable(BUILDING_KIND_CODES[building.kind])) return false;
     if (building.kind === 'fort' && building.faction !== factionId) return false;
     if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || building.faction !== factionId && (!borders || !buildingWithinBorders(state, building, factionId, borders))) return false;
     const left = building.x, top = building.y;
@@ -54,15 +56,18 @@ function unavailable(): AreaToolResult {
 
 export function cancelConstructionInArea(state: GameState, start: Point, end: Point, factionId = playerFaction(state)): AreaToolResult {
   if (state.gameOver || !state.factions.some(faction => faction.id === factionId)) return unavailable();
-  const sites = buildingsInArea(state, start, end, factionId).filter(building => building.construction);
+  const sites = new Map<number, Building>();
+  for (const building of buildingsInArea(state, start, end, factionId)) {
+    if (building.construction) sites.set(building.construction.bridge?.ids[0] ?? building.id, building);
+  }
   // Remove a queued wall before its gate road so the road cannot close that wall on an occupant.
-  sites.sort((a, b) => Number(a.kind === 'road') - Number(b.kind === 'road'));
+  const orders = [...sites.values()].sort((a, b) => Number(a.kind === 'road') - Number(b.kind === 'road'));
   let count = 0, refund = 0;
-  for (const site of sites) {
+  for (const site of orders) {
     const result = cancelConstruction(state, site.id, factionId);
     if (result.ok) { count++; refund += result.refund; }
   }
-  const skipped = sites.length - count;
+  const skipped = orders.length - count;
   const message = count ? `Cancelled ${count} building${count === 1 ? '' : 's'}. Refunded ${refund} gold.`
     : skipped ? 'A gate is occupied and has no safe exit.' : 'No unfinished friendly buildings in this area.';
   return { ok: count > 0, count, refund, skipped, message };
@@ -74,7 +79,6 @@ function crossingLast(a: Building, b: Building): number {
 
 function demolishBuilding(state: GameState, building: Building): boolean {
   if (!prepareConstructionCancellation(state, building)) return false;
-  if (building.kind === 'bridge' && !clearBuildingFootprint(state, building)) return false;
   pauseCityConstruction(state, building);
   removeBuildings(state, new Set([building.id]));
   const left = building.x, top = building.y;
@@ -91,13 +95,15 @@ function demolishBuilding(state: GameState, building: Building): boolean {
 export function clearArea(state: GameState, start: Point, end: Point): AreaToolResult {
   if (state.gameOver || !state.factions.some(faction => faction.id === playerFaction(state))) return unavailable();
   const buildings = buildingsInArea(state, start, end, playerFaction(state), true).sort(crossingLast);
+  const live = entityStore(state).buildings, seenOrders = new Set<number>();
   const changedFactions = new Map<number, boolean>();
   let cancelled = 0, demolished = 0, refund = 0, keptCrossings = 0;
   for (const building of buildings) {
+    if (!live.get(building.id)) continue;
     if (building.faction === playerFaction(state) && building.construction) {
-      // Cancellation normally removes only non-walkable sites, but retain an
-      // occupied bridge too if its removal would strand a unit.
-      if (building.kind === 'bridge' && !clearBuildingFootprint(state, building)) { keptCrossings++; continue; }
+      const order = building.construction.bridge?.ids[0] ?? building.id;
+      if (seenOrders.has(order)) continue;
+      seenOrders.add(order);
       const result = cancelConstruction(state, building.id);
       if (result.ok) { cancelled++; refund += result.refund; }
       else keptCrossings++;

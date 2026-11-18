@@ -1,10 +1,27 @@
-import type { GameState, InputState, PlayerControlState } from './types';
+import type { Faction, GameState, InputState, PlayerControlState } from './types';
 
 export const playerFaction = (state: GameState): number => state.playerFaction ?? 0;
 export const isHumanFaction = (state: GameState, faction: number): boolean =>
   state.scenarioPreparing ? false : state.multiplayer ? state.multiplayer.humanFactionIds.includes(faction) : faction === 0;
 const activeContexts = new WeakMap<GameState, number>();
 const NO_INPUT: InputState = { up: false, down: false, left: false, right: false };
+const factionIndices = new WeakMap<GameState, { source: GameState['factions']; size: number; indices: Map<number, number> }>();
+
+/** Faction IDs stay stable. Read the live array slot so replacing its object
+ * does not invalidate a successful lookup. Appends and snapshot imports do. */
+export function factionById(state: GameState, id: number): Faction | undefined {
+  const factions = state.factions;
+  let index = factionIndices.get(state);
+  const slot = index?.indices.get(id);
+  if (!index || index.source !== factions || index.size !== factions.length || slot !== undefined && factions[slot]?.id !== id) {
+    const indices = new Map<number, number>();
+    factions.forEach((faction, slot) => { if (!indices.has(faction.id)) indices.set(faction.id, slot); });
+    index = { source: factions, size: factions.length, indices };
+    factionIndices.set(state, index);
+  }
+  const current = index.indices.get(id);
+  return current === undefined ? undefined : factions[current];
+}
 
 export function playerControl(state: GameState, faction = playerFaction(state)): PlayerControlState {
   if (!state.multiplayer) return { retinueStance: state.retinueStance ?? 'aggressive', movementMode: state.movementMode ?? 'travel',

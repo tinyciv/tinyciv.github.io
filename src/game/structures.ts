@@ -1,14 +1,18 @@
 import { lifetimeCulture } from './achievement-effects';
 import { livingEngineer } from './leader-abilities';
 import { buildingWorkForbidden } from './forbidden-work';
+import { bridgeConstructionMembers, constructionHead } from './bridge-construction';
 import { isForbidden } from './forbidden-zones';
 import { type Building, type BuildingKind, type GameState } from './types';
 import { invalidateNavigation } from './pathfinding';
 import { clearConstructionSite } from './construction-clearance';
 import { addPalaceRoadRing } from './palace-roads';
 import { announceTownFounded } from './army-warnings';
+import { recordCampaignPopulation } from './campaign-stats';
+import { rustEngine } from './rust-engine';
 import { constructionSpeedMultiplier } from './research-bonuses';
 import { entityStore } from './entity-store';
+import { clearObservedScalar } from './scalar-observer';
 import { markWorldChanged } from './world-revisions';
 import { removeBuildings } from './construction-cancellation';
 import { updateWallStats } from './wall-stats';
@@ -60,6 +64,7 @@ export function updateActiveConstruction(state: GameState): boolean {
   for (const building of sites) {
     const site = building.construction;
     if (!site) { store.buildings.updateRoles(building); continue; }
+    if (constructionHead(state, building) !== building) continue;
     const prepared = runConstructionRule(state, building, 0, {
       speed: constructionSpeedMultiplier(factions.get(building.faction)), forbidden: buildingWorkForbidden(state, building),
       engineer: site.engineerId === undefined ? undefined : store.units.get(site.engineerId),
@@ -78,15 +83,27 @@ export function updateActiveConstruction(state: GameState): boolean {
     if (finished & CONSTRUCTION_INVALIDATE) invalidateNavigation(state);
     if (finished & CONSTRUCTION_COMPLETE) {
       const palisade = site.replacesPalisade === undefined ? undefined : store.buildings.get(site.replacesPalisade);
-      delete building.construction;
-      forgetNativeConstruction(state, building.id);
-      store.buildings.updateRoles(building);
+      for (const part of bridgeConstructionMembers(state, building) ?? [building]) {
+        if (part.kind === 'road' || part.kind === 'bridge') part.roadBuildGold = part.construction?.paidGold ?? 0;
+        clearObservedScalar(part, 'construction');
+        forgetNativeConstruction(state, part.id);
+        store.buildings.updateRoles(part);
+      }
       if (palisade?.kind === 'palisade' && palisade.x === building.x && palisade.y === building.y)
         removeBuildings(state, new Set([palisade.id]));
       if (building.kind === 'palace') {
+        const faction = factions.get(building.faction);
+        if (faction?.firstTownFoundingAvailable) {
+          const residents = rustEngine.town_founding_residents(1);
+          delete faction.firstTownFoundingAvailable;
+          building.foundingSubsidyFaction = faction.id;
+          building.unhousedResidents = residents;
+          faction.population += residents;
+          recordCampaignPopulation(state, faction);
+        }
         // Establish the cultural baseline when this city actually starts
         // claiming territory, rather than while its footprint is still queued.
-        building.cultureAtFounding = lifetimeCulture(state.factions.find(faction => faction.id === building.faction));
+        building.cultureAtFounding = lifetimeCulture(faction);
         addPalaceRoadRing(state, building);
         announceTownFounded(state, building);
       }

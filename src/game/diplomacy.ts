@@ -15,7 +15,7 @@ import { recordCampaignPopulation } from './campaign-stats';
 import { invalidateNavigation } from './pathfinding';
 import { invalidateSettlementDecisions } from './settlement-decisions';
 import { invalidateFactionStrategies } from './faction-strategy';
-import { civAffiliation, settlements } from './settlement-bridge';
+import { civAffiliations, settlements } from './settlement-bridge';
 import { findFactionTradeEndpoints, factionTradeIncomeEstimate, updateTradeRoutes } from './trade';
 import { invalidateCityTransfer, resetOrders } from './settlement-transfer';
 import { settlementHost } from './settlement-host';
@@ -53,6 +53,13 @@ export interface DiplomacyResult { ok: boolean; error: number; message: string; 
 export type DiplomacyCommand = 'preview' | 'propose' | 'accept' | 'decline' | 'war' | 'withdraw' | 'confederate' | 'aid';
 const commandModes: Record<DiplomacyCommand, number> = { preview: 0, propose: 1, accept: 2, decline: 3, war: 4, withdraw: 5, confederate: 6, aid: 7 };
 
+/** Sum bit counts in progressively wider groups, independent of war density. */
+function countBits(bits: number): number {
+  bits -= (bits >>> 1) & 0x55555555;
+  bits = (bits & 0x33333333) + ((bits >>> 2) & 0x33333333);
+  return Math.imul((bits + (bits >>> 4)) & 0x0f0f0f0f, 0x01010101) >>> 24;
+}
+
 class DiplomacyBridge {
   readonly handle: number;
   nextStep = -Infinity;
@@ -80,34 +87,66 @@ class DiplomacyBridge {
   private sample(): void {
     const state = this.state, store = entityStore(state);
     const factions = state.factions.filter(f => f.villageId === undefined);
+    const factionSlots = new Map(factions.map((f, slot) => [f.id, slot]));
     const cities = store.buildings.query('palace').filter(buildingReady);
-    const soldiers = [...store.units.query('soldier'), ...store.units.query('leader')].filter(u => u.hp > 0 && !u.inside);
     const populations = new Map(cityResidents(state).map(row => [row.palace.id, row.population]));
-    this.cityRows = cities.filter(c => factions.some(f => f.id === c.faction))
-      .flatMap(c => [c.id, c.faction, c.previousSovereign ?? -1, populations.get(c.id) ?? 0, c.x, c.y, c.lastAttacked ?? -1e9]);
     this.summaries.clear();
-    for (const f of factions) this.summaries.set(f.id, { cities: cities.filter(c => c.faction === f.id).length,
-      power: soldiers.filter(u => u.faction === f.id).reduce((sum, u) => sum + u.hp, 0),
-      library: structuresOf(state, f.id, STRUCTURE_READY, 'library').length > 0 });
+    const libraries = new Set(structuresOf(state, undefined, STRUCTURE_READY, 'library').map(b => b.faction));
+    for (const f of factions) this.summaries.set(f.id, { cities: 0, power: 0, library: libraries.has(f.id) });
+    this.cityRows = [];
+    for (const c of cities) {
+      const summary = this.summaries.get(c.faction);
+      if (!summary) continue;
+      summary.cities++;
+      this.cityRows.push(c.id, c.faction, c.previousSovereign ?? -1, populations.get(c.id) ?? 0, c.x, c.y, c.lastAttacked ?? -1e9);
+    }
+    const soldiers: Unit[] = [], leaders = new Map<number, Unit[]>();
+    for (const role of ['soldier', 'leader'] as const) for (const unit of store.units.query(role)) {
+      if (!(unit.hp > 0) || unit.inside) continue;
+      soldiers.push(unit);
+      const summary = this.summaries.get(unit.faction);
+      if (summary) summary.power += unit.hp;
+      if (role === 'leader') {
+        const own = leaders.get(unit.faction);
+        if (own) own.push(unit); else leaders.set(unit.faction, [unit]);
+      }
+    }
     // One route candidate per five-second sample bounds expensive route work.
-    const pairs = factions.flatMap((f, i) => factions.slice(i + 1).map(g => [f.id, g.id]));
-    if (pairs.length) {
-      const [a, b] = pairs[this.routeCursor++ % pairs.length];
+    const pairCount = factions.length * (factions.length - 1) / 2;
+    if (pairCount) {
+      let index = this.routeCursor++ % pairCount;
+      let i = 0;
+      for (; index >= factions.length - i - 1; i++) index -= factions.length - i - 1;
+      const a = factions[i].id, b = factions[i + 1 + index].id;
       if (diplomaticRelationship(state, a, b)?.contact) this.route(a, b);
     }
+    const words = Math.ceil(factions.length / 32), wars = new Uint32Array(factions.length * words);
+    for (const pair of state.diplomacyState?.relationships ?? []) {
+      if (!pair.war || pair.a === pair.b) continue;
+      const a = factionSlots.get(pair.a), b = factionSlots.get(pair.b);
+      if (a === undefined || b === undefined) continue;
+      wars[a * words + (b >>> 5)] |= 1 << (b & 31);
+      wars[b * words + (a >>> 5)] |= 1 << (a & 31);
+    }
     this.observations = [];
-    const observers = cities.concat(structuresOf(state, undefined, STRUCTURE_READY, 'tower', 'woodenTower'));
+    const observers = new Map<number, Building[]>();
+    for (const site of cities.concat(structuresOf(state, undefined, STRUCTURE_READY, 'tower', 'woodenTower'))) {
+      const own = observers.get(site.faction);
+      if (own) own.push(site); else observers.set(site.faction, [site]);
+    }
+    const affiliationPairs: number[] = [], affiliationOffsets: number[] = [];
     const fog = presentationFog(state);
-    for (const f of factions) {
+    for (let i = 0; i < factions.length; i++) {
+      const f = factions[i], human = isHumanFaction(state, f.id);
       const seen = new Set<Unit>();
-      const sites = observers.filter(b => b.faction === f.id);
+      const sites = observers.get(f.id) ?? [];
       // Inspect at most eight static sources per faction per sample, rotating
       // fairly. Leaders always contribute. Candidate queries use the existing
       // unit spatial index during simulation updates.
       const sourceOffset = sites.length ? this.observationCursor % sites.length : 0;
-      const sources: (Unit | Building)[] = [...store.units.query('leader').filter(u => u.faction === f.id && u.hp > 0 && !u.inside),
+      const sources: (Unit | Building)[] = [...(leaders.get(f.id) ?? []),
         ...sites.slice(sourceOffset, sourceOffset + 8), ...sites.slice(0, Math.max(0, sourceOffset + 8 - sites.length))];
-      if (isHumanFaction(state, f.id)) {
+      if (human) {
         for (const target of soldiers) if (target.faction !== f.id && pointInSight(fog, target.x, target.y)) seen.add(target);
       } else for (const source of sources) {
         for (const target of nearbyUnits(state, source, 24)) {
@@ -118,18 +157,33 @@ class DiplomacyBridge {
       }
       const visiblePower = new Map<number, number>();
       for (const u of seen) visiblePower.set(u.faction, (visiblePower.get(u.faction) ?? 0) + u.hp);
-      for (const g of factions) if (f !== g) {
-        const visibleCities = cities.filter(c => c.faction === g.id && (isHumanFaction(state, f.id)
-          ? buildingInSight(fog, c) : sources.some(source => Math.hypot(source.x - c.x, source.y - c.y) <= 24 && sight(state, source, c))));
-        const contact = visibleCities.length > 0 || visiblePower.has(g.id) || isHumanFaction(state, f.id)
+      const visibleCities = new Map<number, number>();
+      for (const c of cities) {
+        if (c.faction === f.id || !factionSlots.has(c.faction)) continue;
+        if (human ? buildingInSight(fog, c) : sources.some(source => Math.hypot(source.x - c.x, source.y - c.y) <= 24 && sight(state, source, c))) {
+          visibleCities.set(c.faction, (visibleCities.get(c.faction) ?? 0) + 1);
+        }
+      }
+      for (let j = 0; j < factions.length; j++) {
+        if (i === j) continue;
+        const g = factions[j], cityCount = visibleCities.get(g.id) ?? 0;
+        const contact = cityCount > 0 || visiblePower.has(g.id) || human
           && structuresOf(state, g.id, STRUCTURE_READY, 'house', 'library', 'blacksmith', 'dock').some(b => buildingInSight(fog, b));
         const old = diplomaticRelationship(state, f.id, g.id), known = !!old?.contact || contact;
         const route = this.routes.get(`${Math.min(f.id, g.id)}:${Math.max(f.id, g.id)}`);
-        const commonEnemies = factions.filter(h => h !== f && h !== g
-          && diplomaticRelationship(state, f.id, h.id)?.war && diplomaticRelationship(state, g.id, h.id)?.war).length;
+        let commonEnemies = 0;
+        for (let word = 0; word < words; word++) commonEnemies += countBits(wars[i * words + word] & wars[j * words + word]);
+        if (known) {
+          affiliationPairs.push(f.id, g.id);
+          affiliationOffsets.push(this.observations.length + 5);
+        }
         this.observations.push(f.id, g.id, Number(contact), visiblePower.get(g.id) ?? -1,
-          visibleCities.length, known ? civAffiliation(state, f.id, g.id) : 0, commonEnemies, route?.origin ?? -1, route?.destination ?? -1);
+          cityCount, 0, commonEnemies, route?.origin ?? -1, route?.destination ?? -1);
       }
+    }
+    if (affiliationPairs.length) {
+      const affiliations = civAffiliations(state, affiliationPairs);
+      for (let i = 0; i < affiliationOffsets.length; i++) this.observations[affiliationOffsets[i]] = affiliations[i];
     }
     this.observationCursor += 8;
     this.sampledStructure = structureChangeRevision(state);
@@ -149,12 +203,20 @@ class DiplomacyBridge {
     }
     if (force) {
       const fog = presentationFog(state), player = playerFaction(state), store = entityStore(state);
+      const pendingContacts = new Map<number, number>();
       for (let o = 0; o < this.observations.length; o += 9) {
         const target = this.observations[o + 1];
         if (this.observations[o] !== player || this.observations[o + 2]) continue;
-        if (structuresOf(state, target, STRUCTURE_READY).some(b => buildingInSight(fog, b))
-          || store.units.query('unit').some(u => u.faction === target && u.hp > 0 && !u.inside
-            && observationPostVisibleTo(u, player) && pointInSight(fog, u.x, u.y))) this.observations[o + 2] = 1;
+        if (structuresOf(state, target, STRUCTURE_READY).some(b => buildingInSight(fog, b))) this.observations[o + 2] = 1;
+        else pendingContacts.set(target, o);
+      }
+      if (pendingContacts.size) for (const unit of store.units.query('unit')) {
+        const offset = pendingContacts.get(unit.faction);
+        if (offset === undefined || !(unit.hp > 0) || unit.inside || !observationPostVisibleTo(unit, player)
+          || !pointInSight(fog, unit.x, unit.y)) continue;
+        this.observations[offset + 2] = 1;
+        pendingContacts.delete(unit.faction);
+        if (!pendingContacts.size) break;
       }
     }
     const factions = state.factions.filter(f => f.villageId === undefined);

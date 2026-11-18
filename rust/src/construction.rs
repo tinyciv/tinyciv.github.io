@@ -5,7 +5,7 @@ use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::SingleThreadedExecutor;
 use std::collections::BTreeMap;
 
-pub const INPUT_STRIDE: usize = 30;
+pub const INPUT_STRIDE: usize = 31;
 pub const OUTPUT_STRIDE: usize = 12;
 pub const INVALIDATE: u32 = 1;
 pub const CLEARANCE: u32 = 2;
@@ -18,7 +18,8 @@ pub fn duration(kind: u32) -> f64 {
         1 => 240.0,
         2 | 24 | 25 => 45.0,
         4 => 60.0,
-        5 | 20 | 22 | 23 | 31 => 90.0,
+        5 => 65.0,
+        20 | 22 | 23 | 31 => 90.0,
         6 => 3.75,
         7 => 40.0 / 3.0,
         8 | 18 | 19 => 20.0,
@@ -32,7 +33,9 @@ pub fn duration(kind: u32) -> f64 {
         29 | 32 | 33 => 60.0,
         34 => 90.0,
         35 | 36 => 60.0,
-        37 => 90.0,
+        37 | 38 | 40 => 90.0,
+        39 => 60.0,
+        41 => 0.0,
         _ => panic!("unknown construction kind"),
     }
 }
@@ -58,12 +61,16 @@ pub fn refund(paid: f64, start: f64, duration: f64, waiting: i32, paused: f64, n
     (maximum(0.0, paid) * (1.0 - progress(start, duration, waiting, paused, now)) * 100.0).round() / 100.0
 }
 
-pub fn repair_rate(maximum_hp: f64, duration: f64) -> f64 { maximum_hp / maximum(1.0, duration) }
-pub fn repair(hp: f64, maximum_hp: f64, duration: f64, speed: f64, elapsed: f64) -> f64 {
-    minimum(maximum_hp, hp + repair_rate(maximum_hp, duration) * speed * elapsed)
+pub fn repair_rate(maximum_hp: f64, kind: u32) -> f64 {
+    // Faster founding leaves the established repair rate for towns and Keeps.
+    let seconds = if kind == 5 { 90.0 } else { duration(kind) };
+    maximum_hp / maximum(1.0, seconds)
+}
+pub fn repair(hp: f64, maximum_hp: f64, kind: u32, speed: f64, elapsed: f64) -> f64 {
+    minimum(maximum_hp, hp + repair_rate(maximum_hp, kind) * speed * elapsed)
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 struct Site {
     id: i64,
     kind: u32,
@@ -98,6 +105,7 @@ struct WorkSample {
     width: f64,
     height: f64,
     arriving_builder: f64,
+    follows_clock: bool,
 }
 
 #[derive(Component, Default)]
@@ -149,59 +157,74 @@ fn worker_adjacent(work: &WorkSample) -> bool {
 }
 
 fn advance_sites(command: Res<Command>, mut sites: Query<(&mut Site, &WorkSample, &mut Events)>) {
+    let mut clock = None;
     for entity in &command.entities {
         let (mut site, work, mut events) = sites.get_mut(*entity).expect("imported construction site");
-        events.0 = 0;
         advance_health(&mut site, command.now);
-        if site.hp <= 0.0 { events.0 = SKIP; continue; }
-        match command.mode {
-            // Before actor evacuation: refresh work rates and automatic crews.
-            0 => {
-                retime(&mut site, command.now, work.speed);
-                if work.forbidden {
-                    if site.waiting != 1 { events.0 |= INVALIDATE; }
-                    pause(&mut site, command.now); events.0 |= SKIP;
-                    continue;
-                }
-                if !site.engineer.is_nan() {
-                    if work.engineer_flags != 15 {
-                        site.engineer = f64::NAN; site.waiting = 1; site.paused = command.now;
-                    } else { resume(&mut site, command.now); }
-                }
-                if site.kind == 1 { resume(&mut site, command.now); }
-                if site.waiting != 1 { events.0 |= CLEARANCE; }
-            }
-            // Actor positions have now been updated by ordered clearance.
-            1 => {
-                if !work.clearance {
-                    if (site.kind == 1 || !site.engineer.is_nan()) && site.paused.is_nan() { site.paused = command.now; }
-                    events.0 |= SKIP; continue;
-                }
-                if site.waiting == 0 && site.kind != 1 && site.engineer.is_nan() {
-                    let worker = worker_present(&site, work);
-                    if !worker || !worker_adjacent(work) {
-                        site.waiting = 1; site.paused = command.now; site.cleared = 0;
-                        events.0 |= INVALIDATE;
-                        if !worker { site.builder = f64::NAN; }
-                    }
-                }
-                if site.waiting != 1 && site.hp > 0.0 && command.now + 1e-7 >= site.started + site.duration {
-                    site.completed = true;
-                }
-            }
-            // Research refreshes do not acquire workers, evacuate or complete.
-            2 => retime(&mut site, command.now, work.speed),
-            3 => { pause(&mut site, command.now); events.0 |= INVALIDATE; }
-            // A real builder arrival starts new work or resumes banked work.
-            4 => {
-                if site.waiting == 1 {
-                    site.started = if site.paused.is_nan() { command.now } else { site.started + command.now - site.paused };
-                    site.paused = f64::NAN; site.waiting = 0; events.0 |= INVALIDATE;
-                }
-                site.builder = work.arriving_builder;
-            }
-            _ => panic!("unknown construction operation"),
+        if work.follows_clock {
+            let shared: Site = clock.expect("bridge construction head");
+            // The deck keeps separate damage and occupancy, but the entire
+            // bridge runs one work clock and receives one builder assignment.
+            *site = Site { id: site.id, hp: site.hp, maximum_hp: site.maximum_hp,
+                health_progress: site.health_progress, ..shared };
+        } else {
+            advance_site(&mut site, work, &mut events, &command);
+            clock = Some(*site);
         }
+    }
+}
+
+fn advance_site(site: &mut Site, work: &WorkSample, events: &mut Events, command: &Command) {
+    if site.hp <= 0.0 { events.0 = SKIP; return; }
+    match command.mode {
+        // Before actor evacuation: refresh work rates and automatic crews.
+        0 => {
+            retime(site, command.now, work.speed);
+            if work.forbidden {
+                if site.waiting != 1 { events.0 |= INVALIDATE; }
+                pause(site, command.now); events.0 |= SKIP;
+                return;
+            }
+            if !site.engineer.is_nan() {
+                if work.engineer_flags != 15 {
+                    site.engineer = f64::NAN; site.waiting = 1; site.paused = command.now;
+                } else { resume(site, command.now); }
+            }
+            if site.kind == 1 { resume(site, command.now); }
+            if site.waiting != 1 { events.0 |= CLEARANCE; }
+        }
+        // Actor positions have now been updated by ordered clearance.
+        1 => {
+            if !work.clearance {
+                if (site.kind == 1 || !site.engineer.is_nan()) && site.paused.is_nan() { site.paused = command.now; }
+                events.0 |= SKIP; return;
+            }
+            if site.waiting == 0 && site.kind != 1 && site.engineer.is_nan() {
+                let worker = worker_present(site, work);
+                if !worker || !worker_adjacent(work) {
+                    site.waiting = 1; site.paused = command.now; site.cleared = 0;
+                    events.0 |= INVALIDATE;
+                    if !worker { site.builder = f64::NAN; }
+                }
+            }
+            if site.waiting != 1 && site.hp > 0.0 && command.now + 1e-7 >= site.started + site.duration {
+                site.completed = true;
+            }
+        }
+        // Research refreshes do not acquire workers, evacuate or complete.
+        2 => retime(site, command.now, work.speed),
+        3 => { pause(site, command.now); events.0 |= INVALIDATE; }
+        // A real builder arrival starts new work or resumes banked work.
+        4 => {
+            if site.waiting == 1 {
+                site.started = if site.paused.is_nan() { command.now } else { site.started + command.now - site.paused };
+                site.paused = f64::NAN; site.waiting = 0; events.0 |= INVALIDATE;
+            }
+            site.builder = work.arriving_builder;
+        }
+        // One uninterrupted work order, with the same amount of work per tile.
+        5 => site.duration *= command.entities.len() as f64,
+        _ => panic!("unknown construction operation"),
     }
 }
 
@@ -252,7 +275,7 @@ impl ConstructionEngine {
                 WorkSample { speed: values[12], forbidden: values[13] != 0.0, engineer_flags: values[14] as u32,
                     clearance: values[15] != 0.0, worker_flags: values[16] as u32, worker_hp: values[17], worker_site: values[18],
                     worker_x: values[19], worker_y: values[20], x: values[21], y: values[22], width: values[23], height: values[24],
-                    arriving_builder: values[27] }, Events::default(),
+                    arriving_builder: values[27], follows_clock: values[30] != 0.0 }, Events::default(),
             ));
         }
         {
@@ -446,9 +469,9 @@ mod tests {
 
     #[test]
     fn repair_integrates_real_work_and_caps_health() {
-        assert_eq!(repair_rate(6500.0, 90.0), 6500.0 / 90.0);
-        assert_eq!(repair(80.0, 100.0, 20.0, 1.25, 1.0), 86.25);
-        assert_eq!(repair(99.0, 100.0, 20.0, 1.25, 1.0), 100.0);
+        assert_eq!(repair_rate(6500.0, 5), 6500.0 / 90.0);
+        assert_eq!(repair(80.0, 100.0, 18, 1.25, 1.0), 86.25);
+        assert_eq!(repair(99.0, 100.0, 18, 1.25, 1.0), 100.0);
     }
 
     #[test]

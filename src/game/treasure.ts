@@ -4,6 +4,7 @@ import { buildingSize, buildingWidth, buildingHeight, tileAt, type GameState, ty
 import { updateFog } from './fog';
 import { travelTimeMap, traversable } from './pathfinding';
 import { loadPunyWorld } from './puny-world';
+import { rustEngine } from './rust-engine';
 
 export const TREASURE_GOLD = 200;
 /** Original Puny World closed chest, column 2, row 29. Its open companion
@@ -94,7 +95,7 @@ export function initializeTreasureChests(state: GameState): void {
         const j = Math.floor(random() * (i + 1));
         [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
     }
-    const count = 2 * Math.min(24, Math.max(1, Math.round(width * height / 650)));
+    const count = rustEngine.exploration_treasure_target(width, height);
     const discoveryLimit = Math.min(4, Math.floor(count / 3)), found = new Set<Discovery>();
     for (const cell of candidates) {
         if (state.treasures.length >= discoveryLimit) break;

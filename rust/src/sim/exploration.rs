@@ -702,6 +702,10 @@ pub fn ambush_committed(was: bool, alive: bool, fleeing: bool, distance: f64) ->
 pub fn refugee_arrived(x: f64, y: f64, gx: f64, gy: f64) -> bool {
     (x - gx).hypot(y - gy) <= 0.75
 }
+pub fn treasure_target(width: usize, height: usize) -> usize {
+    ((width * height + 325) / 650).clamp(1, 24)
+}
+
 pub fn ordinary_slots(total: f64, rangers: f64) -> f64 {
     (total - rangers).max(0.0)
 }

@@ -35,7 +35,8 @@ interface ContourLayers {
 const masks = new Map<string, ContourLayers>();
 const noiseFields = new Map<number, Float32Array>();
 let stone: HTMLCanvasElement | undefined, copper: HTMLImageElement | undefined, iron: HTMLImageElement | undefined;
-let loose: HTMLCanvasElement | undefined, looseShadow: HTMLCanvasElement | undefined, loading: Promise<void> | undefined;
+let loose: HTMLCanvasElement | undefined, looseShadow: HTMLCanvasElement | undefined;
+let loading: Promise<void> | undefined, loadingLooseRocks: Promise<void> | undefined;
 
 export function isOutcrop(tile: Tile | undefined): boolean {
     return !!tile && !WATER.has(tile.terrain) && !tile.creek
@@ -115,18 +116,27 @@ function lightenStone(image: HTMLImageElement): HTMLCanvasElement {
     c.filter = `brightness(${STONE_BRIGHTNESS})`; c.drawImage(image, 0, 0);
     return canvas;
 }
-export function loadOutcropArt(): Promise<void> {
-    return loading ??= Promise.all(['stone.png', 'copper-overlay.png', 'iron-overlay.png', 'loose-rocks.png'].map(async file => {
-        const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/resources/outcrops/${file}`);
-        await image.decode(); return image;
-    })).then(([stoneImage, copperImage, ironImage, looseImage]) => {
-        stone = lightenStone(stoneImage); loose = lightenStone(looseImage);
-        copper = copperImage; iron = ironImage;
+async function loadImage(file: string): Promise<HTMLImageElement> {
+    const image = new Image();
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/resources/outcrops/${file}`);
+    await image.decode();
+    return image;
+}
+export function loadLooseRockArt(): Promise<void> {
+    return loadingLooseRocks ??= loadImage('loose-rocks.png').then(image => {
+        loose = lightenStone(image);
         // Derive the contact shadow from the generated sprites' alpha, once.
         looseShadow = document.createElement('canvas'); looseShadow.width = loose.width; looseShadow.height = loose.height;
         const c = looseShadow.getContext('2d')!; c.drawImage(loose, 0, 0);
         c.globalCompositeOperation = 'source-in'; c.fillStyle = '#263025'; c.fillRect(0, 0, loose.width, loose.height);
     });
+}
+export function loadOutcropArt(): Promise<void> {
+    return loading ??= Promise.all(['stone.png', 'copper-overlay.png', 'iron-overlay.png'].map(loadImage))
+        .then(([stoneImage, copperImage, ironImage]) => {
+            stone = lightenStone(stoneImage);
+            copper = copperImage; iron = ironImage;
+        });
 }
 function noise(x: number, y: number, scale: number, seed: number): number {
     const ix = Math.floor(x / scale), iy = Math.floor(y / scale), wrap = PERIOD / scale - 1;

@@ -1,6 +1,6 @@
 /** Transport only: native Bevy terrain authoring selects and shapes landscapes. */
 import { rustEngine } from '../game/rust-engine';
-import { reliefFlags } from '../game/relief';
+import { reliefAllowsTrees, reliefFlags } from '../game/relief';
 import { markWorldChanged } from '../game/world-revisions';
 import { WATER, type World, type WorldFeatureKind } from '../game/types';
 import { terrainYields } from './generator';
@@ -28,7 +28,7 @@ export function generateWorldFeatures(world: World): number {
         const input = new Float64Array(rustEngine.memory.buffer, pointer, count * STRIDE + starts.length * 2 + 2);
         world.tiles.forEach((tile, cell) => input.set([
             TERRAINS.indexOf(tile.terrain), OVERLAYS.indexOf(tile.overlay), tile.elevation, tile.moisture,
-            tile.temperature ?? .55, tile.variation, tile.relief === 'mountains' ? 2 : tile.relief === 'hills' ? 1 : 0,
+            tile.temperature ?? .55, tile.variation, Number(!!tile.ridge || !reliefAllowsTrees(tile)),
             tile.reliefRegion ?? 0, tile.reliefRuggedness ?? 0, BIOMES.indexOf(tile.biome ?? 'temperate'),
             RESOURCES.indexOf(tile.resource), Number(!!tile.beach) | Number(!!tile.palm) << 1 | Number(!!tile.marsh) << 2 | Number(!!tile.oxbow) << 3,
             tile.reliefStyle ?? 0, tile.rainfall ?? tile.moisture, tile.fertility ?? 1, 0,
@@ -51,10 +51,6 @@ export function generateWorldFeatures(world: World): number {
             tile.terrain = TERRAINS[row[0]]; tile.overlay = OVERLAYS[row[1]];
             tile.elevation = row[2]; tile.moisture = row[3]; tile.temperature = row[4]; tile.variation = row[5];
             tile.biome = BIOMES[row[9]]; tile.rainfall = row[13]; tile.fertility = row[14]; tile.worldFeature = row[15];
-            if (row[6]) {
-                tile.relief = row[6] === 2 ? 'mountains' : 'hills'; tile.reliefRegion = row[7];
-                tile.reliefRuggedness = row[8]; tile.reliefStyle = row[12] as 0 | 1 | 2;
-            }
             if (tile.overlay === 'volcano') {
                 // Native islands use the shared 2x2 geothermal footprint/art.
                 tile.geothermal = row[12] as 1 | 2 | 3;

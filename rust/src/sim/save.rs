@@ -21,6 +21,7 @@ pub const QUESTS: u32 = 7;
 pub const CAMPAIGN: u32 = 8;
 pub const OFFENSIVES: u32 = 9;
 pub const OFFENSIVE_AI: u32 = 10;
+pub const CIVIC_ECONOMY: u32 = 11;
 pub const CORE_LENGTH: usize = 8;
 
 pub fn encode(sections: &[(u32, &[f64])], out: &mut Vec<f64>) {

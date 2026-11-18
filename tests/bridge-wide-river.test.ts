@@ -57,13 +57,15 @@ describe('building across a wide river beyond borders', () => {
       const bridges = state.buildings.filter(building => building.kind === 'bridge').sort((a, b) => a.x - b.x);
       const finishedAt = new Map<number, number>(), workedBy = new Set<number>();
       advanceUntil(state, () => bridges.every(buildingReady), 220, () => {
+        expect(new Set(bridges.map(bridge => bridge.construction?.startedAt)).size).toBe(1);
         for (const bridge of bridges) {
           if (bridge.construction?.builderId !== undefined) workedBy.add(bridge.construction.builderId);
           if (buildingReady(bridge) && !finishedAt.has(bridge.x)) finishedAt.set(bridge.x, state.time);
         }
       });
       expect([...finishedAt.keys()]).toEqual(bridges.map(bridge => bridge.x));
-      expect(workedBy.size).toBeGreaterThanOrEqual(population > 5 ? 2 : 1);
+      expect(new Set(finishedAt.values()).size).toBe(1);
+      expect(workedBy.size).toBe(1);
       expect(bridges.every(bridge => canWalk(state, bridge.x + .5, bridge.y + .5, 0))).toBe(true);
       expect(bridges.every(bridge => !insideOwnBorders(state, 0, bridge.x + .5, bridge.y + .5))).toBe(true);
 

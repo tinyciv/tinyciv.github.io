@@ -13,6 +13,10 @@ import { MILITARY_ACADEMY_GOLD } from '../../src/game/military-academy';
 
 export const ECONOMY_INTERVAL = 30;
 export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; production: number }> = {
+  hospital: { food: 0, gold: 450, production: 0 },
+  apartments: { food: 0, gold: 300, production: 0 },
+  factory: { food: 0, gold: 600, production: 0 },
+  goldMine: { food: 0, gold: 0, production: 0 },
   militaryAcademy: { food: 0, gold: MILITARY_ACADEMY_GOLD, production: 0 },
   foundry: { food: 0, gold: 600, production: 0 },
   whalingPost: { food: 0, gold: 300, production: 0 },

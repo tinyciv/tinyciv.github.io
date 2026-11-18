@@ -4,7 +4,7 @@
   "height": 280,
   "simulatedSeconds": 6710.000000005579,
   "wallSeconds": 40.370369875,
-  "bytes": 4793403,
+  "bytes": 4718395,
   "cities": [
     {
       "id": 1,
@@ -483,5 +483,40 @@
       1156
     ],
     "farmsCleared": []
-  }
+  },
+  "fleet": [
+    {
+      "id": 3297,
+      "faction": 2,
+      "x": 99.5,
+      "y": 47.5,
+      "facing": -2.0344439357957027,
+      "turningArea": 154
+    },
+    {
+      "id": 6012,
+      "faction": 3,
+      "x": 225.5,
+      "y": 223.5,
+      "facing": 0.6556956262415362,
+      "turningArea": 96
+    },
+    {
+      "id": 7186,
+      "faction": 1,
+      "x": 26.5,
+      "y": 125.5,
+      "facing": -2.677945044588987,
+      "turningArea": 183
+    },
+    {
+      "id": 7212,
+      "faction": 0,
+      "x": 153.5,
+      "y": 24.5,
+      "facing": -1.892546881191539,
+      "turningArea": 268
+    }
+  ],
+  "fleetRefinementWasmSha256": "b1060edad4a5e0b91373d2d2b318190af105a048dc1f18407e343bf683eb523c"
 }

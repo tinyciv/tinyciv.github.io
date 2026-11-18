@@ -1,0 +1,176 @@
+{
+  "source": "PixelLab blue-green rushes and masked lateral shoots",
+  "processing": "Lossless placement of the approved core strips and the left and right pixels of the overlay strips into a single atlas.",
+  "file": "rushes.png",
+  "sha256": "969b4b9f18e5e0edc178d374a8f58082558f36141167dd5706f493b35304a896",
+  "size": [
+    112,
+    96
+  ],
+  "tileFooting": 0.9375,
+  "verticalScale": 1.5,
+  "bands": {
+    "low": {
+      "base": [
+        0,
+        0,
+        80,
+        16
+      ],
+      "frameWidth": 16,
+      "frameCount": 5,
+      "shoots": [
+        {
+          "left": [
+            80,
+            0,
+            8,
+            16
+          ],
+          "right": [
+            88,
+            0,
+            8,
+            16
+          ]
+        }
+      ],
+      "baseSource": "scratch/2026-11-17-wetland-fringe/sprites/B/low.png",
+      "baseSHA256": "87c32f793f2d7e87304423c3eccd784c23b3f99eba0ee899c7994acce2500195",
+      "overlaySource": "scratch/2026-11-17-rush-edge-shoots/sprites/low.png",
+      "overlaySHA256": "983d3b1369e8d3f4350e16e19a30c675a44e2b3e80572f0ca3d68beb394e5c16",
+      "overlayJobs": [
+        "135dcfb7-0c09-4b3b-be7c-fc3ff49d8d45"
+      ]
+    },
+    "mid": {
+      "base": [
+        0,
+        16,
+        80,
+        16
+      ],
+      "frameWidth": 16,
+      "frameCount": 5,
+      "shoots": [
+        {
+          "left": [
+            80,
+            16,
+            8,
+            16
+          ],
+          "right": [
+            88,
+            16,
+            8,
+            16
+          ]
+        }
+      ],
+      "baseSource": "scratch/2026-11-17-wetland-fringe/sprites/B/mid.png",
+      "baseSHA256": "1b76e37dc1f4268fc02b4e4f9b464aa903bd0c4b047277efc9c3a2c3f0c25bcf",
+      "overlaySource": "scratch/2026-11-17-rush-edge-shoots/sprites/mid.png",
+      "overlaySHA256": "b218d680058200bf554aadb470d8f6826b2be2970d159a6c916bfcc1c2c291a3",
+      "overlayJobs": [
+        "135dcfb7-0c09-4b3b-be7c-fc3ff49d8d45"
+      ]
+    },
+    "high": {
+      "base": [
+        0,
+        32,
+        80,
+        32
+      ],
+      "frameWidth": 16,
+      "frameCount": 5,
+      "shoots": [
+        {
+          "left": [
+            80,
+            32,
+            8,
+            32
+          ],
+          "right": [
+            88,
+            32,
+            8,
+            32
+          ]
+        },
+        {
+          "left": [
+            96,
+            32,
+            8,
+            32
+          ],
+          "right": [
+            104,
+            32,
+            8,
+            32
+          ]
+        }
+      ],
+      "baseSource": "scratch/2026-11-17-wetland-fringe/sprites/B/high.png",
+      "baseSHA256": "3fe33eea3bd4432451cb3cf939bed13a485fbb829afc1488a9cfea1dc0f677b8",
+      "overlaySource": "scratch/2026-11-17-rush-edge-shoots/sprites/high.png",
+      "overlaySHA256": "dd540d295f67d2fb6a4a435463ddf60956eeefe41e9f957080fd8004afe34f21",
+      "overlayJobs": [
+        "476af3eb-8e48-4f44-81cc-137fed1788fb",
+        "e2e0da29-ef34-4c46-9ef0-b44bf6523ce4"
+      ]
+    },
+    "tall": {
+      "base": [
+        0,
+        64,
+        64,
+        32
+      ],
+      "frameWidth": 16,
+      "frameCount": 4,
+      "shoots": [
+        {
+          "left": [
+            80,
+            64,
+            8,
+            32
+          ],
+          "right": [
+            88,
+            64,
+            8,
+            32
+          ]
+        },
+        {
+          "left": [
+            96,
+            64,
+            8,
+            32
+          ],
+          "right": [
+            104,
+            64,
+            8,
+            32
+          ]
+        }
+      ],
+      "baseSource": "scratch/2026-11-17-wetland-fringe/sprites/B/tall.png",
+      "baseSHA256": "df82e7ba20b0bdbd0e53dd7211d9c60f912cccdd681c484a497b89b3e885ec63",
+      "overlaySource": "scratch/2026-11-17-rush-edge-shoots/sprites/tall.png",
+      "overlaySHA256": "bdc117bec65ba2520ef1d882d0ab862815186b45783f0c2e3071f4f73104e372",
+      "overlayJobs": [
+        "0e378733-ec76-4b59-842d-a52a2a9c2e4e",
+        "0dade606-c333-4a05-8daa-bcfe333f41f5"
+      ]
+    }
+  }
+}

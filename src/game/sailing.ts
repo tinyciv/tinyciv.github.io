@@ -265,7 +265,8 @@ function shoreAvailable(state: GameState, leader: Unit, point: Point): boolean {
     && !state.units.some(u=>u.id!==leader.id && u.hp>0 && !u.inside && u.kind!=='sailboat' && distance(u,point)<.65);
 }
 function canCrossShore(state: GameState, leader: Unit, boat: GalleyPose, shore: Point): boolean {
-  return shoreAvailable(state,leader,shore) && !!rustEngine.galley_landing(boat.x,boat.y,boat.facing,shore.x,shore.y);
+  const landing=boat.warship ? rustEngine.warship_landing : rustEngine.galley_landing;
+  return shoreAvailable(state,leader,shore) && !!landing(boat.x,boat.y,boat.facing,shore.x,shore.y);
 }
 function shoreCells(state: GameState, leader: Unit, boat: Unit): Point[] {
   const cells = new Map<number,Point>();

@@ -11,6 +11,7 @@ import { buildingWithinBorders } from './border-placement';
 import { territory } from './borders';
 import { farmParcelPreferenceQuery, FARM_CLUSTER_PRODUCTION_BONUS } from './farm-clusters';
 import { farmBlockPlacementQuery } from './farm-blocks';
+import { hermitCabinOverlaps } from './placement-occupancy';
 import { type Building, type GameState, type Point, buildingReady, buildingWidth, buildingHeight } from './types';
 
 /** Each completed collection point extends the city's practical farm area. */
@@ -48,7 +49,8 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
     let harvest = 0, irrigatedPlots = 0, streetPenalty = 1;
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const px = x + dx, py = y + dy, cell = py * width + px, tile = state.world.tiles[cell];
-      if (!tile || !reliefBuildable(tile) || occupied.has(cell) || !CLEARABLE.has(tile.overlay) || !traversable(state.world, px, py)) return;
+      if (!tile || !reliefBuildable(tile) || occupied.has(cell) || !CLEARABLE.has(tile.overlay)
+        || !traversable(state.world, px, py) || hermitCabinOverlaps(state, px, py)) return;
       const irrigated = !!coverage[cell];
       irrigatedPlots += Number(irrigated);
       harvest += fieldHarvestFood(state.world, px, py) * (irrigated ? tile.terrain === 'desert' ? 3 : 2 : 1) * foodBonus

@@ -9,7 +9,7 @@ import { loadNameplateArt } from './nameplate';
 const images = new Map<string, HTMLImageElement>();
 let loading: Promise<void> | undefined;
 const colored = new Map<string, HTMLCanvasElement>();
-const FILES = ['galley', 'caravel', 'frigate', 'shipyard', 'boarding-plank', 'motion/galley-rowing', 'motion/galley-sinking', 'motion/caravel-sinking', 'motion/frigate-sinking'];
+const FILES = ['galley', 'caravel', 'frigate', 'shipyard', 'motion/galley-rowing', 'motion/galley-sinking', 'motion/caravel-sinking', 'motion/frigate-sinking'];
 export const WARSHIP_BOUNDS = { x: -32, y: -64, width: 96, height: 160 };
 export function loadWarshipArt(): Promise<void> {
   return loading ??= Promise.all([loadNameplateArt(), ...FILES.map(async name => {
@@ -19,7 +19,6 @@ export function loadWarshipArt(): Promise<void> {
     images.set(name, image);
   })]).then(() => undefined);
 }
-export const boardingPlankImage = () => images.get('boarding-plank');
 export const warshipFrame = (ship: Unit, time: number): number => ship.warship?.class === 'warGalley' && ship.moving ? Math.floor(time / .14) % 7 : 0;
 export function drawWarshipMount(c: CanvasRenderingContext2D, kind: NavalWeapon, facing: number, time: number, shotAt?: number, fireEffects = true): void {
   if (kind === 'ballista') drawBallista(c, { siegeFacing: facing, siegeShotAt: shotAt }, -12, -12, 24, time);

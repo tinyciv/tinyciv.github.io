@@ -7,7 +7,7 @@ import { buildingTargetable } from './building-targeting';
 import { nearbyBuildings, nearbyUnits } from './spatial';
 import { nativeMoveLayers, canWalk, traversable, wallBreachingNavigation, withNavigationFrame, findShortestPathBetween } from './pathfinding';
 import { atWar } from './relations';
-import { playerFaction, isHumanFaction } from './player-context';
+import { factionById, playerFaction, isHumanFaction } from './player-context';
 import { researchLevel } from './research';
 import { desiredRetinueSize, interruptOutboundTraining } from './archery';
 import { invalidateDecisions } from './decision-schedule';
@@ -41,7 +41,7 @@ export const isOffensiveMember = (state: GameState, unit: Unit): boolean => ordi
   && !!state.offensives?.some(order => order.faction === unit.faction && order.phase !== 'captured');
 
 export function beginOffensive(state: GameState, rally: Point, objective: Point, faction = playerFaction(state)): { ok: boolean; message: string } {
-  const owner = state.factions.find(f => f.id === faction), leader = entityStore(state).units.query('leader').find(u => u.faction === faction && u.hp > 0);
+  const owner = factionById(state, faction), leader = entityStore(state).units.queryFaction('leader', faction).find(u => u.hp > 0);
   if (state.gameOver || owner?.defeated || !leader || leader.order === 'flee' || leader.embarkedOn !== undefined) return { ok: false, message: 'Choose an available Leader.' };
   if (!researchLevel(owner, 'officerCorps')) return { ok: false, message: 'Research Officer Corps first.' };
   const hostileObjective = traversable(state.world, objective.x, objective.y) && entityStore(state).buildings.query('building').some(building => building.hp > 0
@@ -55,7 +55,7 @@ export function beginOffensive(state: GameState, rally: Point, objective: Point,
   publish(state, faction, new Float64Array(rustEngine.memory.buffer, statusPointer, HEADER));
   bridge(state).next = -Infinity;
   if (leader.infantryFormation) leader.infantryFormation.active = false;
-  for (const unit of entityStore(state).units.query('retinue')) if (unit.faction === faction && ordinaryMember(unit)) {
+  for (const unit of entityStore(state).units.queryFaction('retinue', faction)) if (ordinaryMember(unit)) {
     interruptOutboundTraining(state, unit);
     unit.infantryDrillLeader = undefined; unit.forcedAttack = undefined; unit.attackReturn = undefined; unit.recallIssuedAt = undefined;
     unit.defensiveAnchor = undefined; unit.defensiveThreat = undefined;
@@ -70,7 +70,7 @@ export function cancelOffensive(state: GameState, faction = playerFaction(state)
   rustEngine.sim_offensive_cancel(simCore(state).handle, faction);
   state.offensives = state.offensives?.filter(order => order.faction !== faction);
   const value = bridge(state); value.next = -Infinity;
-  for (const unit of entityStore(state).units.query('retinue')) if (unit.faction === faction && ordinaryMember(unit)) {
+  for (const unit of entityStore(state).units.queryFaction('retinue', faction)) if (ordinaryMember(unit)) {
     value.directives.delete(unit.id);
     unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0; unit.forcedAttack = undefined;
     if (unit.order !== 'flee') unit.order = unit.retinueStance === 'hold' ? 'hold' : 'follow';
@@ -79,8 +79,8 @@ export function cancelOffensive(state: GameState, faction = playerFaction(state)
   invalidateDecisions(state);
 }
 
-/** The only world observations are the indexed retinue and the objective's
- * local spatial buckets, sampled twice a second. Rust makes every order. */
+/** Sample the indexed retinue and hostile contacts near members and the
+ * objective twice a second. Rust makes every order. */
 export function updateOffensives(state: GameState): void {
   const value = bridge(state);
   if (state.time < value.next) return;
@@ -92,7 +92,7 @@ export function updateOffensives(state: GameState): void {
     if (!order || order.phase === 'captured') continue;
     const leader = store.units.get(order.leader);
     if (!leader || leader.hp <= 0 || faction.defeated) { cancelOffensive(state, faction.id); continue; }
-    const members = store.units.query('retinue').filter(u => u.faction === faction.id && u.hp > 0 && ordinaryMember(u));
+    const members = store.units.queryFaction('retinue', faction.id).filter(u => u.hp > 0 && ordinaryMember(u));
     const observed = new Map<number, Unit | Building>();
     const observe = (point: Point, radius: number): void => {
       for (const target of [...nearbyUnits(state, point, radius), ...nearbyBuildings(state, point, radius)]) {
@@ -110,7 +110,6 @@ export function updateOffensives(state: GameState): void {
       observe({ x: x * 4 + 2, y: y * 4 + 2 }, 9);
     }
     const enemies = [...observed.values()];
-    const expected = rustEngine.exploration_ordinary_slots(desiredRetinueSize(faction, leader), faction.rangerCompanions ?? 0);
     const layers = nativeMoveLayers(state, faction.id, false);
     rustEngine.sim_offensive_navigation(handle, layers?.engine.handle ?? 0, layers?.grid ?? 0, layers?.blockers ?? 0, layers?.forbidden ?? 0);
     const inputPointer = rustEngine.sim_offensive_input(handle, members.length, enemies.length);
@@ -120,7 +119,7 @@ export function updateOffensives(state: GameState): void {
       const building = 'capacity' in target;
       input.set([target.id, target.x, target.y, target.hp, Number(building), building ? buildingWidth(target) : 0, building ? buildingHeight(target) : 0], members.length * MEMBER + index * STRIDE);
     });
-    const resultPointer = rustEngine.sim_offensive_step(handle, faction.id, state.time, members.length, enemies.length, expected);
+    const resultPointer = rustEngine.sim_offensive_step(handle, faction.id, state.time, members.length, enemies.length);
     const count = new Float64Array(rustEngine.memory.buffer, resultPointer, HEADER)[5];
     const result = new Float64Array(rustEngine.memory.buffer, resultPointer, HEADER + count * STRIDE).slice();
     const status = publish(state, faction.id, result);
@@ -174,7 +173,7 @@ export function updateFactionOffensive(state: GameState, faction: Faction, leade
     return state.offensives?.some(order => order.faction === faction.id && order.phase !== 'captured')
       ? aiView(aiResult(rustEngine.sim_offensive_ai_status(handle, faction.id))) : undefined;
   }
-  const store = entityStore(state), members = store.units.query('retinue').filter(unit => unit.faction === faction.id && ordinaryMember(unit));
+  const store = entityStore(state), members = store.units.queryFaction('retinue', faction.id).filter(ordinaryMember);
   const observers = [leader, ...members.filter(unit => unit.hp > 0 && !unit.inside)];
   const targets = structuresOf(state, undefined, STRUCTURE_ALIVE, 'palace', 'fort', 'woodenTower', 'tower', 'ballista', 'siegeCannon', 'guardPost', 'militaryAcademy')
     .filter(building => atWar(state, faction.id, building.faction));

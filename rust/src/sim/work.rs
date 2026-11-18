@@ -84,7 +84,7 @@ impl WorkKeys {
     }
     pub fn intern(&mut self, name: &str) -> u16 {
         if let Some(id) = self.by_name.get(name) { return *id; }
-        self.register(name, if name=="drainage" { 1.0 } else { cadence::CHECK_INTERVAL }, false)
+        self.register(name, if name=="drainage" || name=="civic-buildings" { 1.0 } else { cadence::CHECK_INTERVAL }, false)
     }
     pub fn get(&self, id: u16) -> &KeyInfo { self.keys.get(id as usize).expect("unknown work key") }
     /// Host transport for a key name: UTF-16 code units as f64.

@@ -1,4 +1,5 @@
 import { arrayJournal } from '../game/cell-journal';
+import { clearObservedScalar } from '../game/scalar-observer';
 import type { Building, FarmField, GameState, Unit } from '../game/types';
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -90,7 +91,7 @@ export function applyValueDelta<T>(previous: T, patch: ValueDelta): T {
     return previous;
   }
   const object = previous as unknown as Record<string, Json>;
-  for (const key of patch.remove ?? []) delete object[key];
+  for (const key of patch.remove ?? []) clearObservedScalar(object, key);
   for (const key of Object.keys(patch.fields)) object[key] = applyValueDelta(object[key], patch.fields[key]);
   return previous;
 }

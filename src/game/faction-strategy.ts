@@ -1,7 +1,7 @@
 import { entityStore, buildingWithId } from './entity-store';
 import { structuresOf, STRUCTURE_ALIVE, STRUCTURE_READY } from './structure-index';
 import { nearbyBuildings, nearbyUnits } from './spatial';
-import { isHumanFaction, withPlayerFaction } from './player-context';
+import { factionById, isHumanFaction, withPlayerFaction } from './player-context';
 import { isSoldier } from './types';
 import { constructionEdges } from './builders';
 import { insideOwnBorders } from './borders';
@@ -31,6 +31,7 @@ export interface FactionMission {
    * last-seen goal for a short search, never live hidden coordinates. */
   targetId?: number;
   escortIds: number[];
+  escortSet: ReadonlySet<number>;
   garrisonIds: number[];
 }
 export interface FactionStrategyQueries {
@@ -67,7 +68,7 @@ const healthy = (unit: Unit): boolean => unit.hp >= unitMaxHp(unit) * .65 && uni
 /** Health, morale, armor, veterancy and ranged support all affect the estimate;
  * this does not change actual combat stats or grant a bounty before a kill. */
 function strength(state: GameState, unit: Unit): number {
-  const faction = state.factions.find(candidate => candidate.id === unit.faction);
+  const faction = factionById(state, unit.faction);
   const home = culturalHomeGround(state, faction, unit);
   return unit.hp / unitDamageTakenMultiplier(unit) * (unitAttack(unit, faction, home) + unitDefense(unit, faction, home) * .55)
     * (.5 + Math.max(0, Math.min(100, unit.morale)) / 200) * (unit.range >= 3 ? 1.25 : 1);
@@ -142,7 +143,7 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
   const home = center(palace), previous = memory.mission;
   const policy = factionAIPolicy(state, leader.faction);
   const decide = (decision: Parameters<typeof factionAIDecision>[2], ...values: number[]) => factionAIDecision(state, leader.faction, decision, ...values);
-  const army = entityStore(state).units.query('soldier').filter(unit => unit.faction === leader.faction && isSoldier(unit) && unit.kind !== 'skirmisher'
+  const army = entityStore(state).units.queryFaction('soldier', leader.faction).filter(unit => isSoldier(unit) && unit.kind !== 'skirmisher'
     && unit.guardPost === undefined && available(unit));
   const ready = army.filter(unit => healthy(unit) && (!unit.joiningRetinue || unit.levy || distance(unit, leader) <= 5));
   // Keep a real garrison, including wounded troops. Stable assignments avoid
@@ -177,9 +178,9 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
     homeTowers.filter(tower => distance(center(tower), leader) <= 6).length);
   const endangered = decide('retreat', leader.hp, unitMaxHp(leader), leader.morale, enemyPower, friendlyPower, distance(leader, home));
   const make = (mode: FactionMissionMode, goal: Point, targetId?: number): FactionMission =>
-    ({ mode, palaceId: palace.id, leaderId: leader.id, goal: point(goal), targetId, escortIds, garrisonIds });
+    ({ mode, palaceId: palace.id, leaderId: leader.id, goal: point(goal), targetId, escortIds, escortSet, garrisonIds });
 
-  const faction = state.factions.find(candidate => candidate.id === leader.faction)!;
+  const faction = factionById(state, leader.faction)!;
   const abandonCampaign = (): void => {
     if (!memory.campaign) return;
     if (memory.campaign.levied) memory.levyLastThreatAt = state.time;
@@ -395,8 +396,8 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
     for (const { target, seconds, draft } of ranked) {
       const levied = draft > 0 && withPlayerFaction(state, faction.id, () => levyPopulation(state, draft)).ok;
       if (draft && !levied) continue;
-      if (levied) for (const unit of state.units) if (unit.faction === faction.id && unit.levy && unit.hp > 0 && !escortIds.includes(unit.id)) {
-        escorts.push(unit); escortIds.push(unit.id);
+      if (levied) for (const unit of entityStore(state).units.queryFaction('soldier', faction.id)) if (unit.levy && unit.hp > 0 && !escortSet.has(unit.id)) {
+        escorts.push(unit); escortIds.push(unit.id); escortSet.add(unit.id);
       }
       memory.campaign = { palaceId: target.id, goal: center(target), until: state.time + decide('campaignDuration',seconds), levied };
       const mission = campaignMission();
@@ -418,7 +419,7 @@ export function updateFactionStrategies(state: GameState, queries: FactionStrate
   for (const faction of state.factions) {
     if ((faction.id <= 0 || isHumanFaction(state, faction.id)) || faction.villageId !== undefined || faction.defeated || faction.relation === 'confederated') { memories.delete(faction.id); continue; }
     const store = entityStore(state);
-    const leader = store.units.query('leader').find(unit => unit.faction === faction.id && unit.hp > 0);
+    const leader = store.units.queryFaction('leader', faction.id).find(unit => unit.hp > 0);
     if (!leader || leader.order === 'hold' || leader.forcedAttack) { memories.delete(faction.id); continue; }
     let memory = memories.get(faction.id);
     const policy = factionAIPolicy(state, faction.id);
@@ -426,7 +427,7 @@ export function updateFactionStrategies(state: GameState, queries: FactionStrate
     const emergency = memory?.mission?.mode !== 'recover' && !!factionAIDecision(state, faction.id, 'emergency', leader.hp, unitMaxHp(leader), leader.morale);
     // The offensive has its own native planning clock; resolve the indexed
     // home before the generic mission timer can defer a new launch.
-    const palaces = store.buildings.query('palace').filter(building => building.faction === faction.id && buildingReady(building));
+    const palaces = store.buildings.queryFaction('palace', faction.id).filter(buildingReady);
     const palace = palaces.find(building => building.id === leader?.home)
       ?? palaces.sort((a, b) => distance(a, leader ?? a) - distance(b, leader ?? b))[0];
     if (!palace) { memories.delete(faction.id); continue; }
@@ -438,7 +439,7 @@ export function updateFactionStrategies(state: GameState, queries: FactionStrate
       memory.nextAt = state.time + policy.parameters.decisionInterval;
       // The native offensive owns the soldiers. The existing patrol transport
       // moves only the supporting Leader and permits immediate self-defense.
-      memory.mission = { mode: 'patrol', palaceId: palace.id, leaderId: leader.id, goal: offensive.goal, escortIds: [], garrisonIds: [] };
+      memory.mission = { mode: 'patrol', palaceId: palace.id, leaderId: leader.id, goal: offensive.goal, escortIds: [], escortSet: new Set(), garrisonIds: [] };
       leader.destination = undefined;
       commandFormation(state, leader, memory, queries);
       continue;
@@ -496,8 +497,9 @@ function commandFormation(state: GameState, leader: Unit, memory: StrategyMemory
   if (!leader.infantryFormation?.active) return;
   // The drill system controls every eligible professional soldier. Do not also
   // give those same soldiers contradictory home-garrison orders.
-  mission.escortIds = entityStore(state).units.query('soldier').filter(unit => unit.faction === leader.faction && isSoldier(unit) && unit.kind !== 'skirmisher'
+  mission.escortIds = entityStore(state).units.queryFaction('soldier', leader.faction).filter(unit => isSoldier(unit) && unit.kind !== 'skirmisher'
     && unit.hp > 0 && !unit.inside && unit.order !== 'flee' && !unit.training).map(unit => unit.id);
+  mission.escortSet = new Set(mission.escortIds);
   mission.garrisonIds = [];
   leader.destination = point(goal);
   const position = memory.formationPosition;

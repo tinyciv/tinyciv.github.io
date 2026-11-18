@@ -66,6 +66,7 @@ ALLOWED_ORIGINS=$origins
 DATA_DIR=/var/lib/btv
 APP_DIR=/opt/btv/current/server-dist/client
 ACCOUNT_DATABASE_CONFIG=/etc/btv-database.json
+ANALYTICS_CONFIG=/etc/btv-analytics.json
 EOF
 chmod 0600 /etc/btv.env.next
 mv /etc/btv.env.next /etc/btv.env

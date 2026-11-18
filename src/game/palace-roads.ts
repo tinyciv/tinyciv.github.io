@@ -4,6 +4,7 @@ import { buildingOverlapsVillageBorders } from './border-placement';
 import { markWorldChanged } from './world-revisions';
 import { entityStore } from './entity-store';
 import { invalidateNavigation, traversable } from './pathfinding';
+import { hermitCabinOverlaps } from './placement-occupancy';
 import { reliefFootprintAllowed } from './relief';
 import { farmAt, planRoadFarmRelocation, relocateFarm } from './farm-relocation';
 import { buildingReady, buildingSize, buildingWidth, buildingHeight, isFarmKind, isWallKind, tileAt, WATER, type Building, type GameState } from './types';
@@ -22,7 +23,7 @@ export function addPalaceRoadRing(state: GameState, palace: Building): number {
   for (const entity of state.buildings) id = Math.max(id, entity.id);
   for (let y = palace.y - 1; y <= palace.y + size; y++) for (let x = palace.x - 1; x <= palace.x + size; x++) {
     if (x !== palace.x - 1 && x !== palace.x + size && y !== palace.y - 1 && y !== palace.y + size) continue;
-    if (buildingOverlapsVillageBorders(state, 'road', x, y, palace.faction)) continue;
+    if (hermitCabinOverlaps(state, x, y) || buildingOverlapsVillageBorders(state, 'road', x, y, palace.faction)) continue;
     const tile = tileAt(state.world, x, y);
     if (!tile || isForbidden(state, x, y, palace.faction) || WATER.has(tile.terrain) || !traversable(state.world, x, y) || !reliefFootprintAllowed(state.world, x, y)) continue;
     if (state.buildings.some(building => {

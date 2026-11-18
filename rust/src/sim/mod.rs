@@ -22,6 +22,7 @@ pub mod ai_policy;
 pub mod ai_logic;
 pub mod ai_empire;
 pub mod ai_investment;
+pub mod defense_placement;
 pub mod maintenance;
 pub mod world_features;
 pub mod diplomacy;
@@ -29,9 +30,11 @@ pub mod cheats;
 pub mod boat_push;
 pub mod galleys;
 pub mod warships;
+pub mod vessel_navigation;
 pub mod fisheries;
 pub mod field_cannons;
 pub mod military_academies;
+pub mod civic_buildings;
 pub mod rowboats;
 pub mod entities;
 pub mod forts;
@@ -152,6 +155,7 @@ impl Sim {
         world.init_resource::<ai_policy::Policies>();
         world.init_resource::<ai_empire::Empire>();
         world.init_resource::<ai_investment::Investments>();
+        world.init_resource::<defense_placement::DefensePlacement>();
         world.init_resource::<diplomacy::Diplomacy>();
         world.init_resource::<cheats::Cheats>();
         world.init_resource::<boat_push::BoatPush>();
@@ -160,6 +164,7 @@ impl Sim {
         world.init_resource::<fisheries::Fisheries>();
         world.init_resource::<field_cannons::FieldCannons>();
         world.init_resource::<military_academies::MilitaryAcademies>();
+        world.init_resource::<civic_buildings::CivicBuildings>();
         world.init_resource::<SavedSections>();
         world.init_resource::<entities::EntityTables>();
         world.init_resource::<destruction::Destructions>();
@@ -248,6 +253,7 @@ impl Sim {
     /// A new host store is importing a state: drop every unit and building.
     pub fn entities_reset(&mut self) {
         self.world.resource_mut::<military_academies::MilitaryAcademies>().clear_sites();
+        self.world.resource_mut::<civic_buildings::CivicBuildings>().clear_sites();
         thermal_baths::clear(&mut self.world);
         granaries::clear(&mut self.world);
         let width = self.world.resource::<structures::StructureIndex>().width();
@@ -258,7 +264,7 @@ impl Sim {
     pub fn entity_insert(&mut self, table: u32, id: i64) -> bool { entities::insert(&mut self.world, table, id) }
     /// Role bits of the removed row, or `entities::MISSING`.
     pub fn entity_remove(&mut self, table: u32, id: i64) -> u32 {
-        if table == entities::BUILDINGS { thermal_baths::remove(&mut self.world, id); }
+        if table == entities::BUILDINGS { thermal_baths::remove(&mut self.world, id); self.world.resource_mut::<civic_buildings::CivicBuildings>().remove(id); }
         if table == entities::BUILDINGS { self.world.resource_mut::<military_academies::MilitaryAcademies>().remove(id); }
         if table == entities::BUILDINGS {
             if let Some((entity, _)) = self.world.resource::<entities::EntityTables>().buildings.locate(id) {
@@ -283,11 +289,16 @@ impl Sim {
     /// Unpublishes every building row; the host republishes for this width.
     pub fn structures_clear(&mut self, width: i32) {
         self.world.resource_mut::<military_academies::MilitaryAcademies>().clear_sites();
+        self.world.resource_mut::<civic_buildings::CivicBuildings>().clear_sites();
         self.world.resource_scope(|world, mut index: Mut<structures::StructureIndex>| index.clear(world, width));
     }
     pub fn structure_upsert(&mut self, id: i64, faction: f64, x: f64, y: f64, kind: u32, flags: u32) {
         let Some((entity, sequence)) = self.world.resource::<entities::EntityTables>().buildings.locate(id) else { return; };
         self.world.resource_mut::<military_academies::MilitaryAcademies>().site(id, kind, faction, flags);
+        self.world.resource_mut::<civic_buildings::CivicBuildings>().site(id, kind, faction, x, y, flags);
+        if matches!(kind, kinds::building::HOSPITAL | kinds::building::APARTMENTS | kinds::building::FACTORY | kinds::building::GOLD_MINE) {
+            self.world.entity_mut(entity).insert(civic_buildings::CivicStructure);
+        } else { self.world.entity_mut(entity).remove::<civic_buildings::CivicStructure>(); }
         if kind == kinds::building::MILITARY_ACADEMY && faction.is_finite() && flags & 5 == 5 {
             self.world.entity_mut(entity).insert(military_academies::Academy);
         } else { self.world.entity_mut(entity).remove::<military_academies::Academy>(); }
@@ -335,6 +346,8 @@ impl Sim {
         sections.push((save::OFFENSIVES, &offensives));
         let offensive_ai = self.world.resource::<offensive_ai::OffensiveAi>().snapshot();
         sections.push((save::OFFENSIVE_AI, &offensive_ai));
+        let civic = self.world.resource::<civic_buildings::CivicBuildings>().snapshot();
+        sections.push((save::CIVIC_ECONOMY, &civic));
         let mut out = std::mem::take(&mut self.export);
         save::encode(&sections, &mut out);
         self.export = out;
@@ -363,6 +376,7 @@ impl Sim {
         let mut campaign = campaign::Campaign::default();
         let mut offensives = offensive::Offensives::default();
         let mut offensive_ai = offensive_ai::OffensiveAi::default();
+        let mut civic = civic_buildings::CivicBuildings::default();
         for (id, range) in sections {
             match id {
                 save::CORE if range.len() == save::CORE_LENGTH => core = Some(&data[range]),
@@ -390,6 +404,7 @@ impl Sim {
                     let Some(restored) = offensive_ai::OffensiveAi::restore(&data[range]) else { return false; };
                     offensive_ai = restored;
                 }
+                save::CIVIC_ECONOMY => { if !civic.restore(&data[range]) { return false; } }
                 save::AI_POLICIES => {
                     let Some(saved) = ai_policy::decode(&data[range]) else { return false; };
                     policies = Some(saved);
@@ -417,6 +432,7 @@ impl Sim {
         self.world.insert_resource(campaign);
         self.world.insert_resource(offensives);
         self.world.insert_resource(offensive_ai);
+        self.world.insert_resource(civic);
         destruction::restore(&mut self.world, destruction);
         if let Some(saved) = policies { ai_policy::restore(&mut self.world, saved); }
         if let Some(saved) = quests { if !quests::restore(&mut self.world, &saved) { return false; } }

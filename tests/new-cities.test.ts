@@ -2,6 +2,7 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { insideOwnBorders, territory, UNCLAIMED } from '../src/game/borders';
 import { citySummaries } from '../src/game/cities';
+import { buildingMaintenance, factionMaintenanceBreakdown, townBuildTerms } from '../src/game/maintenance';
 import { BUILD_COSTS, buildAt, updateGame, validateBuildAt } from '../src/game/simulation';
 import { updateConstruction } from '../src/game/structures';
 import { buildingReady, type Building, type GameState } from '../src/game/types';
@@ -32,8 +33,11 @@ describe('founding another city', () => {
     expect(supportsBuildStroke('palace')).toBe(false);
   });
 
-  it('costs 100 gold, takes 90 seconds of builder work, then claims a named empty city', () => {
+  it('costs 100 gold and completes the first new town with four residents after 65 seconds of builder work', () => {
     const state = fixture();
+    const faction = state.factions[0];
+    faction.firstTownFoundingAvailable = true;
+    expect(townBuildTerms(state, faction)).toEqual({ upkeep: 5, residents: 4 });
     expect(insideOwnBorders(state, 0, 20.5, 10.5)).toBe(false);
     state.factions[0].gold = 99;
     expect(buildAt(state, 'palace', 20, 10)).toMatchObject({ ok: false, message: 'Need 100 gold.' });
@@ -41,16 +45,33 @@ describe('founding another city', () => {
     expect(buildAt(state, 'palace', 20, 10).ok).toBe(true);
     const palace = state.buildings.find(building => building.kind === 'palace' && building.id !== 1)!;
     expect(state.factions[0].gold).toBe(0);
-    expect(palace).toMatchObject({ capacity: 4, cityName: 'Roma', construction: { duration: 90, paidGold: 100, waitingForBuilder: true } });
+    expect(palace).toMatchObject({ capacity: 4, cityName: 'Roma', construction: { duration: 65, paidGold: 100, waitingForBuilder: true } });
+    expect(faction.firstTownFoundingAvailable).toBe(true);
     expect(insideOwnBorders(state, 0, 20.5, 10.5)).toBe(false);
     for (let i = 0; i < 200 && palace.construction?.waitingForBuilder; i++) updateGame(state, .1, idle);
     expect(palace.construction?.waitingForBuilder).toBe(false);
     const start = palace.construction!.startedAt;
-    state.time = start + 89.99; updateConstruction(state); expect(buildingReady(palace)).toBe(false);
-    state.time = start + 90; updateConstruction(state); expect(buildingReady(palace)).toBe(true);
+    const previousPopulation = faction.population;
+    state.time = start + 64.99; updateConstruction(state); expect(buildingReady(palace)).toBe(false);
+    state.time = start + 65; updateConstruction(state); expect(buildingReady(palace)).toBe(true);
     expect(insideOwnBorders(state, 0, 20.5, 10.5)).toBe(true);
-    expect(citySummaries(state).find(summary => summary.palace.id === palace.id)).toMatchObject({ name: 'Roma', housing: 4, population: 0, food: 4 });
+    expect(faction.population).toBe(previousPopulation + 4);
+    expect(faction.firstTownFoundingAvailable).toBeUndefined();
+    expect(citySummaries(state).find(summary => summary.palace.id === palace.id)).toMatchObject({ name: 'Roma', housing: 4, population: 4, food: 0 });
+    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(5);
     expect(state.buildings.filter(building => building.kind === 'house')).toHaveLength(0);
+
+    expect(townBuildTerms(state, faction)).toEqual({ upkeep: 31.25, residents: 0 });
+    faction.gold = 100;
+    expect(buildAt(state, 'palace', 25, 14).ok).toBe(true);
+    const later = state.buildings.find(building => building.kind === 'palace' && building.x === 25)!;
+    later.construction = { startedAt: state.time - 65, duration: 65 };
+    updateConstruction(state);
+    expect(buildingReady(later)).toBe(true);
+    expect(citySummaries(state).find(summary => summary.palace === later)?.population).toBe(0);
+    expect(faction.population).toBe(previousPopulation + 4);
+    expect(buildingMaintenance(state, palace)).toBe(11.25);
+    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(42.5);
   });
 
   it('allows a settlement on an unclaimed footprint beside a foreign guard post', () => {
@@ -67,7 +88,7 @@ describe('founding another city', () => {
     expect(buildAt(state, 'palace', 20, 10).ok).toBe(true);
     expect(state.factions[0]).toMatchObject({ gold: gold - BUILD_COSTS.palace.gold, food, production });
     expect(state.buildings.find(building => building.kind === 'palace' && building.x === 20)).toMatchObject({
-      faction: 0, y: 10, construction: { duration: 90, paidGold: 100, waitingForBuilder: true },
+      faction: 0, y: 10, construction: { duration: 65, paidGold: 100, waitingForBuilder: true },
     });
     expect(foreignPost.faction).toBe(1);
   });

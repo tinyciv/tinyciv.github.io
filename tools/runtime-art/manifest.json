@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "sourceBytes": 53539510,
-  "outputBytes": 10201734,
+  "sourceBytes": 53563324,
+  "outputBytes": 10211056,
   "files": [
     {
       "source": "assets/bridges/stone-2b/lr-end-e.png",
@@ -1001,10 +1001,10 @@
         32,
         32
       ],
-      "sourceBytes": 2471,
-      "bytes": 1520,
-      "fingerprint": "ea5c171d3a13c26d28c8e7e49a085806b1feff50e7c6eaa9adf477115f910863",
-      "sha256": "a3c8cf182a93bd59791bf49ca46052fdc397a54bb6649c126ac72af6742b5322"
+      "sourceBytes": 857,
+      "bytes": 310,
+      "fingerprint": "3c4dd516b87d228ef89453b250c221495b698f8a9f0aa8ba8d495e3ceb23af67",
+      "sha256": "fbc155a09300feada90223e0c4a96fc7ba1497377846746034b5d05910c0b1f4"
     },
     {
       "source": "assets/exploration/ruins-b.png",
@@ -1018,10 +1018,10 @@
         32,
         32
       ],
-      "sourceBytes": 2324,
-      "bytes": 1380,
-      "fingerprint": "c6d00946d349bfc40f19874f1d5a7a45ccc24f5379dbe71b5c6e13285fbe939f",
-      "sha256": "026cca8c2cc603f61bb76a5abb0404019ad6aa1fd096a3882121466c8c299815"
+      "sourceBytes": 793,
+      "bytes": 306,
+      "fingerprint": "6c65a234552893536cc2f21736ec4dfc8e9d20cdc258b38a73ad1a02647f89b0",
+      "sha256": "dfa3bd3dca4fbc569a0e4bfa4eebcdc3e4b61efe60f01c68b3269e4f383ee5d7"
     },
     {
       "source": "assets/exploration/ruins-c.png",
@@ -1035,10 +1035,10 @@
         32,
         32
       ],
-      "sourceBytes": 2218,
-      "bytes": 1328,
-      "fingerprint": "98b2f5ca2cfe7b2ce6f01719ee71ef2f6ab70836a27ad8d0f28ef823d60d93c1",
-      "sha256": "1707fdc5343894f80c3a57ce01f748e29accd3909b0ff6331892f5e725f3ce35"
+      "sourceBytes": 778,
+      "bytes": 280,
+      "fingerprint": "fd418d9526e372a9d57c13a97b3e0791c556373a1aea395538ca7a70182c05fc",
+      "sha256": "9219026eb3889a82778107442bf46cf1f7dc1e6540f458a9227b0b51ce881497"
     },
     {
       "source": "assets/farms/fence-horizontal.png",
@@ -1141,6 +1141,23 @@
       "bytes": 297636,
       "fingerprint": "cc8802226e7e5ca73db62a9a39964c6dcaeccdd4aab1bc7b53409ff49f9dbbb9",
       "sha256": "d1c1d880df6c9e659ee9d3d93c2e3a32d3f8f15f8bf0032e58e452c86650a3ce"
+    },
+    {
+      "source": "assets/farms/turned-loam-joins.png",
+      "output": "assets/runtime/farms/turned-loam-joins.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        256
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "sourceBytes": 4416,
+      "bytes": 752,
+      "fingerprint": "fbdaaf8dedb9fc500fca7b8beef6a435f695ca7d2926aba9c9642d6202c88199",
+      "sha256": "03a77bed7eb7934ba44fca89cf71df602e9979bd88abb0b05fc069c5c6633b10"
     },
     {
       "source": "assets/fishing/fish-breach.png",
@@ -3823,10 +3840,10 @@
         960,
         840
       ],
-      "sourceBytes": 56007,
-      "bytes": 23936,
-      "fingerprint": "d94b6ac32d3b0f35d18964d232588218292d4fc591ac4e0b627ae7f87ad7faf1",
-      "sha256": "33242054516ee6e3e92171fd96123c1b0ec12b5d06b1d77a0288a32b10b68c9d"
+      "sourceBytes": 53385,
+      "bytes": 23282,
+      "fingerprint": "269bc468d4e2d79ab0ba8439dda189339bcf6fc51ed17e3f2df355b9ca75c737",
+      "sha256": "f19d7a1d6eb6eaa81bcde97f73458765f3581150fa9c3c28d4208b51960a9f01"
     },
     {
       "source": "scenarios/island-deathmatch-map.png",
@@ -3840,10 +3857,10 @@
         1100,
         500
       ],
-      "sourceBytes": 6827,
-      "bytes": 1928,
-      "fingerprint": "2fce678fe1cd24e6655eda948b2b561344aa4f04e140a98949909df2d18cf673",
-      "sha256": "ae74c9015bca6eb7d66392d5d0e97e12468e29e04e61014344a598d1f2c229fd"
+      "sourceBytes": 6687,
+      "bytes": 1790,
+      "fingerprint": "e9f3bf05dec2cd9bb0d9f9e321ccb19d8def97f26dda9ae2abf3e96f5cd99591",
+      "sha256": "807c564c9608c75a8a66e2822e8a4775a8e6914d1c52ae309e7713f053f7d8a9"
     },
     {
       "source": "scenarios/musketry-deathmatch-map.png",
@@ -3857,10 +3874,10 @@
         1120,
         273
       ],
-      "sourceBytes": 6556,
-      "bytes": 2504,
-      "fingerprint": "61d1397ef563f7b8504a135d0de7236e4ffc9847cd98ba4a599463d427e66741",
-      "sha256": "cd6e72831db82a1c8478b41d8711238e5250c37cf6c70a7e027570ccce5eeca4"
+      "sourceBytes": 6528,
+      "bytes": 2490,
+      "fingerprint": "52426290d374fafc56cc39d45b9e2e3178250006df9d698b485dbc889a7a33b2",
+      "sha256": "8984459edcb71cd4c879bd01dbd51e26b8d525bc18cf3708a11d42a35d19d876"
     },
     {
       "source": "scenarios/no-mans-land-map.png",
@@ -3874,10 +3891,10 @@
         1200,
         720
       ],
-      "sourceBytes": 28336,
-      "bytes": 9274,
-      "fingerprint": "b7a90f167bfa3c8b254de7c15275aea453a7f74210ffa8005687999ec359c00d",
-      "sha256": "ff3db0d70708f43cb1c0d5006c1e34c79889a09c96a92067d16e587e39f99970"
+      "sourceBytes": 27582,
+      "bytes": 9248,
+      "fingerprint": "51cc8053aed5c518e82aab7238c69c68ec87625bb3f60e39d4a84cbddd5d1f3a",
+      "sha256": "8f06adb23a92d61b76ea16800b77ca01f54e6b43545ffce0832c5cb72f3d36df"
     },
     {
       "source": "scenarios/sandbox-map.png",
@@ -3891,10 +3908,10 @@
         800,
         600
       ],
-      "sourceBytes": 7002,
-      "bytes": 1864,
-      "fingerprint": "98feb41638adc635646d5299a4b8c40a114c2fe99c8688bb53764fec32c7e6b1",
-      "sha256": "c1612171e6741e33aafff818e365f3a5cb522f3084bd9363498adb6dec8a0aa6"
+      "sourceBytes": 6887,
+      "bytes": 1846,
+      "fingerprint": "46c507f1d2bac52f18ae33a3ea2d5e6b3ea214f3c98580918f7eb4e8d18a9b04",
+      "sha256": "90ee1578e26802588c32cffcf53bb74ce1fd8e6c9a5a71bf55a136a9feef645d"
     },
     {
       "source": "scenarios/tutorial-map.png",
@@ -5478,6 +5495,23 @@
       "sha256": "5932e5b894dd1ca1391ff19b8fce58bd16ce2fb3e1ac6a7c8ee9bbb093f22a7a"
     },
     {
+      "source": "assets/units/refugee/walk.png",
+      "output": "assets/runtime/units/refugee/walk.webp",
+      "alias": true,
+      "sourceSize": [
+        80,
+        128
+      ],
+      "size": [
+        80,
+        128
+      ],
+      "sourceBytes": 4019,
+      "bytes": 3298,
+      "fingerprint": "9b7a8b1f8fce33d4a43f66dc8763d632dcf347f50fd57d6a34b7a26aeaf65469",
+      "sha256": "9cfd6de174787e6553f1f9aa6283cc69982e34732ed2a7c66eb0ab6d9923afa7"
+    },
+    {
       "source": "assets/vegetation/marsh/2A.png",
       "output": "assets/runtime/vegetation/marsh/2A.webp",
       "alias": true,
@@ -5546,6 +5580,125 @@
       "sha256": "742c3096ac0db071b896fd418fedb1af33691f46a0c6fb2fd0230c2652eebc89"
     },
     {
+      "source": "assets/vegetation/marsh/rushes.png",
+      "output": "assets/runtime/vegetation/marsh/rushes.webp",
+      "alias": true,
+      "sourceSize": [
+        112,
+        96
+      ],
+      "size": [
+        112,
+        96
+      ],
+      "sourceBytes": 5420,
+      "bytes": 2214,
+      "fingerprint": "ea8c91ccbc3719e6f0030e6934a6f2758b49990065f3ddd700363e7a2d33a95d",
+      "sha256": "29fcae0a42ba9ea311b1ba766ee313bf655b2fbd3e67655fbe13d0da7bdd2013"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/4.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/4.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 535,
+      "bytes": 198,
+      "fingerprint": "2cf43d58fc656956ad7b11b84fb723d27a7b560596dc96d964629f9b967b29d4",
+      "sha256": "7d6a9d8cb6f7a93e399b35ed72508b0d301d6f62dbf60b39793a152eccd5a410"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/5.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/5.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 943,
+      "bytes": 370,
+      "fingerprint": "55358ab72aa47ca1d58c0ed0bfb185b2509b35697cca4eaba4e3d167812b729e",
+      "sha256": "885dab800e49f81600792e7757c30297ee13e74e5c9771e2f178ae9ab82184ae"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/6.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/6.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 682,
+      "bytes": 286,
+      "fingerprint": "d5aa6e82fde03516738c72722b167518759d9033572d8b078a08efd6a8d77bed",
+      "sha256": "e200e5f587b72498e086a46486c83f9fd41b49324dab8088297583b4510c65f2"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/7.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/7.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 1125,
+      "bytes": 484,
+      "fingerprint": "6b7425abe6cc6766d5c27fa48dc1c490a858f59a298ec14778465bab1410d4f0",
+      "sha256": "4661caf65395d366b95ee2fb7f6122008b5333329edfcd71b5dcf4fbabd11f7d"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/8.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/8.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 591,
+      "bytes": 236,
+      "fingerprint": "449c2603bb70ea82f9bc4d56de09e7020b5c9a470b2750f9c21da76bca016dad",
+      "sha256": "b08c480b9af6cd055dcdf7a306042be747fa7964a9bfc7a1d97f06f7ce24e2f6"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/9.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/9.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 662,
+      "bytes": 286,
+      "fingerprint": "ad4fe672a729c05e16019f6614acbcf4faf9597b2170f93f056e3131ae2a5bb8",
+      "sha256": "88ec0c09382d39859027147d83944299b195e3b05a7c0cad3bc5dfc4b9e82d76"
+    },
+    {
       "source": "assets/vegetation/meadow/grassland/medium.png",
       "output": "assets/runtime/vegetation/meadow/grassland/medium.webp",
       "alias": true,
@@ -5595,6 +5748,193 @@
       "bytes": 378,
       "fingerprint": "ccd474bec627e9705ac54cfe1161a82cf0df4a5edd7122e6b5431faad89e85e6",
       "sha256": "f2228a14379b5804d29f0396ce24b8b303aa51b57f112b9b02f3d129b188b3b2"
+    },
+    {
+      "source": "assets/vegetation/meadow/grassland/variants.png",
+      "output": "assets/runtime/vegetation/meadow/grassland/variants.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        144
+      ],
+      "size": [
+        272,
+        144
+      ],
+      "sourceBytes": 6439,
+      "bytes": 2460,
+      "fingerprint": "89e7271e4e601d83a5ef4da62745ae0281f23367f15d6a15bf84f2c5310f1180",
+      "sha256": "cd7677322727109172d174f4d65466161f36bd609d228c8eac44a624486b7f56"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/1.png",
+      "output": "assets/runtime/vegetation/meadow/plains/1.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 578,
+      "bytes": 242,
+      "fingerprint": "6b7fd9b5acbaf6b73f8d4243892eb7b00a63150d21c95e65f770ecceec356025",
+      "sha256": "3d6a946c9da186e34c169d42bde14e08e295cb3cb818e43874b01b0d065f14c5"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/2.png",
+      "output": "assets/runtime/vegetation/meadow/plains/2.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 725,
+      "bytes": 288,
+      "fingerprint": "e319990d44893a00de6964419d95a17f9648eb429c445c6fdc8ddd7d310cb6f9",
+      "sha256": "53beb4294bf308aaaec90adc82662a5841d9066f09f267d74d95c2b80a1d023d"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/3.png",
+      "output": "assets/runtime/vegetation/meadow/plains/3.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 549,
+      "bytes": 238,
+      "fingerprint": "73589b1d1605e3b970cf2e087b98878d8151fb7dd0cb4024d3b299990b045b2d",
+      "sha256": "1586d733dd91a141f3ab7ab201b35b423009e50c9829c1c4161eff7a61caf7f3"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/4.png",
+      "output": "assets/runtime/vegetation/meadow/plains/4.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 251,
+      "bytes": 100,
+      "fingerprint": "5b36d56dce0daa67cc1acf0444aa9b1fff7ce020ade6f80fef7b0737ad60c52f",
+      "sha256": "47c2fa86ce4ec68ba2e8712221911ec3f651283cc8bfa49cbd38675602c19424"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/5.png",
+      "output": "assets/runtime/vegetation/meadow/plains/5.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 307,
+      "bytes": 128,
+      "fingerprint": "c3ffcebbc4d9df187dfb4e9fac72e8cbc5b19c2ea21c4345268180a079cdfe52",
+      "sha256": "afe00ba8a618b62d75a7af78f32f9a6dd4fc603123c28e25a90b54eb520ce2ca"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/6.png",
+      "output": "assets/runtime/vegetation/meadow/plains/6.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 283,
+      "bytes": 116,
+      "fingerprint": "a423fdc11ec3b25e67e659a09ec865a4da516874ea8fa7f96f7a44cbcb23d959",
+      "sha256": "60c2724db1f4df8c3e62f50f3a3e47181ee47a16f603153aba96ea3bc2283c4d"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/7.png",
+      "output": "assets/runtime/vegetation/meadow/plains/7.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 375,
+      "bytes": 166,
+      "fingerprint": "b0aab78914d9d5d588387927a10aab38abb85a1e61aeeed8830e4edeb70fa86b",
+      "sha256": "40b74c3122dc6cdd48b26c49b2fb78edc5459ea364445cbf36ad095967f3758e"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/8.png",
+      "output": "assets/runtime/vegetation/meadow/plains/8.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 520,
+      "bytes": 224,
+      "fingerprint": "9d7327515a51a4b085396c89cb5a20bb6699f61a6a263c51c61158ab975c7543",
+      "sha256": "b5ab59608ebf4214d957a05dc60c4af9916c20f3a0c632fe79441a3d5ac20575"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/9.png",
+      "output": "assets/runtime/vegetation/meadow/plains/9.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        16
+      ],
+      "size": [
+        272,
+        16
+      ],
+      "sourceBytes": 374,
+      "bytes": 172,
+      "fingerprint": "f4e4bc00f23ece156f7143ae107aeccc11ef5b055c0b6527223c5acdf692991c",
+      "sha256": "ce64ea5756833605331e092570c547d5d9e542edeeb35f2a6c463a6c599f18be"
+    },
+    {
+      "source": "assets/vegetation/meadow/plains/variants.png",
+      "output": "assets/runtime/vegetation/meadow/plains/variants.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        144
+      ],
+      "size": [
+        272,
+        144
+      ],
+      "sourceBytes": 3264,
+      "bytes": 1246,
+      "fingerprint": "9f9b2c989aed0162213512aaf73bc02f803c85c9826f8291e66a42a89645f65c",
+      "sha256": "738a941a1855985a3321004131080eed0cc950d352e5dce2029f17cbbe871874"
     },
     {
       "source": "assets/vegetation/medieval-nature.png",

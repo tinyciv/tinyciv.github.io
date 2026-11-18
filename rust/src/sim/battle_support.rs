@@ -75,7 +75,7 @@ impl BattleSupport {
                     || flags & BUILDING != 0 && building::route(kind) { continue; }
                 let damage = v[11] * 0.5;
                 let damage = if flags & BUILDING != 0 { damage }
-                    else { combat::incoming_damage(v[9], damage) / v[10].max(0.01) };
+                    else { combat::incoming_damage(v[9], damage * combat::CANNON_UNIT_DAMAGE_MULTIPLIER) / v[10].max(0.01) };
                 let next = (v[3] - damage).max(0.0);
                 let result = (next <= 0.0) as u32 | if flags & HOSTILE != 0 { 2 } else { 0 };
                 self.output[1 + n * RESULT..1 + (n + 1) * RESULT].copy_from_slice(&[v[0], next, result as f64]);
@@ -152,13 +152,15 @@ mod tests {
     }
 
     #[test]
-    fn cannon_splash_preserves_both_road_and_bridge_while_hitting_other_structures() {
+    fn cannon_splash_halves_damage_to_units_and_preserves_road_and_bridge_immunity() {
         let mut support = BattleSupport::default();
+        let soldier = [4.0, 0.5, 0.0, 100.0, 100.0, 0.0, unit::WARRIOR as f64,
+            (TARGETABLE | EXPOSED) as f64, 10.0, 0.0, 1.0, 100.0];
         let rows = [structure(1.0, building::ROAD, 0.5, 0),
-            structure(2.0, building::BRIDGE, 0.5, 0), structure(3.0, building::HOUSE, 0.5, 0)];
+            structure(2.0, building::BRIDGE, 0.5, 0), structure(3.0, building::HOUSE, 0.5, 0), soldier];
         support.prepare(rows.len());
         for (index, row) in rows.iter().enumerate() { support.input[index * STRIDE..(index + 1) * STRIDE].copy_from_slice(row); }
         support.run(rows.len(), 3, 0.0, 0.0, 0.0, -1.0);
-        assert_eq!(support.output[..4], [1.0, 3.0, 50.0, 2.0]);
+        assert_eq!(support.output[..7], [2.0, 3.0, 50.0, 2.0, 4.0, 75.0, 0.0]);
     }
 }

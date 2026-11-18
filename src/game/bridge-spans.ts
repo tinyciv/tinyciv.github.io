@@ -66,30 +66,33 @@ export function validateBridgeTile(state: GameState, x: number, y: number, facti
 
 /** Expand every touched water run into its whole bank-to-bank crossing. The
  * caller purchases this list atomically, so limited gold cannot strand a pier. */
-export function bridgeStroke(state: GameState, points: readonly Point[], faction = playerFaction(state)): { ok: boolean; points: Point[]; message: string } {
+interface BridgeStroke { ok: boolean; points: Point[]; spans: BridgeSpan[]; message: string }
+
+export function bridgeStroke(state: GameState, points: readonly Point[], faction = playerFaction(state)): BridgeStroke {
   return withNavigationFrame(state, () => expandBridgeStroke(state, points, faction));
 }
 
-function expandBridgeStroke(state: GameState, points: readonly Point[], faction: number): { ok: boolean; points: Point[]; message: string } {
+function expandBridgeStroke(state: GameState, points: readonly Point[], faction: number): BridgeStroke {
   const input = points.map(point => ({ x: Math.floor(point.x), y: Math.floor(point.y) }));
-  if (!input.length) return { ok: true, points: [], message: '' };
+  if (!input.length) return { ok: true, points: [], spans: [], message: '' };
   const first = input[0], horizontal = input.every(point => point.y === first.y), vertical = input.every(point => point.x === first.x);
-  if (!horizontal && !vertical) return { ok: false, points: input, message: 'Draw bridges in a straight line between banks.' };
+  if (!horizontal && !vertical) return { ok: false, points: input, spans: [], message: 'Draw bridges in a straight line between banks.' };
   const axis = horizontal && vertical ? undefined : horizontal ? 'horizontal' : 'vertical';
   const result = new Map<string, Point>();
-  let spans = 0;
+  const spans: BridgeSpan[] = [];
   for (const point of input) {
+    if (result.has(`${point.x},${point.y}`)) continue;
     if (!waterAt(state, point)) { result.set(`${point.x},${point.y}`, point); continue; }
     const span = bridgeSpanAt(state, point, faction, axis);
-    if (!span) return { ok: false, points: input, message: bridgeLimitMessage(state, faction) };
-    spans++;
+    if (!span) return { ok: false, points: input, spans: [], message: bridgeLimitMessage(state, faction) };
+    spans.push(span);
     for (const tile of [span.banks[0], ...span.tiles, span.banks[1]]) result.set(`${tile.x},${tile.y}`, tile);
   }
-  if (!spans) return { ok: false, points: input, message: 'Draw a bridge across water between two banks.' };
+  if (!spans.length) return { ok: false, points: input, spans: [], message: 'Draw a bridge across water between two banks.' };
   const expanded = [...result.values()];
   // Start from the nearer end of a drag, rather than making construction depend
   // on which water cell happened to be processed first.
   expanded.sort((a, b) => Math.hypot(a.x - first.x, a.y - first.y) - Math.hypot(b.x - first.x, b.y - first.y)
     || a.y - b.y || a.x - b.x);
-  return { ok: true, points: expanded, message: '' };
+  return { ok: true, points: expanded, spans, message: '' };
 }

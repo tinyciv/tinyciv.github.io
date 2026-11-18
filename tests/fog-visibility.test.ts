@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { beginFogFrame, endFogFrame, humanVisibilityViews, pointInSight, updateFog } from '../src/game/fog';
+import { withSimulationReads } from '../src/game/simulation-reads';
 import { scoutRealm } from './helpers/scouts';
 
 describe('visibility-only simulation fog reads', () => {
@@ -38,5 +39,25 @@ describe('visibility-only simulation fog reads', () => {
     expect(pointInSight(humanVisibilityViews(state)[0], 36.5, 24.5)).toBe(true);
     expect(state.fog!.buildings).toEqual([]);
     expect(updateFog(state).buildings.some(building => building.id === target.id)).toBe(true);
+  });
+
+  it('remembers buildings seen between scheduled memory updates', () => {
+    const state = scoutRealm(), leader = state.units[0], buildings = entityStore(state).buildings;
+    const target = { id: 500, kind: 'house' as const, faction: 1, x: 36, y: 24, hp: 100, maxHp: 100, capacity: 4 };
+    buildings.add(target);
+    withSimulationReads(state, () => {
+      updateFog(state);
+      state.time = .2;
+      buildings.add({ ...target, id: 501, x: 38 });
+      updateFog(state);
+      state.time = .7; leader.x = 32.5; leader.y = 24.5;
+      expect(pointInSight(humanVisibilityViews(state)[0], 36.5, 24.5)).toBe(true);
+      expect(state.fog!.buildings).not.toContainEqual(target);
+      updateFog(state);
+      state.time = 1.4; leader.x = 14.5; leader.y = 11.5;
+      const fog = updateFog(state);
+      expect(pointInSight(fog, 36.5, 24.5)).toBe(false);
+      expect(fog.buildings).toContainEqual(target);
+    });
   });
 });

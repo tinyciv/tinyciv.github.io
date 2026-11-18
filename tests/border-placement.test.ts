@@ -56,7 +56,7 @@ describe('construction territory rules', () => {
         expect(insideOwnBorders(state, 0, 18.5, 12.5)).toBe(false);
         const line = constructionLine({ x: 18, y: 12 }, { x: 21, y: 12 });
         expect(planConstruction(state, 'bridge', line).tiles).toEqual(line);
-        for (const point of line) expect(buildAt(state, 'bridge', point.x, point.y).ok).toBe(true);
+        expect(buildAt(state, 'bridge', 18, 12).ok).toBe(true);
         expect(state.buildings.filter(building => building.kind === 'bridge' && building.construction)).toHaveLength(4);
         expect(validateBuildAt(state, 'bridge', 17, 12).ok).toBe(false);
         expect(buildingWithinBorders(state, 'bridge', 40, 12)).toBe(false);

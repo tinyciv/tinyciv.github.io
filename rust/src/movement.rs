@@ -11,13 +11,14 @@ const WALL_PATROL: u32 = 4;
 const INSIDE: u32 = 8;
 const HUMAN_CONTROLLED: u32 = 16;
 const VESSEL_OR_PASSENGER: u32 = 32;
+const FIELD_CANNON: u32 = 18;
 const DIRECTIONS: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
 
 // Kind codes: other/wildlife=0, worker=1, scout=2, merchant=3, supplyCart=4,
 // leader=5, militia=6, warrior=7, swordsman=8, spearman=9, archer=10,
 // horseman=11, horseArcher=12, knight=13, levyInfantry=14, slinger=15,
-// skirmisher=16, marshBird=17. The host only encodes enum names; rules live here.
-fn military(kind: u32) -> bool { (5..=16).contains(&kind) || kind == 18 }
+// skirmisher=16, marshBird=17, fieldCannon=18. The host only encodes enum names; rules live here.
+fn military(kind: u32) -> bool { (5..=16).contains(&kind) || kind == FIELD_CANNON }
 fn same_faction(a: f64, b: f64) -> bool { a == b || a.is_nan() && b.is_nan() }
 pub fn civilian(kind: u32, flags: u32) -> bool { flags & ENGINEER == 0 && (1..=4).contains(&kind) }
 pub fn collision_radius(kind: u32) -> f64 {
@@ -224,29 +225,39 @@ impl Engine {
     /// Artillery has its own path follower. Query only its local gun neighbors
     /// here so two pieces never reserve or enter the same resting position.
     pub fn artillery_position_clear(&self, id: i64, x: f64, y: f64) -> bool {
-        self.artillery_clear(id, x, y, x, y, false)
+        self.artillery_obstruction(id, x, y, x, y, false).is_none()
     }
     pub fn artillery_step_clear(&self, id: i64, x: f64, y: f64, nx: f64, ny: f64) -> bool {
-        self.artillery_clear(id, x, y, nx, ny, true)
+        self.artillery_obstruction(id, x, y, nx, ny, true).is_none()
     }
-    fn artillery_clear(&self, id: i64, x: f64, y: f64, nx: f64, ny: f64, leaving: bool) -> bool {
-        let (cx, cy) = (nx.floor() as i32, ny.floor() as i32);
-        for dy in -1..=1 { for dx in -1..=1 {
-            let (tx, ty) = (cx + dx, cy + dy);
-            if tx < 0 || ty < 0 || tx >= self.width || ty >= self.height { continue; }
+    pub fn artillery_blocker(&self, id: i64, from: (f64, f64), to: (f64, f64)) -> Option<(i64, (f64, f64))> {
+        self.artillery_obstruction(id, from.0, from.1, to.0, to.1, true)
+            .map(|actor| (actor.id, (actor.x, actor.y)))
+    }
+    fn artillery_obstruction(&self, id: i64, x: f64, y: f64, nx: f64, ny: f64, leaving: bool) -> Option<Actor> {
+        const SPACING: f64 = 0.9;
+        let min_x = ((x.min(nx) - SPACING).floor() as i32).max(0);
+        let max_x = ((x.max(nx) + SPACING).floor() as i32).min(self.width - 1);
+        let min_y = ((y.min(ny) - SPACING).floor() as i32).max(0);
+        let max_y = ((y.max(ny) + SPACING).floor() as i32).min(self.height - 1);
+        let (dx, dy) = (nx - x, ny - y);
+        let length_squared = dx * dx + dy * dy;
+        for ty in min_y..=max_y { for tx in min_x..=max_x {
             if let Some(ids) = self.indexed.get(&((ty * self.width + tx) as i64)) {
                 for &other in ids {
                     let Some(actor) = self.resident(other) else { continue; };
-                    if actor.id == id || actor.kind != 18 || actor.hp <= 0.0 || actor.flags & INSIDE != 0 { continue; }
-                    let distance = (actor.x - nx).hypot(actor.y - ny);
-                    if distance >= 0.9 { continue; }
-                    // Loaded overlapping guns may leave their overlap, but a
-                    // following piece must wait instead of stacking onto it.
-                    if !leaving || distance <= (actor.x - x).hypot(actor.y - y) + 1e-7 { return false; }
+                    if actor.id == id || actor.kind != FIELD_CANNON || actor.hp <= 0.0 || actor.flags & INSIDE != 0 { continue; }
+                    let (ax, ay) = (actor.x - x, actor.y - y);
+                    let projection = ax * dx + ay * dy;
+                    // An already overlapping gun can move directly away.
+                    if leaving && projection <= 0.0 && length_squared > 0.0 { continue; }
+                    let progress = if length_squared > 0.0 { (projection / length_squared).clamp(0.0, 1.0) } else { 0.0 };
+                    let (rx, ry) = (ax - dx * progress, ay - dy * progress);
+                    if rx * rx + ry * ry < SPACING * SPACING { return Some(actor); }
                 }
             }
         } }
-        true
+        None
     }
     /// Mode-0 occupancy at a point: civilians and out-of-world points are never
     /// blocked by units (terrain sweeps reject the latter independently).

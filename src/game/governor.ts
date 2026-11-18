@@ -84,7 +84,7 @@ export function governingPalace(state: GameState, point: Point, faction: number)
 
 /** Respect a cancelled/demolished farm or home without stalling other cities. */
 export function pauseCityConstruction(state: GameState, building: Building): void {
-  const kind = isFarmKind(building.kind) ? 'camp' : building.kind === 'house' ? 'house' : undefined;
+  const kind = isFarmKind(building.kind) ? 'camp' : (building.kind === 'house' || building.kind === 'apartments') ? 'house' : undefined;
   if (!kind) return;
   const palace = governingPalace(state, { x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 }, building.faction);
   if (palace) (palace.governorPauseUntil ??= {})[kind] = state.time + 30;
@@ -108,10 +108,10 @@ export function cityDevelopmentNeeds(state: GameState, palace: Building): CityDe
   // Roads, walls and unrelated upgrades cannot affect these two totals. In
   // particular, do not run a nearest-palace scan for each of those buildings.
   const buildings = state.buildings.filter(building => building.hp > 0 && building.faction === palace.faction
-    && (building.kind === 'house' ? ownership.building(building)?.id === palace.id
+    && ((building.kind === 'house' || building.kind === 'apartments') ? ownership.building(building)?.id === palace.id
       : isFarmKind(building.kind) && farmCity(building)?.id === palace.id));
   const population = city?.population ?? 0;
-  const housing = palace.capacity + buildings.filter(building => building.kind === 'house').reduce((sum, house) => sum + house.capacity, 0);
+  const housing = palace.capacity + buildings.filter(building => (building.kind === 'house' || building.kind === 'apartments')).reduce((sum, house) => sum + house.capacity, 0);
   const collection = farmCollectionQuery(state, palace);
   const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(state.factions.find(faction => faction.id === palace.faction));
   // Budget surviving deliveries, not grain that will spoil around a long bend.

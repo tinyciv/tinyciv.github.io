@@ -1,7 +1,7 @@
 import { invalidateNavigation } from '../src/game/pathfinding';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { cultureLevel, culturePerSecond, nextCultureThreshold, updateCulture, MONUMENT_CULTURE_PER_SECOND, SETTLEMENT_CULTURE_PER_SECOND } from '../src/game/culture';
+import { BORDER_WAVE_SECONDS, cultureLevel, culturePerSecond, nextCultureThreshold, updateCulture, MONUMENT_CULTURE_PER_SECOND, SETTLEMENT_CULTURE_PER_SECOND } from '../src/game/culture';
 import { borderRadius, territory } from '../src/game/borders';
 import { updateGame } from '../src/game/simulation';
 import type { Building, GameState } from '../src/game/types';
@@ -23,15 +23,20 @@ function monument(state: GameState, faction = 0): Building {
 }
 
 describe('culture and expansion thresholds', () => {
-    it('grows settlement borders slowly without monuments, independently of population', () => {
+    it('grows settlement borders in game-wide waves without monuments, independently of population', () => {
         const state = fixture(true), before = territory(state);
         expect(culturePerSecond(state, 0)).toBe(SETTLEMENT_CULTURE_PER_SECOND);
         updateCulture(state, 499);
-        expect(cultureLevel(state.factions[0].culture)).toBe(0);
+        // The first wave claims the culture expected at its midpoint.
+        expect(state.borderWave?.culture[0]).toBeCloseTo(SETTLEMENT_CULTURE_PER_SECOND * BORDER_WAVE_SECONDS / 2);
         expect(territory(state)).toBe(before);
         state.factions[0].population = 1000;
         updateCulture(state, 1);
         expect(state.factions[0].culture).toBeCloseTo(100);
+        // Crossing a threshold waits for the next wave.
+        expect(territory(state)).toBe(before);
+        state.time = BORDER_WAVE_SECONDS; updateCulture(state, 1e-6);
+        expect(state.borderWave?.culture[0]).toBeCloseTo(100 + SETTLEMENT_CULTURE_PER_SECOND * BORDER_WAVE_SECONDS / 2);
         expect(territory(state).revision).toBe(before.revision + 1);
     });
 
@@ -110,13 +115,18 @@ describe('culture and expansion thresholds', () => {
         expect(borderRadius('palace', state.factions[0].culture)).toBeCloseTo(7 * 1.3);
     });
 
-    it('reuses the border map between thresholds during sustained production', () => {
+    it('reuses the border map within a wave and expands once per wave', () => {
         const state = fixture(); monument(state); const first = territory(state);
-        for (let i = 0; i < 149; i++) { updateCulture(state, 1); expect(territory(state)).toBe(first); }
-        updateCulture(state, 1); const second = territory(state);
-        expect(second.revision).toBe(first.revision + 1);
-        updateCulture(state, 299); expect(territory(state)).toBe(second);
-        updateCulture(state, 1); expect(territory(state).revision).toBe(second.revision + 1);
+        // Each wave claims the culture expected at its midpoint.
+        updateCulture(state, 1);
+        expect(state.borderWave?.culture[0]).toBeCloseTo(MONUMENT_CULTURE_PER_SECOND * BORDER_WAVE_SECONDS / 2);
+        expect(territory(state)).toBe(first);
+        for (let i = 0; i < 600; i++) { updateCulture(state, 1); expect(territory(state)).toBe(first); }
+        state.time = BORDER_WAVE_SECONDS; updateCulture(state, 1e-6);
+        const claimed = state.factions[0].culture! + MONUMENT_CULTURE_PER_SECOND * BORDER_WAVE_SECONDS / 2;
+        expect(state.borderWave?.culture[0]).toBeCloseTo(claimed);
+        expect(cultureLevel(claimed)).toBe(2);
+        expect(territory(state).revision).toBe(first.revision + 1);
     });
 
     it('reaches expansion thresholds consistently across repeated fractional steps', () => {

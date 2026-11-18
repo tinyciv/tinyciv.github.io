@@ -5,10 +5,11 @@ import { loadGameFonts } from './game/game-font';
 import { setMapRevealed } from './game/fog';
 import { BIOME_NAMES, RESOURCE_NAMES } from './game/geography';
 import { Renderer, MAX_ZOOM } from './game/renderer';
+import { ridgeIsLedge } from './game/ridges';
 import { createGame } from './game/simulation';
 import { TILE_SIZE, WATER, type GameState, type Point } from './game/types';
 import { generateWorldAsync } from './world/generator';
-import { LANDSCAPE_CONTROLS, LANDFORM_NAMES, resolveLandscapeParameters, type LandscapeParameter, type LandscapeParameters, type LandformFamily } from './world/options';
+import { LANDSCAPE_CONTROLS, LANDFORM_NAMES, LEDGES_ENABLED, resolveLandscapeParameters, type LandscapeParameter, type LandscapeParameters, type LandformFamily } from './world/options';
 import { AGES, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_SIZES, initialWorldSetup, newGameOptions, type WorldSetup } from './ui/world-generation';
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
@@ -28,7 +29,7 @@ const presets: Record<string, { label: string; settings: Partial<WorldSetup> }> 
 };
 const presetControls = [
   { setting: 'water', neutral: 70, keys: ['landScale'] },
-  { setting: 'age', neutral: 1, keys: ['reliefCoverage', 'mountainShare', 'hillClustering'] },
+  { setting: 'age', neutral: 1, keys: ['reliefCoverage'] },
   { setting: 'climate', neutral: 1, keys: ['moisture', 'desertThreshold', 'forestThreshold'] },
   { setting: 'temperature', neutral: 1, keys: ['equatorWidth', 'latitudeInfluence'] },
 ] as const;
@@ -36,8 +37,9 @@ const options = (choices: readonly { value: string; label: string }[]) => choice
 const indexedOptions = (choices: readonly string[]) => options(choices.map((label, index) => ({ value: String(index), label })));
 const parameterGroups = new Map<string, LandscapeParameter[]>();
 for (const key of Object.keys(LANDSCAPE_CONTROLS) as LandscapeParameter[]) {
-  if (LANDSCAPE_CONTROLS[key].group === 'World') continue;
   const group = LANDSCAPE_CONTROLS[key].group;
+  if (group === 'World' || group === 'Hills' || group === 'Mountains') continue;
+  if (group === 'Ledges' && !LEDGES_ENABLED) continue;
   parameterGroups.set(group, [...(parameterGroups.get(group) ?? []), key]);
 }
 
@@ -222,12 +224,14 @@ async function regenerate(): Promise<void> {
     state = next;
     renderer.overlays = checked('overlays'); renderer.showGrid = checked('grid');
     // One census per generated world; inspection and camera changes do not rescan it.
-    let land = 0, hills = 0, rivers = 0;
-    for (const tile of world.tiles) {
-      land += Number(!WATER.has(tile.terrain)); hills += Number(!!tile.relief);
+    let land = 0, ledges = 0, rivers = 0;
+    for (const [cell, tile] of world.tiles.entries()) {
+      land += Number(!WATER.has(tile.terrain));
+      if (tile.ridge && ridgeIsLedge(world, cell % world.width, Math.floor(cell / world.width))) ledges++;
       rivers += Number(tile.terrain === 'river' || !!tile.creek);
     }
-    $('#world-summary').textContent = `${world.width}×${world.height} · ${Math.round(land / world.tiles.length * 100)}% land · ${hills} relief · ${rivers} river tiles`;
+    const ledgeCount = LEDGES_ENABLED ? ` · ${ledges} ledge tiles` : '';
+    $('#world-summary').textContent = `${world.width}×${world.height} · ${Math.round(land / world.tiles.length * 100)}% land${ledgeCount} · ${rivers} river tiles`;
     $('#tile-inspection').textContent = '';
     updateLocation(selectedParameters);
     centerWorld(); progress(1);
@@ -298,7 +302,7 @@ canvas.onpointermove = event => {
   }
   const point = renderer.worldPoint(event.clientX, event.clientY), x = Math.floor(point.x), y = Math.floor(point.y);
   const tile = x >= 0 && y >= 0 && x < state.world.width && y < state.world.height ? state.world.tiles[y * state.world.width + x] : undefined;
-  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, tile.resource && RESOURCE_NAMES[tile.resource], tile.relief, tile.stair && 'Stair'].filter(Boolean).join(' · ') : '';
+  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, tile.resource && RESOURCE_NAMES[tile.resource], ridgeIsLedge(state.world, x, y) && 'Ledge', tile.stair && 'Stair'].filter(Boolean).join(' · ') : '';
 };
 function release(event: PointerEvent): void {
   touches.delete(event.pointerId);

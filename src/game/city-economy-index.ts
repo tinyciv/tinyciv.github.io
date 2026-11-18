@@ -1,3 +1,4 @@
+import { factoryGoldIncome } from './civic-buildings-native';
 import { chargesMaintenance } from './maintenance';
 import { EconomyInputs } from './economy-inputs';
 import { entityStore } from './entity-store';
@@ -85,13 +86,13 @@ export class CityEconomyIndex {
   }
 
   private addHome(building: Building, ownership: ReturnType<typeof cityOwnership>): void {
-    if (building.kind !== 'house' && building.kind !== 'palace') return;
+    if ((building.kind !== 'house' && building.kind !== 'apartments') && building.kind !== 'palace') return;
     const group = this.groups.get(building.faction);
     if (!group) return;
     group.buildings.push(building);
     group.scalars.add(building, building.kind, building.id, building.x, building.y, buildingReady(building),
       building.capacity, building.residents, building.unhousedResidents, building.houseLevel, building.cityName);
-    if (building.kind === 'house') group.scalars.add(ownership.building(building)?.id);
+    if ((building.kind === 'house' || building.kind === 'apartments')) group.scalars.add(ownership.building(building)?.id);
   }
 
   /** Population-only queries never prepare routes, field yields or upkeep. */
@@ -137,17 +138,18 @@ export class CityEconomyIndex {
     for (const [id, city] of this.cities) if (selected.has(city.palace.faction) && !city.seen) this.cities.delete(id);
     // Resource ownership can change independently of city population. Read its
     // authoritative index once per faction and compare the resulting value.
-    const salt = new Map<number, number>();
+    const salt = new Map<number, number>(), factory = new Map<number, number>();
     for (const city of this.cities.values()) if (selected.has(city.palace.faction)) {
       const palace = city.palace, faction = factions.get(palace.faction)!;
       if (!salt.has(faction.id)) salt.set(faction.id, saltFoodConsumptionMultiplier(state, faction.id));
+      if (!factory.has(faction.id)) factory.set(faction.id, factoryGoldIncome(state, faction.id, 1));
       city.capital = capitals.get(faction.id) === palace.id;
       city.maintenanceCapital = maintenanceCapitals.get(faction.id);
       city.maintenanceCities = maintenanceCities.get(faction.id);
       city.saltConsumption = salt.get(faction.id)!;
       city.scalars.add(palace, palace.faction, palace.capacity, city.capital,
         city.capital ? faction.purchasedRetinueSlots : undefined, faction.villageId, faction.achievements,
-        maintenanceCapitals.get(faction.id), maintenanceCities.get(faction.id), city.saltConsumption, stoneDefenseMultiplier(state, faction.id, 'tower'),
+        maintenanceCapitals.get(faction.id), maintenanceCities.get(faction.id), city.saltConsumption, factory.get(faction.id), stoneDefenseMultiplier(state, faction.id, 'tower'),
         fishingCityFoodPerEconomyCycle(state, palace.id));
     }
     for (const building of inputs.buildingsFor(selected)) {

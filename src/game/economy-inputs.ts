@@ -139,12 +139,12 @@ export class EconomyInputs implements ScalarObserver {
   private watch(member: Member): void {
     const value = member.value;
     if (!this.full) {
-      if (member.type === 'buildings' && ((value as Building).kind === 'house' || (value as Building).kind === 'palace')) observeScalars(value, homes, this);
+      if (member.type === 'buildings' && (((value as Building).kind === 'house' || (value as Building).kind === 'apartments') || (value as Building).kind === 'palace')) observeScalars(value, homes, this);
       return;
     }
     if (member.type === 'buildings') {
       const building = value as Building;
-      observeScalars(building, building.kind === 'house' || building.kind === 'palace' ? homes
+      observeScalars(building, (building.kind === 'house' || building.kind === 'apartments') || building.kind === 'palace' ? homes
         : isFarmKind(building.kind) || chargesMaintenance(building.kind)
           ? workBuildingScalars : basicBuildingScalars, this);
       if (building.guardPost) {

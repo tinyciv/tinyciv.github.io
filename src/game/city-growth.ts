@@ -1,4 +1,5 @@
 import type { CitySummary } from './cities';
+import { structuresOf, STRUCTURE_READY } from './structure-index';
 import { houseBirthProgress, palaceEnclosures } from './enclosures';
 import { type Faction, type GameState, buildingReady } from './types';
 import { rustEngine } from './rust-engine';
@@ -29,8 +30,8 @@ export function advanceCityPopulation(state: GameState, faction: Faction, summar
   huntingMultiplier: number, unfed = 0): number {
   const cities = summaries.filter(city => city.palace.faction === faction.id && buildingReady(city.palace));
   if (!cities.length) return 0;
-  const homes = state.buildings.filter(house => house.faction === faction.id && house.kind === 'house' && buildingReady(house)
-    && !((house.residents ?? 0) >= house.capacity));
+  const homes = structuresOf(state, faction.id, STRUCTURE_READY, 'house', 'apartments')
+    .filter(house => !((house.residents ?? 0) >= house.capacity));
   // Resolve the enclosure map once per economy batch. Finish all native cache
   // reads before obtaining the transfer view, since they may grow WASM memory.
   const enclosures = homes.length ? palaceEnclosures(state) : undefined;

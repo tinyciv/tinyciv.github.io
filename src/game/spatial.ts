@@ -1,11 +1,121 @@
 import { playerFaction } from './player-context';
-import { buildingSize, type Building, type GameState, type Point, type Unit } from './types';
+import { buildingHeight, buildingSize, buildingWidth, type Building, type GameState, type Point, type Unit } from './types';
 import { civilianFootprint, unitObstructs, unitBlocksNavigationCell, unitsCollide } from './collisions';
 import { entityStore, type UnitRole } from './entity-store';
 import { nativeMovement, type NativeMovementWorld } from './movement-native';
 import { structureIndex } from './structure-index';
 
 const BUCKET_SIZE = 4;
+
+const combatCell = (x: number, y: number) => `${x},${y}`;
+class CombatBuckets<T extends Point> {
+  private readonly cells = new Map<string, Set<T>>();
+  private readonly entries = new Map<T, { cell: string; order: number }>();
+  private nextOrder = 0;
+  constructor(private readonly center: (entity: T) => Point) {}
+
+  reset(entities: readonly T[]): void {
+    this.cells.clear(); this.entries.clear(); this.nextOrder = 0;
+    for (const entity of entities) this.refresh(entity);
+  }
+
+  refresh(entity: T): void {
+    const point = this.center(entity);
+    const cell = combatCell(Math.floor(point.x / BUCKET_SIZE), Math.floor(point.y / BUCKET_SIZE));
+    const previous = this.entries.get(entity);
+    if (previous?.cell === cell) return;
+    if (previous) this.remove(entity);
+    let group = this.cells.get(cell);
+    if (!group) this.cells.set(cell, group = new Set());
+    group.add(entity);
+    this.entries.set(entity, { cell, order: previous?.order ?? this.nextOrder++ });
+  }
+
+  remove(entity: T): void {
+    const previous = this.entries.get(entity);
+    if (!previous) return;
+    const group = this.cells.get(previous.cell)!;
+    group.delete(entity);
+    if (!group.size) this.cells.delete(previous.cell);
+    this.entries.delete(entity);
+  }
+
+  around(point: Point, radius: number): T[] {
+    const x0 = Math.floor((point.x - radius) / BUCKET_SIZE), x1 = Math.floor((point.x + radius) / BUCKET_SIZE);
+    const y0 = Math.floor((point.y - radius) / BUCKET_SIZE), y1 = Math.floor((point.y + radius) / BUCKET_SIZE);
+    const result: T[] = [];
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      for (const entity of this.cells.get(combatCell(x, y)) ?? []) result.push(entity);
+    }
+    return result.sort((a, b) => this.entries.get(a)!.order - this.entries.get(b)!.order);
+  }
+}
+
+const unitCenter = (unit: Unit): Point => unit;
+const buildingCenter = (building: Building): Point => ({ x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 });
+
+/** The early combat phases precede movement indexing, and their targets can
+ * include sleeping actors. Prepare each roster lazily and retain array order
+ * for callbacks whose side effects are applied sequentially. */
+class EarlyCombatQueries {
+  active = false;
+  private unitsCurrent = false;
+  private buildingsCurrent = false;
+  private readonly units = new CombatBuckets(unitCenter);
+  private readonly buildings = new CombatBuckets(buildingCenter);
+  private readonly unitObserver = {
+    added: (unit: Unit) => this.refreshUnit(unit),
+    removed: (unit: Unit) => this.units.remove(unit),
+    changed: (unit: Unit) => this.refreshUnit(unit),
+  };
+  private readonly buildingObserver = {
+    added: (building: Building) => this.refreshBuilding(building),
+    removed: (building: Building) => this.buildings.remove(building),
+    changed: (building: Building) => this.refreshBuilding(building),
+  };
+  constructor(readonly store: ReturnType<typeof entityStore>) {
+    store.units.observe(this.unitObserver);
+    store.buildings.observe(this.buildingObserver);
+  }
+  begin(): void { this.active = true; this.unitsCurrent = false; this.buildingsCurrent = false; }
+  refreshUnit(unit: Unit): void { if (this.active && this.unitsCurrent) this.units.refresh(unit); }
+  private refreshBuilding(building: Building): void { if (this.active && this.buildingsCurrent) this.buildings.refresh(building); }
+  nearbyUnits(state: GameState, point: Point, radius: number): Unit[] {
+    if (!this.unitsCurrent) { this.units.reset(state.units); this.unitsCurrent = true; }
+    return this.units.around(point, radius);
+  }
+  nearbyBuildings(state: GameState, point: Point, radius: number): Building[] {
+    if (!this.buildingsCurrent) { this.buildings.reset(state.buildings); this.buildingsCurrent = true; }
+    return this.buildings.around(point, radius);
+  }
+}
+const earlyCombatQueries = new WeakMap<GameState, EarlyCombatQueries>();
+
+export function withEarlyCombatQueries<T>(state: GameState, run: () => T): T {
+  let view = earlyCombatQueries.get(state);
+  if (view?.active) return run();
+  const store = entityStore(state);
+  if (!view || view.store !== store) { view = new EarlyCombatQueries(store); earlyCombatQueries.set(state, view); }
+  view.begin();
+  try { return run(); } finally { view.active = false; }
+}
+
+export function earlyCombatUnits(state: GameState, point: Point, radius: number): readonly Unit[] {
+  const view = earlyCombatQueries.get(state);
+  return view?.active && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(radius)
+    ? view.nearbyUnits(state, point, radius) : state.units;
+}
+
+export function earlyCombatBuildings(state: GameState, point: Point, radius: number): readonly Building[] {
+  const view = earlyCombatQueries.get(state);
+  return view?.active && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(radius)
+    ? view.nearbyBuildings(state, point, radius) : state.buildings;
+}
+
+export function refreshEarlyCombatUnit(state: GameState, unit: Unit): void {
+  earlyCombatQueries.get(state)?.refreshUnit(unit);
+}
+
 interface IndexedUnit {
   unit: Unit; order: number; cell: number; tile: number; bucketOrder: number; bucketSlot: number;
   seen: number;
@@ -101,10 +211,11 @@ export function beginUnitFrame(state: GameState): void {
     index.buildingQueries.clear();
     if (index.buildingBits.length * 32 < state.buildings.length) index.buildingBits = new Uint32Array(Math.ceil(state.buildings.length / 32));
   }
-  const units = entityStore(state).units;
+  const store = entityStore(state), units = store.units;
   const unitOrderChanged = index.unitOrder !== state.units || index.unitRevision !== units.revision;
   index.unitOrder = state.units; index.unitRevision = units.revision;
   for (const unit of units.query('active')) {
+    if (store.isWorkerDormant(unit)) continue;
     const order = units.indexOf(unit);
     let entry = index.entries.get(unit);
     const key = bucket(index, unit.x, unit.y), nextTile = tile(index, unit);
@@ -144,9 +255,10 @@ function moveBucket(index: UnitIndex, entry: IndexedUnit, key: number): void {
 
 export function refreshIndexedUnit(state: GameState, unit: Unit): void {
   const index = frames.get(state);
-  if (!index) return;
+  if (!index) { refreshEarlyCombatUnit(state, unit); return; }
   let entry = index.entries.get(unit);
-  if (entityStore(state).isUnitSleeping(unit)) {
+  const store = entityStore(state);
+  if (store.isWorkerDormant(unit) || store.isUnitSleeping(unit)) {
     if (entry) { removeBucket(index, entry); index.native.remove(unit); index.entries.delete(unit); }
     return;
   }
@@ -157,7 +269,7 @@ export function refreshIndexedUnit(state: GameState, unit: Unit): void {
   if (key === entry?.cell) { index.native.index(unit, entry.order, entry.bucketOrder, entry.tile); return; }
   if (entry) moveBucket(index, entry, key);
   else {
-    const order = entityStore(state).units.indexOf(unit), group = index.buckets[key] ?? (index.buckets[key] = []);
+    const order = store.units.indexOf(unit), group = index.buckets[key] ?? (index.buckets[key] = []);
     entry = { unit, order, cell: key, tile: nextTile, bucketOrder: index.nextBucketOrder, bucketSlot: group.length, seen: index.generation };
     if (order < 0 || index.unitOrder[order] && index.unitOrder[order] !== unit) index.uniqueUnitOrders = false;
     if (order >= index.unitBits.length * 32) index.unitBits = new Uint32Array(Math.ceil((order + 1) / 32));
@@ -260,7 +372,7 @@ export function indexedUnit(state: GameState, id: number): Unit | undefined {
 /** Keep first-living-leader selection in original unit order. Death remains
  * visible immediately even before the dead unit's index refresh. */
 export function indexedLeader(state: GameState, faction = playerFaction(state)): Unit | undefined {
-  return entityStore(state).units.query('leader').find(unit => unit.faction === faction && unit.hp > 0);
+  return entityStore(state).units.queryFaction('leader', faction).find(unit => unit.hp > 0);
 }
 
 /** A moving unit probes only its next cell; do not build an all-unit occupancy

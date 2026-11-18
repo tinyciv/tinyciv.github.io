@@ -207,6 +207,15 @@ export function provisionAtollFisheries(state: GameState, center: Point, radii: 
   return refined;
 }
 export function updateFishing(state: GameState, dt: number): number { return network(state).step(state, dt); }
+/** Explicit diagnostic reads; ordinary simulation and rendering do not call this. */
+export function fisheryPathStatus(state: GameState, id: number) {
+  const pointer = rustEngine.sim_fishery_status(simCore(state).handle, id);
+  const r = new Float64Array(rustEngine.memory.buffer, pointer, 20).slice();
+  return { id: r[0], phase: r[1], x: r[2], y: r[3], angle: r[4], route: r[5], queued: !!r[6], searching: !!r[7],
+    visited: r[8], frontier: r[9], goal: { x: r[10], y: r[11] }, maneuver: r[12],
+    currentShoreClear: !!r[13], currentTrafficClear: !!r[14], goalShoreClear: !!r[15], goalTrafficClear: !!r[16],
+    yielding: !!r[17], activeSearches: r[18], waiting: r[19] };
+}
 export function whalingPostSiteError(state: GameState, point: Point): string | undefined {
   const bridge = network(state); bridge.syncGeometry(state);
   return rustEngine.sim_fishery_placement(bridge.handle, point.x, point.y) ? undefined : 'A whaling post needs water beside its 2×2 shore site.';

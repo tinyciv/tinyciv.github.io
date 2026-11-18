@@ -1,5 +1,5 @@
 import { diplomaticRelationship } from './diplomacy-view';
-import { isHumanFaction } from './player-context';
+import { factionById, isHumanFaction } from './player-context';
 import { hostileView } from './settlement-bridge';
 import type { GameState } from './types';
 
@@ -11,7 +11,7 @@ export function atWar(state: GameState, a: number, b: number): boolean {
   if (villageWar !== undefined) return villageWar;
   if (a === -2 || b === -2) return a !== b && (a >= 0 || b >= 0);
   if (a < 0 || b < 0 || a === b) return false;
-  if (a === 0) return state.factions.find(faction => faction.id === b)?.relation === 'war';
-  if (b === 0) return state.factions.find(faction => faction.id === a)?.relation === 'war';
+  if (a === 0) return factionById(state, b)?.relation === 'war';
+  if (b === 0) return factionById(state, a)?.relation === 'war';
   return false;
 }

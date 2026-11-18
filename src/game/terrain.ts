@@ -7,6 +7,7 @@ import { creekConnections, creekLayers, creekMouthConnections } from './creek-ar
 import { bankedRiver, bankedRiverPixels, bankedRiverSprite, riverWaterPixel, WATERFALL_FRAME_SECONDS } from './banked-river-art';
 import { applyWaterMotion, waterMotion, waterMotionFrameCount, WATER_MOTION_FRAME_SECONDS } from './water-motion-art';
 import { isSaltPan, saltPanJoinMask, saltPanPixels } from './salt-pan-art';
+import { ridgeQuads } from './ridge-art';
 import type { WorldCellChanges } from './world-revisions';
 export { waterDepthAt, waterDepthField, prepareWaterDepth } from './water-depth';
 
@@ -31,8 +32,7 @@ export function terrainMinimapColor(world: World, x: number, y: number): string 
     const tile = at(world, x, y)!;
     if (tile.geothermal) return tile.geothermal <= 3 ? '#635044' : '#998365';
     if (tile.creek || bankedRiver(tile)) return '#04a0b4';
-    if (tile.relief === 'mountains') return tile.terrain === 'desert' ? '#a1734a' : tile.terrain === 'tundra' ? '#7d8e95' : '#858c7a';
-    if (tile.relief === 'hills') return tile.terrain === 'desert' ? '#b1854d' : tile.terrain === 'tundra' ? '#83958a' : tile.terrain === 'plains' ? '#96934b' : '#758b40';
+    if (tile.ridge) return isSand(tile) ? '#a7956b' : tile.terrain === 'tundra' ? '#7f9589' : '#758b40';
     if (WATER.has(tile.terrain)) return WATER_BAND_COLORS[waterDepthField(world).bands[y * world.width + x]];
     return tile.beach ? '#c9b266' : TERRAIN_COLORS[tile.terrain];
 }
@@ -61,6 +61,8 @@ export function tundraEdgeQuads(world: World, x: number, y: number): TerrainQuad
 /** Native atlas source rectangles, shared by cached and animated terrain. */
 export function terrainQuads(world: World, x: number, y: number, frame = 0, depths = waterDepthField(world)): TerrainQuad[] {
     const tile = at(world, x, y)!;
+    const cliff = ridgeQuads(world, x, y);
+    if (cliff) return cliff;
     if (broadWater(tile)) {
         frame = ((frame % 4) + 4) % 4;
         const waterMember = (nx: number, ny: number) => {
@@ -123,8 +125,9 @@ export function rasterTerrain(world: World, region?: TerrainRegion, source = pun
     for (let ty = 0; ty < height / 16; ty++) for (let tx = 0; tx < width / 16; tx++) {
         const tile = at(world, originX + tx, originY + ty)!;
         const nativeFrame = tile.waterfall ? frame : 0;
-        const sheet = source;
-        const sourceY = 0;
+        const sandyRidge = !!tile.ridge && isSand(tile) && !!desertLedges;
+        const sheet = sandyRidge ? desertLedges : source;
+        const sourceY = sandyRidge ? 64 : 0;
         for (const q of terrainQuads(world, originX + tx, originY + ty, nativeFrame, depths)) for (let py = 0; py < 8; py++) for (let px = 0; px < 8; px++) {
             const src = ((q.sy - sourceY + py) * sheet.width + q.sx + px) * 4;
             const i = (ty * 16 + q.dy + py) * width + tx * 16 + q.dx + px;
@@ -140,7 +143,7 @@ export function rasterTerrain(world: World, region?: TerrainRegion, source = pun
             water[i] = Number(broadWater(tile) && sheet.data[src + 1] > sheet.data[src] + 20 && sheet.data[src + 2] > sheet.data[src] + 20);
         }
         const tundra = tundraSource;
-        if (tile.terrain === 'tundra' && tundra) {
+        if (tile.terrain === 'tundra' && tundra && !tile.ridge) {
             const wx = originX + tx, wy = originY + ty;
             const joins = tundraEdgeQuads(world, wx, wy);
             const neighbors: { dx: number; dy: number; terrain: Terrain }[] = [];
@@ -369,9 +372,11 @@ export function paintTerrain(canvas: HTMLCanvasElement, world: World, changes?: 
     const inspect = (i: number) => {
         const tile = world.tiles[i];
         const variant = Math.min(8, Math.floor(tile.variation * 9));
+        const stair = tile.stair ? ['north', 'east', 'south', 'west'].indexOf(tile.stair) + 1 : 0;
         const ground = tile.creekGround === 'grassland' ? 1 : tile.creekGround === 'plains' ? 2 : tile.creekGround === 'desert' ? 3 : 0;
         const surface = (((terrainIds.get(tile.terrain)! * 2 + Number(tile.farm !== undefined)) * 2 + Number(!!tile.beach)) * 9 + variant) * 3 + depths.bands[i];
-        const signature = (((surface * 2 + Number(!!tile.creek)) * 4 + ground) * 4
+        const ridge = ((tile.ridge ?? 0) * 8 + (tile.ridge ? tile.ridgeTier ?? 1 : 0)) * 5 + stair;
+        const signature = ((ridge * 8192 + (surface * 2 + Number(!!tile.creek)) * 4 + ground) * 4
             + Number(!!tile.riverArt) * 2 + Number(!!tile.waterfall)) * 2 + Number(isSaltPan(tile));
         if (!incremental || signature !== signatures[i]) {
             signatures[i] = signature;

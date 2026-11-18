@@ -1,10 +1,12 @@
 import { villageRelationView } from './settlement-bridge';
 import { playerFaction } from './player-context';
 import { buildingArtTop, buildingWidth, buildingHeight, buildingReady, type Building, type GameState, type Point, type Unit } from './types';
-import { entityVisible } from './fog';
+import { entityVisible, pointExplored, presentationFog } from './fog';
 import { HOUSE_WELL_BOUNDS, HOUSE_WELL_OFFSET, sharedHouseForWell } from './house-wells';
 import { sharedWallForTower, sharedTowerForWall } from './wall-towers';
-import { irrigationChannelDistance, irrigationConnections } from './irrigation-art';
+import { irrigationConnections, irrigationLayout, irrigationLayoutDistance } from './irrigation-art';
+import { roadConnections, roadCoversPixel } from './road-sprites';
+import { placementOccupancy } from './placement-occupancy';
 import { dockArtBounds, dockConstructionBounds } from './naval-art';
 import { galleyContainsPoint } from './galley-footprint';
 
@@ -36,17 +38,22 @@ export function neutralVillageEntityAt(state: GameState, point: Point): Building
 /** Select the visible frontmost structure, including its upper-storey art.
  * Callers check units first; this never changes physical occupancy or sight. */
 export function buildingAtPoint(state: GameState, point: Point): Building | undefined {
-  // A ditch shares a farm's plot, but only its narrow visible channel should
-  // select irrigation. Clicking the grain still opens the farm's activities.
-  for (const ditch of state.buildings) {
-    if (ditch.kind !== 'irrigation' || ditch.hp <= 0 || !entityVisible(state, ditch)
-      || Math.floor(point.x) !== ditch.x || Math.floor(point.y) !== ditch.y) continue;
+  const tileX = Math.floor(point.x), tileY = Math.floor(point.y);
+  const occupancy = placementOccupancy(state);
+  const occupants = (x: number, y: number) => occupancy.at(x, y).filter(other => other.hp > 0 && entityVisible(state, other));
+  const local = occupants(tileX, tileY);
+  const ditch = local.find(b => b.kind === 'irrigation');
+  if (ditch) {
     if (ditch.construction) return ditch;
-    const links = irrigationConnections(ditch, (x, y) => state.buildings.filter(other => other.x === x && other.y === y && entityVisible(state, other)), state.world);
-    if (irrigationChannelDistance(links, (point.x - ditch.x) * 16, (point.y - ditch.y) * 16) > 2.7) continue;
-    const road = state.buildings.find(other => other.kind === 'road' && other.x === ditch.x && other.y === ditch.y && buildingReady(other) && entityVisible(state, other));
-    if (road && Math.abs(point.x - ditch.x - .5) < .25 && Math.abs(point.y - ditch.y - .5) < .25) return road;
-    return ditch;
+    const x = (point.x - tileX) * 16, y = (point.y - tileY) * 16;
+    const road = local.find(b => b.kind === 'road' && buildingReady(b));
+    if (road && roadCoversPixel(roadConnections(road, occupants, state.world), road, Math.floor(x * 2), Math.floor(y * 2))) return road;
+    const fog = presentationFog(state);
+    const links = irrigationConnections(ditch, occupants, state.world, (x, y) => pointExplored(fog, x, y));
+    const layout = irrigationLayout(ditch, links, occupants);
+    // The exposed channel selects the ditch and the surrounding grain still
+    // opens the farm's activities.
+    if (irrigationLayoutDistance(layout, x, y) <= 2.7) return ditch;
   }
   let selected: Building | undefined, frontDepth = -Infinity;
   for (const building of state.buildings) {

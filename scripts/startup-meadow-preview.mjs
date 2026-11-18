@@ -7,7 +7,8 @@ export async function captureMeadowPreview(page) {
     const { createScenarioGame } = await import('/src/game/scenario-loader.ts');
     const { Renderer } = await import('/src/game/renderer.ts');
     const { setMapRevealed } = await import('/src/game/fog.ts');
-    const { meadowTufts, MEADOW_SPRITES, loadMeadowArt } = await import('/src/game/meadow-art.ts');
+    const { MeadowPlacementCache, meadowBiome, MEADOW_SPRITES, loadMeadowArt } = await import('/src/game/meadow-art.ts');
+    const { worldRevisions } = await import('/src/game/world-revisions.ts');
     const { buildingWidth, buildingHeight, WATER } = await import('/src/game/types.ts');
     if (window.__game) window.__game.state.paused = true;
     const state = await createScenarioGame('musketry-deathmatch');
@@ -31,15 +32,17 @@ export async function captureMeadowPreview(page) {
       const x = Math.floor(unit.x), y = Math.floor(unit.y);
       if (x >= 0 && y >= 0 && x < width && y < height) units[y * width + x]++;
     }
-    const grassland = new Float32Array(width * height), plains = new Float32Array(width * height), water = new Float32Array(width * height), relief = new Float32Array(width * height);
+    const grassland = new Float32Array(width * height), plains = new Float32Array(width * height), plainsArea = new Float32Array(width * height), water = new Float32Array(width * height), relief = new Float32Array(width * height);
+    const meadow = new MeadowPlacementCache(), geometry = worldRevisions(world).geometry;
     let grasslandTufts = 0, plainsTufts = 0, biomeLeaks = 0;
     for (let index = 0; index < world.tiles.length; index++) {
       const tile = world.tiles[index], x = index % width, y = Math.floor(index / width);
       water[index] = Number(WATER.has(tile.terrain) || !!tile.creek);
       relief[index] = Number(!!tile.relief);
-      const tufts = meadowTufts(tile, x, y);
+      const tufts = meadow.get(world, x, y, geometry);
       for (const tuft of tufts) if (MEADOW_SPRITES[tuft.variant].biome !== tile.terrain) biomeLeaks++;
       if (occupied.has(index)) continue;
+      plainsArea[index] = Number(meadowBiome(tile) === 'plains');
       if (tile.terrain === 'grassland') { grassland[index] = tufts.length; grasslandTufts += tufts.length; }
       else if (tile.terrain === 'plains') { plains[index] = tufts.length; plainsTufts += tufts.length; }
     }
@@ -52,7 +55,7 @@ export async function captureMeadowPreview(page) {
       }
       return result;
     };
-    const fields = Object.fromEntries(Object.entries({ grassland, plains, buildings, roads, units, water, relief }).map(([name, values]) => [name, prefix(values)]));
+    const fields = Object.fromEntries(Object.entries({ grassland, plains, plainsArea, buildings, roads, units, water, relief }).map(([name, values]) => [name, prefix(values)]));
     const sum = (data, x, y, w, h) => {
       const stride = width + 1, x2 = x + w, y2 = y + h;
       return data[y2 * stride + x2] - data[y * stride + x2] - data[y2 * stride + x] + data[y * stride + x];
@@ -63,12 +66,16 @@ export async function captureMeadowPreview(page) {
       for (let y = 1; y < height - viewHeight; y += 2) for (let x = 1; x < width - viewWidth; x += 2) {
         const counts = Object.fromEntries(Object.entries(fields).map(([name, values]) => [name, sum(values, x, y, viewWidth, viewHeight)]));
         const target = counts[biome], other = counts[biome === 'grassland' ? 'plains' : 'grassland'];
+        if (biome === 'plains' && target === 0) continue;
         const city = Math.min(counts.buildings, 18), people = Math.min(counts.units, 10);
-        const score = target + city * (biome === 'plains' ? 4 : 7) + people * 7 + Math.min(counts.roads, 45) * .5
-          + Math.min(counts.water, 45) * .3 - counts.relief * 4 - other * .14;
+        const score = biome === 'plains'
+          ? target * 5 + counts.plainsArea * 1.5 - counts.water * .8 - counts.relief * 5 - other * .25
+            + Math.min(counts.buildings, 2) * 3 + Math.min(counts.units, 2) + Math.min(counts.roads, 10) * .25
+          : target + city * 7 + people * 7 + Math.min(counts.roads, 45) * .5
+            + Math.min(counts.water, 45) * .3 - counts.relief * 4 - other * .14;
         const candidate = { x: x + viewWidth / 2, y: y + viewHeight / 2, score, ...counts };
         if (!best || score > best.score) best = candidate;
-        if (target >= (biome === 'grassland' ? 40 : 12) && counts.buildings >= 4 && counts.units >= 1 && counts.roads >= 6
+        if (biome === 'grassland' && target >= 40 && counts.buildings >= 4 && counts.units >= 1 && counts.roads >= 6
           && (!scenic || score > scenic.score)) scenic = candidate;
       }
       best = scenic ?? best;

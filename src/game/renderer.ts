@@ -1,8 +1,6 @@
 import { drawExplorationSite, paintExplorationMessage } from './exploration-art';
 import type { ExplorationSite } from './exploration-native';
 import { maritimeArtApproved, vesselArtKey, drawMaritimeVessel, whaleSurfaceFrame, drawWhale } from './maritime-art';
-import { boardingPlankImage } from './warship-art';
-import { galleyClosestPoint } from './galley-footprint';
 import { loyaltyOf, loyaltyPanelAlpha } from './settlement-bridge';
 import { buildingDestructionPose } from './building-destruction-art';
 import { shellImpactFrame } from './shell-impact-art';
@@ -34,15 +32,17 @@ import { isRetinueMember, buildingKindForSelection } from './types';
 import { type Building, type FarmField, type GameState, type Point, type Tile, type Unit, type World, TILE_SIZE, WATER, buildingPresent, buildingReady, buildingWidth, buildingHeight, isFarmKind, isFord, isWallKind, tileAt, unitMaxHp } from './types';
 import { type Connections, buildingArtTop, buildingImageAnchor } from './sprites';
 import { drawGrainCrate } from './food-art';
-import { dirtRoadArtKey, drawDirtRoad } from './road-sprites';
+import { dirtRoadArtKey, drawDirtRoad, roadConnections } from './road-sprites';
 import { villageTrailLinks } from './village-trails';
 import { drawFish, drawFishingBoat, fishArtKey, fishSurfaceFrame, fishingBoatArtKey } from './fishing-art';
 import type { FishingBoat, FishingFish, WhaleResource } from './fishing';
 import type { HarborTradeShip } from './harbor-trade';
 import { drawTreeStump, vegetationRenderDepth, vegetationVariant } from './vegetation-art';
+import { MarshRushPlacementCache } from './marsh-rush-placement';
 import { fordCrossingAxis } from './ford-art';
 import { drawFarmOcclusion, drawFoodExpiryClock, farmOcclusionHeight, wheatJoinMask } from './farm-art';
-import { clipFarmAroundIrrigation, drawIrrigationBridge, drawIrrigationInlet, irrigationConnections } from './irrigation-art';
+import { clipFarmAroundIrrigation, drawIrrigationInlet, drawRoadsideIrrigation, irrigationConnections,
+    irrigationCropKey, irrigationLayout, type IrrigationLayout, type IrrigationRoad } from './irrigation-art';
 import { FIELD_SPOIL_WARNING_SECONDS } from './farms';
 import { farmHarvestMarkers } from './farm-parcels';
 import { buildingInteractionHighlighted } from './building-interaction-highlight';
@@ -70,21 +70,19 @@ import type { ConstructionGesturePreview } from './construction-gesture';
 import { ConstructionGhostCache, ConstructionEffectCache } from './construction-presentation';
 import { previewConstructionPlan } from './construction-display';
 import { constructionProgress } from './construction-cancellation';
-import { CONSTRUCTION_TIMER_RADIUS, CONSTRUCTION_TIMER_STEPS, drawConstructionTimer } from './construction-timer';
+import { constructionHead } from './bridge-construction';
+import { BRIDGE_CONSTRUCTION_BAR_WIDTH, BRIDGE_CONSTRUCTION_BAR_Y, CONSTRUCTION_TIMER_RADIUS, CONSTRUCTION_TIMER_STEPS, drawBridgeConstructionBar, drawConstructionTimer } from './construction-timer';
 import { hasGateWall } from './network-placement';
 import { terrainMinimapColor, waterArtKey, waterSpriteKey, waterAnimationFrame, clipFarmToLand, paintTerrain, drawAnimatedWater } from './terrain';
 import { isMapRevealed, type FogView, buildingInSight, pointExplored, pointInSight, unitInSight, presentationFog, fogRenderMask, withPresentationReads, FOG_RETURN_DELAY, FOG_RETURN_FADE } from './fog';
 import { createMinimapProjection, MinimapTerritoryMemory, minimapToWorld, worldToMinimap, type MinimapProjection } from './minimap';
-import { drawVeterancy, veterancy } from './veterancy';
+import { drawVeterancy, hasUnpaidUpkeep, veterancy } from './veterancy';
 import { borderCultureAt, territory, UNCLAIMED } from './borders';
 import { forEachEnclosureShimmerSpan, palaceEnclosures } from './enclosures';
 import { TREASURE_SPRITE } from './treasure';
 import { punyWorldImage } from './puny-world';
 import { HOUSE_WELL_OFFSET, sharedHouseForWell, sharedWellForHouse } from './house-wells';
 import { canShareWallTowerTile, sharedWallForTower, sharedTowerForWall, type TowerWallKind } from './wall-towers';
-import { visibleReliefStamps, reliefFigureDepth, reliefImage, type ReliefStamp } from './relief-art';
-import { landmarkSight } from './terrain-rays-native';
-import { ReliefFogArt } from './relief-fog-art';
 import { drawCityRibbon, CITY_RIBBON_HEIGHT, CITY_NAME_RIBBON_HEIGHT, CITY_RIBBON_MAX_WIDTH } from './city-ribbon';
 import { drawNameplate, nameplateWidth, NAMEPLATE_HEIGHT } from './nameplate';
 import { fortName } from './fort-names';
@@ -100,7 +98,7 @@ import { RESOURCE_COLORS } from './geography';
 import { ResourceArtMemory, drawResourceRoad, resourceHasObject, type ResourceCellArt } from './resource-art';
 import { drawLooseRocks } from './outcrop-art';
 import { trailArtVariant } from './road-sprites';
-import { MeadowPlacementCache, meadowFrame, type MeadowTuft } from './meadow-art';
+import { MEADOW_TUFT_SCALE, MeadowPlacementCache, meadowFrame, type MeadowTuft } from './meadow-art';
 export { TERRAIN_COLORS } from './terrain';
 export const MIN_ZOOM = .65;
 export const MAX_ZOOM = 2.2;
@@ -120,7 +118,7 @@ export interface PresentationStamp {
     x: number; y: number; width: number; height: number; depth?: number;
 }
 type Scenery = { x: number; y: number; tile: Tile };
-type SceneObject = { depth: number; exploration?: ExplorationSite; relief?: ReliefStamp; hermit?: Hermit; hermitHome?: Hermit; b?: Building; u?: Unit; death?: UnitDeath; feature?: Scenery; sign?: Point & { variant: number };
+type SceneObject = { depth: number; exploration?: ExplorationSite; hermit?: Hermit; hermitHome?: Hermit; b?: Building; u?: Unit; death?: UnitDeath; feature?: Scenery; sign?: Point & { variant: number };
     meadow?: { x: number; y: number; tuft: MeadowTuft };
     geothermal?: Point & { variant: NonNullable<Tile['geothermal']>; mask: number };
     destruction?: BuildingDestruction;
@@ -128,7 +126,7 @@ type SceneObject = { depth: number; exploration?: ExplorationSite; relief?: Reli
     fish?: FishingFish; whale?: WhaleResource; fishingBoat?: FishingBoat | HarborTradeShip; riverPost?: Point;
     resource?: { x: number; y: number; art: ResourceCellArt; fence?: boolean };
     resourceOutline?: { patch: ResourceInteractionPatch; color: string };
-    orchard?: { field: FarmField; time: number; ditchLinks?: Connections; crossingLinks?: Connections };
+    orchard?: { field: FarmField; time: number };
     presentationStamp?: PresentationStamp };
 
 /** Network frames replace GameState while preserving the same displayed world. */
@@ -200,13 +198,15 @@ export function buildingRenderDepth(b: Building, index: BuildingIndex): number {
 
 /** Structure links depend only on the presentation index (replaced whenever an
  * observed structure changes), the world and, for ditch inlets, exploration. */
+interface GroundIrrigation { layout: IrrigationLayout; road?: IrrigationRoad }
 interface StructureLinks {
     network: Connections; secondary?: Connections; attached: boolean; towerWall?: TowerWallKind;
+    irrigation?: GroundIrrigation;
     /** Atlas key of a still picture; fog memories are immutable, so it holds per index. */
     artKey?: string; artColor?: string; artRevision?: number;
     groundKey?: string;
 }
-interface LinkCache { world: World; geometry: number; exploration: number; links: Map<Building, StructureLinks>; ditches: Map<Building, StructureLinks>; keys: WeakMap<Connections, string> }
+interface LinkCache { world: World; geometry: number; exploration: number; links: Map<Building, StructureLinks>; ditches: Map<Building, StructureLinks> }
 const linkCaches = new WeakMap<BuildingIndex, LinkCache>();
 /** Border paths are immutable territory output; their local shape never changes. */
 const borderShapeKeys = new WeakMap<object, string>();
@@ -216,7 +216,7 @@ function linkCache(index: BuildingIndex, world: World, epoch: LinkEpoch): LinkCa
     let cache = linkCaches.get(index);
     const { exploration, geometry } = epoch;
     if (!cache || cache.world !== world || cache.geometry !== geometry) {
-        cache = { world, geometry, exploration, links: new Map(), ditches: new Map(), keys: new WeakMap() }; linkCaches.set(index, cache);
+        cache = { world, geometry, exploration, links: new Map(), ditches: new Map() }; linkCaches.set(index, cache);
     }
     if (cache.exploration !== exploration) {
         // Ditch inlets and clearings read explored ground; other links do not.
@@ -232,48 +232,25 @@ function structureLinks(b: Building, index: BuildingIndex, world: World, epoch: 
         const towerWall = towerSupportingWallKind(b, index), network = buildingConnections(b, index, world, waterKnown);
         links = { network, secondary: b.kind === 'bridge' ? bridgeBanks(b, index, network) : gateConnections(b, index, world),
             attached: wellAttachedToHouse(b, index) || towerWall !== undefined, towerWall };
+        if (b.kind === 'irrigation' && buildingReady(b)) {
+            const occupants = (x: number, y: number) => index.get(tileKey(x, y)) ?? [];
+            const road = occupants(b.x, b.y).find(other => other.kind === 'road' && buildingReady(other));
+            links.irrigation = { layout: irrigationLayout(b, network, occupants),
+                road: road && { building: road, links: structureLinks(road, index, world, epoch, waterKnown).network } };
+        }
         map.set(b, links);
     }
     return links;
 }
-/** JSON key of a links object, shared by every crop drawn with it. */
-function connectionsJsonKey(index: BuildingIndex, world: World, epoch: LinkEpoch, links: Connections | undefined): string {
-    if (!links) return 'null';
-    const keys = linkCache(index, world, epoch).keys;
-    let key = keys.get(links);
-    if (key === undefined) { key = JSON.stringify(links); keys.set(links, key); }
-    return key;
-}
-
 export function buildingConnections(b: Building, index: BuildingIndex, world?: World, waterKnown?: (x: number, y: number) => boolean): Connections {
     if (b.kind === 'irrigation') return irrigationConnections(b, (x, y) => index.get(tileKey(x, y)) ?? [], world, waterKnown);
+    if (b.kind === 'road') return roadConnections(b, (x, y) => index.get(tileKey(x, y)) ?? [], world);
     const links: Connections = { north: false, east: false, south: false, west: false };
-    const path = b.kind === 'road' || b.kind === 'bridge';
+    const path = b.kind === 'bridge';
     for (const [side, dx, dy] of directions) {
         const neighbors = index.get(tileKey(b.x + dx, b.y + dy)) ?? [];
         links[side] = neighbors.some(neighbor => path ? ['road', 'bridge'].includes(neighbor.kind)
             : isWallKind(b.kind) && isWallKind(neighbor.kind) && neighbor.faction === b.faction && buildingReady(neighbor));
-        if (b.kind === 'road' && world && isFord(tileAt(world, b.x + dx, b.y + dy))) links[side] = true;
-    }
-    if (b.kind === 'road') {
-        for (const [side, dx, dy, horizontal, vertical] of [
-            ['northeast', 1, -1, 'east', 'north'], ['southeast', 1, 1, 'east', 'south'],
-            ['southwest', -1, 1, 'west', 'south'], ['northwest', -1, -1, 'west', 'north'],
-        ] as const) {
-            // A cardinal elbow already joins these tiles. Only expose a corner
-            // when it is the actual link, keeping bends and junctions narrow.
-            if (!links[horizontal] && !links[vertical]
-                && index.get(tileKey(b.x + dx, b.y + dy))?.some(other => other.kind === 'road')) links[side] = true;
-        }
-    }
-    if (b.kind === 'road' && b.roadPaved) {
-        links.pavedEnds = 0;
-        const exits = [['north', 0, -1], ['east', 1, 0], ['south', 0, 1], ['west', -1, 0],
-            ['northeast', 1, -1], ['southeast', 1, 1], ['southwest', -1, 1], ['northwest', -1, -1]] as const;
-        exits.forEach(([side, dx, dy], bit) => {
-            if (links[side] && !index.get(tileKey(b.x + dx, b.y + dy))?.some(other => other.kind === 'road' && other.roadPaved && buildingReady(other)))
-                links.pavedEnds! |= 1 << bit;
-        });
     }
     if (b.kind === 'bridge' && world) {
         const bank = (dx: number, dy: number) => { const tile = tileAt(world, b.x + dx, b.y + dy); return !!tile && !WATER.has(tile.terrain); };
@@ -369,7 +346,6 @@ export class Renderer {
     private minimapClaimWorld?: World;
     private minimapClaimPalette = '';
     private fogCanvas = document.createElement('canvas');
-    private reliefFogArt = new ReliefFogArt();
     private fogPixels?: ImageData;
     private fogView?: FogView;
     private fogRevision = -1;
@@ -394,6 +370,7 @@ export class Renderer {
     private presentation?: PresentationIndex;
     private resourceMemory = new ResourceArtMemory();
     private meadowPlacements = new MeadowPlacementCache();
+    private marshRushes = new MarshRushPlacementCache();
     private buildingObjects?: { structures: readonly Building[]; index: BuildingIndex; objects: SceneObject[] };
     constructor(canvas: HTMLCanvasElement, minimap: HTMLCanvasElement) { this.canvas = canvas; this.minimap = minimap; this.mini = minimap.getContext('2d')!; this.resize(); }
     resize() {
@@ -427,6 +404,7 @@ export class Renderer {
         const resetMiniature = this.preparedWorld !== w || this.worldSeed !== w.seed
             || this.miniature.width !== w.width || this.miniature.height !== w.height;
         const changes = worldChangesSince(w, resetMiniature ? undefined : this.terrainJournalRevision);
+        this.marshRushes.refresh(w, changes);
         const revisions = worldRevisions(w), geometryChanged = this.terrainGeometryRevision !== revisions.geometry;
         this.worldSeed = w.seed;
         this.worldAppearanceRevision = revisions.appearance;
@@ -521,14 +499,15 @@ export class Renderer {
                 key = links.artKey;
             }
             const picture = art.building(b, time, color, links.network, links.secondary, links.attached, links.towerWall, key);
-            return scene.sprite(picture, (ox + b.x * s), (oy + b.y * s), scale, alpha);
+            return scene.sprite(picture, (ox + b.x * s), (oy + b.y * s), scale,
+                b.kind === 'road' && b.construction ? .25 : alpha);
         };
         scene.terrain(this.terrain, screenOx, screenOy, scale, this.width, this.height);
         const left = Math.max(0, Math.floor(-screenOx / s) - 5), right = Math.min(w.width, Math.ceil((this.width - screenOx) / s) + 2), top = Math.max(0, Math.floor(-screenOy / s) - 3), bottom = Math.min(w.height, Math.ceil((this.height - screenOy) / s) + 4);
         const time = state.time;
         const scenery: { depth: number; feature: Scenery }[] = [];
         const objects: SceneObject[] = [];
-        const drawnIronOutcrops = new Set<NonNullable<ResourceCellArt['ore']>>();
+        const drawnOres = new Set<NonNullable<ResourceCellArt['ore']>>();
         const geothermalSeen = new Set<number>();
         const presentation = this.presentation ??= new PresentationIndex();
         presentation.update(fog);
@@ -640,28 +619,31 @@ export class Renderer {
             scene.sprite(art.resource(resource), (ox + x * s), (oy + y * s), scale);
         }
         const harvestMarkers = farmHarvestMarkers(state);
-        // Roads remain below every crop stage, sack, and harvest warning.
-        const irrigationIndex = state.buildMode === 'irrigation' ? previewIndex : buildingIndex;
+        // The road surface covers a ditch wherever the two actually cross.
+        const irrigationIndex = previewKind === 'irrigation' || previewKind === 'road' ? previewIndex : buildingIndex;
+        const roadIndex = previewKind === 'road' ? previewIndex : buildingIndex;
+        const groundDitches = new Map<number, GroundIrrigation>();
         const ground = (b: Building) => b.kind === 'road' || b.kind === 'bridge' || b.kind === 'irrigation';
-        const linksKey = (links?: Connections) => connectionsJsonKey(buildingIndex, w, linkEpoch, links);
-        const linksOf = (b: Building, index: BuildingIndex) => structureLinks(b, index, w, linkEpoch, knownWater).network;
-        const bridge = (x: number, y: number, road: Connections, ditch: Connections, alpha = 1) =>
-            bake(`crossing:${linksKey(road)}:${linksKey(ditch)}`, ox + x * s, oy + y * s, 32, 32, c => drawIrrigationBridge(c, 0, 0, 32, road, ditch), alpha);
         const inlet = (x: number, y: number, side: 0 | 1 | 2 | 3, alpha = 1) =>
             bake(`inlet:${side}:${Math.floor(time * 3) % 4}`, ox + x * s, oy + y * s, 32, 32, c => drawIrrigationInlet(c, 0, 0, 32, time, side), alpha);
-        const crop = (field: FarmField, fieldTime: number, ditch?: Connections, road?: Connections) => {
-            const key = `${landKey(field.x, field.y)}:${linksKey(ditch)}:${linksKey(road)}`;
+        const crop = (field: FarmField, fieldTime: number, ditch?: GroundIrrigation) => {
+            const key = `${landKey(field.x, field.y)}:${ditch ? irrigationCropKey(ditch.layout, ditch.road) : ''}`;
             const picture = art.field(field, fieldTime, key, c => {
                 clipFarmToLand(c, this.terrain, field.x, field.y, 0, 0, 32);
                 // Irrigation cuts a gap in ground crops, never through a tree's
                 // trunk or crown. Orchards sit above the channel by footing.
-                if (ditch && !field.orchard) clipFarmAroundIrrigation(c, 0, 0, 32, ditch, road);
+                if (ditch && !field.orchard) clipFarmAroundIrrigation(c, 0, 0, 32, ditch.layout, ditch.road);
             }, fieldJoins(field, fieldTime));
             scene.sprite(picture, ox + field.x * s, oy + field.y * s, scale);
         };
-        for (const b of structures.filter(b => ground(b) && (b.kind !== 'irrigation' || !buildingReady(b)))) building(b);
         const ditchOnGround = (b: Building, alpha = 1) => {
-            building(b, irrigationIndex, alpha);
+            const ditch = structureLinks(b, irrigationIndex, w, linkEpoch, knownWater).irrigation!;
+            groundDitches.set(b.y * w.width + b.x, ditch);
+            const { layout } = ditch;
+            if (layout.shoulder)
+                bake(`roadside-ditch:${layout.key}:${Math.floor(time * 3) % 4}`, ox + b.x * s, oy + b.y * s, 32, 32,
+                    c => drawRoadsideIrrigation(c, 0, 0, 32, time, layout), alpha);
+            else building(b, irrigationIndex, alpha);
             for (const [i, [, dx, dy]] of directions.entries()) {
                 const x = b.x + dx, y = b.y + dy, tile = tileAt(w, x, y);
                 if (tile && WATER.has(tile.terrain) && pointExplored(fog, x, y)) inlet(x, y, ((i + 1) % 4) as 0 | 1 | 2 | 3, alpha);
@@ -672,6 +654,10 @@ export class Renderer {
         // only adds tile highlights, so its water cannot paint over tree crowns.
         if (previewKind === 'irrigation') for (const plan of previewPlans.values())
             if (plan.valid && plan.building.id === -1) ditchOnGround(plan.building, .55);
+        for (const b of structures) {
+            if (b.kind === 'road' && buildingReady(b)) building(b, roadIndex);
+            else if (b.kind === 'bridge' || b.kind === 'irrigation' && !buildingReady(b)) building(b);
+        }
         const expiry = (x: number, y: number) => scene.sprite(art.paint(`expiry:${s}`,
             { x: -16, y: -16, width: 32, height: 32 }, c => drawFoodExpiryClock(c, 0, 0, s, 0)), (x), Math.round(y - Math.abs(Math.sin(time * 5)) * 3 * Math.max(1, Math.round(s / 36))));
         for (let y = top; y < bottom; y++)
@@ -699,18 +685,21 @@ export class Renderer {
                     bake(`village-trail:${dirtRoadArtKey(links, x, y, 'trail')}`, ox + x * s, oy + y * s, 32, 32,
                         c => drawDirtRoad(c, links, x, y, 'trail'));
                 }
-                const ditch = (irrigationIndex === buildingIndex ? occupants : irrigationIndex.get(tileKey(x, y)))?.find(b => b.kind === 'irrigation' && buildingReady(b));
-                const ditchLinks = ditch && linksOf(ditch, irrigationIndex);
-                const ditchAlpha = ditch?.id === -1 ? .55 : 1;
-                const crossingRoad = ditch && occupants?.find(b => b.kind === 'road' && buildingReady(b));
-                const crossingLinks = crossingRoad && linksOf(crossingRoad, buildingIndex);
                 const field = cellFields[y * w.width + x];
                 const resource = resources.get(y * w.width + x);
                 // Decoration consumes the same constant-time observed occupancy
                 // indices as crops and roads. No simulation or entity scan.
-                if (!field && !occupants?.length && !resource && !rubble)
-                    for (const tuft of this.meadowPlacements.get(w, x, y))
+                // Omit meadow grass in fit-to-world overview cameras.
+                if (s >= 16 && !field && !occupants?.length && !resource && !rubble)
+                    for (const tuft of this.meadowPlacements.get(w, x, y, linkEpoch.geometry))
                         objects.push({ depth: y + tuft.y, meadow: { x, y, tuft } });
+                if (resource?.ore && !drawnOres.has(resource.ore)) {
+                    // The peaks cover units walking behind the solid front row.
+                    // Structures can occupy the open ground under the overhang.
+                    const ore = resource.ore;
+                    drawnOres.add(ore);
+                    objects.push({ depth: ore.y + ore.height - 1 / 16, resource: { x: ore.x, y: ore.y, art: resource } });
+                }
                 const resourceCovered = !!field || occupants?.some(b => !['road', 'bridge', 'irrigation'].includes(b.kind));
                 if (resource && !resourceCovered) {
                     const color = resourceInteractionColor(state, x, y, fog), patch = resourcePatches.get(y * w.width + x);
@@ -720,24 +709,18 @@ export class Renderer {
                     }
                     if (resource.road && !roadCells.has(y * w.width + x))
                         bake(`resource-road:${resource.road}:${trailArtVariant(x, y)}`, px, py, 32, 32, c => drawResourceRoad(c, resource, x, y));
-                    // Any explored member in view may emit the shared iron
-                    // mountain; its first member can be outside the camera.
-                    const iron = resource.resource === 'iron' ? resource.ore : undefined;
-                    if (resource.resource === 'salt' || (iron ? !drawnIronOutcrops.has(iron) : resourceHasObject(resource))) {
-                        if (iron) drawnIronOutcrops.add(iron);
-                        const rx = resource.ore?.x ?? x, ry = resource.ore?.y ?? y;
-                        objects.push({ depth: ry + (resource.ore?.height ?? 1) - 1 / 16, resource: { x: rx, y: ry, art: resource } });
-                    }
+                    if (!resource.ore && resourceHasObject(resource)) objects.push({ depth: y + 15 / 16, resource: { x, y, art: resource } });
                     if (resource.fences) {
                         scene.sprite(art.resourceFence(resource, false), Math.round(px), Math.round(py), scale);
                         if (resource.fences & 4) objects.push({ depth: y + 1.01, resource: { x, y, art: resource, fence: true } });
                     }
                 }
+                const roadGhost = occupants?.find(b => b.kind === 'road' && b.construction);
+                if (roadGhost) building(roadGhost);
                 if (field) {
                     const viewed = pointInSight(fog, x + .5, y + .5), fieldTime = viewed ? time : field.observedAt;
-                    if (field.orchard) objects.push({ depth: vegetationRenderDepth(y), orchard: { field, time: fieldTime, ditchLinks, crossingLinks } });
-                    else crop(field, fieldTime, ditchLinks, crossingLinks);
-                    if (crossingLinks && ditchLinks) bridge(x, y, crossingLinks, ditchLinks, ditchAlpha);
+                    if (field.orchard) objects.push({ depth: vegetationRenderDepth(y), orchard: { field, time: fieldTime } });
+                    else crop(field, fieldTime, groundDitches.get(y * w.width + x));
                     const harvest = harvestMarkers.get(field.id);
                     if (harvest && viewed) {
                         bake('food-crate-pixelhole', px, py, 32, 32, c => drawGrainCrate(c, 16, 20));
@@ -754,11 +737,10 @@ export class Renderer {
                     const bridgedFord = t.overlay === 'ford' && occupants?.some(b => b.kind === 'bridge' && buildingReady(b));
                     if (!t.geothermal && !resource && (!t.marsh || marsh) && ((t.overlay !== 'none' && !clearedPath && !bridgedFord) || palm || marsh)) {
                         const feature = { x, y, tile: t.palm && foliageOccupied ? { ...t, palm: false } : t };
-                        if ((!t.palm || !foliageOccupied) && vegetationVariant(t))
+                        if (marsh || (!t.palm || !foliageOccupied) && vegetationVariant(t))
                             objects.push({ depth: vegetationRenderDepth(y), feature });
                         else scenery.push({ depth: y + .9, feature });
                     }
-                    if (crossingLinks && ditchLinks) bridge(x, y, crossingLinks, ditchLinks, ditchAlpha);
                 }
                 if (this.showGrid) scene.graphics().rect(Math.round(px), Math.round(py), s, s).stroke({ color: '#29412b', alpha: .1, width: 1 });
             }
@@ -825,12 +807,12 @@ export class Renderer {
             objects.push({ depth: site.y + size, exploration: site });
         }
         for (const h of state.hermits ?? []) {
-            if (visible(h) && pointInSight(fog, h.x + .5, h.y + .5)) objects.push({ depth: h.y + 1, hermitHome: h });
+            if (visible(h) && pointExplored(fog, h.x + .5, h.y + .5)) objects.push({ depth: h.y + 1, hermitHome: h });
             const p = hermitPosition(h);
             if (h.status !== 'gone' && visible(p) && pointInSight(fog, p.x, p.y)) objects.push({ depth: p.y, hermit: h });
         }
         const visibleUnits:Unit[]=[],vesselAlpha=new Map<number,number>(),vesselGhosts=new Set<number>(),ghostPassengers=new Map<number,Unit>();
-        for(const u of state.units) {
+        for(const u of entityStore(state).units.query('unit')) {
             if(u.inside||u.hp<=0||u.kind!=='sailboat'&&!visible(u)||!isMapRevealed(state)&&!observationPostVisibleTo(u,playerFaction(state)))continue;
             const seen=isMapRevealed(state)||u.faction===playerFaction(state)||unitInSight(fog,u);
             if(seen) {
@@ -840,7 +822,7 @@ export class Renderer {
                     const passenger=entityStore(state).units.get(u.sailboat?.passenger??-1);
                     this.vesselSight.set(u,{time,passenger:passenger?{...passenger}:undefined,pose:{...u,
                         sailboat:u.sailboat?{...u.sailboat}:undefined,barbarianGalley:u.barbarianGalley?{...u.barbarianGalley}:undefined,
-                        warship:u.warship?{...u.warship,guns:u.warship.guns?.map(g=>({...g,shot:undefined})),boarding:undefined}:undefined}});
+                        warship:u.warship?{...u.warship,guns:u.warship.guns?.map(g=>({...g,shot:undefined}))}:undefined}});
                 }
             } else if(u.kind==='sailboat') {
                 const last=this.vesselSight.get(u),age=last?time-last.time:Infinity;
@@ -866,7 +848,7 @@ export class Renderer {
         if (!this.buildingObjects || this.buildingObjects.structures !== structures || this.buildingObjects.index !== previewIndex)
             this.buildingObjects = { structures, index: previewIndex,
                 objects: structures.filter(b => !ground(b)).map(b => ({ depth: buildingRenderDepth(b, previewIndex), b })) };
-        objects.push(...this.buildingObjects.objects, ...visibleUnits.map(u => ({ depth: reliefFigureDepth(w, u.x, u.y, u.y + (u.wallPatrol?.wall !== undefined ? .65 : isPerson(u) ? 0 : .5)), u })));
+        objects.push(...this.buildingObjects.objects, ...visibleUnits.map(u => ({ depth: u.y + (u.wallPatrol?.wall !== undefined ? .65 : isPerson(u) ? 0 : .5), u })));
         for (const sinking of state.shipSinkings ?? []) {
             const age = time - sinking.time;
             if (age < 0 || age >= 4 || !visible(sinking) || !pointInSight(fog, sinking.x, sinking.y)) continue;
@@ -878,7 +860,7 @@ export class Renderer {
             if (age < 0 || age >= UNIT_DEATH_LIFETIME || !visible(death) || !pointInSight(fog, death.x, death.y)) continue;
             // Remains participate in tree/building depth and wheat occlusion,
             // but never health bars, selection, sight, collision or targeting.
-            objects.push({ depth: reliefFigureDepth(w, death.x, death.y, death.y - .01), u: death.unit, death });
+            objects.push({ depth: death.y - .01, u: death.unit, death });
         }
         for (const effect of state.buildingDestructions ?? []) {
             const pose = buildingDestructionPose(effect, time);
@@ -893,7 +875,7 @@ export class Renderer {
             if (effect.x + 1 < left || effect.x - 1 > right || effect.y + 1 < top || effect.y - 1 > bottom
                 || !pointInSight(fog, effect.x, effect.y)) continue;
             const frame = shellImpactFrame(effect.time, time);
-            if (frame >= 0) objects.push({ depth: reliefFigureDepth(w, effect.x, effect.y, effect.renderDepth ?? effect.y + .001), shellImpact: { effect, frame } });
+            if (frame >= 0) objects.push({ depth: effect.renderDepth ?? effect.y + .001, shellImpact: { effect, frame } });
         }
         for (const smoke of state.observationSmoke ?? []) {
             const age = time - smoke.startedAt;
@@ -901,12 +883,6 @@ export class Renderer {
             const phase = Math.floor(age * 8 / 5) % 8;
             bake(`observation-smoke:${phase}`, (ox + (smoke.x - .5) * s), (oy + (smoke.y - 1) * s),
                 32, 32, c => drawObservationSmoke(c, phase));
-        }
-        const distantRelief: ReliefStamp[] = [], landmarkVisible = landmarkSight(fog);
-        for (const relief of visibleReliefStamps(w, left, top, right, bottom)) {
-            const x = relief.cell % w.width, y = Math.floor(relief.cell / w.width);
-            if (pointExplored(fog, x, y)) objects.push({ depth: relief.depth, relief });
-            if (!pointInSight(fog, x, y) && landmarkVisible(relief.cell)) distantRelief.push(relief);
         }
         for (const stamp of this.presentationStamps) {
             if (stamp.x + stamp.width < left || stamp.x > right || stamp.y + stamp.height < top || stamp.y > bottom) continue;
@@ -917,23 +893,21 @@ export class Renderer {
             if (object.meadow) {
                 const { x, y, tuft } = object.meadow;
                 const picture = art.meadow(tuft.variant, meadowFrame(tuft.variant, time, tuft.phase));
-                if (picture) scene.sprite(picture, ox + (x + tuft.x) * s, oy + (y + tuft.y) * s, scale);
+                if (picture) scene.sprite(picture, ox + (x + tuft.x) * s, oy + (y + tuft.y) * s, scale * MEADOW_TUFT_SCALE);
             } else if (object.presentationStamp) {
                 const stamp = object.presentationStamp;
                 bake(`presentation-stamp:${stamp.id}`, ox + stamp.x * s, oy + stamp.y * s,
                     stamp.width * 32, stamp.height * 32,
                     c => c.drawImage(stamp.image, 0, 0, stamp.width * 32, stamp.height * 32));
-            } else if (object.relief) {
-                const stamp = object.relief, picture = art.relief(stamp);
-                if (picture) scene.sprite(picture, ox + stamp.x * s, oy + stamp.y * s, scale * stamp.width);
             } else if (object.exploration) {
                 const site = object.exploration, size = site.kind === 0 ? 2 : 1;
                 bake(`exploration:${site.kind}:${site.variant}`, ox + site.x * s, oy + site.y * s, size * 32, size * 32,
                     c => { c.scale(2, 2); drawExplorationSite(c, site.kind, site.variant); });
             } else if (object.hermitHome) {
-                const h = object.hermitHome, frame = Math.floor(time * 7) % 6;
-                bake(`hermit-home:${h.status === 'home'}:${frame}`, (ox + h.x * s), (oy + h.y * s), 32, 40,
-                    c => drawHermitCabin(c, frame, h.status === 'home'));
+                const h = object.hermitHome, fire = h.status === 'home' && pointInSight(fog, h.x + .5, h.y + .5);
+                const frame = fire ? Math.floor(time * 7) % 6 : 0;
+                bake(`hermit-home:${fire}:${frame}`, (ox + h.x * s), (oy + h.y * s), 32, 40,
+                    c => drawHermitCabin(c, frame, fire));
             } else if (object.hermit) {
                 const h = object.hermit, p = hermitPosition(h), highlight = hermitAvailable(state, h, playerFaction(state), fog), frame = Math.floor(time * 7) % 6;
                 bake(`hermit:${highlight}:${h.status}:${frame}`, (ox + (p.x - .42) * s), (oy + (p.y - .72) * s), 28, 28,
@@ -984,11 +958,12 @@ export class Renderer {
             }
             else if (object.feature) {
                 const { x, y, tile } = object.feature;
-                scene.sprite(art.vegetation(tile), (ox + x * s), (oy + y * s), scale);
+                const rush = tile.marsh ? this.marshRushes.get(w, x, y) : undefined;
+                scene.sprite(art.vegetation(tile, rush), (ox + x * s), (oy + y * s), scale);
             }
             else if (object.orchard) {
-                const { field, time: fieldTime, ditchLinks, crossingLinks } = object.orchard;
-                crop(field, fieldTime, ditchLinks, crossingLinks);
+                const { field, time: fieldTime } = object.orchard;
+                crop(field, fieldTime);
             }
             else if (object.shellImpact) {
                 const { effect, frame } = object.shellImpact, picture = art.shellImpact(frame);
@@ -1033,18 +1008,6 @@ export class Renderer {
                     if (u.observationPost && !u.observationPost.retreating)
                         bake(`observation-campfire:${observationFireFrame(time)}`, (x), (y), 40, 32, c => drawObservationCampfire(c, time));
                     const passenger = vesselGhosts.has(u.id)?ghostPassengers.get(u.id):u.sailboat?.passenger !== undefined ? entityStore(state).units.get(u.sailboat.passenger) : undefined;
-                    if (u.warship?.boarding !== undefined) {
-                        const other = entityStore(state).units.get(u.warship.boarding), plank = boardingPlankImage();
-                        if (other?.warship && other.hp > 0 && plank && (u.id < other.id || other.warship.boarding !== u.id)) {
-                            const near = galleyClosestPoint(u, other), far = galleyClosestPoint(other, u);
-                            const dx = far.x - near.x, dy = far.y - near.y, length = Math.hypot(dx, dy), angle = Math.atan2(dy, dx);
-                            if (length > .03 && length < 3) for (const offset of [-.35, .35]) {
-                                const px = near.x - Math.sin(angle) * offset, py = near.y + Math.cos(angle) * offset;
-                                const picture = art.boardingPlank(plank, length);
-                                scene.sprite({ ...picture, rotation: angle, rotationPivot: { x: 0, y: 0 } }, ox + px * s, oy + py * s, scale);
-                            }
-                        }
-                    }
                     const animationTime = this.mountedAnimation.forUnit(u.kind, time);
                     const firearm = (passenger ?? u).kind === 'leader' && usesFirearm(state, passenger ?? u);
                     const equipment = passenger || firearm ? { passenger, firearm } : undefined;
@@ -1063,15 +1026,13 @@ export class Renderer {
                     const south = fieldAt(column, row + 1);
                     const continuesSouth = !!south && farmOcclusionHeight(south, pointInSight(fog, column + .5, row + 1.5) ? time : south.observedAt) > 0;
                     if (feet >= row + 1 && !continuesSouth) continue;
-                    const occupants = cellBuildings[field.y * w.width + field.x], ditch = (irrigationIndex === buildingIndex ? occupants : irrigationIndex.get(tileKey(field.x, field.y)))?.find(b => b.kind === 'irrigation' && buildingReady(b));
-                    const road = ditch && occupants?.find(b => b.kind === 'road' && buildingReady(b));
-                    const ditchLinks = ditch && linksOf(ditch, irrigationIndex), roadLinks = road && linksOf(road, buildingIndex);
+                    const ditch = groundDitches.get(field.y * w.width + field.x);
                     const footColumn = Math.round((u.x - column) * 16), footRow = Math.round((feet - row) * 16);
                     const joins = fieldJoins(field, fieldTime);
-                    const key = `wheat-front:${fieldKey(field, fieldTime, joins)}:${footColumn},${footRow}:${continuesSouth}:${landKey(column, row)}:${linksKey(ditchLinks)}:${linksKey(roadLinks)}`;
+                    const key = `wheat-front:${fieldKey(field, fieldTime, joins)}:${footColumn},${footRow}:${continuesSouth}:${landKey(column, row)}:${ditch ? irrigationCropKey(ditch.layout, ditch.road) : ''}`;
                     const foreground = art.paint(key, { x: 0, y: 0, width: 32, height: 32 }, c => {
                         c.save(); clipFarmToLand(c, this.terrain, column, row, 0, 0, 32);
-                        if (ditchLinks) clipFarmAroundIrrigation(c, 0, 0, 32, ditchLinks, roadLinks);
+                        if (ditch) clipFarmAroundIrrigation(c, 0, 0, 32, ditch.layout, ditch.road);
                         drawFarmOcclusion(c, 0, 0, 32, fieldTime, field, footColumn * 2, footRow * 2, continuesSouth, joins); c.restore();
                     });
                     scene.sprite(foreground, ox + column * s, oy + row * s, scale);
@@ -1115,19 +1076,8 @@ export class Renderer {
         }
         for (const b of structures) if (b.kind === 'house' && b.houseDowngradeAt !== undefined && buildingInSight(fog, b))
             warning(ox + (b.x + .5) * s, oy + (b.y + buildingArtTop(b)) * s - s * (.25 + Math.abs(Math.sin(time * 4)) * .16), '#ffeaa0', '#5f422b');
-        for (const ship of visibleUnits) if (ship.warship?.boarding !== undefined && (ship.warship.marine === 'warrior' || ship.warship.marine === 'spearman')) {
-            const enemy = entityStore(state).units.get(ship.warship.boarding);
-            if (!enemy || enemy.hp <= 0) continue;
-            const from = galleyClosestPoint(ship, enemy), to = galleyClosestPoint(enemy, ship);
-            const angle = Math.atan2(to.y - from.y, to.x - from.x);
-            for (let i = 0; i < Math.min(2, Math.ceil(ship.warship.crewHp / 100)); i++) {
-                const phase = (time * .6 + i * .5) % 1, offset = i ? .35 : -.35;
-                const px = from.x + (to.x - from.x) * phase - Math.sin(angle) * offset;
-                const py = from.y + (to.y - from.y) * phase + Math.cos(angle) * offset;
-                const marine = { ...ship, kind: ship.warship.marine, warship: undefined, sailboat: undefined, inside: false, facing: angle, moving: true, attackTime: phase > .8 ? .2 : 0 };
-                scene.sprite(art.unit(marine, time, colorFor(ship.faction)), ox + (px - .4) * s, oy + (py - .68) * s, scale * .8);
-            }
-        }
+        const upkeepWarningAlpha = this.designationTime % 1 < .65 ? 1 : .15;
+        const upkeepWarningScale = Math.max(.85, Math.min(1.25, scale));
         for (const u of visibleUnits) {
             if(vesselGhosts.has(u.id))continue;
             const onWall = u.wallPatrol?.wall !== undefined;
@@ -1154,7 +1104,22 @@ export class Renderer {
                 scene.sharedGraphics(`healing:${pixel}`, context => context.rect(-pixel, -3 * pixel, 2 * pixel, 6 * pixel)
                     .rect(-3 * pixel, -pixel, 6 * pixel, 2 * pixel).fill('#83ef91'), cx, cy, pulse);
             }
-            if (u.morale < 35 || u.order === 'flee') warning(x + s * .5 + Math.sin(time * 30) * 2, y - s * .3, '#fffbe9', '#5f5544');
+            const routingWarning = u.morale < 35 || u.order === 'flee';
+            if (routingWarning) warning(x + s * .5 + Math.sin(time * 30) * 2, y - s * .3, '#fffbe9', '#5f5544');
+            if (this.overlays && hasUnpaidUpkeep(u)) {
+                const size = QUEST_MARKER_SIZE;
+                const icon = art.paint('upkeep-warning', { x: -size / 2, y: -size, width: size, height: size }, c => {
+                    // Tint the generated exclamation mark while keeping its outline and transparency.
+                    drawQuestMarker(c, 0);
+                    c.globalCompositeOperation = 'multiply';
+                    c.fillStyle = '#ff5141';
+                    c.fillRect(-size / 2, -size, size, size);
+                    c.globalCompositeOperation = 'destination-in';
+                    drawQuestMarker(c, 0);
+                });
+                const rise = routingWarning ? s * .3 + size : s * .14;
+                scene.sprite(icon, x + s * .5, y - rise, upkeepWarningScale, upkeepWarningAlpha);
+            }
             // Hold stays on the opposite side from the compact rank emblem.
             if (u.order === 'hold' && u.kind !== 'militia' && u.kind !== 'sailboat') {
                 const spacing = Math.round(s * .12);
@@ -1216,33 +1181,6 @@ export class Renderer {
             sprite.position.set(ox + shot.x * s, oy + (shot.y - height) * s); sprite.rotation = Math.atan2(shot.end.y - shot.start.y, shot.end.x - shot.start.x);
         }
         scene.drawFog(ox, oy, w.width * s, w.height * s);
-        if (distantRelief.length) {
-            // Distant slopes and their ground form one terrain-only patch.
-            // Mask it to fogged pixels so it cannot paint over visible units.
-            distantRelief.sort((a, b) => a.depth - b.depth);
-            const revisions = worldRevisions(w);
-            scene.rasterLayer('distant-relief', [w, revisions.geometry, revisions.appearance, fog.sources, this.fogRevision, left, top, right, bottom, s],
-                (right - left) * s, (bottom - top) * s, c => {
-                    c.imageSmoothingEnabled = false;
-                    const reveal = this.reliefFogArt.mask(w, fog, left, top, right, bottom, landmarkVisible);
-                    c.drawImage(this.terrain, left * TILE_SIZE, top * TILE_SIZE, (right - left) * TILE_SIZE, (bottom - top) * TILE_SIZE,
-                        0, 0, (right - left) * s, (bottom - top) * s);
-                    for (const stamp of distantRelief) {
-                        const image = reliefImage(stamp.style, stamp.slot, stamp.palette);
-                        if (image) c.drawImage(image, (stamp.x - left) * s, (stamp.y - top) * s, stamp.width * s, stamp.height * s);
-                    }
-                    c.globalCompositeOperation = 'destination-in';
-                    this.reliefFogArt.paintMask(c, reveal, s);
-                    // Fade the completed patch once so overlapping slopes and
-                    // their ground retain the same distant-terrain brightness.
-                    c.globalAlpha = .65; c.globalCompositeOperation = 'destination-in';
-                    const fogScale = this.fogCanvas.width / w.width;
-                    c.imageSmoothingEnabled = true;
-                    c.drawImage(this.fogCanvas, left * fogScale, top * fogScale, (right - left) * fogScale, (bottom - top) * fogScale,
-                        0, 0, (right - left) * s, (bottom - top) * s);
-                    c.globalCompositeOperation = 'source-over';
-                }, ox + left * s, oy + top * s);
-        }
         // Political boundaries stay legible while terrain, units and structures
         // retain their ordinary fog visibility.
         for (const site of siteViews(state, now)) {
@@ -1342,19 +1280,36 @@ export class Renderer {
         }
         // Owned orders remain reviewable without revealing anything beneath fog.
         // Draw the countdown above crops and people, including ditches in fields.
-        for (const b of entityStore(state).buildings.query('construction')) if (b.faction === playerFaction(state) && b.hp > 0 && b.construction && visible(b)) {
-            if (!buildingIndex.get(tileKey(b.x, b.y))?.some(observed => observed.id === b.id)) building(b);
+        for (const b of entityStore(state).buildings.query('construction')) if (b.faction === playerFaction(state) && b.hp > 0 && b.construction) {
+            const tileVisible = visible(b);
+            if (b.kind === 'road') {
+                if (tileVisible && (!pointExplored(fog, b.x, b.y) || !buildingIndex.get(tileKey(b.x, b.y))?.some(observed => observed.id === b.id))) building(b);
+                continue;
+            }
+            if (tileVisible && !buildingIndex.get(tileKey(b.x, b.y))?.some(observed => observed.id === b.id)) building(b);
+            const bridge = b.construction.bridge;
+            if (bridge ? constructionHead(state, b) !== b : !tileVisible) continue;
             const progress = constructionProgress(state, b);
-            // Queued sites need actual work before a timer.
-            if (progress <= 0) continue;
+            if (progress <= 0 && !bridge) continue;
+            let center: Point;
+            if (bridge) {
+                center = { x: bridge.x + bridge.width / 2, y: bridge.y + bridge.height / 2 };
+                if (!visible(center)) continue;
+            } else {
+                const offset = wellAttachedToHouse(b, buildingIndex) ? HOUSE_WELL_OFFSET : { x: 0, y: 0 };
+                const footprint = b.kind === 'dock' ? dockFootprint(b) : { x: 0, y: 0, width: buildingWidth(b), height: buildingHeight(b) };
+                center = { x: b.x + footprint.x + footprint.width / 2 + offset.x, y: b.y + footprint.y + footprint.height / 2 + offset.y };
+            }
             const frame = Math.ceil((1 - progress) * CONSTRUCTION_TIMER_STEPS);
-            const offset = wellAttachedToHouse(b, buildingIndex) ? HOUSE_WELL_OFFSET : { x: 0, y: 0 };
             const radius = CONSTRUCTION_TIMER_RADIUS;
-            const footprint = b.kind === 'dock' ? dockFootprint(b) : { x: 0, y: 0, width: buildingWidth(b), height: buildingHeight(b) };
-            const timer = art.paint(`construction-timer:${frame}`, { x: -radius, y: -radius, width: radius * 2, height: radius * 2 },
-                c => drawConstructionTimer(c, frame));
-            scene.sprite(timer, (ox + (b.x + footprint.x + footprint.width / 2 + offset.x) * s),
-                (oy + (b.y + footprint.y + footprint.height / 2 + offset.y) * s), scale);
+            const bounds = bridge
+                ? { x: -BRIDGE_CONSTRUCTION_BAR_WIDTH / 2, y: -radius, width: BRIDGE_CONSTRUCTION_BAR_WIDTH, height: radius + BRIDGE_CONSTRUCTION_BAR_Y + 4 }
+                : { x: -radius, y: -radius, width: radius * 2, height: radius * 2 };
+            const timer = art.paint(`${bridge ? 'bridge-construction' : 'construction-timer'}:${frame}`, bounds, c => {
+                drawConstructionTimer(c, frame);
+                if (bridge) drawBridgeConstructionBar(c, frame);
+            });
+            scene.sprite(timer, ox + center.x * s, oy + center.y * s, scale);
         }
         // Planning overlays remain visible in fog, without changing visibility.
         const effectCulture = preview.length && (state.buildMode === 'monument' || state.buildMode === 'house')
@@ -1396,10 +1351,6 @@ export class Renderer {
                         const berth = dockBerth(b);
                         marks.rect(ox + (berth.x - .5) * s, oy + (berth.y - .5) * s, s, s)
                             .fill({ color: '#7fcce9', alpha: .18 }).stroke({ color: '#a6e4ff', width: 1 });
-                    }
-                    if (b.kind === 'road') {
-                        const channel = previewIndex.get(tileKey(x, y))?.find(other => other.kind === 'irrigation' && buildingReady(other));
-                        if (channel) bridge(x, y, buildingConnections(b, previewIndex, w), buildingConnections(channel, previewIndex, w), .55);
                     }
                     // A house ghost is painted late. Restore its real well in
                     // front, rather than tinting or hiding it beneath the roof.
@@ -1669,7 +1620,7 @@ export class Renderer {
             c.fillStyle = RAIDER_COLOR; c.strokeStyle = '#c8bba2'; c.lineWidth = 1;
             c.fillRect(p.x - 3, p.y - 3, 6, 6); c.strokeRect(p.x - 3, p.y - 3, 6, 6);
         }
-        for (const u of state.units) if (!u.inside && u.hp > 0 && (isMapRevealed(state) || observationPostVisibleTo(u, playerFaction(state))) && (u.faction >= 0 || u.faction === -2) && (u.faction === playerFaction(state) || pointInSight(fog, u.x, u.y))) {
+        for (const u of entityStore(state).units.query('unit')) if (!u.inside && u.hp > 0 && (isMapRevealed(state) || observationPostVisibleTo(u, playerFaction(state))) && (u.faction >= 0 || u.faction === -2) && (u.faction === playerFaction(state) || pointInSight(fog, u.x, u.y))) {
             const p = worldToMinimap(u, projection);
             c.fillStyle = u.faction === playerFaction(state) && u.kind === 'leader' ? '#fff8c8' : unitColor(state, u);
             const size = u.kind === 'leader' ? 3 : 2;

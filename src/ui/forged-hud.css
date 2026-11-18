@@ -4,7 +4,7 @@
   --hud-scale: 1; --top-scale: 1; --bar-height: 46px;
   --forged-panel: url('/assets/runtime/ui/forged/panel-frame-hud.webp');
 }
-.game-area { overflow: hidden; }
+.game-area { overflow: hidden; container: game-area / size; }
 .leader-action-feedback { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%,-100%); pointer-events: none; user-select: none; }
 .leader-action-feedback .hotbar-art { width: 40px; height: 40px; max-width: none; flex: none; filter: drop-shadow(0 1px 2px #000); animation: leader-action-flash 180ms ease-out; }
 .leader-action-label { padding: 2px 6px; border-radius: 3px; background: #081319b3; color: #fff0c8; font: bold 14px/1.15 var(--game-font); white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px #000; }
@@ -122,7 +122,7 @@
 .command-clear { background-position: 100% 0; }
 .command-forbid { background-position: 100% 100%; }
 /* A titleless three-column flyout. Keyboard hints remain in each upper-right corner. */
-.build-panel { position: absolute; right: 6px; bottom: 218px; width: min(372px,calc(100vw / var(--hud-scale) - 12px)); height: auto; max-height: calc((100dvh - 64px) / var(--hud-scale) - 218px); padding: 36px 12px 12px; transform: none; pointer-events: auto; display: flex; flex-direction: column; }
+.build-panel { position: absolute; right: 6px; bottom: 218px; width: min(372px,calc(100cqw / var(--hud-scale) - 12px)); height: auto; max-height: calc((100cqh - 64px) / var(--hud-scale) - 218px); padding: 36px 12px 12px; transform: none; pointer-events: auto; display: flex; flex-direction: column; }
 .build-panel.is-building-menu { padding-bottom: 32px; }
 #close-build { position: absolute; right: 12px; top: 9px; width: 28px; height: 28px; padding: 0; }
 .build-actions { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-auto-rows: max-content; align-content: start; gap: 5px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
@@ -137,11 +137,14 @@
 .build-status:not(:empty) { margin: 0; }
 #tile-tooltip { position: absolute; z-index: 3; padding: 7px 11px; font-size: 12px; line-height: 1.4; pointer-events: none; bottom: auto; top: 90px; left: 12px; right: auto; max-width: min(620px,calc(100% - 280px)); }
 .game-menu-actions { display: grid; gap: 10px; }
-@media(max-width:1500px) { :root { --hud-scale: .9; } }
-@media(max-width:1250px) { :root { --hud-scale: .8; } .resources { transform: scale(.85); transform-origin: top left; } .time-controls { transform: scale(.85); transform-origin: top right; } .selection-panel { top: 46px; } }
-@media(max-width:1000px) { :root { --hud-scale: .7; } }
-@media(max-width:760px) {
-  :root { --hud-scale: .65; }
+@container game-area (max-width: 1500px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .9; } }
+@container game-area (max-width: 1250px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .8; } .resources { transform: scale(.85); transform-origin: top left; } .time-controls { transform: scale(.85); transform-origin: top right; } .selection-panel { top: 46px; } }
+@container game-area (max-width: 1000px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .7; } }
+@container game-area (max-width: 870px) {
+  .resources, .time-controls { transform: scale(.74); }
+}
+@container game-area (max-width: 760px) {
+  :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .65; }
   .resources { transform: scale(.65); }
   .time-controls { transform: scale(.65); }
   .selection-panel { top: 36px; }
@@ -157,19 +160,19 @@
   .action-slot { height: 80px; }
   .action-slot kbd { font-size: 14px; left: 4px; }
   .hotbar-art { width: 30px; }
-  .build-panel { bottom: 310px; max-height: calc((100dvh - 52px) / var(--hud-scale) - 310px); }
+  .build-panel { bottom: 310px; max-height: calc((100cqh - 52px) / var(--hud-scale) - 310px); }
   .build-status { top: 38px; max-width: calc(100% - 184px); font-size: 11px; left: 6px; }
   #tile-tooltip { top: 124px; max-width: calc(100% - 12px); left: 6px; }
 }
-@media(max-width:600px) {
+@container game-area (max-width: 665px) {
   .resources { transform: scale(.6); }
   .time-controls { top: 32px; transform: scale(.65); }
   .selection-panel { top: 67px; }
   .build-status { top: 34px; max-width: calc(100% - 180px); }
   #paused { position: absolute; top: 38px; left: 8px; transform: none; font-size: 11px; }
 }
-@media(max-width:360px) {
-  :root { --hud-scale: .58; }
+@container game-area (max-width: 360px) {
+  :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .58; }
   .resources { transform: scale(.51); }
 }
 

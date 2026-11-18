@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Renderer } from '../src/game/renderer';
+import { MarshRushPlacementCache } from '../src/game/marsh-rush-placement';
 import { paintTerrain } from '../src/game/terrain';
 import { markWorldChanged } from '../src/game/world-revisions';
 import type { GameState, World } from '../src/game/types';
@@ -15,7 +16,9 @@ function fixture() {
     const fills: { x: number; y: number; color: string }[] = [];
     const context = { fillStyle: '', fillRect(x: number, y: number) { fills.push({ x, y, color: this.fillStyle }); } };
     const canvas = { width: 0, height: 0, getContext: () => context };
-    const renderer = Object.assign(Object.create(Renderer.prototype), { miniature: canvas, miniatureColors: [], terrain: {} }) as Renderer;
+    const renderer = Object.assign(Object.create(Renderer.prototype), {
+        miniature: canvas, miniatureColors: [], terrain: {}, marshRushes: new MarshRushPlacementCache(),
+    }) as Renderer;
     const state = { world } as GameState;
     return { state, renderer, fills, canvas };
 }

@@ -29,9 +29,12 @@ describe('developed resource composition', () => {
         expect(southernResourceCell([12, 22, 33, 31], 10)).toBe(31);
         expect(southernResourceCell([], 10)).toBeUndefined();
     });
-    it('leaves developed quarry stones exposed with no mine or fence', () => {
+    it('draws one complete stone formation with no mine or fence', () => {
         const layout = buildResourceArtLayout(fixture('stone', [[2, 2], [3, 2], [2, 3], [3, 3]]));
-        expect([...layout.values()].every(art => art.developed && resourceHasObject(art) && !art.worksite && !art.fences && !art.road)).toBe(true);
+        const cells = [...layout.values()], stone = cells[0].ore;
+        expect(stone).toMatchObject({ material: 'stone', width: 2, height: 2, developed: false });
+        expect(cells.filter(resourceHasObject)).toHaveLength(1);
+        expect(cells.every(art => art.developed && art.ore === stone && !art.worksite && !art.fences && !art.road)).toBe(true);
     });
     it('fences only the developed grove perimeter, including partially worked boundaries', () => {
         const world = fixture('olives', [[2, 2], [3, 2], [2, 3], [3, 3]]);

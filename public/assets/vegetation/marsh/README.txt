@@ -1,7 +1,7 @@
-Approved marsh plants
+Blue-green marsh rushes
 
-Four project-generated imagegen variants, reviewed in the marsh and coastal delta studies and approved for game integration on 2026-11-01. Production PNGs are byte-identical copies of the approved 32x48 fuller sprites; the generated masters and prompts remain in scratch/2026-10-31-marsh-plants-v2/.
+The game uses rushes.png for all marsh vegetation. Its four height bands contain the approved PixelLab sprites and lateral shoots, packed without changing their pixels. See rushes-source.json for provenance, coordinates, and hashes.
 
-The renderer preserves the approved proportions: 2 tiles wide, 2.45 tiles tall (30% shorter than the earlier 3.5-tile study), with a bottom-center anchor at tile coordinate (0.5, 15/16). Nearest-neighbor filtering preserves the source pixels.
+Rushes are one tile wide, with a bottom-center anchor at (0.5, 15/16). Upright stems render 50% taller than their native source. Shorter bands grow at the dry-ground fringe, and lateral shoots extend from exposed sides.
 
-See manifest.json for exact source paths and SHA-256 checksums.
+The original four ImageGen broadleaf sprites and manifest.json are retained as an art archive.

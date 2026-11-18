@@ -8,7 +8,6 @@ import { entityStore } from '../../src/game/entity-store';
 import { refreshIndexedUnit } from '../../src/game/spatial';
 import { refreshFogUnit } from '../../src/game/fog';
 import type { GameState } from '../../src/game/types';
-import { removeSmallMountainPatches } from '../../src/world/relief-native';
 
 /** Offline artifact authoring. Rust selects complete structures to remove;
  * ordinary removal reconciles ownership, residents, jobs and navigation. */
@@ -37,7 +36,6 @@ function openCorridors(state: GameState) {
   return {before,landmasses:report.landmasses,walkingRegions:report.regions,removed};
 }
 export function finalizePreparedScenario(state: GameState) {
-  const mountainCellsRemoved = removeSmallMountainPatches(state.world);
   const first=openCorridors(state);
   if (state.world.scenario==='age-of-exploration') {
     setBanditIntensity(state,1);
@@ -46,6 +44,6 @@ export function finalizePreparedScenario(state: GameState) {
     if (!state.units.some(u=>u.faction===-2&&u.hp>0)) {state.roamingMaraudersVersion=0;initializeRoamingMarauders(state);}
   }
   const final=openCorridors(state);
-  return { ...final,mountainCellsRemoved,removed:[...first.removed,...final.removed],before:first.before,
+  return { ...final,removed:[...first.removed,...final.removed],before:first.before,
     camps:state.raiderCamps?.length??0,marauders:state.units.filter(u=>u.faction===-2&&u.hp>0).length };
 }

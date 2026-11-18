@@ -8,6 +8,7 @@ import { type Terrain, type World } from '../src/game/types';
 import { insideOwnBorders } from '../src/game/borders';
 import { ensureBuilders, updateBuilder } from '../src/game/builders';
 import { updateConstruction } from '../src/game/structures';
+import { cancelConstructionInArea } from '../src/game/area-tools';
 
 function crossing(width = 8, terrains: Terrain[] = ['coast'], engineering = true) {
   const world: World = { width: 40, height: 30, seed: 'bridge-spans', source: 'fixture', spawns: [{ x: 8.5, y: 15.5 }],
@@ -174,7 +175,7 @@ describe('complete water crossings', () => {
     expect(canWalk(state, 20, 14, 0)).toBe(false);
   });
 
-  it('lets one palace peasant construct all eight segments successively from the accessible bank', () => {
+  it('lets one palace peasant construct all eight segments together from the accessible bank', () => {
     const state = crossing(8, ['river', 'coast', 'ocean', 'lake']);
     state.factions[0].population = 5;
     expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }]).placed).toBe(8);
@@ -187,5 +188,12 @@ describe('complete water crossings', () => {
     expect(bridges).toHaveLength(8);
     expect(bridges.every(building => !building.construction)).toBe(true);
     expect(findPath(state, { x: 15.5, y: 15.5 }, { x: 24.5, y: 15.5 }, 0).at(-1)).toEqual({ x: 24.5, y: 15.5 });
+  });
+
+  it('cancels a bridge as one order even when the selection covers multiple segments', () => {
+    const state = crossing();
+    expect(buildStroke(state, 'bridge', [{ x: 20, y: 15 }]).placed).toBe(8);
+    expect(cancelConstructionInArea(state, { x: 19, y: 15 }, { x: 21, y: 15 })).toMatchObject({ count: 1, skipped: 0, refund: 80 });
+    expect(state.buildings.filter(building => building.kind === 'bridge')).toHaveLength(0);
   });
 });

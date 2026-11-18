@@ -13,6 +13,7 @@ import { marauderBaseStats, raiderEquipmentMultiplier, raiderPartySize } from '.
 import { refreshRaiderCampPressure } from './raider-camp-pressure';
 import { setSoldierRole } from './archery';
 import { selectRaidTarget } from './raid-targeting';
+import { refreshEarlyCombatUnit } from './spatial';
 import { buildingReady, buildingWidth, buildingHeight, distance, isSoldier, isWallKind, type Building, type GameState, type MarauderPack, type Point, type RaiderCamp, type Unit } from './types';
 
 export const RAIDER_SKIRMISH_MIN_SECONDS = 18;
@@ -53,6 +54,7 @@ export function releaseRaiderReserve(state: GameState, unit: Unit, evacuating = 
     unit.x = exit.x; unit.y = exit.y;
   }
   unit.inside = false; delete unit.raiderGarrison;
+  refreshEarlyCombatUnit(state, unit);
   entityStore(state).setUnitSleeping(unit, false);
   // Losing a shelter still forces a physical exit, never an early rally.
   if (!canRally) { clearOrders(unit); unit.order = 'flee'; unit.routed = true; return true; }
@@ -134,7 +136,11 @@ function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendi
   const points = needed > 0 ? attackedBuilding && attacker ? defenderSpawnTiles(state, attackedBuilding, attacker, needed)
     : campSpawnTiles(state, camp, needed) : [];
   if (defense && units.length + points.length < minimum) {
-    for (const [unit, before] of previous) { Object.assign(unit, before); entityStore(state).setUnitSleeping(unit, !!before.inside); }
+    for (const [unit, before] of previous) {
+      Object.assign(unit, before);
+      refreshEarlyCombatUnit(state, unit);
+      entityStore(state).setUnitSleeping(unit, !!before.inside);
+    }
     return [];
   }
   units.push(...recruit(state, points.slice(0, needed), defendingSoldiers, defense));

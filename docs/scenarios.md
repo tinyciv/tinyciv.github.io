@@ -70,6 +70,10 @@ When a valid shipyard site overlaps ditches, preparation clears those ditches
 through the normal removal lifecycle before purchasing the yard. Native naval
 siting also requires launch room for a warship; an unusable empty yard in a
 resumed checkpoint is retired and resited through ordinary construction.
+After construction, each Age of Exploration starter warship is placed in the
+nearest broad coastal or ocean waterway to its shipyard. A berth must connect
+to at least 96 hull centers with room to turn fully, using the actual
+post-construction water grid.
 
 Run `npm run build:scenarios` to rebuild all stored starts. This compiles Rust
 first, then writes `.json.gz` saves and `-source.json` manifests with dimensions,
@@ -97,14 +101,14 @@ automatic housing, village development and replacement camps reject placements
 that would split an existing walking region, including queued structures.
 Roads remain walkable.
 
-The finalizer also removes isolated mountain patches smaller than 20 tiles
-using the same Rust rule as world generation. Mountain peaks stay at least
-three tiles wide; rocky hills also stop using miniature edge silhouettes.
-
 Run `npm run refine:scenarios` to apply the finalizer to the existing stored
 starts without advancing their simulation clocks or repeating city growth.
 Its manifests record the connectivity report, camp populations and refinement
 engine hashes; input backups are retained under `scratch/scenario-bake/`.
+After building Rust, `node tools/scenario-bake/refine.mjs no-mans-land --diplomacy`
+refreshes only the native starting relationships in the stored start. It preserves
+the terrain, cities, stocks and clock, and records the final relationships in the
+source manifest. Ordinary game loads do not reset negotiated relationships.
 Use `npm run refine:scenarios -- --irrigation` to convert existing scenario
 orchards and let builders finish the replacement irrigation offline. This mode
 advances the stored simulation during construction, preserves starting resource

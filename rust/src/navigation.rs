@@ -46,12 +46,18 @@ impl Navigation {
         self.blocked = vec![0; cells]; self.soft = vec![0; cells]; self.penalty = vec![0.0; cells];
         self.costs = vec![0.0; cells]; self.previous = vec![0; cells];
         self.seen = vec![0; cells]; self.closed = vec![0; cells]; self.output = vec![0; cells];
-        self.heap_indices = vec![0; cells * 8 + 8]; self.heap_scores = vec![0.0; cells * 8 + 8];
+        // The frontier is usually a small fraction of the map. Retain the
+        // high-water storage for subsequent searches without reserving eight
+        // entries per world cell up front on every navigation profile.
+        self.heap_indices.clear(); self.heap_scores.clear();
         self.heap_length = 0; self.stamp = 0;
     }
 
     fn push(&mut self, index: usize, score: f64) {
         let mut i = self.heap_length; self.heap_length += 1;
+        if i == self.heap_indices.len() {
+            self.heap_indices.push(0); self.heap_scores.push(0.0);
+        }
         while i > 0 {
             let parent = (i - 1) >> 1;
             let parent_score = self.heap_scores[parent];

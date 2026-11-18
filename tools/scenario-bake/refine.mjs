@@ -9,24 +9,30 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const agriculture=process.argv.includes('--irrigation');
 const layout=process.argv.includes('--layout');
 const streetsOnly=process.argv.includes('--streets');
-const dir=path.join(root,'scratch/scenario-bake',`${Date.now()}-${layout?'layout':agriculture?'irrigation':'navigation'}`);await mkdir(dir,{recursive:true});
+const diplomacyOnly=process.argv.includes('--diplomacy');
+if(diplomacyOnly&&(agriculture||layout||streetsOnly))throw new Error('Run diplomacy finalization separately from layout or agriculture changes.');
+const dir=path.join(root,'scratch/scenario-bake',`${Date.now()}-${diplomacyOnly?'diplomacy':layout?'layout':agriculture?'irrigation':'navigation'}`);await mkdir(dir,{recursive:true});
 const bundle=path.join(dir,'engine.mjs');
-await build({stdin:{resolveDir:root,loader:'ts',contents:`export{polishScenarioLayout}from'./tools/scenario-bake/layout';export{repairPreparedStreets}from'./tools/scenario-bake/streets';export{auditScenarioAccess}from'./src/game/scenario-access-native';export{irrigatePreparedScenario}from'./tools/scenario-bake/agriculture';export{finalizePreparedScenario}from'./tools/scenario-bake/finalize';export{parseGameSave,serializeGameSave}from'./src/game/game-save';export{migrateGame}from'./src/game/simulation';export{citySummaries}from'./src/game/cities';`},bundle:true,platform:'node',target:'node22',format:'esm',outfile:bundle,define:{'import.meta.env.BASE_URL':'"/"'}});
+await build({stdin:{resolveDir:root,loader:'ts',contents:`export{finalizeScenarioDiplomacy}from'./tools/scenario-bake/diplomacy';export{polishScenarioLayout}from'./tools/scenario-bake/layout';export{repairPreparedStreets}from'./tools/scenario-bake/streets';export{auditScenarioAccess}from'./src/game/scenario-access-native';export{irrigatePreparedScenario}from'./tools/scenario-bake/agriculture';export{finalizePreparedScenario}from'./tools/scenario-bake/finalize';export{parseGameSave,serializeGameSave}from'./src/game/game-save';export{migrateGame}from'./src/game/simulation';export{citySummaries}from'./src/game/cities';export{positionScenarioFleet}from'./src/game/warships-native';`},bundle:true,platform:'node',target:'node22',format:'esm',outfile:bundle,define:{'import.meta.env.BASE_URL':'"/"'}});
 await copyFile(path.join(root,'public/wasm/simulation.wasm'),path.join(dir,'simulation.wasm'));
 const engine=await import(pathToFileURL(bundle));
 const hashes={refinementBundleSha256:createHash('sha256').update(await readFile(bundle)).digest('hex'),refinementWasmSha256:createHash('sha256').update(await readFile(path.join(dir,'simulation.wasm'))).digest('hex')};
 const requested=process.argv.slice(2).filter(arg=>!arg.startsWith('--'));
 const resume=process.argv.find(arg=>arg.startsWith('--resume='))?.slice(9);
 if(resume&&requested.length!==1)throw new Error('Resume irrigation for exactly one named scenario.');
+if(resume&&diplomacyOnly)throw new Error('Diplomacy finalization uses the stored start directly.');
 const scenarios=['tutorial','island-deathmatch','sandbox','musketry-deathmatch','no-mans-land','age-of-exploration'];
-for(const id of requested.length?requested:streetsOnly?scenarios:['no-mans-land','age-of-exploration']){
+for(const id of requested.length?requested:streetsOnly||diplomacyOnly?scenarios:['no-mans-land','age-of-exploration']){
  if(!scenarios.includes(id))throw new Error('Unknown scenario '+id);
  const file=path.join(root,'public/scenarios',id+'.json.gz'),source=path.join(root,'public/scenarios',id+'-source.json');
  const previous=await readFile(file);await writeFile(path.join(dir,id+'-before.json.gz'),previous);
  const original=engine.parseGameSave(gunzipSync(previous).toString());
  const beforeFarming={orchards:original.buildings.filter(b=>b.orchard).length,
    ditches:original.buildings.filter(b=>b.kind==='irrigation'&&b.hp>0).length,time:original.time};
- const state=engine.migrateGame(resume?engine.parseGameSave(gunzipSync(await readFile(resume)).toString()):original);
+ // Relationship-only repairs import the native snapshot directly. General
+ // world migration can repair terrain/structures and is outside this mode.
+ const state=diplomacyOnly?original:engine.migrateGame(resume?engine.parseGameSave(gunzipSync(await readFile(resume)).toString()):original);
+ if(diplomacyOnly)engine.finalizeScenarioDiplomacy(state);
  if(resume){
    state.scenarioPreparing=original.scenarioPreparing;state.banditIntensity=original.banditIntensity;
    for(const faction of state.factions){const stock=original.factions.find(f=>f.id===faction.id);if(stock)Object.assign(faction,{gold:stock.gold,food:stock.food,relation:stock.relation});}
@@ -43,9 +49,12 @@ for(const id of requested.length?requested:streetsOnly?scenarios:['no-mans-land'
  const streetRepair=streetsOnly?engine.repairPreparedStreets(state,value=>console.log(JSON.stringify({scenario:id,...value}))):undefined;
  if(farming)Object.assign(farming,{orchardsRemoved:beforeFarming.orchards-farming.orchards,
    ditchesOrdered:farming.completedDitches-beforeFarming.ditches,simulatedSeconds:state.time-beforeFarming.time});
- const access=streetsOnly?engine.auditScenarioAccess(state,state.units.filter(u=>u.kind==='leader'&&u.hp>0)):engine.finalizePreparedScenario(state),bytes=gzipSync(engine.serializeGameSave(state,false),{level:9});
+ const access=streetsOnly||diplomacyOnly?engine.auditScenarioAccess(state,state.units.filter(u=>u.kind==='leader'&&u.hp>0)):engine.finalizePreparedScenario(state);
+ const fleet=id==='age-of-exploration'&&!diplomacyOnly?engine.positionScenarioFleet(state):undefined;
+ const bytes=gzipSync(engine.serializeGameSave(state,false),{level:9});
  const cities=engine.citySummaries(state).map(c=>({id:c.palace.id,faction:c.palace.faction,population:c.population,housing:c.housing,food:c.food}));
- const manifest={...JSON.parse(await readFile(source,'utf8')),simulatedSeconds:state.time,bytes:bytes.length,cities,access,...(farming?{agriculture:farming}:{}),...(streets?{layout:streets,agriculture:streets.agriculture}:{}),...(streetRepair?{streets:streetRepair}:{}),...hashes};
+ const diplomacy=diplomacyOnly?{relationships:state.diplomacyState.relationships.map(({a,b,contact,war})=>({a,b,contact,war}))}:undefined;
+ const manifest={...JSON.parse(await readFile(source,'utf8')),simulatedSeconds:state.time,bytes:bytes.length,cities,access,...(fleet?{fleet}:{}),...(diplomacy?{diplomacy}:{}),...(farming?{agriculture:farming}:{}),...(streets?{layout:streets,agriculture:streets.agriculture}:{}),...(streetRepair?{streets:streetRepair}:{}),...hashes};
  await writeFile(file,bytes);await writeFile(source,JSON.stringify(manifest,null,2)+'\n');
  console.log(JSON.stringify({saved:id,bytes:bytes.length,cities,access,...(farming?{agriculture:farming}:{})}));
 }

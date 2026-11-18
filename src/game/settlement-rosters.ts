@@ -29,7 +29,7 @@ export function settlementBuildings(state: GameState): SettlementBuildings {
   for (const building of state.buildings) {
     if (building.hp <= 0) continue;
     if (isFarmKind(building.kind)) result.farms.push(building);
-    if (building.kind === 'house') { result.houses.push(building); add(result.housesByFaction, building.faction, building); }
+    if ((building.kind === 'house' || building.kind === 'apartments')) { result.houses.push(building); add(result.housesByFaction, building.faction, building); }
     if (!buildingReady(building)) continue;
     if (building.kind === 'palace') add(result.palacesByFaction, building.faction, building);
     else if (building.kind === 'well') result.wells.push(building);

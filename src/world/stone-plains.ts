@@ -4,14 +4,14 @@ import { WATER, type World } from '../game/types';
 import { environmentRandom, settlementCoreMask } from './environment-fields';
 import { terrainYields } from './generator';
 
-/** Plains cannot cut across hill and mountain aprons or the native water banks. */
+/** Keep plains fringes clear of cliffs and native water banks. */
 export function stonePlainsGroundMask(world: World): Uint8Array {
   const { width, height, tiles } = world, cores = settlementCoreMask(world);
   const ground = Uint8Array.from(tiles, (tile, cell) => Number(!cores[cell] && !tile.worldFeature && !WATER.has(tile.terrain)
-    && !tile.creek && !tile.beach && !tile.marsh && !tile.relief && tile.farm === undefined
+    && !tile.creek && !tile.beach && !tile.marsh && !tile.relief && !tile.ridge && tile.farm === undefined
     && tile.overlay !== 'volcano' && tile.overlay !== 'glacier' && tile.overlay !== 'swamp'));
   for (let cell = 0; cell < tiles.length; cell++) {
-    const tile = tiles[cell], radius = tile.relief ? 2 : WATER.has(tile.terrain) || tile.creek ? 1 : -1;
+    const tile = tiles[cell], radius = tile.relief || tile.ridge ? 2 : WATER.has(tile.terrain) || tile.creek ? 1 : -1;
     if (radius < 0) continue;
     const x = cell % width, y = Math.floor(cell / width);
     for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {

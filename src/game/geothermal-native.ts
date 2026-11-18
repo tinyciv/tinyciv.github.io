@@ -14,8 +14,8 @@ export function initializeGeothermal(state: GameState, seed: number): void {
     const input = new Float64Array(rustEngine.memory.buffer, pointer, (count + starts.length) * 2);
     for (let cell = 0; cell < count; cell++) {
         const tile = world.tiles[cell];
-        input[cell * 2] = Number(!WATER.has(tile.terrain));
-        input[cell * 2 + 1] = Number(!!tile.resource) | Number(!!tile.relief) << 1
+        input[cell * 2] = WATER.has(tile.terrain) ? 0 : tile.overlay === 'forest' || tile.overlay === 'jungle' ? 2 : 1;
+        input[cell * 2 + 1] = Number(!!tile.resource) | Number(!!tile.relief || !!tile.ridge || !!tile.stair) << 1
             | Number(!!tile.waterfall) << 3 | Number(!!tile.creek) << 4 | Number(!!tile.palm) << 5
             | Number(!!tile.marsh) << 6 | Number(!!tile.beach) << 7 | Number(!!tile.geothermal) << 8
             | Number(!!tile.villageTrail) << 9 | Number(tile.overlay === 'volcano' || tile.overlay === 'glacier' || tile.overlay === 'ford') << 10
@@ -36,6 +36,7 @@ export function initializeGeothermal(state: GameState, seed: number): void {
             tile.overlay = 'volcano';
             tile.food = tile.production = tile.gold = 0;
             delete tile.desertStone;
+            delete tile.treeClass;
             changed.push(cell);
         }
     }

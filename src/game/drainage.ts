@@ -111,6 +111,7 @@ export function updateDrainage(state: GameState): void {
   worker.aboardRowboat=false;
   worker.path=journey.path; worker.pathGoal={...goal}; worker.destination=goal; worker.repathAt=0;
   worker.drainageWork={cell,workCell,progress:0,farms:[farm0,farm1]};
+  store.setWorkerDormant(worker, false);
 }
 
 function finish(state: GameState, unit: Unit): void {

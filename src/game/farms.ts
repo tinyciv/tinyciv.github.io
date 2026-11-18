@@ -412,8 +412,7 @@ function createCollector(state: GameState, palace: Building, camp: Building): Un
     cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time,
     collector: true, collectorCamp: camp.id, inside: true, cargo: 0, collectPhase: 'idle',
   };
-  entityStore(state).units.add(unit);
-  return unit;
+  return entityStore(state).units.add(unit);
 }
 
 interface CollectorHomes {
@@ -1133,6 +1132,7 @@ export function updateCollector(state: GameState, unit: Unit, dt: number, move: 
         unit.cultivating = harvest.fallow;
         setParcelPickup(state, group, field);
         setJourney(unit, goal, path); departFarm(state, unit);
+        entityStore(state).setWorkerDormant(unit, false);
         return;
       }
     }

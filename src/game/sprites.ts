@@ -10,6 +10,7 @@ import { drawObservationCampfire, drawObservationPost } from './observation-post
 import { buildingArtTop, buildingWidth, buildingHeight, isFarmKind, type Building, type Overlay, type Unit } from './types';
 import { drawDirtRoad, type RoadLinks } from './road-sprites';
 import { drawPerson } from './unit-sprites';
+import { drawRefugee } from './refugee-art';
 import { drawAuxiliary } from './auxiliary-art';
 import { drawPuny, punyWorldImage } from './puny-world';
 import { drawFordStones, type FordAxis } from './ford-art';
@@ -30,6 +31,7 @@ import { drawVillageTent } from './village-art';
 import { drawArcheryRange } from './archery-art';
 import { drawScoutsLodge } from './scout-art';
 import { drawBlacksmith } from './blacksmith-art';
+import { drawGoldMine } from './resource-art';
 import { drawHealerShack } from './healer-art';
 import { drawStable } from './cavalry-art';
 import { drawBallista } from './siege-art';
@@ -84,6 +86,7 @@ export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number,
   if (unit.observationPost && !unit.observationPost.retreating) drawObservationCampfire(c, time);
   if (unit.kind === 'boar' || unit.kind === 'marshBird') drawWildlife(c, unit, time);
   else if (unit.kind === 'merchant') drawMerchant(c, unit, time);
+  else if (unit.explorationRefugee) drawRefugee(c, unit, time);
   else drawPerson(c, unit, time, color, firearm);
   if (unit.engineer && !unit.inside) drawEngineerEquipment(c, unit.facing, unit.attackTime > 0);
   c.restore();
@@ -131,7 +134,7 @@ function constructionSite(c: Ctx, b: Building): void {
 
 /** Match the displayed artwork, including centered sites and rotated docks. */
 export function buildingImageAnchor(b: Building, attachedWell = false): { x: number; y: number } {
-  if (b.construction && b.kind !== 'well') {
+  if (b.construction && b.kind !== 'well' && b.kind !== 'road') {
     const footprint = b.kind === 'dock' ? dockFootprint(b) : { x: 0, y: 0, width: buildingWidth(b), height: buildingHeight(b) };
     const site = constructionSiteLayout(footprint);
     return { x: site.x + site.size / 2, y: site.y };
@@ -153,7 +156,7 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
   setup(c, x, y, size);
   const overlay = b.kind === 'well' && attached;
   if (overlay) c.translate(HOUSE_WELL_OFFSET.x * 32, HOUSE_WELL_OFFSET.y * 32);
-  if (b.construction && b.kind !== 'well') {
+  if (b.construction && b.kind !== 'well' && b.kind !== 'road') {
     constructionSite(c, b);
     c.restore(); return;
   }
@@ -170,6 +173,11 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
       break;
     case 'villageTent': drawVillageTent(c, 0, 0, 32, color); break;
     case 'camp': case 'shack': case 'cottage': break; // Farm aliases render their fields separately.
+    // Approved existing buildings stand in until the new art is selected.
+    case 'hospital': drawThermalBath(c, 0, 0, 32, time); break;
+    case 'apartments': drawPalace(c, 0, 0, 64, color, 1); break;
+    case 'factory': drawFoundry(c); break;
+    case 'goldMine': drawGoldMine(c); break;
     case 'house': drawWoodenHouse(c, b, 0, 0, 32, color); break;
     case 'tower':
       guardTower(c);

@@ -109,8 +109,8 @@ export function ridgeStairAccess(world: World, x: number, y: number): boolean {
 export function ridgeFootprintAllowed(world: World, x: number, y: number, width = 1, height = width): boolean {
   const level = ridgeLevel(tileAt(world, x, y));
   for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
-    const tile = tileAt(world, x + dx, y + dy);
-    if (!tile || tile.waterfall || resourceBlocksGround(tile) || ridgeLevel(tile) !== level) return false;
+    const xx = Math.floor(x) + dx, yy = Math.floor(y) + dy, tile = tileAt(world, xx, yy);
+    if (!tile || tile.waterfall || resourceBlocksGround(tile, false, yy * world.width + xx, world.width) || ridgeLevel(tile) !== level) return false;
     if (ridgeIsLedge(world, x + dx, y + dy)) return false;
   }
   return true;

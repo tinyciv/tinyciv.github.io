@@ -6,7 +6,8 @@ import { unitNavigationState } from '../src/game/unit-navigation';
 import { withSimulationReads } from '../src/game/simulation-reads';
 import { installNavigationWasm, setNavigationWasmEnabled } from '../src/game/navigation-wasm';
 import { markWorldChanged } from '../src/game/world-revisions';
-import { resourceBlocksGround } from '../src/game/resource-terrain';
+import { resourceBlocksGround, resourceFootprintBlocked } from '../src/game/resource-terrain';
+import { reliefFootprintAllowed } from '../src/game/relief';
 import { planAutomaticFarmSite } from '../src/game/farm-siting';
 import { planHouseAt } from '../src/game/housing';
 import { recordMerchantRoad } from '../src/game/trade';
@@ -47,6 +48,25 @@ describe('solid stone and ore deposits', () => {
       let previous = from;
       for (const point of path) { expect(canMove(state, previous, point, 0)).toBe(true); previous = point; }
     }
+  });
+
+  it.each([[2, 2], [3, 3], [5, 3]])('keeps the back rows of a %i×%i ore deposit open for travel and building', (oreWidth, oreHeight) => {
+    const state = fixture(), { world } = state, oreAnchor = 3 * world.width + 6;
+    for (let y = 0; y < oreHeight; y++) for (let x = 0; x < oreWidth; x++)
+      Object.assign(world.tiles[oreAnchor + y * world.width + x], { resource: 'gold', oreAnchor, oreWidth, oreHeight });
+    markWorldChanged(world, 'appearance');
+    const from = { x: 4.5, y: 3.5 }, behind = { x: 7.5, y: 3.5 }, front = { x: 7.5, y: 3.5 + oreHeight - 1 };
+    expect(resourceFootprintBlocked(world, behind.x, behind.y)).toBe(false);
+    expect(reliefFootprintAllowed(world, behind.x, behind.y)).toBe(true);
+    expect(resourceFootprintBlocked(world, front.x, front.y)).toBe(true);
+    expect(reliefFootprintAllowed(world, front.x, front.y)).toBe(false);
+    const check = () => {
+      expect(canMove(state, from, behind, 0)).toBe(true);
+      expect(findPath(state, from, behind, 0).at(-1)).toEqual(behind);
+      expect(canWalk(state, front.x, front.y, 0)).toBe(false);
+    };
+    check();
+    withSimulationReads(state, check);
   });
 
   it('refreshes cached reachability when deposits appear or disappear', () => {

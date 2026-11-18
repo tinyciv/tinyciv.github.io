@@ -1,12 +1,13 @@
 import { provisionScenarioWhales } from '../../src/game/fishing';
 import { createGame, updateGame } from '../../src/game/simulation';
 import { scenarioPlan, scenarioEquipment } from '../../src/game/scenarios-native';
-import { prepareScenarioFleet } from '../../src/game/warships-native';
+import { positionScenarioFleet, prepareScenarioFleet } from '../../src/game/warships-native';
 import { citySummaries } from '../../src/game/cities';
 import { simCore } from '../../src/game/sim-handle';
 import { rustEngine } from '../../src/game/rust-engine';
 import { factionHasDevelopedResource, developResourceGroup, resourceDevelopmentStatus } from '../../src/game/resource-development';
-import { refreshDiplomacy, negotiateDiplomacy } from '../../src/game/diplomacy';
+import { refreshDiplomacy } from '../../src/game/diplomacy';
+import { finalizeScenarioDiplomacy } from './diplomacy';
 import { revealExplorationCells } from '../../src/game/fog';
 import type { ScenarioId } from '../../src/game/scenario-content';
 import type { GameState } from '../../src/game/types';
@@ -157,12 +158,7 @@ export async function prepareScenario(id: ScenarioId, progress?: (population: nu
       faction.gold=scenario.gold;faction.food=scenario.food;
       faction.relation=faction.id===0?'self':'war';
     }
-    state.diplomacyState=undefined;refreshDiplomacy(state);
-    if(id==='musketry-deathmatch') {
-      if(!state.diplomacyState?.relationships.some(pair=>pair.a===0&&pair.b===1&&pair.war))negotiateDiplomacy(state,1,'war');
-      if(!state.diplomacyState?.relationships.some(pair=>pair.a===0&&pair.b===1&&pair.war))
-        throw new Error('Musketry Deathmatch factions must begin at war.');
-    }
+    finalizeScenarioDiplomacy(state);
     if(id!=='sandbox')revealExplorationCells(state,0,Array.from({length:state.world.tiles.length},(_,i)=>i));
     state.events=[];
     rustEngine.sim_campaign_reset(simCore(state).handle);
@@ -228,13 +224,12 @@ export async function prepareScenario(id: ScenarioId, progress?: (population: nu
   await polishScenarioLayout(state);
   state.scenarioPreparing = false;
   for (const faction of state.factions) { faction.gold = scenario.gold; faction.food = scenario.food; faction.relation = faction.id === 0 ? 'self' : id === 'no-mans-land' ? 'war' : 'peace'; }
-  // Recreate diplomacy from the finished scenario's starting relationships.
-  state.diplomacyState = undefined;
-  refreshDiplomacy(state);
+  finalizeScenarioDiplomacy(state);
   state.events = [];
   state.particles = []; state.projectiles = []; state.shipSinkings = [];
   finalizePreparedScenario(state);
   repairPreparedStreets(state);
+  if (id === 'age-of-exploration') positionScenarioFleet(state);
   rustEngine.sim_campaign_reset(simCore(state).handle);
   for (const faction of state.factions) rustEngine.sim_campaign_population(simCore(state).handle,faction.id,faction.population);
   return state;

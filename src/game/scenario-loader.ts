@@ -1,5 +1,6 @@
 import { SCENARIOS, type ScenarioId } from './scenario-content';
 import { parseGameSave } from './game-save';
+import { rustEngine } from './rust-engine';
 import { migrateGame } from './simulation';
 import type { GameState } from './types';
 
@@ -35,6 +36,9 @@ export async function createScenarioGame(id: ScenarioId, onProgress?: (progress:
     throw new Error(`${scenario.name} data could not be read. Reload the game and try again.`, { cause });
   }
   if (state.world.scenario !== id || state.scenarioPreparing) throw new Error(`${scenario.name} data is incomplete or mismatched. Reload the game and try again.`);
+  // Use the current spawn limit when starting a pre-generated scenario.
+  if (state.treasures) state.treasures = state.treasures.slice(0,
+    rustEngine.exploration_treasure_target(state.world.width, state.world.height));
   onProgress?.(.85, 'Preparing cities');
   await new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const game = migrateGame(state);

@@ -40,7 +40,7 @@ export interface DevelopmentOrders {
 }
 const PLAYER_PLAN_SECONDS = 30;
 const LIBRARY_COST = 200;
-const productiveKinds = ['camp', 'house', 'well', 'monument', 'library', 'guardPost', 'archeryRange', 'blacksmith', 'healerShack', 'stable', 'fort', 'supplyDepot', 'granary', 'barracks', 'forum'];
+const productiveKinds = ['camp', 'house', 'well', 'monument', 'library', 'guardPost', 'archeryRange', 'blacksmith', 'healerShack', 'stable', 'fort', 'supplyDepot', 'granary', 'barracks', 'forum', 'hospital', 'apartments', 'factory'];
 interface CityPlan {
   palace: Building; faction: Faction; interval: number; factionOrder: number; order: number; seen: number;
 }
@@ -260,7 +260,7 @@ function* developInstitution(state: GameState, faction: Faction, palace: Buildin
   if (!upgradeAllowedNow(state, faction, kind)) return false;
   const existing = () => structuresOf(state, faction.id, STRUCTURE_ALIVE, kind).some(building =>
     kind === 'granary' ? granaryCity(state, building)?.id === palace.id
-      : kind === 'barracks' ? ownedByCity(state, building, palace) : true);
+      : kind !== 'forum' ? ownedByCity(state, building, palace) : true);
   if (existing()) return false;
   const farmOwner = kind === 'granary' ? farmCityQuery(state, faction.id) : undefined;
   const farms = farmOwner ? entityStore(state).buildings.query('farm').filter(building =>
@@ -269,7 +269,8 @@ function* developInstitution(state: GameState, faction: Faction, palace: Buildin
   const eligible = () => !!nativeInstitutionPlan(state, faction.id, 0, [INSTITUTION_KIND[kind], faction.gold,
     factionDevelopmentReserve(state, faction), factionCommittedBudget(state, faction).surplus, cityDevelopmentNeeds(state, palace).population,
     farms.filter(farm => farm.faction === faction.id && buildingReady(farm)).length,
-    faction.culture ?? 0, faction.achievements ?? 0, leader && leader.hp > 0 ? distance(leader, palace) : Number.MAX_SAFE_INTEGER])[0];
+    faction.culture ?? 0, faction.achievements ?? 0, leader && leader.hp > 0 ? distance(leader, palace) : Number.MAX_SAFE_INTEGER,
+    structuresOf(state, faction.id, STRUCTURE_ALIVE, 'factory').length, cityDevelopmentNeeds(state, palace).housing])[0];
   if (!eligible()) return false;
   if (kind !== 'granary') return yield* buildCityUpgrade(state, faction, palace, kind, orders, eligible);
   const sites = nativeInstitutionPlan(state, faction.id, state.world.scenario?5:2, [palace.x, palace.y, state.world.width, state.world.height,
@@ -313,7 +314,7 @@ function* buildCityUpgrade(state: GameState, faction: Faction, palace: Building,
     // while this city's candidate scan was suspended.
     if (kind === 'library' ? !libraryPlacementAllowed(state, faction.id, { x: point.x + 1, y: point.y + 1 })
       : state.buildings.some(building => building.hp > 0 && building.faction === faction.id && building.kind === kind
-        && (!['guardPost', 'healerShack', 'fort', 'barracks'].includes(kind) || ownedByCity(state, building, palace)))) return true;
+        && (!['guardPost', 'healerShack', 'fort', 'barracks', 'hospital', 'apartments', 'factory'].includes(kind) || ownedByCity(state, building, palace)))) return true;
     const built = orders.build(faction.id, kind, point.x, point.y).ok; yield 'action';
     if (built) return true;
   }
@@ -362,6 +363,9 @@ function* developUnlockedBuildings(state: GameState, faction: Faction, palace: B
   const reserve = factionDevelopmentReserve(state, faction);
   if (yield* developInstitution(state, faction, palace, 'barracks', orders)) return;
   if (yield* developInstitution(state, faction, palace, 'forum', orders)) return;
+  if (yield* developInstitution(state, faction, palace, 'apartments', orders)) return;
+  if (yield* developInstitution(state, faction, palace, 'factory', orders)) return;
+  if (yield* developInstitution(state, faction, palace, 'hospital', orders)) return;
   const upgrades = ([['guardPost', 200], ['archeryRange', 400], ['blacksmith', 200], ['healerShack', HEALER_SHACK_COST], ['stable', 350],
     ['supplyDepot', SUPPLY_DEPOT_COST], ['fort', FORT_GOLD]] as const)
     .map(([kind,cost],index)=>({kind,cost,rank:factionAIDecision(state,faction.id,'developmentRank',index)}))

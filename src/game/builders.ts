@@ -1,6 +1,7 @@
 import { civilianWorkforcePopulations, constructionWorkerAllowance, recordCivilianCasualties } from './civilian-population';
 import { isForbidden } from './forbidden-zones';
 import { buildingWorkForbidden } from './forbidden-work';
+import { constructionFootprint, constructionHead } from './bridge-construction';
 import { entityStore } from './entity-store';
 import { idleJobDecisionDue } from './settlement-decisions';
 import { unitPositionBlocked } from './civilian-movement';
@@ -11,7 +12,6 @@ import { removeCoveredRoads } from './covered-roads';
 import { type Building, type GameState, type Point, type Unit, buildingReady, buildingWidth, buildingHeight, distance, isFarmKind } from './types';
 import { workNavigationState, canTraverseEdge, canWalk, findPath, findShortestPathBetween, hasStaticPathBetween, invalidateNavigation, withNavigationFrame } from './pathfinding';
 
-import { CONSTRUCTION_SECONDS } from './structures';
 import { fellTree, hasTree, TREE_CLEAR_SECONDS, treeWorkEdges } from './tree-clearing';
 import { constructionSpeedMultiplier } from './research-bonuses';
 import { notifyRepairJobChanged, repairJobCandidates } from './builder-jobs';
@@ -26,7 +26,7 @@ export const POPULATION_PER_BUILDER = 5;
 export const REPAIR_QUIET_SECONDS = 5;
 /** Small surviving settlements retain one builder so they can rebuild housing. */
 export function builderCapacity(population: number): number { return constructionWorkerAllowance(population); }
-export function repairRate(building: Building): number { return nativeRepairRate(building.maxHp, CONSTRUCTION_SECONDS[building.kind]); }
+export function repairRate(building: Building): number { return nativeRepairRate(building.maxHp, building.kind); }
 function repairable(state: GameState, building: Building): boolean {
   return !buildingWorkForbidden(state, building) && buildingReady(building) && !isFarmKind(building.kind) && building.kind !== 'ruin' && building.hp < building.maxHp
     && state.time - (building.lastAttacked ?? -Infinity) >= REPAIR_QUIET_SECONDS;
@@ -63,10 +63,10 @@ function routeDecisionDue(state: GameState, unit: Unit): boolean {
 
 /** Peasants work from reachable side or corner cells outside the footprint. */
 export function constructionEdges(state: GameState, building: Building, avoidForbidden = false): Point[] {
-  const width = buildingWidth(building), height = buildingHeight(building), points = nativeConstructionAccess(building);
+  const { x, y, width, height } = constructionFootprint(building), points = nativeConstructionAccess(x, y, width, height);
   return points.filter(point => canWalk(state, point.x, point.y, building.faction, undefined, avoidForbidden, true) && canTraverseEdge(state.world, point, {
-    x: Math.max(building.x, Math.min(building.x + width - 1, Math.floor(point.x))),
-    y: Math.max(building.y, Math.min(building.y + height - 1, Math.floor(point.y))),
+    x: Math.max(x, Math.min(x + width - 1, Math.floor(point.x))),
+    y: Math.max(y, Math.min(y + height - 1, Math.floor(point.y))),
   }));
 }
 
@@ -128,8 +128,7 @@ function makeBuilder(state: GameState, palace: Building, id: number): Unit {
     cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time,
     builder: true, inside: true, buildPhase: 'idle',
   };
-  entityStore(state).units.add(unit);
-  return unit;
+  return entityStore(state).units.add(unit);
 }
 
 interface ConstructionJourney { palace: Building; exit: Point; goal: Point; path: Point[]; cost: number; }
@@ -176,7 +175,7 @@ export function ensureBuilders(state: GameState): void {
   const pending = new Set<Building>(), wake = new Set<number>(), previous = previousOrders.get(state);
   for (const building of state.buildings) {
     const site = building.construction;
-    if (site && (building.kind === 'ballista' || building.kind === 'siegeCannon')) continue;
+    if (site && (building.kind === 'ballista' || building.kind === 'siegeCannon' || constructionHead(state, building) !== building)) continue;
     if (site && buildingWorkForbidden(state, building)) {
       if (!site.waitingForBuilder) pauseSite(state, building);
       const builder = byId.get(site.builderId ?? -1);
@@ -262,7 +261,8 @@ function beginWork(state: GameState, unit: Unit, building: Building): void {
   if (site.waitingForBuilder) removeCoveredRoads(state, building);
   if (runConstructionRule(state, building, 4, { arrivingBuilder: unit.id }) & CONSTRUCTION_INVALIDATE) invalidateNavigation(state);
   unit.buildPhase = 'working'; unit.moving = false; clearJourney(unit);
-  unit.facing = Math.atan2(building.y + buildingHeight(building) / 2 - unit.y, building.x + buildingWidth(building) / 2 - unit.x);
+  const { x, y, width, height } = constructionFootprint(building);
+  unit.facing = Math.atan2(y + height / 2 - unit.y, x + width / 2 - unit.x);
 }
 
 /** Dispatch uses static terrain routes; moving friends yield through the common movement system. */
@@ -292,7 +292,8 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
     if (unit.inside && !canDispatchPeasant(state, unit)) return;
     const construction = simulationReadsActive(state) ? entityStore(state).buildings.query('construction') : state.buildings;
     const orders = construction.filter(candidate => candidate.kind !== 'ballista' && candidate.kind !== 'siegeCannon' && candidate.hp > 0 && candidate.faction === unit.faction
-      && candidate.construction?.waitingForBuilder && !buildingWorkForbidden(state, candidate) && candidate.construction.builderId === undefined)
+      && candidate.construction?.waitingForBuilder && candidate.construction.builderId === undefined
+      && constructionHead(state, candidate) === candidate && !buildingWorkForbidden(state, candidate))
       .sort((a, b) => a.construction!.startedAt - b.construction!.startedAt || distance(palace, a) - distance(palace, b));
     for (const order of orders) {
       const journey = nearestConstructionJourney(state, unit, order, occupied);
@@ -301,6 +302,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
       invalidateWorkerHomes(state);
       unit.x = journey.exit.x; unit.y = journey.exit.y; unit.inside = false; unit.buildSite = order.id; unit.buildPhase = 'outbound';
       order.construction!.builderId = unit.id; setJourney(unit, journey.goal, journey.path);
+      entityStore(state).setWorkerDormant(unit, false);
       return;
     }
     const exits = constructionEdges(workNavigationState(state, true), palace, true).filter(point => !occupied.has(tileKey(state, point)) && !unitPositionBlocked(state, unit, point));
@@ -311,7 +313,9 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
         const path = findPath(workNavigationState(state, true), exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
         if (!path.length && distance(exit, goal) > .12) continue;
         unit.x = exit.x; unit.y = exit.y; unit.inside = false; unit.clearTree = { x: order.x, y: order.y };
-        unit.clearProgress = 0; unit.buildPhase = 'outbound'; order.workerId = unit.id; setJourney(unit, goal, path); return;
+        unit.clearProgress = 0; unit.buildPhase = 'outbound'; order.workerId = unit.id; setJourney(unit, goal, path);
+        entityStore(state).setWorkerDormant(unit, false);
+        return;
       }
     }
     // Construction takes priority; repairs reuse these same workers and slots.
@@ -324,7 +328,9 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
         const path = findPath(workNavigationState(state, true), exit, goal, unit.faction, false, undefined, undefined, undefined, false, true);
         if (!path.length && distance(exit, goal) > .12) continue;
         unit.x = exit.x; unit.y = exit.y; unit.inside = false; unit.repairSite = repair.id; unit.buildPhase = 'outbound';
-        repair.repairerId = unit.id; setJourney(unit, goal, path); return;
+        repair.repairerId = unit.id; setJourney(unit, goal, path);
+        entityStore(state).setWorkerDormant(unit, false);
+        return;
       }
     }
     unit.repathAt = state.time + 2;
@@ -372,7 +378,7 @@ export function updateBuilder(state: GameState, unit: Unit, dt: number, move: Mo
         unit.buildPhase = 'repairing'; unit.moving = false; clearJourney(unit);
         unit.facing = Math.atan2(repair.y + buildingHeight(repair) / 2 - unit.y, repair.x + buildingWidth(repair) / 2 - unit.x);
         const tools = constructionSpeedMultiplier(state.factions.find(faction => faction.id === unit.faction));
-        repair.hp = nativeRepair(repair.hp, repair.maxHp, CONSTRUCTION_SECONDS[repair.kind], tools, dt);
+        repair.hp = nativeRepair(repair.hp, repair.maxHp, repair.kind, tools, dt);
         notifyRepairJobChanged(state, repair);
         if (repair.hp >= repair.maxHp) { releaseSite(state, unit); unit.buildPhase = 'returning'; }
         return;

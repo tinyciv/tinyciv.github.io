@@ -1,6 +1,7 @@
 //! Field artillery. Conversion, shared weighted route fields, movement, weapon
 //! clocks and upkeep execute in the game's Bevy World; the host mirrors rows.
 use bevy_ecs::prelude::*;
+use smallvec::SmallVec;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, HashMap, HashSet, BinaryHeap};
 use super::{entities::EntityTables, kinds::{building as b, unit as u}};
@@ -11,13 +12,36 @@ pub const RANGE: f64 = 18.0;
 pub const UPKEEP: f64 = 200.0;
 pub const PERIOD: f64 = 30.0;
 pub const SPEED: f64 = 3.6 * 1.1 * 0.5;
+const ACCELERATION_TIME: f64 = 2.5;
+const BRAKING_TIME: f64 = 0.65;
 type Cell = (i32,i32);
+type Detour = SmallVec<[Cell; 12]>;
 fn cell(x:f64,y:f64)->Cell{(x.floor() as i32,y.floor() as i32)}
+fn center(c: Cell) -> (f64, f64) { (c.0 as f64 + 0.5, c.1 as f64 + 0.5) }
 fn neighbors(c:Cell)->[Cell;8]{[(c.0,c.1-1),(c.0+1,c.1),(c.0,c.1+1),(c.0-1,c.1),
     (c.0-1,c.1-1),(c.0+1,c.1-1),(c.0-1,c.1+1),(c.0+1,c.1+1)]}
 const EXPLICIT:u32=1;
 const ATTACK_GOAL:u32=2;
 const RALLY_GOAL:u32=4;
+const TRAFFIC_YIELD_DELAY: f64 = 4.0;
+const TRAFFIC_PASS_TIME: f64 = 6.0;
+
+/// Integrate a straight segment, returning distance, time used and exit speed.
+/// Give any unused time back to the next segment when reaching a waypoint.
+fn translation(speed: f64, limit: f64, acceleration: f64, distance: f64, dt: f64) -> (f64, f64, f64) {
+    let ramp_time = ((limit - speed) / acceleration).min(dt);
+    let ramp_distance = (speed + 0.5 * acceleration * ramp_time) * ramp_time;
+    let (step, elapsed) = if distance <= ramp_distance {
+        let exit_speed = (speed * speed + 2.0 * acceleration * distance).sqrt();
+        (distance, 2.0 * distance / (speed + exit_speed))
+    } else {
+        let cruise_time = ((distance - ramp_distance) / limit).min(dt - ramp_time);
+        (distance.min(ramp_distance + limit * cruise_time), ramp_time + cruise_time)
+    };
+    (step, elapsed, (speed + acceleration * elapsed).min(limit))
+}
+#[derive(Clone, Copy)]
+struct TrafficBlock { blocker: i64, position: (f64, f64), since: f64 }
 
 #[derive(Clone,Copy,PartialEq)]
 struct Site { kind:u32, faction:i32, x:i32, y:i32, flags:u32 }
@@ -27,7 +51,18 @@ struct Field { last_used:f64, revision:u64, navigation:Option<Navigation>, dista
 pub struct Navigation { pub engine:u32, pub grid:u32, pub blockers:u32, pub forbidden:u32, pub width:i32, pub height:i32, pub revision:u64 }
 #[derive(Component,Default,Clone)]
 pub struct Cannon { next_think:f64, next_plan:f64, hold_until:f64, goal:Option<Cell>, waypoint:Option<Cell>, revision:u64,
-    requested:Option<(Cell,u32)>, navigation:Option<Navigation>, rejected:Vec<Cell> }
+    requested:Option<(Cell,u32)>, navigation:Option<Navigation>, rejected:Vec<Cell>, next_detour:f64, detour:Detour,
+    traffic_block: Option<TrafficBlock>, yielding: bool, traffic_wait_until: f64,
+    velocity: [f64; 2] }
+impl Cannon {
+    fn waiting_for_traffic(&mut self, now: f64) -> bool {
+        if self.yielding && self.waypoint.is_none() && self.detour.is_empty() {
+            self.yielding = false;
+            self.traffic_wait_until = now + TRAFFIC_PASS_TIME;
+        }
+        now < self.traffic_wait_until
+    }
+}
 #[derive(Clone,Copy)]
 struct Post { point:Cell, seen:f64 }
 #[derive(Resource,Default)]
@@ -36,6 +71,7 @@ pub struct FieldCannons {
     roads:HashMap<Cell,u32>, paved:HashMap<Cell,u32>, bridges:HashMap<Cell,u32>, blocked:HashMap<Cell,u32>, fields:BTreeMap<(i32,Cell),Field>, navigation:HashMap<i32,Navigation>, revision:u64, work_at:f64, work_left:usize, prune_at:f64,
     posts:HashMap<i64,Post>, posts_prune_at:f64,
     post_cells:HashMap<Cell,i64>,
+    detours_left: usize, detour_frontier: BinaryHeap<Reverse<(u32, Cell)>>,
 }
 fn count(map:&mut HashMap<Cell,u32>,c:Cell,add:bool){
     if add {*map.entry(c).or_default()+=1;} else if let Some(n)=map.get_mut(&c){*n-=1;if *n==0{map.remove(&c);}}
@@ -94,7 +130,14 @@ impl FieldCannons {
         }else{self.ready_road(c)}
     }
     fn edge(&self,a:Cell,z:Cell,navigation:Option<Navigation>,engines:&crate::movement::Engines)->bool{
-        if let Some(n)=navigation {engines.get(n.engine).sweep(n.grid,a.0 as f64+0.5,a.1 as f64+0.5,z.0 as f64+0.5,z.1 as f64+0.5,n.blockers,n.forbidden)}else{self.road_move(a.0 as f64+0.5,a.1 as f64+0.5,z.0 as f64+0.5,z.1 as f64+0.5)}
+        self.segment_clear(center(a), center(z), navigation, engines)
+    }
+    fn segment_clear(&self, from: (f64, f64), to: (f64, f64), navigation: Option<Navigation>, engines: &crate::movement::Engines) -> bool {
+        if let Some(n) = navigation {
+            engines.get(n.engine).sweep(n.grid, from.0, from.1, to.0, to.1, n.blockers, n.forbidden)
+        } else {
+            self.road_move(from.0, from.1, to.0, to.1)
+        }
     }
     fn post_open(&self,id:i64,c:Cell,navigation:Option<Navigation>,engines:&crate::movement::Engines)->bool {
         self.open(c,navigation,engines) && self.post_cells.get(&c).is_none_or(|&other|other==id)
@@ -127,12 +170,110 @@ impl FieldCannons {
     }
     fn edge_cost(&self,a:Cell,z:Cell)->u32 {
         let diagonal=if a.0!=z.0&&a.1!=z.1{std::f64::consts::SQRT_2}else{1.0};
-        ((500.0/self.multiplier(a)+500.0/self.multiplier(z))*diagonal).round() as u32
+        self.travel_cost(a, z, diagonal)
+    }
+    fn travel_cost(&self, from: Cell, to: Cell, distance: f64) -> u32 {
+        ((500.0 / self.multiplier(from) + 500.0 / self.multiplier(to)) * distance).round() as u32
+    }
+    /// Search a bounded patch for a clear rejoin point. When none exists,
+    /// choose a waiting pocket beside the lane or back out along the lane.
+    fn detour(&mut self, id: i64, position: (f64, f64), blocked: Cell, route: (i32, Cell),
+        navigation: Navigation, engine: &crate::movement::Engine, yield_direction: Option<(f64, f64)>) -> (Detour, bool) {
+        const RADIUS: i32 = 6;
+        const WIDTH: usize = (2 * RADIUS + 1) as usize;
+        const SIZE: usize = WIDTH * WIDTH;
+        let field = &self.fields[&route];
+        let remaining_at_blocker = field.distance.get(&blocked).copied();
+        let origin = cell(position.0, position.1);
+        let index = |c: Cell| ((c.1 - origin.1 + RADIUS) as usize) * WIDTH + (c.0 - origin.0 + RADIUS) as usize;
+        let can_move = |from: (f64, f64), to: (f64, f64)| {
+            engine.sweep(navigation.grid, from.0, from.1, to.0, to.1, navigation.blockers, navigation.forbidden)
+                && engine.artillery_step_clear(id, from.0, from.1, to.0, to.1)
+        };
+        let mut distances = [u32::MAX; SIZE];
+        let mut previous = [None; SIZE];
+        let mut frontier = std::mem::take(&mut self.detour_frontier);
+        for candidate in std::iter::once(origin).chain(neighbors(origin)) {
+            let destination = center(candidate);
+            let length = (destination.0 - position.0).hypot(destination.1 - position.1);
+            if length <= 1e-8 || !can_move(position, destination) { continue; }
+            let cost = self.travel_cost(origin, candidate, length);
+            distances[index(candidate)] = cost;
+            frontier.push(Reverse((cost, candidate)));
+        }
+        let mut best: Option<(u32, Cell)> = None;
+        let mut pocket: Option<(bool, u32, Cell)> = None;
+        while let Some(Reverse((cost, current))) = frontier.pop() {
+            if best.is_some_and(|(score, _)| cost > score) { break; }
+            if distances[index(current)] != cost { continue; }
+            if let Some(&remaining) = field.distance.get(&current) {
+                let candidate = (cost.saturating_add(remaining), current);
+                if remaining_at_blocker.is_some_and(|blocked| remaining <= blocked)
+                    && best.is_none_or(|score| candidate < score) { best = Some(candidate); }
+            }
+            if let Some((dx, dy)) = yield_direction {
+                let (x, y) = center(current);
+                let (rx, ry) = (x - position.0, y - position.1);
+                let beside = (dx * ry - dy * rx).abs() >= 1.0;
+                let behind = dx * rx + dy * ry <= -1.0;
+                if beside || behind {
+                    let candidate = (!beside, cost, current);
+                    if pocket.is_none_or(|score| candidate < score) { pocket = Some(candidate); }
+                }
+            }
+            for next in neighbors(current) {
+                if (next.0 - origin.0).abs() > RADIUS || (next.1 - origin.1).abs() > RADIUS { continue; }
+                let next_index = index(next);
+                let next_cost = cost.saturating_add(self.edge_cost(current, next));
+                if next_cost >= distances[next_index] || !can_move(center(current), center(next)) { continue; }
+                distances[next_index] = next_cost;
+                previous[next_index] = Some(current);
+                frontier.push(Reverse((next_cost, next)));
+            }
+        }
+        frontier.clear();
+        self.detour_frontier = frontier;
+        let mut path = Detour::new();
+        let yielding = best.is_none() && pocket.is_some();
+        if let Some(mut current) = best.map(|(_, cell)| cell).or_else(|| pocket.map(|(_, _, cell)| cell)) {
+            path.push(current);
+            while let Some(parent) = previous[index(current)] {
+                path.push(parent);
+                current = parent;
+            }
+        }
+        (path, yielding)
+    }
+    fn recover_route(&mut self, cannon: &mut Cannon, id: i64, position: (f64, f64), blocked: Cell, route: (i32, Cell),
+        navigation: Navigation, engine: &crate::movement::Engine, now: f64) -> bool {
+        if now < cannon.next_detour || self.detours_left == 0 { return false; }
+        if now - cannon.next_detour > 2.0 { cannon.traffic_block = None; }
+        cannon.next_detour = now + 1.0;
+        self.detours_left -= 1;
+        let direction = if let Some((blocker, point)) = engine.artillery_blocker(id, position, center(blocked)) {
+            let block = cannon.traffic_block.get_or_insert(TrafficBlock { blocker, position: point, since: now });
+            if block.blocker != blocker || (block.position.0 - point.0).hypot(block.position.1 - point.1) > 0.2 {
+                *block = TrafficBlock { blocker, position: point, since: now };
+            }
+            let (dx, dy) = (point.0 - position.0, point.1 - position.1);
+            let length = dx.hypot(dy);
+            // A stable priority lets one gun make room first. If the higher
+            // priority gun is blocked by a stationary cannon, it can yield too.
+            if length > 1e-8 && (id > blocker || now - block.since >= TRAFFIC_YIELD_DELAY) {
+                Some((dx / length, dy / length))
+            } else { None }
+        } else { None };
+        let (mut detour, yielding) = self.detour(id, position, blocked, route, navigation, engine, direction);
+        let Some(waypoint) = detour.pop() else { return false; };
+        cannon.waypoint = Some(waypoint);
+        cannon.detour = detour;
+        cannon.yielding = yielding;
+        true
     }
     /// Shared Dijkstra fields prefer fast roads, while allowing legal off-road
     /// links. All artillery shares a bounded work allowance for this step.
     fn advance_field(&mut self,faction:i32,goal:Cell,needed:Cell,now:f64,engines:&crate::movement::Engines){
-        if self.work_at!=now {self.work_at=now;self.work_left=2048;}
+        if self.work_at!=now {self.work_at=now;self.work_left=2048;self.detours_left=4;}
         let key=(faction,goal);let navigation=self.navigation.get(&faction).copied();
         if now>=self.prune_at{self.fields.retain(|_,field|now-field.last_used<3.0);self.prune_at=now+1.0;}
         let mut field=self.fields.remove(&key).unwrap_or_default();
@@ -196,15 +337,15 @@ impl FieldCannons {
         }
         if let Some(post)=self.posts.get_mut(&id){post.seen=now;}
         if self.output[4]<=0.0||dt<=0.0{return;}
+        let mut momentum = std::mem::take(&mut cannon.velocity);
         if !self.output[11].is_finite(){self.output[11]=now+PERIOD;}
         if now>=self.output[11]{
             let periods=((now-self.output[11])/PERIOD).floor()+1.0;let bill=UPKEEP*periods;
             self.output[12]=if self.output[17]>=bill{self.output[17]-=bill;1.0}else{0.0};
             self.output[11]+=PERIOD*periods;
         }
-        if self.input[23]==0.0&&self.output[15]>=0.0{self.output[15]=-1.0;cannon.goal=None;cannon.waypoint=None;cannon.next_plan=0.0;return;}
+        if self.input[23]==0.0&&self.output[15]>=0.0{self.output[15]=-1.0;cannon.goal=None;cannon.waypoint=None;cannon.detour.clear();cannon.next_plan=0.0;return;}
         self.output[9]=(self.output[9]-dt).max(0.0);self.output[13]=(self.output[13]-dt).max(0.0);
-        if self.output[12]==0.0{cannon.next_think=now+1.0;return;}
         if self.output[9]<=1e-8 && now>=cannon.next_think{
             cannon.next_think=now+1.0;
             let mut best:Option<(u32,f64,usize)>=None;
@@ -218,7 +359,8 @@ impl FieldCannons {
             }
             if let Some((_,_,i))=best{let v=&self.input[ROW+i*TARGET..ROW+(i+1)*TARGET];
                 self.output[8]=(v[2]-self.output[3]).atan2(v[1]-self.output[2]);self.output[10]=now;self.output[9]=4.0;self.output[13]=0.74;self.output[21]=v[0];cannon.hold_until=now+4.0;
-                self.output[22]=super::battle_support::siege_attack(true,crate::combat::attack_damage(self.output[16]*v[5],v[4])*self.output[18]*if v[9]!=0.0{2.0}else{1.0});
+                let attack = self.output[16] * crate::combat::upkeep_combat_multiplier(self.output[12] != 0.0);
+                self.output[22]=super::battle_support::siege_attack(true,crate::combat::attack_damage(attack*v[5],v[4])*self.output[18]*if v[9]!=0.0{2.0}else{1.0});
             }
         }
         if !self.output[6].is_finite()||self.output[13]>0.0||(flags&EXPLICIT==0||flags&ATTACK_GOAL!=0)&&now<cannon.hold_until{return;}
@@ -228,13 +370,28 @@ impl FieldCannons {
             cannon.next_plan=now+1.0;
             let changed=cannon.requested!=requested||cannon.navigation!=navigation||cannon.revision!=self.revision;
             if changed {cannon.rejected.clear();}
+            let order_changed = cannon.requested.is_some_and(|(_, mode)| mode != flags & !EXPLICIT)
+                || flags & EXPLICIT != 0 && cannon.requested != requested;
+            // A fresh point order can redirect a gun even while it is yielding.
+            let new_destination = flags == EXPLICIT && cannon.requested != requested;
+            if new_destination || order_changed && !cannon.yielding && now >= cannon.traffic_wait_until {
+                cannon.waypoint = None;
+                cannon.detour.clear();
+                cannon.traffic_block = None;
+                cannon.yielding = false;
+                cannon.traffic_wait_until = 0.0;
+            }
             let keep=!changed && cannon.goal.is_some_and(|goal|self.post_open(id,goal,navigation,engines));
-            if !keep {cannon.goal=self.choose_post(id,faction,cannon,self.output[6],self.output[7],flags,navigation,engines);}
-            // Keep an in-flight segment across ordinary order publications and
-            // distant edits. Returning to the current cell center every half
-            // second made slow off-road artillery reverse forever.
+            if !keep {
+                cannon.goal = self.choose_post(id,faction,cannon,self.output[6],self.output[7],flags,navigation,engines);
+            }
+            // Follow-goal updates can keep an in-flight segment while it is open.
             if let Some(next)=cannon.waypoint {
-                if !self.open(next,navigation,engines)||navigation.is_some_and(|n|!engines.get(n.engine).sweep(n.grid,self.output[2],self.output[3],next.0 as f64+0.5,next.1 as f64+0.5,n.blockers,n.forbidden)){cannon.waypoint=None;}
+                let position = (self.output[2], self.output[3]);
+                if !self.segment_clear(position, center(next), navigation, engines) {
+                    cannon.waypoint = None;
+                    cannon.detour.clear();
+                }
             }
             cannon.requested=requested;cannon.revision=self.revision;cannon.navigation=navigation;
             self.reserve_post(id,cannon.goal,now);
@@ -249,24 +406,59 @@ impl FieldCannons {
         let mut remaining=dt;
         for _ in 0..16{
             if remaining<=1e-9{break;}
-            if cannon.waypoint.is_none(){
-                let c=cell(self.output[2],self.output[3]);let center=(c.0 as f64+0.5,c.1 as f64+0.5);
-                if (center.0-self.output[2]).hypot(center.1-self.output[3])>0.001{cannon.waypoint=Some(c);}
-                else if c==goal{self.output[23]=1.0;break;}
-                else{let field=&self.fields[&(faction,goal)];if !field.settled.contains(&c){break;}let Some(&distance)=field.distance.get(&c) else{break;};
-                    cannon.waypoint=neighbors(c).into_iter().filter(|n|field.distance.get(n).is_some_and(|d|*d<distance)&&self.edge(c,*n,navigation,engines))
-                        .min_by_key(|n|(field.distance[n].saturating_add(self.edge_cost(c,*n)),*n));
+            cannon.velocity = [0.0; 2];
+            if cannon.waiting_for_traffic(now) { break; }
+            if cannon.waypoint.is_none() { cannon.waypoint = cannon.detour.pop(); }
+            let position = (self.output[2], self.output[3]);
+            let current = cell(position.0, position.1);
+            if cannon.waypoint.is_none() {
+                let middle = center(current);
+                let off_center = (middle.0 - position.0).hypot(middle.1 - position.1) > 0.001;
+                if current == goal && !off_center { self.output[23] = 1.0; break; }
+                let field = &self.fields[&(faction, goal)];
+                if !field.settled.contains(&current) { break; }
+                let distance = field.distance[&current];
+                // Start the next leg from the gun's actual position. This lets
+                // a redirected gun go sideways or back without recentering first.
+                cannon.waypoint = neighbors(current).into_iter().filter(|&next| {
+                    field.distance.get(&next).is_some_and(|&next_distance| next_distance < distance)
+                        && self.segment_clear(position, center(next), navigation, engines)
+                }).min_by_key(|&next| (field.distance[&next].saturating_add(self.edge_cost(current, next)), next))
+                    .or_else(|| off_center.then_some(current));
+            }
+            let Some(next) = cannon.waypoint else { break; };
+            if !self.open(next, navigation, engines) { cannon.waypoint = None; cannon.detour.clear(); break; }
+            let endpoint = center(next);
+            let (dx, dy) = (endpoint.0 - position.0, endpoint.1 - position.1);
+            let length = dx.hypot(dy);
+            if length < 1e-8 { cannon.waypoint = None; continue; }
+            let direction = [dx / length, dy / length];
+            let top_speed = SPEED * self.output[19] * self.multiplier(current).min(self.multiplier(next));
+            let limit = if (next == goal || cannon.yielding) && cannon.detour.is_empty() {
+                top_speed.min((2.0 * top_speed * length / BRAKING_TIME).sqrt())
+            } else { top_speed };
+            // Carry momentum along the new heading. The sprite turns at once,
+            // while a sharp turn takes time to regain speed.
+            let entry_speed = (momentum[0] * direction[0] + momentum[1] * direction[1]).clamp(0.0, limit);
+            let (step, elapsed, exit_speed) = translation(entry_speed, limit, top_speed / ACCELERATION_TIME, length, remaining);
+            let (nx, ny) = (position.0 + direction[0] * step, position.1 + direction[1] * step);
+            if let Some(n)=navigation {
+                let engine = engines.get(n.engine);
+                if !engine.sweep(n.grid, position.0, position.1, nx, ny, n.blockers, n.forbidden) {
+                    cannon.waypoint = None;
+                    cannon.detour.clear();
+                    break;
+                }
+                if !engine.artillery_step_clear(id, position.0, position.1, nx, ny) {
+                    momentum = [0.0; 2];
+                    if self.recover_route(cannon, id, position, next, (faction, goal), n, engine, now) { continue; }
+                    break;
                 }
             }
-            let Some(next)=cannon.waypoint else{break;};if !self.open(next,navigation,engines){cannon.waypoint=None;break;}
-            let dx=next.0 as f64+0.5-self.output[2];let dy=next.1 as f64+0.5-self.output[3];let length=dx.hypot(dy);
-            if length<1e-8{cannon.waypoint=None;continue;}
-            let current=cell(self.output[2],self.output[3]);
-            let speed=SPEED*self.output[19]*self.multiplier(current).min(self.multiplier(next));
-            let step=length.min(speed*remaining);let nx=self.output[2]+dx/length*step;let ny=self.output[3]+dy/length*step;
-            if let Some(n)=navigation{if !engines.get(n.engine).sweep(n.grid,self.output[2],self.output[3],nx,ny,n.blockers,n.forbidden){cannon.waypoint=None;break;}}
-            if let Some(n)=navigation{if !engines.get(n.engine).artillery_step_clear(id,self.output[2],self.output[3],nx,ny){break;}}
-            self.output[2]=nx;self.output[3]=ny;self.output[8]=dy.atan2(dx);self.output[20]=1.0;remaining-=step/speed;
+            momentum = [direction[0] * exit_speed, direction[1] * exit_speed];
+            cannon.velocity = momentum;
+            self.output[2] = nx; self.output[3] = ny; self.output[8] = dy.atan2(dx); self.output[20] = 1.0;
+            remaining -= elapsed;
             if step>=length-1e-8{cannon.waypoint=None;}else{break;}
         }
     }
@@ -297,3 +489,43 @@ pub fn step(world:&mut World,id:i64,now:f64,dt:f64,targets:usize,engines:&crate:
     world.entity_mut(entity).insert(c);pointer
 }
 pub fn constant(i:u32)->f64{match i{0=>600.0,1=>750.0,2=>UPKEEP,3=>PERIOD,4=>SPEED,5=>RANGE,_=>f64::NAN}}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cannon_yields_into_a_side_pocket_without_losing_its_goal() {
+        let mut engines = crate::movement::Engines::default();
+        let (width, height) = (8, 4);
+        let handle = engines.create(width, height);
+        let engine = engines.get_mut(handle);
+        let grid = engine.grid_create(width, height);
+        let rows: Vec<_> = (0..width * height).flat_map(|index| {
+            let (x, y) = (index % width, index / width);
+            let open = y == 2 || (x, y) == (2, 1);
+            [index as f64, u32::from(open) as f64, 255.0, 1.0]
+        }).collect();
+        let input = engine.grid_input(rows.len() / 4);
+        unsafe { std::ptr::copy_nonoverlapping(rows.as_ptr(), input, rows.len()); }
+        engine.grid_patch(grid, rows.len() / 4);
+        engine.actor(1, 3.5, 2.5, u::FIELD_CANNON, 0.0, 200.0, 0, f64::NAN, 0, 0.0, Some(19), false);
+        let navigation = Navigation { engine: handle, grid, blockers: 0, forbidden: 0, width, height, revision: 0 };
+        let mut state = FieldCannons::default();
+        state.navigation(0, navigation);
+        let goal = (7, 2);
+        state.advance_field(0, goal, (2, 2), 1.0, &engines);
+        let mut cannon = Cannon { goal: Some(goal), ..Cannon::default() };
+        assert!(state.recover_route(&mut cannon, 2, (2.5, 2.5), (3, 2), (0, goal),
+            navigation, engines.get(handle), 1.0));
+        assert_eq!(cannon.waypoint, Some((2, 1)));
+        assert!(cannon.yielding);
+        assert_eq!(cannon.goal, Some(goal));
+
+        cannon.waypoint = None;
+        assert!(cannon.waiting_for_traffic(2.0));
+        assert!(cannon.waiting_for_traffic(7.9));
+        assert!(!cannon.waiting_for_traffic(8.0));
+        assert_eq!(cannon.goal, Some(goal));
+    }
+}

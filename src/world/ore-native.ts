@@ -1,5 +1,6 @@
 import { rustEngine } from '../game/rust-engine';
 import { reliefBuildable, reliefGroundWalkable } from '../game/relief';
+import { ridgeStairAccess } from '../game/ridges';
 import { WATER, type World } from '../game/types';
 import { resourceBlocksGround } from '../game/resource-terrain';
 
@@ -16,27 +17,30 @@ export function resourceHabitats(world: World): Float64Array {
 }
 export const saltPanLimit = (): number => rustEngine.resource_group_limit(6);
 
-/** Transport only: native ECS owns geology adjacency, footprints and access. */
+/** Transport only: native ECS owns deposit placement, footprints and access. */
 export function assignOreDeposits(world: World, cores: Uint8Array, tutorial=false): number {
   const n = world.tiles.length, pointer = rustEngine.ore_input(n * 4);
   const input = new Float64Array(rustEngine.memory.buffer, pointer, n * 4);
+  const spawns = new Set(tutorial ? world.spawns.map(p => p.y * world.width + p.x) : []);
   world.tiles.forEach((tile, cell) => {
+    const x = cell % world.width, y = Math.floor(cell / world.width);
     const dry = !WATER.has(tile.terrain) && !tile.creek;
-    const walk = dry || tile.terrain === 'river' && tile.overlay === 'ford';
+    const lowGround = !tile.ridge && !tile.stair && !tile.waterfall;
+    const walk = lowGround && (dry || tile.terrain === 'river' && tile.overlay === 'ford');
     const replacedOre=tutorial&&['copper','iron','gold'].includes(tile.resource??'');
-    const eligible = dry && !cores[cell] && reliefBuildable(tile) && (!tile.resource||replacedOre) && !tile.beach && !tile.marsh
-      && tile.farm === undefined && ['none', 'forest', 'jungle'].includes(tile.overlay);
-    input.set([Number(walk && (!resourceBlocksGround(tile,false,cell,world.width)||replacedOre) && reliefGroundWalkable(world, cell % world.width, Math.floor(cell / world.width))
+    const eligible = dry && lowGround && !cores[cell] && reliefBuildable(tile) && (!tile.resource||replacedOre) && !tile.beach && !tile.marsh
+      && !tile.geothermal && tile.farm === undefined && ['none', 'forest', 'jungle'].includes(tile.overlay) && !ridgeStairAccess(world, x, y);
+    input.set([Number(walk && (!resourceBlocksGround(tile,false,cell,world.width)||replacedOre) && reliefGroundWalkable(world, x, y)
       && tile.overlay !== 'volcano' && tile.overlay !== 'glacier') | Number(eligible) << 1
       | Number(tile.overlay === 'forest' || tile.overlay === 'jungle') << 2
-      | Number(tutorial&&world.spawns.some(p=>p.y*world.width+p.x===cell)) << 3,
-      Number(!!tile.relief), ['grassland', 'plains', 'desert', 'tundra'].indexOf(tile.terrain), Number(dry)], cell * 4);
+      | Number(spawns.has(cell)) << 3,
+      tile.elevation, ['grassland', 'plains', 'desert', 'tundra'].indexOf(tile.terrain), Number(dry)], cell * 4);
   });
-  let seed = 2166136261; for (const ch of `${world.seed}:mountain-ore`) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619);
-  const firstGroup=tutorial?Math.max(0,...world.tiles.map(tile=>tile.resourceGroup??0))+1:1;
+  let seed = 2166136261; for (const ch of `${world.seed}:ore`) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619);
+  const firstGroup = tutorial ? world.tiles.reduce((max, tile) => Math.max(max, tile.resourceGroup ?? 0), 0) + 1 : 1;
   const result = rustEngine.ore_generate(world.width, world.height, seed >>> 0, firstGroup, Number(tutorial));
   const rows = new Float64Array(rustEngine.memory.buffer, result, n * 8).slice();
-  let nextGroup = 1;
+  let nextGroup = firstGroup;
   for (let cell = 0; cell < n; cell++) {
     const at = cell * 8, kind = rows[at];
     if(tutorial&&['copper','iron','gold'].includes(world.tiles[cell].resource??'')) {

@@ -56,6 +56,13 @@ export function placementOccupancy(state: GameState): PlacementOccupancy {
   return query;
 }
 
+export function hermitCabinOverlaps(state: GameState, x: number, y: number, width = 1, height = 1): boolean {
+  return state.hermits?.some(hermit => {
+    const size = hermit.status === 'gone' ? 1 : 2;
+    return x < hermit.x + size && x + width > hermit.x && y < hermit.y + size && y + height > hermit.y;
+  }) ?? false;
+}
+
 function berthBlocked(buildings: readonly Building[], x: number, y: number, width: number, height: number): boolean {
   return buildings.some(building => {
     if (building.kind !== 'dock' || building.hp <= 0) return false;

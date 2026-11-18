@@ -14,7 +14,7 @@ An anchored warship repairs its hull at 2.4 HP per second within three tiles of 
 
 Lateen Sails requires Sailing and Engineering. Naval Engineering requires Lateen Sails and Metal Casting. The frigate's 15% speed increase is relative to the caravel. Every hull occupies a 2×5 capsule with 2×4 usable deck space. Steering turns at 0.32 radians/s, compared with the existing galley's 1.15. Reverse thrust reaches 45% of forward speed.
 
-Choose mounts and marine equipment at the ship's own shipyard. Refits are free and preserve casualties. Weapon mounts accept ballistae (Siege Engines) or cannons (Siege Engines and Gunpowder), and can also be left empty. Marine choices are melee warriors, spearmen (Military Tactics), archers (Archery) and musketmen (Gunpowder). Ranged marines fire across water but have substantially weaker boarding attacks.
+Choose mounts and marine equipment at the ship's own shipyard. Refits are free and preserve casualties. Weapon mounts accept ballistae (Siege Engines) or cannons (Siege Engines and Gunpowder), and can also be left empty. Marine choices are archers (Archery) and musketmen (Gunpowder).
 
 Select an empty friendly ship and right-click it to board with the Leader. The current living retinue travels hidden aboard; its identity, equipment and squad veterancy remain intact. Marines remain visible. W/S apply forward/reverse thrust; A/D and Q/E turn. Right-click water to sail. An inspected friendly ship can also receive a water destination while the Leader remains ashore.
 
@@ -24,7 +24,7 @@ Marauder fleets use native 16×32 PixelLab barbarian galleys with a 1×2 physica
 
 Civilian rowboats show their occupants at 60% sprite scale. Their render anchor stays centered on the physical rowboat. Vessel visibility checks the entire hull, and rendering fades a last-observed pose with the fog's return animation instead of snapping off at the center tile. Hidden ships' current positions are never used for that fade.
 
-Nearby hostile ships fight automatically. Melee marines deploy two PixelLab boarding planks when hull separation is at most 0.7 tiles. Archers and muskets defend poorly in melee. Once the opposing complement is defeated, boarders damage its hull. Each ballista, cannon and surviving ranged marine acquires and tracks its own target once per second, retains its own cooldown and fires from its own deck position. Mounts show their existing native siege aiming/recoil frames; marines show their own firing poses. Two ship kills advance a ship's veterancy tier, up to Elite; damage increases with its own kills. Boat labels show only a faction-appropriate name, without numeric suffixes. Veterancy remains saved on the individual ship.
+Nearby hostile ships fight automatically. Each ballista, cannon and surviving marine acquires and tracks its own target once per second, retains its own cooldown and fires from its own deck position. Marines target the enemy crew first, then the hull. Mounts show their existing native siege aiming and recoil frames. Marines show their own firing poses. Two ship kills advance a ship's veterancy tier, up to Elite, and damage increases with its own kills. Boat labels show only a faction-appropriate name, without numeric suffixes. Veterancy remains saved on the individual ship.
 
 Weapons and marines keep acquiring and firing at hostile ships and visible shore units with or without a Leader aboard. Landing the Leader and retinue preserves the ship's crew, mounts and independent weapon cooldowns.
 
@@ -34,9 +34,9 @@ Rival realms consider one city and one shipyard per second, reserve gold before 
 
 ## Implementation and art
 
-- `rust/src/sim/warships.rs`: Bevy ship components and resource; purchase/site rules, controls, navigation, avoidance, collisions, boarding, firing, upkeep and rewards.
+- `rust/src/sim/warships.rs` contains the Bevy ship components and handles shipyard rules, controls, navigation, avoidance, collisions, embarking, firing, upkeep and rewards.
 - `src/game/warships-native.ts`: command/data transport, serializable mirrors, existing construction/ledger/death effects and maintained terrain-blocker publication.
-- `src/game/warship-art.ts`, `src/game/native-art.ts`: retained generated hull textures, continuous rotation and upright marines; generated plank textures and existing troop animations.
+- `src/game/warship-art.ts` and `src/game/native-art.ts` draw the generated hull textures, continuous rotation, and upright marines with troop animations.
 - `src/ui/shipyard-panel.ts`: ship, mount and marine choices; authenticated multiplayer commands use the same validation path.
 - `public/assets/naval/warships/source.json`: PixelLab generation provenance. Native sprites are unmodified API outputs grounded in existing game art and approved mockup crops.
 - `public/assets/ui/naval/source.json`: original imagegen UI icons, extracted from generated atlases without painting pixels.

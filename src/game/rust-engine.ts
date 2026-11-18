@@ -2,6 +2,27 @@
  * compiled module is shared; each navigation grid can instantiate isolated
  * scratch memory without recompiling or crossing into JS during a search. */
 export interface RustExports extends WebAssembly.Exports {
+  sim_structure_changes(handle: number, since: number): number;
+  sim_defense_input(handle: number, length: number): number;
+  sim_defense_reset(handle: number): void;
+  sim_defense_geometry(handle: number, width: number, height: number): void;
+  sim_defense_site(handle: number, id: number, faction: number, kind: number, x: number, y: number, flags: number): void;
+  sim_defense_due(handle: number, faction: number, now: number, interval: number): number;
+  sim_defense_owned(handle: number, faction: number): number;
+  sim_defense_city(handle: number, faction: number): number;
+  sim_defense_towers(handle: number, id: number): number;
+  sim_defense_next(handle: number, id: number, now: number, budget: number): number;
+  sim_defense_rejected(handle: number, id: number): void;
+  civic_building_targetable(kind: number, hp: number): number;
+  civic_building_removable(kind: number): number;
+  civic_building_constant(kind: number, property: number): number;
+  sim_civic_prepare(handle: number, words: number): number;
+  sim_civic_step(handle: number, count: number, now: number, elapsed: number): number;
+  sim_civic_mine_progress(handle: number, id: number, challenger: number, progress: number): void;
+  sim_civic_income(handle: number, amount: number): void;
+  sim_civic_factory_income(handle: number, faction: number, base: number): number;
+  sim_civic_dividends(handle: number): number;
+  sim_civic_generate(handle: number, width: number, height: number, seed: number): number;
   military_academy_constant(index: number): number;
   sim_academy_faction(handle: number, faction: number, level: number, preference: number): void;
   sim_academy_status(handle: number, faction: number): number;
@@ -57,6 +78,7 @@ export interface RustExports extends WebAssembly.Exports {
   exploration_ambush_committed(was:number,alive:number,fleeing:number,distance:number):number;
   exploration_refugee_arrived(x:number,y:number,gx:number,gy:number):number;
   exploration_ordinary_slots(total:number,rangers:number):number;
+  exploration_treasure_target(width:number,height:number):number;
   sim_exploration_build_allowed(handle:number,x:number,y:number,width:number,height:number):number;
   sim_exploration_input(handle:number,length:number):number;
   sim_exploration_geometry(handle:number,width:number,height:number):void;
@@ -77,6 +99,7 @@ export interface RustExports extends WebAssembly.Exports {
   sim_fishery_scenario_whales(handle:number):number;
   sim_fishery_atoll_provision(handle:number,cx:number,cy:number,rx:number,ry:number,multiplier:number):number;
   sim_fishery_length(handle:number):number;
+  sim_fishery_status(handle:number,id:number):number;
   sim_fishery_placement(handle:number,x:number,y:number):number;
   naval_constant(index:number, shipClass:number):number;
   naval_fleet_upkeep(count:number):number;
@@ -87,8 +110,10 @@ export interface RustExports extends WebAssembly.Exports {
   sim_naval_patch(handle:number,count:number):void;
   sim_naval_terrain(handle:number,terrain:number):void;
   sim_naval_command(handle:number,mode:number):number;
-  sim_naval_step(handle:number,ships:number,factions:number,relations:number,targets:number,now:number,dt:number):number;
+  sim_naval_preview(handle:number,mode:number):number;
+  sim_naval_step(handle:number,ships:number,factions:number,targets:number,now:number,dt:number,diplomacy:number,settlements:number):number;
   sim_naval_output_length(handle:number):number;
+  sim_naval_path_status(handle:number,id:number):number;
   terrain_rays_create(): number;
   terrain_rays_drop(handle: number): void;
   terrain_rays_input(handle: number, count: number): number;
@@ -111,7 +136,7 @@ export interface RustExports extends WebAssembly.Exports {
   ore_work_yield(kind: number, cells: number): number;
   resource_habitats(width: number, height: number): number;
   resource_group_limit(resource: number): number;
-  resource_ground_policy(resource: number, width?: number, height?: number, row?: number): number;
+  resource_ground_policy(resource: number, behindFront: number): number;
   resource_work_access(resource: number, phase: number, worker: number): number;
   hermit_plan_input(length:number):number;
   hermit_plan():number;
@@ -145,6 +170,9 @@ export interface RustExports extends WebAssembly.Exports {
   sim_bath_city_multiplier(handle: number, city: number): number;
   sim_bath_capacity(handle: number, id: number, faction: number, x: number, y: number, base: number): number;
   relief_input(length: number): number;
+  ledge_generate(width: number, height: number, seed: number, coverage: number): number;
+  woodland_input(count: number): number;
+  woodland_generate(width: number, height: number, seed: number, patchScale: number): number;
   relief_prune_mountains(width: number,height: number): number;
   relief_footprints(width: number,height: number,count: number): number;
   relief_generate(width:number,height:number,seed:number,coverage:number,mountains:number,hillSize:number,clustering:number,spacing:number,clumps:number,strings:number,lengthMin:number,lengthMax:number,breadth:number,bend:number):number;
@@ -183,6 +211,7 @@ export interface RustExports extends WebAssembly.Exports {
   sim_barbarian_input(handle:number,n:number):number;
   sim_barbarian_step(handle:number,boats:number,targets:number,now:number):number;
   galley_landing(x:number,y:number,angle:number,px:number,py:number):number;
+  warship_landing(x:number,y:number,angle:number,px:number,py:number):number;
   granary_constant(index: number): number;
   sim_granary_reset(handle: number): void;
   sim_granary_upsert(handle: number, id: number, kind: number, faction: number, x: number, y: number, flags: number): void;
@@ -198,6 +227,8 @@ export interface RustExports extends WebAssembly.Exports {
   sim_granary_bounds(handle: number, city: number, width: number, height: number): number;
   ai_investment_constant(kind: number, upkeep: number): number;
   watchtower_upkeep(human: number): number;
+  town_upkeep(cities: number, discounted: number): number;
+  town_founding_residents(available: number): number;
   sim_world_features_input(handle:number,length:number):number;
   sim_world_features_generate(handle:number,width:number,height:number,seed:number,starts:number):number;
   sim_ai_investment_input(handle: number, length: number): number;
@@ -253,6 +284,7 @@ export interface RustExports extends WebAssembly.Exports {
     originResidents: number, partnerResidents: number, achievements: number, domestic: number): number;
   culture_earned(culture: number, spent: number): number;
   sim_diplomacy_input(handle: number, length: number): number;
+  sim_scenario_diplomacy(handle: number, scenario: number): number;
   sim_diplomacy_sync(handle: number, now: number): void;
   sim_diplomacy_step(handle: number, now: number): number;
   sim_diplomacy_command(handle: number, mode: number, a: number, b: number, offer: number, confirmed: number): number;
@@ -341,6 +373,8 @@ export interface RustExports extends WebAssembly.Exports {
   morale_contagion(routing: number, standing: number, nearLeader: number): number;
   sim_entities_reset(handle: number): void;
   sim_entity_insert(handle: number, table: number, id: number): number;
+  sim_worker_slot_insert(handle: number, id: number): number;
+  sim_worker_slot_set(handle: number, id: number, dormant: number): number;
   sim_entity_remove(handle: number, table: number, id: number): number;
   sim_building_destruction_record(handle: number, id: number, x: number, y: number, kind: number, faction: number, hp: number): number;
   sim_building_destructions(handle: number): number;
@@ -391,12 +425,12 @@ export interface RustExports extends WebAssembly.Exports {
   combat_record_kill(kills: number): number;
   combat_unit_attack(scout: number, attack: number, kills: number, weapon: number, equipment: number,
     archerMultiplier: number, raider: number, strength: number, technologyBonus: number, raiderBonus: number,
-    achievements: number, context: number, quests: number): number;
+    achievements: number, context: number, quests: number, unpaid: number): number;
   combat_unit_damage(scout: number, attack: number, kills: number, weapon: number, equipment: number,
     archerMultiplier: number, raider: number, strength: number, technologyBonus: number, raiderBonus: number, defense: number,
     achievements: number, context: number, quests: number): number;
   combat_unit_defense(defense: number, kills: number, armor: number, equipment: number,
-    brace: number, technologyBonus: number, raiderBonus: number, achievements: number, context: number): number;
+    brace: number, technologyBonus: number, raiderBonus: number, achievements: number, context: number, unpaid: number): number;
   progression_constant(index: number): number;
   fort_health_multiplier(level: number): number;
   sim_fort_upgrade(handle: number, id: number, level: number, gold: number, hp: number, maximum: number, flags: number, commit: number): number;
@@ -421,8 +455,8 @@ export interface RustExports extends WebAssembly.Exports {
   construction_health_fraction(maxHp: number, progress: number): number;
   construction_targetable(hp: number): number;
   construction_refund(paid: number, start: number, duration: number, waiting: number, paused: number, now: number): number;
-  construction_repair_rate(maxHp: number, duration: number): number;
-  construction_repair(hp: number, maxHp: number, duration: number, speed: number, elapsed: number): number;
+  construction_repair_rate(maxHp: number, kind: number): number;
+  construction_repair(hp: number, maxHp: number, kind: number, speed: number, elapsed: number): number;
   construction_line(fromX: number, fromY: number, toX: number, toY: number): number;
   research_graph_prepare(count: number): number;
   research_graph_commit(count: number): void;
@@ -468,6 +502,8 @@ export interface RustExports extends WebAssembly.Exports {
   settlement_civ_confederate(handle: number, target: number, requester: number): number;
   settlement_civ_confederate_status(handle: number, target: number, requester: number): number;
   settlement_civ_affiliation(handle: number, target: number, requester: number): number;
+  settlement_civ_affiliations_input(handle: number, count: number): number;
+  settlement_civ_affiliations(handle: number, count: number): number;
   settlement_commit_transfer(handle: number, oldId: number, newId: number, owner: number, kind: number, village: number): void;
   settlement_claim(handle: number, village: number): number;
   settlement_village_hostiles(handle: number, village: number): number;
@@ -483,7 +519,7 @@ export interface RustExports extends WebAssembly.Exports {
   sim_offensive_cancel(handle: number, faction: number): void;
   sim_offensive_status(handle: number, faction: number): number;
   sim_offensive_input(handle: number, members: number, enemies: number): number;
-  sim_offensive_step(handle: number, faction: number, now: number, members: number, enemies: number, expected: number): number;
+  sim_offensive_step(handle: number, faction: number, now: number, members: number, enemies: number): number;
   sim_offensive_reward(handle: number, faction: number, amount: number): number;
   sim_offensive_casualty(handle: number, faction: number): void;
   sim_offensive_growth(handle: number, faction: number, growth: number): number;

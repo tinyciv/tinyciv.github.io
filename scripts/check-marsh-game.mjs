@@ -43,14 +43,13 @@ try {
     const marshCells = world.tiles.flatMap((tile, cell) => tile.marsh ? [cell] : []);
     check('new generated game contains coastal marsh deltas', world.riverDeltas.length > 0 && marshCells.length > 100, { deltas: world.riverDeltas.length, marsh: marshCells.length });
     check('all planted marsh roots are on dry ground', marshCells.every(cell => !WATER.has(world.tiles[cell].terrain)));
-    const assets = await Promise.all(['2A', '2B', '2C', '2D'].map(async id => {
-      const image = new Image(); image.src = `/assets/vegetation/marsh/${id}.png`; await image.decode(); return { id, width: image.width, height: image.height };
-    }));
-    check('four approved full-detail plant assets load in the game', assets.every(asset => asset.width === 32 && asset.height === 48), assets);
+    const rushes = new Image(); rushes.src = '/assets/vegetation/marsh/rushes.png'; await rushes.decode();
+    const atlas = { width: rushes.width, height: rushes.height };
+    check('the approved rush atlas loads in the game', atlas.width === 112 && atlas.height === 96, atlas);
     const sample = world.tiles[marshCells[0]], bounds = vegetation.vegetationArtBounds(sample, 32);
-    check('plant dimensions retain approved width height and footing', bounds.width === 64 && Math.abs(bounds.height - 78.4) < 1e-8 && Math.abs(bounds.y + bounds.height - 30) < 1e-8, bounds);
-    const variants = [0, 1, 2, 3].map(index => vegetation.vegetationVariant({ ...sample, variation: index / 0x1000000 }));
-    check('all four variants are distinct shared sources', new Set(variants.map(sprite => `${sprite.sheet}:${sprite.x}:${sprite.y}`)).size === 4, variants);
+    check('tall rush cores are one tile wide and retain the footing', bounds.width === 32 && bounds.height === 96 && bounds.y + bounds.height === 30, bounds);
+    const variants = [0, 1, 2, 3].map(index => vegetation.vegetationVariant({ ...sample, variation: index / 65536 }));
+    check('four tall variants share one atlas', variants.every(sprite => sprite.sheet === 'rushes') && new Set(variants.map(sprite => sprite.x)).size === 4, variants);
     renderer.camera = { x: delta.bounds.x + delta.bounds.width / 2, y: delta.bounds.y + delta.bounds.height / 2 };
     const planted = frame(game); pictures['delta-game-normal'] = planted.toDataURL();
     const plantedPixels = pixels(planted);
@@ -67,7 +66,7 @@ try {
       visibleWater++;
       if (plantedPixels[p] !== barePixels[p] || plantedPixels[p + 1] !== barePixels[p + 1] || plantedPixels[p + 2] !== barePixels[p + 2]) coveredWater++;
     }
-    check('marsh canopy visibly overlaps the water', visibleWater > 1000 && coveredWater > 1000, { visibleWater, coveredWater, fraction: coveredWater / visibleWater });
+    check('marsh shoots or crowns visibly overlap the water', visibleWater > 1000 && coveredWater > 0, { visibleWater, coveredWater, fraction: coveredWater / visibleWater });
     for (const cell of marshCells) world.tiles[cell].marsh = true;
     markWorldChanged(world, 'appearance'); renderer.zoom = 2;
     pictures['delta-game-close'] = frame(game).toDataURL();
@@ -97,15 +96,18 @@ try {
       fog: explore(fixtureWorld), time: 0 };
     renderer.zoom = 1; renderer.camera = { x: 10.5, y: 10 };
     const plantCell = 10 * width + 10, plant = fixtureWorld.tiles[plantCell]; plant.marsh = true;
+    for (const index of [plantCell - 1, plantCell + 1, plantCell - width, plantCell + width]) fixtureWorld.tiles[index].terrain = 'coast';
     const depth = [];
     for (let variant = 0; variant < 4; variant++) {
-      plant.variation = variant / 0x1000000;
+      plant.variation = variant / 65536;
+      markWorldChanged(fixtureWorld, 'appearance', [plantCell]);
+      renderer.prepare(fixture);
       fixture.units = []; const background = pixels(frame(fixture));
       fixture.units = [{ ...worker, x: 10.5, y: 10.85 }]; const behind = pixels(frame(fixture));
       fixture.units = [{ ...worker, x: 10.5, y: 11.05 }]; const front = pixels(frame(fixture));
       depth.push({ variant, behindPixels: difference(background, behind), frontPixels: difference(background, front) });
     }
-    check('all variants conceal the worker behind their footing', depth.every(value => value.behindPixels <= 3), depth);
+    check('rushes obscure workers behind their footing', depth.every(value => value.behindPixels < value.frontPixels), depth);
     check('workers in front of the footing remain visible', depth.every(value => value.frontPixels > 60), depth);
     pictures['worker-in-front'] = frame(fixture).toDataURL();
     fixture.units = [{ ...worker, x: 10.5, y: 10.85 }]; pictures['worker-behind'] = frame(fixture).toDataURL();

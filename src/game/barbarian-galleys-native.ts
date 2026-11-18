@@ -1,9 +1,11 @@
 import { rustEngine } from './rust-engine';
 import { SimSlot,simCore } from './sim-handle';
 import { entityStore } from './entity-store';
-import { nearbyUnits,refreshIndexedUnit } from './spatial';
+import { earlyCombatUnits, refreshIndexedUnit, withEarlyCombatQueries } from './spatial';
 import { refreshFogUnit } from './fog';
 import { unitAttack } from './veterancy';
+import { unitSightRadius } from './fog';
+import { maximumHighGroundSightMultiplier } from './sight';
 import type { GameState,Unit } from './types';
 import type { NavalCombat } from './warships-native';
 
@@ -15,10 +17,18 @@ export function updateBarbarianGalleys(state:GameState,combat:NavalCombat):void 
   if(!boats.length)return;
   const cached=sources.get(state)??sources.set(state,{next:-Infinity,targets:[]});
   if(state.time>=cached.next){cached.next=state.time+1;cached.targets=[];
-    for(const boat of boats)for(const target of nearbyUnits(state,boat,8)) {
-      if(target.id===boat.id||target.inside||target.hp<=0||target.faction===boat.faction)continue;
-      cached.targets.push({boat:boat.id,target:target.id,...combat.observe(boat,target)});
-    }
+    withEarlyCombatQueries(state, () => {
+      for (const boat of boats) {
+        const radius = unitSightRadius(boat) * maximumHighGroundSightMultiplier(state.world, boat);
+        const nearby = new Set(earlyCombatUnits(state, boat, radius));
+        const selected = store.units.get(boat.barbarianGalley!.target ?? -1);
+        if (selected) nearby.add(selected);
+        for (const target of nearby) {
+          if (target.id === boat.id || target.inside || target.hp <= 0 || target.faction === boat.faction) continue;
+          cached.targets.push({ boat: boat.id, target: target.id, ...combat.observe(boat, target) });
+        }
+      }
+    });
   }
   const values:number[]=[];
   for(const boat of boats){const archer=store.units.get(boat.sailboat?.passenger??-1),gun=boat.barbarianGalley!;

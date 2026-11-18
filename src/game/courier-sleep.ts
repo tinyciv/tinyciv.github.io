@@ -5,6 +5,7 @@ import { farmCourierWakeAt } from './farms';
 import { farmWorkGroups } from './farm-work-groups';
 import { SimulationEvents } from './simulation-events';
 import { unitMaxHp, type GameState, type Unit } from './types';
+import { isIdleWorkerSlot, workerHasLiveReference } from './worker-slots';
 
 interface Sleeper { camp: number; parcel: number; home?: number; faction: number; x: number; y: number }
 interface CourierSleep {
@@ -61,8 +62,8 @@ function changed(state: GameState, schedule: CourierSleep): boolean {
     });
 }
 
-/** Restore the existing entity to the ordered active query; no replacement
- * peasant is spawned and cargo, health, claims and identity remain untouched. */
+/** Wake the existing job in staffing order. A sheltered worker receives an
+ * actor when the job finds a valid departure. */
 export function wakeCourier(state: GameState, unit: Unit): void {
   const schedule = schedules.get(state), sleeper = schedule?.sleepers.get(unit);
   if (!schedule || !sleeper) return;
@@ -123,6 +124,8 @@ export function prepareCourierUpdates(state: GameState): void {
  * waiting for population capacity while food is ripe stay active, preserving
  * same-frame dispatch order when another peasant returns home. */
 export function settleCourier(state: GameState, unit: Unit): void {
+  if (unit.kind !== 'worker' || !unit.collector || unit.builder) return;
+  entityStore(state).setWorkerDormant(unit, isIdleWorkerSlot(unit) && !workerHasLiveReference(state, unit));
   const schedule = schedules.get(state);
   if (!schedule || schedule.sleepers.has(unit) || !eligible(unit)) return;
   const at = farmCourierWakeAt(state, unit);

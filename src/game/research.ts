@@ -77,6 +77,9 @@ export function researchLevel(faction: Pick<Faction, 'research'> | undefined, br
   return rustEngine.research_level(faction?.research?.levels[branch] ?? NaN);
 }
 export function buildingResearchRequirement(kind: BuildingKind): ResearchBranchId | undefined {
+  if (kind === 'hospital') return 'traditionalMedicine';
+  if (kind === 'apartments') return 'urbanPlanning';
+  if (kind === 'factory') return 'metalCasting';
   if (kind === 'militaryAcademy') return 'militaryScience';
   if (kind === 'foundry') return 'fieldCannon';
   if (kind === 'whalingPost') return 'whaling';
@@ -108,7 +111,7 @@ export const DEFAULT_RESEARCH_ALLOCATION = rustEngine.research_constant(0);
 export const RESEARCH_INCOME_WINDOW = rustEngine.research_constant(1);
 /** Spread each paid receipt across the normal tax period instead of applying a lump sum. */
 export const RESEARCH_FUNDING_SECONDS = rustEngine.research_constant(2);
-/** At most 1% per 0.2s: the 150ms HUD cadence can display every percentage. */
+/** Maximum share of ordinary technology cost processed per game second, in percentage points. */
 export const RESEARCH_PERCENT_PER_SECOND = rustEngine.research_constant(3);
 export function researchAllocation(faction: Pick<Faction, 'research'> | undefined): number {
   return rustEngine.research_allocation(faction?.research?.allocation ?? NaN);
@@ -145,7 +148,9 @@ export interface ResearchBranchStatus {
 }
 export interface ResearchStatus {
   focus: ResearchBranchId; requestedFocus: ResearchBranchId; allocation: number; priorities: ResearchBranchId[];
-  level: number; progress: number; required: number; cost: number; rate: number; library: boolean;
+  level: number; progress: number; required: number; cost: number; library: boolean;
+  /** Current funded progress in Science per game second, assuming play continues. */
+  rate: number;
   prerequisite?: ResearchBranchId; active: boolean; completed: boolean; selectedComplete: boolean; branches: ResearchBranchStatus[];
 }
 export function researchStatus(state: GameState, factionId: number): ResearchStatus {

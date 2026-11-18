@@ -1,3 +1,4 @@
+import { buildingFollowsTerritory } from './building-targeting';
 import { territoryValue } from './territory-cells';
 import { transferVillageQuestPosts } from './quest-permissions';
 import { recordCampaignPopulation } from './campaign-stats';
@@ -6,6 +7,7 @@ import { cityOwnership } from './city-ownership';
 import { cityResidents, invalidateCitySummarySnapshot } from './cities';
 import { territory } from './borders';
 import { entityStore } from './entity-store';
+import { clearObservedScalar } from './scalar-observer';
 import { invalidateNavigation } from './pathfinding';
 import { invalidateFog } from './fog';
 import { markWorldChanged } from './world-revisions';
@@ -40,7 +42,7 @@ export function secedeCity(state: GameState, palace: Building): boolean {
   const former = state.factions.find(f => f.id === palace.faction);
   if (!former || former.villageId !== undefined || !buildingReady(palace)) return false;
   const ownership = cityOwnership(state), population = cityResidents(state).find(c => c.palace.id === palace.id)?.population ?? 0;
-  const owned = state.buildings.filter(b => b.faction === former.id && buildingPresent(b) && ownership.building(b)?.id === palace.id);
+  const owned = state.buildings.filter(b => buildingFollowsTerritory(b) && b.faction === former.id && buildingPresent(b) && ownership.building(b)?.id === palace.id);
   const ids = new Set(owned.map(b => b.id));
   const citizens = state.units.filter(u => u.hp > 0 && u.faction === former.id && !u.engineer && u.kind !== 'leader'
     && (u.kind === 'worker' && (ids.has(u.home ?? -1) || ownership.nearest(u, former.id)?.id === palace.id && u.home === undefined)
@@ -62,10 +64,14 @@ export function secedeCity(state: GameState, palace: Building): boolean {
     delete building.repairerId;
     if (building.construction) { building.construction.waitingForBuilder = true; building.construction.pausedAt = state.time; delete building.construction.builderId; }
   }
+  const store = entityStore(state);
   for (const unit of citizens) {
-    if (unit.levy) { entityStore(state).setUnitRole(unit, { kind: 'worker' }); delete unit.levy; }
+    if (unit.levy) { store.setUnitRole(unit, { kind: 'worker' }); delete unit.levy; }
     unit.faction = factionId; unit.villageId = villageId; unit.home = palace.id; resetOrders(unit);
-    if (unit.kind === 'worker') entityStore(state).setUnitRole(unit, { kind: 'worker', builder: false, collector: false });
+    if (unit.kind === 'worker') {
+      store.setWorkerDormant(unit, false);
+      store.setUnitRole(unit, { kind: 'worker', builder: false, collector: false });
+    }
     if (unit.inside) { const exit = constructionEdges(state, palace, true)[0]; if (exit) { Object.assign(unit, exit); unit.inside = false; } }
   }
   for (const field of state.fields ?? []) if (ids.has(field.camp)) { field.faction = factionId; delete field.claimedBy; }
@@ -87,7 +93,7 @@ export function hasSecededCity(state: GameState, faction: number): boolean {
 function absorbSecededCity(state: GameState, village: NeutralVillage, palace: Building): void {
   transferVillageQuestPosts(state,village.id,palace.faction,palace.id);
   village.destroyed = true;
-  for (const building of state.buildings) if (building.villageId === village.id) {
+  for (const building of state.buildings) if (buildingFollowsTerritory(building) && building.villageId === village.id) {
     if (building.hp > 0) building.faction = palace.faction;
     delete building.villageId;
   }
@@ -143,9 +149,9 @@ export function confederateVillage(state: GameState, village: NeutralVillage, fa
   entityStore(state).buildings.retain(building => !ignore.has(building.id));
   const palace = host.makePalace(state, factionId, lot);
   palace.cityName = village.name; palace.villageIdentity = village.identity; palace.palaceLevel = 1;
-  delete palace.construction;
+  clearObservedScalar(palace, 'construction');
   addPalaceRoadRing(state, palace);
-  for (const building of state.buildings) if (building.villageId === village.id) {
+  for (const building of state.buildings) if (buildingFollowsTerritory(building) && building.villageId === village.id) {
     building.faction = factionId; delete building.villageId; applyDefenseResearch(building, faction);
   }
   let workers = 0;

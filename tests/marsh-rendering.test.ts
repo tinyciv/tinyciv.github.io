@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { MARSH_PLANTS, vegetationArtBounds, vegetationStump, vegetationVariant } from '../src/game/vegetation-art';
+import { vegetationArtBounds, vegetationStump, vegetationVariant } from '../src/game/vegetation-art';
+import { MarshRushBand, MarshRushPlacementCache } from '../src/game/marsh-rush-placement';
+import { markWorldChanged, worldChangesSince } from '../src/game/world-revisions';
 import type { FogView } from '../src/game/fog';
 import type { GameState, Tile, Unit } from '../src/game/types';
 import { recordNativeFrame } from './helpers/native-renderer';
@@ -24,27 +26,40 @@ function fixture(x = 6, y = 6) {
 }
 
 describe('approved marsh plants in the game compositor', () => {
-    it('installs all four approved cutouts with the full crown and lowered height', () => {
-        const manifest = JSON.parse(readFileSync(new URL('../public/assets/vegetation/marsh/manifest.json', import.meta.url), 'utf8'));
-        const { tile } = fixture(), variants = new Set<string>();
-        for (const [i, asset] of manifest.assets.entries()) {
-            const path = new URL(`../public/assets/vegetation/marsh/${asset.file}`, import.meta.url), bytes = readFileSync(path);
-            expect(createHash('sha256').update(bytes).digest('hex')).toBe(asset.sha256);
-            const atlas = punyAtlas(path);
-            expect([atlas.width, atlas.height]).toEqual([32, 48]);
-            const alpha = new Set(Array.from(atlas.data).filter((_, index) => index % 4 === 3));
-            expect([...alpha].sort()).toEqual([0, 255]);
-            tile.variation = i / 0x1000000;
-            const source = vegetationVariant(tile)!; variants.add(source.sheet);
-            expect(MARSH_PLANTS).toContainEqual(source);
-            expect(vegetationStump(tile)).toBeUndefined();
+    it('uses the approved atlas and anchors all four bands at the same footing', () => {
+        const manifest = JSON.parse(readFileSync(new URL('../public/assets/vegetation/marsh/rushes-source.json', import.meta.url), 'utf8'));
+        const path = new URL('../public/assets/vegetation/marsh/rushes.png', import.meta.url);
+        expect(createHash('sha256').update(readFileSync(path)).digest('hex')).toBe(manifest.sha256);
+        const atlas = punyAtlas(path), { tile } = fixture();
+        expect([atlas.width, atlas.height]).toEqual([112, 96]);
+        const bands = [MarshRushBand.Low, MarshRushBand.Middle, MarshRushBand.High, MarshRushBand.Tall];
+        for (const [i, band] of bands.entries()) {
+            const rush = { band, left: true, right: false, shootVariant: 0 };
+            const source = vegetationVariant(tile, rush)!;
+            const bounds = vegetationArtBounds(tile, 32, rush);
+            expect([source.sheet, source.y, source.width]).toEqual(['rushes', [0, 16, 32, 64][i], 16]);
+            expect([bounds.x, bounds.width, bounds.height]).toEqual([-16, 48, i < 2 ? 48 : 96]);
+            expect(bounds.y + bounds.height).toBe(30);
         }
-        expect(variants.size).toBe(4);
-        const bounds = vegetationArtBounds(tile);
-        expect(bounds.width / 32).toBe(2);
-        expect(bounds.height / 32).toBe(2.45);
-        expect((bounds.y + bounds.height) / 32).toBe(15 / 16);
-        expect(bounds.x + bounds.width / 2).toBe(16);
+        expect(vegetationStump(tile)).toBeUndefined();
+    });
+
+    it('updates the fringe and side shoots after a localized marsh clearing', () => {
+        const { state } = fixture(), { world } = state, cache = new MarshRushPlacementCache();
+        world.revision = 0;
+        for (let y = 2; y <= 10; y++) for (let x = 2; x <= 10; x++) world.tiles[y * 16 + x].marsh = true;
+        let changes = worldChangesSince(world);
+        cache.refresh(world, changes);
+        expect(cache.get(world, 6, 6)).toMatchObject({ band: MarshRushBand.Tall, left: false, right: false });
+        const far = cache.get(world, 10, 9);
+        const cleared = 6 * 16 + 5;
+        delete world.tiles[cleared].marsh;
+        markWorldChanged(world, 'appearance', [cleared]);
+        changes = worldChangesSince(world, changes.revision);
+        cache.refresh(world, changes);
+        expect(cache.get(world, 6, 6)?.band).toBe(MarshRushBand.Low);
+        expect(cache.get(world, 5, 6)).toBeUndefined();
+        expect(cache.get(world, 10, 9)).toBe(far);
     });
 
     it('covers units behind the reeds and lets units cross in front of the footing', () => {
@@ -79,6 +94,7 @@ describe('approved marsh plants in the game compositor', () => {
 
     it('keeps a visible crown whose ground anchor is below the viewport', () => {
         const { state, fog } = fixture(3, 5);
+        for (const index of [5 * 16 + 2, 5 * 16 + 4, 4 * 16 + 3, 6 * 16 + 3]) state.world.tiles[index].terrain = 'coast';
         const frame = recordNativeFrame({ ...state, units: [] }, { fog, width: 256, height: 128 });
         const plant = frame.sprites.find(s => s.key === 'vegetation');
         expect(plant).toBeDefined();

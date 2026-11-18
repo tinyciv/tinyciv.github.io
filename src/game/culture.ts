@@ -15,7 +15,7 @@ export const SETTLEMENT_CULTURE_PER_SECOND = .2;
 export const CULTURE_THRESHOLD_STEP = 100;
 /** Borders grow in one game-wide wave per interval rather than whenever any
  * city crosses a threshold. */
-export const BORDER_WAVE_SECONDS = 720;
+export const BORDER_WAVE_SECONDS = 30;
 
 /** Culture is saved on the faction; missing or invalid input has no influence. */
 const cultureAmount = (value: number | undefined): number => Number.isFinite(value) ? Math.max(0, value!) : 0;

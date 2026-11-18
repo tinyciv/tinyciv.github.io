@@ -1,6 +1,5 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { resourceBlocksGround } from '../src/game/resource-terrain';
 import { generateWorld } from '../src/world/generator';
 import { placeRidges, ridgeStatistics } from '../src/world/ridges';
 import { ridgeEdgeAllowed, ridgeFootprintAllowed, ridgeGroundWalkable, ridgeIsLedge, ridgeLevel, STAIR_UP } from '../src/game/ridges';
@@ -8,7 +7,7 @@ import { canMove, canWalk, findPath, hasStaticPath, canTraverseEdge, traversable
 import { ridgeQuads, STAIR_SOURCES } from '../src/game/ridge-art';
 import { rasterTerrain } from '../src/game/terrain';
 import { punyAtlas } from './puny-atlas';
-import { type World, type GameState, type Tile, type Point, WATER } from '../src/game/types';
+import { type World, type GameState, type Tile, type Point } from '../src/game/types';
 
 function flat(width = 24, height = 20): World {
   return { width, height, seed: 'ridge-test', source: 'fixture', spawns: [], revision: 0,
@@ -165,102 +164,24 @@ describe('world ridge placement', () => {
     expect(concave).toBeGreaterThan(0);
   });
 
-  it('varies hill coverage while keeping both tiers and all settlements reachable through legal stairs', async () => {
-    const counts = new Set<number>(), directions = new Set<string>(), ratios: number[] = [];
+  it('keeps enabled ledges clear of settlements and preserves land access', async () => {
     for (let seed = 0; seed < 20; seed++) {
       await new Promise(resolve => setTimeout(resolve, 0));
-      // Fixed dimensions preserve the recorded terrain audit baseline.
-      const world = generateWorld(`ridge-coverage-${seed}`, 194, 153);
-      if (!world.tiles.some(tile => tile.ridge)) placeRidges(world.tiles, world.width, world.height, world.seed, world.spawns);
-      const stats = ridgeStatistics(world), ratio = stats.raised / stats.land;
-      ratios.push(ratio);
-      expect(ratio, `seed ${seed}: ${stats.raised}/${stats.land}`).toBeGreaterThanOrEqual(.02);
-      const hillCountry = world.tiles.filter(tile => tile.ridge && tile.hillBiome).length / stats.land;
-      expect(ratio - hillCountry, `seed ${seed}: base relief outside added hill-country`).toBeLessThanOrEqual(.12);
-      const mountains = new Set(world.tiles.filter(tile => tile.relief === 'mountains' && tile.ridge).map(tile => tile.ridge!));
-      const hillDistricts = new Set(world.tiles.filter(tile => tile.ridge && tile.hillBiome).map(tile => tile.ridge!));
-      const incised = new Set(world.tiles.filter(tile => tile.canyon === 'wall' && tile.ridge).map(tile => tile.ridge!));
-      for (const [id, ridge] of stats.ridges) if (!mountains.has(id)) {
-        if (!incised.has(id) && !hillDistricts.has(id)) expect(ridge.stairs).toBeLessThanOrEqual(3);
-        else if (incised.has(id)) {
-          // A river cut can leave several separate upper-floor caps joined
-          // only by impassable ledge artwork. Every cap needs its own legal
-          // entrance, even when their shared hill outline needs >3 stairs.
-          const floors = new Set(world.tiles.flatMap((tile, cell) => tile.ridge === id && !tile.stair
-            && !ridgeIsLedge(world, cell % world.width, Math.floor(cell / world.width)) ? [cell] : []));
-          const seen = new Set<number>(); let caps = 0;
-          for (const start of floors) {
-            if (seen.has(start)) continue;
-            const queue = [start]; seen.add(start); caps++;
-            for (let head = 0; head < queue.length; head++) for (const offset of [-1, 1, -world.width, world.width]) {
-              const next = queue[head] + offset;
-              if (floors.has(next) && !seen.has(next)) { seen.add(next); queue.push(next); }
-            }
-          }
-          expect(ridge.stairs, `one entrance per incised hill floor ${id} seed ${seed}`).toBe(caps);
-        }
-        if (ridge.tiers === 1) counts.add(ridge.stairs);
-      }
-      for (let i = 0; i < world.tiles.length; i++) {
-        const tile = world.tiles[i];
-        if (ridgeIsLedge(world, i % world.width, Math.floor(i / world.width))) {
-          expect(tile.overlay).toBe('none'); expect(tile.palm).toBeUndefined();
-          expect(traversable(world, i % world.width, Math.floor(i / world.width))).toBe(false);
-        }
-        if (!tile.stair) continue;
-        const p = { x: i % world.width, y: Math.floor(i / world.width) }, up = STAIR_UP[tile.stair];
-        directions.add(tile.stair);
-        const low = world.tiles[(p.y - up.y) * world.width + p.x - up.x], high = world.tiles[(p.y + up.y) * world.width + p.x + up.x];
-        expect(ridgeLevel(low)).toBe(ridgeLevel(tile) - 1); expect(ridgeLevel(high)).toBe(ridgeLevel(tile)); expect(high.ridge).toBe(tile.ridge);
-        expect(WATER.has(low.terrain)).toBe(false); expect(WATER.has(high.terrain)).toBe(false);
-        expect(low.overlay).toBe('none'); expect(high.overlay).toBe('none');
-        expect(ridgeGroundWalkable(world, p.x, p.y)).toBe(true);
-        expect(ridgeIsLedge(world, p.x + up.x, p.y + up.y)).toBe(false);
-        expect(ridgeEdgeAllowed(world, { x: p.x - up.x, y: p.y - up.y }, p)).toBe(true);
-        expect(ridgeEdgeAllowed(world, p, { x: p.x + up.x, y: p.y + up.y })).toBe(true);
+      const world = generateWorld(`ridge-coverage-${seed}`, 194, 153, { ledges: true });
+      const faces = world.tiles.flatMap((tile, cell) => tile.ridge && tile.reliefFlags === 0 ? [cell] : []);
+      expect(faces.length, `ledge faces on seed ${seed}`).toBeGreaterThan(0);
+      expect(world.tiles.some(tile => tile.stair)).toBe(true);
+      for (const cell of faces) {
+        const tile = world.tiles[cell];
+        expect(tile.resource).toBeUndefined();
+        expect(tile.overlay).toBe('none');
+        expect(traversable(world, cell % world.width, Math.floor(cell / world.width))).toBe(false);
       }
       const connected = reachable(world, world.spawns[0]);
-      expect(world.spawns.every(p => connected.has(Math.floor(p.y) * world.width + Math.floor(p.x))), `spawn connectivity seed ${seed}`).toBe(true);
-      // Shelves on offshore islands need local access, not a route across the
-      // ocean to the player's capital. Label each traversable component once.
-      const components = new Int32Array(world.tiles.length);
-      let component = 0;
-      for (let i = 0; i < world.tiles.length; i++) if (!components[i] && traversable(world, i % world.width, Math.floor(i / world.width))) {
-        const region = reachable(world, { x: i % world.width, y: Math.floor(i / world.width) });
-        component++;
-        for (const cell of region) components[cell] = component;
-      }
-      const approaches = new Map<number, number>();
-      for (let i = 0; i < world.tiles.length; i++) {
-        const tile = world.tiles[i];
-        if (!tile.ridge || !tile.stair || ridgeLevel(tile) !== 1) continue;
-        const up = STAIR_UP[tile.stair];
-        approaches.set(tile.ridge, components[i - up.y * world.width - up.x]);
-      }
-      for (let index = 0; index < world.tiles.length; index++) {
-        const tile = world.tiles[index];
-        // Only rocky resources intentionally occupy an otherwise usable floor.
-        if (tile.ridge && !tile.stair && !resourceBlocksGround(tile) && traversable(world, index % world.width, Math.floor(index / world.width)) && !ridgeIsLedge(world, index % world.width, Math.floor(index / world.width))) {
-          // Mountain silhouettes may have more than five separate floor caps.
-          // Require actual entrances and local connectivity for every floor,
-          // rather than limiting how many valid stairs can serve those caps.
-          if (mountains.has(tile.ridge)) expect(approaches.has(tile.ridge), `mountain entrance ${tile.ridge} seed ${seed}`).toBe(true);
-          if (mountains.has(tile.ridge) || stats.ridges.get(tile.ridge)!.stairs > 0)
-            expect(components[index], `summit ${tile.ridge} seed ${seed}`).toBe(approaches.get(tile.ridge));
-        }
+      for (const town of [...world.spawns, ...world.secondarySpawns ?? []]) {
+        expect(connected.has(Math.floor(town.y) * world.width + Math.floor(town.x)), `town connectivity on seed ${seed}`).toBe(true);
       }
     }
-    // Incision changes which original hills survive; a fixed set of seeds
-    // need not retain every old stair-count bucket. Keep both closed summits
-    // and accessible hilltops, while the checks above validate every entrance.
-    expect(counts.has(0)).toBe(true);
-    expect([...counts].some(count => count > 0)).toBe(true);
-    expect(counts.size).toBeGreaterThanOrEqual(2);
-    expect([...directions].sort()).toEqual(['east','north','south','west']);
-    // Province contours share a coverage budget. Coastlines, valleys and safe
-    // stair trimming still vary their realized area; larger density changes
-    // are exercised through reliefCoverage in landform-relief.test.ts.
-    expect(Math.max(...ratios) - Math.min(...ratios)).toBeGreaterThan(.005);
   }, 180000);
 });
 

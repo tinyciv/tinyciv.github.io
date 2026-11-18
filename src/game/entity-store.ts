@@ -1,7 +1,9 @@
 import { clearDesertStones } from './desert-stones';
 import { rustEngine } from './rust-engine';
+import { observeScalars, type ScalarObserver } from './scalar-observer';
 import { simCore } from './sim-handle';
 import type { Building, BuildingKind, GameState, Unit, UnitKind } from './types';
+import { isIdleWorkerSlot, isUndergroundWorkerSlot, workerHasLiveReference } from './worker-slots';
 
 export type UnitRole = 'unit' | 'worker' | 'builder' | 'collector' | 'soldier' | 'leader' | 'retinue' | 'active' | 'wildlife' | 'wounded' | 'damageClock' | 'collision' | 'vessel';
 export type BuildingRole = 'building' | 'palace' | 'farm' | 'construction' | 'library' | 'monument' | 'healerShack' | 'ballista' | 'scoutLodge' | 'supplyDepot' | 'towerWeapon' | 'irrigation' | 'shipyard';
@@ -20,7 +22,7 @@ export const BUILDING_KIND_CODES: Record<BuildingKind, number> = {
   fort: 0, supplyDepot: 1, palace: 2, camp: 3, house: 4, shack: 5, cottage: 6, road: 7, wall: 8, palisade: 9,
   bridge: 10, dock: 11, irrigation: 12, ruin: 13, tower: 14, woodenTower: 15, well: 16, monument: 17, blacksmith: 18,
   guardPost: 19, archeryRange: 20, scoutLodge: 21, observationPost: 22, healerShack: 23, ballista: 24, siegeCannon: 30, stable: 25,
-  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37,
+  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37, hospital: 38, apartments: 39, factory: 40, goldMine: 41,
 };
 const UNKNOWN_KIND = 255;
 const UNITS = 0, BUILDINGS = 1;
@@ -28,6 +30,7 @@ const UNITS = 0, BUILDINGS = 1;
  * which WebAssembly returns to JavaScript as a signed integer). */
 const MISSING = -1;
 type Sleep = -1 | 0 | 1;
+const EMPTY_VIEW: readonly never[] = [];
 
 export interface EntityObserver<T> { added(value: T): void; removed(value: T): void; changed?(value: T): void }
 
@@ -38,11 +41,18 @@ export interface EntityObserver<T> { added(value: T): void; removed(value: T): v
  * observers and caches derived from native answers: role views (arrays of the
  * live view objects, dropped when a mutation reports changed role bits), the
  * array-order lookup and the last revision read. The arrays in GameState are
- * the serializable views of the same objects; health, position and ownership
- * stay live on them. */
-class EntityCollection<T extends { id: number }, R extends string> {
+ * the serializable views of the same objects, including dormant worker jobs.
+ * A dormant job keeps its order and staffing roles without a Bevy unit. */
+class EntityCollection<T extends { id: number; faction: number }, R extends string> {
   private records = new Map<number, T>();
   private views = new Map<R, readonly T[]>();
+  private factionViews?: Map<R, Map<number, T[]>>;
+  private readonly factionObserver: ScalarObserver = {
+    changed: value => {
+      if (this.records.get((value as T).id) === value) this.factionViews?.clear();
+    },
+  };
+  private dormant = new WeakSet<T>();
   /** id -> array index, rebuilt from the native order after a removal. */
   private orders?: Map<number, number>;
   private revisionValue?: number;
@@ -64,25 +74,51 @@ class EntityCollection<T extends { id: number }, R extends string> {
   /** `traits` publishes the scalars the roles depend on and returns the role
    * bits Rust changed. */
   constructor(private values: T[], private assign: (values: T[]) => void, private roles: readonly R[], private sim: number,
-    private table: number, private traits: (value: T, sleep: Sleep, trackRevision: boolean) => number, private onRegister?: (value: T) => void) {
+    private table: number, private traits: (value: T, sleep: Sleep, trackRevision: boolean) => number,
+    private onRegister?: (value: T) => void, private startsDormant?: (value: T) => boolean) {
     // Indexing an existing state is read-only, including virtual placement views.
     for (let i = 0; i < values.length; i++) this.register(values[i], false);
   }
   detach(): void { this.detached = true; }
   private dropViews(mask: number): void {
-    for (let bit = 0; bit < this.roles.length; bit++) if (mask & (1 << bit)) this.views.delete(this.roles[bit]);
+    for (let bit = 0; bit < this.roles.length; bit++) if (mask & (1 << bit)) {
+      const role = this.roles[bit];
+      this.views.delete(role);
+      this.factionViews?.delete(role);
+    }
   }
   private register(value: T, notify = true): void {
     if (this.records.has(value.id)) throw new Error(`Duplicate entity ID: ${value.id}`);
     if (notify) this.onRegister?.(value);
     if (!Number.isSafeInteger(value.id)) throw new Error(`Invalid simulation entity ID: ${value.id}`);
-    if (!this.detached && !rustEngine.sim_entity_insert(this.sim, this.table, value.id)) throw new Error(`Duplicate entity ID: ${value.id}`);
+    const dormant = !this.detached && this.startsDormant?.(value);
+    if (!this.detached) {
+      const inserted = dormant ? rustEngine.sim_worker_slot_insert(this.sim, value.id) : rustEngine.sim_entity_insert(this.sim, this.table, value.id);
+      if (!inserted) throw new Error(`Duplicate entity ID: ${value.id}`);
+    }
+    if (dormant) this.dormant.add(value);
+    else this.dormant.delete(value);
     this.records.set(value.id, value);
+    if (this.factionViews) observeScalars(value, ['faction'], this.factionObserver);
     this.orders?.set(value.id, this.orders.size);
     this.updateRoles(value);
     this.publish(value, true);
   }
   get(id: number): T | undefined { return this.records.get(id); }
+  isDormant(value: T): boolean { return this.dormant.has(value); }
+  setDormant(value: T, dormant: boolean): void {
+    if (this.detached || this.isDormant(value) === dormant || this.get(value.id) !== value) return;
+    const changed = rustEngine.sim_worker_slot_set(this.sim, value.id, Number(dormant));
+    if (!changed) return;
+    if (dormant) this.dormant.add(value);
+    else this.dormant.delete(value);
+    // The job is still registered. Only the materialized role view changed.
+    this.dropViews(changed);
+  }
+  /** A replica applies a completed transition from the authority. */
+  reconcileDormancy(value: T): void {
+    if (this.startsDormant) this.setDormant(value, this.startsDormant(value));
+  }
   indexOf(value: T): number {
     if (this.records.get(value.id) !== value) return -1;
     if (!this.orders) {
@@ -125,6 +161,7 @@ class EntityCollection<T extends { id: number }, R extends string> {
       retained ??= this.values.slice(0, index);
       const mask = this.detached ? 0 : rustEngine.sim_entity_remove(this.sim, this.table, value.id);
       this.records.delete(value.id);
+      this.dormant.delete(value);
       this.orders = undefined;
       this.publish(value, false);
       this.revisionValue = undefined;
@@ -154,6 +191,24 @@ class EntityCollection<T extends { id: number }, R extends string> {
       view = built; this.views.set(role, view);
     }
     return view;
+  }
+  /** Partition a native role view once, preserving entity order and live references. */
+  queryFaction(role: R, faction: number): readonly T[] {
+    if (!this.factionViews) {
+      this.factionViews = new Map();
+      for (const value of this.records.values()) observeScalars(value, ['faction'], this.factionObserver);
+    }
+    let groups = this.factionViews.get(role);
+    if (!groups) {
+      groups = new Map();
+      for (const value of this.query(role)) {
+        const group = groups.get(value.faction);
+        if (group) group.push(value);
+        else groups.set(value.faction, [value]);
+      }
+      this.factionViews.set(role, groups);
+    }
+    return groups.get(faction) ?? EMPTY_VIEW;
   }
 }
 
@@ -189,7 +244,8 @@ export class EntityStore {
       (unit, sleep, track) => rustEngine.sim_unit_traits(sim, unit.id, UNIT_KIND_CODES[unit.kind] ?? UNKNOWN_KIND,
         (unit.builder ? 1 : 0) | (unit.collector ? 2 : 0) | (unit.engineer ? 4 : 0) | (Number.isFinite(unit.lastDamagedAt) ? 0 : 8)
           | (unit.maxHp == null ? 16 : 0),
-        unit.hp, unit.maxHp ?? NaN, sleep, Number(track)));
+        unit.hp, unit.maxHp ?? NaN, sleep, Number(track)), undefined,
+      unit => (isIdleWorkerSlot(unit) || isUndergroundWorkerSlot(unit)) && !workerHasLiveReference(this.state, unit));
   }
   get buildings(): EntityCollection<Building, BuildingRole> {
     const owned = this.state as unknown as { buildings: Building[] }, sim = this.sim;
@@ -202,8 +258,11 @@ export class EntityStore {
     // A changed role wakes the unit.
     const wake = unit.kind !== role.kind || 'builder' in role && unit.builder !== role.builder
       || 'collector' in role && unit.collector !== role.collector;
+    if (role.kind !== 'worker') this.setWorkerDormant(unit, false);
     Object.assign(unit, role); this.units.updateRoles(unit, true, wake ? 0 : -1);
   }
+  isWorkerDormant(unit: Unit): boolean { return this.units.isDormant(unit); }
+  setWorkerDormant(unit: Unit, dormant: boolean): void { this.units.setDormant(unit, dormant); }
   /** Runtime scheduling changes no gameplay role or settlement membership. */
   isUnitSleeping(unit: Unit): boolean {
     return this.units.get(unit.id) === unit && !!rustEngine.sim_unit_sleeping(this.sim, unit.id);

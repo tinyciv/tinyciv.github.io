@@ -200,7 +200,7 @@ export function planStartingSettlement(state: GameState, spawn: Point, populatio
     if (++completeCount >= 48) break;
   }
   if (best) return best;
-  if (!firstPalace) throw new Error('No valid starting town has flat ground and eight-tile mountain clearance.');
+  if (!firstPalace) throw new Error('No valid starting town has clear low ground.');
   const fallback = townAt(firstPalace, population);
   fallback.roads = fallback.roads.filter(usable);
   fallback.houses = fallback.houses.filter(point => usable(point) && houseLane(point));

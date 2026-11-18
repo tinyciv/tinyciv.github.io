@@ -10,13 +10,15 @@ import { retinueSlotUpkeep } from './retinue-purchases';
 import { isRetinueMember, type Faction, type GameState } from './types';
 import { enemyFactionStrength } from './enemy-strength';
 import { institutionUpkeep } from './institution-native';
+import { entityStore } from './entity-store';
+import { structuresOf, STRUCTURE_ALIVE } from './structure-index';
 
 /** Count committed upkeep, including unfinished institutions and training. Trade and combat loot
  * are useful windfalls, but cannot guarantee the next garrison's wages. */
 export function factionCommittedBudget(state: GameState, faction: Faction): { upkeep: number; surplus: number } {
   let cities = 0, upkeep = retinueSlotUpkeep(faction) + fleetUpkeep(state, faction.id), soldiers = 0;
-  for (const building of state.buildings) {
-    if (building.faction !== faction.id || building.hp <= 0 || building.villageId !== undefined) continue;
+  for (const building of structuresOf(state, faction.id, STRUCTURE_ALIVE)) {
+    if (building.villageId !== undefined) continue;
     if (building.kind === 'palace') cities++;
     else if (building.kind === 'woodenTower' || building.kind === 'tower') upkeep += watchtowerMaintenance(state, faction.id, building.kind);
     else if (building.kind === 'fort') upkeep += FORT_UPKEEP;
@@ -24,10 +26,13 @@ export function factionCommittedBudget(state: GameState, faction: Faction): { up
     else if (building.kind === 'guardPost') upkeep += guardPostUpkeep(building);
     else upkeep += institutionUpkeep(building.kind);
   }
-  upkeep += state.units.filter(unit => unit.faction === faction.id && (unit.kind === 'levyInfantry' || unit.kind === 'slinger') && unit.hp > 0).length * 5;
+  let levies = 0;
+  for (const unit of entityStore(state).units.queryFaction('soldier', faction.id)) if (unit.hp > 0) {
+    if (unit.kind === 'levyInfantry' || unit.kind === 'slinger') levies++;
+    if (isRetinueMember(unit)) soldiers += retinueUpkeep(unit.training ? { kind: unit.training.role } : unit);
+  }
+  upkeep += levies * 5;
   upkeep += Math.max(0, cities - 1) * settlementMaintenance(cities);
-  for (const unit of state.units) if (unit.faction === faction.id && unit.hp > 0 && isRetinueMember(unit))
-    soldiers += retinueUpkeep(unit.training ? { kind: unit.training.role } : unit);
   return { upkeep, surplus: cityTaxIncome(state, faction)
     * enemyFactionStrength(state, faction.id) - soldiers - upkeep };
 }

@@ -7,7 +7,7 @@ import { isSoldier } from './types';
 import { type GameState, type Point, type Unit, buildingWidth, buildingHeight, distance } from './types';
 import { buildingBlockerView, canMove, canTraverseEdge, canWalk, type CellBlockers } from './pathfinding';
 import { getFactionStrategy } from './faction-strategy';
-import { indexedBuilding, indexedUnit, nearbyUnits, unitsWithRole } from './spatial';
+import { indexedBuilding, indexedUnit, nearbyUnits } from './spatial';
 import { decisionDue, decisionRevision, type DecisionClock } from './decision-schedule';
 import { entityStore } from './entity-store';
 
@@ -40,8 +40,8 @@ const orderedSoldiers = new WeakMap<readonly Unit[], readonly Unit[]>();
 /** Role views change only when membership changes. Stable ID ordering belongs
  * to that roster, not to every leader's movement update. Live eligibility is
  * still checked below so death, combat contact and orders take effect at once. */
-function formationRoster(state: GameState): readonly Unit[] {
-  const soldiers = unitsWithRole(state, 'soldier');
+function formationRoster(state: GameState, faction: number): readonly Unit[] {
+  const soldiers = entityStore(state).units.queryFaction('soldier', faction);
   let ordered = orderedSoldiers.get(soldiers);
   if (!ordered) { ordered = [...soldiers].sort((a, b) => a.id - b.id); orderedSoldiers.set(soldiers, ordered); }
   return ordered;
@@ -233,14 +233,14 @@ export function retinueFormation(state: GameState, leader: Unit): Pick<Formation
     return gap <= unitAttackRange(state.world, unit, target) + .1;
   };
   const mission = !isHumanFaction(state, leader.faction) && leader.faction > 0 ? getFactionStrategy(state, leader.faction) : undefined;
-  const escorts = mission && new Set(mission.escortIds);
-  const soldiers = formationRoster(state);
-  const members = soldiers.filter(unit => unit.hp > 0 && !unit.inside && unit.faction === leader.faction && isSoldier(unit) && unit.fort === undefined && !unit.garrison && unit.order === 'follow' && unit.marauderPack === undefined
+  const escorts = mission?.escortSet;
+  const soldiers = formationRoster(state, leader.faction);
+  const members = soldiers.filter(unit => unit.hp > 0 && !unit.inside && isSoldier(unit) && unit.fort === undefined && !unit.garrison && unit.order === 'follow' && unit.marauderPack === undefined
     && (!escorts || unit.joiningRetinue || escorts.has(unit.id))
     && (unit.retinueStance !== 'defensive' || !unit.defensiveAnchor || unit.joiningRetinue || unit.recallIssuedAt !== undefined || unit.forcedAttack)
     // Contact fighters occupy their real position, not an unused rally slot.
     && !holdingContact(unit));
-  const present = new Set(soldiers.filter(unit => unit.hp > 0 && unit.faction === leader.faction && isSoldier(unit) && unit.fort === undefined && !unit.garrison
+  const present = new Set(soldiers.filter(unit => unit.hp > 0 && isSoldier(unit) && unit.fort === undefined && !unit.garrison
     && (!escorts || unit.joiningRetinue || escorts.has(unit.id))).map(unit => unit.id));
   for (const id of formation.slots.keys()) if (!present.has(id)) formation.slots.delete(id);
   const taken = new Set(formation.slots.values());

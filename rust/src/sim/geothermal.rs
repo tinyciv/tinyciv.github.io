@@ -10,7 +10,8 @@ pub struct Geothermal {
 }
 
 impl Geothermal {
-    /// Input: one [terrain, exclusions] pair per cell, then [x, y] per start.
+    /// Input: [terrain (water 0, open land 1, woodland 2), exclusions] per cell,
+    /// then [x, y] per start.
     pub fn prepare(&mut self, cells: usize, starts: usize) -> *mut f64 {
         self.input.resize((cells + starts) * 2, 0.0);
         self.input.fill(0.0);
@@ -25,6 +26,7 @@ impl Geothermal {
             return self.output.as_ptr();
         }
         let open = |cell: usize| self.input[cell * 2] > 0.0 && self.input[cell * 2 + 1] == 0.0;
+        let tree = |x: usize, y: usize| self.input[(y * width + x) * 2] == 2.0;
         let dry = (0..cells).filter(|&cell| open(cell)).count();
         let target = (dry / 3000).clamp(6, 30);
         let mut random = Mulberry32::new(seed ^ 0x9e3779b9);
@@ -45,6 +47,11 @@ impl Geothermal {
             // deposits and ledges, and leaves a complete local bypass. Forest
             // is walkable; only trees inside the actual footprint are replaced.
             if !(y - 2..=y + 3).all(|ny| (x - 2..=x + 3).all(|nx| open(ny * width + nx))) { continue; }
+            let inside = |nx, ny| (x..=x + 1).contains(&nx) && (y..=y + 1).contains(&ny);
+            let closes_opening = |tx, ty| tree(tx, ty) && !inside(tx, ty)
+                && ![(tx - 1, ty), (tx + 1, ty), (tx, ty - 1), (tx, ty + 1)].iter()
+                    .any(|&(nx, ny)| !inside(nx, ny) && !tree(nx, ny));
+            if (y - 1..=y + 2).any(|ty| (x - 1..=x + 2).any(|tx| closes_opening(tx, ty))) { continue; }
             let variant = candidates.len() % 6 + 1;
             // Thin the original candidate layout independently: volcanoes keep
             // one fifth of their frequency; thermal-bath mud pools keep half.

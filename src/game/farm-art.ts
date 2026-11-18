@@ -4,6 +4,13 @@ import { type FarmField } from './types';
 import { drawPuny } from './puny-world';
 
 type Ctx = CanvasRenderingContext2D;
+const FIELD_ART = [
+  'farms/turned-loam-joins.png',
+  'pixelhole-overworld/Seedling-Wheat-Joins.png',
+  'pixelhole-overworld/Green-Wheat-Joins.png',
+  'pixelhole-overworld/Wheatfield-Joins.png',
+];
+const OCCLUSION_HEIGHT = [0, .07, .14, .28];
 const fieldSheets: HTMLImageElement[] = [];
 const fieldTips: number[][][] = [];
 let loading: Promise<void> | undefined;
@@ -15,26 +22,23 @@ function cropTips(pixels: Uint8ClampedArray, width: number, sx: number, sy = 0):
   return tips;
 }
 
-/** Three joined stages: low pale seedlings, green crops, and original golden wheat. */
+/** Load the joined soil and wheat sheets; only crops have occluding stalks. */
 export function loadFarmArt(): Promise<void> {
-  const load = (file: string, ready: (image: HTMLImageElement, pixels: Uint8ClampedArray) => void) => new Promise<void>((resolve, reject) => {
+  return loading ??= Promise.all(FIELD_ART.map((file, stage) => new Promise<void>((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
-      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
-      const c = canvas.getContext('2d')!; c.drawImage(image, 0, 0);
-      const pixels = c.getImageData(0, 0, image.width, image.height).data;
-      ready(image, pixels);
+      fieldSheets[stage] = image;
+      if (OCCLUSION_HEIGHT[stage]) {
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        const c = canvas.getContext('2d')!; c.drawImage(image, 0, 0);
+        const pixels = c.getImageData(0, 0, image.width, image.height).data;
+        fieldTips[stage] = Array.from({ length: 256 }, (_, mask) => cropTips(pixels, image.width, (mask & 15) * 16, (mask >> 4) * 16));
+      }
       resolve();
     };
     image.onerror = () => reject(new Error('Farm artwork could not be loaded.'));
-    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/pixelhole-overworld/${file}`);
-  });
-  return loading ??= Promise.all(['Seedling-Wheat-Joins.png', 'Green-Wheat-Joins.png', 'Wheatfield-Joins.png'].map((file, stage) =>
-    load(file, (image, pixels) => {
-      fieldSheets[stage] = image;
-      fieldTips[stage] = Array.from({ length: 256 }, (_, mask) => cropTips(pixels, image.width, (mask & 15) * 16, (mask >> 4) * 16));
-    }),
-  )).then(() => undefined);
+    image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/${file}`);
+  }))).then(() => undefined);
 }
 
 /** Grain stays ripe until collected or spoiled; empty plots follow their actual next crop. */
@@ -44,13 +48,15 @@ export function fieldGrowth(field: Pick<FarmField, 'planted' | 'food' | 'nextHar
   return Math.max(0, Math.min(1, 1 - (field.nextHarvest - time) / FIELD_HARVEST_SECONDS));
 }
 
-/** Spend 10% of the crop cycle as seedlings, 55% green and 35% golden.
+/** Spend 10% of the crop cycle as bare soil, 10% as seedlings, 45% green and 35% golden.
  * Golden appearance precedes harvest; only the crop deadline produces food. */
 export function fieldStage(field: FarmField, time: number): number {
   if (!field.planted) return 0;
-  if (field.wheatRipe ?? field.food > 0) return 2;
+  if (field.wheatRipe ?? field.food > 0) return 3;
   const remaining = field.nextHarvest - time;
-  return remaining > FIELD_HARVEST_SECONDS * .9 ? 0 : remaining > FIELD_HARVEST_SECONDS * .35 ? 1 : 2;
+  if (remaining > FIELD_HARVEST_SECONDS * .9) return 0;
+  if (remaining > FIELD_HARVEST_SECONDS * .8) return 1;
+  return remaining > FIELD_HARVEST_SECONDS * .35 ? 2 : 3;
 }
 
 /** Fruit appears for the last 30–45 seconds of a mature crop cycle, before it
@@ -83,10 +89,10 @@ export function wheatJoinMask(field: FarmField, time: number,
 
 /** Low crops hide feet and lower legs, never an entire standing figure. */
 export function farmOcclusionHeight(field: FarmField, time: number): number {
-  return field.orchard ? 0 : [.07, .14, .28][fieldStage(field, time)];
+  return field.orchard ? 0 : OCCLUSION_HEIGHT[fieldStage(field, time)];
 }
 
-/** Original native wheat edges frame the patch, never individual joined cells. */
+/** Soil and crop edges frame the connected patch. */
 export function drawFarmField(c: Ctx, x: number, y: number, size: number, time: number, field: FarmField, joins = 0): void {
   c.save(); c.imageSmoothingEnabled = false;
   if (field.orchard) {
@@ -107,7 +113,8 @@ export function drawFarmField(c: Ctx, x: number, y: number, size: number, time: 
  * stalk edge. The caller applies terrain/ditch clipping just as for the field.
  * Crossing the southern planting edge puts the whole unit in front again. */
 export function drawFarmOcclusion(c: Ctx, x: number, y: number, size: number, time: number, field: FarmField, feetX: number, feetY: number, continuesSouth = false, joins = 0): void {
-  const stage = fieldStage(field, time), height = farmOcclusionHeight(field, time);
+  if (field.orchard) return;
+  const stage = fieldStage(field, time), height = OCCLUSION_HEIGHT[stage];
   const tips = fieldTips[stage]?.[joins];
   if (!fieldSheets[stage] || !height || !tips || feetY < y || feetY >= y + size && !continuesSouth) return;
   const pixel = size / 16, min = Math.min(...tips), top = y + Math.round((feetY - y - height * size) / pixel) * pixel;

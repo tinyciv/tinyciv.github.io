@@ -4,7 +4,7 @@ use bevy_ecs::prelude::*;
 use std::collections::BTreeMap;
 use rustc_hash::FxHashMap;
 
-use super::entities::EntityTables;
+use super::entities::{assign_worker_slot_storage, EntityTables};
 use super::kinds::building::{self, GRANARY, PALACE};
 
 pub const GOLD: f64 = 200.0;
@@ -161,8 +161,11 @@ pub fn upsert(world: &mut World, id: i64, kind: u32, faction: i32, x: f64, y: f6
 pub fn assign(world: &mut World, unit: i64, city: i64, storage: i64, previous: f64, inside: bool) -> *const f64 {
     world.resource_scope(|world, mut network: Mut<Granaries>| {
         let (storage, _) = network.assignment(city, storage, previous, inside);
+        let assignment = FarmStorageAssignment { city, storage };
         if let Some((entity, _)) = world.resource::<EntityTables>().units.locate(unit) {
-            world.entity_mut(entity).insert(FarmStorageAssignment { city, storage });
+            world.entity_mut(entity).insert(assignment);
+        } else {
+            assign_worker_slot_storage(world, unit, assignment);
         }
         network.output.as_ptr()
     })

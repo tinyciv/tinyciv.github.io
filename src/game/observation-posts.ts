@@ -35,7 +35,7 @@ export function validateObservationPost(state: GameState, faction: number, point
   else if (!recruitingCity(state, faction, point)) message = 'Need 1 resident to staff the observation post.';
   else if ((territoryValue(territory(state), Math.floor(point.y) * state.world.width + Math.floor(point.x)) ?? UNCLAIMED) !== UNCLAIMED)
     message = 'Observation posts must be outside all borders.';
-  else if (!reliefFootprintAllowed(state.world, Math.floor(point.x), Math.floor(point.y))) message = 'Hills and mountains cannot be built on.';
+  else if (!reliefFootprintAllowed(state.world, Math.floor(point.x), Math.floor(point.y))) message = 'Build clear of cliff faces.';
   else if (!canWalk(state, point.x, point.y, faction)) message = 'Place the observation post on clear, walkable ground.';
   else if (state.units.some(unit => unit.hp > 0 && unit.observationPost && !unit.observationPost.retreating
     && Math.floor(unit.x) === Math.floor(point.x) && Math.floor(unit.y) === Math.floor(point.y))) message = 'An observation post already occupies this tile.';
@@ -54,7 +54,7 @@ export function placeObservationPost(state: GameState, factionId: number, point:
   if (!city) return { ok: false, message: 'Need 1 resident in a friendly town to staff the observation post.' };
   if (faction.gold < OBSERVATION_POST_COST) return { ok: false, message: `Need ${OBSERVATION_POST_COST} gold to establish the observation post.` };
   const ownership = cityOwnership(state);
-  const house = state.buildings.find(building => building.kind === 'house' && building.faction === factionId && buildingReady(building)
+  const house = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === factionId && buildingReady(building)
     && (building.residents ?? 0) > 0 && ownership.building(building)?.id === city.id);
   if (house) house.residents!--;
   else city.unhousedResidents = Math.max(0, (city.unhousedResidents ?? 0) - 1);
@@ -137,7 +137,7 @@ export function updateObservationPost(state: GameState, scout: Unit, dt: number,
   const faction = state.factions.find(candidate => candidate.id === scout.faction);
   if (faction) {
     const ownership = cityOwnership(state), city = plan.city;
-    const house = state.buildings.find(building => building.kind === 'house' && building.faction === scout.faction && buildingReady(building)
+    const house = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === scout.faction && buildingReady(building)
       && (building.residents ?? 0) < building.capacity && ownership.building(building)?.id === city.id);
     if (house) house.residents = (house.residents ?? 0) + 1;
     else city.unhousedResidents = (city.unhousedResidents ?? 0) + 1;

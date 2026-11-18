@@ -6,11 +6,11 @@ import type { GameCommand } from '../multiplayer/protocol';
 import { icon } from './icons';
 import './shipyard.css';
 const art = (name: string) => `${import.meta.env.BASE_URL}assets/runtime/ui/naval/${name}.webp`;
-const marineLabels = { warrior: 'Melee marines', spearman: 'Spear marines', archer: 'Archer marines', musketman: 'Musket marines' };
+const marineLabels = { archer: 'Archer marines', musketman: 'Musket marines' };
 const weaponArt = { empty: '', ballista: 'ballista', cannon: 'cannon' };
 export class ShipyardPanel {
   private yard?: number;
-  private draft: NavalLoadout = { class: 'warGalley', marine: 'warrior', weapons: ['empty', 'empty', 'empty', 'empty'] };
+  private draft: NavalLoadout = { class: 'warGalley', marine: 'archer', weapons: ['empty', 'empty', 'empty', 'empty'] };
   private changedDraft = false;
   constructor(private element: HTMLElement, private state: () => GameState, private changed: () => void, private message: (text: string, error: boolean) => void,
     private send?: (command: GameCommand) => boolean) {
@@ -44,7 +44,7 @@ export class ShipyardPanel {
     const state = this.state(), ship = shipyardWarship(state, yard), faction = state.factions.find(f => f.id === yard.faction);
     if (this.yard !== yard.id || !this.changedDraft && ship?.warship) {
       this.draft = ship?.warship ? { class: ship.warship.class, marine: ship.warship.marine, weapons: [...ship.warship.weapons] }
-        : { class: 'warGalley', marine: 'warrior', weapons: ['empty', 'empty', 'empty', 'empty'] };
+        : { class: 'warGalley', marine: !researchLevel(faction, 'archeryRange') && researchLevel(faction, 'gunpowder') ? 'musketman' : 'archer', weapons: ['empty', 'empty', 'empty', 'empty'] };
       this.yard = yard.id; this.changedDraft = false;
     }
     this.element.querySelector<HTMLElement>('.naval-status')!.textContent = ship?.warship
@@ -68,9 +68,9 @@ export class ShipyardPanel {
     });
     this.element.querySelectorAll<HTMLButtonElement>('[data-marine]').forEach(button => {
       const marine = button.dataset.marine as MarineType;
-      const technology = marine === 'spearman' ? 'militaryTactics' : marine === 'archer' ? 'archeryRange' : marine === 'musketman' ? 'gunpowder' : undefined;
-      button.disabled = !!technology && !researchLevel(faction, technology);
-      button.title = button.disabled ? `Requires ${marine === 'spearman' ? 'Military Tactics' : marine === 'archer' ? 'Archery' : 'Gunpowder'}` : marineLabels[marine];
+      const technology = marine === 'archer' ? 'archeryRange' : 'gunpowder';
+      button.disabled = !researchLevel(faction, technology);
+      button.title = button.disabled ? `Requires ${marine === 'archer' ? 'Archery' : 'Gunpowder'}` : marineLabels[marine];
       button.setAttribute('aria-pressed', String(this.draft.marine === marine));
     });
     const build = this.element.querySelector<HTMLButtonElement>('[data-naval-build]')!, refit = this.element.querySelector<HTMLButtonElement>('[data-naval-refit]')!;

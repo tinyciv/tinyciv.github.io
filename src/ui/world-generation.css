@@ -2,7 +2,7 @@
  * All chrome and map art comes from imagegen; labels use Pixel Operator. */
 .is-world-generation{overflow:hidden;background:#161411}
 .is-world-generation>.menu-back{display:none}
-.is-world-generation>.menu-front{transform:translate(var(--worldgen-x),var(--worldgen-y)) scale(var(--worldgen-scale))}
+.is-world-generation>.menu-front{position:absolute;inset:0 auto auto 0;width:1672px;height:941px;transform-origin:0 0;transform:translate(var(--worldgen-x),var(--worldgen-y)) scale(var(--worldgen-scale))}
 .frontend-single{position:absolute;inset:0;width:1672px;height:941px;background:url('/assets/ui/world-generation/backdrop.webp') center/100% 100% no-repeat;color:#fff2c9;font-size:30px;text-shadow:1px 2px 1px #16130c}
 .frontend-single>.worldgen-heading{position:absolute;inset:0 0 auto;height:90px;display:block;margin:0}
 .worldgen-brand{position:absolute;left:133px;top:12px;font-size:56px;line-height:1;font-weight:700;color:#850900;text-shadow:1px 1px #e6a64b}
@@ -102,8 +102,8 @@
 /* Narrow screens keep the same generated brass art and native controls, with
  * sections stacked in reading order and comfortably sized touch targets. */
 .frontend.is-compact.is-world-generation{padding:12px;overflow:auto;background:#211f1a}
-.is-compact.is-world-generation>.menu-front{transform:none}
-.is-compact .frontend-single{display:flex;flex-direction:column;gap:14px;width:100%;height:auto;max-width:560px;background:none;margin:0 auto}
+.is-compact.is-world-generation>.menu-front{position:static;width:auto;height:auto;transform:none}
+.is-compact .frontend-single{position:static;display:flex;flex-direction:column;gap:14px;width:100%;height:auto;max-width:560px;background:none;margin:0 auto}
 .is-compact .frontend-single>.worldgen-heading{position:relative;inset:auto;display:block;height:92px;flex:none;background:url('/assets/ui/world-generation/backdrop.webp') 4.058% 0/572.603% 1057.303% no-repeat}
 .is-compact .worldgen-brand{display:none}
 .frontend.is-compact .worldgen-heading h1{left:12px;right:12px;top:27px;width:auto;font-size:clamp(29px,7vw,40px);letter-spacing:0;color:#850900}

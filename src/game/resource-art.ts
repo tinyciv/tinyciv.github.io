@@ -5,8 +5,7 @@ import { punyWorldPixels } from './puny-world';
 import { worldRevisions } from './world-revisions';
 import { southernResourceCell } from './resource-worksite';
 import { isOreMaterial, loadOreArt, drawOreClump, oreArtKey, type OreClumpArt } from './ore-art';
-import { buildLooseRockLayout, drawOutcrop, drawOutcropMineDoor, loadOutcropArt, outcropCell, outcropKey, outcropSeed,
-    type LooseRockCell, type OutcropCell, type OutcropMaterial, type OutcropEdgeStyle } from './outcrop-art';
+import { buildLooseRockLayout, loadLooseRockArt, type LooseRockCell } from './outcrop-art';
 
 export type ResourceArtKind = 'copper' | 'iron' | 'gold' | 'stone' | 'olives' | 'salt';
 export interface ResourceCellArt {
@@ -20,12 +19,15 @@ export interface ResourceCellArt {
     road: number;
     variant: number;
     /** Cached presentation geometry; no effect on deposits or navigation. */
-    outcrop?: OutcropCell;
     ore?: OreClumpArt;
     oreDraw?: boolean;
 }
 const STEPS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
 const KINDS = new Set(['copper', 'iron', 'gold', 'stone', 'olives', 'salt']);
+const GOLD_MINE_ART: OreClumpArt = {
+    anchor: 0, x: 0, y: 0, width: 2, height: 2, family: 1, variant: 0,
+    material: 'gold', palette: 'grassland', visible: [0, 1, 2, 3], developed: true,
+};
 let objects: HTMLImageElement | undefined;
 let mineDoor: HTMLCanvasElement | undefined;
 let fenceH: HTMLCanvasElement | undefined, fenceV: HTMLCanvasElement | undefined, fencePost: HTMLCanvasElement | undefined;
@@ -60,7 +62,7 @@ function extractMineDoor(sheet: HTMLImageElement): HTMLCanvasElement {
 export function loadResourceArt(): Promise<void> {
     return loading ??= Promise.all([Promise.all(['resources/resource-objects.png', 'cozy-farm-lite/fence-h.png', 'cozy-farm-lite/fence-v.png', 'cozy-farm-lite/fence-post.png'].map(async file => {
         const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/${file}`); await image.decode(); return image;
-    })), loadOutcropArt(), loadOreArt()]).then(([[sheet, horizontal, vertical, post]]) => {
+    })), loadLooseRockArt(), loadOreArt()]).then(([[sheet, horizontal, vertical, post]]) => {
         objects = sheet;
         mineDoor = extractMineDoor(sheet);
         fenceH = compact(horizontal, Array.from({ length: 16 }, (_, x) => x), [6, 8, 10, 12, 13]);
@@ -72,17 +74,20 @@ export function resourceHasArt(tile: Tile | undefined): boolean {
     return !!tile && KINDS.has(tile.resource ?? '') && !WATER.has(tile.terrain) && !tile.creek;
 }
 
+/** Keep the native 32px outcrop inside the mine's two-tile footprint. */
+export function drawGoldMine(c: CanvasRenderingContext2D): void {
+    drawOreClump(c, GOLD_MINE_ART, mineDoor, 0, 0, 32, 1);
+}
+
 /** Shared by the game renderer and visual fixtures. No simulation mutations. */
 export function buildResourceArtLayout(world: World, observedDevelopment?: Uint8Array, explored?: ArrayLike<number>): Map<number, ResourceCellArt> {
     const result = new Map<number, ResourceCellArt>();
     const { width, height, tiles } = world;
-    const rockSeed = outcropSeed(world.seed);
     const at = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height ? y * width + x : -1;
     for (let cell = 0; cell < tiles.length; cell++) {
         const tile = tiles[cell]; if (!resourceHasArt(tile)) continue;
         result.set(cell, { resource: tile.resource as ResourceArtKind, developed: observedDevelopment ? !!observedDevelopment[cell] : !!tile.resourceDeveloped,
-            worksite: false, fences: 0, gate: 0, road: 0, variant: Math.floor(tile.variation * 0x1000000) & 1,
-            outcrop: tile.resource === 'stone' ? outcropCell(world, cell % width, Math.floor(cell / width), rockSeed, explored) : undefined });
+            worksite: false, fences: 0, gate: 0, road: 0, variant: Math.floor(tile.variation * 0x1000000) & 1 });
     }
     const seen = new Set<number>();
     for (const [start, item] of result) {
@@ -129,25 +134,25 @@ export function buildResourceArtLayout(world: World, observedDevelopment?: Uint8
     return withOreClumps(world, result, explored);
 }
 
-/** Sparse footprint lookup. Iron components share one complete mountain image;
+/** Sparse footprint lookup. Iron and quarry components share one complete outcrop;
  * immutable art descriptors keep cached sprites and fog memories coherent. */
 function withOreClumps(world: World, layout: Map<number, ResourceCellArt>, explored?: ArrayLike<number>): Map<number, ResourceCellArt> {
     const clumps = new Map<number, number[]>();
-    const seenIron = new Set<number>();
-    for (const [cell, art] of layout) if (isOreMaterial(art.resource)) {
-        if (art.resource === 'iron') {
-            if (seenIron.has(cell)) continue;
-            const members = [cell]; seenIron.add(cell);
+    const seen = new Set<number>();
+    for (const [cell, art] of layout) if (isOreMaterial(art.resource) || art.resource === 'stone') {
+        if (art.resource === 'iron' || art.resource === 'stone') {
+            if (seen.has(cell)) continue;
+            const members = [cell]; seen.add(cell);
             for (let i = 0; i < members.length; i++) {
                 const current = members[i], x = current % world.width, y = Math.floor(current / world.width);
                 for (const [dx, dy] of STEPS) {
                     const nx = x + dx, ny = y + dy;
                     if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) continue;
                     const next = ny * world.width + nx;
-                    if (seenIron.has(next) || layout.get(next)?.resource !== 'iron') continue;
+                    if (seen.has(next) || layout.get(next)?.resource !== art.resource) continue;
                     const group = world.tiles[current].resourceGroup, nextGroup = world.tiles[next].resourceGroup;
                     if (group !== undefined && nextGroup !== undefined && group !== nextGroup) continue;
-                    seenIron.add(next); members.push(next);
+                    seen.add(next); members.push(next);
                 }
             }
             clumps.set(cell, members);
@@ -158,12 +163,13 @@ function withOreClumps(world: World, layout: Map<number, ResourceCellArt>, explo
     }
     let result = layout;
     for (const [sourceAnchor, members] of clumps) {
-        const iron = layout.get(members[0])!.resource === 'iron';
-        // A sparse iron component's bounding corner need not hold a resource.
-        const tile = world.tiles[iron ? members[0] : sourceAnchor];
+        const material = layout.get(members[0])!.resource as OreClumpArt['material'];
+        const iron = material === 'iron', stone = material === 'stone', irregular = iron || stone;
+        // A sparse component's bounding corner need not hold a resource.
+        const tile = world.tiles[irregular ? members[0] : sourceAnchor];
         let anchor = sourceAnchor, x = anchor % world.width, y = Math.floor(anchor / world.width);
         let width = tile.oreWidth ?? 1, height = tile.oreHeight ?? 1;
-        if (iron) {
+        if (irregular) {
             let right = -1, bottom = -1; x = world.width; y = world.height;
             for (const cell of members) {
                 const cx = cell % world.width, cy = Math.floor(cell / world.width);
@@ -174,20 +180,20 @@ function withOreClumps(world: World, layout: Map<number, ResourceCellArt>, explo
             width = right - x + 1; height = bottom - y + 1;
         }
         const draw = members.find(cell => !explored || explored[cell]), visible: number[] = [];
-        if (iron) {
+        if (irregular) {
             // Keep explored holes in the image instead of cutting the mountain
-            // into one rectangular fragment per occupied deposit cell.
+            // into one fragment per occupied deposit cell.
             for (let row = 0; row < height; row++) for (let col = 0; col < width; col++)
                 if (!explored || explored[(y + row) * world.width + x + col]) visible.push(row * width + col);
         } else for (const cell of members) if (!explored || explored[cell])
             visible.push((Math.floor(cell / world.width) - y) * width + cell % world.width - x);
         const nativeFamily = tile.oreFamily ?? 0;
-        const family = iron && nativeFamily === 0 ? width > height ? 2 : 1 : nativeFamily;
+        const family = irregular && nativeFamily === 0 ? width > height ? 2 : 1 : nativeFamily;
         const next: OreClumpArt = { anchor, x, y, width, height, family,
             variant: tile.oreVariant ?? (Math.floor(tile.variation * 256) & 1) as 0 | 1,
-            material: layout.get(members[0])!.resource as OreClumpArt['material'],
+            material,
             palette: !iron && (tile.terrain === 'desert' || tile.terrain === 'plains' || tile.terrain === 'tundra') ? tile.terrain : 'grassland',
-            visible, developed: members.some(cell => layout.get(cell)!.developed) };
+            visible, developed: !stone && members.some(cell => layout.get(cell)!.developed) };
         const old = layout.get(members[0])!.ore;
         const ore = old && old.anchor === anchor && old.x === x && old.y === y && oreArtKey(old) === oreArtKey(next) ? old : next;
         for (const cell of members) {
@@ -228,18 +234,7 @@ export class ResourceArtMemory {
         this.revision = revision; this.fogRevision = fogRevision;
         this.explorationRevision = explorationRevision;
         if (changed) this.layout = buildResourceArtLayout(world, this.observed, explored);
-        else if (explorationChanged) {
-            // Explore only the resource index, not the whole terrain array.
-            // Publish a fresh map only when a previously hidden join changes.
-            let updated: Map<number, ResourceCellArt> | undefined;
-            for (const [cell, art] of this.layout) if (art.outcrop) {
-                const next = outcropCell(world, cell % world.width, Math.floor(cell / world.width), art.outcrop.seed, explored);
-                if (next.neighbors !== art.outcrop.neighbors) {
-                    updated ??= new Map(this.layout); updated.set(cell, { ...art, outcrop: next });
-                }
-            }
-            this.layout = withOreClumps(world, updated ?? this.layout, explored);
-        }
+        else if (explorationChanged) this.layout = withOreClumps(world, this.layout, explored);
         if (geologyChanged) this.allRubble = buildLooseRockLayout(world, this.layout.keys());
         if (geologyChanged || explorationChanged) this.rubble = explored
             ? new Map([...this.allRubble].filter(([, rocks]) => !!explored[rocks.source])) : this.allRubble;
@@ -252,7 +247,7 @@ export function resourceObjectBounds(art: ResourceCellArt): { x: number; y: numb
     return art.resource === 'olives' && art.variant ? { x: 0, y: -32, width: 32, height: 64 } : { x: 0, y: 0, width: 32, height: 32 };
 }
 export function resourceObjectKey(art: ResourceCellArt): string {
-    return `${art.resource}:${Number(art.worksite)}:${art.variant}:${Number(art.developed)}${art.outcrop ? `:${outcropKey(art.outcrop)}` : ''}${art.ore ? `:ore:${oreArtKey(art.ore)}` : ''}`;
+    return `${art.resource}:${Number(art.worksite)}:${art.variant}:${Number(art.developed)}${art.ore ? `:ore:${oreArtKey(art.ore)}` : ''}`;
 }
 export function resourceHasObject(art: ResourceCellArt): boolean { return art.ore ? !!art.oreDraw : art.resource !== 'salt' || art.developed; }
 
@@ -265,8 +260,7 @@ export function drawSaltFields(c: CanvasRenderingContext2D, x = 0, y = 0, size =
     c.fillRect(x + 3 * pixel, y + 3 * pixel, 10 * pixel, 10 * pixel);
     c.fillRect(x + 2 * pixel, y + 4 * pixel, 12 * pixel, 8 * pixel);
 }
-export function drawResourceObject(c: CanvasRenderingContext2D, art: ResourceCellArt, x = 0, y = 0, size = 32,
-    edgeStyle: OutcropEdgeStyle = 'grounded'): void {
+export function drawResourceObject(c: CanvasRenderingContext2D, art: ResourceCellArt, x = 0, y = 0, size = 32): void {
     if (art.resource === 'salt') {
         if (art.developed) drawSaltFields(c, x, y, size);
         return;
@@ -280,18 +274,12 @@ export function drawResourceObject(c: CanvasRenderingContext2D, art: ResourceCel
     if (!objects) return;
     c.imageSmoothingEnabled = false;
     const pixel = size / 16;
-    if (art.outcrop) {
-        drawOutcrop(c, art.resource as OutcropMaterial, art.outcrop, x, y, size, edgeStyle);
-        if (art.worksite && art.resource !== 'stone' && mineDoor)
-            drawOutcropMineDoor(c, mineDoor, art.outcrop, x, y, size);
-        return;
-    }
     if (art.resource === 'olives') {
         const height = art.variant ? 32 : 16;
         c.drawImage(objects, art.variant ? 64 : 48, 0, 16, height, x, y + size - height * pixel, size, height * pixel);
     } else {
         const column = art.resource === 'copper' ? 0 : 32;
-        c.drawImage(objects, column, art.resource !== 'stone' && art.worksite ? 16 : 0, 16, 16, x, y, size, size);
+        c.drawImage(objects, column, art.worksite ? 16 : 0, 16, 16, x, y, size, size);
     }
 }
 export function drawResourceRoad(c: CanvasRenderingContext2D, art: ResourceCellArt, x: number, y: number): void {

@@ -11,7 +11,8 @@ import { villageRelationView, settlements } from './settlement-bridge';
 import { hermitPosition } from './hermits';
 import { questGiverPosition, questMarkerRevealed, questIncompleteMessage } from './quest-presentation';
 import { playerFaction } from './player-context';
-import { grantIncome } from './resource-income';
+import { grantIncome, recordIncome } from './resource-income';
+import { recordGoldInput } from './gold-ledger';
 import { updateWallStats } from './wall-stats';
 import { houseCapacity } from './wells';
 import { updateConstructionResearch } from './structures';
@@ -95,7 +96,8 @@ export function updateQuests(state: GameState, force = false): void {
         data.push(h.id, p.x, p.y, Number(h.status === 'home'), seen(p.x, p.y));
     }
     for (const b of buildings)
-        data.push(b.id, BUILDING_KIND_CODES[b.kind], b.faction, b.x, b.y, Number(buildingReady(b)), b.raiderCamp ?? -1, residents.get(b.id) ?? 0, b.villageId ?? -1, seen(b.x + .5, b.y + .5));
+        data.push(b.id, BUILDING_KIND_CODES[b.kind], b.faction, b.x, b.y, Number(buildingReady(b)), b.raiderCamp ?? -1,
+            residents.get(b.id) ?? 0, b.villageId ?? -1, seen(b.x + .5, b.y + .5), b.roadBuildGold ?? 0);
     for (const f of fields)
         data.push(f.id, f.camp, f.faction, f.x, f.y);
     for (const u of posts)
@@ -128,7 +130,12 @@ export function performQuestAction(state: GameState, kind: QuestKind, action: 'a
         for (const house of settlementBuildings(state).housesByFaction.get(actor) ?? [])
             if (house.faction === actor && buildingReady(house)) house.capacity = houseCapacity(house, faction, state);
         updateConstructionResearch(state, true);
-        grantIncome(faction, { gold: header[1], food: header[2] }, state);
+        if (kind === 1) {
+            // Repay construction in gold at the quoted amount.
+            faction.gold += header[1];
+            recordGoldInput(state, faction, header[1], 'other');
+            recordIncome(faction, { gold: header[1] });
+        } else grantIncome(faction, { gold: header[1], food: header[2] }, state);
         if (header[6] >= 0 && header[3] > 0)
             settlements(state).questReward(header[6], actor, header[3]);
         const store = entityStore(state);

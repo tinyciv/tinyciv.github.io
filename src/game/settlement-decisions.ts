@@ -92,6 +92,14 @@ interface IdleJobClock extends DecisionClock {
 }
 const idleJobs = new WeakMap<Unit, IdleJobClock>();
 
+/** Earliest time an idle worker's job choice can run without an urgent input:
+ * its sampled deadline or, when later, its blocked-route retry. */
+export function idleJobWakeAt(state: GameState, unit: Unit): number | undefined {
+  const clock = idleJobs.get(unit);
+  if (!clock || clock.state !== state || clock.sampledAt === undefined || clock.nextAt === undefined || state.time < clock.sampledAt) return;
+  return Math.max(clock.nextAt - 1e-9, unit.repathAt ?? 0);
+}
+
 /** Only choosing work is sampled. Trips, pickup, delivery, clearing and repairs
  * still execute every simulation step. Keep existing blocked-route backoffs,
  * while commands that reset a retry clock are observed at the next sample. */

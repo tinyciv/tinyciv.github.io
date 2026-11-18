@@ -1,3 +1,4 @@
+import { buildingFollowsTerritory } from './building-targeting';
 import { lifetimeCulture } from './achievement-effects';
 import { recordCampaignPopulation } from './campaign-stats';
 import { raiderCampActive } from './raider-camps';
@@ -49,10 +50,10 @@ function unchanged(state: GameState, borders: Territory, previous: OwnershipSnap
 }
 
 function supportsProperty(building: Building): boolean {
-    if (!buildingReady(building) || building.villageId !== undefined) return false;
+    if (!buildingFollowsTerritory(building) || !buildingReady(building) || building.villageId !== undefined) return false;
     // Recorded camps claim walls through their inner towers. Independent
     // marauder settlements retain nearby walls but cannot claim neutral property. Untargetable farms cannot hold walls or one another.
-    if (building.faction === RAIDER_FACTION) return building.raiderCamp === undefined && (building.kind === 'house' || building.kind === 'villageTent');
+    if (building.faction === RAIDER_FACTION) return building.raiderCamp === undefined && ((building.kind === 'house' || building.kind === 'apartments') || building.kind === 'villageTent');
     return building.faction >= 0 && !isWallKind(building.kind) && !isFarmKind(building.kind)
         && !['road', 'bridge', 'irrigation', 'ruin'].includes(building.kind);
 }
@@ -96,7 +97,7 @@ export function updateWallOwnership(state: GameState): boolean {
         if (building.faction === owner) return;
         const former = state.factions.find(faction => faction.id === building.faction);
         const winner = state.factions.find(faction => faction.id === owner);
-        const residents = buildingReady(building) ? Math.max(0, building.kind === 'house' ? building.residents ?? 0
+        const residents = buildingReady(building) ? Math.max(0, (building.kind === 'house' || building.kind === 'apartments') ? building.residents ?? 0
             : building.kind === 'palace' ? building.unhousedResidents ?? 0 : 0) : 0;
         const moved = former ? Math.min(Math.max(0, former.population), residents) : residents;
         if (former) former.population -= moved;
@@ -123,7 +124,7 @@ export function updateWallOwnership(state: GameState): boolean {
         if (!isFarmKind(building.kind)) invalidateNavigation(state);
     };
     for (const wall of state.buildings) {
-        if (wall.hp <= 0 || wall.villageId !== undefined || questPropertyReserved(state,wall) || ['fort', 'guardPost', 'woodenTower', 'tower', 'ballista', 'siegeCannon'].includes(wall.kind)) continue;
+        if (!buildingFollowsTerritory(wall) || wall.hp <= 0 || wall.villageId !== undefined || questPropertyReserved(state,wall) || ['fort', 'guardPost', 'woodenTower', 'tower', 'ballista', 'siegeCannon'].includes(wall.kind)) continue;
         // A road underneath a wall follows the gate's evacuation/claim result.
         if (wall.kind === 'road' && wallCells.has(key(wall.x, wall.y))) continue;
         const farm = isFarmKind(wall.kind);

@@ -1,0 +1,37 @@
+{
+  "candidate": "F3 \u2014 Turned loam",
+  "provider": "PixelLab",
+  "pixelLab": {
+    "description": "Change this farm into one continuous brown soil bed freshly plowed before planting. Use five perfectly clear horizontal grooves running in unbroken bands edge to edge across a single flat brown soil patch. Loam with subtle scattered clods and dusty ridge highlights. Keep the footprint and pixel scale. High top-down orthographic camera. Opaque brown earth between furrows, transparent outside. Remove all vegetation. Flat ground.",
+    "width": 32,
+    "height": 32,
+    "no_background": true,
+    "seed": 261118102,
+    "name": "Turned loam",
+    "endpoint": "/edit-image-pixen",
+    "reference": "ripe-patch.png",
+    "job_id": "26d45639-a5c3-46a0-a433-9a60450a8b02",
+    "sha256": "d8d94b61d5808c0541cd234859b0baa0f146d8ba3c47178272a3f2115d652531"
+  },
+  "referenceAsset": "public/assets/pixelhole-overworld/Wheatfield-Joins.png",
+  "source": "scratch/2026-11-17-furrowed-soil/sprites/F3.png",
+  "generator": "scratch/2026-11-17-furrowed-soil/build-f3-joins.py",
+  "atlas": "turned-loam-joins.png",
+  "sha256": "819ec3a77c6aedc0ec4f01e200601fc29b5389783317dd67b0676cbf71a47697",
+  "cellSize": [
+    16,
+    16
+  ],
+  "maskBits": [
+    "N",
+    "E",
+    "S",
+    "W",
+    "NE",
+    "SE",
+    "SW",
+    "NW"
+  ],
+  "layout": "Column = mask & 15. Row = mask >> 4.",
+  "composition": "Unscaled F3 soil has three horizontal furrows per interior cell. Exterior edges use the original F3 border. Concave corners use the existing wheat join geometry."
+}

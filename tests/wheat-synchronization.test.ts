@@ -27,10 +27,10 @@ it('keeps joined wheat golden for 21 seconds before producing its scheduled harv
   state.fields!.forEach(field => field.nextHarvest = 80);
   synchronizeWheatFields(state);
   state.time = 58.999; updateHarvests(state);
-  expect(state.fields!.every(field => fieldStage(field, state.time) === 1 && field.food === 0)).toBe(true);
+  expect(state.fields!.every(field => fieldStage(field, state.time) === 2 && field.food === 0)).toBe(true);
   for (const time of [59, 70, 79.999]) {
     state.time = time; updateHarvests(state);
-    expect(state.fields!.every(field => fieldStage(field, time) === 2 && field.food === 0 && !field.wheatRipe && field.nextHarvest === 80)).toBe(true);
+    expect(state.fields!.every(field => fieldStage(field, time) === 3 && field.food === 0 && !field.wheatRipe && field.nextHarvest === 80)).toBe(true);
     const fieldAt = (x: number, y: number) => state.fields!.find(field => field.x === x && field.y === y);
     expect(state.fields!.map(field => wheatJoinMask(field, time, fieldAt))).toEqual([2, 2 | 8, 8]);
   }
@@ -48,7 +48,7 @@ it('shares growth and regrowth with one parcel pickup and the original expiry', 
   state.time = 80; updateHarvests(state);
   const total = state.fields!.reduce((sum, field) => sum + field.food, 0);
   expect(total).toBeGreaterThan(0);
-  expect(state.fields!.every(field => fieldStage(field, 80) === 2 && field.expiresAt === 80 + FIELD_SPOIL_SECONDS)).toBe(true);
+  expect(state.fields!.every(field => fieldStage(field, 80) === 3 && field.expiresAt === 80 + FIELD_SPOIL_SECONDS)).toBe(true);
   const workers = state.units.filter(unit => unit.collector);
   expect(workers).toHaveLength(1); // One real courier serves all three fields.
   const worker = workers[0]; state.time = 81;
@@ -218,6 +218,6 @@ it('remembers the shared ripe state in fog even on a tile whose own bag was coll
   state.units[0].x = 27.5; state.time = 4; invalidateFog(state); fog = updateFog(state);
   b.food = 0; synchronizeWheatFields(state); state.time = 5; invalidateFog(state); fog = updateFog(state);
   const memory = fog.fields.find(field => field.id === a.id)!;
-  expect(memory.wheatRipe).toBe(true); expect(fieldStage(memory, memory.observedAt)).toBe(2);
+  expect(memory.wheatRipe).toBe(true); expect(fieldStage(memory, memory.observedAt)).toBe(3);
 });
 

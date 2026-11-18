@@ -260,6 +260,7 @@ export class SettlementBridge {
 
   // ------------------------------------------------------------- views
   private ensureFactions(): void { if (this.signature() !== this.factionSignature) this.sendFactions(); }
+  hostilityHandle(): number { this.ensureFactions(); return this.handle; }
   hostile(a: number, b: number): boolean {
     this.ensureFactions();
     if (this.hostilityDirty) {
@@ -501,8 +502,11 @@ export function chooseVillageLayout(state: GameState, villageId: number, center:
     tents: [{ x: result[7], y: result[8] }, { x: result[9], y: result[10] }], dock: result[11] ? { x: result[12], y: result[13] } : undefined };
 }
 
-/** Population-weighted cultural attachment, independent of treaty trust. */
-export function civAffiliation(state: GameState, target: number, requester: number): number {
-  const bridge = settlements(state); bridge.sync();
-  return rustEngine.settlement_civ_affiliation(bridge.handle, target, requester);
+/** Population-weighted cultural attachment for ordered [target, requester] pairs. */
+export function civAffiliations(state: GameState, pairs: readonly number[]): Float64Array {
+  const existing = bridges.get(state), bridge = existing ?? settlements(state);
+  existing?.sync();
+  const count = pairs.length / 2;
+  write(rustEngine.settlement_civ_affiliations_input(bridge.handle, count), pairs);
+  return copy(rustEngine.settlement_civ_affiliations(bridge.handle, count), count);
 }

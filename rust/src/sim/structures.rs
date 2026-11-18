@@ -7,7 +7,7 @@
 //! registration sequence (host array order), so ordered results and distance
 //! ties match the original stable sorts.
 use bevy_ecs::prelude::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use rustc_hash::FxHashMap;
 
@@ -76,6 +76,8 @@ pub struct StructureIndex {
     ordered: BTreeMap<u64, Entity>,
     by_faction: BTreeMap<i64, BTreeSet<u64>>,
     revision: f64,
+    journal: VecDeque<(f64, i64)>,
+    journal_floor: f64,
     /// Wall/palisade corner cells, whatever their state.
     wall_cells: CellCounts,
     /// Corner cells of present wooden towers.
@@ -92,7 +94,7 @@ impl Default for StructureIndex { fn default() -> Self { Self::new(1) } }
 
 impl StructureIndex {
     pub fn new(width: i32) -> Self {
-        Self { width: width.max(1) as i64, ordered: BTreeMap::new(), by_faction: BTreeMap::new(), revision: 0.0,
+        Self { width: width.max(1) as i64, ordered: BTreeMap::new(), by_faction: BTreeMap::new(), revision: 0.0, journal: VecDeque::new(), journal_floor: 0.0,
             wall_cells: CellCounts::default(), wooden_tower_cells: CellCounts::default(), solid_cells: CellCounts::default(),
             defenses: BTreeMap::new(), output: vec![0.0], scratch: Vec::new(), proximity: FxHashMap::default(), clearance: BTreeSet::new() }
     }
@@ -155,7 +157,7 @@ impl StructureIndex {
         world.entity_mut(entity).insert(next);
         self.count_cells(&next, 1);
         self.index_proximity(&next, true);
-        self.revision += 1.0;
+        self.changed(id);
     }
 
     /// Forgets a building that is about to be despawned (or unpublished).
@@ -165,7 +167,7 @@ impl StructureIndex {
         self.index_proximity(&row, false);
         self.ordered.remove(&row.sequence);
         if let Some(set) = self.by_faction.get_mut(&faction_key(row.faction)) { set.remove(&row.sequence); }
-        self.revision += 1.0;
+        self.changed(row.id);
     }
 
     /// Drops every row (the host republishes) and adopts the world width.
@@ -176,6 +178,29 @@ impl StructureIndex {
         let revision = self.revision + 1.0;
         *self = Self::new(width);
         self.revision = revision;
+        self.journal_floor = revision;
+    }
+
+    fn changed(&mut self, id: i64) {
+        self.revision += 1.0;
+        self.journal.push_back((self.revision, id));
+        while self.journal.len() > 4096 {
+            if let Some((revision, _)) = self.journal.pop_front() { self.journal_floor = revision; }
+        }
+    }
+
+    /// Each derived navigation grid keeps its own cursor. A bounded history
+    /// transports only changed IDs; a slow consumer gets an explicit full reset.
+    /// [revision, full, count, ids...]. Routine nonlethal damage emits no row.
+    pub fn changes_since(&mut self, since: f64) -> *const f64 {
+        let full = !since.is_finite() || since < self.journal_floor || since > self.revision;
+        self.output.clear(); self.output.extend_from_slice(&[self.revision, full as u8 as f64, 0.0]);
+        if !full {
+            let ids: BTreeSet<_> = self.journal.iter().rev().take_while(|(revision, _)| *revision > since).map(|(_, id)| *id).collect();
+            self.output.extend(ids.into_iter().map(|id| id as f64));
+        }
+        self.output[2] = (self.output.len() - 3) as f64;
+        self.output.as_ptr()
     }
 
     /// Advances whenever a row changes.
@@ -319,6 +344,23 @@ mod tests {
     }
     fn defenses(world: &mut World, palace: i64) -> Vec<f64> { ids(world.resource_mut::<StructureIndex>().defenses(palace)) }
     fn refresh(world: &mut World) { world.resource_scope(|world, mut index: Mut<StructureIndex>| index.refresh_defenses(world)); }
+
+    #[test]
+    fn row_journal_coalesces_changes_and_reports_rollover() {
+        let mut world = world();
+        upsert(&mut world, 1, 0.0, 4.0, 4.0, HOUSE, ALIVE | PRESENT | READY);
+        let start = world.resource::<StructureIndex>().revision();
+        for owner in 1..=3 { upsert(&mut world, 1, owner as f64, 4.0, 4.0, HOUSE, ALIVE | PRESENT | READY); }
+        {
+            let mut index = world.resource_mut::<StructureIndex>();
+            index.changes_since(start);
+            assert_eq!(&index.output[1..], &[0.0, 1.0, 1.0]);
+        }
+        for owner in 4..=4105 { upsert(&mut world, 1, (owner % 2) as f64, 4.0, 4.0, HOUSE, ALIVE | PRESENT | READY); }
+        let mut index = world.resource_mut::<StructureIndex>();
+        index.changes_since(start); assert_eq!(index.output[1], 1.0);
+        let now = index.revision(); index.changes_since(now); assert_eq!(&index.output[1..], &[0.0, 0.0]);
+    }
 
     #[test]
     fn obstacle_events_follow_ruin_restoration_and_construction_lifecycle() {

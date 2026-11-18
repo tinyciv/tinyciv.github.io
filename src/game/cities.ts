@@ -1,3 +1,5 @@
+import { structureIndex } from './structure-index';
+import { simCore } from './sim-handle';
 import { rustEngine } from './rust-engine';
 import { isHumanFaction } from './player-context';
 import { housingGoldBonus } from './wells';
@@ -168,7 +170,7 @@ function calculateCityResidents(state: GameState, group?: CityEconomyGroup): Cit
     }
     const remaining = new Map(state.factions.map(faction => [faction.id, Math.max(0, faction.population)]));
     for (const house of group?.buildings ?? state.buildings) {
-        if (house.kind !== 'house' || !buildingReady(house)) continue;
+        if ((house.kind !== 'house' && house.kind !== 'apartments') || !buildingReady(house)) continue;
         const city = byPalace.get(ownership.building(house)?.id ?? -1);
         if (!city) continue;
         city.housing += house.capacity;
@@ -201,27 +203,31 @@ export function factionFoodConsumption(state: GameState, faction: number): numbe
 /** Assign every house, farm and soldier to exactly one friendly palace. The
  * local net rates sum to the faction's normal food and gold rate; joining
  * another faction does not repeat the combined realm total on every palace. */
-export function citySummaries(state: GameState): CitySummary[] {
+export function citySummaries(state: GameState, faction?: number): CitySummary[] {
     const scope = summaryScopes.get(state);
-    if (scope?.value && !scope.live) return scope.value;
+    if (scope?.value && !scope.live) return faction === undefined ? scope.value : scope.value.filter(city => city.palace.faction === faction);
     const indexed = indexedScope(state);
     if (indexed) {
         const index = reconcileEconomy(state, indexed);
+        if (faction !== undefined) {
+            const cities: CitySummary[] = [];
+            for (const resident of indexed.factions.get(faction)?.residents ?? []) {
+                const id = resident.palace.id, inputs = index.cities.get(id);
+                if (inputs) cities.push(indexedCitySummary(state, indexed, id, resident, inputs));
+            }
+            return cities;
+        }
         for (const [id, city] of index.cities) {
             const resident = indexed.factions.get(city.palace.faction)?.residents.find(value => value.palace === city.palace);
             if (!resident) continue;
-            const cached = indexed.cities.get(id), old = cached?.resident;
-            if (!cached || cached.revision !== city.revision || old!.palace !== resident.palace
-                || old!.name !== resident.name || old!.population !== resident.population
-                || old!.housing !== resident.housing || old!.housingGold !== resident.housingGold)
-                indexed.cities.set(id, { revision: city.revision, resident, value: calculateIndexedCitySummary(state, resident, city) });
+            indexedCitySummary(state, indexed, id, resident, city);
         }
         for (const id of indexed.cities.keys()) if (!index.cities.has(id)) indexed.cities.delete(id);
         return indexed.value = orderedCities(state, [Array.from(indexed.cities.values(), value => value.value)]);
     }
     const cities = calculateCitySummaries(state, cityResidents(state));
     if (scope) scope.value = cities;
-    return cities;
+    return faction === undefined ? cities : cities.filter(city => city.palace.faction === faction);
 }
 
 /** City ribbons only expose the player's economy. Keep the complete resident
@@ -241,12 +247,23 @@ export function citySummariesForFaction(state: GameState, faction: number): City
     return cities;
 }
 
+function indexedCitySummary(state: GameState, scope: SummaryScope, id: number, resident: CityResidents, city: CityEconomyCity): CitySummary {
+    const cached = scope.cities.get(id), old = cached?.resident;
+    if (cached && cached.revision === city.revision && old!.palace === resident.palace
+        && old!.name === resident.name && old!.population === resident.population
+        && old!.housing === resident.housing && old!.housingGold === resident.housingGold) return cached.value;
+    const value = calculateIndexedCitySummary(state, resident, city);
+    scope.cities.set(id, { revision: city.revision, resident, value });
+    return value;
+}
+
 function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents, salt = saltFoodConsumptionMultiplier(state, city.palace.faction)): CitySummary {
+    structureIndex(state);
     return { ...city,
         food: palaceFoodProduction(city.palace) + fishingCityFoodPerEconomyCycle(state, city.palace.id)
             - city.population * salt,
-        gold: rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(state.factions.find(faction => faction.id === city.palace.faction), AchievementEffect.tax,
-            (city.population + housingGold) * TAX_INCOME_MULTIPLIER), 1) };
+        gold: rustEngine.sim_civic_factory_income(simCore(state).handle, city.palace.faction, rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(state.factions.find(faction => faction.id === city.palace.faction), AchievementEffect.tax,
+            (city.population + housingGold) * TAX_INCOME_MULTIPLIER), 1)) };
 }
 
 function calculateIndexedCitySummary(state: GameState, resident: CityResidents, inputs: CityEconomyCity): CitySummary {
@@ -320,5 +337,6 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
 
 /** Match the city cards and treasury. */
 export function cityTaxIncome(state: GameState, faction: Faction): number {
-    return rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(faction, AchievementEffect.tax, (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER), 1);
+    structureIndex(state);
+    return rustEngine.sim_civic_factory_income(simCore(state).handle, faction.id, rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(faction, AchievementEffect.tax, (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER), 1));
 }

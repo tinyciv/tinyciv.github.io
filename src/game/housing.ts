@@ -5,6 +5,7 @@ import { canTraverseEdge, createReachabilityQuery, withNavigationFrame } from '.
 import { palaceReachability } from './placement';
 import { replaceableRoad } from './covered-roads';
 import { reliefFootprintAllowed } from './relief';
+import { hermitCabinOverlaps } from './placement-occupancy';
 import { palaceEnclosures } from './enclosures';
 import { planFarmRelocation, withFarmRelocationProbes, type FarmRelocationPlan } from './farm-relocation';
 import TinyQueue from 'tinyqueue';
@@ -39,7 +40,8 @@ function placementContext(state: GameState, palace: Building, allowRoads = false
 
 function candidateAt(state: GameState, palace: Building, context: PlacementContext, point: Point, allowClearing = false): Candidate | undefined {
   const { x, y } = point, key = y * state.world.width + x;
-  if (isForbidden(state, x, y, palace.faction) || context.occupied.has(key) || !reliefFootprintAllowed(state.world, x, y)) return;
+  if (isForbidden(state, x, y, palace.faction) || context.occupied.has(key) || !reliefFootprintAllowed(state.world, x, y)
+    || hermitCabinOverlaps(state, x, y)) return;
   const tile = tileAt(state.world, x, y), camp = context.farms.get(key);
   if (!tile || WATER.has(tile.terrain) || tile.farm !== undefined && !camp) return;
   if (tile.overlay !== 'none' && !(allowClearing && ['forest', 'jungle', 'swamp'].includes(tile.overlay))) return;

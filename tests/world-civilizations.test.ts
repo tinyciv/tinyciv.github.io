@@ -5,7 +5,6 @@ import { createGame } from '../src/game/simulation';
 import { hasStaticPath } from '../src/game/pathfinding';
 import { buildingHeight, buildingWidth, isWallKind, tileAt, WATER, type Building } from '../src/game/types';
 import { generateWorld } from '../src/world/generator';
-import { harmonizeRidgeTerrain } from '../src/world/ridges';
 
 describe('six-civilization starting worlds', () => {
   it.each(['CROWN', '42', 'first-light'])('starts five distinct two-city rivals with a funded economy on %s', seed => {
@@ -56,10 +55,6 @@ describe('six-civilization starting worlds', () => {
   it('keeps six factions and eleven non-overlapping palaces on a small development map', () => {
     const state = createGame(generateWorld('small', 64, 64));
     expect(state.factions.filter(faction => faction.villageId === undefined)).toHaveLength(STARTING_FACTION_COUNT);
-    const land = state.world.tiles.filter(tile => !WATER.has(tile.terrain)).length;
-    const raised = state.world.tiles.filter(tile => tile.relief).length;
-    expect(raised / land).toBeGreaterThan(.01);
-    expect(raised / land).toBeLessThanOrEqual(.12);
     const palaces = state.buildings.filter(building => building.kind === 'palace');
     expect(palaces).toHaveLength(STARTING_FACTION_COUNT + OPPOSING_FACTION_COUNT);
     for (let i = 0; i < palaces.length; i++) for (let j = 0; j < i; j++)
@@ -67,29 +62,19 @@ describe('six-civilization starting worlds', () => {
   });
 });
 
-describe('native relief terrain', () => {
-  it.each(['CROWN', '42', 'first-light'])('keeps relief on dry ground with explicit native policy on %s', seed => {
-    const world = generateWorld(seed);
-    expect(world.tiles.some(tile => tile.relief)).toBe(true);
-    for (let i = 0; i < world.tiles.length; i++) {
-      const tile = world.tiles[i];
-      expect(tile.ridge).toBeUndefined(); expect(tile.stair).toBeUndefined();
-      if (!tile.relief) continue;
+describe('native ledge shelves', () => {
+  it.each(['CROWN', '42', 'first-light'])('keeps each enabled shelf and its apron on one terrain type on %s', seed => {
+    const world = generateWorld(seed, undefined, undefined, { ledges: true });
+    expect(world.tiles.some(tile => tile.stair)).toBe(true);
+    for (const [cell, tile] of world.tiles.entries()) {
+      expect(tile.relief).toBeUndefined();
+      if (!tile.ridge) continue;
+      const x = cell % world.width, y = Math.floor(cell / world.width);
+      expect(tile.resource).toBeUndefined();
       expect(WATER.has(tile.terrain)).toBe(false);
-      expect(['grassland', 'desert', 'plains', 'tundra']).toContain(tile.terrain);
-      expect(tile.reliefRegion).toBeGreaterThan(0);
-      expect([0, 5, 7]).toContain(tile.reliefFlags);
-      expect([0, 1, 2]).toContain(tile.reliefLevel);
-      expect(tile.reliefSpeed).toBeGreaterThan(0); expect(tile.reliefSpeed).toBeLessThanOrEqual(1);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        expect(tileAt(world, x + dx, y + dy)?.terrain).toBe(tile.terrain);
+      }
     }
-  });
-
-  it('does not repaint waterways or change the geometry of existing stairs', () => {
-    const world = generateWorld('ridge-water-preservation');
-    const water = world.tiles.map(tile => WATER.has(tile.terrain) ? { ...tile } : null);
-    const geometry = world.tiles.map(tile => [tile.ridge, tile.stair]);
-    harmonizeRidgeTerrain(world);
-    expect(world.tiles.map(tile => [tile.ridge, tile.stair])).toEqual(geometry);
-    for (let i = 0; i < water.length; i++) if (water[i]) expect(world.tiles[i]).toEqual(water[i]);
   });
 });

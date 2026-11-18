@@ -49,13 +49,17 @@ export function questProgress(q: QuestView): string {
         return `Settlement population: ${q.progress} / 40`;
     return 'In progress';
 }
-export function questMarkup(q: QuestView): string {
+function questReward(q: QuestView): string {
+    if (q.kind === 1 && q.state < 2) return '2× the gold spent on the new connection';
     const relation = q.relations ? ` · +${q.relations} village affiliation` : '';
+    return `${q.gold.toLocaleString('en-US')} gold${q.food ? ` · ${q.food.toLocaleString('en-US')} food` : ''}${relation}`;
+}
+export function questMarkup(q: QuestView): string {
     return `<div class="quest-dialog" data-quest-kind="${q.kind}">
     <h2 id="dialog-title">${QUEST_TITLES[q.kind]}</h2>
     <p class="quest-dialogue">“${questDialogue(q)}”</p>
     <p class="quest-progress" data-quest-progress>${questProgress(q)}</p>
-    <p class="quest-reward">${q.gold.toLocaleString('en-US')} gold${q.food ? ` · ${q.food.toLocaleString('en-US')} food` : ''}${relation}</p>
+    <p class="quest-reward">${questReward(q)}</p>
     <p class="quest-benefit">${QUEST_BENEFITS[q.kind]}</p>
     <div class="dialog-actions"><button data-quest-action="${q.state === 0 ? 'accept' : 'complete'}" ${q.state === 0 || q.state === 2 ? '' : 'disabled'}>${q.state === 0 ? 'Accept quest' : 'Claim reward'}</button>
       ${q.state === 1 || q.state === 2 ? '<button id="quest-target">Show target</button>' : ''}
@@ -72,6 +76,9 @@ export function refreshQuestDialog(root: HTMLElement, state: GameState): void {
     const progress = dialog.querySelector<HTMLElement>('[data-quest-progress]');
     if (progress)
         progress.textContent = questProgress(q);
+    const reward = dialog.querySelector<HTMLElement>('.quest-reward');
+    if (reward)
+        reward.textContent = questReward(q);
     const button = dialog.querySelector<HTMLButtonElement>('[data-quest-action]');
     if (button && !button.dataset.pending)
         button.disabled = q.state !== 0 && q.state !== 2;

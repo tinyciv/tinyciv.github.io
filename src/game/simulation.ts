@@ -1,3 +1,4 @@
+import { civicBuildingProperty, isCivicBuilding, initializeGoldMines, updateCivicBuildings, payGoldMineDividends } from './civic-buildings-native';
 import { FOUNDRY_GOLD, FOUNDRY_HP } from './field-cannon-config';
 import { updateOffensives, offensiveDirective, offensiveReward, isOffensiveMember, recordOffensiveCasualty, cancelOffensive } from './offensive-native';
 import { displaceNewObstacles } from './obstacle-displacement';
@@ -49,12 +50,12 @@ import { updateMassLevy, recordLevyCasualty, unitMoraleMaximum } from './mass-le
 import { maximumUnitRange, unitAttackRange, downhillRangeBonus } from './combat-range';
 import { dockPlacement } from './dock';
 import { DOCK_COST, DOCK_HP } from './dock-config';
-import { placementOccupancy } from './placement-occupancy';
+import { hermitCabinOverlaps, placementOccupancy } from './placement-occupancy';
 import { boardedBoat, commandSailingMove, completeBoarding, orderBoardBoat, resolveSailingPassengers, updateSailboatLaunches, updateSailingLeader } from './sailing';
 import { initializeVillageTrails, removeVillageTrailAt } from './village-trails';
 import { initializeFishing, updateFishing, whalingPostSiteError, whalingMovementSpeed, WHALING_POST_COST, WHALING_POST_HP } from './fishing';
 import { updateHarborTrade } from './harbor-trade';
-import { playerFaction, isHumanFaction, playerInput, movementModeFor, retinueStanceFor, withPlayerFaction } from './player-context';
+import { factionById as factionOf, playerFaction, isHumanFaction, playerInput, movementModeFor, retinueStanceFor, withPlayerFaction } from './player-context';
 import { grantIncome } from './resource-income';
 import { applyInfiniteGold } from './cheats';
 import { recordGoldOutlay, spendGold, refundGold } from './gold-ledger';
@@ -71,10 +72,11 @@ import { isSoldier, isRetinueMember, buildingKindForSelection } from './types';
 import { updateScout } from './scouts';
 import { IRRIGATION_GOLD, irrigationConnects } from './irrigation';
 import { UNIT_KIND_CODES, entityStore, resetEntities, buildingWithId } from './entity-store';
-import { nearestRefuge, shelterNear, structureIndex } from './structure-index';
+import { nearestRefuge, shelterNear, structureIndex, structuresOf, STRUCTURE_READY } from './structure-index';
 import { setEnemyStrength, updateEnemyStrength } from './enemy-strength';
 import { marauderFortificationMultiplier, updateMarauderFormations } from './marauder-formations';
 import { prepareCourierUpdates, settleCourier, wakeCourier } from './courier-sleep';
+import { prepareBuilderUpdates, settleBuilder } from './builder-sleep';
 import { movementProfile } from './movement-profile';
 import { invalidateSettlementDecisions, runSettlementDecision } from './settlement-decisions';
 import { mountedSpeedMultiplier, retinueUpkeep, unitAttackTiming, HORSEMAN_SPEED_MULTIPLIER, HORSEMAN_ATTACK_MULTIPLIER, desiredRetinueSize, nextRecruitRole, advancedStartingEscortRole, setSoldierRole, scheduleArcheryTraining, interruptOutboundTraining, updateArcheryTraining, evadeMelee } from './archery';
@@ -82,7 +84,7 @@ import { updateRaiderGroupMotivation, updateRaiderMotivation } from './raider-mo
 import { arrowLineClear } from './arrows';
 import { usesFirearm } from './firearms';
 import { battleSupport } from './battle-support-native';
-import { buildingTargetable } from './building-targeting';
+import { buildingTargetable, buildingFollowsTerritory } from './building-targeting';
 import { type Building, type BuildingKind, type Faction, type GameEvent, type GameState, type InputState, type Point, type RetinueStance, type Unit, type UnitKind, type World, BUILDABLE_KINDS, WATER, buildingPresent, buildingReady, buildingWidth, buildingHeight, distance, isFarmKind, isFord, isWallKind, tileAt, unitMaxHp } from './types';
 import { beginNavigationFrame, endNavigationFrame, invalidateNavigation, buildingBlockers, buildingBlockerView, canMove, canTraverseEdge, canTraverseNavigationEdge, canWalk, createReachabilityQuery, findPath, hasStaticPath, isNarrowPassage, movementMultiplier, nativeMoveLayers, travelTimeMap, traversable, UNIT_RADIUS } from './pathfinding';
 import { nativeMovement, STEER_BLOCKED, STEER_TRAFFIC, type NativeMoveProbe, type SeparationRow } from './movement-native';
@@ -118,9 +120,12 @@ import { buildingDisplacesFarms, farmAt, farmsUnderBuilding, planBuildingFarmRel
 import { FARM_BUILD_GOLD } from './farm-config';
 import { houseCapacity } from './wells';
 import { HOUSE_BASE_CAPACITIES, HOUSE_BUILD_GOLD } from './housing-config';
-import { validateBridgeTile } from './bridge-spans';
+import { validateBridgeTile, type BridgeSpan } from './bridge-spans';
+import { bridgeConstructionMembers } from './bridge-construction';
+import { buildStroke } from './construction';
+import { runConstructionRule } from './construction-native';
 import { reliefFootprintAllowed } from './relief';
-import { settlementFootprintAllowed, SETTLEMENT_MOUNTAIN_GAP, unitSpawnTerrainAllowed } from './terrain-sites';
+import { settlementFootprintAllowed, unitSpawnTerrainAllowed } from './terrain-sites';
 import { resourceFootprintError } from './resource-terrain';
 import { unitObstructs, unitsCollide } from './collisions';
 import { beginUnitFrame, cellOccupant, endUnitFrame, forEachNearbyUnit, indexedBuilding, indexedLeader, indexedUnit, lastCollidingUnitInCell, nearbyUnits, nearbyBuildings, refreshIndexedUnit, unitOccupancy } from './spatial';
@@ -207,6 +212,10 @@ import { cityOwnership } from './city-ownership';
 export { ECONOMY_INTERVAL } from './economy-constants';
 /** Production remains zero only to read legacy saves; all construction uses gold. */
 export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; production: number }> = {
+  hospital: { food: 0, gold: civicBuildingProperty('hospital', 0), production: 0 },
+  apartments: { food: 0, gold: civicBuildingProperty('apartments', 0), production: 0 },
+  factory: { food: 0, gold: civicBuildingProperty('factory', 0), production: 0 },
+  goldMine: { food: 0, gold: 0, production: 0 },
   fort: { food: 0, gold: FORT_GOLD, production: 0 }, supplyDepot: { food: 0, gold: 120, production: 0 },
   palace: { food: 0, gold: 100, production: 0 }, camp: { food: 0, gold: FARM_BUILD_GOLD, production: 0 },
   house: { food: 0, gold: HOUSE_BUILD_GOLD, production: 0 }, shack: { food: 0, gold: 250, production: 0 }, cottage: { food: 0, gold: 250, production: 0 },
@@ -255,15 +264,14 @@ function edgeDistance(point: Point, building: Building): number {
   const size = buildingWidth(building), height = buildingHeight(building);
   return Math.hypot(Math.max(building.x - point.x, 0, point.x - building.x - size), Math.max(building.y - point.y, 0, point.y - building.y - height));
 }
-function factionOf(state: GameState, id: number): Faction | undefined { return state.factions.find(faction => faction.id === id); }
 function palaceOf(state: GameState, faction: number): Building | undefined {
-  return entityStore(state).buildings.query('palace').find(building => building.faction === faction && buildingReady(building));
+  return entityStore(state).buildings.queryFaction('palace', faction).find(buildingReady);
 }
 export function getLeader(state: GameState, faction = playerFaction(state)): Unit | undefined {
   return indexedLeader(state, faction);
 }
 export function housingCapacity(state: GameState, faction = playerFaction(state)): number {
-  return state.buildings.filter(building => building.faction === faction && (building.kind === 'house' || building.kind === 'palace') && buildingReady(building)).reduce((sum, building) => sum + building.capacity, 0);
+  return state.buildings.filter(building => building.faction === faction && (building.kind === 'house' || building.kind === 'apartments' || building.kind === 'palace') && buildingReady(building)).reduce((sum, building) => sum + building.capacity, 0);
 }
 export function logEvent(state: GameState, text: string, kind: GameEvent['kind'] = 'info'): void {
   state.events.unshift({ id: (state.events[0]?.id ?? 0) + 1, time: state.time, text, kind });
@@ -300,13 +308,13 @@ function makeBuilding(state: GameState, kind: BuildingKind, faction: number, poi
   if (!reliefFootprintAllowed(state.world, point.x, point.y, width, height, isWallKind(kind)))
     throw new Error(`Cannot place ${kind} on this terrain.`);
   if (kind === 'palace' && !settlementFootprintAllowed(state.world, point.x, point.y, width, height))
-    throw new Error('Starting towns require eight-tile mountain clearance.');
-  const maxHp = kind === 'militaryAcademy' ? MILITARY_ACADEMY_HP : kind === 'foundry' ? FOUNDRY_HP : kind === 'whalingPost' ? WHALING_POST_HP : kind === 'shipyard' ? 1000 : kind === 'thermalBath' ? THERMAL_BATH_HP : kind === 'granary' ? GRANARY_HP : kind === 'fort' ? FORT_BASE_HP : kind === 'supplyDepot' ? 250 : kind === 'dock' ? DOCK_HP : (kind === 'ballista' || kind === 'siegeCannon') ? BALLISTA_HP : kind === 'healerShack' ? HEALER_SHACK_HP : kind === 'tower' ? 1200 : kind === 'woodenTower' ? 600 : kind === 'palace' ? SETTLEMENT_MAX_HP : kind === 'guardPost' ? 300 : kind === 'library' || kind === 'forum' ? 750 : kind === 'monument' || kind === 'blacksmith' || kind === 'archeryRange' || kind === 'scoutLodge' || kind === 'stable' ? 250 : kind === 'palisade' ? 225 / 4 : kind === 'wall' ? 225 : kind === 'cottage' ? 220 : kind === 'shack' || kind === 'house' ? 160 : 100;
+    throw new Error('Starting towns require clear low ground.');
+  const maxHp = isCivicBuilding(kind) ? civicBuildingProperty(kind, 1) : kind === 'militaryAcademy' ? MILITARY_ACADEMY_HP : kind === 'foundry' ? FOUNDRY_HP : kind === 'whalingPost' ? WHALING_POST_HP : kind === 'shipyard' ? 1000 : kind === 'thermalBath' ? THERMAL_BATH_HP : kind === 'granary' ? GRANARY_HP : kind === 'fort' ? FORT_BASE_HP : kind === 'supplyDepot' ? 250 : kind === 'dock' ? DOCK_HP : (kind === 'ballista' || kind === 'siegeCannon') ? BALLISTA_HP : kind === 'healerShack' ? HEALER_SHACK_HP : kind === 'tower' ? 1200 : kind === 'woodenTower' ? 600 : kind === 'palace' ? SETTLEMENT_MAX_HP : kind === 'guardPost' ? 300 : kind === 'library' || kind === 'forum' ? 750 : kind === 'monument' || kind === 'blacksmith' || kind === 'archeryRange' || kind === 'scoutLodge' || kind === 'stable' ? 250 : kind === 'palisade' ? 225 / 4 : kind === 'wall' ? 225 : kind === 'cottage' ? 220 : kind === 'shack' || kind === 'house' ? 160 : 100;
   const building: Building = { id: entityStore(state).allocateId(minimumId), kind, faction, x: Math.floor(point.x), y: Math.floor(point.y), hp: maxHp, maxHp, capacity: HOUSE_CAPACITY[kind] ?? 0, armor: kind === 'tower' ? 15 : kind === 'woodenTower' ? 6 : kind === 'monument' ? 0 : 2 };
   if (kind === 'fort') building.fortName = nextFortName(state, faction);
   if (kind === 'dock') building.dockFacing = dockPlacement(state, point.x, point.y, faction)?.facing;
   applyDefenseResearch(building, factionOf(state, faction));
-  if (kind === 'house') building.capacity = houseCapacity(building, factionOf(state, faction), state);
+  if (kind === 'house' || kind === 'apartments') building.capacity = houseCapacity(building, factionOf(state, faction), state);
   if (kind === 'palace') {
     if (state.scenarioPreparing) building.scenarioCity = true;
     building.capacity = PALACE_HOUSING;
@@ -356,6 +364,7 @@ interface SiteSearch { buildings: Set<number>; fields: Set<number>; units: Set<n
 const siteSearches = new WeakMap<GameState, SiteSearch>();
 function freeTile(state: GameState, x: number, y: number, replaceRoadsFor?: number, allowIrrigation = false): boolean {
   if (!traversable(state.world, x, y) || !reliefFootprintAllowed(state.world, Math.floor(x), Math.floor(y))) return false;
+  if (hermitCabinOverlaps(state, Math.floor(x), Math.floor(y))) return false;
   const search = siteSearches.get(state);
   if (search && replaceRoadsFor === undefined) return !search.buildings.has(y * state.world.width + x);
   if (isPendingCampField(state, x, y)) return false;
@@ -470,6 +479,8 @@ export function createGame(world: World, duel?: { names?: string[]; colors?: str
       food: 500, gold: isHumanFaction(state, index) ? 500 : RIVAL_STARTING_GOLD, production: 0, population: 0, culture: 0, yields: { food: 0, production: 0, gold: 0 },
       nextRaid: 75 + simRandom(state) * 45, defeated: false,
     };
+    if (!options.advancedStart && !options.scenario && !world.scenario && isHumanFaction(state, index))
+      faction.firstTownFoundingAvailable = true;
     state.factions.push(faction);
     const scenario = options.scenario;
     const citySpawns = scenario ? scenario.buildings.filter(entry => entry.kind === 'palace' && entry.faction === index) : [spawn], second = !duel && index > 0 ? world.secondarySpawns?.[index - 1] : undefined;
@@ -576,14 +587,15 @@ export function createGame(world: World, duel?: { names?: string[]; colors?: str
     initializeVillageTrails(state);
   }
   initializeFishing(state);
+  initializeCivicWorld(state);
   for (const faction of state.factions) calculateYields(state, faction);
   if (!options.scenario) logEvent(state, 'Your people await. Explore, build roads, and unite the valley.', 'good');
   const enemies = state.factions.filter(faction => faction.relation === 'war');
   if (enemies.length) logEvent(state, `${enemies.map(faction => faction.name).join(' and ')} are hostile. Protect your town.`, 'warning');
   if (state.multiplayer) for (const id of state.multiplayer.humanFactionIds) updateFog(state, id);
   else updateFog(state);
-  initializeTreasureChests(state);
   initializeHermits(state);
+  initializeTreasureChests(state);
   initializeExploration(state);
   initializeWildlife(state);
   if (state.multiplayer) for (const id of state.multiplayer.humanFactionIds) publishFog(state, id);
@@ -1371,7 +1383,7 @@ function rehouse(state: GameState, factionId: number): void {
   synchronizeFarms(state);
 }
 function destroyTarget(state: GameState, attacker: Pick<Unit, 'faction' | 'target'> & Partial<Pick<Unit, 'id'>>, target: Unit | Building, projectileLeaderXp?: number, rewards = true): void {
-  if (isBuilding(target) && target.kind === 'irrigation') return;
+  if (isBuilding(target) && (target.kind === 'irrigation' || !buildingFollowsTerritory(target))) return;
   if (!isBuilding(target) && target.warship) resolveWarshipLoss(state, target, attacker.faction, (unit, faction) => destroyTarget(state, { faction }, unit, undefined, false));
   if(!isBuilding(target)&&target.barbarianGalley) {
     const passenger=entityStore(state).units.get(target.sailboat?.passenger??-1);
@@ -2135,7 +2147,7 @@ function updateSettlementGuard(state: GameState, unit: Unit, dt: number): boolea
   if (!palace) return false;
   const leader = getLeader(state, unit.faction);
   const mission = getFactionStrategy(state, unit.faction);
-  if (mission && leader && (unit.id === mission.leaderId || mission.escortIds.includes(unit.id))) {
+  if (mission && leader && (unit.id === mission.leaderId || mission.escortSet.has(unit.id))) {
     updateFactionMission(state, unit, leader, mission, dt); return true;
   }
   // Allies fighting nearby lift the town and Leader tethers: a soldier caught
@@ -2371,24 +2383,38 @@ function updateLeader(state: GameState, leader: Unit, dt: number, input: InputSt
 }
 function settlementGoldBreakdown(state: GameState, faction: Faction) {
   const gross = cityTaxIncome(state, faction), costs = factionMaintenanceBreakdown(state, faction);
-  const army = state.units.filter(unit => isRetinueMember(unit) && unit.kind !== 'fieldCannon' && unit.faction === faction.id && unit.hp > 0).reduce((sum, unit) => sum + retinueUpkeep(unit), 0) + retinueSlotUpkeep(faction) + fleetUpkeep(state, faction.id);
+  let wages = 0;
+  for (const unit of entityStore(state).units.queryFaction('retinue', faction.id))
+    if (unit.kind !== 'fieldCannon' && unit.hp > 0) wages += retinueUpkeep(unit);
+  const army = wages + retinueSlotUpkeep(faction) + fleetUpkeep(state, faction.id);
   return { gross, ...costs, army, net: Math.round((gross - army - costs.settlements - costs.defenses) * 10) / 10 };
 }
 function settlementGoldIncome(state: GameState, faction: Faction): number {
-  return settlementGoldBreakdown(state, faction).net - rustEngine.field_cannon_total_upkeep(entityStore(state).units.query('soldier').filter(u => u.kind === 'fieldCannon' && u.faction === faction.id && u.hp > 0).length);
+  return settlementGoldBreakdown(state, faction).net - rustEngine.field_cannon_total_upkeep(entityStore(state).units.queryFaction('retinue', faction.id).filter(u => u.kind === 'fieldCannon' && u.hp > 0).length);
+}
+function fundedGuardPosts(state: GameState, faction: number): Building[] {
+  return structuresOf(state, faction, STRUCTURE_READY, 'guardPost')
+    .filter(post => post.villageId === undefined && post.guardPost?.funded === true);
+}
+function factionFortUpkeep(state: GameState, faction: number): number {
+  return structuresOf(state, faction, STRUCTURE_READY, 'fort').reduce((sum, fort) => sum + fortUpkeep(fort), 0);
+}
+function factionLevyUpkeep(state: GameState, faction: number): number {
+  let levies = 0;
+  for (const unit of entityStore(state).units.queryFaction('soldier', faction))
+    if ((unit.kind === 'levyInfantry' || unit.kind === 'slinger') && unit.hp > 0) levies++;
+  return levies * 5;
 }
 function calculateYields(state: GameState, faction: Faction): void {
   // Field food is delivered physically; palace gardens provide their small
   // local baseline directly. Rates include both supply and consumption.
   const population = faction.population;
-  const cities = citySummaries(state).filter(city => city.palace.faction === faction.id);
-  const guardUpkeep = cities.length && isHumanFaction(state, faction.id) ? state.buildings.filter(building => building.kind === 'guardPost'
-    && building.faction === faction.id && building.villageId === undefined && buildingReady(building) && building.guardPost?.funded === true)
-    .reduce((sum, post) => sum + guardPostUpkeep(post), 0) : 0;
+  const cities = citySummaries(state, faction.id);
+  const guardUpkeep = cities.length && isHumanFaction(state, faction.id)
+    ? fundedGuardPosts(state, faction.id).reduce((sum, post) => sum + guardPostUpkeep(post), 0) : 0;
   faction.yields = { food: cities.length ? cities.reduce((sum, city) => sum + city.food, 0) : -population,
     production: 0, gold: settlementGoldIncome(state, faction) - guardUpkeep
-      - state.buildings.filter(b => b.faction === faction.id).reduce((sum, b) => sum + fortUpkeep(b), 0)
-      - state.units.filter(u => u.faction === faction.id && (u.kind === 'levyInfantry' || u.kind === 'slinger') && u.hp > 0).length * 5 };
+      - factionFortUpkeep(state, faction.id) - factionLevyUpkeep(state, faction.id) };
 }
 /** Placement, preview and payment must all use the same replacement credit. */
 export function buildCostAt(state: GameState, selection: Exclude<BuildSelection, 'clearTrees'>, x: number, y: number, faction = playerFaction(state)) {
@@ -2429,10 +2455,9 @@ function canAffordAutomatic(state: GameState, faction: Faction, kind: BuildingKi
   let reserve = scope?.get(faction.id);
   if (reserve === undefined) {
     reserve = factionBuildingMaintenance(state, faction) + retinueSlotUpkeep(faction) + fleetUpkeep(state, faction.id)
-      + state.buildings.filter(b => b.faction === faction.id).reduce((sum, b) => sum + fortUpkeep(b), 0)
-      + state.units.filter(u => u.faction === faction.id && (u.kind === 'levyInfantry' || u.kind === 'slinger') && u.hp > 0).length * 5;
-    for (const post of state.buildings) if (isHumanFaction(state, faction.id) && post.kind === 'guardPost' && post.faction === faction.id
-      && post.villageId === undefined && buildingReady(post) && post.guardPost?.funded === true) reserve += guardPostUpkeep(post);
+      + factionFortUpkeep(state, faction.id) + factionLevyUpkeep(state, faction.id);
+    if (isHumanFaction(state, faction.id))
+      for (const post of fundedGuardPosts(state, faction.id)) reserve += guardPostUpkeep(post);
     scope?.set(faction.id, reserve);
   }
   return faction.gold + 1e-7 >= BUILD_COSTS[kind].gold * stoneDefenseMultiplier(state, faction.id, kind) + reserve;
@@ -2561,7 +2586,7 @@ function economyTick(state: GameState): void {
   applyInfiniteGold(state);
   for (const faction of state.factions) {
     if (faction.defeated || faction.relation === 'confederated' || faction.villageId !== undefined) continue;
-    const cities = citySummaries(state).filter(city => city.palace.faction === faction.id);
+    const cities = citySummaries(state, faction.id);
     grantIncome(faction, { food: cities.reduce((sum, city) => sum + palaceFoodProduction(city.palace), 0) }, state);
     const consumption = factionFoodConsumption(state, faction.id);
     const unfed = Math.max(0, consumption - faction.food);
@@ -2583,6 +2608,7 @@ function economyTick(state: GameState): void {
     syncRetinue(state, faction);
     calculateYields(state, faction);
   }
+  payGoldMineDividends(state);
 }
 const positionSnapshots = new WeakMap<GameState, { positions: Map<number, Point>; points: WeakMap<Unit, Point> }>();
 const separationOrders = new WeakMap<GameState, Map<Unit, number>>();
@@ -2834,6 +2860,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
   });
   runRecurringWork(state, 'courier-wakeups', dt, () => prepareCourierUpdates(state));
   traceOrchestration(state, 'phase', 'unit-frame');
+  prepareBuilderUpdates(state);
   const activeUnits = entityStore(state).units.query('active');
   updateEnemyStrength(state);
   const profile = movementProfile(state), spatialStarted = profile ? performance.now() : 0;
@@ -3027,7 +3054,8 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
           clearFriendlyYield(state, unit);
           if (offensive.recover) { unit.order = 'follow'; unit.routed = false; unit.routOrder = undefined; unit.routUntil = undefined; }
           const target = offensive.target === undefined ? undefined : targetEntity(state, offensive.target);
-          if (offensive.mode === 3 && unit.order !== 'flee' && target && target.hp > 0 && atWar(state, unit.faction, target.faction)) fight(state, unit, target, unitDt);
+          if (target && (offensive.mode === 3 || offensive.mode === 1) && unit.order !== 'flee' && !unit.routed
+            && target.hp > 0 && atWar(state, unit.faction, target.faction)) fight(state, unit, target, unitDt);
           else {
             unit.target = undefined;
             // A newly routed member waits at most one observation interval for
@@ -3084,7 +3112,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
         else if (unit.kind === 'worker' && unit.resourceWork) updateResourceWorker(state, unit, unitDt, moveUnit);
         else if (unit.kind === 'worker' && unit.builder) updateBuilder(state, unit, unitDt, moveUnit);
         else if (unit.kind === 'worker' && unit.collector) updateCollector(state, unit, unitDt, moveUnit);
-      } finally { if (unit.kind === 'leader') updateLeaderBrace(unit, unitDt); autoHunt(state, unit); settleCourier(state, unit); refreshIndexedUnit(state, unit); refreshFogUnit(state, unit); refreshPeasant(state, unit); }
+      } finally { if (unit.kind === 'leader') updateLeaderBrace(unit, unitDt); autoHunt(state, unit); settleCourier(state, unit); settleBuilder(state, unit); refreshIndexedUnit(state, unit); refreshFogUnit(state, unit); refreshPeasant(state, unit); }
     }
     traceOrchestration(state, 'phase', 'separation');
     // Collision separation can move several scouts. It does not query sight;
@@ -3100,6 +3128,7 @@ function stepGame(state: GameState, dt: number, input: InputState): void {
   updateQuests(state);
   runRecurringWork(state, 'treasure-discovery', dt, () => { updateTreasureChests(state); updateExploration(state); });
   regenerateUnits(state, dt);
+  runRecurringWork(state, 'civic-buildings', dt, elapsed => updateCivicBuildings(state, elapsed));
   traceOrchestration(state, 'phase', 'traffic');
   if (!state.palaceCaptures?.length) {
     beginTrafficFrame(state);
@@ -3441,9 +3470,9 @@ function validateBuildCellAt(state: GameState, kind: BuildingKind | 'clearTrees'
   const resourceError = resourceFootprintError(state.world, point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind }));
   if (resourceError) return { ok: false, message: resourceError };
   if (!reliefFootprintAllowed(state.world, point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind }), isWallKind(kind)))
-    return { ok: false, message: isWallKind(kind) ? 'Walls require pathable ground.' : 'Hills and mountains cannot be built on.' };
+    return { ok: false, message: 'Build on one level and leave cliff faces clear.' };
   if (kind === 'palace' && !settlementFootprintAllowed(state.world, point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind })))
-    return { ok: false, message: `Place towns at least ${SETTLEMENT_MOUNTAIN_GAP} tiles from mountains.` };
+    return { ok: false, message: 'Place towns on clear low ground.' };
   const occupancy = placementOccupancy(state);
   if (occupancy.berthBlocked(point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind })))
     return { ok: false, message: 'Leave the dock jetty clear.' };
@@ -3455,8 +3484,7 @@ function validateBuildCellAt(state: GameState, kind: BuildingKind | 'clearTrees'
     return { ok: false, message: 'This Fort foundation is permanent. Its owner can rebuild it for half price.' };
   if (!rustEngine.sim_exploration_build_allowed(simCore(state).handle, point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind })))
     return { ok: false, message: 'Explore this site with your Leader first.' };
-  if (state.hermits?.some(h => point.x < h.x + (h.status === 'gone' ? 1 : 2) && point.x + buildingWidth({ kind }) > h.x
-    && point.y < h.y + (h.status === 'gone' ? 1 : 2) && point.y + buildingHeight({ kind }) > h.y))
+  if (hermitCabinOverlaps(state, point.x, point.y, buildingWidth({ kind }), buildingHeight({ kind })))
     return { ok: false, message: 'Leave the hermit and their cabin undisturbed.' };
   const gateRoad = kind === 'road' && hasGateWall(state, point.x, point.y, factionId);
   if (kind === 'road' && !gateRoad && isFord(tileAt(state.world, point.x, point.y)))
@@ -3558,11 +3586,11 @@ function validateBuildCellAt(state: GameState, kind: BuildingKind | 'clearTrees'
     if (!state.buildings.some(palace => palace.kind === 'palace' && palace.faction === factionId && buildingReady(palace) && canReachConstruction(state, palace, proposed)))
       return { ok: false, message: 'This building needs a builder route from the town.' };
   }
-  if (kind === 'palace' || kind === 'fort' || kind === 'archeryRange' || kind === 'library' || kind === 'colosseum' || kind === 'barracks' || kind === 'forum' || kind === 'granary' || kind === 'shipyard' || kind === 'whalingPost' || kind === 'foundry' || kind === 'militaryAcademy') {
+  if (kind === 'palace' || kind === 'fort' || kind === 'archeryRange' || kind === 'library' || kind === 'colosseum' || kind === 'barracks' || kind === 'forum' || kind === 'granary' || kind === 'shipyard' || kind === 'whalingPost' || kind === 'foundry' || kind === 'militaryAcademy' || kind === 'hospital' || kind === 'apartments' || kind === 'factory') {
     for (let dy = 0; dy < buildingHeight({ kind }); dy++) for (let dx = 0; dx < buildingWidth({ kind }); dx++)
       if (!freeTile(clearedSite, point.x + dx, point.y + dy, factionId)
         || clearedSite.fields?.some(field => field.x === point.x + dx && field.y === point.y + dy))
-        return { ok: false, message: kind === 'militaryAcademy' ? 'A Military Academy needs a clear 2 by 2 area.' : kind === 'foundry' ? 'A foundry needs a clear 2 by 2 area.' : kind === 'whalingPost' ? 'A whaling post needs a clear 2 by 2 area.' : kind === 'fort' ? 'A Fort needs a clear 3 by 3 area.' : kind === 'palace' ? 'A town needs a clear 2 by 2 area.' : kind === 'shipyard' ? 'A shipyard needs a clear 3 by 3 area.' : kind === 'granary' ? 'A granary needs a clear 2 by 2 area.' : kind === 'forum' ? 'A forum needs a clear 2 by 2 area.' : kind === 'library' ? 'A library needs a clear 2 by 2 area.' : kind === 'colosseum' ? 'A Colosseum needs a clear 2 by 2 area.' : kind === 'barracks' ? 'A barracks needs a clear 2 by 1 area.' : 'An archery range needs a clear 2 by 1 area.' };
+        return { ok: false, message: kind === 'hospital' || kind === 'apartments' || kind === 'factory' ? 'A clear 2 by 2 area is required.' : kind === 'militaryAcademy' ? 'A Military Academy needs a clear 2 by 2 area.' : kind === 'foundry' ? 'A foundry needs a clear 2 by 2 area.' : kind === 'whalingPost' ? 'A whaling post needs a clear 2 by 2 area.' : kind === 'fort' ? 'A Fort needs a clear 3 by 3 area.' : kind === 'palace' ? 'A town needs a clear 2 by 2 area.' : kind === 'shipyard' ? 'A shipyard needs a clear 3 by 3 area.' : kind === 'granary' ? 'A granary needs a clear 2 by 2 area.' : kind === 'forum' ? 'A forum needs a clear 2 by 2 area.' : kind === 'library' ? 'A library needs a clear 2 by 2 area.' : kind === 'colosseum' ? 'A Colosseum needs a clear 2 by 2 area.' : kind === 'barracks' ? 'A barracks needs a clear 2 by 1 area.' : 'An archery range needs a clear 2 by 1 area.' };
     const proposed: Building = { id: -1, kind, ...point, faction: factionId, hp: SETTLEMENT_MAX_HP, maxHp: SETTLEMENT_MAX_HP, capacity: 0 };
     if (!state.buildings.some(palace => palace.kind === 'palace' && palace.faction === factionId && buildingReady(palace) && canReachConstruction(state, palace, proposed)))
       return { ok: false, message: 'This building needs a builder route from an existing city.' };
@@ -3646,6 +3674,27 @@ function refreshAfterConstructionOrder(state: GameState, faction: Faction): void
   pending.builders = true;
 }
 
+/** Commit one validated bridge span, charging only the new deck tiles. */
+export function buildBridgeSpan(state: GameState, factionId: number, span: BridgeSpan, pending: ReadonlySet<number>): void {
+  const faction = factionOf(state, factionId)!, parts: Building[] = [];
+  for (const point of span.tiles) {
+    if (!pending.has(point.y * state.world.width + point.x)) continue;
+    const cost = buildCostAt(state, 'bridge', point.x, point.y, factionId);
+    pay(state, faction, 'bridge', cost);
+    const part = makeBuilding(state, 'bridge', factionId, point);
+    queueConstruction(part, state.time, cost.gold, state);
+    parts.push(part);
+  }
+  if (!parts.length) return;
+  const horizontal = span.axis === 'horizontal';
+  const bridge = { ...span.tiles[0], width: horizontal ? span.tiles.length : 1, height: horizontal ? 1 : span.tiles.length,
+    ids: parts.map(part => part.id) };
+  for (const part of parts) part.construction!.bridge = bridge;
+  runConstructionRule(state, parts[0], 5);
+  invalidateDecisions(state);
+  refreshAfterConstructionOrder(state, faction);
+}
+
 /** Offline scenario orders omit Leader proximity while preparation is active.
  * Ordinary terrain, ownership, technology, cost and construction rules apply. */
 export function buildAt(state: GameState, selection: BuildSelection, x: number, y: number, factionId = playerFaction(state), reservedTiles?: ReadonlySet<number>, rebuilding?: DefenseRebuild & { minimumId?: number }, scenarioOrder = false): { ok: boolean; message: string } {
@@ -3653,6 +3702,10 @@ export function buildAt(state: GameState, selection: BuildSelection, x: number, 
   const kind = selection === 'clearTrees' ? selection : buildingKindForSelection(selection);
   const validation = validateBuildAt(state, kind, x, y, factionId, reservedTiles, !!rebuilding, scenarioOrder);
   if (!validation.ok) return validation;
+  if (kind === 'bridge') {
+    const bridge = withPlayerFaction(state, factionId, () => buildStroke(state, kind, [{ x, y }]));
+    return { ok: bridge.ok, message: bridge.message || 'Bridge ordered.' };
+  }
   invalidateDecisions(state);
   if (kind === 'observationPost') return placeObservationPost(state, factionId, { x, y });
   if (kind === 'clearTrees') { const result = orderTreeClearing(state, x, y); if (result.ok) ensureBuilders(state); return result; }
@@ -3691,11 +3744,12 @@ export function buildAt(state: GameState, selection: BuildSelection, x: number, 
 
 /** Cancel only a living friendly order; finished buildings are never deleted. */
 export function cancelConstruction(state: GameState, buildingId: number, factionId = playerFaction(state)): { ok: boolean; refund: number } {
-  const building = state.buildings.find(candidate => candidate.id === buildingId);
+  const building = entityStore(state).buildings.get(buildingId);
   const faction = factionOf(state, factionId);
   if (state.gameOver || !faction || !building || building.faction !== factionId || building.hp <= 0 || !building.construction)
     return { ok: false, refund: 0 };
-  if (!prepareConstructionCancellation(state, building)) return { ok: false, refund: 0 };
+  const parts = bridgeConstructionMembers(state, building) ?? [building];
+  if (!parts.every(part => prepareConstructionCancellation(state, part))) return { ok: false, refund: 0 };
   // Canceling an unfinished source also cancels its dependent stone order:
   // refunding the palisade alone would leave a wall with an unpaid discount.
   let replacementRefund = 0;
@@ -3703,15 +3757,16 @@ export function cancelConstruction(state: GameState, buildingId: number, faction
     candidate.faction === factionId && candidate.hp > 0 && candidate.construction?.replacesPalisade === building.id))
     replacementRefund += cancelConstruction(state, replacement.id, factionId).refund;
   invalidateDecisions(state);
-  const refund = cancellationRefund(state, building);
+  const refund = parts.reduce((total, part) => total + cancellationRefund(state, part), 0);
   refundGold(state, faction, refund);
   pauseCityConstruction(state, building);
-  removeBuildings(state, new Set([building.id]));
-  const size = buildingWidth(building), height = buildingHeight(building);
-  const left = building.x, top = building.y;
-  for (let y = top; y < top + height; y++) for (let x = left; x < left + size; x++) {
-    if (building.kind === 'irrigation') continue;
-    if (state.traffic) delete state.traffic[y * state.world.width + x];
+  removeBuildings(state, new Set(parts.map(part => part.id)));
+  for (const part of parts) {
+    if (part.kind === 'irrigation') continue;
+    const { x: left, y: top } = part, width = buildingWidth(part), height = buildingHeight(part);
+    for (let y = top; y < top + height; y++) for (let x = left; x < left + width; x++) {
+      if (state.traffic) delete state.traffic[y * state.world.width + x];
+    }
   }
   synchronizeFarms(state); ensureCollectors(state); ensureBuilders(state);
   calculateYields(state, faction);
@@ -3840,6 +3895,7 @@ export function migrateGame(state: GameState): GameState {
   initializeRoamingMarauders(state);
   importSettlementSnapshot(state);
   initializeExploration(state);
+  initializeCivicWorld(state);
   if (state.buildMode && state.buildMode !== 'clearTrees' && !BUILDABLE_KINDS.includes(buildingKindForSelection(state.buildMode))) state.buildMode = null;
   for (const faction of state.factions) calculateYields(state, faction);
   publishFog(state);
@@ -3880,7 +3936,7 @@ export function diplomacyAction(state: GameState, factionId: number, action: 'wa
     faction.food = 0; faction.gold = 0; faction.production = 0; faction.population = 0; faction.yields = { food: 0, production: 0, gold: 0 };
     faction.relation = 'confederated';
     const joined: Building[] = [];
-    for (const building of state.buildings) if (building.faction === factionId) {
+    for (const building of state.buildings) if (buildingFollowsTerritory(building) && building.faction === factionId) {
       building.faction = player.id;
       applyDefenseResearch(building, player);
       if (building.kind === 'palace') { building.cultureAtFounding = lifetimeCulture(player); joined.push(building); }
@@ -3914,3 +3970,8 @@ export function diplomacyAction(state: GameState, factionId: number, action: 'wa
 }
 
 registerDiplomacySight(targetInSight);
+
+/** Attach the control points to the procedural world and prebuilt scenarios. */
+export function initializeCivicWorld(state: GameState): void {
+  initializeGoldMines(state, point => makeBuilding(state, 'goldMine', -1, point));
+}

@@ -2,6 +2,7 @@
 //! simulation builds. Callers supply research effects, never precomputed hits.
 
 const DAMAGE_MULTIPLIER: f64 = 0.7;
+pub const CANNON_UNIT_DAMAGE_MULTIPLIER: f64 = 0.5;
 const ELITE_DAMAGE_MULTIPLIER: f64 = 2.3;
 const ELITE_DAMAGE_TAKEN_MULTIPLIER: f64 = 0.15;
 const RAIDER_ATTACK_MULTIPLIER: f64 = 0.85;
@@ -59,6 +60,10 @@ pub fn incoming_damage(kills: f64, damage: f64) -> f64 {
 
 pub fn attack_damage(attack: f64, defense: f64) -> f64 {
     maximum(4.0, attack - defense) * DAMAGE_MULTIPLIER
+}
+
+pub fn upkeep_combat_multiplier(funded: bool) -> f64 {
+    if funded { 1.0 } else { 0.5 }
 }
 
 fn raw_attack(scout: u32, attack: f64, kills: f64, weapon: u32, equipment: f64) -> f64 {

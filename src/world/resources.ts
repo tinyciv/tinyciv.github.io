@@ -1,5 +1,6 @@
 import { createNoise2D } from 'simplex-noise';
 import { reliefBuildable, reliefEdgeAllowed, reliefGroundWalkable } from '../game/relief';
+import { ridgeStairAccess } from '../game/ridges';
 import { resourceBlocksGround } from '../game/resource-terrain';
 import { WATER, type World } from '../game/types';
 import { environmentRandom, settlementCoreMask, terrainDistance } from './environment-fields';
@@ -46,14 +47,15 @@ export function assignRegionalResources(world: World): void {
   let dryLand = 0;
   for (let cell = 0; cell < tiles.length; cell++) {
     const tile = tiles[cell], x = cell % width, y = Math.floor(cell / width);
-    if (!WATER.has(tile.terrain) && !(habitats[cell] & 4)) continue;
-    usable[cell] = Number(!cores[cell] && !WATER.has(tile.terrain) && !tile.creek && !tile.resource && reliefBuildable(tile)
+    const wet = WATER.has(tile.terrain);
+    if (!wet && (!(habitats[cell] & 4) || tile.ridge || ridgeStairAccess(world, x, y))) continue;
+    usable[cell] = Number(!cores[cell] && !wet && !tile.creek && !tile.resource && reliefBuildable(tile)
       && !tile.marsh && tile.farm === undefined && reliefGroundWalkable(world, x, y));
     if (usable[cell]) dryLand++;
     if (cores[cell] || tile.resource || !reliefBuildable(tile)) continue;
     const patch = .5 + geology(x * .047, y * .047) * .34 + seams(x * .16 + 29, y * .16 - 37) * .16;
     if (patch < .67) continue;
-    if (WATER.has(tile.terrain)) {
+    if (wet) {
       if ((habitats[cell] & 2) && land[cell] <= 3 && (tile.temperature ?? .5) > .2) tile.resource = 'fish';
     } else if (fresh[cell] <= 3 && !tile.relief && (tile.fertility ?? .5) > .5) tile.resource = 'clay';
   }
@@ -84,8 +86,7 @@ export function assignRegionalResources(world: World): void {
     const province = geology(x * .033, y * .033 - 83);
     if (resource === 'salt') return coast[cell] * .05 + tile.moisture;
     if (resource === 'olives') return Math.abs(tile.moisture - .48) - province * .18;
-    // Prefer exposed uplands, but allow lower open ground when mountain
-    // shelves occupy every high site.
+    // Prefer exposed uplands while retaining lower open ground as a fallback.
     const lowStone = resource === 'stone' && tile.elevation <= .51 ? 2 : 0;
     return lowStone - tile.elevation * .3 - province * .25;
   };
@@ -123,14 +124,14 @@ export function assignRegionalResources(world: World): void {
     }
     return [...selected];
   };
-  // Blocking deposits must leave all previously connected approaches linked.
-  // A local perimeter detour proves this without flooding the whole map for
-  // every candidate, and prevents sealing a ford, land neck or stair route.
-  const keepsApproachesConnected = (cells: number[]): boolean => {
+  // Keep woodland gaps around blocking deposits. For stone, also prove a
+  // local detour around the footprint without flooding the whole map.
+  const keepsApproachesOpen = (cells: number[], requireDetour: boolean): boolean => {
     const removed = new Set(cells), approaches = new Set<number>();
     const ground = (cell: number) => {
       const tile = tiles[cell];
-      return !removed.has(cell) && !resourceBlocksGround(tile, false, cell, width) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
+      return !removed.has(cell) && !tile.ridge && !tile.stair && !resourceBlocksGround(tile, false, cell, width)
+        && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
         && (!WATER.has(tile.terrain) || tile.terrain === 'river' && tile.overlay === 'ford')
         && reliefGroundWalkable(world, cell % width, Math.floor(cell / width));
     };
@@ -140,9 +141,10 @@ export function assignRegionalResources(world: World): void {
     // A rocky deposit can preserve overall connectivity while consuming that
     // tree's last clearing, so check this separately from the detour flood.
     for (const cell of cells) for (const tree of neighbors(cell)) {
-      if (removed.has(tree) || tiles[tree].overlay !== 'forest') continue;
+      if (removed.has(tree) || tiles[tree].overlay !== 'forest' || !linked(tree, cell)) continue;
       if (!neighbors(tree).some(open => ground(open) && tiles[open].overlay === 'none' && linked(tree, open))) return false;
     }
+    if (!requireDetour) return true;
     let x0 = width, x1 = 0, y0 = height, y1 = 0;
     for (const cell of cells) {
       const x = cell % width, y = Math.floor(cell / width);
@@ -179,7 +181,7 @@ export function assignRegionalResources(world: World): void {
       // patch converging on the same middle-sized circle.
       const target = minimum + Math.floor(sample(resource, cell, 1) ** 1.45 * (maximum - minimum + 1));
       const cells = grow(resource, cell, target);
-      if (cells.length < minimum || resource === 'stone' && !keepsApproachesConnected(cells)) continue;
+      if (cells.length < minimum || (resource !== 'olives' && !keepsApproachesOpen(cells, resource === 'stone'))) continue;
       const group = nextGroup++; plan.count++;
       for (const next of cells) {
         const tile = tiles[next]; tile.resource = resource; tile.resourceGroup = group;

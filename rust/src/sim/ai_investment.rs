@@ -12,7 +12,9 @@ pub fn constant(kind: u32, upkeep: bool) -> f64 {
     match (kind, upkeep) {
         (0, false) => granaries::GOLD, (0, true) => granaries::UPKEEP,
         (1, false) => 300.0, (1, true) => 30.0,
-        (2, false) => 300.0, (2, true) => 3.0, _ => f64::NAN,
+        (2, false) => 300.0, (2, true) => 3.0,
+        (3..=5, _) => super::civic_buildings::constant(match kind {3=>super::kinds::building::HOSPITAL,4=>super::kinds::building::APARTMENTS,_=>super::kinds::building::FACTORY}, if upkeep {2}else{0}),
+        _ => f64::NAN,
     }
 }
 pub fn achievement(culture: f64, owned: u32) -> i32 {
@@ -39,7 +41,7 @@ impl Investments {
         self.output.clear(); self.output.push(0.0);
         if !self.input.iter().all(|v| v.is_finite()) { return self.output.as_ptr(); }
         match mode {
-            0 if self.input.len() == 9 => {
+            0 if (9..=11).contains(&self.input.len()) => {
                 let v = &self.input;
                 let kind = v[0] as u32;
                 let cost = constant(kind, false); let upkeep = constant(kind, true);
@@ -48,6 +50,9 @@ impl Investments {
                     1 => policy.has(PURCHASES) && v[4] >= 24.0,
                     2 => policy.has(PURCHASES) && v[4] >= 12.0 && v[8] <= 12.0
                         && achievement(v[6], v[7] as u32) >= 0,
+                    3 => v[4] >= 40.0,
+                    4 => v[4] >= 30.0 && v.get(10).copied().unwrap_or(v[4]) <= v[4] + 12.0,
+                    5 => v[4] >= 40.0 && v[3] >= 25.0 && v.get(9).copied().unwrap_or(0.0) < 5.0,
                     _ => false,
                 };
                 let affordable = v[1] >= cost + v[2] + upkeep * 2.0 && v[3] >= upkeep + 3.0;

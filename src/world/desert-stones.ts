@@ -1,5 +1,6 @@
 import { environmentRandom } from './environment-fields';
 import type { World } from '../game/types';
+import { ridgeStairAccess } from '../game/ridges';
 
 /** Cosmetic 8FC stones: sparse, separated, and independent of gameplay RNG. */
 export function scatterDesertStones(world: World): void {
@@ -8,8 +9,9 @@ export function scatterDesertStones(world: World): void {
   for (const tile of tiles) delete tile.desertStone;
   for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
     const tile = tiles[y * width + x];
-    if (tile.terrain !== 'desert' || tile.overlay !== 'none' || tile.resource || tile.relief
-      || tile.creek || tile.channel || tile.beach || tile.marsh || tile.palm || tile.villageTrail || tile.farm !== undefined) continue;
+    if (tile.terrain !== 'desert' || tile.overlay !== 'none' || tile.resource || tile.relief || tile.ridge
+      || tile.creek || tile.channel || tile.beach || tile.marsh || tile.palm || tile.villageTrail || tile.farm !== undefined
+      || ridgeStairAccess(world, x, y)) continue;
     if (random() >= .085) continue;
     let nearby = false;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {

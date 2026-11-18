@@ -1,9 +1,9 @@
 import { resourceFootprintError } from './resource-terrain';
-import { placementOccupancy } from './placement-occupancy';
+import { hermitCabinOverlaps, placementOccupancy } from './placement-occupancy';
 import { dockPlacement } from './dock';
 import { isForbidden } from './forbidden-zones';
 import { reliefFootprintAllowed } from './relief';
-import { settlementFootprintAllowed, SETTLEMENT_MOUNTAIN_GAP } from './terrain-sites';
+import { settlementFootprintAllowed } from './terrain-sites';
 import { traversable } from './pathfinding';
 import { thermalBathSiteError } from './thermal-baths-native';
 import { canShareHouseWellTile } from './house-wells';
@@ -35,12 +35,12 @@ export function validatePhysicalFootprint(state: GameState, kind: BuildingKind, 
   if (occupancy.berthBlocked(x, y, width, height)) return fail(1, 'Leave the dock jetty clear.');
   if (kind === 'dock' && !dockPlacement(state, x, y, faction)) return fail(5, 'A dock needs a low shore with clear water beside it.');
   if (occupancy.permanentFortOverlaps(x, y, width, height)) return fail(1, 'This Fort foundation is permanent.');
-  if (state.hermits?.some(h => x < h.x + (h.status === 'gone' ? 1 : 2) && x + width > h.x && y < h.y + (h.status === 'gone' ? 1 : 2) && y + height > h.y))
+  if (hermitCabinOverlaps(state, x, y, width, height))
     return fail(1, 'Leave the hermit and their cabin undisturbed.');
   if (!reliefFootprintAllowed(world, x, y, width, height, isWallKind(kind)))
-    return fail(5, isWallKind(kind) ? 'Walls require pathable ground.' : 'Hills and mountains cannot be built on.');
+    return fail(5, 'Build on one level and leave cliff faces clear.');
   if (kind === 'palace' && !settlementFootprintAllowed(world, x, y, width, height))
-    return fail(5, `Place towns at least ${SETTLEMENT_MOUNTAIN_GAP} tiles from mountains.`);
+    return fail(5, 'Place towns on clear low ground.');
   for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
     const cx = x + dx, cy = y + dy, tile = tileAt(world, cx, cy);
     if (!tile || kind !== 'dock' && kind !== 'thermalBath' && (!traversable(world, cx, cy) || WATER.has(tile.terrain))) return fail(5, 'Build on dry land.');

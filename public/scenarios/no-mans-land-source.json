@@ -4,7 +4,7 @@
   "height": 144,
   "simulatedSeconds": 3520.899999997727,
   "wallSeconds": 247.330711,
-  "bytes": 1871683,
+  "bytes": 1846442,
   "cities": [
     {
       "id": 1,
@@ -78,8 +78,8 @@
       }
     ]
   },
-  "refinementBundleSha256": "8d17d54b9af5f099f7100fabbda4953c133e4f3cbd540236a020ed1f013a666b",
-  "refinementWasmSha256": "e227301ee9127717aca424ccc01d91ad24e95c701702788ff1e69221b2fa908e",
+  "refinementBundleSha256": "62657e0d841b80dd5bed6901e08ba19d8931deaa1f4447dd57b76847c78393ab",
+  "refinementWasmSha256": "05d74fe2beb98b9ee4edacb6b255556c5c28af31943039cbadb7809683f88555",
   "agriculture": {
     "orchards": 0,
     "completedDitches": 664,
@@ -921,5 +921,15 @@
       13272
     ],
     "farmsCleared": []
+  },
+  "diplomacy": {
+    "relationships": [
+      {
+        "a": 0,
+        "b": 1,
+        "contact": true,
+        "war": true
+      }
+    ]
   }
 }

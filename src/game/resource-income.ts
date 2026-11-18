@@ -18,7 +18,7 @@ export function recordIncome(faction: Faction, amounts: Partial<IncomeAmounts>):
 
 /** Receive earned resources once, at the same point as their ledger entry. */
 export function grantIncome(faction: Faction, amounts: Partial<IncomeAmounts>, state: GameState, category: GoldInputCategory = 'other'): void {
-  if (amounts.gold) amounts = { ...amounts, gold: rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, amounts.gold, Number(!['taxes', 'refunds', 'transfers', 'other'].includes(category))) * enemyFactionStrength(state, faction.id) };
+  if (amounts.gold && category !== 'controlMines') amounts = { ...amounts, gold: rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, amounts.gold, Number(!['taxes', 'refunds', 'transfers', 'other'].includes(category))) * enemyFactionStrength(state, faction.id) };
   const gold = amounts.gold ?? 0;
   const diverted = advanceResearchIncome(state, faction, gold);
   for (const resource of ['food', 'gold', 'culture'] as const) {

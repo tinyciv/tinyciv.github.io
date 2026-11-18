@@ -5,6 +5,7 @@ import { ResourceArtMemory, resourceObjectKey, type ResourceCellArt } from '../.
 import * as fogModule from '../../src/game/fog';
 import type { GameState, Point } from '../../src/game/types';
 import { MeadowPlacementCache } from '../../src/game/meadow-art';
+import { MarshRushPlacementCache } from '../../src/game/marsh-rush-placement';
 import * as terrainModule from '../../src/game/terrain';
 import { punyAtlas } from '../puny-atlas.js';
 
@@ -86,6 +87,7 @@ export function recordNativeFrame(state: GameState, options: { fog?: fogModule.F
             drawFog() { drawOrder.push('fog'); }, finishFrame() {} },
         width, height, zoom: size / 32, camera: { x: (width / 2 - ox) / size, y: (height / 2 - oy) / size }, follow: false, overlays: true,
         terrain: {}, fogCanvas: {}, resourceMemory: new ResourceArtMemory(), meadowPlacements: new MeadowPlacementCache(),
+        marshRushes: new MarshRushPlacementCache(),
         presentationStamps: [], vesselSight: new WeakMap(), buildPreview: options.buildPreview ?? [],
         constructionGesture: options.constructionGesture, pendingConstruction: options.pendingConstruction ?? [],
         hover: null, areaPreview: null, prepare() {}, prepareFog() {}, drawMinimap() {},

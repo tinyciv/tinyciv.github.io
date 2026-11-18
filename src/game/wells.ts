@@ -1,3 +1,4 @@
+import { rustEngine } from './rust-engine';
 import { grantIncome } from './resource-income';
 import { insideOwnBorders, territory } from './borders';
 import { type GameState, type Building, type Faction, type HouseStyle, type Point, buildingReady, distance } from './types';
@@ -18,7 +19,7 @@ export const HOUSE_DOWNGRADE_SECONDS = 60;
 const LEVEL_STYLES: readonly HouseStyle[] = ['shack', 'hovel', 'cottage', 'villa'];
 export const houseLevel = (house: Building): number => Math.max(1, Math.min(4, Math.floor(house.houseLevel ?? 1)));
 export const houseCapacity = (house: Building, faction?: Pick<Faction, 'research'>, state?: GameState): number => {
-  const base = HOUSE_BASE_CAPACITIES[houseLevel(house) - 1] + (house.redevelopedFarm ? 1 : 0) + housingResearchBonus(faction);
+  const base = (house.kind === 'apartments' ? rustEngine.civic_building_constant(39, 3) : HOUSE_BASE_CAPACITIES[houseLevel(house) - 1]) + (house.redevelopedFarm ? 1 : 0) + housingResearchBonus(faction);
   return state ? thermalBathCapacity(state, house, base) : base;
 };
 export const houseGoldMultiplier = (house: Building): number => houseLevel(house) >= 3 ? 1.5 : 1;
@@ -120,6 +121,7 @@ export function updateWellUpgrades(state: GameState): void {
     house.houseLevel = houseLevel(house);
     // Independent villages buy their housing quality with trade earnings;
     // their homes do not depend on palace population, wells or city walls.
+    if (house.kind === 'apartments') { house.capacity = houseCapacity(house, factions.get(house.faction), state); continue; }
     if (house.villageId !== undefined) {
       if (house.houseUpgradeLevel !== undefined) advanceHouseUpgrade(state, house, house.houseUpgradeLevel);
       delete house.houseDowngradeAt;

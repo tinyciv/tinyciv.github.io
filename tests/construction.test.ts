@@ -178,6 +178,8 @@ describe('drag construction commits',()=>{
     expect(plan.tiles.map(tile => tile.x).sort()).toEqual([25, 26, 28, 29]);
     expect(plan.cells.filter(cell => cell.existing).map(cell => cell.x).sort()).toEqual([24, 27, 30]);
     expect(buildStroke(state, 'bridge', line)).toMatchObject({ ok: true, placed: 4, skipped: 0 });
+    const orders = state.buildings.filter(building => building.kind === 'bridge').map(building => building.construction?.bridge?.ids[0]);
+    expect(new Set(orders).size).toBe(2);
     expect(state.factions[0].gold).toBe(100 - plan.cost);
   });
   it('allows wall strokes throughout owned territory even beyond the leader sight radius', () => {

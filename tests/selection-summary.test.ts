@@ -60,22 +60,16 @@ describe('compact selection summaries', () => {
     }
   });
 
-  it('shows actual soil fertility on farm and other land-building cards without fractional text', () => {
+  it('omits soil fertility from farm and other land-building cards', () => {
     const state = fixture(), building = state.buildings[0];
     state.selectedType = 'building'; state.selected = building.id;
-    building.kind = 'camp';
-    const land = state.world.tiles[building.y * state.world.width + building.x];
     state.world.tiles[building.y * state.world.width + building.x + 1].terrain = 'river';
-    expect(selectionSummary(state)).toMatchObject({ showHealth: false, fertility: 1.25 });
-    expect(selectionSummary(state)!.title).toContain('Soil fertility 125%');
-    land.terrain = 'plains';
-    expect(selectionSummary(state)!.fertility).toBe(1);
-    land.terrain = 'desert'; building.kind = 'house';
-    expect(selectionSummary(state)).toMatchObject({ showHealth: true, fertility: .75 });
-    expect(selectionSummary(state)!.title).toContain('Soil fertility 75%');
-    expect(selectionSummary(state)!.title).not.toMatch(/\d\.\d/);
-    land.terrain = 'coast'; building.kind = 'bridge';
-    expect(selectionSummary(state)!.fertility).toBeUndefined();
+    for (const kind of ['camp', 'house'] as const) {
+      building.kind = kind;
+      const summary = selectionSummary(state)!;
+      expect(summary).not.toHaveProperty('fertility');
+      expect(summary.title).not.toContain('Soil fertility');
+    }
   });
 
   it('suppresses hidden enemies, dead units, and garrisoned friendlies', () => {

@@ -3,18 +3,17 @@ import { tileAt, type ResourceWork, type RegionalResource, type Tile, type World
 
 // Enum encoding only; Rust owns obstacle and work-access policies.
 const codes: Record<RegionalResource, number> = { clay: 1, copper: 2, iron: 3, gold: 4, stone: 5, salt: 6, olives: 7, fish: 8 };
-const policies = Uint8Array.from({ length: 9 }, (_, code) => rustEngine.resource_ground_policy(code));
-const tallOrePolicies = Uint8Array.from({ length: 3 }, (_, row) => rustEngine.resource_ground_policy(2, 3, 3, row));
+const policies = Uint8Array.from({ length: 18 }, (_, index) => rustEngine.resource_ground_policy(index % 9, Number(index >= 9)));
 const phases: Record<ResourceWork['phase'], number> = { road: 0, outbound: 1, working: 2, returning: 3 };
 export const resourceWorkAccess = (resource: RegionalResource, phase: ResourceWork['phase'], worker = true): boolean =>
   !!rustEngine.resource_work_access(codes[resource], phases[phase], Number(worker));
-/** Native deposit policy; callers without cell geometry reserve the full artwork. */
-export const resourceBlocksGround = (tile: Pick<Tile, 'resource' | 'oreAnchor' | 'oreWidth' | 'oreHeight'> | undefined,
+/** Native deposit policy; ore cells behind the front row are open ground. */
+export const resourceBlocksGround = (tile: Pick<Tile, 'resource' | 'oreAnchor' | 'oreHeight'> | undefined,
   saltAccess = false, cell = -1, worldWidth = 0): boolean => {
-  const code = tile?.resource ? codes[tile.resource] : 0;
-  const row = tile?.oreAnchor !== undefined && cell >= 0 && worldWidth > 0 ? Math.floor((cell - tile.oreAnchor) / worldWidth) : -1;
-  const policy = tile?.oreWidth === 3 && tile.oreHeight === 3 && code >= 2 && code <= 4 && row >= 0 && row < 3
-    ? tallOrePolicies[row] : policies[code];
+  if (!tile?.resource) return false;
+  const behindFront = tile.oreAnchor !== undefined && tile.oreHeight !== undefined && cell >= tile.oreAnchor && worldWidth > 0
+    && cell < tile.oreAnchor + (tile.oreHeight - 1) * worldWidth;
+  const policy = policies[codes[tile.resource] + (behindFront ? 9 : 0)];
   return !!(policy & (saltAccess ? 1 : 3));
 };
 
@@ -23,7 +22,11 @@ export function resourceFootprintBlocked(world: World, x: number, y: number, wid
 }
 
 export function resourceFootprintError(world: World, x: number, y: number, width = 1, height = width): string | undefined {
-  for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++)
-    if (resourceBlocksGround(tileAt(world, x + dx, y + dy))) return resourceBlocksGround(tileAt(world, x + dx, y + dy), true)
+  const startX = Math.floor(x), startY = Math.floor(y);
+  for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
+    const column = startX + dx, row = startY + dy;
+    const tile = tileAt(world, column, row), cell = row * world.width + column;
+    if (resourceBlocksGround(tile, false, cell, world.width)) return resourceBlocksGround(tile, true, cell, world.width)
       ? 'Stone and ore deposits block construction.' : 'Salt pans block construction.';
+  }
 }

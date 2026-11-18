@@ -2,7 +2,7 @@ import { planHermitHomes } from './quest-hermits';
 import { territoryValue } from './territory-cells';
 import { type GameState, type Point, type Hermit, buildingWidth, buildingHeight, distance } from './types';
 import { territory, UNCLAIMED } from './borders';
-import { canWalk, canMove, buildingBlockerView } from './pathfinding';
+import { canMove, buildingBlockerView, invalidateNavigation } from './pathfinding';
 import { updateFog, pointInSight, type FogView } from './fog';
 import { playerFaction } from './player-context';
 import { spendGold } from './gold-ledger';
@@ -15,7 +15,9 @@ export const HERMIT_PRICE = 25;
 export const hermitPosition = (h: Hermit): Point => h.position ?? { x: h.x + 1.35, y: h.y + 1.25 };
 /** Separate scenery entities deliberately never enter combat's unit/building stores. */
 export function initializeHermits(state: GameState): void {
-  if (state.hermits === undefined) state.hermits = planHermitHomes(state);
+  if (state.hermits !== undefined) return;
+  state.hermits = planHermitHomes(state);
+  invalidateNavigation(state);
 }
 export function hermitAvailable(state: GameState, h: Hermit, faction = playerFaction(state), fog?: FogView): boolean {
   if (h.status !== 'home') return false;

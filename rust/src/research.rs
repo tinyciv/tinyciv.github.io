@@ -218,6 +218,19 @@ fn complete(account: &mut Account, graph: &Graph, id: usize, step: &mut Step) {
     step.level_changes |= 1_u64 << id; step.progress_changes |= 1_u64 << id;
 }
 
+fn processing_rate(account: &Account, graph: &Graph, id: usize) -> f64 {
+    // Keep the same absolute rate in Tutorial even when the cost is lower.
+    graph.cost(id, account.bonus, false) * constant(3) / 100.0
+}
+
+fn funded_rate(account: &Account, graph: &Graph, id: usize) -> f64 {
+    let limit = processing_rate(account, graph, id);
+    if or_zero(account.credit) > 1e-9 { return limit; }
+    let released = account.funding.iter().filter(|batch| batch.remaining > 0.0)
+        .map(|batch| batch.points / batch.remaining).sum();
+    minimum(limit, released)
+}
+
 fn advance_funded(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Query<(&mut Account, &Context)>) {
     if step.mode != 2 || !step.dt.is_finite() || step.dt <= 0.0 { return; }
     let graph = &content.0;
@@ -242,9 +255,7 @@ fn advance_funded(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Q
             let required = graph.cost(id, account.bonus, account.tutorial); let previous = or_zero(account.progress[id]);
             if previous + 1e-8 >= required { complete(&mut account, graph, id, &mut step); selected = focus(&account, graph); continue; }
             if credit <= 1e-9 { break; }
-            // Keep the absolute Science processing rate: a tenth-cost Tutorial
-            // technology completes in a tenth of the ordinary minimum time.
-            let rate = graph.cost(id, account.bonus, false) * constant(3) / 100.0;
+            let rate = processing_rate(&account, graph, id);
             let spent = minimum(minimum(credit, maximum(0.0, required - previous)), rate * elapsed);
             account.progress[id] = previous + spent; credit -= spent; elapsed -= spent / rate; step.flags |= PROGRESS;
             step.progress_changes |= 1_u64 << id;
@@ -308,7 +319,9 @@ impl ResearchEngine {
         let context = self.world.get::<Context>(self.entity).expect("research context");
         let step = self.world.resource::<Step>(); let resolved = focus(account, &self.graph);
         let priorities = normalized_priorities(account, count); let reserve = reserved(account);
-        let rate = account.receipts.iter().filter(|receipt| receipt.time > now - constant(1) && receipt.time <= now).map(|receipt| receipt.points).sum::<f64>() / constant(1);
+        let rate = if mode == 0 && context.faction && !context.defeated && !context.game_over && context.library {
+            resolved.map_or(0.0, |id| funded_rate(account, &self.graph, id))
+        } else { 0.0 };
         let active = context.faction && !context.defeated && !context.game_over && !context.paused && context.library
             && resolved.is_some() && (allocation(account.allocation) > 0.0 || reserve > 0.0);
         self.output.clear(); self.output.extend_from_slice(&[step.flags as f64, step.error as f64,

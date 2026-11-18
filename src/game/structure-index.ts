@@ -10,16 +10,17 @@ import { buildingPresent, type Building, type BuildingKind, type GameState } fro
  * Encoding and change publication only: which buildings are refuges, shelter,
  * arcing walls, solid footprints or a palace's defenses is decided in Rust.
  * A building is republished when the entity store adds, removes or reclassifies
- * it or when one of its indexed scalars changes; open construction sites are
- * rechecked before each query because their lifecycle fields are nested.
- * Queries therefore never rescan `state.buildings`. */
+ * it or when one of its indexed scalars changes, including the construction
+ * flags that control whether the footprint is present. */
 
 /** Row flags: hp > 0, buildingPresent and buildingReady. */
 export const STRUCTURE_ALIVE = 1, STRUCTURE_PRESENT = 2, STRUCTURE_READY = 4;
 const CLASS_REFUGE = 0, CLASS_SHELTER = 1;
-const OBSERVED = ['faction', 'hp', 'kind', 'x', 'y'] as const;
+const OBSERVED = ['faction', 'hp', 'kind', 'x', 'y', 'roadPaved', 'construction'] as const;
+const CONSTRUCTION_PRESENCE = ['waitingForBuilder', 'pausedAt', 'evacuating'] as const;
 
-interface Row { faction: number; x: number; y: number; kind: number; flags: number }
+type Construction = NonNullable<Building['construction']>;
+interface Row { faction: number; x: number; y: number; kind: number; flags: number; construction?: Construction }
 const same = (a: number, b: number): boolean => a === b || Number.isNaN(a) && Number.isNaN(b);
 
 export class StructureIndex implements ScalarObserver {
@@ -29,6 +30,7 @@ export class StructureIndex implements ScalarObserver {
   private entityObserver?: EntityObserver<Building>;
   private readonly rows = new Map<Building, Row>();
   private readonly dirty = new Set<Building>();
+  private constructionOwners = new WeakMap<Construction, Set<Building>>();
   private readonly queries = new Map<string, { revision: number; buildings: readonly Building[] }>();
   private defenseKey = NaN;
   private readonly defenseLists = new Map<number, readonly Building[]>();
@@ -42,7 +44,12 @@ export class StructureIndex implements ScalarObserver {
     this.handle = simCore(state).handle;
   }
 
-  changed(target: object): void { this.dirty.add(target as Building); }
+  changed(target: object, key: string, previous: unknown, value: unknown): void {
+    if (key === 'hp' && (Number(previous) > 0) === (Number(value) > 0)) return;
+    const owners = this.constructionOwners.get(target as Construction);
+    if (owners) for (const building of owners) this.dirty.add(building);
+    else if (this.rows.has(target as Building)) this.dirty.add(target as Building);
+  }
 
   private bind(store: EntityStore): void {
     // Resolve the collection first: creating it may import the state into the
@@ -50,11 +57,16 @@ export class StructureIndex implements ScalarObserver {
     const collection = store.buildings;
     rustEngine.sim_structures_clear(this.handle, this.state.world.width);
     this.rows.clear(); this.dirty.clear(); this.queries.clear(); this.defenseKey = NaN; this.revision++; this.geometry++;
+    this.constructionOwners = new WeakMap();
     this.store = store; this.collection = collection;
     this.entityObserver = {
       added: building => { if (this.collection === collection) this.track(building); },
       removed: building => {
-        if (this.collection !== collection || !this.rows.delete(building)) return;
+        if (this.collection !== collection) return;
+        const row = this.rows.get(building);
+        if (!row) return;
+        if (row.construction) this.constructionOwners.get(row.construction)?.delete(building);
+        this.rows.delete(building);
         // Rust dropped the row together with the building entity.
         this.dirty.delete(building); this.revision++; this.geometry++;
       },
@@ -69,14 +81,24 @@ export class StructureIndex implements ScalarObserver {
   }
   private publish(building: Building): void {
     const faction = building.faction ?? NaN, kind = BUILDING_KIND_CODES[building.kind] ?? 255;
+    const construction = building.construction, row = this.rows.get(building);
+    if (row?.construction !== construction) {
+      if (row?.construction) this.constructionOwners.get(row.construction)?.delete(building);
+      if (construction) {
+        let owners = this.constructionOwners.get(construction);
+        if (!owners) this.constructionOwners.set(construction, owners = new Set());
+        owners.add(building);
+        observeScalars(construction, CONSTRUCTION_PRESENCE, this);
+      }
+      if (row) row.construction = construction;
+    }
     const flags = (building.hp > 0 ? STRUCTURE_ALIVE : 0) | (buildingPresent(building) ? STRUCTURE_PRESENT : 0)
-      | (building.hp > 0 && !building.construction ? STRUCTURE_READY : 0);
-    const row = this.rows.get(building);
+      | (building.hp > 0 && !construction ? STRUCTURE_READY : 0) | (building.roadPaved ? 8 : 0);
     if (row) {
       if (same(row.faction, faction) && row.x === building.x && row.y === building.y && row.kind === kind && row.flags === flags) return;
       if (row.x !== building.x || row.y !== building.y || row.kind !== kind) this.geometry++;
       row.faction = faction; row.x = building.x; row.y = building.y; row.kind = kind; row.flags = flags;
-    } else { this.rows.set(building, { faction, x: building.x, y: building.y, kind, flags }); this.geometry++; }
+    } else { this.rows.set(building, { faction, x: building.x, y: building.y, kind, flags, construction }); this.geometry++; }
     rustEngine.sim_structure_upsert(this.handle, building.id, faction, building.x, building.y, kind, flags);
     this.revision++;
   }
@@ -84,13 +106,18 @@ export class StructureIndex implements ScalarObserver {
   flush(): this {
     const store = entityStore(this.state);
     if (store !== this.store || store.buildings !== this.collection || this.rows.size !== this.state.buildings.length) this.bind(store);
-    const collection = this.collection!;
-    for (const site of collection.query('construction')) this.publish(site);
     if (this.dirty.size) {
       for (const building of this.dirty) if (this.rows.has(building)) this.publish(building);
       this.dirty.clear();
     }
     return this;
+  }
+
+  /** Native row journal shared by independent derived navigation caches. */
+  changesSince(since?: number): { revision: number; full: boolean; ids: readonly number[] } {
+    const pointer = rustEngine.sim_structure_changes(this.handle, since ?? NaN);
+    const header = new Float64Array(rustEngine.memory.buffer, pointer, 3);
+    return { revision: header[0], full: !!header[1], ids: Array.from(new Float64Array(rustEngine.memory.buffer, pointer + 24, header[2])) };
   }
 
   private ids(pointer: number): Building[] {

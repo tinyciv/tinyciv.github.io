@@ -177,7 +177,13 @@ export interface World {
     source: string;
     revision?: number;
 }
-export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy';
+export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy' | 'hospital' | 'apartments' | 'factory' | 'goldMine';
+export interface BridgeConstruction extends Point {
+    readonly width: number;
+    readonly height: number;
+    /** Tile entities in deterministic order, starting with the construction site. */
+    readonly ids: readonly number[];
+}
 export type RoadStyle = 'road' | 'trail';
 export type BuildSelection = BuildingKind | 'clearTrees';
 export const buildingKindForSelection = (kind: Exclude<BuildSelection, 'clearTrees'>): BuildingKind => kind;
@@ -186,10 +192,10 @@ export type HouseStyle = 'shack' | 'hovel' | 'cottage' | 'villa';
 export const isWallKind = (kind: BuildingKind): boolean => kind === 'wall' || kind === 'palisade';
 /** Farms are uninhabited, pathable single-tile crop plots. */
 export const isFarmKind = (kind: BuildingKind): boolean => kind === 'camp' || kind === 'shack' || kind === 'cottage';
-export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy'];
+export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory'];
 export type WarshipClass = 'warGalley' | 'caravel' | 'frigate';
 export type NavalWeapon = 'empty' | 'ballista' | 'cannon';
-export type MarineType = 'warrior' | 'spearman' | 'archer' | 'musketman';
+export type MarineType = 'archer' | 'musketman';
 export interface NavalGunner {
     target?: number; facing: number; firedAt?: number;
     shot?: { from: Point; to: Point; time: number; projectile?: boolean };
@@ -201,7 +207,7 @@ export interface Warship {
     class: WarshipClass; name: string; yard: number; speed: number; kills: number;
     marine: MarineType; crewHp: number; weapons: NavalWeapon[]; anchored: boolean;
     readyAt: number; nextUpkeepAt: number; funded: boolean; lastAttacker: number; lastAttackerShip?: number; rewarded: boolean;
-    boarding?: number; target?: number; attackTarget?: number; guns?: NavalGunner[]; passengers?: number[]; shore?: Point; reinforcing?: boolean;
+    attackTarget?: number; guns?: NavalGunner[]; passengers?: number[]; shore?: Point; reinforcing?: boolean;
 }
 export interface Building extends Point {
     scenarioCity?: boolean;
@@ -215,7 +221,13 @@ export interface Building extends Point {
     id: number;
     /** Initial capital only; later settlements start with the ordinary border radius. */
     initialCity?: boolean;
+    /** This town receives lower upkeep while its original founder owns it. */
+    foundingSubsidyFaction?: number;
     kind: BuildingKind;
+    /** Capturable world objective; progress is in simulated seconds. */
+    mineCaptureFaction?: number;
+    mineCaptureProgress?: number;
+    mineContested?: boolean;
     /** Omitted for the standard road; trails differ only in their artwork. */
     roadStyle?: RoadStyle;
     /** Derived by the native neighborhood/research rule. */
@@ -309,7 +321,9 @@ export interface Building extends Point {
     guardPost?: { nextUpkeepAt: number; funded: boolean; level?: 0 | 1 | 2; kills?: number; lastThreatAt?: number; needsRecruits?: boolean; wallsOnly?: boolean;
         /** Guards route and pursue through forbidden zones (default: they avoid them). */
         ignoreForbidden?: boolean };
-    construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number };
+    /** Gold paid for this completed road or bridge. Generated roads have no purchase cost. */
+    roadBuildGold?: number;
+    construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number; bridge?: BridgeConstruction };
 }
 export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich' | 'musketman' | 'fieldCannon';
 // `kind` is an observed scalar on live entities: read it once per call.
@@ -707,7 +721,7 @@ export interface ResearchState {
     /** Bounded thirty-second Science receipts for the presentation rate. */
     receipts?: { time: number; points: number }[];
 }
-export type GoldInputCategory = 'taxes' | 'trade' | 'mining' | 'loot' | 'treasure' | 'refunds' | 'transfers' | 'other';
+export type GoldInputCategory = 'taxes' | 'trade' | 'mining' | 'loot' | 'treasure' | 'refunds' | 'transfers' | 'other' | 'controlMines';
 export type GoldOutlayCategory = 'construction' | 'settlements' | 'defenses' | 'army' | 'science' | 'upgrades' | 'immigration' | 'diplomacy' | 'raided' | 'transfers' | 'other';
 export interface GoldLedgerEntry {
     /** Exact game time; transactions in one simulation step share a bucket. */
@@ -717,6 +731,8 @@ export interface GoldLedgerEntry {
 }
 export type MilitaryFormationType = 'wide' | 'standard' | 'deep';
 export interface Faction {
+    /** A normal one-city start can grant settlers and reduced upkeep to one completed town. */
+    firstTownFoundingAvailable?: true;
     formationType?: MilitaryFormationType;
     rangerCompanions?: number;
     /** Native whale-delivery reward: expiry in simulation seconds. */
@@ -833,13 +849,13 @@ export interface BattleCasualty extends Point {
     faction: number;
     time: number;
 }
-/** A thrown javelin deals its damage when it reaches its target. */
 /** Transient native shell landing; depth keeps a primary building hit visible. */
 export interface ShellImpact extends Point {
     id: number;
     time: number;
     renderDepth?: number;
 }
+/** A thrown javelin deals its damage when it reaches its target. */
 export interface Projectile extends Point {
     /** Preserve Leader XP credit when a retinue archer dies before its arrow lands. */
     leaderXp?: number;
@@ -992,8 +1008,8 @@ export interface PlayerControlState {
 }
 export const TILE_SIZE = 32;
 /** Maximum span, for broad spatial queries. Use width/height for footprints. */
-const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy']);
-const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy']);
+const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine']);
+const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine']);
 export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : WIDE_KINDS.has(building.kind) ? 2 : 1;
 export const buildingWidth = (building: Pick<Building, 'kind'>): number => buildingSize(building);
 export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : SQUARE_WIDE_KINDS.has(building.kind) ? 2 : 1;

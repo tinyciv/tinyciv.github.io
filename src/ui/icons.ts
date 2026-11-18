@@ -45,6 +45,10 @@ function farmIconUrl(): string {
 }
 /** Every building portrait calls the world renderer, including gate clipping. */
 export function buildingIconUrl(selection: BuildingKind | 'trail', color: string, tier = 1, gate = false, palaceLevel: 1 | 2 = 1): string {
+  if (selection === 'hospital') return `${import.meta.env.BASE_URL}assets/runtime/ui/thermal-bath.webp`;
+  if (selection === 'apartments') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/urbanPlanning.webp`;
+  if (selection === 'factory') return `${import.meta.env.BASE_URL}assets/runtime/ui/foundry.webp`;
+  if (selection === 'goldMine') return `${import.meta.env.BASE_URL}assets/runtime/ui/resources/gold.webp`;
   if (selection === 'whalingPost') return `${import.meta.env.BASE_URL}assets/runtime/ui/whaling.webp`;
   if (selection === 'shipyard') return `${import.meta.env.BASE_URL}assets/runtime/ui/naval/shipyard.webp`;
   if (selection === 'thermalBath') return `${import.meta.env.BASE_URL}assets/runtime/ui/thermal-bath.webp`;
@@ -67,6 +71,7 @@ export function buildingIconUrl(selection: BuildingKind | 'trail', color: string
   const url = canvas.toDataURL(); buildingIcons.set(key, url); return url;
 }
 export function icon(name: string, color = '#f34f59', houseStyle?: HouseStyle | number, armorLevel = 0): string {
+  if (['hospital', 'apartments', 'factory', 'goldMine'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl(name as BuildingKind, color)}">`;
   if (['gold', 'coins', 'food', 'wheat', 'culture'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/resources/${name === 'coins' ? 'gold' : name === 'wheat' ? 'food' : name}.webp">`;
   if (['shipyard', 'warGalley', 'caravel', 'frigate'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/naval/${name === 'warGalley' ? 'galley' : name}.webp">`;
   if (name === 'whalingPost') return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl('whalingPost', color)}">`;

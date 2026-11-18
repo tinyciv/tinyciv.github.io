@@ -1,5 +1,6 @@
 import { buildResourceArtLayout, drawResourceObject, loadResourceArt } from '../../src/game/resource-art';
-import { buildLooseRockLayout, drawLooseRocks, type OutcropMaterial, type OutcropEdgeStyle } from '../../src/game/outcrop-art';
+import { buildLooseRockLayout, drawLooseRocks, drawOutcrop, loadOutcropArt, outcropCell, outcropSeed,
+  type OutcropMaterial, type OutcropEdgeStyle } from '../../src/game/outcrop-art';
 import type { World } from '../../src/game/types';
 
 const PATCHES = [
@@ -46,7 +47,7 @@ export function renderNaturalOutcrops({ developed = false, seed = 'Natural-outcr
   if (!compact) root.append(heading, note);
   root.append(loading);
   const grass = new Image(); grass.src = `${import.meta.env.BASE_URL}assets/puny-world/overworld.png`;
-  Promise.all([loadResourceArt(), grass.decode()]).then(() => {
+  Promise.all([loadResourceArt(), loadOutcropArt(), grass.decode()]).then(() => {
     loading.remove();
     for (const material of materials) {
       const world = fixture(material, seed, developed), layout = buildResourceArtLayout(world);
@@ -63,7 +64,12 @@ export function renderNaturalOutcrops({ developed = false, seed = 'Natural-outcr
         c.save(); c.translate(cell % world.width * 16, Math.floor(cell / world.width) * 16);
         drawLooseRocks(c, rocks, 16, edgeStyle); c.restore();
       }
-      for (const [cell, art] of layout) drawResourceObject(c, art, cell % world.width * 16, Math.floor(cell / world.width) * 16, 16, edgeStyle);
+      const textureSeed = outcropSeed(seed);
+      for (const [cell, art] of layout) {
+        const x = cell % world.width, y = Math.floor(cell / world.width);
+        if (material === 'stone') drawOutcrop(c, material, outcropCell(world, x, y, textureSeed), x * 16, y * 16, 16, edgeStyle);
+        else drawResourceObject(c, art, x * 16, y * 16, 16);
+      }
       for (const scale of scales) {
         const image = scale === 1 ? canvas : document.createElement('canvas');
         if (scale !== 1) {
@@ -87,7 +93,7 @@ export function renderOutcropEdgeComparison(): HTMLElement {
   const heading = document.createElement('h1'); heading.textContent = 'Outcrop edge treatments';
   heading.style.cssText = 'font:700 28px "Pixel Operator",monospace;margin:0 0 12px';
   const note = document.createElement('p');
-  note.textContent = 'Same stone, contours, seed and loose rocks in every view. Compare the flat cutout with a shaded rim, then with the rim plus an earthy contact border and small cast shadows. C is the current game treatment.';
+  note.textContent = 'Compare the archived flat cutout, shaded rim, and rim with ground contact on the same stone patches.';
   note.style.cssText = 'line-height:1.4;max-width:1000px'; root.append(heading, note);
   const grid = document.createElement('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,512px),512px));gap:24px'; root.append(grid);
   for (const [style, label] of [['flat', 'A · Flat cutout (before)'], ['rim', 'B · Shaded stone rim'],

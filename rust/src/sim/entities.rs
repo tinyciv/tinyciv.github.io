@@ -1,16 +1,14 @@
 //! Entity authority for one game: lifetime, array order, sleeping, role
 //! membership and ID allocation for units and buildings.
 //!
-//! Every unit and building is a bevy entity in the simulation World. The host
-//! keeps the serializable view objects and publishes the scalars a role
-//! depends on; which roles those scalars imply is decided here. Array order
-//! is registration order (the host arrays are appended to and compacted in
-//! the same order), so ordered role views never sort.
+//! Buildings and materialized units are Bevy entities. A worker waiting at
+//! home keeps its job and place in registration order in a resource until it
+//! needs an entity again. The host publishes the scalars that determine roles.
 use bevy_ecs::prelude::*;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 
-use super::kinds::{building, unit};
+use super::{granaries::FarmStorageAssignment, kinds::{building, unit}};
 
 pub const ROLE_COUNT: usize = 13;
 pub const UNITS: u32 = 0;
@@ -115,7 +113,14 @@ pub fn building_roles(traits: &BuildingTraits) -> u32 {
 }
 
 #[derive(Clone, Copy)]
-struct Row { entity: Entity, mask: u32, sequence: u64 }
+struct Row { entity: Option<Entity>, mask: u32, sequence: u64 }
+
+#[derive(Clone, Copy, Default)]
+struct WorkerSlot {
+    traits: Option<UnitTraits>,
+    sleeping: bool,
+    storage: Option<FarmStorageAssignment>,
+}
 
 /// One ordered entity collection (units or buildings).
 pub struct Table {
@@ -140,15 +145,18 @@ impl Table {
     }
     pub fn len(&self) -> usize { self.rows.len() }
     pub fn contains(&self, id: i64) -> bool { self.rows.contains_key(&id) }
-    /// The entity and registration sequence of a registered ID.
-    pub fn locate(&self, id: i64) -> Option<(Entity, u64)> { self.rows.get(&id).map(|row| (row.entity, row.sequence)) }
+    /// The Bevy entity and registration sequence of a materialized ID.
+    pub fn locate(&self, id: i64) -> Option<(Entity, u64)> {
+        let row = self.rows.get(&id)?;
+        Some((row.entity?, row.sequence))
+    }
     pub fn revision(&self) -> f64 { self.revision }
     /// A wholesale replacement is a membership change even when the rows match.
     pub fn touch(&mut self) { self.revision += 1.0; }
     pub fn count(&self, role: usize) -> u32 { self.counts[role] }
     pub fn ids(&self) -> impl Iterator<Item = i64> + '_ { self.rows.keys().copied() }
 
-    fn insert(&mut self, id: i64, entity: Entity) -> u64 {
+    fn insert(&mut self, id: i64, entity: Option<Entity>) -> u64 {
         let sequence = self.next_sequence;
         self.next_sequence += 1;
         self.rows.insert(id, Row { entity, mask: 0, sequence });
@@ -207,13 +215,16 @@ impl Table {
 pub struct EntityTables {
     pub units: Table,
     pub buildings: Table,
+    worker_slots: FxHashMap<i64, WorkerSlot>,
     /// Unset until the first allocation scans the registered IDs, exactly as
     /// the host allocator did: IDs removed before that scan may be reused,
     /// later removals never are.
     next_id: Option<i64>,
 }
 impl Default for EntityTables {
-    fn default() -> Self { Self { units: Table::new(UNIT_REVISION_MASK), buildings: Table::new(u32::MAX), next_id: None } }
+    fn default() -> Self {
+        Self { units: Table::new(UNIT_REVISION_MASK), buildings: Table::new(u32::MAX), worker_slots: FxHashMap::default(), next_id: None }
+    }
 }
 impl EntityTables {
     pub fn table(&self, table: u32) -> &Table { if table == UNITS { &self.units } else { &self.buildings } }
@@ -239,16 +250,70 @@ pub fn insert(world: &mut World, table: u32, id: i64) -> bool {
     let entity = if table == UNITS { world.spawn((SimId(id), Roles(0), UnitRow)).id() }
         else { world.spawn((SimId(id), Roles(0), BuildingRow)).id() };
     let mut tables = world.resource_mut::<EntityTables>();
-    let sequence = tables.table_mut(table).insert(id, entity);
+    let sequence = tables.table_mut(table).insert(id, Some(entity));
     tables.reserve(id);
     world.entity_mut(entity).insert(Sequence(sequence));
     true
 }
 
+/// Register a worker job without spawning an entity before dispatch.
+pub fn insert_worker_slot(world: &mut World, id: i64) -> bool {
+    let mut tables = world.resource_mut::<EntityTables>();
+    if tables.units.contains(id) { return false; }
+    tables.units.insert(id, None);
+    tables.worker_slots.insert(id, WorkerSlot::default());
+    tables.reserve(id);
+    true
+}
+
+/// Change physical presence while keeping the logical job, scheduling state and
+/// registration order. Only the physical unit view changes during a trip.
+pub fn set_worker_slot_dormant(world: &mut World, id: i64, dormant: bool) -> u32 {
+    let Some(row) = world.resource::<EntityTables>().units.rows.get(&id).copied() else { return 0; };
+    if dormant {
+        let Some(entity) = row.entity else { return 0; };
+        let Some(&traits) = world.get::<UnitTraits>(entity) else { return 0; };
+        if traits.kind != unit::WORKER || traits.flags & FLAG_ENGINEER != 0 { return 0; }
+        let slot = WorkerSlot {
+            traits: Some(traits),
+            sleeping: world.get::<Sleeping>(entity).is_some(),
+            storage: world.get::<FarmStorageAssignment>(entity).copied(),
+        };
+        world.despawn(entity);
+        let mut tables = world.resource_mut::<EntityTables>();
+        tables.worker_slots.insert(id, slot);
+        tables.units.rows.get_mut(&id).unwrap().entity = None;
+        return tables.units.set_mask(id, row.mask & !UNIT, false);
+    }
+
+    let Some(slot) = world.resource::<EntityTables>().worker_slots.get(&id).copied() else { return 0; };
+    let Some(traits) = slot.traits else { return 0; };
+    let mask = row.mask | UNIT;
+    let mut entity = world.spawn((SimId(id), Roles(mask), UnitRow, Sequence(row.sequence), traits));
+    if slot.sleeping { entity.insert(Sleeping); }
+    if let Some(storage) = slot.storage { entity.insert(storage); }
+    let entity_id = entity.id();
+    let mut tables = world.resource_mut::<EntityTables>();
+    tables.worker_slots.remove(&id);
+    tables.units.rows.get_mut(&id).unwrap().entity = Some(entity_id);
+    tables.units.set_mask(id, mask, false)
+}
+
+/// A courier can be assigned to a different store while waiting for work.
+pub fn assign_worker_slot_storage(world: &mut World, id: i64, storage: FarmStorageAssignment) {
+    if let Some(slot) = world.resource_mut::<EntityTables>().worker_slots.get_mut(&id) {
+        slot.storage = Some(storage);
+    }
+}
+
 /// Removes a row and returns its role bits, or `MISSING`.
 pub fn remove(world: &mut World, table: u32, id: i64) -> u32 {
     let Some(row) = world.resource_mut::<EntityTables>().table_mut(table).remove(id) else { return MISSING; };
-    world.despawn(row.entity);
+    if let Some(entity) = row.entity {
+        world.despawn(entity);
+    } else if table == UNITS {
+        world.resource_mut::<EntityTables>().worker_slots.remove(&id);
+    }
     row.mask
 }
 
@@ -261,7 +326,15 @@ fn apply_mask(world: &mut World, table: u32, id: i64, entity: Entity, mask: u32,
 /// Publishes the scalars unit roles depend on. `sleeping`: -1 keeps the
 /// current scheduling state, 0 wakes, 1 puts the unit to sleep.
 pub fn unit_traits(world: &mut World, id: i64, traits: UnitTraits, sleeping: i32, track_revision: bool) -> u32 {
-    let Some((entity, _)) = world.resource::<EntityTables>().units.locate(id) else { return 0; };
+    let entity = world.resource::<EntityTables>().units.rows.get(&id).and_then(|row| row.entity);
+    let Some(entity) = entity else {
+        let mut tables = world.resource_mut::<EntityTables>();
+        let Some(slot) = tables.worker_slots.get_mut(&id) else { return 0; };
+        if sleeping == 0 || sleeping == 1 { slot.sleeping = sleeping == 1; }
+        slot.traits = Some(traits);
+        let mask = unit_roles(&traits, slot.sleeping) & !UNIT;
+        return tables.units.set_mask(id, mask, track_revision);
+    };
     let mut row = world.entity_mut(entity);
     let asleep = match sleeping { 0 => false, 1 => true, _ => row.contains::<Sleeping>() };
     if sleeping == 1 { row.insert(Sleeping); } else if sleeping == 0 { row.remove::<Sleeping>(); }
@@ -270,7 +343,10 @@ pub fn unit_traits(world: &mut World, id: i64, traits: UnitTraits, sleeping: i32
 }
 
 pub fn unit_sleeping(world: &World, id: i64) -> bool {
-    world.resource::<EntityTables>().units.locate(id).is_some_and(|(entity, _)| world.entity(entity).contains::<Sleeping>())
+    let tables = world.resource::<EntityTables>();
+    let Some(row) = tables.units.rows.get(&id) else { return false; };
+    if let Some(entity) = row.entity { world.get::<Sleeping>(entity).is_some() }
+    else { tables.worker_slots.get(&id).is_some_and(|slot| slot.sleeping) }
 }
 
 pub fn building_traits(world: &mut World, id: i64, traits: BuildingTraits, track_revision: bool) -> u32 {
@@ -283,7 +359,9 @@ pub fn building_traits(world: &mut World, id: i64, traits: BuildingTraits, track
 /// host store is importing a state).
 pub fn reset(world: &mut World) {
     let tables = std::mem::take(&mut *world.resource_mut::<EntityTables>());
-    for row in tables.units.rows.values().chain(tables.buildings.rows.values()) { world.despawn(row.entity); }
+    for row in tables.units.rows.values().chain(tables.buildings.rows.values()) {
+        if let Some(entity) = row.entity { world.despawn(entity); }
+    }
 }
 
 #[cfg(test)]
@@ -318,6 +396,36 @@ mod tests {
         let mut tables = world.resource_mut::<EntityTables>();
         assert_eq!(tables.units.order()[1..], [2.0, 4.0, 9.0]);
         assert_eq!(tables.units.count(SOLDIER.trailing_zeros() as usize), 2);
+    }
+
+    #[test]
+    fn worker_slot_keeps_order_storage_and_workforce_roles_without_an_entity() {
+        let mut world = world();
+        unit(&mut world, 9, unit::WARRIOR, 0);
+        assert!(insert_worker_slot(&mut world, 2));
+        assert!(!insert(&mut world, UNITS, 2));
+        assert_eq!(set_worker_slot_dormant(&mut world, 2, false), 0);
+        assert_eq!(unit_traits(&mut world, 2, traits(unit::WORKER, FLAG_COLLECTOR), 1, true), WORKER | COLLECTOR);
+        unit(&mut world, 4, unit::WORKER, FLAG_BUILDER);
+        let revision = world.resource::<EntityTables>().units.revision();
+        assert_eq!(view(&mut world, UNITS, UNIT), vec![9.0, 4.0]);
+        assert_eq!(view(&mut world, UNITS, WORKER), vec![2.0, 4.0]);
+        assert_eq!(view(&mut world, UNITS, ACTIVE), vec![9.0, 4.0]);
+        assert!(world.resource::<EntityTables>().units.locate(2).is_none());
+        assert!(unit_sleeping(&world, 2));
+        assert_eq!(unit_traits(&mut world, 2, traits(unit::WORKER, FLAG_COLLECTOR), 0, false), ACTIVE);
+        assert_eq!(view(&mut world, UNITS, ACTIVE), vec![9.0, 2.0, 4.0]);
+        assign_worker_slot_storage(&mut world, 2, FarmStorageAssignment { city: 10, storage: 11 });
+        assert_eq!(set_worker_slot_dormant(&mut world, 2, false), UNIT);
+        let (entity, sequence) = world.resource::<EntityTables>().units.locate(2).unwrap();
+        assert_eq!(sequence, 1);
+        assert_eq!(world.get::<FarmStorageAssignment>(entity).unwrap().storage, 11);
+        assert_eq!(view(&mut world, UNITS, UNIT), vec![9.0, 2.0, 4.0]);
+        assert_eq!(set_worker_slot_dormant(&mut world, 2, true), UNIT);
+        assert!(world.get::<UnitRow>(entity).is_none());
+        assert_eq!(world.resource::<EntityTables>().units.revision(), revision);
+        assert_eq!(remove(&mut world, UNITS, 2), WORKER | COLLECTOR | ACTIVE);
+        assert!(!world.resource::<EntityTables>().worker_slots.contains_key(&2));
     }
 
     #[test]

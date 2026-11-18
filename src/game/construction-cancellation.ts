@@ -6,11 +6,12 @@ import { invalidateNavigation } from './pathfinding';
 import { releaseAttackSpot } from './engagement';
 import { clearBuildingFootprint } from './construction-clearance';
 import { updateWallStats } from './wall-stats';
+import { constructionHead } from './bridge-construction';
 import { forgetNativeConstruction, nativeConstructionProgress, nativeConstructionRefund } from './construction-native';
 
-/** A canceled road can turn an occupied gate into a solid wall. Clear its
- * occupants first, or leave the order and its gateway intact if they cannot exit. */
+/** Clear occupants before removing a bridge or the road through a gate. */
 export function prepareConstructionCancellation(state: GameState, building: Building): boolean {
+  if (building.kind === 'bridge') return clearBuildingFootprint(state, building);
   if (building.kind !== 'road') return true;
   if (state.buildings.some(other => other.id !== building.id && other.kind === 'road' && other.hp > 0
     && other.x === building.x && other.y === building.y)) return true;
@@ -20,12 +21,15 @@ export function prepareConstructionCancellation(state: GameState, building: Buil
 }
 
 export function constructionProgress(state: GameState, building: Building): number {
-  return building.construction ? nativeConstructionProgress(state.time, building.construction) : 1;
+  const site = constructionHead(state, building).construction;
+  return site ? nativeConstructionProgress(state.time, site) : 1;
 }
 
 /** Refund only the work not yet performed, using the price actually paid. */
 export function cancellationRefund(state: GameState, building: Building): number {
-  return building.construction ? nativeConstructionRefund(state.time, building.construction) : 0;
+  const head = constructionHead(state, building), site = head.construction;
+  if (!site) return 0;
+  return nativeConstructionRefund(state.time, head === building ? site : { ...site, paidGold: building.construction?.paidGold });
 }
 
 /** Shared by cancellation and road replacement; no completed building is

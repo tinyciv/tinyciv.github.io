@@ -12,6 +12,7 @@ interface Collection<T extends { id: number }> {
   retain(keep: (value: T) => boolean): void;
   replace(values: T[]): void;
   updateRoles(value: T): void;
+  reconcileDormancy(value: T): void;
 }
 export interface UnitChanges {
   before(unit: Unit): void;
@@ -83,6 +84,7 @@ export class ClientStateReplica {
       if (!entity) throw new Error(`Missing replicated entity ${id}`);
       changes?.before(entity as Unit);
       applyValueDelta(entity, fields); collection.updateRoles(entity);
+      collection.reconcileDormancy(entity);
       changes?.after(entity as Unit, false);
     }
     // Normal additions/removals already have the authoritative order. A rare

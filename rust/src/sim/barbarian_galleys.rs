@@ -14,18 +14,22 @@ impl BarbarianGalleys {
     pub fn step(&mut self,boats:usize,targets:usize,now:f64)->*const f64{
         self.output.clear();self.output.push(boats as f64);
         let mut live=std::collections::BTreeSet::new();
+        let mut by_boat = BTreeMap::<i64, Vec<&[f64]>>::new();
+        for row in self.input[boats*9..boats*9+targets*7].chunks_exact(7) {
+            by_boat.entry(row[0] as i64).or_default().push(row);
+        }
         for r in self.input[..boats*9].chunks_exact(9){let id=r[0]as i64;live.insert(id);
             let mut target=r[8];let mut fired=r[6];let mut damage=0.0;let mut angle=f64::NAN;
-            let candidates=&self.input[boats*9..boats*9+targets*7];
-            let eligible=|t:&&[f64]|t[0]==r[0]&&t[4]>0.0&&t[6]!=0.0&&(t[2]-r[4]).hypot(t[3]-r[5])<=constant(1);
+            let candidates=by_boat.get(&id).map_or(&[][..], Vec::as_slice);
+            let eligible=|t:&&[f64]|t[4]>0.0&&t[6]!=0.0&&(t[2]-r[4]).hypot(t[3]-r[5])<=constant(1);
             if r[2]>0.0&&r[3]>0.0&&r[1]>=0.0{
                 let next=self.next.entry(id).or_default();
                 if now>=*next{*next=now+1.0;
-                    target=candidates.chunks_exact(7).filter(eligible)
+                    target=candidates.iter().copied().filter(eligible)
                         .min_by(|a,b|(a[2]-r[4]).hypot(a[3]-r[5]).total_cmp(&(b[2]-r[4]).hypot(b[3]-r[5])).then(a[1].total_cmp(&b[1])))
                         .map_or(-1.0,|t|t[1]);
                 }
-                if let Some(t)=candidates.chunks_exact(7).filter(eligible).find(|t|t[1]==target){
+                if let Some(t)=candidates.iter().copied().filter(eligible).find(|t|t[1]==target){
                     angle=(t[3]-r[5]).atan2(t[2]-r[4]);
                     if now>=fired+constant(2){fired=now;damage=crate::combat::attack_damage(r[7],t[5]);}
                 }

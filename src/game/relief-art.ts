@@ -28,6 +28,7 @@ const rasterCells = cells.map((family, style) => {
   });
 });
 const rasters = new Map<string, HTMLCanvasElement>();
+const sheetLoads = new Map<number, Promise<void>>();
 let loading: Promise<void> | undefined;
 
 function layoutSources(styles: readonly number[]): ReliefLayoutSource[] {
@@ -51,13 +52,17 @@ for (const family of Object.values(reliefArtLayoutCatalog))
 
 /** Imagegen silhouettes; only crop, native rasterization and palette mapping. */
 export function loadReliefArt(): Promise<void> {
-  return loading ??= Promise.all([...activeStyles].map(async style => {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image(); image.onload = () => resolve(image); image.onerror = reject;
-      image.src = `${import.meta.env.BASE_URL}assets/runtime/relief/${sheetFiles[style].replace('.png', '.webp')}`;
-    });
-    sheets[style] = image;
-  })).then(() => undefined);
+  return loading ??= Promise.all([...activeStyles].map(loadReliefSheet)).then(() => undefined);
+}
+
+export function loadReliefSheet(style: number): Promise<void> {
+  const loaded = sheetLoads.get(style);
+  if (loaded) return loaded;
+  const image = new Image();
+  image.src = `${import.meta.env.BASE_URL}assets/runtime/relief/${sheetFiles[style].replace('.png', '.webp')}`;
+  const request = image.decode().then(() => { sheets[style] = image; });
+  sheetLoads.set(style, request);
+  return request;
 }
 
 const levels = { surface: [46, 72, 97, 123, 151, 185], rock: [43, 75, 109, 144, 180, 220] };
@@ -66,7 +71,7 @@ const ramps = Object.fromEntries(Object.entries(palettes).filter(([, p]) => 'sur
   const ramp = p as typeof palettes.plains; return [key, { surface: ramp.surface.map(rgb), rock: ramp.rock.map(rgb) }];
 }));
 export function reliefImage(style: number, slot: number, palette: Palette): HTMLCanvasElement | undefined {
-  if (!cells[style]?.[slot]) return;
+  if (!cells[style]?.[slot] || !sheets[style]) return;
   const key = `${style}:${slot}:${palette}`, cached = rasters.get(key); if (cached) return cached;
   const cell = cells[style][slot], canvas = document.createElement('canvas');
   canvas.width = nativeWidth(style, cell); canvas.height = Math.max(2, Math.round(canvas.width * cell.height / cell.width));

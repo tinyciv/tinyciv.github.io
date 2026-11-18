@@ -14,6 +14,8 @@ import { canDispatchPeasant } from './peasant-capacity';
 import { planResourceRoad, createResourceRoadCursor, resourceRoadOrigins, buildResourceRoadTile, resourceRoadTileReady, type ResourceRoadJourney, type ResourceRoadCursor } from './resource-roads';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { southernResourceCell } from './resource-worksite';
+import { refreshIndexedUnit } from './spatial';
+import { isMineResource, isUndergroundWorkerSlot, workerHasLiveReference } from './worker-slots';
 import { worldRevisions, worldStructureRevision } from './world-revisions';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, distance, WATER,
     type Building, type GameState, type Point, type ResourceWorkKind, type ResourceWorkSite, type Unit } from './types';
@@ -22,7 +24,6 @@ export const RESOURCE_VISIT_INTERVAL = 10;
 export const RESOURCE_WORK_SECONDS = 5;
 export const RESOURCE_ROAD_TILE_SECONDS = .55;
 const kinds = new Set(['copper', 'iron', 'gold', 'stone', 'salt', 'olives']);
-const metal = (resource: ResourceWorkKind) => resource === 'copper' || resource === 'iron' || resource === 'gold';
 type Move = (state: GameState, unit: Unit, goal: Point, dt: number, direct?: boolean, allowPartial?: boolean, avoidForbidden?: boolean) => void;
 interface SitesCache {
     world: GameState['world']; tiles: GameState['world']['tiles']; appearance: number; structure: number; borders: number; buildings: number; factions: string;
@@ -98,7 +99,8 @@ function reconcileSites(state: GameState, force = false): SitesCache {
         const site: ResourceWorkSite = old ?? { id: sequence++, faction, resource: tile.resource as ResourceWorkKind, cells, revision: 0,
             nextVisitAt: state.time + RESOURCE_VISIT_INTERVAL, roadComplete: false };
         if (old && !same) { site.revision++; site.roadComplete = false; site.roadWorker = undefined; site.retryAt = undefined; }
-        site.cells = cells; used.add(site); sites.push(site);
+        // Stable immutable footprints keep shared resource navigation views alive.
+    if (!same) site.cells = cells; used.add(site); sites.push(site);
     }
     state.resourceWorkSites = sites; state.nextResourceWorkSiteId = sequence;
     cache = { world, tiles: world.tiles, appearance: revisions.appearance, structure, borders: borders.revision,
@@ -122,7 +124,7 @@ function workPoint(state: GameState, site: ResourceWorkSite, approach: Point): P
     const point = pointAt(state, cell);
     // Rocky deposits are solid. Miners enter from the exterior approach;
     // quarry workers remain there to hammer the exposed face.
-    const choices = site.resource === 'stone' || metal(site.resource) ? [approach]
+    const choices = site.resource === 'stone' || isMineResource(site.resource) ? [approach]
         : [point, ...site.cells.map(cell => pointAt(state, cell)).sort((a, b) => distance(a, approach) - distance(b, approach))];
     return choices.find(goal => canWalk(navigation, goal.x, goal.y, site.faction, undefined, true)
         && (distance(goal, approach) < .12 || findPath(navigation, approach, goal, site.faction, false, undefined, undefined, undefined, false, true).length > 0));
@@ -268,6 +270,11 @@ function beginReturn(state: GameState, unit: Unit): void {
     if (site?.roadWorker === unit.id) site.roadWorker = undefined;
     job.phase = 'returning'; job.nextPlanAt = undefined; job.workTarget = undefined;
     unit.inside = false; unit.order = 'hold'; unit.attackTime = 0; clearPath(unit);
+    const store = entityStore(state);
+    if (store.isWorkerDormant(unit)) {
+        store.setWorkerDormant(unit, false);
+        refreshIndexedUnit(state, unit);
+    }
 }
 function returnHome(state: GameState, unit: Unit, dt: number, move: Move): void {
     const job = unit.resourceWork!;
@@ -320,14 +327,13 @@ function roadWork(state: GameState, unit: Unit, site: ResourceWorkSite, dt: numb
 }
 function workResource(state: GameState, unit: Unit, site: ResourceWorkSite, dt: number, move: Move): void {
     const job = unit.resourceWork!;
-    const navigation = unitNavigationState(state, unit);
     job.worked = (job.worked ?? 0) + dt;
     if (job.worked + 1e-8 >= RESOURCE_WORK_SECONDS) {
         const gold = oreWorkYield(site.resource, site.cells.length), faction = state.factions.find(f => f.id === site.faction);
         if (gold > 0 && faction) grantIncome(faction, { gold }, state, 'mining');
         beginReturn(state, unit); return;
     }
-    if (metal(site.resource)) { unit.inside = true; unit.moving = false; unit.order = 'hold'; return; }
+    if (isMineResource(site.resource)) { unit.inside = true; unit.moving = false; unit.order = 'hold'; return; }
     unit.inside = false;
     if (site.resource === 'stone') {
         const rock = pointAt(state, southernResourceCell(site.cells, state.world.width)!);
@@ -341,6 +347,7 @@ function workResource(state: GameState, unit: Unit, site: ResourceWorkSite, dt: 
         move(state, unit, job.workTarget, dt, false, false, true); return;
     }
     if (job.workTarget) { job.workTarget = undefined; job.pulseUntil = state.time + .65; clearPath(unit); unit.order = 'work'; return; }
+    const navigation = unitNavigationState(state, unit);
     const current = Math.floor(unit.y) * state.world.width + Math.floor(unit.x), candidates = site.cells
         .filter(cell => Math.abs(cell % state.world.width - current % state.world.width)
             + Math.abs(Math.floor(cell / state.world.width) - Math.floor(current / state.world.width)) === 1)
@@ -362,7 +369,7 @@ export function updateResourceWorker(state: GameState, unit: Unit, dt: number, m
     if (!site || !site.cells.length) { beginReturn(state, unit); returnHome(state, unit, dt, move); return; }
     // Civilian panic may have walked this worker all the way back into shelter.
     // Its resource shift is abandoned rather than restarted remotely there.
-    if (unit.inside && !(job.phase === 'working' && metal(job.resource))) {
+    if (unit.inside && !(job.phase === 'working' && isMineResource(job.resource))) {
         beginReturn(state, unit); unit.inside = true; returnHome(state, unit, dt, move); return;
     }
     if (job.phase === 'road') { roadWork(state, unit, site, dt, move); return; }
@@ -379,5 +386,7 @@ export function updateResourceWorker(state: GameState, unit: Unit, dt: number, m
     if (goal !== job.goal || distance(unit, job.goal) > .15) return;
     clearPath(unit); job.workTarget = undefined; job.phase = 'working'; job.worked = 0;
     job.pulseUntil = state.time + .55; unit.facing = -Math.PI / 2;
-    unit.inside = metal(job.resource); unit.order = metal(job.resource) ? 'hold' : 'work';
+    unit.inside = isMineResource(job.resource); unit.order = unit.inside ? 'hold' : 'work';
+    // The logical worker keeps ticking and occupies its workforce slot underground.
+    if (isUndergroundWorkerSlot(unit) && !workerHasLiveReference(state, unit)) entityStore(state).setWorkerDormant(unit, true);
 }
