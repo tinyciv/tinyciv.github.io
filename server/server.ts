@@ -163,7 +163,8 @@ function secretMatches(value: unknown): boolean {
 const contentTypes: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp',
   '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.woff2': 'font/woff2',
-  '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg' };
+  '.wasm': 'application/wasm', '.gz': 'application/gzip', '.txt': 'text/plain; charset=utf-8',
+  '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.mp4': 'video/mp4', '.webm': 'video/webm' };
 const server = createServer(async (request, response) => {
   if (!secretMatches(request.headers['x-tinyciv-origin']) && request.socket.remoteAddress !== '127.0.0.1' && request.socket.remoteAddress !== '::1') { response.writeHead(403).end(); return; }
   if (request.headers.origin && origins.has(request.headers.origin)) response.setHeader('Access-Control-Allow-Origin', request.headers.origin);
