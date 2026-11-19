@@ -22,7 +22,8 @@ export const BUILDING_KIND_CODES: Record<BuildingKind, number> = {
   fort: 0, supplyDepot: 1, palace: 2, camp: 3, house: 4, shack: 5, cottage: 6, road: 7, wall: 8, palisade: 9,
   bridge: 10, dock: 11, irrigation: 12, ruin: 13, tower: 14, woodenTower: 15, well: 16, monument: 17, blacksmith: 18,
   guardPost: 19, archeryRange: 20, scoutLodge: 21, observationPost: 22, healerShack: 23, ballista: 24, siegeCannon: 30, stable: 25,
-  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37, hospital: 38, apartments: 39, factory: 40, goldMine: 41,
+  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37, hospital: 38, apartments: 39, factory: 40, goldMine: 41, marketplace: 42, scoutTower: 43,
+  frontierVillage: 44, fountain: 46,
 };
 const UNKNOWN_KIND = 255;
 const UNITS = 0, BUILDINGS = 1;

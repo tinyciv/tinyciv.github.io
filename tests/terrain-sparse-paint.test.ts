@@ -61,4 +61,14 @@ describe('sparse terrain repainting', () => {
         paintTerrain(canvas, world, worldChangesSince(world, cursor));
         expect(pixels()).toEqual(rasterTerrain(world).pixels);
     });
+
+    it('repaints the full blend halo when a tile changes biome', () => {
+        const { world, canvas, pixels, cursor } = fixture();
+        const cell = 12 * world.width + 15;
+        world.tiles[cell].terrain = 'tundra';
+        markWorldChanged(world, 'geometry', [cell]);
+        const changed = paintTerrain(canvas, world, worldChangesSince(world, cursor));
+        expect(changed).toMatchObject({ x: 12, y: 9, width: 7, height: 7 });
+        expect(pixels()).toEqual(rasterTerrain(world).pixels);
+    });
 });

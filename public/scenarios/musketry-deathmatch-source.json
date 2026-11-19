@@ -5,30 +5,30 @@
     "sides": [
       {
         "side": 0,
-        "dry": 1732,
+        "dry": 1679,
         "resources": {
-          "clay": 58,
+          "clay": 71,
           "copper": 4,
           "iron": 4,
           "gold": 0,
           "stone": 5,
-          "salt": 16,
-          "olives": 13,
-          "fish": 104
+          "salt": 17,
+          "olives": 22,
+          "fish": 109
         }
       },
       {
         "side": 1,
-        "dry": 1732,
+        "dry": 1679,
         "resources": {
-          "clay": 58,
+          "clay": 71,
           "copper": 4,
           "iron": 4,
           "gold": 0,
           "stone": 5,
-          "salt": 16,
-          "olives": 13,
-          "fish": 104
+          "salt": 17,
+          "olives": 22,
+          "fish": 109
         }
       }
     ],
@@ -38,7 +38,7 @@
         "gold": 15000,
         "food": 12000,
         "population": 300,
-        "technologies": 37,
+        "technologies": 40,
         "musketmen": 11,
         "cannons": 2
       },
@@ -47,7 +47,7 @@
         "gold": 15000,
         "food": 12000,
         "population": 300,
-        "technologies": 37,
+        "technologies": 40,
         "musketmen": 11,
         "cannons": 2
       }
@@ -57,54 +57,62 @@
   "width": 160,
   "height": 39,
   "simulatedSeconds": 0,
-  "wallSeconds": 0.3712252080000001,
-  "bytes": 284732,
+  "wallSeconds": 2.193955833,
+  "bytes": 281747,
   "cities": [
     {
       "id": 1,
       "faction": 0,
+      "x": 19,
+      "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -34.366666666666994
+      "food": -18.380000000000003
     },
     {
-      "id": 123,
+      "id": 121,
       "faction": 0,
+      "x": 46,
+      "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -17.83333333333338
+      "food": 50.09199999999995
     },
     {
-      "id": 251,
+      "id": 249,
       "faction": 1,
+      "x": 139,
+      "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -34.366666666666994
+      "food": -19.45999999999995
     },
     {
-      "id": 373,
+      "id": 369,
       "faction": 1,
+      "x": 112,
+      "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -17.83333333333338
+      "food": 51.31599999999998
     }
   ],
   "resources": {
-    "clay": 116,
+    "clay": 142,
     "copper": 8,
     "iron": 8,
     "gold": 0,
     "stone": 10,
-    "salt": 32,
-    "olives": 26,
-    "fish": 208
+    "salt": 34,
+    "olives": 44,
+    "fish": 218
   },
   "whales": 0,
   "agriculture": {
     "orchards": 0,
     "completedDitches": 0,
     "irrigatedFields": 0,
-    "fields": 918
+    "fields": 940
   },
   "iron": [
     {
@@ -116,111 +124,15 @@
       "developed": false
     }
   ],
-  "bundleSha256": "aead6533511e1695bf4a59803b57feb457adbd9b14dda808ad04f9ecd3030fd3",
-  "wasmSha256": "5b11f9f7740e2842f8aae553792ce1ebd3d3f40c21507e401a34a16c3acf4739",
-  "access": {
-    "remove": [],
-    "landmasses": 7,
-    "regions": 7,
-    "remaining": 7,
-    "unreachable": 0,
-    "starts": [
-      {
-        "x": 23.5,
-        "y": 18.5
-      },
-      {
-        "x": 136.5,
-        "y": 18.5
-      }
-    ]
-  },
-  "streets": {
-    "before": [
-      {
-        "faction": 0,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 2,
-        "expectedRoadRegions": 1
-      },
-      {
-        "faction": 1,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 2,
-        "expectedRoadRegions": 1
-      }
+  "bundleSha256": "ccbd97dc2d447f94ef2f53aaebfb285f15dc05588f7a31ebd90a64ab6b58015a",
+  "wasmSha256": "1bf9531829fe4c325368e97cca98110f1f158953ec9555edc526d9af510f4c1b",
+  "snowBands": {
+    "snowTiles": 26,
+    "rowRange": [
+      5,
+      5
     ],
-    "after": [
-      {
-        "faction": 0,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      },
-      {
-        "faction": 1,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      }
-    ],
-    "moved": [],
-    "removedRoads": [],
-    "roadsAdded": 62,
-    "farmsMoved": [
-      535,
-      687,
-      701,
-      727,
-      771,
-      883,
-      993,
-      537,
-      509,
-      511,
-      515,
-      669,
-      707,
-      723,
-      743,
-      837,
-      1141,
-      1111,
-      1045,
-      536,
-      688,
-      702,
-      728,
-      772,
-      884,
-      994,
-      538,
-      510,
-      512,
-      516,
-      670,
-      708,
-      724,
-      744,
-      838,
-      1142,
-      1112,
-      1046
-    ],
-    "farmsCleared": []
-  },
-  "refinementBundleSha256": "8d17d54b9af5f099f7100fabbda4953c133e4f3cbd540236a020ed1f013a666b",
-  "refinementWasmSha256": "90664d94c5df9a295ab2f5db560cf57c4910c3bc500ca8a0fce66659699b24d2"
+    "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
+    "previousSha256": "c63768df35c2f299e0b748e53f7aeab5e9c6f995dbba07d9033fd80b26dcb599"
+  }
 }

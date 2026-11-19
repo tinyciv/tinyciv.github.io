@@ -15,6 +15,11 @@ const MARINES: f64 = 800.0;
 const GALLEY_SPEED: f64 = 2.7;
 const CITY_POPULATION: f64 = 100.0;
 const REPAIR_PER_SECOND: f64 = 2.4;
+const HULL_SCALE: f64 = 0.94;
+const HULL_RADIUS: f64 = HULL_SCALE;
+const HULL_HALF_SPINE: f64 = 1.5 * HULL_SCALE;
+const TURN_RATE: f64 = 0.48;
+const REVERSE_SPEED: f64 = 0.65;
 // Weapon IDs match NAVAL_WEAPONS in the host bridge; 0 is an empty mount.
 const BALLISTA: u32 = 1;
 const CANNON: u32 = 2;
@@ -29,12 +34,18 @@ const MIN_STARTING_WATER_AREA: usize = 96;
 const COAST: u16 = 128;
 const SEA: u16 = 256;
 #[derive(Clone, Copy)]
-struct ShoreTarget { id:i64, faction:i32, x:f64, y:f64, hp:f64, defense:f64, eligible:bool }
+struct ShoreTarget { id:i64, faction:i32, x:f64, y:f64, hp:f64, defense:f64, sight:u8 }
+impl ShoreTarget {
+    fn in_sight(&self, ship: &Ship, slot: usize) -> bool {
+        self.sight & 1 != 0 || self.sight & 2 != 0 && slot < 4 && ship.weapons[slot] == CANNON
+    }
+}
 pub fn fleet_upkeep(count:usize)->f64 {count as f64 * UPKEEP}
 pub fn constant(index: u32, class: u32) -> f64 {
     match index { 0 => BUILD, 1 => UPKEEP, 2 => BOUNTY, 3 => CITY_POPULATION, 4 => 90.0, 5 => 30.0,
         6 => GALLEY_SPEED * 1.15_f64.powi(class.min(2) as i32), 7 => (class.min(2) + 2) as f64,
-        8 => [900.0, 1100.0, 1400.0][class.min(2) as usize], 9 => MARINES, _ => f64::NAN }
+        8 => [900.0, 1100.0, 1400.0][class.min(2) as usize], 9 => MARINES,
+        10 => 2.0 * (HULL_HALF_SPINE + HULL_RADIUS), 11 => 2.0 * HULL_RADIUS, _ => f64::NAN }
 }
 // Tech mask: sailing, lateen sails, naval engineering, siege engines,
 // gunpowder, archery.
@@ -165,10 +176,12 @@ impl Warships {
     fn coastal(&self,x:f64,y:f64)->bool {self.cell(x,y)==1&&self.cell_data(x,y)&COAST!=0}
     fn pose(&self,x:f64,y:f64,a:f64)->bool {
         let(c,s)=(a.cos(),a.sin());
-        // Sub-cell sampling of the actual 2x5 capsule; no expensive world search.
-        for f in -5..=5 {for side in -2..=2 {let forward=f as f64*0.49;let sideways=side as f64*0.49;
-            if forward.abs()>1.5 && (forward.abs()-1.5).powi(2)+sideways*sideways>0.99 {continue;}
-            if self.cell(x+c*forward-s*sideways,y+s*forward+c*sideways)!=1 || self.level(x+c*forward-s*sideways,y+s*forward+c*sideways)!=self.level(x,y){return false;}
+        let level = self.level(x, y);
+        // Sub-cell samples follow the same smaller capsule used for other hulls.
+        for f in -5..=5 {for side in -2..=2 {let forward=f as f64*0.49*HULL_SCALE;let sideways=side as f64*0.49*HULL_SCALE;
+            if (forward.abs()-HULL_HALF_SPINE).max(0.0).powi(2)+sideways*sideways>HULL_RADIUS*HULL_RADIUS {continue;}
+            let cell = self.cell_data(x+c*forward-s*sideways,y+s*forward+c*sideways);
+            if cell&3 != 1 || (cell>>2)&31 != level {return false;}
         }}true
     }
     /// A water tile can still be too close to shore for the whole hull. Keep
@@ -401,33 +414,35 @@ impl VesselGeometry for Warships {
     fn pose(&self,x:f64,y:f64,angle:f64)->bool{Warships::pose(self,x,y,angle)}
 }
 fn hull_point(s:&Ship,x:f64,y:f64)->(f64,f64) {
-    let(c,a)=(s.angle.cos(),s.angle.sin());let f=((x-s.x)*c+(y-s.y)*a).clamp(-1.5,1.5);
-    let(px,py)=(s.x+c*f,s.y+a*f);let d=(x-px).hypot(y-py);let k=if d>1.0{1.0/d}else{1.0};(px+(x-px)*k,py+(y-py)*k)
+    let(c,a)=(s.angle.cos(),s.angle.sin());let f=((x-s.x)*c+(y-s.y)*a).clamp(-HULL_HALF_SPINE,HULL_HALF_SPINE);
+    let(px,py)=(s.x+c*f,s.y+a*f);let d=(x-px).hypot(y-py);let k=if d>HULL_RADIUS{HULL_RADIUS/d}else{1.0};(px+(x-px)*k,py+(y-py)*k)
 }
 fn hull_distance(s:&Ship,x:f64,y:f64)->f64 {let(p,q)=hull_point(s,x,y);(x-p).hypot(y-q)}
 /// Boarding and landing use the same capsule as navigation and naval commands.
 pub fn landing(x:f64,y:f64,angle:f64,px:f64,py:f64)->bool {
-    let forward=((px-x)*angle.cos()+(py-y)*angle.sin()).clamp(-1.5,1.5);
-    (px-x-angle.cos()*forward).hypot(py-y-angle.sin()*forward)<=3.0
+    let forward=((px-x)*angle.cos()+(py-y)*angle.sin()).clamp(-HULL_HALF_SPINE,HULL_HALF_SPINE);
+    (px-x-angle.cos()*forward).hypot(py-y-angle.sin()*forward)<=HULL_RADIUS+2.0
 }
 fn yard_distance(s:&Ship,x:f64,y:f64)->f64 {
     // Capsule/rectangle closest points occur at a spine endpoint or yard corner.
     let mut distance=f64::INFINITY;
-    for forward in [-1.5,0.0,1.5] {
+    for forward in [-HULL_HALF_SPINE,0.0,HULL_HALF_SPINE] {
         let(px,py)=(s.x+s.angle.cos()*forward,s.y+s.angle.sin()*forward);
-        distance=distance.min(((px-px.clamp(x,x+3.0)).hypot(py-py.clamp(y,y+3.0))-1.0).max(0.0));
+        distance=distance.min(((px-px.clamp(x,x+3.0)).hypot(py-py.clamp(y,y+3.0))-HULL_RADIUS).max(0.0));
     }
     for(px,py)in [(x,y),(x+3.0,y),(x,y+3.0),(x+3.0,y+3.0)] {distance=distance.min(hull_distance(s,px,py));}
     distance
 }
 fn separation(a:&Ship,x:f64,y:f64,angle:f64)->(f64,f64,f64){
     let mut distance=f64::INFINITY;let mut normal=(1.0,0.0);
-    // Closest spines sampled at 0.3 tiles. Narrow phase only for nearby hulls.
-    for i in -5..=5{let t=i as f64*0.3;let(px,py)=(x+angle.cos()*t,y+angle.sin()*t);
-        let f=((px-a.x)*a.angle.cos()+(py-a.y)*a.angle.sin()).clamp(-1.5,1.5);
-        let(dx,dy)=(px-a.x-a.angle.cos()*f,py-a.y-a.angle.sin()*f);let d=dx.hypot(dy);
-        if d<distance{distance=d;normal=if d>0.001{(dx/d,dy/d)}else{(-a.angle.sin(),a.angle.cos())};}
-    }(distance-2.0,normal.0,normal.1)
+    // Closest spines sampled at roughly 0.28 tiles, only for nearby hulls.
+    let (c, s) = (a.angle.cos(), a.angle.sin());
+    let (other_c, other_s) = (angle.cos(), angle.sin());
+    for i in -5..=5{let t=i as f64*(HULL_HALF_SPINE/5.0);let(px,py)=(x+other_c*t,y+other_s*t);
+        let f=((px-a.x)*c+(py-a.y)*s).clamp(-HULL_HALF_SPINE,HULL_HALF_SPINE);
+        let(dx,dy)=(px-a.x-c*f,py-a.y-s*f);let d=dx.hypot(dy);
+        if d<distance{distance=d;normal=if d>0.001{(dx/d,dy/d)}else{(-s,c)};}
+    }(distance-2.0*HULL_RADIUS,normal.0,normal.1)
 }
 fn delta(a:f64,b:f64)->f64{(b-a).sin().atan2((b-a).cos())}
 fn nearby(grid:&BTreeMap<(i32,i32),Vec<usize>>,s:&Ship,r:i32)->Vec<usize>{
@@ -485,7 +500,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
             faction_info.insert(r[0] as i32, (r[2] as u32, r[3]));
         }
         let shore:BTreeMap<(i64,i64),ShoreTarget>=net.input[start..start+targets*SHORE_STRIDE].chunks_exact(SHORE_STRIDE)
-            .map(|r|((r[0]as i64,r[1]as i64),ShoreTarget{id:r[1]as i64,x:r[2],y:r[3],faction:r[4]as i32,hp:r[5],defense:r[6],eligible:r[7]!=0.0})).collect();
+            .map(|r|((r[0]as i64,r[1]as i64),ShoreTarget{id:r[1]as i64,x:r[2],y:r[3],faction:r[4]as i32,hp:r[5],defense:r[6],sight:r[7] as u8})).collect();
         // Completed shipyard observations follow targets. Bucket their centers
         // so anchored hulls sample only their neighboring coast once a second.
         let yard_start=start+targets*SHORE_STRIDE;
@@ -558,7 +573,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                     let sea=neighbors.iter().copied().filter(|j|*j!=i&&before[*j].hp>0.0&&now>=before[*j].ready&&hostile(s.faction,before[*j].faction))
                         .map(|j|(before[j].id,before[j].x,before[j].y));
                     let land=shore.range((s.id,i64::MIN)..=(s.id,i64::MAX)).map(|(_,t)|t)
-                        .filter(|t|t.hp>0.0&&t.eligible&&hostile(s.faction,t.faction)).map(|t|(t.id,t.x,t.y));
+                        .filter(|t|t.hp>0.0&&t.in_sight(s,slot)&&hostile(s.faction,t.faction)).map(|t|(t.id,t.x,t.y));
                     let chosen=sea.chain(land).filter(|t|(x-t.1).hypot(y-t.2)<=range)
                         .filter(|t|net.mountains.0.first_blocked(x,y,t.1,t.2,false).is_none())
                         .min_by(|a,b|(Some(a.0)!=s.ordered).cmp(&(Some(b.0)!=s.ordered))
@@ -614,6 +629,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
             }
             let until=faction_info.get(&s.faction).map_or(0.0, |row| row.1);
             let top=super::fisheries::speed(until,now,constant(6,s.class))*if s.funded{1.0}else{0.4};
+            if s.anchored { s.speed=0.0; continue; }
             let mut remaining=dt;
             while remaining>0.000001{let elapsed=remaining.min(0.05);remaining-=elapsed;
                 let(mut forward,mut turn)=(s.forward,s.turn);
@@ -626,7 +642,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                         let distance=(g.x-s.x).hypot(g.y-s.y);
                         let desired=if g.drive==0.0||g.drive==2.0{g.angle}else{(g.y-s.y).atan2(g.x-s.x)+if g.drive<0.0{std::f64::consts::PI}else{0.0}};
                         let change=delta(s.angle,desired);
-                        if g.drive!=0.0||s.speed.abs()<0.05{turn=(change/(0.32*elapsed)).clamp(-1.0,1.0);}
+                        if g.drive!=0.0||s.speed.abs()<0.05{turn=(change/(TURN_RATE*elapsed)).clamp(-1.0,1.0);}
                         if g.drive==2.0 {
                             if change.abs()<0.02&&distance>0.000001{lateral=Some(((g.x-s.x)/distance,(g.y-s.y)/distance));s.lateral=true;}
                         }else if g.drive!=0.0&&change.abs()<0.25{forward=g.drive;}
@@ -635,18 +651,23 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                     if s.route.is_empty()&&s.goal.is_some_and(|g|(g.0-s.x).hypot(g.1-s.y)<0.15){s.goal=None;net.searches.remove(&s.id);}
                 }
                 let mut safe=1.0_f64;
+                let gear = if forward == 0.0 { s.speed.signum() } else { forward.signum() };
+                let direction = lateral.unwrap_or((s.angle.cos()*gear,s.angle.sin()*gear));
+                let look = (s.speed.abs()*0.65).max(0.30);
+                let (lookx,looky)=(s.x+direction.0*look,s.y+direction.1*look);
                 for j in traffic.iter().copied(){if j==i||before[j].hp<=0.0{continue;}let other=&before[j];
                     if s.manual && forward>0.0 && hostile(s.faction,other.faction) {continue;}
-                    let direction=lateral.unwrap_or((s.angle.cos(),s.angle.sin()));
-                    let lookx=s.x+direction.0*s.speed*0.8;let looky=s.y+direction.1*s.speed*0.8;
-                    if separation(other,lookx,looky,s.angle).0<0.45 {safe=safe.min(0.0);if !s.manual && s.goal.is_some(){turn=if s.id<other.id{-1.0}else{1.0};}}
+                    let ahead = separation(other,lookx,looky,s.angle).0;
+                    if ahead < 0.28 && ahead < separation(other,s.x,s.y,s.angle).0 - 1e-6 {
+                        safe=0.0;
+                        if !s.manual && s.goal.is_some(){turn=if s.id<other.id{-1.0}else{1.0};}
+                    }
                 }
-                if s.anchored{forward=0.0;turn=0.0;s.speed=0.0;}
-                let angle=s.angle+turn*0.32*elapsed;
+                let angle=s.angle+turn*TURN_RATE*elapsed;
                 if net.pose(s.x,s.y,angle){s.angle=angle;}
-                let desired=if lateral.is_some()&&!s.anchored{top.min(2.0)*0.25*safe}else{forward*top*if forward<0.0{0.45}else{1.0}*safe};
+                let desired=if lateral.is_some(){top.min(2.0)*0.25*safe}else{forward*top*if forward<0.0{REVERSE_SPEED}else{1.0}*safe};
                 let desired=desired.clamp(-stopping,stopping);
-                let accel=if desired*s.speed<0.0||desired.abs()<s.speed.abs(){2.8}else{0.8};
+                let accel=if desired*s.speed<0.0||desired.abs()<s.speed.abs(){2.8}else{1.05};
                 s.speed+=(desired-s.speed).clamp(-accel*elapsed,accel*elapsed);
                 let direction=lateral.unwrap_or((s.angle.cos(),s.angle.sin()));
                 let(x,y)=(s.x+direction.0*s.speed*elapsed,s.y+direction.1*s.speed*elapsed);
@@ -658,6 +679,9 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
         for i in 0..ships.len(){if ships[i].hp<=0.0{continue;}for j in nearby(&buckets,&before[i],1){if j<=i||ships[j].hp<=0.0{continue;}
             let(gap,nx,ny)=separation(&ships[i],ships[j].x,ships[j].y,ships[j].angle);
             if gap<0.0 {
+                // Already touching hulls can back away even if one shore pins
+                // them together and the first move is only a fraction of a tile.
+                if gap > separation(&before[i],before[j].x,before[j].y,before[j].angle).0 + 1e-6 { continue; }
                 // Harbor side movement contributes no ramming velocity. An
                 // incoming ordinary ram still uses the other hull's motion.
                 let speed_i=if before[i].lateral||ships[i].lateral{0.0}else{before[i].speed};
@@ -678,7 +702,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                 let Some((range,damage,reload))=gun_stats(a,slot) else {continue;};
                 let Some(target)=a.guns[slot].target else{continue;};
                 let sea=by_id.get(&target).copied().filter(|&j|snapshot[j].hp>0.0&&hostile(a.faction,snapshot[j].faction));
-                let land=shore.get(&(a.id,target)).filter(|t|t.hp>0.0&&t.eligible&&hostile(a.faction,t.faction));
+                let land=shore.get(&(a.id,target)).filter(|t|t.hp>0.0&&t.in_sight(a,slot)&&hostile(a.faction,t.faction));
                 let(tx,ty)=if let Some(j)=sea{(snapshot[j].x,snapshot[j].y)}else if let Some(t)=land{(t.x,t.y)}else{continue;};
                 let(x,y)=gun_origin(a,slot);ships[i].guns[slot].angle=(ty-y).atan2(tx-x);
                 if now<ships[i].guns[slot].next||(x-tx).hypot(y-ty)>range||net.mountains.0.first_blocked(x,y,tx,ty,false).is_some() {continue;}

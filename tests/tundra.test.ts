@@ -9,8 +9,13 @@ import { generateWorld, normalizePunyWorld } from '../src/world/generator';
 import type { World, GameState } from '../src/game/types';
 it('creates reproducible polar tundra while preserving water and restricting snow trees', () => {
  const w: World = { width: 80, height: 100, seed: 'polar', source: 'test', spawns: [], tiles: Array.from({length:8000}, () => ({terrain:'grassland',overlay:'forest',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4,treeClass:'snowy'})) };
- w.tiles[0].terrain='lake'; const b=structuredClone(w);applyTundra(w);applyTundra(b);expect(w).toEqual(b);
+ w.tiles[0].terrain='lake';
+ Object.assign(w.tiles[1], { terrain: 'desert', beach: true, palm: true });
+ const b=structuredClone(w);applyTundra(w);applyTundra(b);expect(w).toEqual(b);
  expect(w.tiles[0].terrain).toBe('lake');
+ expect(w.tiles[1]).toMatchObject({ terrain: 'tundra', biome: 'tundra' });
+ expect(w.tiles[1].beach).toBeUndefined();
+ expect(w.tiles[1].palm).toBeUndefined();
  expect(w.tiles.slice(80,560).every(t=>t.terrain==='tundra')).toBe(true);
  expect(w.tiles.slice(7440).every(t=>t.terrain==='tundra')).toBe(true);
  expect(w.tiles.slice(4800,6400).every(t=>t.terrain==='grassland')).toBe(true);

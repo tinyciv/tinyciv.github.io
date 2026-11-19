@@ -1,58 +1,108 @@
-import type { ResearchBranchId } from '../game/research';
+import { RESEARCH_BRANCHES, type ResearchBranchId } from '../game/research';
 
 /** Agriculture above, military below. Prerequisite order minimizes crossings. */
 export const RESEARCH_COLUMNS: readonly (readonly ResearchBranchId[])[] = [
   ['irrigation', 'scoutLodge', 'woodenTower'],
-  ['grainStorage', 'sailing', 'archeryRange', 'wall', 'drainage'],
-  ['monument', 'traditionalMedicine', 'engineering', 'blacksmith', 'whaling'],
+  ['grainStorage', 'drainage', 'commerce', 'archeryRange', 'wall', 'sailing'],
+  ['cropRotation', 'monument', 'traditionalMedicine', 'blacksmith', 'engineering', 'whaling'],
   ['coinage', 'culturalIdentity', 'metalTools', 'militaryTactics', 'roadBuilding', 'lateenSails'],
-  ['urbanPlanning', 'reinforcedDefenses', 'fletching', 'infantryDrill'],
-  ['metalCasting', 'siegeEngines', 'massLevy', 'horsebackRiding', 'officerCorps'],
-  ['stirrups', 'supplyTrain', 'compoundBow', 'urbanMilitia', 'navalEngineering'],
+  ['ironPlows', 'urbanPlanning', 'reinforcedDefenses', 'fletching', 'infantryDrill'],
+  ['siegeEngines', 'horsebackRiding', 'metalCasting', 'officerCorps', 'massLevy'],
+  ['supplyTrain', 'compoundBow', 'stirrups', 'urbanMilitia', 'navalEngineering'],
   ['populism', 'gunpowder'],
   ['fieldCannon', 'militaryScience'],
 ];
 export const RESEARCH_CARD_WIDTH = 220;
-export const RESEARCH_COLUMN_PITCH = 292;
-export const RESEARCH_BOARD_WIDTH = 2576;
-export const RESEARCH_BOARD_HEIGHT = 650;
-const rows = [[0, 1.5, 3], [0, 1, 2, 3, 5], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3], [0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [.5, 3], [3, 4]];
+export const RESEARCH_CARD_HEIGHT = 64;
+export const RESEARCH_COLUMN_PITCH = 352;
+const ROW_PITCH = 96;
+const BOARD_MARGIN = 18;
+const FIRST_ROW_CENTER = BOARD_MARGIN + RESEARCH_CARD_HEIGHT / 2;
+const rows = [[1, 2.5, 4], [1, 2, 3, 4, 6, 7], [0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4], [1, 2, 3, 4, 5], [1, 2, 3, 4, 6], [1.5, 4], [4, 5]];
+const columnLeft = (column: number) => BOARD_MARGIN + column * RESEARCH_COLUMN_PITCH;
+const rowCenter = (row: number) => FIRST_ROW_CENTER + row * ROW_PITCH;
+export const RESEARCH_BOARD_WIDTH = columnLeft(RESEARCH_COLUMNS.length - 1) + RESEARCH_CARD_WIDTH + BOARD_MARGIN;
+export const RESEARCH_BOARD_HEIGHT = rowCenter(Math.max(...rows.flat())) + RESEARCH_CARD_HEIGHT / 2 + ROW_PITCH;
 export const RESEARCH_POSITIONS = new Map<ResearchBranchId, { x: number; y: number }>(
   RESEARCH_COLUMNS.flatMap((column, x) => column.map((id, i) => [id, { x, y: rows[x][i] }] as const)),
 );
 
+export function researchCardPosition(id: ResearchBranchId): { left: number; top: number } {
+  const { x, y } = RESEARCH_POSITIONS.get(id)!;
+  return { left: columnLeft(x), top: rowCenter(y) - RESEARCH_CARD_HEIGHT / 2 };
+}
+
 type Point = [number, number];
 type Command = { kind: 'line'; to: Point } | { kind: 'curve'; a: Point; b: Point; to: Point };
-const channels: Partial<Record<ResearchBranchId, Partial<Record<ResearchBranchId, number[]>>>> = {
-  scoutLodge: { traditionalMedicine: [100], horsebackRiding: [397, 397, 397, 397] },
-  traditionalMedicine: { supplyTrain: [0, 0, 0] },
-  horsebackRiding: { compoundBow: [], stirrups: [] },
-  metalCasting: { gunpowder: [100] },
-  fletching: { compoundBow: [300] },
-  militaryTactics: { massLevy: [300] },
-  infantryDrill: { militaryScience: [450, 450, 450] },
-  sailing: { coinage: [200] },
-  wall: { roadBuilding: [400] },
-  archeryRange: { fletching: [300, 300], militaryTactics: [300] },
+/** Each skipped column gets a lane between cards, expressed in row units. */
+const channels: Partial<Record<ResearchBranchId, Partial<Record<ResearchBranchId, readonly number[]>>>> = {
+  archeryRange: { fletching: [2.6, 3.5], militaryTactics: [3.4] },
+  commerce: { coinage: [1.4] },
+  cropRotation: { ironPlows: [0] },
+  fletching: { compoundBow: [1.6] },
+  lateenSails: { navalEngineering: [5.5, 5.9] },
+  metalCasting: { gunpowder: [3.6] },
+  militaryTactics: { massLevy: [5] },
+  sailing: { lateenSails: [6.5] },
+  scoutLodge: { traditionalMedicine: [3.4], horsebackRiding: [7.5, 7.6, 6.4, 3.4] },
+  siegeEngines: { fieldCannon: [1.6, 3.5] },
+  traditionalMedicine: { supplyTrain: [2.4, .6, .5] },
+  wall: { roadBuilding: [3.6] },
 };
 
+interface Connection {
+  source: { x: number; y: number };
+  target: { x: number; y: number };
+  lanes: readonly number[];
+  exitOffset: number;
+  entryOffset: number;
+}
+const connectionKey = (from: ResearchBranchId, to: ResearchBranchId) => `${from}:${to}`;
+function connectionRow(connection: Connection, column: number): number {
+  const { source, target, lanes } = connection;
+  if (column === source.x) return source.y;
+  if (column === target.x) return target.y;
+  return lanes[column - source.x - 1] ?? Math.max(source.y, target.y);
+}
+
+function buildConnections(): Map<string, Connection> {
+  const connections = new Map<string, Connection>();
+  const incoming = new Map<ResearchBranchId, Connection[]>(), outgoing = new Map<ResearchBranchId, Connection[]>();
+  for (const { id: to, prerequisites } of RESEARCH_BRANCHES) for (const from of prerequisites) {
+    const connection: Connection = { source: RESEARCH_POSITIONS.get(from)!, target: RESEARCH_POSITIONS.get(to)!,
+      lanes: channels[from]?.[to] ?? [], exitOffset: 0, entryOffset: 0 };
+    connections.set(connectionKey(from, to), connection);
+    const arrivals = incoming.get(to) ?? [], departures = outgoing.get(from) ?? [];
+    arrivals.push(connection); departures.push(connection);
+    incoming.set(to, arrivals); outgoing.set(from, departures);
+  }
+  // Fan arrows out in the order of their next lane so they separate at the card edge.
+  const portOffset = (index: number, count: number) => (index - (count - 1) / 2) * 12;
+  for (const group of outgoing.values()) {
+    const column = group[0].source.x + 1;
+    group.sort((a, b) => connectionRow(a, column) - connectionRow(b, column));
+    group.forEach((connection, index) => { connection.exitOffset = portOffset(index, group.length); });
+  }
+  for (const group of incoming.values()) {
+    const column = group[0].target.x - 1;
+    group.sort((a, b) => connectionRow(a, column) - connectionRow(b, column));
+    group.forEach((connection, index) => { connection.entryOffset = portOffset(index, group.length); });
+  }
+  return connections;
+}
+const connections = buildConnections();
+
 function edgeCommands(from: ResearchBranchId, to: ResearchBranchId): { start: Point; commands: Command[] } {
-  const a = RESEARCH_POSITIONS.get(from)!, b = RESEARCH_POSITIONS.get(to)!;
-  let current: Point = [10 + a.x * RESEARCH_COLUMN_PITCH + RESEARCH_CARD_WIDTH, a.y * 100 + 50];
+  const connection = connections.get(connectionKey(from, to))!;
+  const { source, target } = connection;
+  let current: Point = [columnLeft(source.x) + RESEARCH_CARD_WIDTH, rowCenter(source.y) + connection.exitOffset];
   const start = current, commands: Command[] = [];
-  const intermediate = channels[from]?.[to] ?? [];
-  for (let column = a.x + 1; column <= b.x; column++) {
-    const end: Point = [10 + column * RESEARCH_COLUMN_PITCH, column === b.x ? b.y * 100 + 50 : intermediate[column - a.x - 1] ?? (Math.max(a.y, b.y) * 100 + 50)];
-    // Both Archery links share one trunk through the busy Bronze/Metal gutter.
-    // Branch after the sole crossing, so it reads as one bridge, not two knots.
-    if (from === 'archeryRange' && to === 'militaryTactics' && column === b.x) {
-      const fork: Point = [end[0] - 18, current[1]];
-      commands.push({ kind: 'line', to: fork }); current = fork;
-    }
+  for (let column = source.x + 1; column <= target.x; column++) {
+    const end: Point = [columnLeft(column), rowCenter(connectionRow(connection, column)) + (column === target.x ? connection.entryOffset : 0)];
     const bend = (end[0] - current[0]) / 2;
     commands.push({ kind: 'curve', a: [current[0] + bend, current[1]], b: [end[0] - bend, end[1]], to: end });
     current = end;
-    if (column < b.x) {
+    if (column < target.x) {
       current = [end[0] + RESEARCH_CARD_WIDTH, end[1]];
       commands.push({ kind: 'line', to: current });
     }

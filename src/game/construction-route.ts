@@ -109,8 +109,7 @@ function findConstructionRoute(state: GameState, kind: 'road' | 'wall' | 'palisa
       const result = validateBuildAt(searchState, kind, p.x, p.y);
       // Connectivity is supplied by the growing route, and checked once more
       // against reservations before anything is bought.
-      allowed = result.ok || result.message === 'Extend an existing road or bridge, or start from a ford.'
-        || result.message === 'Start irrigation beside freshwater or extend an existing ditch.';
+      allowed = result.ok || result.message === 'Start irrigation beside freshwater or extend an existing ditch.';
       if (!allowed) rejected.message ||= result.message;
     }
     if (context.routeChecks.size >= 4096) context.routeChecks.clear();

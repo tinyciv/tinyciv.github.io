@@ -1,6 +1,6 @@
-import { type GameState, type Point } from '../game/types';
+import { tileAt, type GameState, type Point, type RegionalResource } from '../game/types';
 import { resourceDevelopmentStatus, developResourceGroup } from '../game/resource-development';
-import { RESOURCE_NAMES } from '../game/geography';
+import { RESOURCE_NAMES, resourceName } from '../game/geography';
 import { playerFaction } from '../game/player-context';
 import { isVisible } from '../game/fog';
 import { resourceAtPoint } from '../game/resource-hit-testing';
@@ -9,6 +9,15 @@ import { MeasuredSize } from './measured-size';
 import { logEvent } from '../game/simulation';
 import type { GameCommand } from '../multiplayer/protocol';
 import { icon } from './icons';
+import { COAL_FACTORY_GOLD_BONUS } from '../game/civic-buildings-native';
+import { rustEngine } from '../game/rust-engine';
+
+const BENEFITS: Partial<Record<RegionalResource, string>> = {
+    marble: 'Fully developed · 10% lower construction costs',
+    peat: `${Math.round(100 * (1 - rustEngine.peat_upkeep_multiplier(1)))}% lower factory and field cannon upkeep`,
+    grapes: `${Math.round(100 * (rustEngine.grape_trade_multiplier(1) - 1))}% more gold from outgoing land trade`,
+    coal: `Local factories grant +${Math.round(100 * COAL_FACTORY_GOLD_BONUS)}% gold income each`,
+};
 
 /** Resource activity follows the selected deposit and uses the existing HUD frame. */
 export class ResourceActivityPopup {
@@ -23,6 +32,7 @@ export class ResourceActivityPopup {
         element.innerHTML = `<button class="activity-close" type="button" aria-label="Close resource activity">×</button>
             <h2 id="resource-activity-title"></h2><div class="activity-stack">
             <p class="activity-note resource-city"></p>
+            <p class="activity-note resource-benefit" hidden></p>
             <button type="button" class="activity-upgrade" data-resource-develop><span class="upgrade-label">Develop resource</span>
             <span class="upgrade-price"><span class="resource-cost"></span>${icon('gold')}</span></button>
             <p class="activity-note resource-status"></p><p class="resource-message" role="status"></p></div>`;
@@ -56,15 +66,21 @@ export class ResourceActivityPopup {
         const state = this.getState(), status = resourceDevelopmentStatus(state, this.point.x, this.point.y);
         if (state.gameOver || !status.resource || !status.city || status.city.faction !== playerFaction(state)
             || !isVisible(state, this.point.x, this.point.y)) { this.close(); return; }
-        this.element.querySelector<HTMLElement>('#resource-activity-title')!.textContent = RESOURCE_NAMES[status.resource];
+        this.element.querySelector<HTMLElement>('#resource-activity-title')!.textContent =
+            resourceName(tileAt(state.world, this.point.x, this.point.y)) ?? RESOURCE_NAMES[status.resource];
         this.element.querySelector<HTMLElement>('.resource-city')!.textContent = status.city.cityName || 'City resource';
+        const benefit = this.element.querySelector<HTMLElement>('.resource-benefit')!;
+        benefit.textContent = BENEFITS[status.resource] ?? '';
+        benefit.hidden = !benefit.textContent;
         const button = this.element.querySelector<HTMLButtonElement>('[data-resource-develop]')!;
         button.disabled = !status.ok;
         button.title = status.ok ? '' : status.message;
         button.querySelector<HTMLElement>('.upgrade-label')!.textContent = status.cells.length ? status.remainingCount && status.ok ? 'Develop affordable tiles' : 'Develop resource' : 'Developed';
         button.querySelector<HTMLElement>('.upgrade-price')!.hidden = !status.cells.length;
         button.querySelector<HTMLElement>('.resource-cost')!.textContent = String(status.cost);
-        this.element.querySelector<HTMLElement>('.resource-status')!.textContent = status.ok
+        const statusLabel = this.element.querySelector<HTMLElement>('.resource-status')!;
+        statusLabel.hidden = status.resource === 'marble' && status.developedCount === 4;
+        statusLabel.textContent = status.ok
             ? `${status.cells.length} tile${status.cells.length === 1 ? '' : 's'}${status.remainingCount ? ` · ${status.remainingCount} remaining` : ''}` : status.message;
         this.position();
     }

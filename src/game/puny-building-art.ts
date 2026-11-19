@@ -73,6 +73,8 @@ function shadeColor(rgb: readonly number[], nativeValue: number): readonly numbe
   return base.map(v => Math.round((v + offset) * 255));
 }
 
+export { teamColor as buildingFactionColor, shadeColor as buildingFactionShade };
+
 export interface PunyBuildingPixels extends PunyPixels { teamMask: Uint8Array }
 
 /** Pure pixel operation for both runtime caching and palette regression tests.

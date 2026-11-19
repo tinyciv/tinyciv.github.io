@@ -3,6 +3,7 @@ import { playerFaction } from '../game/player-context';
 import type { GameState } from '../game/types';
 import { researchIconUrl } from './research-icons';
 import { formatResearchCost } from './research-format';
+import { SCIENCE_ICON_URL } from './science-icon';
 import './research-toolbar.css';
 
 /** Read-only faction progress; changing research remains a library activity. */
@@ -21,7 +22,8 @@ export class ResearchToolbar {
     const signature = JSON.stringify([label, paused, seconds, status.focus, Math.floor(status.progress), status.required]);
     if (signature === this.signature) return; this.signature = signature;
     const image = this.element.querySelector<HTMLImageElement>('img')!;
-    if (image.dataset.research !== status.focus) { image.src = researchIconUrl(status.focus); image.dataset.research = status.focus; }
+    const icon = inProgress ? researchIconUrl(status.focus) : SCIENCE_ICON_URL;
+    if (image.getAttribute('src') !== icon) image.src = icon;
     this.element.querySelector<HTMLElement>('.research-toolbar-name')!.textContent = label;
     const eta = this.element.querySelector<HTMLElement>('.research-toolbar-eta')!;
     eta.hidden = !inProgress;

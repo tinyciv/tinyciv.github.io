@@ -144,6 +144,7 @@ Stone can be developed as a quarry but has no additional bonus yet. Resource acc
 | Farm | 9.75 gold | 3.75 seconds |
 | House | 42.25 gold | 13⅓ seconds |
 | Well | 50 gold; requires 30 population | 20 seconds |
+| Fountain (1×1) | 150 gold | 30 seconds |
 | Monument | 200 gold | 20 seconds |
 | Library (2×2) | 200 gold | 90 seconds |
 | Blacksmith | 200 gold | 90 seconds |
@@ -284,7 +285,7 @@ A **blacksmith costs 200 gold**, occupies **one tile**, and takes **90 seconds**
 
 A **level-three house** needs at least **40 residents within six tiles**, a completed guard post belonging to its own city inside the borders, and a well within eight tiles. It holds **four people**, plus any permanent redevelopment bonus, and earns **1.5× gold per resident** without additional health. Losing any requirement starts a bouncing warning and a **60-second grace period**; restoring the requirements cancels the downgrade.
 
-A **level-four house** meets those level-three requirements and sits inside a secure settlement enclosure—the same condition that gives that house **30% faster population growth**. It uses the original Puny gabled house with a chimney and framed doorway, keeps its **1×1 footprint**, and holds **five people** before redevelopment and Urban Planning bonuses. Its gold multiplier remains **1.5×**, with no further health increase. Houses outside the enclosure do not qualify. A wall breach or nonfriendly intruder removes the growth bonus immediately and starts the same **60-second recovery warning**; restoring protection cancels it. After the warning expires, the house returns to level three, or level two if its other requirements are also missing.
+A **level-four house** meets the level-three requirements and lies within **eight tiles**, center to center, of a completed fountain of the same faction. It uses the Puny gabled house with a chimney, keeps its **1×1 footprint**, and holds **five people** before redevelopment and Urban Planning bonuses. Its gold multiplier remains **1.5×**. Losing fountain coverage starts a **60-second recovery warning**. Restoring coverage cancels the warning. When it expires, the house returns to level three, or level two if a level-three requirement is missing.
 
 **Traditional Medicine** requires **42 science** after Grain Storage and Exploration. It unlocks the **Healer’s shack** under **B then P**: **200 gold**, **45 seconds**, a solid **1×1 footprint**, and **160 health**. Its unchanged Miniworld timber shop with potion jars is distinct from other buildings. A completed shack triples friendly human units’ healing within **four tiles** of its center: **7.2 HP/second** instead of 2.4. Units must still be inside their own borders and wait fifteen seconds after taking damage. Effects do not stack, do not affect enemies or animals, and stop when the shack is destroyed or changes ownership. Placement shows green coverage cells. Rival cities can research and build one when their development budget permits.
 

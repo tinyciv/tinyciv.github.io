@@ -1,0 +1,15 @@
+{
+  "selection": "Open front",
+  "file": "frontier-village.png",
+  "size": [32, 32],
+  "footprint": [2, 2],
+  "provider": "PixelLab API /v2/edit-images-v2",
+  "townReference": "public/assets/buildings/wooden-settlement.png",
+  "townReferenceSha256": "a6fe0e9dfd967bd4e942f1876df6a11a309e2978294179128daec44c4aa1fd05",
+  "primitiveVillageJobId": "6ba5905e-5bd3-4a05-a3b0-9f05cacc39c3",
+  "primitiveVillageSha256": "39cf3041311b02c335967b80f9dd86674dc7c4d1179292f3c079c09e779fbdb6",
+  "openFrontJobId": "ba05777d-166d-40f3-b40d-b78002d27931",
+  "removedRectangleLTRB": [10, 21, 18, 31],
+  "approvedSource": "scratch/2026-11-18-primitive-town-variants/sprites/primitive-village-open-front.png",
+  "sha256": "7ffb2159109e12d4534d3345a808cd3f6f9183b43067a60803ba8fc975579cdc"
+}

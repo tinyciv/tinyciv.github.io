@@ -5,9 +5,18 @@ import { environmentRandom } from './environment-fields';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
 import { terrainYields } from './generator';
 
-/** Coherent polar regions, with a gently wandering rather than ruler-straight edge. */
-export function applyTundra(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): void {
+/** Signed distance in tile rows from the irregular edge of either polar cap. */
+export function tundraBoundary(world: World): (x: number, y: number) => number {
   const noise = createNoise2D(environmentRandom(`${world.seed}:tundra`));
+  const span = Math.max(1, world.height - 1);
+  return (x, y) => {
+    const edge = .12 + noise(x * .025, y * .025) * .022 + noise(x * .09 + 37, y * .09) * .008;
+    return Math.min(y, world.height - 1 - y) - edge * span;
+  };
+}
+
+export function applyTundra(world: World, _parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): void {
+  const distance = tundraBoundary(world);
   const stoneFringe = new Uint8Array(world.tiles.length);
   world.tiles.forEach((tile, cell) => {
     if (tile.resource !== 'stone') return;
@@ -19,17 +28,14 @@ export function applyTundra(world: World, parameters: LandscapeParameters = DEFA
   });
   for (let y = 0; y < world.height; y++) for (let x = 0; x < world.width; x++) {
     const tile = world.tiles[y * world.width + x];
-    if (WATER.has(tile.terrain) || tile.beach || stoneFringe[y * world.width + x]) continue;
-    // Polar caps belong at both map edges, independently of the warmer
-    // equator's position. Keep their irregular boundary in the outer 9–15%.
-    const poleDistance = Math.min(y, world.height - 1 - y) / Math.max(1, world.height - 1);
-    const edge = .12 + noise(x * .025, y * .025) * .022 + noise(x * .09 + 37, y * .09) * .008;
-    if (poleDistance > edge) continue;
+    if (WATER.has(tile.terrain) || distance(x, y) > 0) continue;
+    if (stoneFringe[y * world.width + x] && !tile.beach) continue;
     const old = terrainYields(tile.terrain, tile.overlay);
     tile.terrain = 'tundra'; tile.biome = 'tundra';
-    delete tile.palm; delete tile.marsh; delete tile.desertStone;
+    delete tile.beach; delete tile.palm; delete tile.marsh; delete tile.desertStone;
     if (tile.overlay === 'jungle') tile.overlay = 'forest';
     if (tile.overlay === 'forest') tile.treeClass = 'snowy';
+    if (tile.geothermal) continue;
     const next = terrainYields(tile.terrain, tile.overlay);
     for (const resource of ['food', 'production', 'gold'] as const)
       tile[resource] = Math.max(0, tile[resource] + next[resource] - old[resource]);
@@ -41,7 +47,7 @@ export function applyTundra(world: World, parameters: LandscapeParameters = DEFA
       else delete tile.hillBiome;
     }
     if (tile.terrain === 'tundra') {
-      tile.biome = 'tundra'; delete tile.palm; delete tile.marsh; delete tile.desertStone;
+      tile.biome = 'tundra'; delete tile.beach; delete tile.palm; delete tile.marsh; delete tile.desertStone;
       if (tile.overlay === 'forest' || tile.overlay === 'jungle') tile.treeClass = 'snowy';
     } else if (tile.biome === 'tundra') tile.biome = 'taiga';
   }

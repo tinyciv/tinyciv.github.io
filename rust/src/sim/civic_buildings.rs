@@ -2,15 +2,17 @@
 //! hospital spatial trees and factory counts. Mine capture samples troops at
 //! 1 Hz; its spatial query never compares every troop with every building.
 use bevy_ecs::prelude::*;
-use rstar::RTree;
-use std::collections::BTreeMap;
-use super::kinds::{unit, building::{HOSPITAL, APARTMENTS, FACTORY, GOLD_MINE}};
+use rstar::{RTree, primitives::GeomWithData};
+use std::collections::{BTreeMap, BTreeSet};
+use super::kinds::{unit, building::{HOSPITAL, APARTMENTS, FACTORY, GOLD_MINE, PALACE}};
 
 pub const UNIT_STRIDE: usize = 9;
 pub const CAPTURE_SECONDS: f64 = 12.0;
 pub const CAPTURE_RADIUS: f64 = 4.0;
 pub const HOSPITAL_RADIUS: f64 = 8.0;
 pub const MINE_WORLD_SHARE: f64 = 0.1;
+const FACTORY_BONUS: f64 = 0.20;
+const COAL_FACTORY_BONUS: f64 = 0.35;
 
 pub fn targetable(kind: u32, hp: f64) -> bool { kind != GOLD_MINE && hp > 0.0 }
 pub fn removable(kind: u32) -> bool { kind != GOLD_MINE }
@@ -22,7 +24,8 @@ pub fn constant(kind: u32, property: u32) -> f64 {
         (FACTORY, 0) => 600.0, (FACTORY, 1) => 650.0, (FACTORY, 2) => 8.0,
         (GOLD_MINE, 0) => 0.0, (GOLD_MINE, 1) => 1000.0, (GOLD_MINE, 2) => 0.0,
         (APARTMENTS, 3) => 24.0, (HOSPITAL, 3) => HOSPITAL_RADIUS,
-        (GOLD_MINE, 3) => CAPTURE_SECONDS, (FACTORY, 3) => 0.2,
+        (GOLD_MINE, 3) => CAPTURE_SECONDS, (FACTORY, 3) => FACTORY_BONUS,
+        (FACTORY, 4) => COAL_FACTORY_BONUS,
         _ => f64::NAN,
     }
 }
@@ -41,6 +44,9 @@ pub struct CivicBuildings {
     sites: BTreeMap<i64, Site>,
     hospitals: BTreeMap<i32, RTree<[f64; 2]>>,
     factories: BTreeMap<i32, usize>,
+    coal_cities: BTreeSet<i64>,
+    coal_factories: BTreeMap<i32, usize>,
+    coal_dirty: bool,
     mines: BTreeMap<i64, Mine>,
     // Integer-cell membership is bounded by fixed capture radius and
     // nonoverlapping 2×2 structures. Generated mines are 24+ tiles apart.
@@ -52,6 +58,7 @@ impl CivicBuildings {
     pub fn clear_sites(&mut self) {
         self.sites.clear(); self.hospitals.clear(); self.factories.clear();
         self.mines.clear(); self.mine_cells.clear();
+        self.coal_factories.clear(); self.coal_dirty = true;
     }
     pub fn remove(&mut self, id: i64) {
         if let Some(site) = self.sites.remove(&id) {
@@ -61,6 +68,7 @@ impl CivicBuildings {
             if site.kind == FACTORY && site.ready {
                 if let Some(count) = self.factories.get_mut(&site.faction) { *count = count.saturating_sub(1); }
             }
+            if site.ready && matches!(site.kind, FACTORY | PALACE) { self.coal_dirty = true; }
             if site.kind == GOLD_MINE {
                 self.mines.remove(&id);
                 for y in site.y as i32 - 3..=site.y as i32 + 5 { for x in site.x as i32 - 3..=site.x as i32 + 5 {
@@ -70,12 +78,13 @@ impl CivicBuildings {
         }
     }
     pub fn site(&mut self, id: i64, kind: u32, faction: f64, x: f64, y: f64, flags: u32) {
-        if !matches!(kind, HOSPITAL | APARTMENTS | FACTORY | GOLD_MINE) || flags & 1 == 0 { self.remove(id); return; }
+        if !matches!(kind, HOSPITAL | APARTMENTS | FACTORY | GOLD_MINE | PALACE) || flags & 1 == 0 { self.remove(id); return; }
         let site = Site { kind, faction: faction as i32, x, y, ready: flags & 5 == 5 };
         if self.sites.get(&id) == Some(&site) { return; }
         let previous = self.mines.get(&id).copied();
         self.remove(id);
         self.sites.insert(id, site);
+        if site.ready && matches!(kind, FACTORY | PALACE) { self.coal_dirty = true; }
         if site.kind == HOSPITAL && site.ready { self.hospitals.entry(site.faction).or_default().insert(site.center()); }
         if site.kind == FACTORY && site.ready { *self.factories.entry(site.faction).or_default() += 1; }
         if site.kind == GOLD_MINE && site.ready {
@@ -92,8 +101,46 @@ impl CivicBuildings {
             mine.challenger = challenger; mine.progress = progress.clamp(0.0, CAPTURE_SECONDS);
         }
     }
-    pub fn factory_income(&self, faction: i32, base: f64) -> f64 {
-        base.max(0.0) * (1.0 + (self.factories.get(&faction).copied().unwrap_or(0) as f64 * 0.2).min(1.0))
+    pub fn set_coal_cities(&mut self, count: usize) {
+        let cities: BTreeSet<_> = self.input[..count].iter().map(|id| *id as i64).collect();
+        if self.coal_cities != cities {
+            self.coal_cities = cities;
+            self.coal_dirty = true;
+        }
+    }
+    /// Coal changes the contribution of the factories assigned to a supplying
+    /// city. Rebuild the counts only after a supply or relevant site change.
+    fn refresh_coal_factories(&mut self) {
+        if !std::mem::take(&mut self.coal_dirty) { return; }
+        self.coal_factories.clear();
+        if self.coal_cities.is_empty() { return; }
+        type City = GeomWithData<[f64; 2], i64>;
+        let owners: BTreeSet<_> = self.coal_cities.iter().filter_map(|id| self.sites.get(id))
+            .filter(|site| site.kind == PALACE && site.ready).map(|site| site.faction).collect();
+        let mut palaces: BTreeMap<i32, Vec<City>> = BTreeMap::new();
+        for (&id, site) in &self.sites {
+            if site.kind == PALACE && site.ready && owners.contains(&site.faction) {
+                palaces.entry(site.faction).or_default().push(GeomWithData::new(site.center(), id));
+            }
+        }
+        let city_trees: BTreeMap<_, _> = palaces.into_iter()
+            .map(|(faction, cities)| (faction, RTree::bulk_load(cities))).collect();
+        for site in self.sites.values().filter(|site| site.kind == FACTORY && site.ready) {
+            let Some(tree) = city_trees.get(&site.faction) else { continue; };
+            let mut nearest = tree.nearest_neighbor_iter_with_distance_2(site.center());
+            let Some((city, distance)) = nearest.next() else { continue; };
+            // The same center and lower-id tiebreak as the city ownership view.
+            let city = nearest.take_while(|(_, next)| *next == distance)
+                .fold(city.data, |id, (candidate, _)| id.min(candidate.data));
+            if self.coal_cities.contains(&city) { *self.coal_factories.entry(site.faction).or_default() += 1; }
+        }
+    }
+    pub fn factory_income(&mut self, faction: i32, base: f64) -> f64 {
+        self.refresh_coal_factories();
+        let total = self.factories.get(&faction).copied().unwrap_or(0);
+        let supplied = self.coal_factories.get(&faction).copied().unwrap_or(0);
+        let bonus = (total - supplied) as f64 * FACTORY_BONUS + supplied as f64 * COAL_FACTORY_BONUS;
+        base.max(0.0) * (1.0 + bonus.min(1.0))
     }
     pub fn income(&mut self, amount: f64) { if amount.is_finite() && amount > 0.0 { self.earned_gold += amount; } }
     pub fn snapshot(&self) -> [f64; 1] { [self.earned_gold] }

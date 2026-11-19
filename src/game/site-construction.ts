@@ -1,4 +1,4 @@
-import { buildAt, validateBuildAt } from './simulation';
+import { buildAt, buildCostAt, validateBuildAt } from './simulation';
 import { siteTarget } from './sites-native';
 import { playerFaction } from './player-context';
 import type { GameState } from './types';
@@ -12,6 +12,7 @@ export function buildSite(state: GameState, siteId: number, actor = playerFactio
 }
 export function quoteSite(state: GameState, siteId: number, actor = playerFaction(state)) {
     const target = siteTarget(state, siteId, actor);
-    return target ? validateBuildAt(state, target.kind, target.x, target.y, actor)
-        : { ok: false, message: 'Approach an available site with your Leader.' };
+    if (!target) return { ok: false, message: 'Approach an available site with your Leader.', gold: undefined };
+    return { ...validateBuildAt(state, target.kind, target.x, target.y, actor),
+        gold: buildCostAt(state, target.kind, target.x, target.y, actor).gold };
 }

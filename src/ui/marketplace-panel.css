@@ -1,0 +1,26 @@
+.building-activity.is-marketplace { width: 394px; }
+.marketplace-destination > span { color: var(--popup-muted); }
+.marketplace-destination select {
+  min-width: 0; flex: 1; min-height: 36px; padding: 4px 8px;
+  border: 2px solid var(--popup-edge); border-radius: 0;
+  background: var(--popup-inset); color: var(--popup-ink); font-family: var(--game-font);
+}
+.marketplace-apply.activity-upgrade {
+  display: block; width: 100%; min-height: 39px; margin-top: 8px; padding: 2px 4px; text-align: center;
+}
+.marketplace-heading { display: flex; justify-content: space-between; gap: 8px; margin-top: 15px; font-size: 15px; }
+.marketplace-heading [data-market-eta] { color: var(--popup-muted); white-space: nowrap; }
+.marketplace-status, .marketplace-route { display: inline-block; margin: 3px 6px 8px 0; font-size: 14px; }
+.marketplace-status { color: var(--popup-muted); }
+.marketplace-route { color: #ecd59d; }
+.marketplace-yields { width: 100%; border-collapse: collapse; font-size: 15px; }
+.marketplace-yields th, .marketplace-yields td { padding: 5px; }
+.marketplace-yields th:first-child { text-align: left; font-weight: 400; }
+.marketplace-yields th:not(:first-child), .marketplace-yields td { text-align: right; white-space: nowrap; }
+.marketplace-yields thead { color: var(--popup-muted); border-bottom: 1px solid var(--popup-edge); }
+.marketplace-yields .icon { --icon-size: 15px; }
+.marketplace-yields .science-icon { width: 15px; height: 15px; }
+.marketplace-yields td:nth-child(2) { color: #ecd59d; }
+.marketplace-yields :is(th, td):nth-child(3) { color: var(--science-color); }
+.marketplace-yields tbody { background: #21191266; }
+.marketplace-yields .marketplace-last { border-top: 1px solid var(--popup-edge); }

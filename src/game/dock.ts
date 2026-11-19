@@ -1,6 +1,7 @@
 import { canTraverseEdge, canWalk, traversable } from './pathfinding';
 import { reliefFootprintAllowed, reliefLevel } from './relief';
 import { navigableWaterCell } from './water-navigation';
+import { isPolarSeaLane } from '../world/polar-sea';
 import { galleyOverlapsTile } from './galley-footprint';
 import { placementOccupancy } from './placement-occupancy';
 import { buildingWidth, buildingHeight, isFarmKind, tileAt, WATER, type Building, type GameState, type Point } from './types';
@@ -120,6 +121,7 @@ export function dockPlacement(state: GameState, x: number, y: number, faction = 
   })) return;
   for (const facing of [2, 1, 0, 3] as const) {
     const berth = dockBerth({ x, y, dockFacing: facing }), water = tileAt(state.world, berth.x, berth.y);
+    if ((state.world.generationStyle || state.world.scenario) && isPolarSeaLane(berth.y, state.world.height)) continue;
     if (!water || !navigableWaterCell(state.world, berth.x, berth.y) || reliefLevel(water) !== reliefLevel(land)
       || dockBerthOccupiedByFootprint(state, Math.floor(berth.x), Math.floor(berth.y))) continue;
     if (state.buildings.some(building => building.hp > 0 && berth.x >= building.x && berth.y >= building.y

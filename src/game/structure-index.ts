@@ -15,6 +15,7 @@ import { buildingPresent, type Building, type BuildingKind, type GameState } fro
 
 /** Row flags: hp > 0, buildingPresent and buildingReady. */
 export const STRUCTURE_ALIVE = 1, STRUCTURE_PRESENT = 2, STRUCTURE_READY = 4;
+export const FOUNTAIN_RADIUS = rustEngine.fountain_radius();
 const CLASS_REFUGE = 0, CLASS_SHELTER = 1;
 const OBSERVED = ['faction', 'hp', 'kind', 'x', 'y', 'roadPaved', 'construction'] as const;
 const CONSTRUCTION_PRESENCE = ['waitingForBuilder', 'pausedAt', 'evacuating'] as const;
@@ -132,6 +133,9 @@ export class StructureIndex implements ScalarObserver {
   }
   near(faction: number, x: number, y: number, radius: number, classCode: number): boolean {
     return !!rustEngine.sim_structure_near(this.handle, faction ?? NaN, x, y, radius, classCode);
+  }
+  fountainCovers(house: Pick<Building, 'faction' | 'x' | 'y'>): boolean {
+    return !!rustEngine.sim_fountain_covers(this.handle, house.faction, house.x, house.y);
   }
   query(faction: number | undefined, flags: number, kinds: readonly BuildingKind[]): readonly Building[] {
     const key = `${faction}|${flags}|${kinds.join(',')}`, cached = this.queries.get(key);

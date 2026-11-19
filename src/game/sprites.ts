@@ -15,6 +15,7 @@ import { drawAuxiliary } from './auxiliary-art';
 import { drawPuny, punyWorldImage } from './puny-world';
 import { drawFordStones, type FordAxis } from './ford-art';
 import { drawPalace } from './palace-sprite';
+import { drawFrontierVillage } from './frontier-village-art';
 import { drawFort } from './fort-art';
 import { drawPunyWall } from './wall-sprites';
 import { drawStoneBridge } from './stone-bridge-art';
@@ -24,6 +25,7 @@ import { drawIrrigation } from './irrigation-art';
 import { drawCoveredWell, drawWoodenHouse } from './wooden-building-art';
 import { drawStoneWallTower } from './stone-wall-tower-art';
 import { drawPalisadeTower } from './palisade-tower-art';
+import { drawScoutTower } from './scout-tower-art';
 import type { TowerWallKind } from './wall-towers';
 import { drawMonument } from './monument-art';
 import { drawLibrary } from './library-art';
@@ -44,7 +46,7 @@ import { dockArtBounds, drawDock, drawRowboat, rowboatOccupant } from './naval-a
 import { dockFootprint } from './dock';
 import { drawLeaderGalley, drawTradingBoat } from './galley-art';
 import { drawBarbarianGalley } from './barbarian-galley-art';
-import { drawBarracks, drawForum, drawColosseum, drawGranary, drawThermalBath } from './civic-art';
+import { drawBarracks, drawForum, drawColosseum, drawFountain, drawGranary, drawMarketplace, drawThermalBath } from './civic-art';
 export { buildingArtTop } from './types';
 
 /** Original Puny scenery and buildings, with shared faction-color masks. */
@@ -171,16 +173,20 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
     case 'palace':
       drawPalace(c, 0, 0, 64, color, b.palaceLevel);
       break;
+    case 'frontierVillage': drawFrontierVillage(c, 0, 0, 64, color); break;
     case 'villageTent': drawVillageTent(c, 0, 0, 32, color); break;
     case 'camp': case 'shack': case 'cottage': break; // Farm aliases render their fields separately.
     // Approved existing buildings stand in until the new art is selected.
     case 'hospital': drawThermalBath(c, 0, 0, 32, time); break;
     case 'apartments': drawPalace(c, 0, 0, 64, color, 1); break;
     case 'factory': drawFoundry(c); break;
-    case 'goldMine': drawGoldMine(c); break;
+    case 'goldMine': drawGoldMine(c, b.faction >= 0); break;
     case 'house': drawWoodenHouse(c, b, 0, 0, 32, color); break;
     case 'tower':
       guardTower(c);
+      break;
+    case 'scoutTower':
+      drawScoutTower(c);
       break;
     case 'woodenTower':
       if (towerWall === 'wall') drawStoneWallTower(c, 0, 0, 32, color);
@@ -195,6 +201,8 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
     case 'observationPost': drawObservationPost(c, time, color); break;
     case 'scoutLodge': drawScoutsLodge(c, 0, 0, 32, color); break;
     case 'library': drawLibrary(c, 0, 0, 32, time, color); break;
+    case 'marketplace': drawMarketplace(c, 0, 0, 32); break;
+    case 'fountain': drawFountain(c, time); break;
     case 'forum': drawForum(c, 0, 0, 32); break;
     case 'militaryAcademy': drawMilitaryAcademy(c); break;
     case 'foundry': drawFoundry(c); break;

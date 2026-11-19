@@ -30,6 +30,8 @@ export const buildingDestructionImage = (size: 1 | 2, rubble: boolean): HTMLImag
 /** Rendering interpolation only. The ECS owns the underlying event lifetime. */
 export function buildingDestructionPose(effect: BuildingDestruction, time: number):
     { size: 1 | 2; frame: number; rubble: boolean; alpha: number; showBuilding: boolean } | undefined {
+    const kind = effect.kind ?? effect.building?.kind;
+    if (kind === 'wall' || kind === 'palisade' || kind === 'tower' || kind === 'woodenTower' || kind === 'scoutTower') return;
     const age = time - effect.time;
     if (!Number.isFinite(age) || age < 0 || age >= BUILDING_DESTRUCTION_LIFETIME) return;
     const size = effect.width === 2 && effect.height === 2 ? 2 : 1;

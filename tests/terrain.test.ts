@@ -34,8 +34,10 @@ function components(mask: Uint8Array, width: number, height: number) {
 }
 
 describe('tile-local terrain ground', () => {
-    it('uses only unmodified atlas pixels and native source quadrants', () => {
-        const world = fixture(), raster = rasterTerrain(world);
+    it('uses unmodified atlas pixels in uniform grassland', () => {
+        const world = fixture();
+        for (const tile of world.tiles) tile.terrain = 'grassland';
+        const raster = rasterTerrain(world);
         for (let ty = 0; ty < world.height; ty++) for (let tx = 0; tx < world.width; tx++) {
             for (const q of terrainQuads(world, tx, ty)) for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
                 const source = ((q.sy + y) * atlas.width + q.sx + x) * 4;
@@ -44,6 +46,20 @@ describe('tile-local terrain ground', () => {
                 expect(raster.pixels[target + 3]).toBe(255);
             }
         }
+    });
+
+    it('blends frost and sand several tiles into intervening grassland', () => {
+        const world = fixture();
+        for (let y = 0; y < world.height; y++)
+            for (let x = 0; x <= 2; x++) world.tiles[y * world.width + x].terrain = 'tundra';
+        const raster = rasterTerrain(world);
+        const pixel = (x: number) => raster.pixels.subarray((4 * 16 * raster.width + x) * 4, (4 * 16 * raster.width + x) * 4 + 3);
+        const grass = pixel(5 * 16 + 7);
+        const sage = pixel(3 * 16 + 3), olive = pixel(6 * 16 + 9);
+        expect(sage[2]).toBeGreaterThan(grass[2]);
+        expect(olive[0]).toBeGreaterThan(grass[0]);
+        expect(Math.abs(pixel(47)[2] - pixel(48)[2])).toBeLessThan(12);
+        expect(raster.water.some(Boolean)).toBe(false);
     });
 
     it('keeps narrow river bends connected and diagonal water bodies separate', () => {

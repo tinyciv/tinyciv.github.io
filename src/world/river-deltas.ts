@@ -24,7 +24,7 @@ const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(ma
  * This is a deterministic landscape model, not a sediment/tide simulation.
  * Existing freshwater spines and their receivers are never filled by sediment.
  */
-export function generateRiverDeltas(world: World): RiverDelta[] {
+export function generateRiverDeltas(world: World, polarSeaRows = 0): RiverDelta[] {
   const { width, height, tiles } = world, count = tiles.length;
   if (Math.min(width, height) < 128) return [];
   const neighbors = (cell: number): number[] => {
@@ -114,7 +114,7 @@ export function generateRiverDeltas(world: World): RiverDelta[] {
     const size = clamp(10 + Math.sqrt(discharge) * .24, 13, 19), inland = size * .62;
     const candidate = new Uint8Array(count), cells: number[] = [];
     const search = Math.ceil(size * 1.65);
-    for (let y = Math.max(2, my - search); y <= Math.min(height - 3, my + search); y++)
+    for (let y = Math.max(2, polarSeaRows, my - search); y <= Math.min(height - 3, height - polarSeaRows - 1, my + search); y++)
       for (let x = Math.max(2, mx - search); x <= Math.min(width - 3, mx + search); x++) {
         const cell = y * width + x, tile = tiles[cell], dx = x - mx, dy = y - my;
         if (!oceanDraining[cell] || tile.delta || reliefApron[cell] || tile.ridge || tile.relief || tile.canyon || (!WATER.has(tile.terrain) && tile.elevation > .48)) continue;

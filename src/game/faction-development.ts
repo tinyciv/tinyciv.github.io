@@ -19,7 +19,7 @@ import { factionIrrigationSites } from './faction-irrigation';
 import { HEALER_SHACK_COST } from './healer-shack';
 import { FORT_GOLD, FORT_UPKEEP } from './forts';
 import { SUPPLY_DEPOT_COST } from './supply-train';
-import { autoDevelopResources } from './resource-development';
+import { autoDevelopResources, marbleConstructionMultiplier } from './resource-development';
 import { buildingDisplacesFarms } from './farm-relocation';
 import { placementOccupancy } from './placement-occupancy';
 import { INSTITUTION_KIND, nativeInstitutionPlan, type InstitutionKind } from './institution-native';
@@ -190,7 +190,7 @@ function validationWork(state: GameState, faction: number, kind: DevelopmentKind
 /** A 50-gold well adds two beds to every covered level-one house, often much
  * cheaper than buying further homes. Pending wells must not trigger duplicates. */
 function* improveHousing(state: GameState, faction: Faction, palace: Building, orders: DevelopmentOrders): Generator<DevelopmentWork, boolean, void> {
-  if (faction.population < WELL_POPULATION_REQUIREMENT || faction.gold < 50
+  if (faction.population < WELL_POPULATION_REQUIREMENT || faction.gold < 50 * marbleConstructionMultiplier(state, faction.id)
     || (faction.constructionPauseUntil?.well ?? 0) > state.time) return false;
   const owned = state.buildings.filter(building => (building.kind === 'house' || building.kind === 'well')
     && ownedByCity(state, building, palace));
@@ -270,7 +270,8 @@ function* developInstitution(state: GameState, faction: Faction, palace: Buildin
     factionDevelopmentReserve(state, faction), factionCommittedBudget(state, faction).surplus, cityDevelopmentNeeds(state, palace).population,
     farms.filter(farm => farm.faction === faction.id && buildingReady(farm)).length,
     faction.culture ?? 0, faction.achievements ?? 0, leader && leader.hp > 0 ? distance(leader, palace) : Number.MAX_SAFE_INTEGER,
-    structuresOf(state, faction.id, STRUCTURE_ALIVE, 'factory').length, cityDevelopmentNeeds(state, palace).housing])[0];
+    structuresOf(state, faction.id, STRUCTURE_ALIVE, 'factory').length, cityDevelopmentNeeds(state, palace).housing,
+    marbleConstructionMultiplier(state, faction.id)])[0];
   if (!eligible()) return false;
   if (kind !== 'granary') return yield* buildCityUpgrade(state, faction, palace, kind, orders, eligible);
   const sites = nativeInstitutionPlan(state, faction.id, state.world.scenario?5:2, [palace.x, palace.y, state.world.width, state.world.height,
@@ -328,7 +329,7 @@ function* establishResearch(state: GameState, faction: Faction, palace: Building
   const needs = cityDevelopmentNeeds(state, palace);
   if (governorPermissions(palace).housing && needs.housing - needs.population <= needs.housing * .25
     && (yield* improveHousing(state, faction, palace, orders))) return true;
-  if (faction.gold < LIBRARY_COST + factionCommittedBudget(state, faction).upkeep) return true;
+  if (faction.gold < LIBRARY_COST * marbleConstructionMultiplier(state, faction.id) + factionCommittedBudget(state, faction).upkeep) return true;
   return (yield* buildCityUpgrade(state, faction, palace, 'library', orders));
 }
 
@@ -370,8 +371,9 @@ function* developUnlockedBuildings(state: GameState, faction: Faction, palace: B
     ['supplyDepot', SUPPLY_DEPOT_COST], ['fort', FORT_GOLD]] as const)
     .map(([kind,cost],index)=>({kind,cost,rank:factionAIDecision(state,faction.id,'developmentRank',index)}))
     .sort((a,b)=>a.rank-b.rank);
+  const marble = marbleConstructionMultiplier(state, faction.id);
   for (const {kind,cost} of upgrades) {
-    if (!isBuildingUnlocked(faction, kind) || faction.gold < cost + reserve
+    if (!isBuildingUnlocked(faction, kind) || faction.gold < cost * marble + reserve
       || kind === 'guardPost' && !canSustainFactionDefense(state, faction, kind)
       || kind === 'fort' && factionCommittedBudget(state, faction).surplus < FORT_UPKEEP + Math.max(5, faction.population * .1)
       || owned.some(building => building.kind === kind && (kind !== 'guardPost' && kind !== 'healerShack' && kind !== 'fort' || ownedByCity(state, building, palace)))) continue;
@@ -382,7 +384,8 @@ function* developUnlockedBuildings(state: GameState, faction: Faction, palace: B
 /** Spend less than the equivalent new farmland, then let the normal governor
  * fill the freshly irrigated neighborhood before expanding farther away. */
 function* improveFarms(state: GameState, faction: Faction, palace: Building, orders: DevelopmentOrders): Generator<DevelopmentWork, boolean, void> {
-  if (!isBuildingUnlocked(faction, 'irrigation') || faction.gold < IRRIGATION_GOLD + factionCommittedBudget(state, faction).upkeep
+  if (!isBuildingUnlocked(faction, 'irrigation')
+    || faction.gold < IRRIGATION_GOLD * marbleConstructionMultiplier(state, faction.id) + factionCommittedBudget(state, faction).upkeep
     || (faction.constructionPauseUntil?.irrigation ?? 0) > state.time) return false;
   for (const point of factionIrrigationSites(state, palace)) {
     const valid = orders.validate(faction.id, 'irrigation', point.x, point.y).ok; yield 'validation';

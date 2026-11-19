@@ -13,10 +13,13 @@ import { MILITARY_ACADEMY_GOLD } from '../../src/game/military-academy';
 
 export const ECONOMY_INTERVAL = 30;
 export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; production: number }> = {
+  fountain: { food: 0, gold: 150, production: 0 },
+  marketplace: { food: 0, gold: 150, production: 0 },
   hospital: { food: 0, gold: 450, production: 0 },
   apartments: { food: 0, gold: 300, production: 0 },
   factory: { food: 0, gold: 600, production: 0 },
   goldMine: { food: 0, gold: 0, production: 0 },
+  scoutTower: { food: 0, gold: 0, production: 0 },
   militaryAcademy: { food: 0, gold: MILITARY_ACADEMY_GOLD, production: 0 },
   foundry: { food: 0, gold: 600, production: 0 },
   whalingPost: { food: 0, gold: 300, production: 0 },
@@ -29,6 +32,7 @@ export const BUILD_COSTS: Record<BuildingKind, { food: number; gold: number; pro
   dock: { food: 0, gold: 100, production: 0 },
   observationPost: { food: 0, gold: 20, production: 0 },
   villageTent: { food: 0, gold: 0, production: 0 },
+  frontierVillage: { food: 0, gold: 0, production: 0 },
   scoutLodge: { food: 0, gold: 200, production: 0 },
   ballista: { food: 0, gold: 300, production: 0 },
   siegeCannon: { food: 0, gold: 500, production: 0 },

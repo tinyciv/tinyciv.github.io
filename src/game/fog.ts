@@ -16,6 +16,7 @@ import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision, withSimulationReads } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
 import { galleyFootprintCells } from './galley-footprint';
+import { rustEngine } from './rust-engine';
 
 /** Visibility and last-seen memories are sampled at half the ordinary sensing
  * rate. Rendering can continue interpolating fades between these snapshots. */
@@ -206,7 +207,8 @@ function rememberValidation(state: GameState, frame: FogFrame, view: FogView, re
 }
 
 export const unitSightRadius = (unit: Pick<Unit, 'kind' | 'observationPost'>): number => unit.observationPost && !unit.observationPost.retreating ? 21 : unit.kind === 'leader' || unit.kind === 'sailboat' ? 9 : isSoldier(unit) || unit.kind === 'scout' || unit.kind === 'militia' ? 7 : 6;
-export const buildingSightRadius = (building: Pick<Building, 'kind'>): number => building.kind === 'tower' ? 18 : building.kind === 'ballista' || building.kind === 'siegeCannon' ? BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS + .65 : building.kind === 'woodenTower' || building.kind === 'fort' ? 12 : building.kind === 'palace' ? 9 : building.kind === 'monument' ? 7 : isWallKind(building.kind) ? 3 : 6;
+const SCOUT_TOWER_SIGHT = rustEngine.scout_tower_sight();
+export const buildingSightRadius = (building: Pick<Building, 'kind'>): number => building.kind === 'scoutTower' ? SCOUT_TOWER_SIGHT : building.kind === 'tower' ? 18 : building.kind === 'ballista' || building.kind === 'siegeCannon' ? BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS + .65 : building.kind === 'woodenTower' || building.kind === 'fort' ? 12 : building.kind === 'palace' ? 9 : building.kind === 'monument' ? 7 : isWallKind(building.kind) ? 3 : 6;
 
 function unitSightSource(world: World, unit: Unit): SightSource {
     const x = quantize(unit.x), y = quantize(unit.y);
@@ -295,7 +297,7 @@ function refreshSightSources(state: GameState, fog: CachedFog): boolean {
     if (frame?.staticSources && frame.staticKey === staticKey) records.push(...frame.staticSources);
     else {
     const start = records.length;
-    for (const b of state.buildings) if ((b.faction === playerFaction(state) || ['tower', 'woodenTower', 'fort', 'palace'].includes(b.kind) && diplomaticAllies(state, playerFaction(state), b.faction)) && buildingReady(b) && !['road', 'bridge', 'irrigation', 'ruin'].includes(b.kind)) {
+    for (const b of state.buildings) if ((b.faction === playerFaction(state) || ['tower', 'woodenTower', 'scoutTower', 'fort', 'palace'].includes(b.kind) && diplomaticAllies(state, playerFaction(state), b.faction)) && buildingReady(b) && !['road', 'bridge', 'irrigation', 'ruin'].includes(b.kind)) {
         const x = b.x + buildingWidth(b) / 2, y = b.y + buildingHeight(b) / 2;
         add(b, x, y, buildingSightRadius(b));
     }

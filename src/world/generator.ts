@@ -1,4 +1,6 @@
-import { applyTundra } from './tundra';
+import { applyTundra, tundraBoundary } from './tundra';
+import { generateWinterTerrain } from './frost-native';
+import { POLAR_SEA_LANE_WIDTH } from './polar-sea';
 import { applyScenarioOceanChannel } from './scenario-geography';
 import { tundraStartAllowed } from '../game/tundra-starts';
 import { scatterDesertStones } from './desert-stones';
@@ -25,6 +27,7 @@ import { applyStonePlains } from './stone-plains';
 import { applyDesertTransitions } from './desert-regions';
 import { MIN_FACTION_START_DISTANCE, packSettlementSites, spreadFactionStarts } from './starting-sites';
 import { generateWorldFeatures } from './features-native';
+import { settlementCoreMask } from './environment-fields';
 
 const PATCH = 24;
 const OVERLAP = 7;
@@ -436,13 +439,16 @@ export function settlements(tiles: Tile[], width: number, height: number, random
   return { capitals: centers(chosen), secondary: centers(secondary) };
 }
 
-/** Broad sandy stretches occupy half of the ocean-facing shore. A separate
+/** Broad sandy stretches occupy part of the temperate and warm shore. A separate
  * stream keeps beach scenery from changing rivers or settlement placement. */
 function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeParameters): void {
   const { width, height, tiles } = world;
   const random = seededRandom(`${world.seed}:beaches:${attempt}`);
   const noise = createNoise2D(random);
-  const shore: { index: number; score: number; depth: number }[] = [];
+  const polarDistance = tundraBoundary(world);
+  const warm = new Float32Array(tiles.length);
+  const settlementClearings = settlementCoreMask(world);
+  const shore: { index: number; score: number; depth: number; warmth: number }[] = [];
   const distance = new Uint8Array(tiles.length);
   const owner = new Int32Array(tiles.length).fill(-1);
   const sandy = new Uint8Array(tiles.length);
@@ -461,17 +467,20 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
     neighbors(i, next => { if (tiles[next].terrain === 'coast' || tiles[next].terrain === 'ocean') oceanFacing = true; });
     if (!oceanFacing) continue;
     const x = i % width, y = Math.floor(i / width);
-    shore.push({ index: i, score: noise(x * .045, y * .045) + noise(x * .11 + 67, y * .11 - 23) * .1,
-      depth: Math.max(1, Math.min(3, Math.round((2 + noise(x * .075 - 41, y * .075 + 19) * 1.4) * parameters.beachWidth))) });
+    const warmth = clamp(polarDistance(x, y) / Math.max(3, height * .05));
+    warm[i] = warmth;
+    const depth = clamp((2 + noise(x * .075 - 41, y * .075 + 19) * 1.4) * parameters.beachWidth, 1, 3);
+    shore.push({ index: i, warmth,
+      score: noise(x * .045, y * .045) + noise(x * .11 + 67, y * .11 - 23) * .1 - (1 - warmth) * 1.4,
+      depth: Math.round(1 + (depth - 1) * warmth) });
     distance[i] = 1; owner[i] = i; queue.push(i);
   }
-  // Ranking a smooth field, rather than flipping a coin per tile, gives long
-  // beach/grass runs while keeping the visible sandy coastline near 50%.
+  // A smooth ranking makes coherent beaches. Reduce the budget near the caps
+  // so excluded polar coast does not concentrate sand on other shores.
   shore.sort((a, b) => b.score - a.score || a.index - b.index);
-  const settlementSites = [...world.spawns, ...world.secondarySpawns ?? []];
-  const beachCandidates = shore.filter(({ index }) => !settlementSites.some(spawn =>
-    Math.abs(index % width - Math.floor(spawn.x)) <= 2 && Math.abs(Math.floor(index / width) - Math.floor(spawn.y)) <= 2));
-  for (const { index, depth } of beachCandidates.slice(0, Math.round(shore.length * parameters.beachFraction))) {
+  const beachCandidates = shore.filter(({ index, warmth }) => warmth > 0 && tiles[index].terrain !== 'tundra' && !settlementClearings[index]);
+  const beachBudget = Math.round(beachCandidates.reduce((sum, candidate) => sum + candidate.warmth, 0) * parameters.beachFraction);
+  for (const { index, depth } of beachCandidates.slice(0, beachBudget)) {
     sandy[index] = 1; beachDepth[index] = depth;
   }
   // The nearest shore owns its inward strip. Grass shores cannot be swallowed
@@ -485,19 +494,21 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
     });
   }
   const raisedApron = reliefApron(tiles, width, height);
-  const palms: number[] = [];
+  const palms = new Uint8Array(tiles.length);
   for (const i of queue) {
     const tile = tiles[i], x = i % width, y = Math.floor(i / width), source = owner[i];
-    const settlementClearing = settlementSites.some(spawn => Math.abs(x - Math.floor(spawn.x)) <= 2 && Math.abs(y - Math.floor(spawn.y)) <= 2);
-    if (settlementClearing || raisedApron[i] || tile.marsh) continue;
-    if (sandy[source] && distance[i] <= beachDepth[source]) {
+    if (settlementClearings[i] || raisedApron[i] || tile.marsh || tile.terrain === 'tundra') continue;
+    if (sandy[source] && distance[i] <= beachDepth[source] && polarDistance(x, y) > 0) {
       tile.terrain = 'desert'; tile.overlay = 'none'; tile.beach = true;
       Object.assign(tile, terrainYields(tile.terrain, tile.overlay));
       neighbors(i, next => { if (tiles[next].terrain === 'river' || tiles[next].terrain === 'lake') tile.food = 1; });
       // A lone palm is scenery, not dense forest cover. Keep enough spacing
       // that these remain occasional landmarks instead of another tree stand.
-      if (random() < .07 * parameters.palmDensity && palms.every(other => Math.hypot(other % width - x, Math.floor(other / width) - y) >= 3)) {
-        tile.palm = true; palms.push(i);
+      if (random() < .07 * parameters.palmDensity * warm[source] && !palms[i]) {
+        tile.palm = true;
+        for (let py = Math.max(0, y - 2); py <= Math.min(height - 1, y + 2); py++)
+          for (let px = Math.max(0, x - 2); px <= Math.min(width - 1, x + 2); px++)
+            palms[py * width + px] = 1;
       }
     } else if (distance[i] === 1 && (tile.terrain === 'plains' || tile.terrain === 'desert')) {
       // Both dry biomes use the native sand tile. Leaving them on the other
@@ -560,6 +571,9 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   if (oceanChannelWidth > 0) applyScenarioOceanChannel(land, width, height, oceanChannelWidth);
   const plan = !profile.compact ? createLandformPlan(seed, width, height, land, landformFamily, parameters) : undefined;
   if (plan) shapeLandformCoasts(land, width, height, plan);
+  const laneCells = POLAR_SEA_LANE_WIDTH * width;
+  land.fill(0, 0, laneCells);
+  land.fill(0, land.length - laneCells);
   const inland = distanceField(land, width, height, 0);
   const offshore = distanceField(land, width, height, 1);
   const tiles: Tile[] = [];
@@ -608,7 +622,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   yield checkpoint(.47, 'Forming wetlands');
   // Sediment builds coastal wetlands only after the upstream landforms and
   // channel network are complete. Settlement and beach placement respect them.
-  world.riverDeltas = options.riverDeltas === false ? [] : generateRiverDeltas(world);
+  world.riverDeltas = options.riverDeltas === false ? [] : generateRiverDeltas(world, POLAR_SEA_LANE_WIDTH);
   // Refresh base yields after waterways are carved, adding riverside fertility.
   for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
     const i = y * width + x, tile = tiles[i];
@@ -632,10 +646,10 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   world.secondarySpawns = sites.secondary;
   addCoastalBeaches(world, attempt, parameters);
   applyDesertTransitions(world);
-  // Plant after the final waterways and coast features so their banks leave
-  // the same walkable woodland gaps as ordinary terrain.
-  applyTundra(world, parameters);
   generateWorldFeatures(world);
+  // Native landforms can add new dry shore, so finalize polar ground before
+  // relief palettes, vegetation and resources are selected.
+  applyTundra(world, parameters);
   if (options.ledges ?? LEDGES_ENABLED) generateLedges(world, parameters.reliefCoverage);
   yield checkpoint(.78, 'Growing woodland');
   applyTerrainEcology(world, parameters);
@@ -645,6 +659,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   assignRegionalResources(world);
   applyStonePlains(world);
   scatterDesertStones(world);
+  generateWinterTerrain(world);
   yield checkpoint(1, 'Terrain ready');
   return world;
 }

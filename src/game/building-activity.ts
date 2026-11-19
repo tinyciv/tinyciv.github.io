@@ -2,7 +2,7 @@ import { playerFaction } from './player-context';
 import { buildingArtTop, buildingReady, buildingWidth, buildingHeight, isFarmKind, type Building, type GameState, type Point } from './types';
 
 export const BUILDING_ACTIVITY_RANGE = 3;
-export type BuildingActivityKind = 'fort' | 'governor' | 'blacksmith' | 'farm' | 'guardPost' | 'archeryRange' | 'library' | 'forum' | 'scoutLodge' | 'stable' | 'barracks' | 'village' | 'shipyard' | 'foundry' | 'militaryAcademy';
+export type BuildingActivityKind = 'fort' | 'governor' | 'blacksmith' | 'farm' | 'guardPost' | 'archeryRange' | 'library' | 'forum' | 'scoutLodge' | 'stable' | 'barracks' | 'village' | 'shipyard' | 'foundry' | 'militaryAcademy' | 'marketplace';
 
 /** Each of these buildings opens the same faction-wide army controls. */
 export const isCompositionBuilding = (building: Building): boolean =>
@@ -11,7 +11,7 @@ export const isCompositionBuilding = (building: Building): boolean =>
 /** Add a kind here when another building gains an activity panel. */
 export function buildingActivityKind(building: Building): BuildingActivityKind | undefined {
   return building.villageId !== undefined || building.kind === 'villageTent' ? 'village' : building.kind === 'palace' ? 'governor' : isFarmKind(building.kind) ? 'farm'
-    : ['fort', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'forum', 'scoutLodge', 'stable', 'barracks', 'shipyard', 'foundry', 'militaryAcademy'].includes(building.kind) ? building.kind as BuildingActivityKind : undefined;
+    : ['fort', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'forum', 'scoutLodge', 'stable', 'barracks', 'shipyard', 'foundry', 'militaryAcademy', 'marketplace'].includes(building.kind) ? building.kind as BuildingActivityKind : undefined;
 }
 
 /** Reach is measured from the actual footing, including its south/east edges. */

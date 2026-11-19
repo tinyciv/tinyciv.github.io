@@ -32,6 +32,7 @@ The game primarily uses **Shade's Puny asset family**, licensed **CC0 1.0**. The
 - A well sharing a house tile uses approved overlay **2A** from `scratch/2026-10-27-house-well-overlays/gallery.html`: the complete narrow well at the original pixel scale, offset (-6,+3) native pixels / (-12,+6) world pixels to the front left. Houses and wells keep independent ownership-matched entities. The renderer draws the well in front regardless of build order, and both remain individually selectable. Standalone wells use the same narrow sprite centered in their tile.
 - A tower sharing a completed, same-owner stone wall uses the approved `public/assets/buildings/stone-wall-tower.png`: a 16×28 sprite with a wooden lookout platform and red banner, approved on 2026-11-08 in `scratch/2026-11-08-watchtower-ingame-review/index.html`. It is drawn after the joined wall in either build order, at 32×56 world pixels with native ground anchor `(8,28)` and offset `(0,-24)`. `stone-wall-tower-source.json` records the imagegen source, native-grid conversion, atlas palette and SHA-256. The PNG is copied unchanged from the approved review; its red banner retains the selected colors. This generated addition is not part of Shade's original CC0 atlas. All other wooden towers use the approved timber counterpart described below. A queued stone upgrade retains the timber artwork until the stone wall completes; the artwork cache distinguishes the support material. The upper tower and lower wall face remain separately selectable.
 - Wooden towers use `public/assets/buildings/palisade-tower.png` by default, both standalone and sharing a completed, same-owner palisade. Approved on 2026-11-08, it is the matching timber design with a red banner, one-native-pixel dark side outlines, and the requested three horizontal lookout boards. The 16×28 sprite uses the same `(8,28)` native ground anchor and `(0,-24)` world offset as the stone version. `src/game/palisade-tower-art.ts` renders the exact final PNG at 2× native scale; `palisade-tower-source.json` records its SHA-256 and preparation history. Its wood uses the six colors found in the adjacent palisade runs. It is generated artwork with a Puny palette reference, not an original asset from the purchased atlas. Gameplay and placement previews share this default; a completed, same-owner stone wall selects the stone version instead.
+- Scout towers use the approved 3C Split shaft from `scratch/2026-11-18-wooden-scouting-towers-16x28/`. PixelLab edited the existing wooden tower and inpainted the open shaft below the plank deck. The native 16×28 sprite uses a 1×1 footprint and ground anchor `(8,28)`. The lossless runtime WebP preserves the approved pixels.
 
 ## Miniworld farm fields
 
@@ -133,6 +134,10 @@ License: [Creative Commons CC0 1.0 Universal](https://creativecommons.org/public
 Settlements use approved **1B — Heavy frame** from `scratch/2026-11-01-wooden-palace/gallery.html`. The production `public/assets/buildings/wooden-settlement.png` is the exact reviewed 32×34 export, with native ground anchor `(16,32)`, drawn at 2× scale on the existing 2×2 footprint. Its source record retains generation and export provenance. Runtime faction coloring affects only the blue roof; timber and transparency retain their approved pixels.
 
 After Fortification, the settlement popup offers a one-time upgrade to a Keep with 6,500 maximum HP. Keeps use the previous stone settlement: two original Puny World 16×32 atlas buildings at `(192,416)` and `(208,416)`, with the existing faction recoloring. Both tiers share their production artwork with placement previews and HUD portraits.
+
+The approved open-front sprite for the settler-founded Village is `public/assets/buildings/frontier-village.png`, a native 32×32 PixelLab edit on a 2×2 footprint. PixelLab generated the primitive village from the wooden Town, then cleared the detached foreground hut. The approved export uses that cleared region and retains the original art around it. `frontier-village-source.json` records both edits and the approved hash. The runtime WebP preserves the PNG's pixels and transparency.
+
+`src/game/frontier-village-art.ts` applies the shared faction shading to the central roof and four corner roofs. The tint uses the approved roofing swatches and preserves the timber, trim and transparency. The 2×2 building renderer caches the result per faction color.
 
 ## Primitive library
 
@@ -281,6 +286,15 @@ The user's original watermill and chapel reference images were processed through
 - Forum controls and achievement nodes reuse the existing imagegen-made culture book and forged research glyphs; none are cropped from building or character sprites. Original generation records remain in `public/assets/ui/resources/source.json` and `public/assets/ui/research/forged/source.json`.
 - The twelve later cultural unlocks reuse these same generated glyphs for household, legal, craft, agricultural, and military branches. No additional raster artwork is introduced.
 
+## Marketplace (2026-11-17)
+
+- `public/assets/buildings/marketplace.png` preserves the selected 1C Fountain Agora from PixelLab's `create-object-pro-flash` endpoint. The 32×32 sprite was grounded in the existing thermal-bath art and uses the shared 2×2 footprint and nearest-neighbor rendering.
+- `scratch/2026-11-17-agora-marketplace/` retains the generation prompt, reference, and original sprite. The runtime build encodes the same pixels losslessly.
+
+## Fountain (2026-11-18)
+
+`public/assets/buildings/fountain-animation.png` contains nine native 24×24 frames of the approved PixelLab 1C Weathered basin. The renderer centers the stone basin in one tile and plays the water loop at 180 ms per frame. The source record contains the prompts, grounding crop, and frame hashes.
+
 ## Granary (2026-11-14)
 
 - `public/assets/buildings/granary.png` is a byte-identical copy of the existing PixelLab `wooden_granary_front_facing/wooden_granary_front_facing/rotations/wooden_granary_front_facing.png` under `public/assets/pixellab-grounding/buildings/`. Its 32×32 pixels occupy a 2×2 footprint at the shared native scale. The visible ground anchor is `(16,31)`; a one-native-pixel vertical offset compensates for the transparent last row. No artwork was generated or edited for this integration.
@@ -326,11 +340,25 @@ The static integration review is in `scratch/2026-11-15-relief-integration/`; it
 
 ## Mountain ore outcrops and mine entrances
 
-`public/assets/resources/mountain-ore/` contains all eighteen approved imagegen ore silhouettes from `scratch/2026-11-15-mountain-ore-options/`: compact nodules, foothill clumps and exposed seams, each with two shapes in copper, iron and gold. The original PNGs are copied unchanged; prompts and SHA-256 digests accompany them. `src/game/ore-art.ts` crops opaque bounds and caches 16×16, 32×32 and 48×32 sprites, with the approved biome palettes applied to host rock while mineral colors remain intact.
+`public/assets/resources/mountain-ore/` archives the eighteen November 15 ore sprites, including compact nodules, foothill clumps and exposed seams in copper, iron and gold. Their original PNGs, prompts and SHA-256 digests accompany them.
 
-`rust/src/ore.rs` uses a Bevy schedule to place 2×2, 3×3 and 5×3 footprints on dry flat ground touching hills or mountains. It preserves settlement space, woodland openings, deposit spacing and a flat southern approach. Resource development retains its per-tile cost, including partial purchases. The renderer draws each complete clump once, clips it to explored cells, and fits the existing timber mine doorway into its rock face after development. Ore bodies and mine entrances render at 150% of their original scale, centered inside the enlarged footprints. A partly developed deposit routes miners around the entire rock footprint. Resource outlines draw each clump once at its true origin. Stone quarries retain their existing art.
+`rust/src/ore.rs` uses a Bevy schedule to place 2×2, 3×3 and 5×3 footprints on dry flat ground touching hills or mountains. It preserves settlement space, woodland openings, deposit spacing and a flat southern approach. Resource development retains its per-tile cost, including partial purchases. The renderer draws each complete clump once, clips it to explored cells, and fits the existing timber mine doorway into its rock face after development. A partly developed deposit routes miners around the entire rock footprint. Resource outlines draw each clump once at its true origin.
+
+`public/assets/resources/ore-formations/atlas.webp` holds the six selected outcrops with PixelLab surface detail at 16 pixels per tile. For smaller footprints the renderer scales the clumps down uniformly. Each silhouette has a developable stone version and copper, iron and gold variants. PixelLab edited the ore veins directly into the original rock faces using the legacy ore sprites as color references. The native stone sources are in `scratch/2026-11-17-native-ore-outcrops/`. The vein edits and packing records are in `scratch/2026-11-17-ore-veins/`.
 
 Gold ore participates in development, AI purchases, miner visits, navigation and resource selection. A completed gold-mining visit pays the native reward of two gold per developed tile, recorded under Mining in the gold ledger and processed by the usual income rules. Unfinished visits earn nothing. Static production-art and generated-terrain previews are in `scratch/2026-11-15-ore-integration/`; no game or simulation loop is started by the preview renderer.
+
+## Marble quarry
+
+`public/assets/resources/marble-quarry.webp` packs two native 32×32 PixelLab sprites. A low marble seam switches to a recessed excavation with cut benches and staged blocks when developed. Native generation places marble on rare 2×2 sites, at most one per starting faction region. Each faction can operate one quarry. Completing all four tiles grants 10% off construction throughout the faction while it controls the full footprint. The lower profiles, source records and in-game comparison are in `scratch/2026-11-18-sunken-marble-quarry/`.
+
+## Peat and wild grapes
+
+`public/assets/resources/peat-and-grapes.webp` packs the approved native 32×32 PixelLab frames in two rows, peat above wild grapes, each with its wild and developed state. The source frames and generation records are in `scratch/2026-11-18-resource-proposals/`. Both resources use rare 2×2 sites with a southern approach.
+
+## Open-cut coal mine
+
+`public/assets/resources/coal-open-cut.webp` packs the approved option B PixelLab sprites at 48×48 pixels per state, with the natural exposure on the left and the terraced mine on the right. Coal deposits use a single 3×3 footprint on grassland or plains with room for a southern approach. Original frames and source records are in `scratch/2026-11-18-coal-resource/`.
 
 ## Routing-style quest markers (2026-11-15)
 

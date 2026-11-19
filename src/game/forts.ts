@@ -120,7 +120,7 @@ export function rebuildFort(state: GameState, fort: Building): { ok: boolean; me
   const data = fortState(state, fort);
   data.destroyed = false; data.funded = false; data.nextUpkeepAt = -1;
   fort.hp = fort.maxHp;
-  queueConstruction(fort, state.time, status.cost, state);
+  queueConstruction(fort, state.time, status.cost, state, true);
   invalidateNavigation(state); markWorldChanged(state.world); invalidateSettlementDecisions(state);
   return { ok: true, message: `Fort rebuilding ordered for ${status.cost} gold. The Skirmisher Brigade upgrade is preserved.` };
 }

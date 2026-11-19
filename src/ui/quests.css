@@ -3,3 +3,4 @@
 .quest-progress { color: #f2d675; }
 .quest-reward { color: #ffe7a0; font-weight: 700; }
 .quest-benefit { color: var(--popup-muted); }
+.quest-dialog[data-quest-kind="7"] .quest-benefit { color: var(--science-color); }

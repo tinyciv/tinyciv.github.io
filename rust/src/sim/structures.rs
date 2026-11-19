@@ -12,7 +12,7 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use rustc_hash::FxHashMap;
 
 use crate::jsmath::hypot2;
-use super::kinds::building::{defensive, farm, height, route, wall, width, IRRIGATION, PALACE, RUIN, WOODEN_TOWER};
+use super::kinds::building::{defensive, farm, height, route, wall, width, FOUNTAIN, IRRIGATION, PALACE, RUIN, WOODEN_TOWER};
 
 fn obstructs(row: &Structure) -> bool {
     row.flags & PRESENT != 0 && !farm(row.kind) && !route(row.kind) && row.kind != IRRIGATION && row.kind != RUIN
@@ -21,6 +21,7 @@ fn obstructs(row: &Structure) -> bool {
 pub const ALIVE: u32 = 1;
 pub const PRESENT: u32 = 2;
 pub const READY: u32 = 4;
+pub const FOUNTAIN_RADIUS: i32 = 8;
 
 /// Candidate classes for nearest/near queries.
 pub const CLASS_REFUGE: u32 = 0;
@@ -84,6 +85,7 @@ pub struct StructureIndex {
     wooden_tower_cells: CellCounts,
     /// Footprint cells of living buildings that are neither farms nor irrigation.
     solid_cells: CellCounts,
+    fountain_coverage: FxHashMap<(i64, usize), u16>,
     defenses: BTreeMap<i64, Vec<f64>>,
     output: Vec<f64>,
     scratch: Vec<(f64, u64, i64)>,
@@ -96,6 +98,7 @@ impl StructureIndex {
     pub fn new(width: i32) -> Self {
         Self { width: width.max(1) as i64, ordered: BTreeMap::new(), by_faction: BTreeMap::new(), revision: 0.0, journal: VecDeque::new(), journal_floor: 0.0,
             wall_cells: CellCounts::default(), wooden_tower_cells: CellCounts::default(), solid_cells: CellCounts::default(),
+            fountain_coverage: FxHashMap::default(),
             defenses: BTreeMap::new(), output: vec![0.0], scratch: Vec::new(), proximity: FxHashMap::default(), clearance: BTreeSet::new() }
     }
     pub fn width(&self) -> i32 { self.width as i32 }
@@ -115,6 +118,32 @@ impl StructureIndex {
                 self.solid_cells.add(cell, delta);
             } }
         }
+        if row.kind == FOUNTAIN && row.flags & READY != 0 {
+            self.count_fountain_cells(row, delta);
+        }
+    }
+
+    // Count coverage by home tile and owner. Fountain lifecycle updates touch a
+    // fixed area and overlapping fountains each keep their own contribution.
+    fn count_fountain_cells(&mut self, row: &Structure, delta: i32) {
+        let faction = faction_key(row.faction);
+        for dy in -FOUNTAIN_RADIUS..=FOUNTAIN_RADIUS {
+            for dx in -FOUNTAIN_RADIUS..=FOUNTAIN_RADIUS {
+                if dx.pow(2) + dy.pow(2) > FOUNTAIN_RADIUS.pow(2) { continue; }
+                let Some(cell) = self.cell(row.x + f64::from(dx), row.y + f64::from(dy)) else { continue; };
+                let key = (faction, cell);
+                if delta > 0 {
+                    *self.fountain_coverage.entry(key).or_default() += 1;
+                } else if let std::collections::hash_map::Entry::Occupied(mut entry) = self.fountain_coverage.entry(key) {
+                    *entry.get_mut() -= 1;
+                    if *entry.get() == 0 { entry.remove(); }
+                }
+            }
+        }
+    }
+
+    pub fn fountain_covers(&self, faction: f64, x: f64, y: f64) -> bool {
+        self.cell(x, y).is_some_and(|cell| self.fountain_coverage.contains_key(&(faction_key(faction), cell)))
     }
 
     fn index_proximity(&mut self, row: &Structure, insert: bool) {

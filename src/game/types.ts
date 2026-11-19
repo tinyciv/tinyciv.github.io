@@ -10,8 +10,8 @@ export type Overlay = 'none' | 'forest' | 'jungle' | 'swamp' | 'volcano' | 'glac
 export type TreeClass = 'tropical' | 'dry' | 'temperate' | 'conifer' | 'snowy';
 export type Biome = 'temperate' | 'taiga' | 'tundra' | 'rainforest' | 'savanna' | 'steppe' | 'desert' | 'wetland' | 'alpine';
 export type HillBiome = 'desert-hills' | 'forest-hills';
-export type RegionalResource = 'clay' | 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives' | 'fish';
-export type ResourceWorkKind = 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives';
+export type RegionalResource = 'clay' | 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives' | 'fish' | 'marble' | 'peat' | 'grapes' | 'coal';
+export type ResourceWorkKind = Exclude<RegionalResource, 'clay' | 'fish'>;
 export interface ResourceWorkSite {
     id: number;
     faction: number;
@@ -42,6 +42,9 @@ export interface ResourceWork {
     nextPlanAt?: number;
 }
 export interface Tile {
+    /** One-based native atlas cell for a permanent winter pocket. */
+    snow?: number;
+    seaIce?: number;
     /** 1..3 volcanoes, 4..6 hot mud pools; every occupied cell is volcanic terrain. */
     geothermal?: 1 | 2 | 3 | 4 | 5 | 6;
     /** Top-left cell index of this feature's complete 2x2 footprint. */
@@ -64,7 +67,7 @@ export interface Tile {
     resource?: RegionalResource;
     /** Connected geological deposit/grove identity, stable within this world. */
     resourceGroup?: number;
-    /** Complete native ore footprint; all members reference its top-left cell. */
+    /** Complete native deposit footprint; all members reference its top-left cell. */
     oreAnchor?: number;
     oreFamily?: 0 | 1 | 2;
     oreVariant?: 0 | 1;
@@ -177,7 +180,7 @@ export interface World {
     source: string;
     revision?: number;
 }
-export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy' | 'hospital' | 'apartments' | 'factory' | 'goldMine';
+export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy' | 'hospital' | 'apartments' | 'factory' | 'goldMine' | 'marketplace' | 'scoutTower' | 'frontierVillage' | 'fountain';
 export interface BridgeConstruction extends Point {
     readonly width: number;
     readonly height: number;
@@ -192,7 +195,7 @@ export type HouseStyle = 'shack' | 'hovel' | 'cottage' | 'villa';
 export const isWallKind = (kind: BuildingKind): boolean => kind === 'wall' || kind === 'palisade';
 /** Farms are uninhabited, pathable single-tile crop plots. */
 export const isFarmKind = (kind: BuildingKind): boolean => kind === 'camp' || kind === 'shack' || kind === 'cottage';
-export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory'];
+export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'marketplace', 'fountain'];
 export type WarshipClass = 'warGalley' | 'caravel' | 'frigate';
 export type NavalWeapon = 'empty' | 'ballista' | 'cannon';
 export type MarineType = 'archer' | 'musketman';
@@ -210,6 +213,7 @@ export interface Warship {
     attackTarget?: number; guns?: NavalGunner[]; passengers?: number[]; shore?: Point; reinforcing?: boolean;
 }
 export interface Building extends Point {
+    marketTrade?: { city: number; faction: number; destination: number };
     scenarioCity?: boolean;
     explorationUpkeepUntil?: number;
     /** Previous sovereign for negotiated return of captured towns. */
@@ -323,7 +327,7 @@ export interface Building extends Point {
         ignoreForbidden?: boolean };
     /** Gold paid for this completed road or bridge. Generated roads have no purchase cost. */
     roadBuildGold?: number;
-    construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number; bridge?: BridgeConstruction };
+    construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; hideUntilStarted?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number; bridge?: BridgeConstruction };
 }
 export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich' | 'musketman' | 'fieldCannon';
 // `kind` is an observed scalar on live entities: read it once per call.
@@ -363,7 +367,7 @@ export interface LeaderRespawnState {
     position: Point;
 }
 export interface Unit extends Point {
-    fieldCannon?: { nextUpkeepAt: number; funded: boolean; shotAt?: number };
+    fieldCannon?: { nextUpkeepAt: number; funded: boolean; shotAt?: number; supplyCity?: number };
     /** Immutable ranger specialty uses the archer combat and art pipeline. */
     ranger?: boolean;
     explorationRefugee?: Point & { city: number };
@@ -681,6 +685,11 @@ export interface TradeRoute {
     distance: number;
     /** Population-supported rate fixed at departure, paid on arrival. */
     legValue?: { distance: number; originShare: number; partnerShare: number; goldPerSecond: number };
+    marketLeg?: { gold: number; science: number; partnerScience: number };
+    lastMarketDelivery?: { gold: number; science: number; partnerScience: number; to: number };
+    marketLand?: boolean;
+    marketManaged?: boolean;
+    pendingMarketChange?: boolean;
     /** Active game seconds, weighted by the river premium while aboard. */
     transitSeconds?: number;
     partnerFaction?: number;
@@ -704,7 +713,8 @@ export interface RetinueSquad {
     kills: number;
 }
 export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding' | 'compoundBow' | 'gunpowder' | 'stirrups' | 'populism' | 'urbanMilitia'
-    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering' | 'culturalIdentity' | 'roadBuilding' | 'lateenSails' | 'navalEngineering' | 'whaling' | 'fieldCannon' | 'drainage' | 'militaryScience' | 'officerCorps';
+    | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering' | 'culturalIdentity' | 'roadBuilding' | 'lateenSails' | 'navalEngineering' | 'whaling' | 'fieldCannon' | 'drainage' | 'militaryScience' | 'officerCorps' | 'commerce'
+    | 'cropRotation' | 'ironPlows';
 export interface ResearchState {
     /** Resolved project; explicit priorities may refer to later technologies. */
     focus: ResearchBranchId;
@@ -716,6 +726,8 @@ export interface ResearchState {
     funding?: { points: number; remaining: number }[];
     /** Released Science awaiting the next continuous progress step. */
     credit?: number;
+    /** Earned Science available to the research queue with zero gold basis. */
+    tradeCredit?: number;
     /** Gold actually paid for the unspent Science reserve. */
     reservedGold?: number;
     /** Bounded thirty-second Science receipts for the presentation rate. */
@@ -813,7 +825,7 @@ export interface Particle extends Point {
     text: string;
     color: string;
     life: number;
-    kind?: 'hunt' | 'food' | 'damage' | 'healing' | 'exploration';
+    kind?: 'hunt' | 'food' | 'damage' | 'healing' | 'exploration' | 'mining';
     duration?: number;
     direction?: number;
     /** Damaged unit's owner; color is chosen per viewer, including multiplayer. */
@@ -837,6 +849,7 @@ export interface UnitDeath extends Point {
 /** Rust-owned destruction lifetime; the building is a drawing snapshot only. */
 export interface BuildingDestruction extends Point {
     id: number;
+    kind?: BuildingKind;
     width: number;
     height: number;
     faction: number;
@@ -924,6 +937,7 @@ export interface GameState {
     casualties?: BattleCasualty[];
     projectiles?: Projectile[];
     shellImpacts?: ShellImpact[];
+    gunSmoke?: import('./gun-smoke').GunSmoke[];
     selected: number | null;
     selectedType: 'unit' | 'building' | null;
     buildMode: BuildSelection | null;
@@ -1008,18 +1022,20 @@ export interface PlayerControlState {
 }
 export const TILE_SIZE = 32;
 /** Maximum span, for broad spatial queries. Use width/height for footprints. */
-const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine']);
-const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine']);
+const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
+const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
 export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : WIDE_KINDS.has(building.kind) ? 2 : 1;
 export const buildingWidth = (building: Pick<Building, 'kind'>): number => buildingSize(building);
 export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : SQUARE_WIDE_KINDS.has(building.kind) ? 2 : 1;
 /** Northward art overhang, in tiles; collision footprints remain unchanged. */
 export const buildingArtTop = (building: Pick<Building, 'kind' | 'construction'>): number =>
-    building.construction ? 0 : building.kind === 'tower' || building.kind === 'woodenTower' ? -.75 : building.kind === 'barracks' ? -1 : 0;
+    building.construction ? 0 : building.kind === 'tower' || building.kind === 'woodenTower' || building.kind === 'scoutTower' ? -.75 : building.kind === 'barracks' ? -1 : 0;
 export const buildingReady = (building: Building): boolean => building.hp > 0 && !building.construction;
 /** A reservation is open ground until a peasant actually starts working. */
 export const buildingPresent = (building: Building): boolean => building.hp > 0 && (!building.construction
     || building.construction.waitingForBuilder !== true && building.construction.pausedAt === undefined && !building.construction.evacuating);
+export const constructionSiteHidden = ({ construction }: Building): boolean =>
+    !!construction?.hideUntilStarted && construction.waitingForBuilder === true && construction.pausedAt === undefined;
 export const WATER = new Set<Terrain>(['ocean', 'coast', 'river', 'lake']);
 export const isFord = (tile: Tile | undefined): boolean => tile?.terrain === 'river' && tile.overlay === 'ford';
 export function tileAt(world: World, x: number, y: number): Tile | undefined { if (x < 0 || y < 0 || x >= world.width || y >= world.height)

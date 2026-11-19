@@ -1,0 +1,72 @@
+[
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_000.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_000.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_001.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_001.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_002.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_002.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_003.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_003.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_004.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_004.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_005.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_005.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_006.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_006.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_007.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_007.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_008.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_008.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  },
+  {
+    "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/rotations/Water_fountain_front_facing.png",
+    "output": "assets/runtime/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/rotations/Water_fountain_front_facing.webp",
+    "width": 16,
+    "height": 16,
+    "resample": "nearest"
+  }
+]

@@ -5,6 +5,7 @@ import { observeScalars, type ScalarObserver } from './scalar-observer';
 import { scenarioAccessTerrain } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
 import { worldRevisions } from './world-revisions';
+import { resourceBlocksGround } from './resource-terrain';
 import { buildingReady, WATER, type Building, type GameState, type Point } from './types';
 
 const bridges = new SimSlot<DefenseBridge>();
@@ -39,9 +40,10 @@ class DefenseBridge implements ScalarObserver {
       const input = new Float64Array(rustEngine.memory.buffer, pointer, length * 2);
       for (let i = 0; i < length; i++) {
         const tile = state.world.tiles[i];
+        const x = i % state.world.width, y = Math.floor(i / state.world.width);
+        const dry = !tile.marsh && !WATER.has(tile.terrain) && reliefFootprintAllowed(state.world, x, y);
         input[i * 2] = terrain.open[i] | terrain.bridgeGround[i] << 1
-          | Number(!tile.marsh && !WATER.has(tile.terrain)
-            && reliefFootprintAllowed(state.world, i % state.world.width, Math.floor(i / state.world.width))) << 2;
+          | Number(dry) << 2 | Number(dry && !tile.creek && !tile.stair && !resourceBlocksGround(tile, false, i, state.world.width)) << 3;
         input[i * 2 + 1] = terrain.edges[i];
       }
       rustEngine.sim_defense_geometry(this.handle, state.world.width, state.world.height);
@@ -86,4 +88,14 @@ export function nativeDefenseSite(state: GameState, city: Building, budget: numb
 }
 export function nativeDefenseRejected(state: GameState, city: Building): void {
   rustEngine.sim_defense_rejected(simCore(state).handle, city.id);
+}
+
+export function nativeScoutTowerSites(state: GameState, city: Building, blocked: readonly number[]): Point[] {
+  const { handle } = bridge(state);
+  const input = rustEngine.sim_defense_input(handle, blocked.length);
+  new Float64Array(rustEngine.memory.buffer, input, blocked.length).set(blocked);
+  const pointer = rustEngine.sim_scout_tower_sites(handle, city.id, blocked.length);
+  const count = new Float64Array(rustEngine.memory.buffer, pointer, 1)[0];
+  const cells = new Float64Array(rustEngine.memory.buffer, pointer + 8, count * 2);
+  return Array.from({ length: count }, (_, i) => ({ x: cells[i * 2], y: cells[i * 2 + 1] }));
 }

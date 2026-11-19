@@ -4,7 +4,7 @@
   "height": 280,
   "simulatedSeconds": 6710.000000005579,
   "wallSeconds": 40.370369875,
-  "bytes": 4718395,
+  "bytes": 4721418,
   "cities": [
     {
       "id": 1,
@@ -518,5 +518,36 @@
       "turningArea": 268
     }
   ],
-  "fleetRefinementWasmSha256": "b1060edad4a5e0b91373d2d2b318190af105a048dc1f18407e343bf683eb523c"
+  "fleetRefinementWasmSha256": "b1060edad4a5e0b91373d2d2b318190af105a048dc1f18407e343bf683eb523c",
+  "resources": {
+    "clay": 1575,
+    "copper": 165,
+    "iron": 149,
+    "gold": 123,
+    "stone": 148,
+    "salt": 1057,
+    "olives": 578,
+    "fish": 3125
+  },
+  "polarSeaLanes": {
+    "rowsPerEdge": 5,
+    "convertedTiles": 138,
+    "originalSha256": "d98ade2844006ecf4f63739efbe80769deff941c684f57b9cb5299582ed89d0d"
+  },
+  "winterPockets": {
+    "tileCounts": {
+      "seaIce": 527
+    },
+    "generatorWasmSha256": "16579e5edb4b5bcd5b74285a8f99c2742bd2f13e58f1eb6cd00d6d2f8ff1d612",
+    "previousSha256": "b663998715cf197e762d45dc179c87eb4afc4d3834fc39a6fb5d16e36bbf90b6"
+  },
+  "snowBands": {
+    "snowTiles": 1679,
+    "rowRange": [
+      5,
+      30
+    ],
+    "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
+    "previousSha256": "ae111008b0a4f57fbd0c501e343a8ec911a88ebd59c76220e6f9f13b8c3aaf70"
+  }
 }

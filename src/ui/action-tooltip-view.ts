@@ -47,7 +47,15 @@ export class ActionTooltips {
     if (!item.isConnected || !item.getClientRects().length || item.closest('[hidden]')) { this.close(); return; }
     if (!text) { this.close(); return; }
     this.placed = { item, text, at: now };
-    if (this.popup.textContent !== text) this.popup.textContent = text;
+    if (placed?.item !== item || this.popup.textContent !== text) {
+      const cost = item.hasAttribute('data-research') ? /(^|\n)Cost: ([^\n]+? Science)(?= ·|$)/.exec(text) : null;
+      if (cost) {
+        const start = cost.index + cost[1].length + 'Cost: '.length;
+        const value = document.createElement('span');
+        value.className = 'science-text'; value.textContent = cost[2];
+        this.popup.replaceChildren(text.slice(0, start), value, text.slice(start + cost[2].length));
+      } else this.popup.textContent = text;
+    }
     this.popup.hidden = false; item.setAttribute('aria-describedby', this.popup.id);
     const rect = item.getBoundingClientRect(), width = this.popup.offsetWidth, height = this.popup.offsetHeight;
     this.popup.style.left = `${Math.max(8, Math.min(innerWidth - width - 8, rect.x + rect.width / 2 - width / 2))}px`;

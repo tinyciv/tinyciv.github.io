@@ -3,7 +3,7 @@ import { livingEngineer } from './leader-abilities';
 import { buildingWorkForbidden } from './forbidden-work';
 import { bridgeConstructionMembers, constructionHead } from './bridge-construction';
 import { isForbidden } from './forbidden-zones';
-import { type Building, type BuildingKind, type GameState } from './types';
+import { buildingHeight, buildingWidth, type Building, type BuildingKind, type GameState } from './types';
 import { invalidateNavigation } from './pathfinding';
 import { clearConstructionSite } from './construction-clearance';
 import { addPalaceRoadRing } from './palace-roads';
@@ -35,9 +35,14 @@ export function startConstruction(building: Building, time: number, state?: Game
   }
 }
 /** Reserve a footprint immediately, but work begins only when its peasant arrives. */
-export function queueConstruction(building: Building, time: number, paidGold = 0, state?: GameState): void {
+export function queueConstruction(building: Building, time: number, paidGold = 0, state?: GameState, rebuilding = false): void {
   startConstruction(building, time, state);
   if (building.construction) { building.construction.waitingForBuilder = building.kind !== 'ballista' && building.kind !== 'siegeCannon'; building.construction.paidGold = paidGold; }
+  if (building.construction?.waitingForBuilder && (rebuilding || state?.buildingDestructions?.some(effect =>
+    building.x < effect.x + effect.width && building.x + buildingWidth(building) > effect.x
+    && building.y < effect.y + effect.height && building.y + buildingHeight(building) > effect.y))) {
+    building.construction.hideUntilStarted = true;
+  }
   if (state && building.construction && (building.kind === 'road' || building.kind === 'bridge')) {
     const engineer = livingEngineer(state, building.faction);
     if (engineer) { building.construction.engineerId = engineer.id; building.construction.waitingForBuilder = false; }

@@ -12,15 +12,18 @@ import { loadHermitArt } from './hermit-art';
 import { loadQuestArt } from './quest-art';
 import { loadGameFonts } from './game-font';
 import { loadPalaceSprite } from './palace-sprite';
+import { loadFrontierVillageArt } from './frontier-village-art';
 import { loadFortArt } from './fort-art';
 import { loadStoneWallTowerArt } from './stone-wall-tower-art';
 import { loadPalisadeTowerArt } from './palisade-tower-art';
+import { loadScoutTowerArt } from './scout-tower-art';
 import { loadPunyCharacters } from './unit-sprites';
 import { loadFarmArt } from './farm-art';
 import { loadSaltPanArt } from './salt-pan-art';
 import { loadResourceArt } from './resource-art';
 import { loadFoodArt } from './food-art';
 import { loadNavalArt } from './naval-art';
+import { loadCoastalLifeArt } from './coastal-life-art';
 import { loadFishingArt } from './fishing-art';
 import { loadCityPanelArt } from './city-panel-art';
 import { loadCombatEffectArt } from './combat-effect-art';
@@ -67,15 +70,18 @@ export function loadGameAssets(renderer: Renderer): Promise<void>[] {
     loadGameFonts(),
     renderer.initialize(),
     loadPalaceSprite(),
+    loadFrontierVillageArt(),
     loadFortArt(),
     loadStoneWallTowerArt(),
     loadPalisadeTowerArt(),
+    loadScoutTowerArt(),
     loadPunyCharacters(),
     loadFarmArt(),
     loadSaltPanArt(),
     loadResourceArt(),
     loadFoodArt(),
     loadNavalArt(),
+    loadCoastalLifeArt(),
     loadFishingArt(),
     loadCityPanelArt(),
     loadCombatEffectArt(),

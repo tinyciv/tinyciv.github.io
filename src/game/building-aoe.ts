@@ -1,6 +1,7 @@
 import { borderRadius } from './borders';
 import { WOODEN_TOWER_RANGE } from './tower-combat';
 import { WELL_RADIUS } from './wells';
+import { FOUNTAIN_RADIUS } from './structure-index';
 import { OBSERVATION_POST_SIGHT } from './observation-posts';
 import { IRRIGATION_RADIUS } from './irrigation';
 import { BALLISTA_RANGE } from './ballista';
@@ -13,6 +14,7 @@ interface CellBounds { left: number; right: number; top: number; bottom: number 
 
 export function buildingPlacementEffect(kind: GameState['buildMode'], culture = 0): PlacementEffect | undefined {
     if (kind === 'well') return { radius: WELL_RADIUS, beneficial: true };
+    if (kind === 'fountain') return { radius: FOUNTAIN_RADIUS, beneficial: true };
     if (kind === 'observationPost') return { radius: OBSERVATION_POST_SIGHT, beneficial: true };
     if (kind === 'irrigation') return { radius: IRRIGATION_RADIUS, beneficial: true };
     if (kind === 'healerShack') return { radius: HEALER_SHACK_RADIUS, beneficial: true };

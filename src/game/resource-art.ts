@@ -1,13 +1,13 @@
 import { runtimeArtUrl } from './runtime-art';
-import { type Tile, type World, WATER } from './types';
+import { type ResourceWorkKind, type Tile, type World, WATER } from './types';
 import { rasterDirtRoad, trailArtVariant, type RoadLinks } from './road-sprites';
 import { punyWorldPixels } from './puny-world';
 import { worldRevisions } from './world-revisions';
 import { southernResourceCell } from './resource-worksite';
-import { isOreMaterial, loadOreArt, drawOreClump, oreArtKey, type OreClumpArt } from './ore-art';
+import { isOreMaterial, isSiteMaterial, loadOreArt, drawOreClump, oreArtKey, ORE_FORMATION_COUNT, type OreClumpArt } from './ore-art';
 import { buildLooseRockLayout, loadLooseRockArt, type LooseRockCell } from './outcrop-art';
 
-export type ResourceArtKind = 'copper' | 'iron' | 'gold' | 'stone' | 'olives' | 'salt';
+export type ResourceArtKind = ResourceWorkKind;
 export interface ResourceCellArt {
     resource: ResourceArtKind;
     developed: boolean;
@@ -23,11 +23,12 @@ export interface ResourceCellArt {
     oreDraw?: boolean;
 }
 const STEPS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
-const KINDS = new Set(['copper', 'iron', 'gold', 'stone', 'olives', 'salt']);
+const KINDS: ReadonlySet<string> = new Set<ResourceArtKind>(['copper', 'iron', 'gold', 'stone', 'olives', 'salt', 'marble', 'peat', 'grapes', 'coal']);
 const GOLD_MINE_ART: OreClumpArt = {
     anchor: 0, x: 0, y: 0, width: 2, height: 2, family: 1, variant: 0,
-    material: 'gold', palette: 'grassland', visible: [0, 1, 2, 3], developed: true,
+    material: 'gold', palette: 'grassland', visible: [0, 1, 2, 3], developed: false,
 };
+const ACTIVE_GOLD_MINE_ART = { ...GOLD_MINE_ART, developed: true };
 let objects: HTMLImageElement | undefined;
 let mineDoor: HTMLCanvasElement | undefined;
 let fenceH: HTMLCanvasElement | undefined, fenceV: HTMLCanvasElement | undefined, fencePost: HTMLCanvasElement | undefined;
@@ -75,8 +76,8 @@ export function resourceHasArt(tile: Tile | undefined): boolean {
 }
 
 /** Keep the native 32px outcrop inside the mine's two-tile footprint. */
-export function drawGoldMine(c: CanvasRenderingContext2D): void {
-    drawOreClump(c, GOLD_MINE_ART, mineDoor, 0, 0, 32, 1);
+export function drawGoldMine(c: CanvasRenderingContext2D, active: boolean): void {
+    drawOreClump(c, active ? ACTIVE_GOLD_MINE_ART : GOLD_MINE_ART, mineDoor);
 }
 
 /** Shared by the game renderer and visual fixtures. No simulation mutations. */
@@ -139,7 +140,7 @@ export function buildResourceArtLayout(world: World, observedDevelopment?: Uint8
 function withOreClumps(world: World, layout: Map<number, ResourceCellArt>, explored?: ArrayLike<number>): Map<number, ResourceCellArt> {
     const clumps = new Map<number, number[]>();
     const seen = new Set<number>();
-    for (const [cell, art] of layout) if (isOreMaterial(art.resource) || art.resource === 'stone') {
+    for (const [cell, art] of layout) if (isOreMaterial(art.resource) || art.resource === 'stone' || isSiteMaterial(art.resource)) {
         if (art.resource === 'iron' || art.resource === 'stone') {
             if (seen.has(cell)) continue;
             const members = [cell]; seen.add(cell);
@@ -189,11 +190,14 @@ function withOreClumps(world: World, layout: Map<number, ResourceCellArt>, explo
             visible.push((Math.floor(cell / world.width) - y) * width + cell % world.width - x);
         const nativeFamily = tile.oreFamily ?? 0;
         const family = irregular && nativeFamily === 0 ? width > height ? 2 : 1 : nativeFamily;
+        const formation = isSiteMaterial(material) ? undefined : Math.floor(tile.variation * 0x1000000) % ORE_FORMATION_COUNT;
         const next: OreClumpArt = { anchor, x, y, width, height, family,
             variant: tile.oreVariant ?? (Math.floor(tile.variation * 256) & 1) as 0 | 1,
-            material,
-            palette: !iron && (tile.terrain === 'desert' || tile.terrain === 'plains' || tile.terrain === 'tundra') ? tile.terrain : 'grassland',
-            visible, developed: !stone && members.some(cell => layout.get(cell)!.developed) };
+            material, formation,
+            palette: tile.terrain === 'desert' || tile.terrain === 'plains' || tile.terrain === 'tundra' ? tile.terrain : 'grassland',
+            visible, developed: material === 'marble'
+                ? members.length === 4 && members.every(cell => layout.get(cell)!.developed)
+                : !stone && members.some(cell => layout.get(cell)!.developed) };
         const old = layout.get(members[0])!.ore;
         const ore = old && old.anchor === anchor && old.x === x && old.y === y && oreArtKey(old) === oreArtKey(next) ? old : next;
         for (const cell of members) {
@@ -266,21 +270,17 @@ export function drawResourceObject(c: CanvasRenderingContext2D, art: ResourceCel
         return;
     }
     if (art.ore) { drawOreClump(c, art.ore, mineDoor, x, y, size); return; }
-    if (art.resource === 'iron') {
+    if (art.resource === 'stone' || isOreMaterial(art.resource)) {
         drawOreClump(c, { anchor: 0, x: 0, y: 0, width: 1, height: 1, family: 1, variant: 0,
-            material: 'iron', palette: 'grassland', visible: [0], developed: art.developed }, mineDoor, x, y, size);
+            formation: art.variant % ORE_FORMATION_COUNT,
+            material: art.resource, palette: 'grassland', visible: [0], developed: art.developed }, mineDoor, x, y, size);
         return;
     }
     if (!objects) return;
     c.imageSmoothingEnabled = false;
     const pixel = size / 16;
-    if (art.resource === 'olives') {
-        const height = art.variant ? 32 : 16;
-        c.drawImage(objects, art.variant ? 64 : 48, 0, 16, height, x, y + size - height * pixel, size, height * pixel);
-    } else {
-        const column = art.resource === 'copper' ? 0 : 32;
-        c.drawImage(objects, column, art.worksite ? 16 : 0, 16, 16, x, y, size, size);
-    }
+    const height = art.variant ? 32 : 16;
+    c.drawImage(objects, art.variant ? 64 : 48, 0, 16, height, x, y + size - height * pixel, size, height * pixel);
 }
 export function drawResourceRoad(c: CanvasRenderingContext2D, art: ResourceCellArt, x: number, y: number): void {
     if (!art.road) return;

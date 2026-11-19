@@ -1,5 +1,6 @@
 import { factionAIPolicy, factionAIDecision } from './faction-ai-profile';
 import { stoneDefenseMultiplier } from './stone-defense';
+import { marbleConstructionMultiplier } from './resource-development';
 import { isHumanFaction } from './player-context';
 import type { GameState } from './types';
 import { nativeDefenseBuildings, nativeDefenseCity, nativeDefenseDue, nativeDefenseRejected } from './faction-defense-native';
@@ -32,8 +33,10 @@ export function updateFactionDefenses(state: GameState, orders: DefenseOrders): 
     const limit = factionAIDecision(state,faction.id,'defenseLimit',productiveWork,faction.population);
     if (pending >= limit) continue;
     let budget = limit - pending;
+    const marble = marbleConstructionMultiplier(state, faction.id);
     const attempt = (kind: DefenseKind, x: number, y: number, validated = false): boolean => {
-      const cost = (kind === 'woodenTower' ? 40 : kind === 'wall' ? STONE_WALL_GOLD : kind === 'palisade' ? PALISADE_GOLD : 10) * stoneDefenseMultiplier(state, faction.id, kind);
+      const cost = (kind === 'woodenTower' ? 40 : kind === 'wall' ? STONE_WALL_GOLD : kind === 'palisade' ? PALISADE_GOLD : 10)
+        * stoneDefenseMultiplier(state, faction.id, kind) * marble;
       if (!budget || (faction.constructionPauseUntil?.[kind] ?? 0) > state.time || !isBuildingUnlocked(faction, kind) || faction.gold - cost < Math.max(underAttack ? 0 : 20, reserve)
         || kind === 'woodenTower' && !canSustainFactionDefense(state, faction, kind)
         || !validated && !orders.validate(faction.id, kind, x, y).ok) return false;
@@ -45,7 +48,7 @@ export function updateFactionDefenses(state: GameState, orders: DefenseOrders): 
       const towers = factionCityTowers(state, palace);
       if (budget && towers.length < FACTION_CITY_TOWERS && isBuildingUnlocked(faction, 'woodenTower')
         && canSustainFactionDefense(state, faction, 'woodenTower') && (faction.constructionPauseUntil?.woodenTower ?? 0) <= state.time
-        && faction.gold - 40 * stoneDefenseMultiplier(state, faction.id, 'woodenTower') >= Math.max(underAttack ? 0 : 20, reserve)) {
+        && faction.gold - 40 * stoneDefenseMultiplier(state, faction.id, 'woodenTower') * marble >= Math.max(underAttack ? 0 : 20, reserve)) {
         const enclosure = nextFactionTowerEnclosure(state, palace,
           point => orders.validate(faction.id, 'woodenTower', point.x, point.y).ok);
         if (enclosure && !attempt('woodenTower', enclosure.tower.x, enclosure.tower.y, true)) nativeDefenseRejected(state, palace);

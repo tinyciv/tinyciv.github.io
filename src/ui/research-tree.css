@@ -1,4 +1,4 @@
-/* A compact library: browse seven stages horizontally while controls stay put. */
+/* Research controls stay in place as the tree scrolls. */
 .building-activity.is-library {
   isolation: isolate; display: flex; flex-direction: column; width: 1340px;
   height: min(700px, calc(100dvh - 104px)); max-width: calc(100vw - 24px);
@@ -10,39 +10,40 @@
   color: var(--popup-ink); font-size: 24px; line-height: 26px; text-align: left;
 }
 .building-activity.is-library .activity-close { top: 18px; right: 22px; }
-.activity-research { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.activity-research { --research-selection: var(--science-color); display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
 .research-funding { flex: none; display: grid; grid-template-columns: 245px minmax(80px, 1fr); align-items: center; gap: 20px; padding: 5px 10px; border: 1px solid #6d5938; background: var(--popup-inset); }
 .building-activity.is-library .research-funding label { min-height: 22px; gap: 10px; font-size: 16px; white-space: nowrap; }
-.research-allocation-value { color: #f4d485; font-size: 18px; min-width: 38px; text-align: right; margin-left: auto; }
+.research-allocation-value { color: var(--science-color); font-size: 18px; min-width: 38px; text-align: right; margin-left: auto; }
 .research-funding input[type="range"] { --allocation: 25%; width: 100%; min-width: 0; height: 20px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
-.research-funding input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: linear-gradient(to right, #b79b62 0 var(--allocation), #17120e var(--allocation) 100%); border: 1px solid var(--popup-edge); border-radius: 2px; }
-.research-funding input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 20px; margin-top: -8px; border: 2px ridge #dabd79; border-radius: 2px; background: #b49450; box-shadow: 0 1px 3px #000; }
+.research-funding input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: linear-gradient(to right, var(--science-color) 0 var(--allocation), #17120e var(--allocation) 100%); border: 1px solid var(--popup-edge); border-radius: 2px; }
+.research-funding input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 20px; margin-top: -8px; border: 2px ridge var(--science-color); border-radius: 2px; background: var(--science-color); box-shadow: 0 1px 3px #000; }
 .research-funding input[type="range"]::-moz-range-track { height: 6px; background: #17120e; border: 1px solid var(--popup-edge); }
-.research-funding input[type="range"]::-moz-range-progress { height: 6px; background: #b79b62; }
-.research-funding input[type="range"]::-moz-range-thumb { width: 12px; height: 18px; border: 2px ridge #dabd79; border-radius: 2px; background: #b49450; }
+.research-funding input[type="range"]::-moz-range-progress { height: 6px; background: var(--science-color); }
+.research-funding input[type="range"]::-moz-range-thumb { width: 12px; height: 18px; border: 2px ridge var(--science-color); border-radius: 2px; background: var(--science-color); }
 .research-queue { flex: none; min-height: 25px; display: flex; align-items: center; gap: 10px; overflow: hidden; }
 .research-queue-label { color: #d9bd84; font-size: 14px; flex: none; }
 .research-queue-list { display: flex; gap: 6px; align-items: center; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #80663f var(--popup-inset); }
 .research-queue-list:not(:has(> :not([hidden]))) { display: none; }
 .building-activity.is-library .research-queue-chip { flex: none; padding: 5px 9px; font: 13px/16px var(--game-font); white-space: nowrap; }
 .building-activity.is-library .research-queue-chip.is-selected { outline: 1px solid #d6bb7e; outline-offset: -3px; }
-.research-tree-scroll { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #9b8151 var(--popup-inset); padding-bottom: 5px; border-top: 1px solid #66553a; border-bottom: 1px solid #66553a; touch-action: pan-x; }
-.research-tree-scroll::-webkit-scrollbar { height: 9px; }.research-tree-scroll::-webkit-scrollbar-track { background: var(--popup-inset); }.research-tree-scroll::-webkit-scrollbar-thumb { background: #806c44; border: 2px solid var(--popup-inset); border-radius: 4px; }
-.research-board { position: relative; height: 100%; }
+.research-tree-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #9b8151 var(--popup-inset); border-top: 1px solid #66553a; border-bottom: 1px solid #66553a; touch-action: pan-x pan-y; }
+.research-tree-scroll::-webkit-scrollbar { width: 9px; height: 9px; }.research-tree-scroll::-webkit-scrollbar-track { background: var(--popup-inset); }.research-tree-scroll::-webkit-scrollbar-thumb { background: #806c44; border: 2px solid var(--popup-inset); border-radius: 4px; }
+.research-board { position: relative; }
 .research-connections { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .research-edge { fill: none; stroke: #8b7952; stroke-width: 1.6; }
 .research-edge-line { opacity: .72; }
-.research-edge .research-edge-halo { stroke: #30261d; stroke-width: 6px; stroke-linecap: round; }
+.research-edge .research-edge-halo { stroke: #30261d; stroke-width: 5px; stroke-linecap: round; }
 .research-edge path { vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .research-edge.is-open { stroke: #b3a772; }.research-edge.is-selected { stroke: #f0d187; stroke-width: 2; }
+.activity-research .research-edge:is(.is-open, .is-selected) { stroke: var(--science-color); }
 .research-edge.is-open .research-edge-line { opacity: .85; }.research-edge.is-selected .research-edge-line { opacity: 1; }
 .building-activity.is-library .research-node {
-  position: absolute; top: calc(var(--research-row) * 20% + 2%); width: 220px; height: 17%;
+  position: absolute; width: var(--research-card-width); height: var(--research-card-height);
   display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 8px; padding: 5px 9px;
   text-align: left; cursor: pointer;
 }
-.building-activity.is-library .research-node.is-selected { outline: 2px solid #d6bb7e; outline-offset: -4px; }
-.building-activity.is-library .research-node.is-current:not(.is-selected) { outline: 1px solid #c3b481; outline-offset: -4px; }
+.building-activity.is-library .research-node.is-selected { outline: 2px solid var(--research-selection, #d6bb7e); outline-offset: -4px; }
+.building-activity.is-library .research-node.is-current:not(.is-selected) { outline: 1px solid var(--research-selection, #c3b481); outline-offset: -4px; }
 .building-activity.is-library .research-node.is-priority:not(.is-selected):not(.is-current) { outline: 1px solid var(--popup-edge); outline-offset: -4px; }
 .building-activity.is-library .research-node:focus-visible { outline-offset: -4px; }
 .research-node-frame { position: relative; display: block; width: 40px; height: 40px; padding: 2px; border: 1px solid #8a734b; background: #1a1510; box-shadow: inset 1px 1px #000; }
@@ -51,9 +52,10 @@
 .research-node-copy strong { color: #efe0bd; font-size: 17px; line-height: 17px; font-weight: 600; }
 .research-node-meta { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .research-node-price { display: flex; align-items: center; gap: 4px; color: #e4ca89; font-size: 12px; line-height: 13px; font-variant-numeric: tabular-nums; }
-.research-node-price .science-icon { width: 12px; height: 12px; }
+.research-cost-number { color: var(--science-color); }
+.research-node-price .science-icon { width: 14px; height: 14px; }
 .research-node.is-complete .research-node-frame { border-color: #93a56b; }.research-node.is-locked .research-node-icon { opacity: .65; }.research-node.is-locked .research-node-copy strong { color: #c3c0ae; }
-.research-node-progress { position: absolute; left: 8px; right: 8px; bottom: 2px; height: 2px; background: #17120e; }.research-node-progress > span { display: block; height: 2px; background: #c4b369; }
+.research-node-progress { position: absolute; left: 8px; right: 8px; bottom: 2px; height: 2px; background: #17120e; }.research-node-progress > span { display: block; height: 2px; background: var(--science-color); }
 .building-activity.is-library .research-detail { flex: none; display: grid; grid-template-columns: 46px minmax(0, 1fr) 230px; gap: 13px; align-items: center; min-height: 92px; padding: 10px 12px; border: 1px solid #66553a; border-radius: 0; background: var(--popup-inset); }
 .research-detail-icon { width: 46px; height: 46px; padding: 3px; object-fit: contain; image-rendering: pixelated; border: 1px solid #9d8050; background: #1a1510; }
 .research-detail-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -61,9 +63,9 @@
 .research-detail-controls { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .research-priority-actions { display: flex; gap: 6px; }
 .building-activity.is-library .research-priority-actions button { flex: 1; min-height: 34px; padding: 6px 8px; font: 14px/16px var(--game-font); white-space: normal; }
-.research-progress { width: 100%; height: 7px; border: 1px solid var(--popup-edge); border-radius: 0; overflow: hidden; appearance: none; background: #17120e; accent-color: #b79b62; }
-.research-progress::-webkit-progress-bar { background: #17120e; }.research-progress::-webkit-progress-value { background: #b79b62; }.research-progress::-moz-progress-bar { background: #b79b62; }
-.research-status { display: flex; justify-content: space-between; gap: 4px 8px; color: var(--popup-muted); font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
+.research-progress { width: 100%; height: 7px; border: 1px solid var(--popup-edge); border-radius: 0; overflow: hidden; appearance: none; background: #17120e; accent-color: var(--science-color); }
+.research-progress::-webkit-progress-bar { background: #17120e; }.research-progress::-webkit-progress-value { background: var(--science-color); }.research-progress::-moz-progress-bar { background: var(--science-color); }
+.research-status { display: flex; justify-content: space-between; gap: 4px 8px; color: var(--science-color); font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
 .research-activity { display: flex; align-items: center; gap: 5px; }.research-activity .science-icon { width: 13px; height: 13px; }
 @media (max-width: 900px) {
   .building-activity.is-library .research-detail { grid-template-columns: minmax(0, 1fr) 200px; gap: 12px; min-height: 92px; }.research-detail-icon { display: none; }
@@ -74,7 +76,7 @@
   .building-activity.is-library .activity-close { top: 16px; right: 22px; }
   .activity-research { gap: 5px; }.research-funding { padding: 3px 8px; }.research-queue { min-height: 22px; }
   .research-node-copy strong { font-size: 12px; line-height: 11px; }.research-node-copy { gap: 0; }
-  .research-node-price { font-size: 10px; line-height: 11px; }.research-node-price .science-icon { width: 10px; height: 10px; }
+  .research-node-price { font-size: 10px; line-height: 11px; }.research-node-price .science-icon { width: 12px; height: 12px; }
   .building-activity.is-library .research-node { padding: 2px 8px; grid-template-columns: 26px 1fr; }.research-node-frame { width: 26px; height: 26px; }
   .building-activity.is-library .research-detail { min-height: 90px; padding: 7px 10px; }.research-tech { font-size: 18px; }
   .research-detail-controls { gap: 5px; }

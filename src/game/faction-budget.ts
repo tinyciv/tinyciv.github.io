@@ -1,11 +1,12 @@
 import { fleetUpkeep } from './warships-native';
 import { stoneDefenseMultiplier } from './stone-defense';
+import { marbleConstructionMultiplier } from './resource-development';
 import { factionAIDecision } from './faction-ai-profile';
 import { cityTaxIncome } from './cities';
 import { FORT_UPKEEP } from './forts';
 import { retinueUpkeep } from './archery';
 import { guardPostUpkeep, GUARD_POST_UPKEEP } from './guard-posts';
-import { BUILDING_UPKEEP, settlementMaintenance, watchtowerMaintenance } from './maintenance';
+import { BUILDING_UPKEEP, factoryMaintenanceQuote, settlementMaintenance, watchtowerMaintenance } from './maintenance';
 import { retinueSlotUpkeep } from './retinue-purchases';
 import { isRetinueMember, type Faction, type GameState } from './types';
 import { enemyFactionStrength } from './enemy-strength';
@@ -17,6 +18,7 @@ import { structuresOf, STRUCTURE_ALIVE } from './structure-index';
  * are useful windfalls, but cannot guarantee the next garrison's wages. */
 export function factionCommittedBudget(state: GameState, faction: Faction): { upkeep: number; surplus: number } {
   let cities = 0, upkeep = retinueSlotUpkeep(faction) + fleetUpkeep(state, faction.id), soldiers = 0;
+  let factoryQuote: ReturnType<typeof factoryMaintenanceQuote> | undefined;
   for (const building of structuresOf(state, faction.id, STRUCTURE_ALIVE)) {
     if (building.villageId !== undefined) continue;
     if (building.kind === 'palace') cities++;
@@ -24,6 +26,7 @@ export function factionCommittedBudget(state: GameState, faction: Faction): { up
     else if (building.kind === 'fort') upkeep += FORT_UPKEEP;
     else if (building.kind === 'siegeCannon') upkeep += BUILDING_UPKEEP.siegeCannon!;
     else if (building.kind === 'guardPost') upkeep += guardPostUpkeep(building);
+    else if (building.kind === 'factory') upkeep += (factoryQuote ??= factoryMaintenanceQuote(state))(building);
     else upkeep += institutionUpkeep(building.kind);
   }
   let levies = 0;
@@ -41,6 +44,7 @@ export function factionCommittedBudget(state: GameState, faction: Faction): { up
 export function canSustainFactionDefense(state: GameState, faction: Faction, kind: 'woodenTower' | 'guardPost'): boolean {
   const extra = kind === 'guardPost' ? GUARD_POST_UPKEEP : watchtowerMaintenance(state, faction.id, kind);
   const budget=factionCommittedBudget(state,faction);
-  const cost=kind==='guardPost'?200:40*stoneDefenseMultiplier(state,faction.id,kind);
+  const cost = (kind === 'guardPost' ? 200 : 40 * stoneDefenseMultiplier(state, faction.id, kind))
+    * marbleConstructionMultiplier(state, faction.id);
   return !!factionAIDecision(state,faction.id,'defenseAffordable',faction.gold,budget.upkeep,budget.surplus,cost,extra,faction.population);
 }

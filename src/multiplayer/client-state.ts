@@ -37,6 +37,8 @@ export class ClientStateReplica {
   apply(delta: StateDelta, units?: UnitChanges): void {
     if (delta.state) {
       applyValueDelta(this.state, delta.state);
+      if ('fields' in delta.state && delta.state.fields.tradeRoutes && this.state.tradeRoutes)
+        this.state.tradeRoutes = [...this.state.tradeRoutes];
       // Fog owns immutable observation snapshots. Renew its container when
       // authoritative memories change so its private cache imports them.
       if ('fields' in delta.state && delta.state.fields.fog && this.state.fog) this.state.fog = { ...this.state.fog };

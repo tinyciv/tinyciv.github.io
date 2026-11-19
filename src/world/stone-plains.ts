@@ -42,7 +42,7 @@ export function applyStonePlains(world: World): void {
   const noise = createNoise2D(environmentRandom(`${world.seed}:stone-plains`));
   const selected = new Set<number>();
   for (let cell = 0; cell < tiles.length; cell++) {
-    if (tiles[cell].resource !== 'stone') continue;
+    if (tiles[cell].resource !== 'stone' && tiles[cell].resource !== 'marble') continue;
     const x = cell % width, y = Math.floor(cell / width);
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const nx = x + dx, ny = y + dy, next = ny * width + nx;
@@ -55,7 +55,7 @@ export function applyStonePlains(world: World): void {
   }
   for (const cell of selected) {
     const tile = tiles[cell];
-    if (tile.terrain === 'plains') continue;
+    if (tile.terrain === 'plains' || tile.terrain === 'tundra') continue;
     const before = terrainYields(tile.terrain, tile.overlay), after = terrainYields('plains', tile.overlay);
     if (tile.fertility !== undefined) tile.fertility += baseSoilFertility('plains') - baseSoilFertility(tile.terrain);
     tile.terrain = 'plains';

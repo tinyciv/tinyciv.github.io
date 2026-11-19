@@ -457,7 +457,7 @@ describe('movement, construction and roads', () => {
     expect({ x: outsider.x, y: outsider.y }).not.toEqual({ x: 22.5, y: 10.5 });
   });
 
-  it('extends a starting road arm cardinally without creating isolated roads or direct food income', () => {
+  it('starts an isolated road and then connects it to the town without direct food income', () => {
     const state = game(), leader = getLeader(state)!;
     const palace = state.buildings.find(building => building.kind === 'palace' && building.faction === 0)!;
     entityStore(state).buildings.replace(state.buildings.filter(building => building.kind === 'palace' || building.kind === 'road' && building.faction === 0));
@@ -467,10 +467,9 @@ describe('movement, construction and roads', () => {
     worker.x = palace.x + 8.5; worker.y = palace.y - .5;
     leader.x = palace.x + 9.5; leader.y = palace.y + .5;
     state.factions[0].gold = 50;
-    expect(buildAt(state, 'road', palace.x + 10, palace.y - 1)).toEqual({ ok: false, message: 'Extend an existing road or bridge, or start from a ford.' });
-    expect(state.factions[0].gold).toBe(50);
-    expect(buildAt(state, 'road', palace.x + 9, palace.y - 1).ok).toBe(true);
     expect(buildAt(state, 'road', palace.x + 10, palace.y - 1).ok).toBe(true);
+    expect(state.factions[0].gold).toBe(40);
+    expect(buildAt(state, 'road', palace.x + 9, palace.y - 1).ok).toBe(true);
     const roadFoodYield = state.factions[0].yields.food;
     const food = state.factions[0].food;
     finishOrders(state);

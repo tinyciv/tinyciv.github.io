@@ -45,6 +45,17 @@ function visitor(state: GameState): Unit {
 }
 
 describe('resource resident jobs', () => {
+    it('pays developed gold sites periodically and floats the payout at the mine without dispatching workers', () => {
+        const state = fixture('gold'); develop(state);
+        const faction = state.factions[0], startingGold = faction.gold;
+        state.time = 9; updateResourceWorkforce(state);
+        expect(faction.gold).toBe(startingGold);
+        state.time = 10; updateResourceWorkforce(state); updateResourceWorkforce(state);
+        expect(faction.gold).toBe(startingGold + 8);
+        expect(state.units).toHaveLength(0);
+        expect(state.particles).toMatchObject([{ x: 11.5, y: 9.5, text: '+8 gold', faction: 0 }]);
+    });
+
     it('immediately dispatches a road worker, charges only development, and builds along the physical trip', () => {
         const state = fixture(); develop(state);
         expect(state.factions[0].gold).toBe(4800);

@@ -17,7 +17,7 @@ import { installResearchContent, nativeResearchCost, nativeResearchIndex, runNat
 export type { ResearchBranchId } from './types';
 
 export interface ResearchTier { name: string; points: number; description: string }
-export interface ResearchBranch { id: ResearchBranchId; label: string; prerequisites: readonly ResearchBranchId[]; tiers: readonly ResearchTier[] }
+export interface ResearchBranch { id: ResearchBranchId; label: string; prerequisites: readonly ResearchBranchId[]; tiers: readonly ResearchTier[]; fixedCost?: boolean }
 const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'woodenTower', label: 'Fortification', prerequisites: [], tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, militia, and town upgrades to Keeps with ten times the health.' }] },
   { id: 'wall', label: 'Masonry', prerequisites: ['woodenTower'], tiers: [{ name: 'Masonry', points: 24, description: 'Unlocks walls and gates.' }] },
@@ -33,7 +33,7 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'navalEngineering', label: 'Naval Engineering', prerequisites: ['lateenSails', 'metalCasting'], tiers: [{ name: 'Naval Engineering', points: 120, description: 'Unlocks frigates: four weapon mounts and 15% more speed than caravels.' }] },
   { id: 'traditionalMedicine', label: 'Traditional Medicine', prerequisites: ['grainStorage', 'scoutLodge'], tiers: [{ name: 'Traditional Medicine', points: 42, description: 'Unlocks healers’ shacks: friendly units within four tiles heal three times faster inside their borders, after the normal recovery delay. Overlapping shacks do not stack.' }] },
   { id: 'reinforcedDefenses', label: 'Reinforced Defenses', prerequisites: ['metalTools'], tiers: [{ name: 'Reinforced Defenses', points: 63, description: 'Walls and towers gain 30% maximum health.' }] },
-  { id: 'coinage', label: 'Coinage', prerequisites: ['monument', 'sailing'], tiers: [{ name: 'Coinage', points: 54, description: 'Caravan deliveries earn 20% more gold.' }] },
+  { id: 'coinage', label: 'Coinage', prerequisites: ['monument', 'commerce'], tiers: [{ name: 'Coinage', points: 54, description: 'Caravan deliveries earn 20% more gold.' }] },
   { id: 'urbanPlanning', label: 'Urban Planning', prerequisites: ['coinage', 'metalTools'], tiers: [{ name: 'Urban Planning', points: 75, description: 'Each house gains one housing place.' }] },
   { id: 'metalCasting', label: 'Metal Casting', prerequisites: ['reinforcedDefenses', 'infantryDrill'], tiers: [{ name: 'Metal Casting', points: 100, description: 'Unlocks swordsmen at blacksmiths: twice the attack of spearmen, with lower defense and no piercing thrust.' }] },
   { id: 'metalTools', label: 'Metal Tools', prerequisites: ['blacksmith'], tiers: [{ name: 'Metal Tools', points: 63, description: 'Construction and repair speed increases by 25%.' }] },
@@ -56,6 +56,9 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'roadBuilding', label: 'Road Building', prerequisites: ['wall'], tiers: [{ name: 'Road Building', points: 54, description: 'Roads become paved where the median completed friendly house within 10 tiles is level 4. Paved roads give 25% faster movement than dirt roads.' }] },
   { id: 'militaryScience', label: 'Military Science', prerequisites: ['gunpowder'], tiers: [{ name: 'Military Science', points: 120, description: 'Unlocks the Military Academy and formation choices.' }] },
   { id: 'officerCorps', label: 'Officer Corps', prerequisites: ['infantryDrill'], tiers: [{ name: 'Officer Corps', points: 90, description: 'Unlocks Offensive for the Leader’s retinue.' }] },
+  { id: 'cropRotation', label: 'Crop Rotation', prerequisites: ['grainStorage'], fixedCost: true, tiers: [{ name: 'Crop Rotation', points: 60, description: '+15% farm yield.' }] },
+  { id: 'ironPlows', label: 'Iron Plows', prerequisites: ['cropRotation', 'metalTools'], fixedCost: true, tiers: [{ name: 'Iron Plows', points: 90, description: '+20% farm yield.' }] },
+  { id: 'commerce', label: 'Commerce', prerequisites: ['scoutLodge'], tiers: [{ name: 'Commerce', points: 45, description: 'Unlocks Marketplaces.' }] },
 ];
 const baseBranchById = new Map(BASE_RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
 const depthCache = new Map<ResearchBranchId, number>();
@@ -68,7 +71,7 @@ const researchStages = 6;
 /** Fortification retains its introductory price. Every later branch ramps
  * linearly by dependency stage, reaching five times its old cost at the end. */
 export const RESEARCH_BRANCHES: readonly ResearchBranch[] = BASE_RESEARCH_BRANCHES.map(branch => ({
-  ...branch, tiers: branch.tiers.map(tier => ({ ...tier, points: branch.id === 'woodenTower' ? tier.points
+  ...branch, tiers: branch.tiers.map(tier => ({ ...tier, points: branch.fixedCost || branch.id === 'woodenTower' ? tier.points
     : Math.round(tier.points * (1 + 4 * Math.min(researchStages, researchDepth(branch.id) + 1) / researchStages)) * (branch.id === 'scoutLodge' || branch.id === 'wall' ? .5 : 1) })),
 }));
 installResearchContent(RESEARCH_BRANCHES);
@@ -86,6 +89,7 @@ export function buildingResearchRequirement(kind: BuildingKind): ResearchBranchI
   if (kind === 'shipyard') return 'sailing';
   if (kind === 'granary') return 'grainStorage';
   if (kind === 'forum') return 'culturalIdentity';
+  if (kind === 'marketplace') return 'commerce';
   if (kind === 'supplyDepot') return 'supplyTrain';
   if (kind === 'colosseum') return 'populism';
   if (kind === 'barracks') return 'urbanMilitia';
@@ -136,7 +140,7 @@ export function libraryPlacementAllowed(state: GameState, factionId: number, cen
   return !!city && !entityStore(state).buildings.query('library').some(library => library.hp > 0
     && library.faction === factionId && ownership.building(library)?.id === city.id);
 }
-function hasLibrary(state: GameState, factionId: number): boolean {
+export function hasLibrary(state: GameState, factionId: number): boolean {
   return entityStore(state).buildings.query('library').some(building => building.faction === factionId && buildingReady(building));
 }
 function nativeContext(state: GameState, faction: Faction | undefined, library: boolean): ResearchContext {
@@ -214,6 +218,10 @@ export function advanceResearchIncome(state: GameState, faction: Faction, grossG
   const library = hasLibrary(state, faction.id);
   return runNativeResearch(state, faction, nativeContext(state, faction, library), 1, 0, grossGold,
     library ? libraryResearchMultiplier(state, faction.id) : 1).divertedGold;
+}
+export function receiveTradeScience(state: GameState, faction: Faction, science: number): number {
+  if (science <= 0) return 0;
+  return runNativeResearch(state, faction, nativeContext(state, faction, hasLibrary(state, faction.id)), 7, 0, science).earnedScience;
 }
 /** Native completion events retain their order; the browser applies only
  * derived-building updates, ledger refunds, and existing player messages. */

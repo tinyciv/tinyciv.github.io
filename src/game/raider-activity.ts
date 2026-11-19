@@ -334,7 +334,7 @@ export function updateRaiderActivity(state: GameState): void {
     }
     const lostCamp = pack.raiderCamp !== undefined && !state.raiderCamps?.some(camp => camp.id === pack.raiderCamp && raiderCampActive(state, camp));
     if (lostCamp && !pack.campDefense || pack.returning && pack.raiderCamp === undefined
-      || pack.campDefense && state.time >= (pack.defenseUntil ?? 0)
+      || pack.campDefense && !pack.returning && state.time >= (pack.defenseUntil ?? 0)
       // Reinforcement retries cannot exempt a blocked approach forever. Only
       // an actual muster may wait in place; it has its own 90-second deadline.
       || pack.phase !== 'muster' && state.time - (pack.lastProgressAt ?? state.time) > 30)

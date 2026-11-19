@@ -1,1 +1,28 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/><meta name="theme-color" content="#202d2d"/><link rel="icon" type="image/webp" href="/assets/runtime/ui/main-menu/favicon.webp"/><title>TinyCiv</title></head><body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="theme-color" content="#202d2d">
+  <link rel="icon" type="image/webp" href="/assets/runtime/ui/main-menu/favicon.webp">
+  <link rel="stylesheet" href="/src/ui/game-font.css">
+  <link rel="stylesheet" href="/src/ui/boot-loading.css">
+  <title>TinyCiv</title>
+</head>
+<body>
+  <section id="boot-loading" class="boot-loading" aria-label="Starting TinyCiv">
+    <div class="boot-loading-film">
+      <video muted playsinline preload="none" poster="/assets/ui/loading/settlement-assault-poster.webp" aria-hidden="true"></video>
+    </div>
+    <div class="boot-loading-progress">
+      <label for="boot-progress">Loading TinyCiv</label>
+      <progress id="boot-progress" value="0" max="1"></progress>
+      <output aria-hidden="true">0%</output>
+    </div>
+    <p class="boot-loading-error" role="alert" hidden>Unable to load the game font. <button type="button">Retry</button></p>
+  </section>
+  <div id="app"></div>
+  <script type="module" src="/src/ui/boot-loading.ts"></script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

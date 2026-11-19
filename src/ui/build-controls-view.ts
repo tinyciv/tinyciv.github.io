@@ -12,6 +12,7 @@ export function constructionActionsMarkup(titles: Record<'build' | 'fortificatio
 export function buildingButtonsMarkup(titleForOption: (kind: Exclude<BuildSelection, 'clearTrees'>) => string): string {
   return BUILD_OPTIONS.map(({ kind, key, label }) => {
     const menuKey = buildMenuForSelection(kind) === 'fortifications' ? 'F' : 'B';
-    return `<button data-build="${kind}" aria-label="${label}" aria-keyshortcuts="${menuKey} ${key.toUpperCase()}" title="${titleForOption(kind)}"><kbd>${key.toUpperCase()}</kbd><span class="action-label">${label}</span></button>`;
+    const letter = key?.toUpperCase();
+    return `<button data-build="${kind}" aria-label="${label}"${letter ? ` aria-keyshortcuts="${menuKey} ${letter}"` : ''} title="${titleForOption(kind)}">${letter ? `<kbd>${letter}</kbd>` : ''}<span class="action-label">${label}</span></button>`;
   }).join('');
 }

@@ -97,10 +97,7 @@ describe('construction territory rules', () => {
     it.each(['road', 'camp', 'wall', 'palisade'] as const)('places a visible %s outside borders without relaxing its normal placement rules', kind => {
         const state = fixture();
         expect(insideOwnBorders(state, 0, 18.5, 12.5)).toBe(false);
-        if (kind === 'road') {
-            expect(validateBuildAt(state, kind, 18, 12).message).toBe('Extend an existing road or bridge, or start from a ford.');
-            add(state, 'road', 17, 12);
-        } else {
+        if (kind !== 'road') {
             state.world.tiles[12 * 40 + 18].terrain = 'river';
             expect(validateBuildAt(state, kind, 18, 12).ok).toBe(false);
             state.world.tiles[12 * 40 + 18].terrain = 'grassland';

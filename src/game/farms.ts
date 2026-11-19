@@ -17,7 +17,7 @@ import { entityStore, buildingWithId } from './entity-store';
 import { idleJobDecisionDue } from './settlement-decisions';
 import { questEffect } from './quest-effects';
 import { AchievementEffect, achievementEffect } from './achievement-effects';
-import { grainStorageMultiplier } from './research-bonuses';
+import { farmResearchYieldMultiplier, grainStorageMultiplier } from './research-bonuses';
 import { farmCityQuery, farmStorageQuery, farmTravelRevision } from './farm-travel';
 import { assignFarmStorage, granaryYieldMultiplier, STORAGE_REASSIGN, STORAGE_ENTER } from './granaries-native';
 import { courierOutboundPath, courierReturnPath } from './courier-routes';
@@ -110,7 +110,7 @@ export function fieldHarvestFood(world: World, x: number, y: number): number {
 /** Actual and projected farm production share the same completed-ditch bonus. */
 export function fieldHarvestFoodForState(state: GameState, x: number, y: number, factionId = tileAt(state.world, x, y)?.farm ?? 0, orchard = false): number {
   const faction = state.factions.find(candidate => candidate.id === factionId);
-  return fieldHarvestFood(state.world, x, y) * achievementEffect(faction, AchievementEffect.orchard,
+  return fieldHarvestFood(state.world, x, y) * farmResearchYieldMultiplier(faction) * achievementEffect(faction, AchievementEffect.orchard,
     questEffect(faction, 6, irrigationYieldMultiplier(state, x, y) * (1 + (faction?.villageBonuses?.food ?? 0))
       * granaryYieldMultiplier(state, factionId, x, y) * (orchard ? ORCHARD_YIELD_MULTIPLIER : 1)), Number(orchard));
 }

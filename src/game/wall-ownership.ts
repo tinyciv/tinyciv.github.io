@@ -55,7 +55,7 @@ function supportsProperty(building: Building): boolean {
     // marauder settlements retain nearby walls but cannot claim neutral property. Untargetable farms cannot hold walls or one another.
     if (building.faction === RAIDER_FACTION) return building.raiderCamp === undefined && ((building.kind === 'house' || building.kind === 'apartments') || building.kind === 'villageTent');
     return building.faction >= 0 && !isWallKind(building.kind) && !isFarmKind(building.kind)
-        && !['road', 'bridge', 'irrigation', 'ruin'].includes(building.kind);
+        && !['road', 'bridge', 'irrigation', 'ruin', 'scoutTower'].includes(building.kind);
 }
 
 /** Territory claims civilian property, roads and walls; defensive posts/towers
@@ -124,7 +124,7 @@ export function updateWallOwnership(state: GameState): boolean {
         if (!isFarmKind(building.kind)) invalidateNavigation(state);
     };
     for (const wall of state.buildings) {
-        if (!buildingFollowsTerritory(wall) || wall.hp <= 0 || wall.villageId !== undefined || questPropertyReserved(state,wall) || ['fort', 'guardPost', 'woodenTower', 'tower', 'ballista', 'siegeCannon'].includes(wall.kind)) continue;
+        if (!buildingFollowsTerritory(wall) || wall.hp <= 0 || wall.villageId !== undefined || questPropertyReserved(state,wall) || ['fort', 'guardPost', 'woodenTower', 'scoutTower', 'tower', 'ballista', 'siegeCannon'].includes(wall.kind)) continue;
         // A road underneath a wall follows the gate's evacuation/claim result.
         if (wall.kind === 'road' && wallCells.has(key(wall.x, wall.y))) continue;
         const farm = isFarmKind(wall.kind);

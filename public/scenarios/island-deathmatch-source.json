@@ -1,31 +1,47 @@
 {
   "id": "island-deathmatch",
+  "seed": "Scenario:island-deathmatch:prepared-2026-11-16:1",
   "width": 110,
   "height": 50,
   "simulatedSeconds": 0,
-  "wallSeconds": 0.415518792,
-  "bytes": 262480,
+  "wallSeconds": 0.40304674999999995,
+  "bytes": 259954,
   "cities": [
     {
       "id": 1,
       "faction": 0,
+      "x": 45,
+      "y": 20,
       "population": 30,
       "housing": 34,
-      "food": 12.34666666666667
+      "food": 12.266666666666683
     },
     {
-      "id": 129,
+      "id": 126,
       "faction": 1,
+      "x": 65,
+      "y": 15,
       "population": 30,
       "housing": 34,
-      "food": 12.373333333333344
+      "food": 12.64000000000001
     }
   ],
+  "resources": {
+    "clay": 92,
+    "copper": 8,
+    "iron": 8,
+    "gold": 0,
+    "stone": 15,
+    "salt": 48,
+    "olives": 79,
+    "fish": 164
+  },
+  "whales": 2,
   "agriculture": {
     "orchards": 0,
     "completedDitches": 0,
     "irrigatedFields": 0,
-    "fields": 131
+    "fields": 130
   },
   "iron": [
     {
@@ -37,139 +53,15 @@
       "developed": false
     }
   ],
-  "bundleSha256": "2c607353a77398b97fe7910f823bf3cec0961b13025a472f290cb5e920d1fa27",
-  "wasmSha256": "1dbe7418b041ce7c15e018149cf84a1f8079bc66d7997a7d2a7854ce00d1d2f8",
-  "access": {
-    "remove": [],
-    "landmasses": 6,
-    "regions": 6,
-    "remaining": 6,
-    "unreachable": 0,
-    "starts": [
-      {
-        "x": 30.5,
-        "y": 11.5
-      },
-      {
-        "x": 67.5,
-        "y": 12.5
-      }
-    ]
-  },
-  "streets": {
-    "before": [
-      {
-        "faction": 0,
-        "blockers": [
-          53
-        ],
-        "blockedRoads": [
-          1356,
-          1357
-        ],
-        "missingRing": [],
-        "unserved": [
-          50,
-          52,
-          54,
-          55
-        ],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      },
-      {
-        "faction": 1,
-        "blockers": [
-          181,
-          182
-        ],
-        "blockedRoads": [
-          835,
-          1503,
-          1504
-        ],
-        "missingRing": [],
-        "unserved": [
-          178,
-          180,
-          183
-        ],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      }
+  "bundleSha256": "ccbd97dc2d447f94ef2f53aaebfb285f15dc05588f7a31ebd90a64ab6b58015a",
+  "wasmSha256": "1bf9531829fe4c325368e97cca98110f1f158953ec9555edc526d9af510f4c1b",
+  "snowBands": {
+    "snowTiles": 73,
+    "rowRange": [
+      5,
+      5
     ],
-    "after": [
-      {
-        "faction": 0,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      },
-      {
-        "faction": 1,
-        "blockers": [],
-        "blockedRoads": [],
-        "missingRing": [],
-        "unserved": [],
-        "roadRegions": 1,
-        "expectedRoadRegions": 1
-      }
-    ],
-    "moved": [
-      {
-        "id": 53,
-        "kind": "library",
-        "from": {
-          "x": 36,
-          "y": 11
-        },
-        "to": {
-          "x": 33,
-          "y": 9
-        }
-      },
-      {
-        "id": 181,
-        "kind": "library",
-        "from": {
-          "x": 73,
-          "y": 13
-        },
-        "to": {
-          "x": 74,
-          "y": 17
-        }
-      },
-      {
-        "id": 182,
-        "kind": "blacksmith",
-        "from": {
-          "x": 65,
-          "y": 7
-        },
-        "to": {
-          "x": 65,
-          "y": 6
-        }
-      }
-    ],
-    "removedRoads": [],
-    "roadsAdded": 30,
-    "farmsMoved": [
-      85,
-      80,
-      77,
-      78,
-      88,
-      184,
-      219,
-      240
-    ],
-    "farmsCleared": []
-  },
-  "refinementBundleSha256": "8d17d54b9af5f099f7100fabbda4953c133e4f3cbd540236a020ed1f013a666b",
-  "refinementWasmSha256": "e227301ee9127717aca424ccc01d91ad24e95c701702788ff1e69221b2fa908e"
+    "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
+    "previousSha256": "b186fe7120ba85b7b6b67e0007269aee2ae401db095ce1b6d73b5f5e83a4160f"
+  }
 }

@@ -9,6 +9,7 @@ import { dockPlacement } from './dock';
 import { DOCK_HP } from './dock-config';
 import { houseCapacity } from './wells';
 import { validatePhysicalFootprint } from './placement-physical';
+import { overlapsFallenDefense } from './defense-rebuilding';
 import { scenarioStructuresAllowed } from './scenario-access-native';
 import { reliefFootprintAllowed } from './relief';
 import { unitSpawnTerrainAllowed } from './terrain-sites';
@@ -79,6 +80,7 @@ export function applyVillageRequests(state: GameState, requests: readonly BuildR
       if (failure) return;
       const kind = KIND_BY_CODE.get(row.kind);
       if (!kind) { failure = { index, reason: 1 }; return; }
+      if (overlapsFallenDefense(state, kind, row.x, row.y)) { failure = { index, reason: 1 }; return; }
       const tent = kind === 'house' ? state.buildings.find(b => b.villageId === village.id && b.kind === 'villageTent' && b.id !== village.campId
         && b.x === row.x && b.y === row.y && b.hp > 0) : undefined;
       const physical = validatePhysicalFootprint(state, kind, row.x, row.y, village.faction, { ignore: tent ? new Set([tent.id]) : undefined });

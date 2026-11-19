@@ -5,7 +5,7 @@ import { type GameState, type Building, type Faction, type HouseStyle, type Poin
 import { housingResearchBonus } from './research-bonuses';
 import { HOUSE_BASE_CAPACITIES } from './housing-config';
 import { thermalBathCapacity } from './thermal-baths-native';
-import { isHouseEnclosed, palaceEnclosures, type PalaceEnclosures } from './enclosures';
+import { structureIndex, type StructureIndex } from './structure-index';
 import { notifyRepairJobChanged } from './builder-jobs';
 import { settlementBuildings, type SettlementBuildings } from './settlement-rosters';
 
@@ -84,7 +84,7 @@ function housingLayout(roster: SettlementBuildings): HousingLayout {
 }
 
 /** Wells permanently establish level two. A dense, guarded neighborhood earns
- * level three, and the growth bonus's secure enclosure earns level four.
+ * level three, and nearby fountain coverage earns level four.
  * Losing a requirement starts a reversible one-minute warning. */
 export function updateWellUpgrades(state: GameState): void {
   const roster = settlementBuildings(state), layout = housingLayout(roster);
@@ -114,13 +114,11 @@ export function updateWellUpgrades(state: GameState): void {
   for (const house of houses) addResidents(house.faction, house.x + .5, house.y + .5, Math.min(house.capacity, house.residents ?? 0));
   for (const list of palaces.values()) for (const palace of list)
     addResidents(palace.faction, palace.x + 1, palace.y + 1, palace.unhousedResidents ?? 0);
-  // The geometry is cached, but checking for intruders scans units. Share that
-  // result across all eligible houses rather than repeating it per home.
-  let enclosures: PalaceEnclosures | undefined;
+  let structures: StructureIndex | undefined;
   for (const house of houses) {
     house.houseLevel = houseLevel(house);
     // Independent villages buy their housing quality with trade earnings;
-    // their homes do not depend on palace population, wells or city walls.
+    // their homes do not depend on the city's housing requirements.
     if (house.kind === 'apartments') { house.capacity = houseCapacity(house, factions.get(house.faction), state); continue; }
     if (house.villageId !== undefined) {
       if (house.houseUpgradeLevel !== undefined) advanceHouseUpgrade(state, house, house.houseUpgradeLevel);
@@ -141,7 +139,7 @@ export function updateWellUpgrades(state: GameState): void {
     }
     const eligible = localPopulation >= LEVEL_THREE_POPULATION;
     const earnedLevel = eligible
-      ? isHouseEnclosed(state, house, enclosures ??= palaceEnclosures(state)) ? 4 : 3
+      ? (structures ??= structureIndex(state)).fountainCovers(house) ? 4 : 3
       : supplied ? 2 : Math.min(2, house.houseLevel);
     advanceHouseUpgrade(state, house, earnedLevel);
     if (earnedLevel >= house.houseLevel) {

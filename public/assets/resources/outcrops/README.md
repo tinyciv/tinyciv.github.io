@@ -3,7 +3,7 @@
 Production copper, iron and gold now use the approved mountain silhouettes in
 `../mountain-ore/`, rendered by `src/game/ore-art.ts`. This directory supplies
 loose rubble in the game. The joined stone texture and mineral overlays remain
-available in the visual studies below. Quarries draw one complete stone formation per deposit using the existing mountain artwork.
+available in the visual studies below. Quarries draw one approved stone formation per deposit from `../ore-formations/atlas.webp`.
 
 The archived joined stone style uses `stone.png`, the approved coarse
 PixelLab texture from `stories/assets/rock-texture-overlays/1-stone.png`.

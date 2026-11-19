@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { scoutRealm } from './helpers/scouts';
 import { entityStore } from '../src/game/entity-store';
 import { BUILD_COSTS, buildAt, updateGame, validateBuildAt } from '../src/game/simulation';
-import { automaticallyRebuildDefenses, recordDestroyedDefense, setAutomaticallyRebuildDefenses, updateDefenseRebuilds } from '../src/game/defense-rebuilding';
+import { automaticallyRebuildDefenses, overlapsFallenDefense, recordDestroyedDefense, setAutomaticallyRebuildDefenses, updateDefenseRebuilds } from '../src/game/defense-rebuilding';
 import { demolishBuildingsInArea } from '../src/game/area-tools';
 import { parseGameSave, serializeGameSave } from '../src/game/game-save';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { canWalk } from '../src/game/pathfinding';
-import type { Building, GameState } from '../src/game/types';
+import { constructionSiteHidden, type Building, type GameState } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
 function fixture(kind: Building['kind'] = 'wall') {
@@ -38,10 +38,12 @@ describe('automatic defense rebuilding', () => {
     const { state, defense } = fixture(kind);
     destroy(state, defense);
     expect(state.defenseRebuilds).toHaveLength(1);
+    expect(overlapsFallenDefense(state, 'house', defense.x, defense.y)).toBe(true);
     expect(validateBuildAt(state, kind, defense.x, defense.y).message).toContain('leader');
     advance(state, 1.2);
     const replacement = state.buildings.find(building => building.kind === kind)!;
     expect(replacement).toBeDefined(); expect(replacement.id).toBeGreaterThan(defense.id);
+    expect(constructionSiteHidden(replacement)).toBe(true);
     expect(replacement.construction?.paidGold).toBe(BUILD_COSTS[kind].gold);
     expect(state.factions[0].gold).toBe(1000 - BUILD_COSTS[kind].gold);
     expect(state.defenseRebuilds).toHaveLength(0);
@@ -98,13 +100,14 @@ describe('automatic defense rebuilding', () => {
     expect(state.factions[0].gold).toBe(1000);
   });
 
-  it('disables future replacements and drops pending orders through the authenticated setting command', () => {
+  it('disables replacement work and keeps the footprint reserved through the authenticated setting command', () => {
     const { state, defense } = fixture();
     expect(automaticallyRebuildDefenses(state.factions[0])).toBe(true);
     destroy(state, defense);
     expect(applyGameCommand(state, 0, { type: 'auto-rebuild-defenses', enabled: false, faction: 9 }).ok).toBe(true);
     expect(automaticallyRebuildDefenses(state.factions[0])).toBe(false);
-    advance(state, 4); expect(state.defenseRebuilds).toHaveLength(0);
+    advance(state, 4); expect(state.defenseRebuilds?.[0].nextAttempt).toBeNull();
+    expect(overlapsFallenDefense(state, 'house', defense.x, defense.y)).toBe(true);
     expect(state.buildings.some(building => building.kind === 'wall')).toBe(false);
     expect(applyGameCommand(state, 0, { type: 'auto-rebuild-defenses', enabled: 'yes' }).ok).toBe(false);
     expect(parseGameSave(serializeGameSave(state)).factions[0].autoRebuildDefenses).toBe(false);

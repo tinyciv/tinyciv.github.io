@@ -36,6 +36,18 @@ function returned(state: GameState, count = 1): { pack: MarauderPack; members: U
 const defenders = (state: GameState) => state.units.filter(unit => state.marauderPacks?.some(pack => pack.campDefense && pack.id === unit.marauderPack));
 
 describe('camp activity and small raids', () => {
+  it('fights a visible local attacker during an alarm while returning to camp', () => {
+    const state = fixture(), { members: [victim] } = returned(state);
+    const attacker = state.units[0]; attacker.x = victim.x - 2; attacker.y = victim.y;
+    expect(notifyRaiderAttack(state, victim, attacker)).toBe(1);
+    const attacked: number[] = [];
+    const orders = { move: () => { throw Error('Enemy is in sight'); }, attack: (target: { id: number }) => attacked.push(target.id),
+      visible: () => true, localEnemy: () => attacker };
+    expect(updateRaiderAlert(state, victim, .1, orders)).toBe(true);
+    expect(updateRaiderAlert(state, victim, .1, orders)).toBe(true);
+    expect(attacked).toEqual([attacker.id, attacker.id]);
+  });
+
   it('broadcasts attacks to allies fourteen tiles away without revealing hidden enemy movement', () => {
     const state = fixture(), { pack, members } = returned(state, 3);
     Object.assign(pack, { returning: false, raid: true, targetBuilding: 2 });

@@ -40,6 +40,7 @@ export type GameCommand =
   | { type: 'capture'; buildingId: number; capture: boolean }
   | { type: 'achievement'; buildingId: number; achievement: import('../game/achievements').AchievementId }
   | { type: 'research-priority' | 'research-remove-priority'; buildingId: number; branch: ResearchBranchId }
+  | { type: 'market-destination'; buildingId: number; destination: number | null }
   | { type: 'research-allocation'; buildingId: number; allocation: number }
   | { type: 'guard-walls'; buildingId: number; enabled: boolean }
   | { type: 'guard-forbidden'; buildingId: number; enabled: boolean }

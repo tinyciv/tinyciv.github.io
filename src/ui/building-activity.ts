@@ -1,3 +1,6 @@
+import { MarketplacePanel } from './marketplace-panel';
+import { orderMarketRoute } from '../game/trade';
+import './marketplace-panel.css';
 import { militaryFormationControl, selectMilitaryFormation } from '../game/military-academy';
 import { ShipyardPanel } from './shipyard-panel';
 import { AchievementTree } from './achievement-tree';
@@ -70,6 +73,7 @@ export class BuildingActivityPopup {
   private readonly researchTree: ResearchTree;
   private readonly achievementTree: AchievementTree;
   private readonly shipyard: ShipyardPanel;
+  private readonly marketplace: MarketplacePanel;
   private readonly farms: HTMLInputElement;
   private readonly housing: HTMLInputElement;
   private readonly immigrants: HTMLButtonElement;
@@ -133,6 +137,7 @@ export class BuildingActivityPopup {
         <p class="activity-note military-formation-effect"></p>
       </div>
       <div class="activity-shipyard" hidden></div>
+      <div class="activity-marketplace" hidden></div>
       <div class="activity-research" hidden></div>
       <div class="activity-achievements" hidden></div>
       <div class="activity-village activity-stack" hidden>
@@ -183,7 +188,7 @@ export class BuildingActivityPopup {
       if (this.sendCommand?.(command(building))) return;
       const result = action(this.getState(), building);
       this.message(result.message, !result.ok);
-      if (result.ok) { logEvent(this.getState(), result.message, 'good'); this.changed(); }
+      if (result.ok) { if (result.message) logEvent(this.getState(), result.message, 'good'); this.changed(); }
       this.refresh();
     };
     for (const count of [1, 10] as const) element.querySelector<HTMLButtonElement>(`[data-orchard="${count}"]`)!.onclick =
@@ -243,6 +248,9 @@ export class BuildingActivityPopup {
       this.refresh(); if (result.ok) this.changed();
     };
     this.shipyard = new ShipyardPanel(element.querySelector<HTMLElement>('.activity-shipyard')!, this.getState, this.changed, (text,error) => this.message(text,error), this.sendCommand);
+    this.marketplace = new MarketplacePanel(element.querySelector<HTMLElement>('.activity-marketplace')!,
+      destination => purchase((state, building) => orderMarketRoute(state, building, destination),
+        building => ({ type: 'market-destination', buildingId: building.id, destination })), () => this.refresh());
     this.researchTree = new ResearchTree(element.querySelector<HTMLElement>('.activity-research')!, {
       allocate: allocation => purchase((state, building) => setResearchAllocation(state, building, allocation), building => ({ type: 'research-allocation', buildingId: building.id, allocation })),
       prioritize: branch => purchase((state, building) => prioritizeResearch(state, building, branch), building => ({ type: 'research-priority', buildingId: building.id, branch })),
@@ -271,7 +279,7 @@ export class BuildingActivityPopup {
     this.message('',false);
     this.buildingId = null;
     this.editingComposition.clear(); this.pendingComposition.clear();
-    this.researchTree.reset(); this.achievementTree.reset();
+    this.researchTree.reset(); this.achievementTree.reset(); this.marketplace.reset();
     this.element.hidden = true;
   }
 
@@ -280,7 +288,7 @@ export class BuildingActivityPopup {
     this.message('',false);
     this.editingComposition.clear(); this.pendingComposition.clear();
     this.buildingId = building.id; this.deferVillageTrade = true;
-    this.researchTree.reset(); this.achievementTree.reset();
+    this.researchTree.reset(); this.achievementTree.reset(); this.marketplace.reset();
     this.refresh();
   }
 
@@ -297,9 +305,10 @@ export class BuildingActivityPopup {
     this.element.classList.toggle('is-village', kind === 'village');
     this.element.classList.toggle('is-foundry', kind === 'foundry');
     this.element.classList.toggle('is-shipyard', kind === 'shipyard');
-    const titles = { militaryAcademy: 'Military Academy', foundry: 'Foundry', shipyard: 'Shipyard', fort: 'Fort', governor: settlementLabel(building), blacksmith: 'Blacksmith', farm: 'Orchard upgrades', guardPost: 'Guard post', archeryRange: 'Army composition', library: 'Research', forum: 'Forum · Achievements', scoutLodge: 'Scouts’ Lodge', stable: 'Stable', barracks: 'Barracks', village: 'Neutral village' };
+    this.element.classList.toggle('is-marketplace', kind === 'marketplace');
+    const titles = { marketplace: 'Marketplace', militaryAcademy: 'Military Academy', foundry: 'Foundry', shipyard: 'Shipyard', fort: 'Fort', governor: settlementLabel(building), blacksmith: 'Blacksmith', farm: 'Orchard upgrades', guardPost: 'Guard post', archeryRange: 'Army composition', library: 'Research', forum: 'Forum · Achievements', scoutLodge: 'Scouts’ Lodge', stable: 'Stable', barracks: 'Barracks', village: 'Neutral village' };
     this.element.querySelector<HTMLElement>('#building-activity-title')!.textContent = titles[kind!];
-    for (const [section, type] of [['fort', 'fort'], ['governor', 'governor'], ['upgrades', 'blacksmith'], ['orchard', 'farm'], ['guards', 'guardPost'], ['research', 'library'], ['achievements', 'forum'], ['scouts', 'scoutLodge'], ['village', 'village'], ['shipyard', 'shipyard'], ['militaryAcademy', 'militaryAcademy']])
+    for (const [section, type] of [['fort', 'fort'], ['governor', 'governor'], ['upgrades', 'blacksmith'], ['orchard', 'farm'], ['guards', 'guardPost'], ['research', 'library'], ['achievements', 'forum'], ['scouts', 'scoutLodge'], ['village', 'village'], ['shipyard', 'shipyard'], ['marketplace', 'marketplace'], ['militaryAcademy', 'militaryAcademy']])
       this.element.querySelector<HTMLElement>(`.activity-${section}`)!.hidden = kind !== type;
     if (kind === 'militaryAcademy') {
       const control = militaryFormationControl(this.getState(), building.faction);
@@ -309,6 +318,7 @@ export class BuildingActivityPopup {
         ? 'No defense bonus · +30% missile fire rate' : '+50% frontal defense';
     }
     if (kind === 'shipyard') this.shipyard.refresh(building);
+    if (kind === 'marketplace') this.marketplace.refresh(this.getState(), building);
     if (kind === 'governor') {
       const state = this.getState(), loyalty = loyaltyOf(state, building), rate = Math.round(loyalty.rate * 60);
       const factors = affiliationBreakdown(state, building.id, building.faction);

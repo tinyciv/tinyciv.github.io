@@ -10,6 +10,8 @@ let house: HTMLImageElement | undefined, jetty: HTMLImageElement | undefined, sa
 let loading: Promise<void> | undefined;
 let dockIcon: string | undefined;
 let rowboat: HTMLImageElement | undefined;
+let anchorMarker: HTMLCanvasElement | undefined;
+export const warshipAnchorMarker = () => anchorMarker;
 
 const rowboatOccupants = new WeakMap<Unit, Unit>();
 /** Reuse a render-only view without copying each worker's observed game state every frame. */
@@ -28,7 +30,7 @@ export function rowboatOccupant(unit: Unit): Unit {
 
 /** Original PixelHole pixels. Only the boat's baked cyan foam is removed. */
 export function loadNavalArt(): Promise<void> {
-  return loading ??= Promise.all([loadGalleyArt(), loadWarshipArt(), loadBarbarianGalleyArt(), loadMerchantShipArt(), ...['pixelhole-overworld/Dock-House.png', 'pixelhole-overworld/Dock-Jetty.png', 'pixelhole-overworld/Sailboat.png'].map(async (file, index) => {
+  return loading ??= Promise.all([loadGalleyArt(), loadWarshipArt(), loadBarbarianGalleyArt(), loadMerchantShipArt(), loadAnchorMarker(), ...['pixelhole-overworld/Dock-House.png', 'pixelhole-overworld/Dock-Jetty.png', 'pixelhole-overworld/Sailboat.png'].map(async (file, index) => {
     const image = new Image(); image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/${file}`);
     await image.decode();
     if (image.naturalWidth !== 16 || image.naturalHeight !== (index === 1 ? 20 : 16)) throw new Error(`Invalid naval sprite: ${file}`);
@@ -39,6 +41,20 @@ export function loadNavalArt(): Promise<void> {
     if (image.naturalWidth !== 32 || image.naturalHeight !== 16) throw new Error('Invalid rowboat sprite.');
     rowboat = image;
   })()]).then(() => {});
+}
+
+async function loadAnchorMarker(): Promise<void> {
+  const image = new Image();
+  image.src = `${import.meta.env.BASE_URL}assets/runtime/ui/naval/anchor.webp`;
+  await image.decode();
+  const marker = document.createElement('canvas');
+  marker.width = marker.height = 16;
+  const context = marker.getContext('2d')!;
+  context.drawImage(image, 0, 0, 16, 16);
+  context.globalCompositeOperation = 'source-in';
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, 16, 16);
+  anchorMarker = marker;
 }
 
 /** Bounds relative to the land anchor, in the ordinary 32px tile plane. */

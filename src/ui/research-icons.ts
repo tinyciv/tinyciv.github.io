@@ -6,6 +6,7 @@ import { characterIconUrl, loadPunyCharacters } from '../game/unit-sprites';
 import { colosseumIconUrl, loadCivicArt } from '../game/civic-art';
 import { loadPikemanArt, pikemanIconUrl } from '../game/pikeman-art';
 import { runtimeArtUrl } from '../game/runtime-art';
+import { SCIENCE_ICON_URL } from './science-icon';
 
 const RESEARCH_ICON_BRANCHES: readonly ResearchBranchId[] = [
   'woodenTower', 'wall', 'reinforcedDefenses', 'monument', 'coinage', 'urbanPlanning', 'scoutLodge',
@@ -17,6 +18,9 @@ const RESEARCH_ICON_BRANCHES: readonly ResearchBranchId[] = [
 export function researchIconUrl(branch: ResearchBranchId): string {
   // Reuse the approved imagegen retinue command artwork.
   if (branch === 'officerCorps') return `${import.meta.env.BASE_URL}assets/runtime/ui/forged/retinue-actions-pixel.webp`;
+  if (branch === 'cropRotation') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/grainStorage.webp`;
+  if (branch === 'ironPlows') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/metalTools.webp`;
+  if (branch === 'commerce') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/coinage.webp`;
   if (branch === 'drainage') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/irrigation.webp`;
   if (branch === 'militaryScience') return `${import.meta.env.BASE_URL}assets/runtime/ui/military-academy.webp`;
   if (branch === 'fieldCannon') return `${import.meta.env.BASE_URL}assets/runtime/ui/field-cannon.webp`;
@@ -42,9 +46,16 @@ export function researchIconUrl(branch: ResearchBranchId): string {
   return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/${branch}.webp`;
 }
 
+async function loadScienceArt(): Promise<void> {
+  const image = new Image();
+  image.src = SCIENCE_ICON_URL;
+  await image.decode();
+  if (image.naturalWidth !== 28 || image.naturalHeight !== 28) throw new Error('Invalid Science icon.');
+}
+
 let loading: Promise<void> | undefined;
 export function loadResearchIcons(): Promise<void> {
-  return loading ??= Promise.all([loadCivicArt(), loadPikemanArt(), loadPunyCharacters(), loadCavalryArt(), loadHealerShackArt(), loadSiegeArt(), ...RESEARCH_ICON_BRANCHES.map(async branch => {
+  return loading ??= Promise.all([loadScienceArt(), loadCivicArt(), loadPikemanArt(), loadPunyCharacters(), loadCavalryArt(), loadHealerShackArt(), loadSiegeArt(), ...RESEARCH_ICON_BRANCHES.map(async branch => {
     const image = new Image(); image.src = researchIconUrl(branch);
     await image.decode();
     // Icon slots use object-fit: contain, so rectangular artwork is valid.

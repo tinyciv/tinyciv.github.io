@@ -6,12 +6,13 @@ import { buildingAlignmentQuery } from './placement';
 import { farmCityQuery, farmCollectionQuery } from './farm-travel';
 import { FARM_COLLECTION_RADIUS, farmCollectionBounds, farmCollectionRangeQuery, granaryYieldMultiplier } from './granaries-native';
 import { reliefFootprintAllowed, reliefBuildable } from './relief';
-import { grainStorageMultiplier } from './research-bonuses';
+import { farmResearchYieldMultiplier, grainStorageMultiplier } from './research-bonuses';
 import { buildingWithinBorders } from './border-placement';
 import { territory } from './borders';
 import { farmParcelPreferenceQuery, FARM_CLUSTER_PRODUCTION_BONUS } from './farm-clusters';
 import { farmBlockPlacementQuery } from './farm-blocks';
 import { hermitCabinOverlaps } from './placement-occupancy';
+import { overlapsFallenDefense } from './defense-rebuilding';
 import { type Building, type GameState, type Point, buildingReady, buildingWidth, buildingHeight } from './types';
 
 /** Each completed collection point extends the city's practical farm area. */
@@ -29,14 +30,16 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
   const { width, height } = state.world, occupied = new Set<number>(), roads = new Set<number>();
   for (const building of state.buildings) {
     if (building.hp > 0 && building.faction === palace.faction && building.kind === 'road') roads.add(building.y * width + building.x);
-    if (building.hp <= 0 || building.faction === palace.faction && building.kind === 'irrigation') continue;
+    if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed)
+      || building.faction === palace.faction && building.kind === 'irrigation') continue;
     for (let y = building.y; y < building.y + buildingHeight(building); y++)
       for (let x = building.x; x < building.x + buildingWidth(building); x++) occupied.add(y * width + x);
   }
   for (const field of state.fields ?? []) occupied.add(field.y * width + field.x);
   const collection = farmCollectionQuery(state, palace), inRange = farmCollectionRangeQuery(state, palace), coverage = prepareIrrigation(state).coverage;
   const faction = state.factions.find(faction => faction.id === palace.faction);
-  const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(faction), foodBonus = 1 + (faction?.villageBonuses?.food ?? 0);
+  const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(faction);
+  const foodBonus = farmResearchYieldMultiplier(faction) * (1 + (faction?.villageBonuses?.food ?? 0));
   const farmCity = farmCityQuery(state, palace.faction, exactOwnership);
   const alignment = buildingAlignmentQuery(state, palace.faction), origin = { x: palace.x + 1, y: palace.y + 1 };
   const borders = state.villages?.length ? territory(state) : undefined;
@@ -49,7 +52,7 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
     let harvest = 0, irrigatedPlots = 0, streetPenalty = 1;
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const px = x + dx, py = y + dy, cell = py * width + px, tile = state.world.tiles[cell];
-      if (!tile || !reliefBuildable(tile) || occupied.has(cell) || !CLEARABLE.has(tile.overlay)
+      if (!tile || !reliefBuildable(tile) || occupied.has(cell) || overlapsFallenDefense(state, 'camp', px, py) || !CLEARABLE.has(tile.overlay)
         || !traversable(state.world, px, py) || hermitCabinOverlaps(state, px, py)) return;
       const irrigated = !!coverage[cell];
       irrigatedPlots += Number(irrigated);

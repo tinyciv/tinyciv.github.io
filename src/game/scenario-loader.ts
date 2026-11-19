@@ -1,7 +1,8 @@
 import { SCENARIOS, type ScenarioId } from './scenario-content';
 import { parseGameSave } from './game-save';
+import { publishFog } from './fog';
 import { rustEngine } from './rust-engine';
-import { migrateGame } from './simulation';
+import { initializeStartingScoutTowers, migrateGame } from './simulation';
 import type { GameState } from './types';
 
 /** Load a complete offline-built start. No world generation, city growth or
@@ -42,6 +43,8 @@ export async function createScenarioGame(id: ScenarioId, onProgress?: (progress:
   onProgress?.(.85, 'Preparing cities');
   await new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const game = migrateGame(state);
+  initializeStartingScoutTowers(game);
+  publishFog(game);
   onProgress?.(1, 'Scenario ready');
   return game;
 }

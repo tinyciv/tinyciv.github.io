@@ -1,0 +1,153 @@
+{
+  "generator": "PixelLab",
+  "tileSize": 16,
+  "columns": 12,
+  "rows": 8,
+  "source": "scratch/2026-11-18-sea-ice-snow-pop",
+  "packing": "Sea ice uses the footprints below. Snow uses the neighbor-indexed atlas described in its texture entry.",
+  "shapes": [
+    [
+      ".###",
+      "####",
+      "..#."
+    ],
+    [
+      "##.",
+      "###",
+      "###",
+      ".#."
+    ],
+    [
+      ".###",
+      "####",
+      "###."
+    ],
+    [
+      ".###",
+      "####",
+      "####"
+    ],
+    [
+      ".##.",
+      "###.",
+      "####",
+      ".###"
+    ],
+    [
+      ".##.",
+      "####",
+      "####",
+      "###."
+    ],
+    [
+      "..#.",
+      ".###",
+      "####",
+      "####",
+      ".##."
+    ],
+    [
+      ".###.",
+      "#####",
+      "#####",
+      ".##.."
+    ]
+  ],
+  "textures": [
+    {
+      "image": "sea-ice.webp",
+      "sha256": "817cdfc281812905afb1e5f8802e2a5bcab0431c4de6a329439ed6945bb35d33",
+      "references": [
+        {
+          "image": "ice-corners-a.png",
+          "sha256": "c030216b01c49e3c4f047d2fc2b44fcab08e68cc08659dfc3e60b492c86a5e71"
+        },
+        {
+          "image": "ice-corners-b.png",
+          "sha256": "865d9cf3aad82d805e61d7b8e14f153fb4c49e4012ad0cfb822d82b5c3038277"
+        },
+        {
+          "image": "ice-wide-surface.png",
+          "sha256": "a375975dc16a2a8442223a0e08969ed153b0db4704ecca496e825c448a2b9d20"
+        },
+        {
+          "image": "ice-compact-surface.png",
+          "sha256": "92ff1d95f44bd18b2e80706d7cec882dfda72850378f29248dcb8168bf98f4c6"
+        },
+        {
+          "image": "ice-frost-surface.png",
+          "sha256": "ad37e0eda3bcb0f0d5a31a3f2b1ff1702a3093d5c82010097e6474c8c640f261"
+        }
+      ]
+    },
+    {
+      "image": "snow.webp",
+      "sha256": "c3ce7ad9d599a0ce925434913108ac5735511e918bb968661228e3b6a70fb625",
+      "references": [
+        {
+          "image": "snow-corners-a.png",
+          "sha256": "ca08d3ef5dd1e9a63b95309d3eaaa1495b62f837ba060e33aca42f8d3375df5a"
+        },
+        {
+          "image": "snow-wide-surface.png",
+          "sha256": "d386399d410e637672071fee2e54f5cb14946f0f504961346222609697d2cd03"
+        },
+        {
+          "image": "snow-compact-surface.png",
+          "sha256": "c32129b27ae69a222e05d1cc9fc5b112e27585902e36650d82530337061c2703"
+        }
+      ],
+      "columns": 16,
+      "rows": 18,
+      "packing": "Assembled the approved PixelLab corner pixels in four 8\u00d78 quadrants per cell. Interior textures follow the transition frames.",
+      "neighborBitOrder": [
+        [
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          -1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "frames": {
+        "neighborMaskPlusOne": [
+          1,
+          256
+        ],
+        "wideSurface": [
+          257,
+          276
+        ],
+        "compactSurface": [
+          277,
+          285
+        ]
+      }
+    }
+  ]
+}

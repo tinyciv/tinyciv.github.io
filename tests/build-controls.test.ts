@@ -23,6 +23,7 @@ describe('construction keyboard controls', () => {
 
   it('reserves building letters for their menu without consuming movement or menu keys', () => {
     for (const option of BUILD_OPTIONS) {
+      if (!option.key) continue;
       expect(buildSelectionForKey(option.key, null)).toBeUndefined();
       expect(buildSelectionForKey(option.key.toUpperCase(), buildMenuForSelection(option.kind))).toBe(option.kind);
     }
@@ -31,7 +32,7 @@ describe('construction keyboard controls', () => {
         expect(buildSelectionForKey(key, menu)).toBeUndefined();
     }
     for (const menu of ['build', 'fortifications'] as const) {
-      const choices = buildOptionsForMenu(menu);
+      const choices = buildOptionsForMenu(menu).filter(option => option.key);
       expect(new Set(choices.map(option => option.key)).size).toBe(choices.length);
     }
   });

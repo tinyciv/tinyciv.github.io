@@ -4,7 +4,7 @@ import type { Building, GameState } from '../game/types';
 import { researchIconUrl } from './research-icons';
 import { formatResearchCost } from './research-format';
 import { scienceIcon } from './science-icon';
-import { RESEARCH_POSITIONS as positions, RESEARCH_COLUMNS, RESEARCH_COLUMN_PITCH, RESEARCH_BOARD_WIDTH, RESEARCH_BOARD_HEIGHT, researchEdgePath, researchNeighbor } from './research-tree-layout';
+import { RESEARCH_COLUMNS, RESEARCH_BOARD_WIDTH, RESEARCH_BOARD_HEIGHT, RESEARCH_CARD_WIDTH, RESEARCH_CARD_HEIGHT, researchCardPosition, researchEdgePath, researchNeighbor } from './research-tree-layout';
 import './research-tree.css';
 
 const definitions = new Map(RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
@@ -34,17 +34,17 @@ export class ResearchTree {
     const edges = RESEARCH_BRANCHES.flatMap(branch => branch.prerequisites.map(prerequisite => {
       const path = researchEdgePath(prerequisite, branch.id);
       return `<g class="research-edge" data-from="${prerequisite}" data-to="${branch.id}"><title>${definitions.get(prerequisite)!.label} required for ${branch.label}</title><path class="research-edge-halo" d="${path}"/><path class="research-edge-line" d="${path}" marker-end="url(#research-arrow)"/></g>`;
-    })).sort((a, b) => Number(a.includes('data-to="metalTools"')) - Number(b.includes('data-to="metalTools"'))).join('');
+    })).join('');
     element.innerHTML = `<div class="research-funding">
-      <label for="research-allocation">Gold income to Science <output for="research-allocation" class="research-allocation-value">25%</output></label>
+      <label for="research-allocation"><span>Gold income to <span class="science-text">Science</span></span><output for="research-allocation" class="research-allocation-value">25%</output></label>
       <input id="research-allocation" name="research-allocation" type="range" min="0" max="100" step="5" value="25" aria-label="Gold income allocated to research">
     </div>
     <div class="research-queue"><span class="research-queue-label">Priorities</span><div class="research-queue-list" aria-label="Research priorities"></div></div>
-    <div class="research-tree-scroll" aria-label="Technology tree, scroll horizontally"><div class="research-board" style="width:${RESEARCH_BOARD_WIDTH}px">
+    <div class="research-tree-scroll" aria-label="Technology tree"><div class="research-board" style="width:${RESEARCH_BOARD_WIDTH}px;height:${RESEARCH_BOARD_HEIGHT}px;--research-card-width:${RESEARCH_CARD_WIDTH}px;--research-card-height:${RESEARCH_CARD_HEIGHT}px">
       <svg class="research-connections" width="${RESEARCH_BOARD_WIDTH}" height="${RESEARCH_BOARD_HEIGHT}" viewBox="0 0 ${RESEARCH_BOARD_WIDTH} ${RESEARCH_BOARD_HEIGHT}" preserveAspectRatio="none" aria-label="Research prerequisites"><defs><marker id="research-arrow" viewBox="0 0 6 8" refX="5" refY="4" markerWidth="5" markerHeight="6" orient="auto"><path d="M0 0L6 4L0 8" fill="none" stroke="context-stroke" stroke-width="1.5"/></marker></defs>${edges}</svg>
-      ${RESEARCH_COLUMNS.flat().filter((id): id is ResearchBranchId => !!id).map(id => {
-        const branch = definitions.get(id)!, position = positions.get(id)!;
-        return `<button type="button" class="research-node" data-research="${id}" style="left:${10 + position.x * RESEARCH_COLUMN_PITCH}px;--research-row:${position.y}" aria-pressed="false">
+      ${RESEARCH_COLUMNS.flat().map(id => {
+        const branch = definitions.get(id)!, { left, top } = researchCardPosition(id);
+        return `<button type="button" class="research-node" data-research="${id}" style="left:${left}px;top:${top}px" aria-pressed="false">
           <span class="research-node-frame"><img class="research-node-icon" alt=""><span class="research-node-badge" aria-hidden="true"></span></span>
           <span class="research-node-copy"><strong>${branch.label}</strong><span class="research-node-meta"><span class="research-node-price"><span class="research-cost-number"></span>${scienceIcon()}</span></span></span>
           <span class="research-node-progress" aria-hidden="true" hidden><span></span></span></button>`;
@@ -60,7 +60,7 @@ export class ResearchTree {
       </section>`;
     const scroller = element.querySelector<HTMLElement>('.research-tree-scroll')!;
     scroller.addEventListener('wheel', event => {
-      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || scroller.scrollHeight > scroller.clientHeight + 1) return;
       event.preventDefault(); scroller.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 18 : event.deltaMode === 2 ? scroller.clientWidth : 1);
     }, { passive: false });
     this.allocation = element.querySelector<HTMLInputElement>('[name="research-allocation"]')!;
@@ -75,7 +75,9 @@ export class ResearchTree {
       button.onclick = () => this.inspect(id);
       button.onfocus = () => this.reveal(button);
       const chip = document.createElement('button'); chip.type = 'button'; chip.className = 'research-queue-chip';
-      chip.dataset.priority = id; chip.hidden = true; chip.onclick = () => this.inspect(id); this.chips.set(id, chip); queue.append(chip);
+      chip.dataset.priority = id; chip.hidden = true;
+      chip.onclick = () => { this.inspect(id); this.reveal(button); };
+      this.chips.set(id, chip); queue.append(chip);
       button.onkeydown = event => {
         if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault(); const next = researchNeighbor(id, event.key);
@@ -91,6 +93,9 @@ export class ResearchTree {
     const left = button.offsetLeft, right = left + button.offsetWidth;
     if (left < scroller.scrollLeft + 6) scroller.scrollLeft = left - 6;
     else if (right > scroller.scrollLeft + scroller.clientWidth - 6) scroller.scrollLeft = right - scroller.clientWidth + 6;
+    const viewport = scroller.getBoundingClientRect(), card = button.getBoundingClientRect();
+    if (card.top < viewport.top + 6) scroller.scrollTop += card.top - viewport.top - 6;
+    else if (card.bottom > viewport.bottom - 6) scroller.scrollTop += card.bottom - viewport.bottom + 6;
   }
   private inspect(id: ResearchBranchId): void { this.inspected = id; this.signature = ''; this.refreshCurrent(); }
   private refreshCurrent(): void { if (this.state && this.building) this.refresh(this.state, this.building); }
@@ -161,7 +166,7 @@ export class ResearchTree {
     progress.value = percent; progress.setAttribute('aria-valuetext', `${Math.floor(branch.progress)} of ${formatResearchCost(branch.required)} Science`);
     text(this.element.querySelector<HTMLElement>('.research-percentage')!, `${percent}%`);
     text(this.element.querySelector<HTMLElement>('.research-activity-number')!, branch.complete ? 'Complete' : `${Math.floor(branch.progress)} / ${formatResearchCost(branch.required)}`);
-    this.element.querySelector<SVGElement>('.research-activity .science-icon')!.style.display = branch.complete ? 'none' : '';
+    this.element.querySelector<HTMLImageElement>('.research-activity .science-icon')!.style.display = branch.complete ? 'none' : '';
     this.element.querySelector<HTMLElement>('.research-activity')!.setAttribute('aria-label', branch.complete ? 'Complete' : `${Math.floor(branch.progress)} of ${formatResearchCost(branch.required)} Science`);
   }
 }

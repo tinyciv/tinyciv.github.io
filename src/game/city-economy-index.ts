@@ -1,4 +1,4 @@
-import { factoryGoldIncome } from './civic-buildings-native';
+import { factoryIncomeQuote } from './factory-economy';
 import { chargesMaintenance } from './maintenance';
 import { EconomyInputs } from './economy-inputs';
 import { entityStore } from './entity-store';
@@ -11,6 +11,7 @@ import { retinueUpkeep } from './archery';
 import { saltFoodConsumptionMultiplier } from './resource-development';
 import { worldRevisions } from './world-revisions';
 import { fishingCityFoodPerEconomyCycle } from './fishing';
+import { farmResearchYieldMultiplier } from './research-bonuses';
 import { buildingReady, buildingSize, type Building, type FarmField, type GameState, type Unit } from './types';
 
 /** Reused scalar storage avoids serializing an economy or allocating a string
@@ -39,7 +40,8 @@ export interface CityEconomyGroup {
 interface Group extends CityEconomyGroup { scalars: Scalars; }
 export interface CityEconomyCity {
   palace: Building; buildings: Building[]; fields: FarmField[]; unitCosts: number[];
-  capital: boolean; maintenanceCapital?: number; maintenanceCities?: number; saltConsumption: number; revision: number;
+  capital: boolean; maintenanceCapital?: number; maintenanceCities?: number; saltConsumption: number; peatSupplied?: boolean;
+  factoryMultiplier: number; revision: number;
 }
 interface City extends CityEconomyCity { scalars: Scalars; seen: boolean; }
 interface FarmOwner {
@@ -129,7 +131,7 @@ export class CityEconomyIndex {
       let city = this.cities.get(palace.id);
       if (!city || city.palace !== palace) {
         city = { palace, buildings: [], fields: [], unitCosts: [], capital: false,
-          saltConsumption: 1, revision: 0, scalars: new Scalars(), seen: true };
+          saltConsumption: 1, factoryMultiplier: 1, revision: 0, scalars: new Scalars(), seen: true };
         this.cities.set(palace.id, city);
       }
       city.seen = true;
@@ -139,18 +141,21 @@ export class CityEconomyIndex {
     // Resource ownership can change independently of city population. Read its
     // authoritative index once per faction and compare the resulting value.
     const salt = new Map<number, number>(), factory = new Map<number, number>();
+    const quoteFactoryIncome = factoryIncomeQuote(state, inputs.coalCities);
     for (const city of this.cities.values()) if (selected.has(city.palace.faction)) {
       const palace = city.palace, faction = factions.get(palace.faction)!;
       if (!salt.has(faction.id)) salt.set(faction.id, saltFoodConsumptionMultiplier(state, faction.id));
-      if (!factory.has(faction.id)) factory.set(faction.id, factoryGoldIncome(state, faction.id, 1));
+      if (!factory.has(faction.id)) factory.set(faction.id, quoteFactoryIncome(faction.id, 1));
       city.capital = capitals.get(faction.id) === palace.id;
       city.maintenanceCapital = maintenanceCapitals.get(faction.id);
       city.maintenanceCities = maintenanceCities.get(faction.id);
       city.saltConsumption = salt.get(faction.id)!;
+      city.peatSupplied = inputs.peatCities.has(palace.id);
+      city.factoryMultiplier = factory.get(faction.id)!;
       city.scalars.add(palace, palace.faction, palace.capacity, city.capital,
         city.capital ? faction.purchasedRetinueSlots : undefined, faction.villageId, faction.achievements,
-        maintenanceCapitals.get(faction.id), maintenanceCities.get(faction.id), city.saltConsumption, factory.get(faction.id), stoneDefenseMultiplier(state, faction.id, 'tower'),
-        fishingCityFoodPerEconomyCycle(state, palace.id));
+        maintenanceCapitals.get(faction.id), maintenanceCities.get(faction.id), city.saltConsumption, city.factoryMultiplier, stoneDefenseMultiplier(state, faction.id, 'tower'),
+        fishingCityFoodPerEconomyCycle(state, palace.id), city.peatSupplied);
     }
     for (const building of inputs.buildingsFor(selected)) {
       // Only homes participate in the ordered resident ledger. A new road,
@@ -189,9 +194,10 @@ export class CityEconomyIndex {
       irrigation ??= prepareIrrigation(state).coverage;
       city.fields.push(field);
       const tile = state.world.tiles[field.y * state.world.width + field.x];
+      const owner = factions.get(field.faction);
       city.scalars.add(field, field.faction, field.x, field.y, !!field.orchard,
         field.orchard ? state.time + 1e-7 >= field.orchard.readyAt : true,
-        factions.get(field.faction)?.villageBonuses?.food, factions.get(field.faction)?.achievements, state.world, yieldRevision, irrigation,
+        owner?.villageBonuses?.food, owner?.achievements, farmResearchYieldMultiplier(owner), state.world, yieldRevision, irrigation,
         tile?.terrain, tile?.fertility, granaryYieldMultiplier(state, field.faction, field.x, field.y));
     }
     for (const [camp, owner] of this.farmOwners) if (selected.has(owner.faction) && !assignedFarms.has(camp)) this.farmOwners.delete(camp);

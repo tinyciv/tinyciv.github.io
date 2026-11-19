@@ -104,8 +104,9 @@ export function createLinearPurchase(state: GameState, kind: LinearPurchaseKind,
     frontier = new TinyQueue<number>(); queued.clear(); view = undefined; stamp = undefined;
     return result();
   };
+  const canExtend = (index: number, point: Point) => kind === 'road' && index === 0 || view!.connected(point);
   const enqueue = (index: number) => {
-    if (!queued.has(index) && pending.has(index) && view!.connected(pending.get(index)!)) {
+    if (!queued.has(index) && pending.has(index) && canExtend(index, pending.get(index)!)) {
       frontier.push(index); queued.add(index);
     }
   };
@@ -142,14 +143,13 @@ export function createLinearPurchase(state: GameState, kind: LinearPurchaseKind,
           const index = frontier.pop()!; queued.delete(index);
           const point = pending.get(index); if (!point) continue;
           if (view!.existing(point)) { remove(index); continue; }
-          if (view!.connected(point)) { next = index; break; }
+          if (canExtend(index, point)) { next = index; break; }
         }
         if (next === undefined) {
           const first = pending.keys().next().value;
           if (first !== undefined) {
             remove(first); skipped++;
-            message ||= kind === 'road' ? 'Extend an existing road or bridge, or start from a ford.'
-              : 'Start irrigation beside freshwater or extend an existing ditch.';
+            message ||= kind === 'road' ? 'This part of the road is disconnected.' : 'Start irrigation beside freshwater or extend an existing ditch.';
           }
         } else {
           const point = pending.get(next)!; remove(next);

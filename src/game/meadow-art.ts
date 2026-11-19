@@ -96,13 +96,13 @@ export function meadowBiome(tile: Tile): MeadowBiome | undefined {
 
 /** Pure placement also serves art previews. Broad continuous stands and fixed
  * subcell gaps break up open land; plains have one slot to grasslands' three. */
-export function meadowTufts(tile: Tile, x: number, y: number): readonly MeadowTuft[] {
+export function meadowTufts(tile: Tile, x: number, y: number, density = 1): readonly MeadowTuft[] {
     const biome = meadowBiome(tile);
     if (!biome) return NONE;
     const salt = Math.floor(tile.variation * 0xffffff) >>> 0;
     const cluster = (Math.sin(x * .28 + Math.sin(y * .25) * 1.8) + Math.sin(y * .39 - x * .11)
         + Math.sin(x * .71 + y * .31) * .36 + 2.36) / 4.72;
-    const chance = (biome === 'grassland' ? .72 : .6) * (.12 + cluster * 1.28) * (2 / 3) * MEADOW_DENSITY_SCALE;
+    const chance = (biome === 'grassland' ? .72 : .6) * (.12 + cluster * 1.28) * (2 / 3) * MEADOW_DENSITY_SCALE * density;
     const tufts: MeadowTuft[] = [];
     for (let slot = 0; slot < (biome === 'grassland' ? 3 : 1); slot++) {
         if (hash(x, y, salt + slot * 13 + 15) > chance) continue;
@@ -117,6 +117,16 @@ export function meadowTufts(tile: Tile, x: number, y: number): readonly MeadowTu
             phase: (hash(x, y, salt + slot * 17 + 23) * .38 + x * .026 - y * .012 + 10000) % 1 });
     }
     return tufts.length ? tufts : NONE;
+}
+
+/** Taper foreground grass as frost begins to appear in the ground palette. */
+function tundraEdgeDensity(world: World, x: number, y: number): number {
+    let density = 1;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        if (tileAt(world, x + dx, y + dy)?.terrain === 'tundra')
+            density = Math.min(density, Math.max(Math.abs(dx), Math.abs(dy)) === 1 ? .45 : .75);
+    }
+    return density;
 }
 
 /** The full animation frame can extend past its root tile. Check it once per
@@ -151,7 +161,7 @@ export class MeadowPlacementCache {
         if (!tile || !meadowBiome(tile)) return NONE;
         const old = this.cells[cell];
         if (old && old.terrain === tile.terrain && old.variation === tile.variation) return old.tufts;
-        const candidates = meadowTufts(tile, x, y);
+        const candidates = meadowTufts(tile, x, y, tundraEdgeDensity(world, x, y));
         const tufts = candidates.length ? candidates.filter(tuft => meadowFits(world, x, y, tuft)) : NONE;
         this.cells[cell] = { terrain: tile.terrain, variation: tile.variation, tufts };
         return tufts;

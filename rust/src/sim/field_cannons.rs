@@ -323,7 +323,8 @@ impl FieldCannons {
     }
     /// Row: id,faction,x,y,hp,speed,goalX,goalY,facing,cooldown,shotAt,
     /// upkeepAt,funded,attackTime,goalFlags,forcedTarget,rawAttack,gold,
-    /// strength,whaleBonus,moved,shotTarget,damage,reachedGoal.
+    /// strength,whaleBonus,peatSupplied,shotTarget,damage,reachedGoal.
+    /// Output slot 20 reports whether the cannon moved.
     /// Target rows: id,x,y,range,defense,edge,flags,priority,building,wall,0,0.
     fn step(&mut self,cannon:&mut Cannon,now:f64,dt:f64,targets:usize,engines:&crate::movement::Engines){
         self.output.copy_from_slice(&self.input[..ROW]);self.output[20]=0.0;self.output[21]=-1.0;self.output[23]=0.0;
@@ -340,7 +341,8 @@ impl FieldCannons {
         let mut momentum = std::mem::take(&mut cannon.velocity);
         if !self.output[11].is_finite(){self.output[11]=now+PERIOD;}
         if now>=self.output[11]{
-            let periods=((now-self.output[11])/PERIOD).floor()+1.0;let bill=UPKEEP*periods;
+            let periods = ((now - self.output[11]) / PERIOD).floor() + 1.0;
+            let bill = UPKEEP * periods * crate::ore::peat_upkeep_multiplier(self.input[20] != 0.0);
             self.output[12]=if self.output[17]>=bill{self.output[17]-=bill;1.0}else{0.0};
             self.output[11]+=PERIOD*periods;
         }

@@ -9,7 +9,7 @@ import { wasmNearestOriginMap, wasmPath, wasmPathBetween, wasmTravelTimeMap, was
 import { type GameState, type Point, type Tile, type World, type Building, type Unit, WATER, tileAt, buildingReady, buildingPresent, buildingWidth, buildingHeight, isFarmKind, isWallKind } from './types';
 import { reliefEdgeAllowed, reliefGroundWalkable } from './relief';
 import { invalidateIrrigation, IRRIGATION_MOVEMENT_MULTIPLIER } from './irrigation';
-import { groundMovementMultiplier } from './geography';
+import { applySnowSpeed, groundMovementMultiplier } from './geography';
 import { factionRespectsForbidden, forbiddenCells, forbiddenRevision, isForbidden } from './forbidden-zones';
 import { resourceBlocksGround } from './resource-terrain';
 import { NativeMovementGeometry, NativeMovementWorld, nativeMovement, nativeBlockerSource, registerNativeBlockers } from './movement-native';
@@ -54,14 +54,17 @@ export function movementMultiplier(state: GameState, x: number, y: number, route
   if (rowboatViews.has(state) && WATER.has(tile.terrain) && !(topology.flags[index] & BRIDGE))
     return 1 / navigationTerrain(state).cost[index];
   const paved = routes ? routes.has(index) : !!(topology.flags[index] & ROUTE);
-  // Bridges use normal speed across every water type, without a road bonus.
-  if (paved && WATER.has(tile.terrain)) return (bridges ? bridges.has(index) : !!(topology.flags[index] & BRIDGE)) ? 1 : .45;
-  if (paved) return topology.flags[index] & PAVED ? PAVED_ROAD_SPEED : DIRT_ROAD_SPEED;
+  if (paved) return roadMovementMultiplier(tile, topology.flags[index], bridges?.has(index));
   const irrigation = (topology.flags[index] & DITCH) ? IRRIGATION_MOVEMENT_MULTIPLIER : 1;
   return groundMovementMultiplier(tile) * irrigation;
 }
 
 const ROUTE = 1, BRIDGE = 2, DITCH = 4, SOLID = 8, PAVED = 16;
+function roadMovementMultiplier(tile: Tile, flags: number, bridge = !!(flags & BRIDGE)): number {
+  // Bridges use normal speed across every water type, without a road bonus.
+  if (WATER.has(tile.terrain)) return bridge ? 1 : .45;
+  return applySnowSpeed(tile, flags & PAVED ? PAVED_ROAD_SPEED : DIRT_ROAD_SPEED);
+}
 interface CellChanges { revision: number; cells: readonly number[] }
 const MAX_CHANGE_HISTORY = 64;
 function changedCells(history: readonly CellChanges[], since: number, revision: number): Set<number> | undefined {
@@ -474,7 +477,7 @@ function residentMovementGeometry(state: GameState): NativeMovementGeometry {
     output[offset] = cell;
     output[offset + 1] = Number(!!terrain.open[cell] || !!(flags & BRIDGE) && !!terrain.bridgeGround[cell]);
     output[offset + 2] = terrain.edges[cell];
-    output[offset + 3] = flags & ROUTE ? WATER.has(state.world.tiles[cell].terrain) ? flags & BRIDGE ? 1 : 1 / .45 : 1 / (flags & PAVED ? PAVED_ROAD_SPEED : DIRT_ROAD_SPEED)
+    output[offset + 3] = flags & ROUTE ? 1 / roadMovementMultiplier(state.world.tiles[cell], flags)
       : terrain.cost[cell] / (flags & DITCH ? IRRIGATION_MOVEMENT_MULTIPLIER : 1);
   });
   caches.set(owner, { terrain, terrainVersion: terrain.version, topology, structureRevision: topology.revision, geometry });
@@ -548,7 +551,7 @@ function searchScratch(grid: NavigationGrid): SearchScratch {
   return grid.search ??= { costs: new Float64Array(count), previous: new Int32Array(count),
     seen: new Uint32Array(count), closed: new Uint32Array(count), stamp: 0, frontier: new MinHeap() };
 }
-type TerrainSnapshot = Pick<Tile, 'terrain' | 'overlay' | 'biome' | 'resource' | 'oreAnchor' | 'oreWidth' | 'oreHeight' | 'ridge' | 'ridgeTier' | 'stair' | 'relief' | 'reliefFlags' | 'reliefSpeed' | 'waterfall' | 'creek' | 'villageTrail'>;
+type TerrainSnapshot = Pick<Tile, 'terrain' | 'overlay' | 'biome' | 'resource' | 'oreAnchor' | 'oreWidth' | 'oreHeight' | 'ridge' | 'ridgeTier' | 'stair' | 'relief' | 'reliefFlags' | 'reliefSpeed' | 'waterfall' | 'creek' | 'villageTrail' | 'snow' | 'seaIce'>;
 interface TerrainNavigation {
   tiles: World['tiles']; width: number; height: number; cursor: number; version: number; geometryVersion: number;
   snapshots: TerrainSnapshot[]; history: CellChanges[];
@@ -559,14 +562,16 @@ const terrainNavigationCaches = new WeakMap<World, TerrainNavigation>();
 function terrainSnapshot(tile: Tile): TerrainSnapshot {
   return { terrain: tile.terrain, overlay: tile.overlay, biome: tile.biome, resource: tile.resource,
     oreAnchor: tile.oreAnchor, oreWidth: tile.oreWidth, oreHeight: tile.oreHeight, ridge: tile.ridge, ridgeTier: tile.ridgeTier, stair: tile.stair,
-    relief:tile.relief,reliefFlags:tile.reliefFlags,reliefSpeed:tile.reliefSpeed, waterfall: tile.waterfall, creek: tile.creek, villageTrail: tile.villageTrail };
+    relief:tile.relief,reliefFlags:tile.reliefFlags,reliefSpeed:tile.reliefSpeed, waterfall: tile.waterfall, creek: tile.creek, villageTrail: tile.villageTrail,
+    snow: tile.snow, seaIce: tile.seaIce };
 }
 function terrainMatches(tile: Tile, old: TerrainSnapshot): boolean {
   return tile.terrain === old.terrain && tile.overlay === old.overlay && tile.biome === old.biome && tile.resource === old.resource
     && tile.oreAnchor === old.oreAnchor && tile.oreWidth === old.oreWidth && tile.oreHeight === old.oreHeight
     && tile.ridge === old.ridge && tile.ridgeTier === old.ridgeTier && tile.stair === old.stair
     && tile.relief === old.relief && tile.reliefFlags === old.reliefFlags && tile.reliefSpeed === old.reliefSpeed
-    && tile.waterfall === old.waterfall && tile.creek === old.creek && tile.villageTrail === old.villageTrail;
+    && tile.waterfall === old.waterfall && tile.creek === old.creek && tile.villageTrail === old.villageTrail
+    && tile.snow === old.snow && tile.seaIce === old.seaIce;
 }
 function addHalo(cells: Set<number>, cell: number, radius: number, width: number, height: number): void {
   const x = cell % width, y = Math.floor(cell / width);
@@ -832,7 +837,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
       if (grid.land[i] !== land) accessChanged.add(region(i));
       grid.land[i] = land;
     }
-    const cost = flags & ROUTE ? WATER.has(world.tiles[i].terrain) ? flags & BRIDGE ? 1 : 1 / .45 : 1 / (flags & PAVED ? PAVED_ROAD_SPEED : DIRT_ROAD_SPEED)
+    const cost = flags & ROUTE ? 1 / roadMovementMultiplier(world.tiles[i], flags)
       : terrain.cost[i] / (flags & DITCH ? IRRIGATION_MOVEMENT_MULTIPLIER : 1);
     if (grid.cost[i] !== cost) {
       costChanged.add(region(i));

@@ -1,12 +1,26 @@
 ### Fixes and features:
+- Remove the current demolition animation for walls and towers; propose new ones that are crumbling (not fire) and top down, not isomorphic.
+- Show the basic controls on the loading screen for the world; give me some designs for a nice WASD explanation with visuals. It sohuld show the keys highlighted on the keyboard (only show WASD) and then show the Leader zooming around as they are highlighted
+- When opening the menu from within the running game, show a popup menu like most games instead of immediately returning to the main menu. Put options for Save game, Load game, Exit to menu, Preferences, etc. Style it like the other popups in the game.
+- Prepare an initial loading animation (shown when the app is loading for the first time of a small group of spearmen attacking a settlement with a few archers. Record the frames; we will play this in the initial loading screen to keep people's attention. It should last for ~15 seconds. When it finishes, it should freeze on the last frame and fade out to a sepia and wait for the rest of the game to finish loading.) 
 
+
+- Make sure warships can reverse. Also, reduce their collision box slightly. Make it easier for them to reverse/move around. When they are anchored, show a small white anchor symbol above them
+- Halve the time that footsteps stay present on the map
+- For gold mines, dont draw them with a mine entry until they are developed
+- Roads do not need to start on a previously existing road / ford tile
+- For quick start, have it default to roaming barbarians
+- Show progress bar for world generation, and have it say "Generating world..."
 - For gunpowder units, we should add a translucent smoke cloud effect from each firing animation that hangs around for 5 seconds and then fades away. If there is a large battle with lots of units, we want it to produce a substantial amount of smoke. The clouds can have a small amount of random drift too; the drift should be bias + random noise with bias = 10% of the strength of the random noise variation.
 - Remove the old Leader-only 1x2 galley art; it looks bad. Create some new versions with the same size, using the other ships as comparisons / grounding context.
 - For the musketry deathmatch scenario, give the AI player 50% more gold per turn than the player
 - Add minimum range of 5 tiles for cannons
-- have cannons use the turn/move forward/reverse navigation, just like the ships
 - Reduce cannon damage against units by 70%
 - Let cannons fire over buildings and walls, but not mountains
+- When a building is destroyed,do not show a construction site on its location until a civilian comes to start it
+- when fortifications are destroyed, do not let other buildings get autoplaced on top of it
+- Marauders sometimes mill about and even when I attack them, they dont come after me. This happens around a camp, might not be related to that though
+- For developed gold mines, there doesnt need to be a civilian walking back and forth; just generate the gold in situ and show the floating gold number each time it happens
 
 
 - At end of game, victory or defeat popup should link to main menu, not new world.

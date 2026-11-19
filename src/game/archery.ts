@@ -13,6 +13,7 @@ import { structuresOf, STRUCTURE_READY } from './structure-index';
 import { purchasedRetinueSlots } from './retinue-purchases';
 import { leaderRetinueBonus } from './leader-progression';
 import { factionHasDevelopedResource } from './resource-development';
+import { cityOwnership } from './city-ownership';
 import { isMountedKind, buildingHeight, buildingReady, buildingWidth, distance, isRetinueMember, type Building, type Faction, type GameState, type Point, type Unit } from './types';
 
 export const ARCHER_RANGE = 4;
@@ -246,7 +247,9 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
     const exit = edges.find(edge => !occupied.has(Math.floor(edge.y) * state.world.width + Math.floor(edge.x)));
     if (!exit) return true;
     setSoldierRole(unit, training.role);
-    if (training.role === 'fieldCannon') unit.fieldCannon = { nextUpkeepAt: state.time + rustEngine.field_cannon_constant(3), funded: true };
+    if (training.role === 'fieldCannon') unit.fieldCannon = {
+      nextUpkeepAt: state.time + rustEngine.field_cannon_constant(3), funded: true, supplyCity: cityOwnership(state).building(range)?.id,
+    };
     entityStore(state).units.updateRoles(unit);
     unit.inside = false; unit.x = exit.x; unit.y = exit.y;
     delete unit.training; unit.joiningRetinue = true;

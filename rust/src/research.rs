@@ -6,8 +6,8 @@ use bevy_ecs::schedule::SingleThreadedExecutor;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-pub const INPUT_HEADER: usize = 15;
-pub const OUTPUT_HEADER: usize = 20;
+pub const INPUT_HEADER: usize = 16;
+pub const OUTPUT_HEADER: usize = 22;
 pub const CREATED: u32 = 1;
 pub const FOCUS: u32 = 2;
 pub const CREDIT: u32 = 4;
@@ -17,12 +17,17 @@ pub const RECEIPTS: u32 = 32;
 pub const PRIORITIES: u32 = 64;
 pub const ALLOCATION: u32 = 128;
 pub const PROGRESS: u32 = 256;
+pub const TRADE_CREDIT: u32 = 512;
 
 pub fn constant(index: u32) -> f64 { match index { 0 => 0.25, 1 | 2 => 30.0, 3 => 5.0, _ => panic!("unknown research constant") } }
 fn minimum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.min(b) } }
 fn maximum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) } }
 fn or_zero(value: f64) -> f64 { if value.is_nan() { 0.0 } else { value } }
 pub fn level(value: f64) -> f64 { maximum(0.0, minimum(1.0, or_zero(value).floor())) }
+pub fn farm_yield_multiplier(crop_rotation: bool, iron_plows: bool) -> f64 {
+    let bonus = 15 * u32::from(crop_rotation) + 20 * u32::from(iron_plows);
+    f64::from(100 + bonus) / 100.0
+}
 pub fn allocation(value: f64) -> f64 { if value.is_finite() { maximum(0.0, minimum(1.0, value)) } else { constant(0) } }
 pub fn library_multiplier(cities: usize) -> f64 {
     let bonuses = [0.30, 0.20, 0.14, 0.09, 0.06]; let mut multiplier = 1.0;
@@ -42,7 +47,7 @@ impl Graph { pub fn cost(&self, branch: usize, bonus: f64, tutorial: bool) -> f6
 /// points and the deepest tier 5x. Depth is the longest prerequisite chain.
 const ROOT_COST_SCALE: f64 = 1.2;
 const DEEPEST_COST_SCALE: f64 = 5.0;
-fn depth_scaled(mut nodes: Vec<Node>) -> Vec<Node> {
+fn depth_scaled(mut nodes: Vec<Node>, fixed_costs: u64) -> Vec<Node> {
     let count = nodes.len();
     let mut depth = vec![0usize; count];
     // Longest-path relaxation; prerequisite chains are acyclic and at most `count` long.
@@ -55,7 +60,8 @@ fn depth_scaled(mut nodes: Vec<Node>) -> Vec<Node> {
         if !changed { break; }
     }
     let max_depth = depth.iter().copied().max().unwrap_or(0);
-    for (node, &d) in nodes.iter_mut().zip(&depth) {
+    for (id, (node, &d)) in nodes.iter_mut().zip(&depth).enumerate() {
+        if fixed_costs & (1u64 << id) != 0 { continue; }
         let t = if max_depth == 0 { 0.0 } else { d as f64 / max_depth as f64 };
         node.points *= ROOT_COST_SCALE + (DEEPEST_COST_SCALE - ROOT_COST_SCALE) * t;
     }
@@ -69,7 +75,7 @@ struct Funding { points: f64, remaining: f64 }
 struct Receipt { time: f64, points: f64 }
 #[derive(Component, Default)]
 struct Account {
-    exists: bool, tutorial:bool, focus: i32, allocation: f64, credit: f64, reserved_gold: f64, bonus: f64,
+    exists: bool, tutorial:bool, focus: i32, allocation: f64, credit: f64, trade_credit: f64, reserved_gold: f64, bonus: f64,
     levels: Vec<f64>, progress: Vec<f64>, priorities: Vec<i32>, funding: Vec<Funding>, receipts: Vec<Receipt>,
     funding_present: bool, receipts_present: bool, priorities_present: bool,
 }
@@ -78,7 +84,7 @@ struct Context { library: bool, defeated: bool, game_over: bool, paused: bool, f
 #[derive(Resource, Default)]
 struct Step {
     mode: u32, now: f64, dt: f64, gross: f64, efficiency: f64, target: f64,
-    flags: u32, error: u32, refund: f64, diverted: f64, completions: Vec<usize>,
+    flags: u32, error: u32, refund: f64, diverted: f64, earned: f64, completions: Vec<usize>,
     level_changes: u64, progress_changes: u64,
 }
 
@@ -122,9 +128,10 @@ fn focus(account: &Account, graph: &Graph) -> Option<usize> {
     }
     best
 }
-fn reserved(account: &Account) -> f64 {
+fn paid_reserved(account: &Account) -> f64 {
     maximum(0.0, or_zero(account.credit)) + account.funding.iter().map(|receipt| receipt.points).sum::<f64>()
 }
+fn reserved(account: &Account) -> f64 { paid_reserved(account) + account.trade_credit }
 fn remaining(account: &Account, graph: &Graph) -> f64 {
     graph.nodes.iter().enumerate().map(|(id, _)| if level(account.levels[id]) > 0.0 { 0.0 }
         else { maximum(0.0, graph.cost(id, account.bonus, account.tutorial) - or_zero(account.progress[id])) }).sum()
@@ -132,7 +139,7 @@ fn remaining(account: &Account, graph: &Graph) -> f64 {
 fn ensure(account: &mut Account, step: &mut Step) { if !account.exists { account.exists = true; account.focus = 0; step.flags |= CREATED; } }
 
 fn control_account(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Query<&mut Account>) {
-    if step.mode < 3 { return; }
+    if !(3..=6).contains(&step.mode) { return; }
     let graph = &content.0;
     for mut account in &mut accounts {
         if step.mode == 5 {
@@ -168,7 +175,14 @@ fn refund_excess(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Qu
         if !account.exists || context.defeated || (context.paused && step.mode != 6) || context.game_over { continue; }
         let reserve = reserved(&account); if reserve <= 1e-9 { continue; }
         let excess = reserve - remaining(&account, &content.0); if excess <= 1e-8 { continue; }
-        let mut left = excess;
+        let paid_reserve = paid_reserved(&account);
+        let mut left = excess.min(paid_reserve);
+        let earned_excess = excess - left;
+        if earned_excess > 0.0 {
+            account.trade_credit = maximum(0.0, account.trade_credit - earned_excess);
+            step.flags |= TRADE_CREDIT;
+        }
+        let refundable = left;
         let credit = minimum(left, or_zero(account.credit));
         account.credit = maximum(0.0, or_zero(account.credit) - credit); left -= credit;
         step.flags |= CREDIT;
@@ -180,8 +194,9 @@ fn refund_excess(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Qu
             if receipt.points <= 1e-9 { account.funding.remove(index); }
             step.flags |= FUNDING;
         }
-        let paid = if account.reserved_gold.is_nan() { reserve } else { account.reserved_gold };
-        let gold = paid * (excess - left) / reserve;
+        if paid_reserve <= 1e-9 { continue; }
+        let paid = if account.reserved_gold.is_nan() { paid_reserve } else { account.reserved_gold };
+        let gold = paid * (refundable - left) / paid_reserve;
         account.reserved_gold = maximum(0.0, paid - gold); step.refund += gold; step.flags |= RESERVED;
     }
 }
@@ -196,18 +211,43 @@ fn allocate_income(content: Res<Content>, mut step: ResMut<Step>, mut accounts: 
         let reserve = reserved(&account);
         let diverted = minimum(offered, maximum(0.0, remaining(&account, &content.0) - reserve) / step.efficiency);
         if diverted <= 1e-9 { continue; }
-        account.reserved_gold = (if account.reserved_gold.is_nan() { reserve } else { account.reserved_gold }) + diverted;
+        account.reserved_gold = (if account.reserved_gold.is_nan() { paid_reserved(&account) } else { account.reserved_gold }) + diverted;
         let science = diverted * step.efficiency;
         account.focus = focus as i32; step.flags |= FOCUS | RESERVED | FUNDING | RECEIPTS;
         let funding_seconds=constant(2)*if account.tutorial {0.1} else {1.0};
         if let Some(previous) = account.funding.last_mut().filter(|receipt| receipt.remaining == funding_seconds) { previous.points += science; }
         else { account.funding.push(Funding { points: science, remaining: funding_seconds }); }
         account.funding_present = true;
-        account.receipts.retain(|receipt| receipt.time > step.now - constant(1));
-        let second = step.now.floor();
-        if let Some(previous) = account.receipts.last_mut().filter(|receipt| receipt.time == second) { previous.points += science; }
-        else { account.receipts.push(Receipt { time: second, points: science }); }
-        account.receipts_present = true; step.diverted += diverted;
+        record_receipt(&mut account, step.now, science);
+        step.diverted += diverted;
+    }
+}
+
+fn record_receipt(account: &mut Account, now: f64, science: f64) {
+    account.receipts.retain(|receipt| receipt.time > now - constant(1));
+    let second = now.floor();
+    if let Some(previous) = account.receipts.last_mut().filter(|receipt| receipt.time == second) {
+        previous.points += science;
+    } else {
+        account.receipts.push(Receipt { time: second, points: science });
+    }
+    account.receipts_present = true;
+}
+
+fn earn_trade_science(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Query<(&mut Account, &Context)>) {
+    if step.mode != 7 || !step.gross.is_finite() || step.gross <= 0.0 { return; }
+    for (mut account, context) in &mut accounts {
+        if context.defeated || context.game_over || !context.library { continue; }
+        let Some(selected) = focus(&account, &content.0) else { continue; };
+        let room = remaining(&account, &content.0) - account.trade_credit;
+        let earned = step.gross.min(room);
+        if earned <= 1e-9 { continue; }
+        ensure(&mut account, &mut step);
+        account.focus = selected as i32;
+        account.trade_credit += earned;
+        record_receipt(&mut account, step.now, earned);
+        step.flags |= FOCUS | TRADE_CREDIT | RECEIPTS;
+        step.earned = earned;
     }
 }
 
@@ -225,7 +265,7 @@ fn processing_rate(account: &Account, graph: &Graph, id: usize) -> f64 {
 
 fn funded_rate(account: &Account, graph: &Graph, id: usize) -> f64 {
     let limit = processing_rate(account, graph, id);
-    if or_zero(account.credit) > 1e-9 { return limit; }
+    if or_zero(account.credit) + account.trade_credit > 1e-9 { return limit; }
     let released = account.funding.iter().filter(|batch| batch.remaining > 0.0)
         .map(|batch| batch.points / batch.remaining).sum();
     minimum(limit, released)
@@ -240,7 +280,8 @@ fn advance_funded(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Q
         let Some(id) = selected else { continue; };
         account.focus = id as i32; step.flags |= FOCUS;
         if !context.library { continue; }
-        let reserved_before = reserved(&account);
+        let reserved_before = paid_reserved(&account);
+        let mut trade_credit = account.trade_credit;
         let mut credit = maximum(0.0, or_zero(account.credit));
         for receipt in &mut account.funding {
             let elapsed = minimum(step.dt, receipt.remaining);
@@ -254,17 +295,23 @@ fn advance_funded(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Q
             account.focus = id as i32;
             let required = graph.cost(id, account.bonus, account.tutorial); let previous = or_zero(account.progress[id]);
             if previous + 1e-8 >= required { complete(&mut account, graph, id, &mut step); selected = focus(&account, graph); continue; }
-            if credit <= 1e-9 { break; }
+            if credit + trade_credit <= 1e-9 { break; }
             let rate = processing_rate(&account, graph, id);
-            let spent = minimum(minimum(credit, maximum(0.0, required - previous)), rate * elapsed);
-            account.progress[id] = previous + spent; credit -= spent; elapsed -= spent / rate; step.flags |= PROGRESS;
+            let spent = minimum(minimum(credit + trade_credit, maximum(0.0, required - previous)), rate * elapsed);
+            let earned_spent = spent.min(trade_credit);
+            trade_credit -= earned_spent;
+            account.progress[id] = previous + spent; credit -= spent - earned_spent; elapsed -= spent / rate; step.flags |= PROGRESS;
             step.progress_changes |= 1_u64 << id;
             if account.progress[id] + 1e-8 < required { break; }
             complete(&mut account, graph, id, &mut step); selected = focus(&account, graph);
         }
         account.credit = maximum(0.0, credit);
+        if account.trade_credit != trade_credit {
+            account.trade_credit = trade_credit;
+            step.flags |= TRADE_CREDIT;
+        }
         account.reserved_gold = if reserved_before > 0.0 {
-            (if account.reserved_gold.is_nan() { reserved_before } else { account.reserved_gold }) * reserved(&account) / reserved_before
+            (if account.reserved_gold.is_nan() { reserved_before } else { account.reserved_gold }) * paid_reserved(&account) / reserved_before
         } else { 0.0 };
         step.flags |= CREDIT | RESERVED;
         if let Some(id) = selected { account.focus = id as i32; }
@@ -280,7 +327,7 @@ impl ResearchEngine {
         let mut world = World::new(); world.insert_resource(Content(graph.clone())); world.init_resource::<Step>();
         let entity = world.spawn((Account::default(), Context::default())).id();
         let mut schedule = Schedule::default(); schedule.set_executor(SingleThreadedExecutor::new());
-        schedule.add_systems((control_account, refund_excess, allocate_income, advance_funded).chain());
+        schedule.add_systems((control_account, refund_excess, allocate_income, earn_trade_science, advance_funded).chain());
         Self { world, schedule, entity, graph, input: Vec::new(), output: Vec::new(), priorities: 0, funding: 0, receipts: 0 }
     }
     pub fn prepare(&mut self, priorities: usize, funding: usize, receipts: usize) -> *mut f64 {
@@ -295,6 +342,7 @@ impl ResearchEngine {
             let mut account = self.world.get_mut::<Account>(self.entity).expect("research account");
             let input = &self.input;
             account.exists = input[0] != 0.0; account.focus = input[1] as i32; account.allocation = input[2];
+            account.trade_credit = maximum(0.0, or_zero(input[15]));
             account.credit = input[3]; account.reserved_gold = input[4]; account.bonus = input[5]; account.tutorial = input[14] == 2.0;
             account.funding_present = input[10] != 0.0; account.receipts_present = input[11] != 0.0; account.priorities_present = input[12] != 0.0;
             account.levels.resize(count, f64::NAN); account.progress.resize(count, f64::NAN);
@@ -311,7 +359,7 @@ impl ResearchEngine {
         {
             let mut step = self.world.resource_mut::<Step>();
             step.mode = mode; step.now = now; step.dt = dt; step.gross = gross; step.efficiency = efficiency; step.target = target;
-            step.flags = 0; step.error = 0; step.refund = 0.0; step.diverted = 0.0; step.completions.clear();
+            step.flags = 0; step.error = 0; step.refund = 0.0; step.diverted = 0.0; step.earned = 0.0; step.completions.clear();
             step.level_changes = 0; step.progress_changes = 0;
         }
         self.schedule.run(&mut self.world);
@@ -328,7 +376,7 @@ impl ResearchEngine {
             resolved.map_or(-1.0, |value| value as f64), account.focus as f64, allocation(account.allocation),
             account.credit, account.reserved_gold, reserve, step.refund, step.diverted, account.exists as u32 as f64,
             priorities.len() as f64, account.funding.len() as f64, account.receipts.len() as f64, step.completions.len() as f64,
-            rate, remaining(account, &self.graph), active as u32 as f64, step.level_changes as f64, step.progress_changes as f64]);
+            rate, remaining(account, &self.graph), active as u32 as f64, step.level_changes as f64, step.progress_changes as f64, account.trade_credit, step.earned]);
         for id in 0..count { self.output.extend_from_slice(&[account.levels[id], account.progress[id], level(account.levels[id]), self.graph.cost(id, account.bonus, account.tutorial)]); }
         self.output.extend(priorities.iter().map(|id| *id as f64));
         for receipt in &account.funding { self.output.extend_from_slice(&[receipt.points, receipt.remaining]); }
@@ -344,11 +392,11 @@ impl Engines {
         assert!(count > 0 && count <= 53, "research graph supports at most 53 safe mask bits");
         self.metadata.resize(count * 2, 0.0); self.metadata.as_mut_ptr()
     }
-    pub fn commit_graph(&mut self, count: usize) {
+    pub fn commit_graph(&mut self, count: usize, fixed_costs: u64) {
         assert!(self.engines.is_empty(), "research metadata must be installed before accounts");
         assert!(count > 0 && count <= 53 && count * 2 <= self.metadata.len(), "invalid research graph");
         let nodes: Vec<Node> = (0..count).map(|id| Node { points: self.metadata[id * 2], prerequisites: self.metadata[id * 2 + 1] as u64 }).collect();
-        self.graph = Arc::new(Graph { nodes: depth_scaled(nodes) });
+        self.graph = Arc::new(Graph { nodes: depth_scaled(nodes, fixed_costs) });
     }
     pub fn cost(&self, branch: usize, bonus: f64, tutorial:bool) -> f64 { self.graph.cost(branch, bonus, tutorial) }
     pub fn create(&mut self) -> u32 {
@@ -418,7 +466,7 @@ mod tests {
     }
     #[test]
     fn tech_cost_scales_linearly_with_depth() {
-        let scaled = depth_scaled(vec![Node { points: 10.0, prerequisites: 0 }, Node { points: 10.0, prerequisites: 1 }, Node { points: 10.0, prerequisites: 2 }]);
+        let scaled = depth_scaled(vec![Node { points: 10.0, prerequisites: 0 }, Node { points: 10.0, prerequisites: 1 }, Node { points: 10.0, prerequisites: 2 }], 0);
         assert!((scaled[0].points - 12.0).abs() < 1e-9);
         assert!((scaled[1].points - 31.0).abs() < 1e-9);
         assert!((scaled[2].points - 50.0).abs() < 1e-9);

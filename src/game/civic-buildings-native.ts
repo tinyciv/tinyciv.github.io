@@ -10,6 +10,7 @@ import { buildingWidth, buildingHeight, unitMaxHp, WATER, type BuildingKind, typ
 const CODES = { hospital: 38, apartments: 39, factory: 40, goldMine: 41 } as const;
 export type CivicBuildingKind = keyof typeof CODES;
 export const civicBuildingProperty = (kind: CivicBuildingKind, property: number): number => rustEngine.civic_building_constant(CODES[kind], property);
+export const COAL_FACTORY_GOLD_BONUS = civicBuildingProperty('factory', 4);
 export const isCivicBuilding = (kind: BuildingKind): kind is CivicBuildingKind => kind in CODES;
 const UNIT_STRIDE = 9;
 
@@ -58,10 +59,6 @@ function publish(state: GameState, pointer: number): void {
   }
 }
 
-export function factoryGoldIncome(state: GameState, faction: number, base: number): number {
-  structureIndex(state);
-  return rustEngine.sim_civic_factory_income(simCore(state).handle, faction, base);
-}
 export function payGoldMineDividends(state: GameState): void {
   structureIndex(state);
   publish(state, rustEngine.sim_civic_dividends(simCore(state).handle));

@@ -33,10 +33,10 @@ import { armorVisualLevel } from './armor-art';
 import { horsemanBounds, horsemanPose, horsemanSheet } from './cavalry-art';
 import { ballistaFrame, spearmanBounds, spearmanPose, spearmanSheet } from './siege-art';
 import { cannonFrame, drawCannon } from './cannon-art';
-import { cannonFireStamp, CANNON_FIRE_FRAME_SIZE } from './cannon-fire-art';
+import { cannonFireImage, cannonFireStamp, CANNON_FIRE_FRAME_SIZE } from './cannon-fire-art';
 import { shellImpactImage, SHELL_IMPACT_FRAME_SIZE, SHELL_IMPACT_BOUNDS } from './shell-impact-art';
-import { thermalBathFrame } from './civic-art';
-import { dockArtBounds, dockConstructionBounds, rowboatFrame, drawRowboat, rowboatOccupant } from './naval-art';
+import { FOUNTAIN_ART_BOUNDS, FOUNTAIN_FRAME_SIZE, fountainFrame, fountainSheet, thermalBathFrame } from './civic-art';
+import { dockArtBounds, dockConstructionBounds, rowboatFrame, drawRowboat, rowboatOccupant, warshipAnchorMarker } from './naval-art';
 import { galleyPose, galleyHullImage, galleyRigImage, galleyAttachmentOffset, drawGalleyHull, drawGalleyRig, drawGalleyPassenger, GALLEY_ART_BOUNDS, GALLEY_PIVOT, TRADING_BOAT_SCALE } from './galley-art';
 import { trailArtVariant } from './road-sprites';
 import { drawResourceObject, drawResourceFence, resourceObjectBounds, resourceObjectKey, type ResourceCellArt } from './resource-art';
@@ -84,10 +84,12 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
 }
 
 /** Kinds whose picture changes with the animation clock once built. */
-export const ANIMATED_BUILDING_KINDS: ReadonlySet<Building['kind']> = new Set(['observationPost', 'ballista', 'siegeCannon', 'library', 'thermalBath', 'irrigation']);
+export const ANIMATED_BUILDING_KINDS: ReadonlySet<Building['kind']> = new Set(['observationPost', 'ballista', 'siegeCannon', 'library', 'thermalBath', 'irrigation', 'fountain']);
 
 export function buildingKey(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind): string {
     if (b.construction && b.kind !== 'well' && b.kind !== 'road') return `construction:${buildingWidth(b)}:${buildingHeight(b)}${b.kind === 'dock' ? `:dock:${b.dockFacing ?? 2}` : ''}`;
+    if (b.kind === 'fountain') return `fountain:${fountainFrame(time)}`;
+    if (b.kind === 'goldMine') return `gold-mine:${b.faction >= 0}`;
     const phase = b.kind === 'observationPost' ? Math.floor(time * 4) % 2 : b.kind === 'ballista' ? Object.values(ballistaFrame(b, time)).join(':')
         : b.kind === 'siegeCannon' ? Object.values(cannonFrame(b, time)).join(':')
         : b.kind === 'library' ? Math.floor(time * 5) % 4 : b.kind === 'thermalBath' ? thermalBathFrame(time) : b.kind === 'irrigation' ? Math.floor(time * 3) % 4 : 0;
@@ -178,6 +180,18 @@ export class NativeArt {
         const image = sinkingImage(effect, color); if (!image) return;
         const frame = sinkingFrame(effect, time);
         return { ...this.image(image, [frame * 48, 0, 48, 80], WARSHIP_BOUNDS), rotation: effect.facing + Math.PI / 2, rotationPivot: { x: 16, y: 16 } };
+    }
+
+    warshipAnchor(): BakedArt | undefined {
+        const marker = warshipAnchorMarker();
+        return marker && this.image(marker, [0, 0, 16, 16], { x: -8, y: -8, width: 16, height: 16 });
+    }
+
+    gunSmoke(variant: number): BakedArt | undefined {
+        const image = cannonFireImage();
+        // Reuse the smoke-only tail of the approved black-powder animation.
+        return image && this.image(image, [(6 + variant) * CANNON_FIRE_FRAME_SIZE + 6, 3, 18, 19],
+            { x: -16, y: -16, width: 32, height: 32 });
     }
 
     private cannonFire(shotAt: number | undefined, time: number, facing: number, centerX: number, centerY: number,
@@ -368,6 +382,11 @@ export class NativeArt {
     }
     /** `key`, when supplied, must equal buildingKey(b, time, color, links, gate, attached, towerWall). */
     building(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind, key?: string): BakedArt {
+        if (b.kind === 'fountain' && !b.construction) {
+            const sheet = fountainSheet();
+            const size = FOUNTAIN_FRAME_SIZE;
+            if (sheet) return this.image(sheet, [fountainFrame(time) * size, 0, size, size], FOUNTAIN_ART_BOUNDS);
+        }
         if (b.kind === 'siegeCannon' && !b.construction) {
             const pose = cannonFrame(b, time);
             const body = this.paint(`siege-cannon-body:${pose.direction}:${pose.recoil}`,

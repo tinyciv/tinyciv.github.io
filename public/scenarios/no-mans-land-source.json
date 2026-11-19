@@ -4,7 +4,7 @@
   "height": 144,
   "simulatedSeconds": 3520.899999997727,
   "wallSeconds": 247.330711,
-  "bytes": 1846442,
+  "bytes": 1848239,
   "cities": [
     {
       "id": 1,
@@ -931,5 +931,21 @@
         "war": true
       }
     ]
+  },
+  "winterPockets": {
+    "tileCounts": {
+      "seaIce": 143
+    },
+    "generatorWasmSha256": "16579e5edb4b5bcd5b74285a8f99c2742bd2f13e58f1eb6cd00d6d2f8ff1d612",
+    "previousSha256": "8579b007a989da7d6c23b1d97a7464572ff891564e66e4f6380122cac81c4f65"
+  },
+  "snowBands": {
+    "snowTiles": 48,
+    "rowRange": [
+      9,
+      15
+    ],
+    "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
+    "previousSha256": "2056468e1b575a39b97b1323b7051cc87d9f224989eb4f6e712a078bb06d773d"
   }
 }

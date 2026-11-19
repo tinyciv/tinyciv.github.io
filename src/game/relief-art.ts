@@ -28,7 +28,6 @@ const rasterCells = cells.map((family, style) => {
   });
 });
 const rasters = new Map<string, HTMLCanvasElement>();
-const sheetLoads = new Map<number, Promise<void>>();
 let loading: Promise<void> | undefined;
 
 function layoutSources(styles: readonly number[]): ReliefLayoutSource[] {
@@ -52,17 +51,12 @@ for (const family of Object.values(reliefArtLayoutCatalog))
 
 /** Imagegen silhouettes; only crop, native rasterization and palette mapping. */
 export function loadReliefArt(): Promise<void> {
-  return loading ??= Promise.all([...activeStyles].map(loadReliefSheet)).then(() => undefined);
-}
-
-export function loadReliefSheet(style: number): Promise<void> {
-  const loaded = sheetLoads.get(style);
-  if (loaded) return loaded;
-  const image = new Image();
-  image.src = `${import.meta.env.BASE_URL}assets/runtime/relief/${sheetFiles[style].replace('.png', '.webp')}`;
-  const request = image.decode().then(() => { sheets[style] = image; });
-  sheetLoads.set(style, request);
-  return request;
+  return loading ??= Promise.all([...activeStyles].map(async style => {
+    const image = new Image();
+    image.src = `${import.meta.env.BASE_URL}assets/runtime/relief/${sheetFiles[style].replace('.png', '.webp')}`;
+    await image.decode();
+    sheets[style] = image;
+  })).then(() => undefined);
 }
 
 const levels = { surface: [46, 72, 97, 123, 151, 185], rock: [43, 75, 109, 144, 180, 220] };

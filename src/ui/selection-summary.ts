@@ -14,12 +14,17 @@ import { woodenTowerAttack, WOODEN_TOWER_RANGE } from '../game/tower-combat';
 import { RAIDER_COLOR } from '../game/raider-camps';
 import { nativeHouseTier } from '../game/puny-building-art';
 import { houseLevel, WELL_RADIUS } from '../game/wells';
+import { FOUNTAIN_RADIUS } from '../game/structure-index';
 import { constructionProgress } from '../game/construction-cancellation';
 import { constructionHead } from '../game/bridge-construction';
 import { IRRIGATION_RADIUS } from '../game/irrigation';
 import { MONUMENT_CULTURE_PER_SECOND } from '../game/culture';
 import { guardPostCapacity, guardPostUpkeep, GUARD_POST_UPKEEP_INTERVAL } from '../game/guard-posts';
 import { buildingMaintenance } from '../game/maintenance';
+import { cityOwnership } from '../game/city-ownership';
+import { fieldCannonUpkeep } from '../game/field-cannons-native';
+import { FIELD_CANNON_UPKEEP } from '../game/field-cannon-config';
+import { cityHasDevelopedPeat, peatUpkeepMultiplier } from '../game/resource-development';
 import { ECONOMY_INTERVAL } from '../game/economy-constants';
 import { equipmentMultiplier } from '../game/equipment';
 import { citySpecialties } from '../game/regional-economy';
@@ -80,7 +85,8 @@ function unitSummary(state: GameState, unit: Unit): SelectionSummary {
   if (unit.kind === 'horseman') details.push('65% faster · 50% greater base attack', 'Running charge · Area damage');
   if (unit.kind === 'swordsman') details.push('Twice spearman base attack', 'Lower defense than spearmen');
   if (unit.kind === 'spearman') details.push('50% greater base defense', 'Thrusts pierce up to two additional enemies');
-  if (unit.kind === 'fieldCannon') details.push('Half infantry speed · Off-road speed 20%', 'Range 18 · Siege cannon damage · Splash 2 tiles, including friendlies', 'Upkeep 200 gold / 30s', ...(hasUnpaidUpkeep(unit) ? ['Unpaid upkeep · Half attack and defense'] : []));
+  if (unit.kind === 'fieldCannon') details.push('Half infantry speed · Off-road speed 20%', 'Range 18 · Siege cannon damage · Splash 2 tiles, including friendlies',
+    `Upkeep ${wholeNumber(fieldCannonUpkeep(state, unit))} gold / 30s`, ...(hasUnpaidUpkeep(unit) ? ['Unpaid upkeep · Half attack and defense'] : []));
   if (unit.kind === 'musketman') details.push('Heavy musket volleys · one shot every 2.5 seconds', 'Upkeep: 2 gold / 30s · no Fletching bonus');
   if (unit.kind === 'pikeman') details.push('Spearman attack, 50% more defense and 25% more reach', 'Thrusts pierce up to two enemies behind and knock them back');
   if (unit.kind === 'scout') details.push('Automatically maps unexplored land', 'Avoids combat', 'Independent of the retinue');
@@ -137,6 +143,7 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
   if (isFarmKind(building.kind) && building.farmFallow) name += ' · Fallow';
   if (building.kind === 'fort') name = `${fortName(building)} · Level ${building.fortLevel ?? 1}${building.fort?.destroyed ? ' · Foundation' : ''}`;
   const details = [name];
+  if (building.kind === 'scoutTower' && ready) details.push('Extends sight');
   if (building.kind === 'goldMine') {
     details.push(owner?.name ?? 'Neutral');
     if (building.mineContested) details.push('Contested');
@@ -173,6 +180,7 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
       if ((building.kind === 'woodenTower' || building.kind === 'tower' || building.kind === 'fort' || isKeep(building)) && owner?.weaponLevel) details.push(`Weapons ${multiplierPercent(equipmentMultiplier(owner.weaponLevel))}`);
     }
     if (building.kind === 'well') details.push(`Level 2 housing within ${WELL_RADIUS} tiles`);
+    if (building.kind === 'fountain') details.push(`Level 4 housing within ${FOUNTAIN_RADIUS} tiles`);
     if (building.kind === 'granary') {
       const city = granaryCity(state, building);
       if (city) details.push(city.cityName ?? 'City granary');
@@ -181,7 +189,10 @@ function buildingSummary(state: GameState, building: Building): SelectionSummary
       } else details.push(city ? 'Inactive: this city already has an operating granary' : 'Needs a completed city');
     }
     if (building.kind === 'militaryAcademy') details.push('Choose wide, standard or deep formation');
-    if (building.kind === 'foundry') details.push('Field cannon upkeep: 200 gold / 30s');
+    if (building.kind === 'foundry') {
+      const supplied = cityHasDevelopedPeat(state, cityOwnership(state).building(building));
+      details.push(`Field cannon upkeep: ${wholeNumber(FIELD_CANNON_UPKEEP * peatUpkeepMultiplier(supplied))} gold / 30s`);
+    }
     if (building.kind === 'thermalBath') {
       const town = thermalBathCity(state, building);
       if (town) details.push(town.cityName ?? 'Nearest town', buildingReady(building) ? 'House capacity +30% · Does not stack' : 'Housing bonus begins when construction finishes');

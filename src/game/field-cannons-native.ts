@@ -14,15 +14,28 @@ import { recordGoldOutlay } from './gold-ledger';
 import { researchLevel } from './research';
 import { playerFaction } from './player-context';
 import { buildingActivityAvailable } from './building-activity';
+import { cityOwnership } from './city-ownership';
+import { citiesWithDevelopedPeat, peatUpkeepMultiplier } from './resource-development';
 import { buildingWidth, buildingHeight, buildingPresent, buildingReady, isWallKind, isFarmKind, isRetinueMember,
   type GameState, type Unit, type Building, type Point } from './types';
 
-import { FIELD_CANNON_RANGE } from './field-cannon-config';
+import { FIELD_CANNON_RANGE, FIELD_CANNON_UPKEEP } from './field-cannon-config';
 const ROW = 24;
 const networks = new SimSlot<CannonBridge>();
 const ERRORS = ['', 'Choose your completed foundry.', 'Research Field cannon first.',
   'Choose an available friendly soldier. Leaders, civilians, temporary troops and garrisons cannot convert.',
   'Move the soldier within 3 tiles of the foundry.', 'Build a completed road beside the foundry and clear its exit.'];
+
+function cannonSupplyCity(state: GameState, unit: Unit): Building | undefined {
+  const id = unit.fieldCannon?.supplyCity;
+  const city = id === undefined ? undefined : entityStore(state).buildings.get(id);
+  if (city?.kind === 'palace' && city.faction === unit.faction && buildingReady(city)) return city;
+}
+
+export function fieldCannonUpkeep(state: GameState, unit: Unit, peatCities?: ReadonlySet<number>): number {
+  const city = cannonSupplyCity(state, unit);
+  return FIELD_CANNON_UPKEEP * peatUpkeepMultiplier(!!city && (peatCities ?? citiesWithDevelopedPeat(state)).has(city.id));
+}
 
 interface CannonCombat {
   observe(cannon: Unit, target: Unit | Building): { eligible: boolean; range: number; defense: number; edge: number };
@@ -89,6 +102,7 @@ class CannonBridge implements ScalarObserver {
     this.flush();
     if (this.rosterDirty) { this.roster = [...this.cannons]; this.rosterDirty = false; }
     const start = this.cursor++ % this.roster.length;
+    let peatCities: ReadonlySet<number> | undefined;
     for (let offset = 0; offset < this.roster.length; offset++) {
       const u = this.roster[(start + offset) % this.roster.length];
       if (u.hp <= 0) continue;
@@ -107,11 +121,14 @@ class CannonBridge implements ScalarObserver {
       const goalFlags = Number(!!u.destination) | Number(directive?.mode === 3) << 1
         | Number(directive?.mode === 1) << 2 | Number(u.order === 'follow') << 3;
       const a = combat.attack(u), w = u.fieldCannon;
+      const supplyCity = w && this.state.time >= w.nextUpkeepAt ? cannonSupplyCity(this.state, u) : undefined;
+      const peatSupplied = !!supplyCity && (peatCities ??= citiesWithDevelopedPeat(this.state)).has(supplyCity.id);
       const candidates: (Unit | Building)[] = rustEngine.sim_field_due(this.handle, u.id, this.state.time) && u.cooldown <= dt && !u.training
         ? [...nearbyBuildings(this.state, u, FIELD_CANNON_RANGE + 4), ...nearbyUnits(this.state, u, FIELD_CANNON_RANGE + 4)] : [];
       const values = [u.id, u.faction, u.x, u.y, u.hp, u.speed, goal?.x ?? NaN, goal?.y ?? NaN, u.facing, u.cooldown,
         w?.shotAt ?? -1000, w?.nextUpkeepAt ?? NaN, Number(w?.funded ?? true), u.attackTime, goalFlags,
-        u.forcedAttack ? u.target ?? -1 : -1, a.attack, f.gold, a.strength, f.whalingUntil && f.whalingUntil > this.state.time ? 1.05 : 1, 0, -1, 0, Number(!u.forcedAttack || !!forced && combat.validOrder(u, forced))];
+        u.forcedAttack ? u.target ?? -1 : -1, a.attack, f.gold, a.strength, f.whalingUntil && f.whalingUntil > this.state.time ? 1.05 : 1,
+        Number(peatSupplied), -1, 0, Number(!u.forcedAttack || !!forced && combat.validOrder(u, forced))];
       for (const target of candidates) {
         const building = 'capacity' in target, observation = combat.observe(u, target);
         values.push(target.id, target.x + (building ? buildingWidth(target) / 2 : 0), target.y + (building ? buildingHeight(target) / 2 : 0),
@@ -123,7 +140,7 @@ class CannonBridge implements ScalarObserver {
       const r = new Float64Array(rustEngine.memory.buffer, pointer, ROW).slice();
       recordGoldOutlay(this.state, f, f.gold - r[17], 'army'); f.gold = r[17];
       u.x = r[2]; u.y = r[3]; u.facing = r[8]; u.cooldown = r[9]; u.attackTime = r[13]; u.moving = !!r[20];
-      u.fieldCannon = { nextUpkeepAt: r[11], funded: !!r[12], shotAt: r[10] >= 0 ? r[10] : undefined };
+      u.fieldCannon = { nextUpkeepAt: r[11], funded: !!r[12], shotAt: r[10] >= 0 ? r[10] : undefined, supplyCity: w?.supplyCity };
       if (r[15] < 0 && u.forcedAttack) combat.finishOrder(u);
       if (r[23]) u.destination = undefined;
       const target = candidates.find(t => t.id === r[21]); if (target) combat.shoot(u, target, r[22]);
@@ -152,7 +169,7 @@ export function convertFieldCannon(state: GameState, foundry: Building, soldier:
   entityStore(state).setUnitRole(soldier, { kind: 'fieldCannon', builder: false, collector: false });
   soldier.x = r[2]; soldier.y = r[3]; soldier.maxHp = r[4]; soldier.hp = r[5];
   soldier.attack = r[6]; soldier.defense = r[7]; soldier.speed = r[8]; soldier.range = r[9];
-  soldier.fieldCannon = { nextUpkeepAt: r[10], funded: true };
+  soldier.fieldCannon = { nextUpkeepAt: r[10], funded: true, supplyCity: cityOwnership(state).building(foundry)?.id };
   soldier.order = 'follow'; soldier.retinueStance = 'aggressive'; soldier.attackTime = 0; soldier.cooldown = 0; soldier.moving = false;
   soldier.target = undefined; soldier.destination = undefined; soldier.path = undefined; soldier.pathGoal = undefined; soldier.forcedAttack = undefined;
   soldier.training = undefined; soldier.infantryDrillLeader = undefined; soldier.joiningRetinue = undefined; soldier.retinueSquad = undefined;

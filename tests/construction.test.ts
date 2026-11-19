@@ -205,19 +205,19 @@ describe('drag construction commits',()=>{
     expect(state.factions[0].gold).toBe(100);
     expect(isVisible(state, 34.5, 14.5)).toBe(false);
   });
-  it('builds a stroke dragged toward the network in connection order', () => {
+  it('starts at the dragged endpoint even when the opposite end touches a road', () => {
     const state = settlement();
     const line = constructionLine({ x: 30, y: 14 }, { x: 25, y: 14 });
     const plan = planConstruction(state, 'road', line);
     expect(plan.ok).toBe(true);
-    expect(plan.tiles).toEqual([25, 26, 27, 28, 29, 30].map(x => ({ x, y: 14 })));
+    expect(plan.tiles).toEqual([30, 29, 28, 27, 26, 25].map(x => ({ x, y: 14 })));
     expect(buildStroke(state, 'road', line).placed).toBe(6);
     expect(state.factions[0].gold).toBe(140);
   });
-  it('rejects disconnected strokes without spending gold', () => {
+  it('starts a new road on clear ground beyond the existing network', () => {
     const state = settlement();
-    expect(buildStroke(state, 'road', constructionLine({ x: 26, y: 14 }, { x: 30, y: 14 }))).toMatchObject({ ok: false, placed: 0 });
-    expect(state.factions[0].gold).toBe(200);
-    expect(state.buildings.filter(b => b.kind === 'road')).toHaveLength(1);
+    expect(buildStroke(state, 'road', constructionLine({ x: 26, y: 14 }, { x: 30, y: 14 }))).toMatchObject({ ok: true, placed: 5 });
+    expect(state.factions[0].gold).toBe(150);
+    expect(state.buildings.filter(b => b.kind === 'road')).toHaveLength(6);
   });
 });

@@ -1,7 +1,7 @@
 import { playerFaction } from './player-context';
 import { entityStore } from './entity-store';
 import { BUILDABLE_KINDS, type Point, type Building, type BuildSelection, type GameState, buildingKindForSelection, isFord, isWallKind, tileAt, WATER } from './types';
-import { BUILD_COSTS, buildAt, buildBridgeSpan, buildCostAt, validateBuildAt, withConstructionBatch } from './simulation';
+import { buildAt, buildBridgeSpan, buildCostAt, validateBuildAt, withConstructionBatch } from './simulation';
 import { hasNeighboringRoad } from './traffic';
 import { hasGateWall } from './network-placement';
 import { queueConstruction } from './structures';
@@ -38,7 +38,7 @@ export interface ConstructionPlan {
   bridgeSpans?: readonly BridgeSpan[];
 }
 const commitContexts = new WeakMap<ConstructionPlan, object>();
-/** Reserve each eligible cell independently; a gap never seeds a new road island. */
+/** A road stroke can seed its first cell and extend from existing routes. */
 export function planConstruction(state: GameState, selection: BuildSelection, points: Point[]): ConstructionPlan {
   if (!['road', 'wall', 'palisade', 'bridge', 'irrigation'].includes(selection)) return planConstructionUncached(state, selection, points);
   const context = constructionPreviewContext(state, selection), key = `${selection}:${points.map(p => `${Math.floor(p.x)},${Math.floor(p.y)}`).join(';')}`;
@@ -99,7 +99,7 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
       cost: 0, costs: { production: 0, food: 0, gold: 0 } };
     const result = validateBuildAt(state, kind, cell.x, cell.y);
     cell.ok = result.ok; cell.message = result.message;
-    const costs = result.ok ? { ...BUILD_COSTS[kind] } : { production: 0, food: 0, gold: 0 };
+    const costs = result.ok ? buildCostAt(state, kind, cell.x, cell.y) : { production: 0, food: 0, gold: 0 };
     return { ok: result.ok, message: result.message, tiles: result.ok ? [{ x: cell.x, y: cell.y }] : [], cells,
       skipped: result.ok ? 0 : 1, cost: costs.gold, costs };
   }
@@ -133,12 +133,11 @@ function planConstructionUncached(state: GameState, selection: BuildSelection, p
       if (virtual.factions.find(faction => faction.id === playerFaction(state))!.gold < totalGold) return rejectAll(`Need ${totalGold} gold for this complete bridge.`);
     }
     while (pending.length) {
-      // A stroke may be drawn toward a road instead of away from one. Always
-      // reserve its connected end first, then grow outward in either direction.
-      const next = kind === 'road' ? pending.findIndex(tile => hasGateWall(virtual, tile.x, tile.y) || hasNeighboringRoad(virtual, tile.x, tile.y))
+      const next = kind === 'road' ? pending.findIndex(tile => tile === cells[0] || hasGateWall(virtual, tile.x, tile.y) || hasNeighboringRoad(virtual, tile.x, tile.y))
         : irrigationConnections ? pending.findIndex(tile => irrigationConnections(tile.x, tile.y, reservedDitches)) : 0;
       if (next < 0) {
-        for (const cell of pending) cell.message = validateBuildAt(virtual, kind, cell.x, cell.y, playerFaction(state), reservedDitches).message;
+        for (const cell of pending) cell.message = validateBuildAt(virtual, kind, cell.x, cell.y, playerFaction(state), reservedDitches).message
+          || 'This part of the road is disconnected.';
         break;
       }
       const [cell] = pending.splice(next, 1);

@@ -8,11 +8,12 @@ import { createNetworkPlacementQuery, validateNetworkPlacement, MIN_GATE_SPACING
 import { canTraverseEdge, canWalk, hasStaticPath, invalidateNavigation, terrainNavigationEdges, withNavigationFrame } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
 import { hermitCabinOverlaps, placementOccupancy } from './placement-occupancy';
+import { overlapsFallenDefense } from './defense-rebuilding';
 import { simulationReadsActive } from './simulation-reads';
 import { southernResourceCell } from './resource-worksite';
 import { removeVillageTrailAt } from './village-trails';
 import { markWorldChanged } from './world-revisions';
-import { buildingHeight, buildingPresent, buildingReady, buildingWidth, distance, tileAt, WATER,
+import { buildingHeight, buildingPresent, buildingReady, buildingWidth, constructionSiteHidden, distance, tileAt, WATER,
   type Building, type GameState, type Point, type RegionalResource, type Unit } from './types';
 
 export interface ResourceRoadJourney {
@@ -30,9 +31,11 @@ const CARDINAL_BITS = [64, 16, 8, 2] as const;
 const key = (state: GameState, point: Point) => Math.floor(point.y) * state.world.width + Math.floor(point.x);
 const center = (state: GameState, cell: number): Point => ({ x: cell % state.world.width + .5, y: Math.floor(cell / state.world.width) + .5 });
 const isRoute = (building: Building) => (building.kind === 'road' || building.kind === 'bridge') && buildingReady(building);
+const roadOccupant = (building: Building) => buildingPresent(building)
+  || building.hp > 0 && constructionSiteHidden(building) || building.kind === 'fort' && !!building.fort?.destroyed;
 function buildingsAt(state: GameState, x: number, y: number): Building[] {
-  if (simulationReadsActive(state)) return placementOccupancy(state).at(x, y).filter(buildingPresent);
-  return state.buildings.filter(building => buildingPresent(building) && x >= building.x && x < building.x + buildingWidth(building)
+  if (simulationReadsActive(state)) return placementOccupancy(state).at(x, y).filter(roadOccupant);
+  return state.buildings.filter(building => roadOccupant(building) && x >= building.x && x < building.x + buildingWidth(building)
     && y >= building.y && y < building.y + buildingHeight(building));
 }
 
@@ -45,7 +48,8 @@ export function resourceRoadTileReady(state: GameState, faction: number, point: 
 
 function terrainCanReceiveRoad(state: GameState, faction: number, x: number, y: number, occupants: readonly Building[], reservationsChecked = false, walkabilityChecked = false): boolean {
   const tile = tileAt(state.world, x, y);
-  if (!tile || WATER.has(tile.terrain) || tile.resource && tile.oreAnchor === undefined || tile.farm !== undefined || hermitCabinOverlaps(state, x, y)
+  if (!tile || WATER.has(tile.terrain) || tile.resource && tile.oreAnchor === undefined || tile.farm !== undefined
+    || overlapsFallenDefense(state, 'road', x, y) || hermitCabinOverlaps(state, x, y)
     || !reliefFootprintAllowed(state.world, x, y) || !walkabilityChecked && !canWalk(state, x + .5, y + .5, faction, undefined, true)) return false;
   // Access roads preserve crops and trees. They do not demolish structures,
   // relocate farms, open new gates, or build new crossings over water.
@@ -225,10 +229,11 @@ function* resourceRoadSteps(state: GameState, city: Building, cells: readonly nu
   const developed = cells.filter(cell => Number.isSafeInteger(cell) && cell >= 0 && cell < state.world.tiles.length);
   // A partly purchased clump still has one complete physical footprint and
   // entrance. Route to its outside edge, including its undeveloped rock cells.
-  const footprint = new Set(developed);
+  const footprint = new Set(developed), anchors = new Set<number>();
   for (const cell of developed) {
     const tile = state.world.tiles[cell], anchor = tile.oreAnchor;
-    if (anchor === undefined) continue;
+    if (anchor === undefined || anchors.has(anchor)) continue;
+    anchors.add(anchor);
     const source = state.world.tiles[anchor], x = anchor % state.world.width, y = Math.floor(anchor / state.world.width);
     for (let dy = 0; dy < (source.oreHeight ?? 1); dy++) for (let dx = 0; dx < (source.oreWidth ?? 1); dx++)
       footprint.add((y + dy) * state.world.width + x + dx);
@@ -243,7 +248,7 @@ function* resourceRoadSteps(state: GameState, city: Building, cells: readonly nu
     const occupancy = simulationReadsActive(state) ? placementOccupancy(state) : undefined;
     // Gameplay placement and worker routes share the same footprint index.
     // Standalone queries still snapshot live, potentially unjournaled edits.
-    if (!occupancy) for (const building of state.buildings) if (buildingPresent(building)) {
+    if (!occupancy) for (const building of state.buildings) if (roadOccupant(building)) {
       for (let y = building.y; y < building.y + buildingHeight(building); y++) for (let x = building.x; x < building.x + buildingWidth(building); x++) {
         const cell = y * width + x, list = occupants.get(cell) ?? []; list.push(building); occupants.set(cell, list);
       }
@@ -257,7 +262,7 @@ function* resourceRoadSteps(state: GameState, city: Building, cells: readonly nu
     const usable = (cell: number): boolean => {
       const cached = allowed[cell]; if (cached) return cached > 1;
       const x = cell % width, y = Math.floor(cell / width), tile = state.world.tiles[cell];
-      const structures = occupancy ? occupancy.at(x, y).filter(buildingPresent) : occupants.get(cell) ?? [];
+      const structures = occupancy ? occupancy.at(x, y).filter(roadOccupant) : occupants.get(cell) ?? [];
       let okay = inside(x, y) && !!tile && canWalk(state, x + .5, y + .5, faction, undefined, true);
       const ready = okay && (structures.some(isRoute) || tile.terrain === 'river' && tile.overlay === 'ford');
       if (ready) allowed[cell] = 3;

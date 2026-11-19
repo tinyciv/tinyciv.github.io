@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "sourceBytes": 53563324,
-  "outputBytes": 10211056,
+  "sourceBytes": 53566534,
+  "outputBytes": 10209708,
   "files": [
     {
       "source": "assets/bridges/stone-2b/lr-end-e.png",
@@ -293,6 +293,40 @@
       "sha256": "c4f7e40bc4ae19b9e1663d14482dfa335d25ee9ff345b5e0de907ee9334d7e60"
     },
     {
+      "source": "assets/buildings/fountain-animation.png",
+      "output": "assets/runtime/buildings/fountain-animation.webp",
+      "alias": true,
+      "sourceSize": [
+        216,
+        24
+      ],
+      "size": [
+        216,
+        24
+      ],
+      "sourceBytes": 1330,
+      "bytes": 512,
+      "fingerprint": "b4401d1d62a29f08d956ac5ab9733b8579fbefce1ca8412cd5b9efb4fdb4f9be",
+      "sha256": "1833c17a8119c8d15e644358383f7f559b3a114fea7d08daffbf440b2eda8010"
+    },
+    {
+      "source": "assets/buildings/frontier-village.png",
+      "output": "assets/runtime/buildings/frontier-village.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1446,
+      "bytes": 578,
+      "fingerprint": "0794cb2db0c3af30d5b00b37c0ea055f0ff47adc463c18bddb35a8081e8f482f",
+      "sha256": "8f203eefe95cabc149b127ecd64fd2cf866e120f3446384bec28e3381edb744d"
+    },
+    {
       "source": "assets/buildings/granary.png",
       "output": "assets/runtime/buildings/granary.webp",
       "alias": true,
@@ -378,6 +412,23 @@
       "sha256": "e555f384080271cd53bc16232053e1d592ed39a874a0de232bc50b4d6a7c1520"
     },
     {
+      "source": "assets/buildings/marketplace.png",
+      "output": "assets/runtime/buildings/marketplace.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 1274,
+      "bytes": 478,
+      "fingerprint": "02eac6e1b326b2dc49f75364f09d2f51fcc9603b7264360075c33555d48e9261",
+      "sha256": "eb78fdfe9debc09081e84caafef9bdd9e1ca4d38339c8168cedf5fb58d5eba19"
+    },
+    {
       "source": "assets/buildings/military-academy.png",
       "output": "assets/runtime/buildings/military-academy.webp",
       "alias": true,
@@ -410,6 +461,23 @@
       "bytes": 212,
       "fingerprint": "168ba903c186cf2e1f9bd4c77ad82f4f37d4a0f7a7f95d7a4d2f85b564acc417",
       "sha256": "75d768a6bf4511045f03c01afb5001c65fe4fa9fa1bba9d255c42d37ed71f30a"
+    },
+    {
+      "source": "assets/buildings/scout-tower.png",
+      "output": "assets/runtime/buildings/scout-tower.webp",
+      "alias": true,
+      "sourceSize": [
+        16,
+        28
+      ],
+      "size": [
+        16,
+        28
+      ],
+      "sourceBytes": 743,
+      "bytes": 336,
+      "fingerprint": "1cd85013c28dec9d48736631cf9f65a142729c6e409fd5068848f6ed70bbc6b9",
+      "sha256": "15aa692399c7795b474e54e8a1697d6e5e469d41c6a0bedcf03215a11919d747"
     },
     {
       "source": "assets/buildings/siege-cannon/east.png",
@@ -2630,13 +2698,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1270,
-      "bytes": 580,
-      "fingerprint": "343c6faadff4c09fba00a7992c2ac0719a5ca7ae0a512b0b124d2077fe4a4d26",
-      "sha256": "c09075a1781575b70a1ad460d0a293792eceda0e38570b813b857cc4b3b797b5"
+      "bytes": 288,
+      "fingerprint": "10477f74b02ebce6335d080f22afadf2034544a9fa292ff7bb857b1cf352f44c",
+      "sha256": "1986d905efbe7f746b2f1607e2179fcf50a6fb8b39f7db30c5151ee2dcb5f52f"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_001.png",
@@ -2647,13 +2715,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1244,
-      "bytes": 552,
-      "fingerprint": "52730c2e914f76dd3bdce71168ceb37003094aeb78c78a727c16fb693873c081",
-      "sha256": "fe33ce199aa4c92a7a8723a74c70efe8bc355a0e5afb851be27d400e1e65affa"
+      "bytes": 290,
+      "fingerprint": "b6778316263c24fead90eaab000b49ccfcdc562d6ee2ba5a810027d3afd96342",
+      "sha256": "5b5f3d72a349b666144d3ddf5d944494eef43a3fff113e34649d3d863dc406cd"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_002.png",
@@ -2664,13 +2732,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1258,
-      "bytes": 556,
-      "fingerprint": "f8aa98db79b8423412f186029b7d5beb996636d2476056e96cd6253fe51df9f5",
-      "sha256": "655c147dddb475c5fc7955d7ef7bff09eb992da9f50699516872c53986856b80"
+      "bytes": 288,
+      "fingerprint": "20b658b0f7cb216a7729beb801e15236e3fff343ebcc9844a8451b41e8c5a27c",
+      "sha256": "87bc7ce0ca0586599dab7bf617db8a7b95787dd1147187031aa68a4793c4ff92"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_003.png",
@@ -2681,13 +2749,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1256,
-      "bytes": 572,
-      "fingerprint": "222684b5e4f3892671d35128f84a450b39a75ae483966607d1dbf46bc631ceac",
-      "sha256": "078bb5f5468af9f0a89eb53128849680c05b19f0cba48e72afe1015e13f2ea3f"
+      "bytes": 288,
+      "fingerprint": "c5d9f200f8ebdb8d175fd16e482ed0bfaec5fd22b026f66d5735057dd202ac44",
+      "sha256": "42a4ff5652beb649f3dec405319a64a260c043ec9264340ea80163addd59e5d2"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_004.png",
@@ -2698,13 +2766,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1245,
-      "bytes": 558,
-      "fingerprint": "3001f4edd9b17990211ddbb881562f668a0a53b1a3950802bd5e471d0be7f60a",
-      "sha256": "359995a25216e69ec51e8a7140dd70bf7977377723aa4afd9327260cef8f850c"
+      "bytes": 292,
+      "fingerprint": "b79be3efa7bf09554a132f1ab3889fcb5775f65d84a17f3c9d2029b248047876",
+      "sha256": "b669f206bb3032f3d00ff7effce94bc90bc9c841d2a1f7415d5f8cb5acfb6bf5"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_005.png",
@@ -2715,13 +2783,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1222,
-      "bytes": 568,
-      "fingerprint": "69d58ffa23434dfd3a0b9272559055cc8be7f8d5a54119db32efa99583626083",
-      "sha256": "1a859a163c11915e188aa658944023ab01eec2f55829f8730417e7b2fe8a7ca0"
+      "bytes": 290,
+      "fingerprint": "f003319b60be9215a34c9b7da4b33d2114c5445e40c82fefcb02ce9a8f06cf49",
+      "sha256": "65dc0e4125be4e8abbfb3e6500b305d94d2ead6c1349155ce3cc09c6b0c97072"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_006.png",
@@ -2732,13 +2800,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1230,
-      "bytes": 570,
-      "fingerprint": "48ba1e7e0793a4009957f12378c6891f3f1261f5074436f0221d56f6e591770a",
-      "sha256": "9df8ed62be7c36977db0590b5d377dc49e985a32e2a5cd4e317727017a30f608"
+      "bytes": 300,
+      "fingerprint": "547a8346c612026fdc0e9d4eaf3980bd198007eb50669737655fc9f0aafb0be7",
+      "sha256": "fc96f4c50601c6c442a048752cab8d413f20cf607c20ab5ad97052a4fd62d161"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_007.png",
@@ -2749,13 +2817,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1189,
-      "bytes": 542,
-      "fingerprint": "2d28a65182ca9489193488c4335634b375bc48c22c866c21f42159534f860287",
-      "sha256": "d6b99824866e0428bcb9b1da6ec97f45655096876ef3d5187d6da1a712f2d5c2"
+      "bytes": 282,
+      "fingerprint": "78266e59e9c6bfd42a187becc62081c6943ad8245343f8a474fc3fa3a2196f4d",
+      "sha256": "148f9f5c60deb4d9125b416af2731d237180d41727674395403cd466baa2017c"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/animations/The_water_flows_from_the_fountain/unknown/frame_008.png",
@@ -2766,13 +2834,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1231,
-      "bytes": 542,
-      "fingerprint": "e3a9524b0722d1e3127329b83febc1d76985782c4e97f4ed9a88f784dda3502d",
-      "sha256": "a057fe003166e46399bd5fadfa51e8e4a13224e5ccf8f7be2491286e640c19ea"
+      "bytes": 278,
+      "fingerprint": "a00f425b3bf2f5e18948cf5559fce7be17557b1309ad3107c094ed4d8c14de3a",
+      "sha256": "b235ee84859e04216d28437300a6d49765b98d1c7e77ddf47bea09a66e1ed991"
     },
     {
       "source": "assets/pixellab-grounding/buildings/Water_fountain_front_facing/Water_fountain_front_facing/rotations/Water_fountain_front_facing.png",
@@ -2783,13 +2851,13 @@
         32
       ],
       "size": [
-        32,
-        32
+        16,
+        16
       ],
       "sourceBytes": 1270,
-      "bytes": 586,
-      "fingerprint": "efa259647f13576218eb48b8755c1c932ded7235f440b15f515bc5071e5c9e29",
-      "sha256": "02d45ea4d699c65c3d821ca0cc5bcaa461e2e270567c2bae45e9745d333d7328"
+      "bytes": 292,
+      "fingerprint": "b6512c3abc4654c0f7b96b0c051b5e1eca8497f90baa7562c37c0ca08c2b33aa",
+      "sha256": "d9e59543de0b613ba08815c6a4e156748dc0abec5c38fc88591412fb601b986d"
     },
     {
       "source": "assets/pixellab-grounding/buildings/wooden-walled_barracks_with_t/wooden-walled_barracks_with_t/rotations/wooden-walled_barracks_with_t.png",
@@ -3840,10 +3908,10 @@
         960,
         840
       ],
-      "sourceBytes": 53385,
-      "bytes": 23282,
-      "fingerprint": "269bc468d4e2d79ab0ba8439dda189339bcf6fc51ed17e3f2df355b9ca75c737",
-      "sha256": "f19d7a1d6eb6eaa81bcde97f73458765f3581150fa9c3c28d4208b51960a9f01"
+      "sourceBytes": 53282,
+      "bytes": 23256,
+      "fingerprint": "3bc8e07d051a640695d6d1647955158808dc3526e6dafc9ad9e5fe1b14d4590e",
+      "sha256": "72dd4dc870b73b4c90e219677ab0dc324d4fb38148af33ecd4f653cd27ac9958"
     },
     {
       "source": "scenarios/island-deathmatch-map.png",
@@ -3857,10 +3925,10 @@
         1100,
         500
       ],
-      "sourceBytes": 6687,
-      "bytes": 1790,
-      "fingerprint": "e9f3bf05dec2cd9bb0d9f9e321ccb19d8def97f26dda9ae2abf3e96f5cd99591",
-      "sha256": "807c564c9608c75a8a66e2822e8a4775a8e6914d1c52ae309e7713f053f7d8a9"
+      "sourceBytes": 6285,
+      "bytes": 1680,
+      "fingerprint": "1ca6c46df323148fbed0065e84a3ea4611f1ccbf87d82f8d22f8b40bf096b57c",
+      "sha256": "c4aab4f73d500711ea62b5cb6b0210d2b18d56bdb6260b119b0a43f7d3b9bcca"
     },
     {
       "source": "scenarios/musketry-deathmatch-map.png",
@@ -3874,10 +3942,10 @@
         1120,
         273
       ],
-      "sourceBytes": 6528,
-      "bytes": 2490,
-      "fingerprint": "52426290d374fafc56cc39d45b9e2e3178250006df9d698b485dbc889a7a33b2",
-      "sha256": "8984459edcb71cd4c879bd01dbd51e26b8d525bc18cf3708a11d42a35d19d876"
+      "sourceBytes": 5872,
+      "bytes": 2276,
+      "fingerprint": "91d7ae786aac36bfc9ac49b81b0da5d8eccbf797dc8b73588fb27d51ba8e1f7a",
+      "sha256": "016e5662ec53e33e12c7eb6dc86bbeab1332a1d0ec555461bc5b08f00143a6f0"
     },
     {
       "source": "scenarios/no-mans-land-map.png",
@@ -3908,10 +3976,10 @@
         800,
         600
       ],
-      "sourceBytes": 6887,
-      "bytes": 1846,
-      "fingerprint": "46c507f1d2bac52f18ae33a3ea2d5e6b3ea214f3c98580918f7eb4e8d18a9b04",
-      "sha256": "90ee1578e26802588c32cffcf53bb74ce1fd8e6c9a5a71bf55a136a9feef645d"
+      "sourceBytes": 6504,
+      "bytes": 1716,
+      "fingerprint": "958d3778f9f777ce635df9968e5897c3a3d60b325e45059b6ec111cba2110eff",
+      "sha256": "13ec29e5f0fbe48ff8980dcc64384d860a2ab90b648066d44cf627da9495b3db"
     },
     {
       "source": "scenarios/tutorial-map.png",
@@ -3925,10 +3993,10 @@
         800,
         300
       ],
-      "sourceBytes": 3390,
-      "bytes": 1026,
-      "fingerprint": "8966c634c29af417eb1dc217133a34f57b90a002da5bce362e42a46f8643d9b1",
-      "sha256": "d5bed0f76eba4a55f6c3feb497236104b9031bbe7614b45ee7f7c9a8163dcb1e"
+      "sourceBytes": 3351,
+      "bytes": 992,
+      "fingerprint": "9c00f7c98d8c7503ef2bf1f64b9ab4d7f273837235caa187d8369b185c01c1f7",
+      "sha256": "9d26357031ff374aec2e071143c082c5f4ec2d68eaab49abbe82706eaf77daba"
     },
     {
       "source": "assets/tiny-overworld/overworld.png",

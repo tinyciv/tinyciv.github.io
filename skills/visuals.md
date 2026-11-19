@@ -2,6 +2,8 @@ Avoid editing this file without the user's explicit approval.
 
 Make sure to follow these rules:
 - Consider carefully the existing resolution and style of game assets before producing new ones. Common failure modes include 1) using a very detailed image or asset which then downscales poorly, and 2) imbalance between visual elements of an image, e.g. a house roof which is too large.
+- Use PixelLab API for all building and terrain generation. 
+- NEVER use imagegen unless specifically requested by user.
 - Look at all the assets in public/assets.
 - When producing assets, you should produce a diverse set with variation across the axes of 1) detail, 2) resolution, and 3) realism-to-cartoon. Present these as a simple HTML file with labels for each one, e.g. 1A, 2C, etc. For the user to review. do not insert them into the game directly without consultation first.
 - For a given task, create a new folder name in scratch like `2026-10-26-create-temple` and put all files in that folder.

@@ -145,7 +145,10 @@ impl Terrain {
     }
     fn protect(&mut self, starts: &[[f64; 2]]) {
         for (cell, tile) in self.cells.iter().enumerate() {
-            self.protected[cell] = tile.row[6] != 0.0 || tile.dry() && tile.row[19] as u32 & 2 == 0 || matches!(tile.overlay(), 3 | 4 | 5 | 6)
+            let y = cell / self.width;
+            let lane = crate::frost::POLAR_SEA_LANE_WIDTH;
+            self.protected[cell] = y < lane || y >= self.height.saturating_sub(lane)
+                || tile.row[6] != 0.0 || tile.dry() && tile.row[19] as u32 & 2 == 0 || matches!(tile.overlay(), 3 | 4 | 5 | 6)
                 || tile.flags() & MARSH != 0 || tile.row[16] != 0.0 || tile.row[17] != 0.0 || tile.row[18] != 0.0;
         }
         let freshwater: Vec<_> = self.cells.iter().enumerate().filter_map(|(i, c)|

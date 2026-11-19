@@ -41,10 +41,11 @@ impl Investments {
         self.output.clear(); self.output.push(0.0);
         if !self.input.iter().all(|v| v.is_finite()) { return self.output.as_ptr(); }
         match mode {
-            0 if (9..=11).contains(&self.input.len()) => {
+            0 if (9..=12).contains(&self.input.len()) => {
                 let v = &self.input;
                 let kind = v[0] as u32;
-                let cost = constant(kind, false); let upkeep = constant(kind, true);
+                let cost = constant(kind, false) * v.get(11).copied().unwrap_or(1.0);
+                let upkeep = constant(kind, true);
                 let useful = match kind {
                     0 => v[5] >= 4.0,
                     1 => policy.has(PURCHASES) && v[4] >= 24.0,

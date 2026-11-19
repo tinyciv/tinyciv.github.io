@@ -3,6 +3,7 @@ import { provokeRaiderCamp, raiderCanTarget } from './raider-aggression';
 import { entityStore } from './entity-store';
 import { isRaiderEnemyFaction } from './raid-targeting';
 import { releaseRaiderReserve } from './raider-activity';
+import { earlyCombatUnits } from './spatial';
 import { buildingWidth, buildingHeight, distance, type Building, type GameState, type Point, type Unit } from './types';
 
 /** A battle is audible well beyond an individual soldier's 5.5-tile search. */
@@ -14,6 +15,12 @@ interface AlarmState { alerts: WeakMap<Unit, Alarm>; nextByGroup: Map<string, nu
 const alarms = new WeakMap<GameState, AlarmState>();
 const center = (entity: Unit | Building): Point => 'capacity' in entity
   ? { x: entity.x + buildingWidth(entity) / 2, y: entity.y + buildingHeight(entity) / 2 } : entity;
+
+export function raiderAlarmActive(state: GameState, unit: Unit): boolean {
+  const alert = alarms.get(state)?.alerts.get(unit);
+  return !!alert && state.time < alert.until && unit.hp > 0 && !unit.inside
+    && unit.order !== 'flee' && !unit.routed && !unit.marauderRetreating;
+}
 
 /** Called only after real damage. One bounded broadcast per nearby group,
  * with no route searches or every-frame scans. Distant allies learn the last
@@ -33,13 +40,14 @@ export function notifyRaiderAttack(state: GameState, victim: Unit | Building,
   const source = attacker.id === undefined ? undefined : entityStore(state).units.get(attacker.id) ?? entityStore(state).buildings.get(attacker.id);
   const goal = source ? center(source) : attacker;
   let responding = 0;
-  for (const unit of state.units) {
+  for (const unit of earlyCombatUnits(state, heardAt, RAIDER_ALARM_RADIUS)) {
     if (unit.hp <= 0 || unit.faction !== -2 || unit.marauderPack === undefined || unit.order === 'flee' || unit.routed
       || !raiderCanTarget(state, unit, attacker.faction) || !canRallyFromRout(state, unit) || unit.marauderRetreating || distance(unit, heardAt) > RAIDER_ALARM_RADIUS
       || unit.marauderLeader && unit.hp <= (unit.maxHp ?? 100) * .45) continue;
     if (unit.inside && !releaseRaiderReserve(state, unit)) continue;
     const old = frame.alerts.get(unit);
-    if (unit.target === undefined && (!old || old.target !== attacker.id || distance(old.goal, goal) > 2)) {
+    if ((!old || old.target !== attacker.id || distance(old.goal, goal) > 2)
+      && (unit.target !== attacker.id || attacker.id === undefined)) {
       unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0;
     }
     frame.alerts.set(unit, { goal: { x: goal.x, y: goal.y }, faction: attacker.faction, target: attacker.id, until: state.time + RAIDER_ALARM_SECONDS });
@@ -56,13 +64,14 @@ export function updateRaiderAlert(state: GameState, unit: Unit, dt: number, orde
 }): boolean {
   const frame = alarms.get(state), alert = frame?.alerts.get(unit);
   if (!alert) return false;
-  if (unit.hp <= 0 || unit.inside || unit.order === 'flee' || unit.routed || unit.marauderRetreating || state.time >= alert.until) {
+  if (!raiderAlarmActive(state, unit) || !raiderCanTarget(state, unit, alert.faction)) {
     frame!.alerts.delete(unit); return false;
   }
   // The alarm brings distant allies to the fight; normal combat selection
   // distributes arriving troops among reachable contact positions. Forcing
   // everyone onto the latest attacker crowds one target and idles rear ranks.
-  if (orders.localEnemy?.()) { frame!.alerts.delete(unit); return false; }
+  const localEnemy = orders.localEnemy?.();
+  if (localEnemy) { orders.attack(localEnemy, dt); return true; }
   const target = alert.target === undefined ? undefined : entityStore(state).units.get(alert.target) ?? entityStore(state).buildings.get(alert.target);
   if (target && target.hp > 0 && target.faction === alert.faction && isRaiderEnemyFaction(state, target.faction)
     && ('capacity' in target || !target.inside) && orders.visible(target)) {

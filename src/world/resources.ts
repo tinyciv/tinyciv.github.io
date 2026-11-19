@@ -8,7 +8,7 @@ import { stonePlainsSites } from './stone-plains';
 import { assignOreDeposits, resourceHabitats, saltPanLimit } from './ore-native';
 
 const CARDINAL = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const;
-export const RESOURCE_GROUP_SIZES = { copper: [4, 15], iron: [4, 15], gold: [4, 15], stone: [3, 10], olives: [4, 32], salt: [2, saltPanLimit()] } as const;
+export const RESOURCE_GROUP_SIZES = { copper: [4, 15], iron: [4, 15], gold: [4, 15], stone: [3, 10], marble: [4, 4], peat: [4, 4], grapes: [4, 4], coal: [9, 9], olives: [4, 32], salt: [2, saltPanLimit()] } as const;
 /** Minimum distance between the closest occupied tiles of distinct deposits. */
 export const RESOURCE_GROUP_SEPARATION = 10;
 type ClusterResource = 'stone' | 'olives' | 'salt';
@@ -40,7 +40,7 @@ export function assignRegionalResources(world: World): void {
       if (x >= 0 && y >= 0 && x < width && y < height) cores[y * width + x] = 1;
     }
   for (const tile of tiles) { delete tile.resource; delete tile.resourceGroup; delete tile.resourceDeveloped; delete tile.oreAnchor; delete tile.oreFamily; delete tile.oreVariant; delete tile.oreWidth; delete tile.oreHeight; }
-  let nextGroup = assignOreDeposits(world, cores);
+  let nextGroup = assignOreDeposits(world, cores, false, stoneSites);
   const at = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height ? y * width + x : -1;
   const neighbors = (cell: number) => CARDINAL.map(([dx, dy]) => at(cell % width + dx, Math.floor(cell / width) + dy)).filter(next => next >= 0);
   const usable = new Uint8Array(tiles.length);

@@ -7,8 +7,8 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-const SIDE: usize = 24;
-const CELLS: usize = SIDE * SIDE;
+const DEFENSE_REACH: i32 = 11;
+pub const SCOUT_SEARCH_RADIUS: i32 = 16;
 const DIRS: [(i32, i32); 8] = [
     (-1, -1),
     (0, -1),
@@ -418,14 +418,15 @@ impl DefensePlacement {
         };
         self.edges[i] & (1 << d) != 0
     }
-    fn flood(&self, city: Row) -> Vec<bool> {
-        let mut seen = vec![false; CELLS];
+    fn local_cell(city: Row, x: i32, y: i32, radius: i32) -> Option<usize> {
+        let (dx, dy) = (x - city.x + radius, y - city.y + radius);
+        let side = radius * 2 + 2;
+        (dx >= 0 && dy >= 0 && dx < side && dy < side).then_some((dy * side + dx) as usize)
+    }
+    fn flood(&self, city: Row, radius: i32) -> Vec<bool> {
+        let mut seen = vec![false; ((radius * 2 + 2) as usize).pow(2)];
         let mut queue = VecDeque::new();
-        let (left, top) = (city.x - 11, city.y - 11);
-        let local = |x: i32, y: i32| {
-            ((x >= left) && (y >= top) && (x < left + SIDE as i32) && (y < top + SIDE as i32))
-                .then(|| ((y - top) as usize) * SIDE + (x - left) as usize)
-        };
+        let local = |x, y| Self::local_cell(city, x, y, radius);
         for y in city.y - 1..=city.y + b::height(city.kind) as i32 {
             for x in city.x - 1..=city.x + b::width(city.kind) as i32 {
                 if self.walk(x, y) {
@@ -496,18 +497,8 @@ impl DefensePlacement {
         {
             return false;
         }
-        // A complete open ring remains connected after the single center tile
-        // becomes solid, so a tower cannot sever a choke or a mountain stair.
-        for (index, &(dx, dy)) in RING.iter().enumerate() {
-            let (nx, ny) = (x + dx, y + dy);
-            let (next_x, next_y) = (x + RING[(index + 1) % 8].0, y + RING[(index + 1) % 8].1);
-            if !self.walk(nx, ny) || !self.edge(nx, ny, next_x, next_y) {
-                return false;
-            }
-            let local = ((ny - (city.y - 11)) as usize) * SIDE + (nx - (city.x - 11)) as usize;
-            if !reachable.get(local).copied().unwrap_or(false) {
-                return false;
-            }
+        if !self.connected_ring(city, x, y, reachable, DEFENSE_REACH) {
+            return false;
         }
         for dy in -3..=3 {
             for dx in -3..=3 {
@@ -520,6 +511,80 @@ impl DefensePlacement {
             }
         }
         true
+    }
+    // An open ring stays connected after the center turns solid.
+    fn connected_ring(&self, city: Row, x: i32, y: i32, reachable: &[bool], radius: i32) -> bool {
+        for (index, &(dx, dy)) in RING.iter().enumerate() {
+            let (nx, ny) = (x + dx, y + dy);
+            let (next_x, next_y) = (x + RING[(index + 1) % 8].0, y + RING[(index + 1) % 8].1);
+            if !self.walk(nx, ny) || !self.edge(nx, ny, next_x, next_y) {
+                return false;
+            }
+            if !Self::local_cell(city, nx, ny, radius).is_some_and(|local| reachable[local]) {
+                return false;
+            }
+        }
+        true
+    }
+    /// One reachable lookout per quadrant, as close as possible to the
+    /// diagonal ten-tile ring. Reuse the indexed footprint and terrain layers.
+    pub fn scout_sites(&mut self, id: i64, blocked: usize) -> *const f64 {
+        self.output.clear();
+        self.output.push(0.0);
+        if let Some(city) = self.rows.get(&id).copied().filter(|row| row.kind == b::PALACE) {
+            let reachable = self.flood(city, SCOUT_SEARCH_RADIUS);
+            let blocked: FxHashSet<usize> = self.input.iter().take(blocked).map(|&cell| cell as usize).collect();
+            let mut candidates = Vec::new();
+            for dy in 1 - SCOUT_SEARCH_RADIUS..=SCOUT_SEARCH_RADIUS {
+                for dx in 1 - SCOUT_SEARCH_RADIUS..=SCOUT_SEARCH_RADIUS {
+                    // Doubled tile-center displacement from a 2×2 palace.
+                    let (rx, ry) = (2 * dx - 1, 2 * dy - 1);
+                    let distance = rx * rx + ry * ry;
+                    if !(4 * 6 * 6..=4 * 17 * 17).contains(&distance) {
+                        continue;
+                    }
+                    let (x, y) = (city.x + dx, city.y + dy);
+                    let Some(cell) = self.cell(x, y) else { continue };
+                    if self.occupied[cell] != 0 || self.terrain[cell] & 9 != 9
+                        || blocked.contains(&cell)
+                        || !self.connected_ring(city, x, y, &reachable, SCOUT_SEARCH_RADIUS)
+                    {
+                        continue;
+                    }
+                    let score = (distance - 400).abs() + 4 * (rx.abs() - ry.abs()).abs();
+                    let quadrant = usize::from(dx > 0) + 2 * usize::from(dy > 0);
+                    let preferred = (4 * 7 * 7..=4 * 12 * 12).contains(&distance);
+                    candidates.push((score, y, x, quadrant, preferred));
+                }
+            }
+            let spaced = |sites: &[(i32, i32)], x: i32, y: i32| {
+                sites.iter().all(|&(sx, sy)| (sx - x).pow(2) + (sy - y).pow(2) >= 16)
+            };
+            let mut sites = Vec::with_capacity(4);
+            let mut placed = [false; 4];
+            candidates.sort_unstable();
+            for &(_, y, x, quadrant, preferred) in &candidates {
+                if preferred && !placed[quadrant] && spaced(&sites, x, y) {
+                    sites.push((x, y));
+                    placed[quadrant] = true;
+                }
+            }
+            if sites.len() < 3 {
+                for (_, y, x, _, _) in candidates {
+                    if spaced(&sites, x, y) {
+                        sites.push((x, y));
+                        if sites.len() == 3 {
+                            break;
+                        }
+                    }
+                }
+            }
+            for (x, y) in sites {
+                self.output.extend([x as f64, y as f64]);
+            }
+        }
+        self.output[0] = ((self.output.len() - 1) / 2) as f64;
+        self.output.as_ptr()
     }
     /// A rejected authoritative order can be transient (a walking worker).
     /// Retry it after a cooldown; pure geometry failures stay cached until edits.
@@ -554,7 +619,7 @@ impl DefensePlacement {
         }
         if plan.cursor < plan.candidates.len() {
             if plan.reachable.is_empty() || plan.revision != revision {
-                plan.reachable = self.flood(city);
+                plan.reachable = self.flood(city, DEFENSE_REACH);
                 plan.revision = revision;
             }
             for _ in 0..budget.min(400) {

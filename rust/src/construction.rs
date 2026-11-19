@@ -11,6 +11,11 @@ pub const INVALIDATE: u32 = 1;
 pub const CLEARANCE: u32 = 2;
 pub const COMPLETE: u32 = 4;
 pub const SKIP: u32 = 8;
+pub const MARBLE_CONSTRUCTION_MULTIPLIER: f64 = 0.90;
+
+pub fn marble_construction_multiplier(developed: u32) -> f64 {
+    if developed == 4 { MARBLE_CONSTRUCTION_MULTIPLIER } else { 1.0 }
+}
 
 pub fn duration(kind: u32) -> f64 {
     match kind {
@@ -27,10 +32,10 @@ pub fn duration(kind: u32) -> f64 {
         10 => 2.0,
         11 | 12 | 13 => 4.0,
         14 => 12.0,
-        16 => 15.0,
-        21 | 26 | 27 | 30 => 30.0,
+        16 | 43 => 15.0,
+        21 | 26 | 27 | 30 | 44 => 30.0,
         28 => 180.0,
-        29 | 32 | 33 => 60.0,
+        29 | 32 | 33 | 42 => 60.0,
         34 => 90.0,
         35 | 36 => 60.0,
         37 | 38 | 40 => 90.0,

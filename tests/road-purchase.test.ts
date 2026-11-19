@@ -23,9 +23,9 @@ const layout = (state: GameState) => ({
 });
 
 describe('incremental road purchases', () => {
-  it('buys one new cell per step in connected order and matches an immediate stroke', () => {
+  it('starts a new road one tile at a time and matches an immediate stroke', () => {
     const state = denseConstructionFixture(), immediate = structuredClone(state);
-    // Draw toward the existing road: purchase order must grow from its anchor.
+    // Draw from clear ground toward the existing road.
     const points = constructionLine({ x: 87, y: 69 }, { x: 83, y: 69 });
     const expected = buildStroke(immediate, 'road', points), job = createRoadPurchase(state, points);
     let steps = 0;

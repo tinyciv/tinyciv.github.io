@@ -41,6 +41,7 @@ pub mod forts;
 pub mod destruction;
 pub mod shell_impacts;
 pub mod harbor_trade;
+pub mod land_trade;
 pub mod granaries;
 pub mod geothermal;
 pub mod thermal_baths;
@@ -170,6 +171,7 @@ impl Sim {
         world.init_resource::<destruction::Destructions>();
         world.init_resource::<shell_impacts::ShellImpacts>();
         world.init_resource::<harbor_trade::HarborTrade>();
+        world.init_resource::<land_trade::LandTrade>();
         world.init_resource::<granaries::Granaries>();
         world.init_resource::<geothermal::Geothermal>();
         world.init_resource::<world_features::WorldFeatures>();

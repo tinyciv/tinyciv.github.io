@@ -2,7 +2,8 @@ import { factionTradeActive } from './faction-trade-agreements';
 import { rustEngine } from './rust-engine';
 import { unitNavigationState } from './unit-navigation';
 import { atWar } from './relations';
-import { playerFaction } from './player-context';
+import { factionById, playerFaction } from './player-context';
+import { invalidateSettlementDecisions } from './settlement-decisions';
 import { spendGold } from './gold-ledger';
 import { grantIncome } from './resource-income';
 import { removeVillageTrailAt } from './village-trails';
@@ -14,13 +15,16 @@ import { entityStore } from './entity-store';
 import { solidBuildingAt, structuresOf, STRUCTURE_READY } from './structure-index';
 import { hermitCabinOverlaps } from './placement-occupancy';
 import { cityResidents } from './cities';
+import { marketBuildings, marketDestination, marketLandPath, marketPartnerEligible, marketQuote,
+  marketplaceCity, setMarketDestination, type MarketYield } from './marketplace';
+import { receiveTradeScience } from './research';
 import { markWorldChanged } from './world-revisions';
 import { constructionEdges } from './builders';
 import { validateNetworkPlacement } from './network-placement';
 import { workNavigationState, canWalk, findPath, hasStaticPath, invalidateNavigation, withNavigationFrame } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
 import { regionalTradeMultiplier } from './regional-economy';
-import { factionHasDevelopedResource, oliveVillageTradeMultiplier } from './resource-development';
+import { factionHasDevelopedResource, grapeTradeMultiplier, oliveVillageTradeMultiplier } from './resource-development';
 import { tradeGoldMultiplier } from './research-bonuses';
 import { villageCamp, villageTradeActive, villageRequiredResource, VILLAGE_TRADE_MULTIPLIER, VILLAGE_TRADE_BASE_SCALE, VILLAGE_RESOURCE_MULTIPLIER } from './villages';
 import { settlementTrade, villageTradingFactions, villageTradeOrigin } from './settlement-bridge';
@@ -39,6 +43,27 @@ export const MERCHANT_REPLACEMENT_SECONDS = 240;
 export const MERCHANT_SPEED = 1.3;
 const PLAN_INTERVAL = 10;
 const planning = new WeakMap<GameState, { signature: string; nextAt: number }>();
+interface RouteIndex {
+  routes: GameState['tradeRoutes'];
+  byId: Map<number, TradeRoute>; byPair: Map<string, TradeRoute>;
+  byOrigin: Map<number, TradeRoute>; incomingDomestic: Map<number, TradeRoute>;
+}
+const routeIndices = new WeakMap<GameState, RouteIndex>();
+function routeIndex(state: GameState): RouteIndex {
+  const old = routeIndices.get(state);
+  if (old && old.routes === state.tradeRoutes) return old;
+  const index: RouteIndex = { routes: state.tradeRoutes, byId: new Map(), byPair: new Map(), byOrigin: new Map(), incomingDomestic: new Map() };
+  for (const route of state.tradeRoutes ?? []) {
+    index.byId.set(route.id, route);
+    if (route.villageId !== undefined) continue;
+    index.byPair.set(cityPair(route.origin, route.partner), route);
+    if (route.partnerFaction !== undefined) continue;
+    index.byOrigin.set(route.origin, route);
+    if (!index.incomingDomestic.has(route.partner)) index.incomingDomestic.set(route.partner, route);
+  }
+  routeIndices.set(state, index);
+  return index;
+}
 type Move = (state: GameState, unit: Unit, goal: Point, dt: number) => void;
 
 /** Village active-transit rate, calibrated to an ordinary merchant on land. */
@@ -72,9 +97,20 @@ export function domesticTradePayout(seconds: number, originShare: number, partne
 
 interface PopulationSnapshot {
   time: number; routes: GameState['tradeRoutes']; buildings: number; world: number | undefined;
-  population: string; merchants: string; residents: Map<number, number>; shares: Map<number, number>;
+  population: string; merchants: string; residents: Map<number, number>; shares: Map<number, number>; degree: Map<number, number>;
 }
 const populations = new WeakMap<GameState, PopulationSnapshot>();
+const marketPopulations = new WeakMap<GameState, { second: number; snapshot: PopulationSnapshot }>();
+
+/** Market departures share one population and live-capacity sample per game
+ * second. A route reconciliation invalidates it before any new departures. */
+function marketPopulationSnapshot(state: GameState): PopulationSnapshot {
+  const second = Math.floor(state.time), old = marketPopulations.get(state);
+  if (old?.second === second && old.snapshot.routes === state.tradeRoutes) return old.snapshot;
+  const snapshot = domesticTradePopulationSnapshot(state);
+  marketPopulations.set(state, { second, snapshot });
+  return snapshot;
+}
 
 /** Requested only at departure, never while a caravan is travelling. Departures
  * in one simulation pass share a single resident-ledger scan. Revision and
@@ -99,7 +135,7 @@ function domesticTradePopulationSnapshot(state: GameState): PopulationSnapshot {
     degree.set(route.partner, (degree.get(route.partner) ?? 0) + 1);
   }
   const shares = new Map(cities.map(city => [city.palace.id, city.population / Math.max(1, degree.get(city.palace.id) ?? 0)]));
-  const snapshot = { time: state.time, routes: state.tradeRoutes, buildings: store.buildings.revision, world: state.world.revision, population, merchants, residents, shares };
+  const snapshot = { time: state.time, routes: state.tradeRoutes, buildings: store.buildings.revision, world: state.world.revision, population, merchants, residents, shares, degree };
   populations.set(state, snapshot);
   return snapshot;
 }
@@ -124,15 +160,25 @@ function planDomesticLeg(state: GameState, route: TradeRoute, merchant: Unit, go
 }
 
 function quoteDomesticLeg(state: GameState, route: TradeRoute, plannedDistance: number): void {
-  const { shares, residents } = domesticTradePopulationSnapshot(state);
+  const market = route.marketManaged && !route.riverLeg;
+  const { shares, residents, degree } = market ? marketPopulationSnapshot(state) : domesticTradePopulationSnapshot(state);
   const originShare = shares.get(route.origin) ?? 0, partnerShare = shares.get(route.partner) ?? 0;
   const store = entityStore(state).buildings, origin = store.get(route.origin), partner = store.get(route.partner);
-  const faction = state.factions.find(candidate => candidate.id === route.faction);
+  const faction = factionById(state, route.faction);
+  if (market && origin && partner) {
+    const quote = marketQuote(state, origin, partner, { distance: plannedDistance, seconds: plannedDistance / MERCHANT_SPEED },
+      residents.get(origin.id) ?? 0, residents.get(partner.id) ?? 0, degree.get(origin.id) ?? 0, degree.get(partner.id) ?? 0);
+    route.marketLeg = { gold: route.target === partner.id ? quote.outboundGold : quote.returnGold,
+      science: quote.science, partnerScience: quote.partnerScience };
+    route.legValue = { distance: plannedDistance, originShare, partnerShare, goldPerSecond: 0 };
+    return;
+  }
   const bonus = (origin && partner ? regionalTradeMultiplier(state.world, origin, partner, state) : 1) * tradeGoldMultiplier(faction);
+  const grapes = route.riverLeg ? 1 : grapeTradeMultiplier(state, route.target === route.partner ? origin : partner);
   route.legValue = { distance: plannedDistance, originShare, partnerShare,
     goldPerSecond: domesticTradePayout(1, originShare, partnerShare, bonus,
       { origin: residents.get(route.origin) ?? 0, partner: residents.get(route.partner) ?? 0 }, faction?.achievements ?? 0,
-      origin?.faction === partner?.faction) };
+      origin?.faction === partner?.faction) * grapes };
 }
 
 function nextId(state: GameState): number { return entityStore(state).allocateId(); }
@@ -142,7 +188,7 @@ const villageCooldown = (villageId: number, faction: number): string => `village
 // Negative route IDs cannot collide with positive city-building route IDs.
 const villageRouteId = (camp: number, faction: number): number => -((camp + faction) * (camp + faction + 1) / 2 + faction + 1);
 const completedCities = (state: GameState): Building[] => structuresOf(state, undefined, STRUCTURE_READY, 'palace')
-  .filter(building => state.factions.some(faction => faction.id === building.faction && !faction.defeated));
+  .filter(building => factionById(state, building.faction)?.defeated === false);
 
 /** One static component probe rejects an inaccessible city before pathfinding.
  * Prefer the nearest clear pair of doors, keeping all movement outside walls. */
@@ -170,24 +216,47 @@ function idleAtOrigin(state: GameState, route: TradeRoute, origin: Building, mer
     && constructionEdges(state, origin, true).some(door => distance(merchant, door) <= .2);
 }
 
+function marketCaravanHome(state: GameState, route: TradeRoute): boolean {
+  return !liveRouteMerchant(state, route) || (!route.legValue && !route.riverLeg && route.target === route.partner);
+}
+
+function reconcileMarketMode(state: GameState, route: TradeRoute, pinned: boolean, automatic = false): void {
+  if (!pinned && !automatic && !route.marketLand && !route.marketManaged && !route.pendingMarketChange) return;
+  const action = rustEngine.sim_land_trade_change(1, Number(!!route.marketLand === pinned), Number(marketCaravanHome(state, route)));
+  route.pendingMarketChange = action === 1;
+  if (action === 1) return;
+  route.marketLand = pinned;
+  route.marketManaged = pinned || automatic;
+  if (pinned) {
+    route.river = undefined;
+    route.pendingRiverPartner = undefined;
+  }
+}
+
 function retire(state: GameState, route: TradeRoute): void {
-  const merchant = state.units.find(unit => unit.id === route.merchantId && unit.kind === 'merchant');
+  const merchant = liveRouteMerchant(state, route);
   // Closing a route is retirement, never a combat kill or a source of bounty.
   if (merchant) merchant.hp = 0;
 }
 
-/** Remember a casualty before route ownership/partner reconciliation can remove
- * its route. A restored or reversed city pair must still wait for a caravan. */
+function liveRouteMerchant(state: GameState, route: TradeRoute): Unit | undefined {
+  const merchant = route.merchantId === undefined ? undefined : entityStore(state).units.get(route.merchantId);
+  return merchant?.kind === 'merchant' && merchant.hp > 0 ? merchant : undefined;
+}
+
+/** Preserve replacement deadlines across ownership and endpoint changes. */
 function recordMissingMerchants(state: GameState): void {
-  const live = new Set(state.units.filter(unit => unit.kind === 'merchant' && unit.hp > 0).map(unit => unit.id));
   for (const route of state.tradeRoutes ?? []) {
-    if (route.merchantId === undefined || live.has(route.merchantId)) continue;
+    if (route.merchantId === undefined || liveRouteMerchant(state, route)) continue;
     route.merchantId = undefined;
     route.nextDepartureAt = Math.max(route.nextDepartureAt, state.time + MERCHANT_REPLACEMENT_SECONDS);
-    route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
+    route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.marketLeg = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
     const pair = cityPair(route.origin, route.partner), cooldowns = state.tradeCooldowns ??= {};
     cooldowns[pair] = Math.max(cooldowns[pair] ?? 0, route.nextDepartureAt);
-    if (route.villageId !== undefined) {
+    if (route.villageId === undefined) {
+      const key = `city:${route.origin}`;
+      cooldowns[key] = Math.max(cooldowns[key] ?? 0, route.nextDepartureAt);
+    } else {
       const village = villageCooldown(route.villageId, route.faction);
       cooldowns[village] = Math.max(cooldowns[village] ?? 0, route.nextDepartureAt);
     }
@@ -202,16 +271,31 @@ function recordMissingMerchants(state: GameState): void {
  * Existing traders retain their route; dead traders refill slowly. */
 export function updateTradeRoutes(state: GameState): void {
   const cities = completedCities(state);
+  const marketOrders = marketBuildings(state).markets;
+  const orderSignature = cities.flatMap(city => {
+    const market = marketOrders.get(city.id);
+    return market ? [`${city.id}:${marketDestination(city, market) ?? ''}`] : [];
+  }).join(',');
   const villages = (state.villages ?? []).filter(village => !village.destroyed && villageCamp(state, village));
   const partners = villages.flatMap(village => villageTradingFactions(state, village)
     .filter(faction => villageTradeActive(state, village, faction)).map(faction => ({ village, faction })));
-  const signature = `${JSON.stringify(state.factionTrades ?? [])}:${state.factions.map(f => f.relation).join()}|${forbiddenRevision(state)}|${cities.map(city => `${city.id}:${city.faction}`).join(',')}|${state.factions.map(f => `${f.id}:${f.research?.levels.sailing ?? 0}`).join(',')}|${partners.map(({ village, faction }) => `${village.id}:${village.campId}:${faction}`).join(',')}`;
+  const signature = `${orderSignature}|${JSON.stringify(state.factionTrades ?? [])}:${state.factions.map(f => f.relation).join()}|${forbiddenRevision(state)}|${cities.map(city => `${city.id}:${city.faction}`).join(',')}|${state.factions.map(f => `${f.id}:${f.research?.levels.sailing ?? 0}`).join(',')}|${partners.map(({ village, faction }) => `${village.id}:${village.campId}:${faction}`).join(',')}`;
   const previous = planning.get(state);
   if (previous?.signature === signature && state.time < previous.nextAt) return;
   planning.set(state, { signature, nextAt: state.time + PLAN_INTERVAL });
   populations.delete(state);
   recordMissingMerchants(state);
   const cityById = new Map(cities.map(city => [city.id, city])), origins = new Set<number>();
+  const requested = new Map<number, Building>(), landPairs = new Set<string>();
+  const previousRoutes = marketOrders.size ? routeIndex(state) : undefined;
+  for (const [id, market] of marketOrders) {
+    const city = cityById.get(id), partner = city && cityById.get(marketDestination(city, market) ?? -1);
+    if (!city || !partner || !marketPartnerEligible(state, city, partner)) continue;
+    requested.set(id, partner);
+    const current = previousRoutes?.byOrigin.get(id);
+    if (!current || current.partner === partner.id || marketCaravanHome(state, current))
+      landPairs.add(cityPair(id, partner.id));
+  }
   // Reserve live pairs before considering switches; two returning caravans
   // cannot independently adopt reciprocal copies of the same river service.
   const occupiedPairs = new Map((state.tradeRoutes ?? []).filter(route => route.villageId === undefined
@@ -223,7 +307,8 @@ export function updateTradeRoutes(state: GameState): void {
     if (route.partnerFaction !== undefined) {
       const origin = cityById.get(route.origin), partner = cityById.get(route.partner);
       if (!origin || !partner || origin.faction !== route.faction || partner.faction !== route.partnerFaction
-        || !factionTradeActive(state, route.faction, route.partnerFaction)) { retire(state, route); continue; }
+        || !marketPartnerEligible(state, origin, partner)) { retire(state, route); continue; }
+      reconcileMarketMode(state, route, landPairs.has(cityPair(route.origin, route.partner)));
       retained.push(route); pairs.add(cityPair(route.origin, route.partner)); continue;
     }
     if (route.villageId !== undefined) {
@@ -238,19 +323,45 @@ export function updateTradeRoutes(state: GameState): void {
     if (!origin || origin.faction !== route.faction || origins.has(route.origin)) { retire(state, route); continue; }
     let partner = cityById.get(route.partner);
     if (!partner || partner.faction !== route.faction) {
+      if (route.marketManaged) { retire(state, route); continue; }
       // Closing an invalid river service retires its vessel normally. A boat
       // cannot be reassigned a land destination in the middle of the river.
-      if (state.units.some(unit => unit.id === route.merchantId && unit.aboardRiverTrade)) { retire(state, route); continue; }
-      const replacement = choosePartner(state, origin, cities);
-      if (!replacement) { retire(state, route); continue; }
+      if (liveRouteMerchant(state, route)?.aboardRiverTrade) { retire(state, route); continue; }
+      const replacement = requested.get(origin.id) ?? choosePartner(state, origin, cities);
+      if (!replacement || replacement.faction !== route.faction) { retire(state, route); continue; }
       route.partner = replacement.id; route.target = replacement.id; route.distance = 0; route.transitSeconds = 0;
-      route.goal = undefined; route.legValue = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
+      route.goal = undefined; route.legValue = undefined; route.marketLeg = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
       partner = replacement;
     }
-    const preferredRiver = !findRiverTradeConnection(state, origin, partner) ? riverPartner(state, origin, cities) : undefined;
+    const choice = requested.get(origin.id);
+    const oldPair = cityPair(route.origin, route.partner);
+    const home = marketCaravanHome(state, route);
+    const switchAction = choice ? rustEngine.sim_land_trade_change(Number(choice.id === route.partner), 1, Number(home)) : 0;
+    if (switchAction === 2) {
+      if (occupiedPairs.get(oldPair) === route.id) occupiedPairs.delete(oldPair);
+      const nextPair = cityPair(route.origin, choice!.id);
+      if (choice!.faction !== route.faction || pairs.has(nextPair)
+        || occupiedPairs.has(nextPair) && occupiedPairs.get(nextPair) !== route.id) {
+        retire(state, route);
+        origins.add(route.origin);
+        continue;
+      }
+      partner = choice!;
+      route.partner = route.target = partner.id;
+      route.goal = undefined; route.legValue = undefined; route.marketLeg = undefined; route.lastMarketDelivery = undefined;
+      route.river = undefined; route.riverLeg = undefined;
+      route.distance = 0; route.transitSeconds = 0; route.nextPlanAt = 0;
+      route.nextDepartureAt = Math.max(route.nextDepartureAt, state.tradeCooldowns?.[nextPair] ?? 0);
+      occupiedPairs.set(nextPair, route.id);
+    }
+    const pinned = landPairs.has(cityPair(route.origin, route.partner));
+    reconcileMarketMode(state, route, pinned, marketOrders.has(route.origin) || marketOrders.has(route.partner));
+    if (switchAction === 1) route.pendingMarketChange = true;
+    const preferredRiver = !choice && !pinned && !route.pendingMarketChange && !findRiverTradeConnection(state, origin, partner)
+      ? riverPartner(state, origin, cities) : undefined;
     route.pendingRiverPartner = preferredRiver?.id;
     if (preferredRiver) {
-      const merchant = state.units.find(unit => unit.id === route.merchantId && unit.kind === 'merchant' && unit.hp > 0);
+      const merchant = liveRouteMerchant(state, route);
       if (idleAtOrigin(state, route, origin, merchant)) {
         const oldPair = cityPair(route.origin, route.partner), newPair = cityPair(route.origin, preferredRiver.id);
         if (occupiedPairs.get(oldPair) === route.id) occupiedPairs.delete(oldPair);
@@ -269,13 +380,16 @@ export function updateTradeRoutes(state: GameState): void {
   }
   for (const origin of cities) {
     if (origins.has(origin.id)) continue;
-    const partner = choosePartner(state, origin, cities);
-    if (!partner) continue;
+    const choice = requested.get(origin.id);
+    const partner = choice ?? choosePartner(state, origin, cities);
+    if (!partner || partner.faction !== origin.faction) continue;
     const pair = cityPair(origin.id, partner.id);
     if (pairs.has(pair)) continue;
     pairs.add(pair);
     retained.push({ id: origin.id, faction: origin.faction, origin: origin.id, partner: partner.id, target: partner.id,
-      nextDepartureAt: Math.max(state.time, state.tradeCooldowns?.[pair] ?? 0), distance: 0, journeys: 0 });
+      marketManaged: marketOrders.has(origin.id) || marketOrders.has(partner.id), marketLand: landPairs.has(pair),
+      nextDepartureAt: Math.max(state.time, state.tradeCooldowns?.[pair] ?? 0, state.tradeCooldowns?.[`city:${origin.id}`] ?? 0),
+      distance: 0, journeys: 0 });
   }
   for (const { village, faction } of partners) {
     const camp = villageCamp(state, village)!;
@@ -295,15 +409,15 @@ export function updateTradeRoutes(state: GameState): void {
     const pair = cityPair(agreement.origin, agreement.partner);
     if (pairs.has(pair)) continue;
     const a = Math.min(agreement.origin, agreement.partner), b = Math.max(agreement.origin, agreement.partner);
-    retained.push({ ...agreement, id: -1000000000 - ((a + b) * (a + b + 1) / 2 + b), target: agreement.partner,
+    retained.push({ ...agreement, marketManaged: landPairs.has(pair), marketLand: landPairs.has(pair), id: -1000000000 - ((a + b) * (a + b + 1) / 2 + b), target: agreement.partner,
       nextDepartureAt: Math.max(state.time, state.tradeCooldowns?.[pair] ?? 0), distance: 0, journeys: 0 });
     pairs.add(pair);
   }
   state.tradeRoutes = retained;
   for (const route of retained) {
     const origin = cityById.get(route.origin)!, partner = cityById.get(route.partner)!;
-    if (route.villageId === undefined) route.river = findRiverTradeConnection(state, origin, partner);
-    const live = state.units.find(unit => unit.id === route.merchantId && unit.kind === 'merchant' && unit.hp > 0);
+    if (route.villageId === undefined && !route.marketLand) route.river = findRiverTradeConnection(state, origin, partner);
+    const live = liveRouteMerchant(state, route);
     if (live) { live.speed = MERCHANT_SPEED; continue; }
     if (state.time < Math.max(route.nextDepartureAt, state.tradeCooldowns?.[cityPair(route.origin, route.partner)] ?? 0,
       route.villageId === undefined ? 0 : state.tradeCooldowns?.[villageCooldown(route.villageId, route.faction)] ?? 0)) continue;
@@ -318,15 +432,15 @@ export function updateTradeRoutes(state: GameState): void {
       order: 'work', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0, bornAt: state.time,
       home: origin.id, tradeRoute: route.id };
     entityStore(state).units.add(merchant); route.merchantId = merchant.id; route.target = partner.id;
-    route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
+    route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.marketLeg = undefined; route.riverLeg = undefined; route.nextPlanAt = 0;
   }
 }
 
 /** Dispatch through the ordinary movement/collision system. No partial path or
  * proximity to an unreachable city can complete a delivery. */
 export function updateMerchant(state: GameState, merchant: Unit, dt: number, move: Move): void {
-  const route = state.tradeRoutes?.find(candidate => candidate.id === merchant.tradeRoute && candidate.merchantId === merchant.id);
-  if (!route || merchant.hp <= 0) return;
+  const route = merchant.tradeRoute === undefined ? undefined : routeIndex(state).byId.get(merchant.tradeRoute);
+  if (!route || route.merchantId !== merchant.id || merchant.hp <= 0) return;
   if (route.faction !== merchant.faction) { merchant.moving = false; return; }
   merchant.speed = MERCHANT_SPEED;
   const village = route.villageId === undefined ? undefined : state.villages?.find(v => v.id === route.villageId);
@@ -339,15 +453,17 @@ export function updateMerchant(state: GameState, merchant: Unit, dt: number, mov
     || !partner || !buildingReady(partner) || (village
       ? partner.kind !== 'villageTent' || partner.id !== village.campId
       : partner.kind !== 'palace' || partner.faction !== (route.partnerFaction ?? route.faction)
-        || route.partnerFaction !== undefined && !factionTradeActive(state, route.faction, route.partnerFaction))) {
-    route.legValue = undefined; route.goal = undefined; route.distance = 0; route.transitSeconds = 0;
+        || route.partnerFaction !== undefined && !marketPartnerEligible(state, origin, partner))) {
+    route.legValue = undefined; route.marketLeg = undefined; route.goal = undefined; route.distance = 0; route.transitSeconds = 0;
     merchant.moving = false; merchant.destination = undefined; merchant.path = undefined; merchant.pathGoal = undefined;
     return;
   }
   const target = route.target === origin.id ? origin : route.target === partner.id ? partner : undefined;
-  if (!target || state.factions.find(faction => faction.id === merchant.faction)?.defeated) { merchant.moving = false; return; }
+  if (!target || factionById(state, merchant.faction)?.defeated) { merchant.moving = false; return; }
   // Hold the brief home turnaround until the next bounded planning pass can
   // adopt the river partner. Otherwise a 1.5s pause can slip between 5s scans.
+  if (route.marketLand && state.time < route.nextDepartureAt) { merchant.moving = false; return; }
+  if (route.pendingMarketChange && marketCaravanHome(state, route)) { merchant.moving = false; return; }
   if (route.pendingRiverPartner !== undefined && idleAtOrigin(state, route, origin, merchant)) { merchant.moving = false; return; }
   if (buildingWorkForbidden(state, target, merchant.faction)) {
     merchant.moving = false; merchant.destination = undefined; merchant.path = undefined; route.goal = undefined; return;
@@ -395,7 +511,13 @@ function finishDelivery(state: GameState, route: TradeRoute, merchant: Unit): vo
   const faction = state.factions.find(candidate => candidate.id === merchant.faction);
   if (!faction) return;
   const village = route.villageId === undefined ? undefined : state.villages?.find(v => v.id === route.villageId);
-  const gold = village ? villageTradePayout(state, village, faction.id, (route.transitSeconds ?? 0)) : route.legValue!.goldPerSecond * (route.transitSeconds ?? 0);
+  const gold = village ? villageTradePayout(state, village, faction.id, (route.transitSeconds ?? 0)) : route.marketLeg?.gold ?? route.legValue!.goldPerSecond * (route.transitSeconds ?? 0);
+  if (route.marketLeg) {
+    const science = receiveTradeScience(state, faction, route.marketLeg.science);
+    const recipient = route.partnerFaction === undefined ? undefined : state.factions.find(f => f.id === route.partnerFaction);
+    const partnerScience = recipient ? receiveTradeScience(state, recipient, route.marketLeg.partnerScience) : 0;
+    route.lastMarketDelivery = { gold, science, partnerScience, to: route.target };
+  }
   if (!village || gold > 0) route.journeys++;
   if (gold > 0) {
     grantIncome(faction, { gold }, state, 'trade');
@@ -410,7 +532,11 @@ function finishDelivery(state: GameState, route: TradeRoute, merchant: Unit): vo
     if (Math.round(gold) > 0) state.particles.push({ x: merchant.x, y: merchant.y, text: `+${Math.round(gold)} gold`, color: '#ffe33d', life: 1.4, duration: 1.4 });
   }
   route.target = route.target === route.origin ? route.partner : route.origin;
-  route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.riverLeg = undefined; route.nextPlanAt = state.time + 1.5;
+  route.distance = 0; route.transitSeconds = 0; route.goal = undefined; route.legValue = undefined; route.marketLeg = undefined; route.riverLeg = undefined; route.nextPlanAt = state.time + 1.5;
+  if (route.pendingMarketChange && route.target === route.partner) {
+    planning.delete(state);
+    invalidateSettlementDecisions(state);
+  }
   merchant.aboardRiverTrade = false;
   merchant.destination = undefined; merchant.path = undefined; merchant.pathGoal = undefined;
   merchant.moving = false;
@@ -449,6 +575,56 @@ function recordTransit(route: TradeRoute, merchant: Unit, before: Point, facing:
     route.transitSeconds = (route.transitSeconds ?? 0) + dt * (water ? RIVER_TRADE_TIME_MULTIPLIER : 1);
 }
 
+export function orderMarketRoute(state: GameState, market: Building, destination: number | null): { ok: boolean; message: string } {
+  const result = setMarketDestination(state, market, destination, MERCHANT_SPEED);
+  if (result.ok) {
+    planning.delete(state);
+    invalidateSettlementDecisions(state);
+  }
+  return result;
+}
+
+export interface MarketplaceTradeView {
+  city: Building; destination?: number; partner?: Building; route?: TradeRoute;
+  status: 'No route' | 'Land route' | 'River route' | 'Returning before switch' | 'Route blocked' | 'Destination unavailable' | 'Caravan replacing';
+  seconds?: number; yield?: MarketYield; reverse: boolean;
+}
+
+export function marketplaceTradeView(state: GameState, market: Building, candidate?: number): MarketplaceTradeView | undefined {
+  const city = marketplaceCity(state, market);
+  if (!city) return;
+  const destination = marketDestination(city, market), index = routeIndex(state);
+  const originRoute = index.byOrigin.get(city.id), inbound = index.incomingDomestic.get(city.id);
+  const partnerId = candidate ?? destination ?? originRoute?.partner ?? inbound?.origin;
+  const pair = partnerId === undefined ? undefined : index.byPair.get(cityPair(city.id, partnerId));
+  const partner = partnerId === undefined ? undefined : entityStore(state).buildings.get(partnerId);
+  const eligible = !!partner && marketPartnerEligible(state, city, partner);
+  const path = eligible ? marketLandPath(state, city, partner!, MERCHANT_SPEED) : undefined;
+  const active = originRoute ?? pair ?? inbound;
+  const status = destination !== undefined && !eligible ? 'Destination unavailable'
+    : active?.pendingMarketChange || destination !== undefined && originRoute && originRoute.partner !== destination
+    ? 'Returning before switch' : active && active.nextDepartureAt > state.time && !liveRouteMerchant(state, active)
+      ? 'Caravan replacing' : active?.river && (destination === undefined || active.riverLeg) ? 'River route'
+        : partnerId !== undefined && !path ? 'Route blocked' : active ? 'Land route' : 'No route';
+  const view: MarketplaceTradeView = { city, destination, partner, route: active, status, reverse: active?.partner === city.id };
+  if (!partner || !path) return view;
+  if (candidate === undefined && destination === undefined && status === 'River route') return view;
+  const { residents, degree } = marketPopulationSnapshot(state);
+  const livePair = pair && liveRouteMerchant(state, pair);
+  const replaced = originRoute && originRoute !== pair && liveRouteMerchant(state, originRoute) ? 1 : 0;
+  view.seconds = path.seconds;
+  const from = pair?.origin === partner.id ? partner : city, to = from === city ? partner : city;
+  const cityDegree = (degree.get(city.id) ?? 0) + Number(!livePair) - replaced;
+  const partnerDegree = (degree.get(partner.id) ?? 0) + Number(!livePair);
+  const quote = marketQuote(state, from, to, path, residents.get(from.id) ?? 0, residents.get(to.id) ?? 0,
+    from === city ? cityDegree : partnerDegree, to === city ? cityDegree : partnerDegree);
+  view.yield = from === city ? quote : { ...quote, outboundGold: quote.returnGold, returnGold: quote.outboundGold,
+    science: from.faction === city.faction ? quote.science : quote.partnerScience,
+    partnerScience: from.faction === city.faction ? 0 : quote.science,
+    sciencePerMinute: from.faction === city.faction ? quote.sciencePerMinute : quote.partnerScience * 120 / (2 * path.seconds + 3) };
+  return view;
+}
+
 export const FACTION_TRADE_COST = 250;
 export function factionTradeStatus(state: GameState, partnerFaction: number, faction = playerFaction(state), buildingId?: number) {
   const active = factionTradeActive(state, faction, partnerFaction);
@@ -467,7 +643,7 @@ export function factionTradeStatus(state: GameState, partnerFaction: number, fac
  * the realized rate; this is gold per active transit time, before Science. */
 export function factionTradeIncomeEstimate(state: GameState, origin: Building, partner: Building): number {
   const snapshot = domesticTradePopulationSnapshot(state);
-  const active = !!state.tradeRoutes?.some(r => r.partnerFaction !== undefined
+  const active = state.tradeRoutes?.find(r => r.partnerFaction !== undefined
     && (r.origin === origin.id && r.partner === partner.id || r.origin === partner.id && r.partner === origin.id));
   const share = (city: Building): number => {
     const population = snapshot.residents.get(city.id) ?? 0, current = snapshot.shares.get(city.id) ?? population;
@@ -476,8 +652,10 @@ export function factionTradeIncomeEstimate(state: GameState, origin: Building, p
   };
   const owner = state.factions.find(f => f.id === origin.faction);
   const bonus = regionalTradeMultiplier(state.world, origin, partner, state) * tradeGoldMultiplier(owner);
+  const grapes = (grapeTradeMultiplier(state, origin) + grapeTradeMultiplier(state, partner)) / 2;
+  const river = active ? active.riverLeg || active.river : grapes > 1 && findRiverTradeConnection(state, origin, partner, true);
   return domesticTradePayout(30, share(origin), share(partner), bonus,
-    { origin: snapshot.residents.get(origin.id) ?? 0, partner: snapshot.residents.get(partner.id) ?? 0 });
+    { origin: snapshot.residents.get(origin.id) ?? 0, partner: snapshot.residents.get(partner.id) ?? 0 }) * (river ? 1 : grapes);
 }
 /** Reachability query shared by diplomacy; it never charges a treaty fee. */
 export function findFactionTradeEndpoints(state: GameState, partnerFaction: number, faction: number, buildingId?: number): { origin: Building; partner: Building } | undefined {

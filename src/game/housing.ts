@@ -6,6 +6,7 @@ import { palaceReachability } from './placement';
 import { replaceableRoad } from './covered-roads';
 import { reliefFootprintAllowed } from './relief';
 import { hermitCabinOverlaps } from './placement-occupancy';
+import { overlapsFallenDefense } from './defense-rebuilding';
 import { palaceEnclosures } from './enclosures';
 import { planFarmRelocation, withFarmRelocationProbes, type FarmRelocationPlan } from './farm-relocation';
 import TinyQueue from 'tinyqueue';
@@ -19,7 +20,7 @@ interface PlacementContext { occupied: Set<number>; farms: Map<number, Building>
 
 function placementContext(state: GameState, palace: Building, allowRoads = false): PlacementContext {
   const { width } = state.world, occupied = new Set<number>(), farms = new Map<number, Building>(), activeWells = new Set<number>(), reservedSolid = new Set<number>();
-  for (const building of state.buildings) if (building.hp > 0) {
+  for (const building of state.buildings) if (building.hp > 0 || building.kind === 'fort' && building.fort?.destroyed) {
     if (allowRoads && replaceableRoad(building, palace.faction)) continue;
     const shareableWell = building.kind === 'well' && building.faction === palace.faction;
     const movableFarm = isFarmKind(building.kind) && building.faction === palace.faction && buildingReady(building) && !building.farmSuppressed;
@@ -41,7 +42,7 @@ function placementContext(state: GameState, palace: Building, allowRoads = false
 function candidateAt(state: GameState, palace: Building, context: PlacementContext, point: Point, allowClearing = false): Candidate | undefined {
   const { x, y } = point, key = y * state.world.width + x;
   if (isForbidden(state, x, y, palace.faction) || context.occupied.has(key) || !reliefFootprintAllowed(state.world, x, y)
-    || hermitCabinOverlaps(state, x, y)) return;
+    || !allowClearing && overlapsFallenDefense(state, 'house', x, y) || hermitCabinOverlaps(state, x, y)) return;
   const tile = tileAt(state.world, x, y), camp = context.farms.get(key);
   if (!tile || WATER.has(tile.terrain) || tile.farm !== undefined && !camp) return;
   if (tile.overlay !== 'none' && !(allowClearing && ['forest', 'jungle', 'swamp'].includes(tile.overlay))) return;

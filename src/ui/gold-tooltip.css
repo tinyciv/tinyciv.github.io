@@ -15,6 +15,7 @@
 .gold-flow-rows { margin: 4px 0 0; }.gold-flow-rows:empty { display: none; }
 .gold-flow-row { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0 1px 8px; font-size: 14px; line-height: 17px; }
 .gold-flow-row dt { min-width: 0; color: var(--popup-muted); }.gold-flow-row dd { margin: 0; flex: none; }
+.gold-flow-row[data-category="science"] dt { color: var(--science-color); }
 .gold-flow-section.is-income dd, .gold-flow-section.is-income strong, .gold-flow-net .is-positive { color: #a7ce8c; }
 .gold-flow-section.is-outlay dd, .gold-flow-section.is-outlay strong, .gold-flow-net .is-negative { color: #e5aa87; }
 .gold-flow-net { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--popup-edge); color: #efd392; font-size: 17px; }

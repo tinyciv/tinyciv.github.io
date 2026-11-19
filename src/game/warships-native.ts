@@ -1,4 +1,5 @@
 import { warshipGunPoint } from './warship-layout';
+import { recordGunSmoke } from './gun-smoke';
 import { shipName } from './ship-names';
 import { rustEngine } from './rust-engine';
 import { SimSlot, simCore } from './sim-handle';
@@ -63,7 +64,7 @@ const sinkRevisions = new SimSlot<number>();
 export interface NavalLoadout { class: WarshipClass; marine: MarineType; weapons: NavalWeapon[] }
 type Result = { ok: boolean; message: string; code?: number };
 export interface NavalCombat {
-  observe(ship: Unit,target: Unit): { eligible: boolean; defense: number };
+  observe(ship: Unit,target: Unit): { eligible: boolean; cannonVisible?: boolean; defense: number };
   shoot(ship: Unit,target: Unit,slot: number,damage: number): void;
 }
 function technologyMask(state: GameState, faction: number): number {
@@ -94,7 +95,7 @@ export const shipyardWarship = (state: GameState, yard: Building): Unit | undefi
 export function shipRank(ship: Unit): string { return ['Untrained', 'Regular', 'Veteran', 'Hardened', 'Elite'][Math.min(4, Math.floor((ship.warship?.kills ?? 0) / 2))]; }
 class NavalBridge implements ScalarObserver {
   private nextTargets = -Infinity;
-  private targets: { ship: number; unit: number; eligible: boolean; defense: number }[] = [];
+  private targets: ({ ship: number; unit: number } & ReturnType<NavalCombat['observe']>)[] = [];
   orderChanged(): void { this.nextTargets=-Infinity; }
   readonly handle: number;
   readonly store: EntityStore;
@@ -200,7 +201,8 @@ class NavalBridge implements ScalarObserver {
     let targets=0;
     if (combat) for (const target of this.targets) {
       const unit=this.store.units.get(target.unit); if (!unit) continue;
-      values.push(target.ship,unit.id,unit.x,unit.y,unit.faction,unit.hp,target.defense,Number(target.eligible && !unit.inside && unit.embarkedOn===undefined)); targets++;
+      const sight = !unit.inside && unit.embarkedOn === undefined ? Number(target.eligible) | Number(!!target.cannonVisible) << 1 : 0;
+      values.push(target.ship,unit.id,unit.x,unit.y,unit.faction,unit.hp,target.defense,sight); targets++;
     }
     const yards = this.store.buildings.query('shipyard').filter(yard => buildingReady(yard) && yard.hp > 0);
     values.push(yards.length);
@@ -225,7 +227,9 @@ class NavalBridge implements ScalarObserver {
         gun.target = r[at] < 0 ? undefined : r[at]; gun.facing = r[at + 1];
         if (r[at + 2] >= 0 && gun.firedAt !== r[at + 2]) {
           gun.firedAt = r[at + 2];
-          if (target) gun.shot = { from: warshipGunPoint(ship, slot), to: { x: target.x, y: target.y }, time: gun.firedAt,projectile:!target.warship };
+          const from = warshipGunPoint(ship, slot), cannon = slot < 4 && w.weapons[slot] === 'cannon';
+          if (target) gun.shot = { from, to: { x: target.x, y: target.y }, time: gun.firedAt, projectile: !target.warship };
+          if (cannon || slot >= 4 && w.marine === 'musketman') recordGunSmoke(state, from, gun.facing, ship.id, cannon, .65, slot);
         }
       }
       ship.destination = Number.isFinite(r[20]) ? { x: r[20], y: r[21] } : undefined;

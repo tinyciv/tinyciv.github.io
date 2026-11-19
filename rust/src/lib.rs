@@ -24,6 +24,7 @@ mod woodland;
 mod ore;
 mod terrain_sites;
 mod terrain_rays;
+mod frost;
 
 use std::cell::RefCell;
 
@@ -35,6 +36,7 @@ thread_local! {
     static RELIEF: RefCell<relief::Relief> = RefCell::new(relief::Relief::default());
     static WOODLAND: RefCell<woodland::Woodland> = RefCell::new(woodland::Woodland::default());
     static RIVERS: RefCell<rivers::Rivers> = RefCell::new(rivers::Rivers::default());
+    static FROST: RefCell<frost::WinterTerrain> = RefCell::new(frost::WinterTerrain::default());
     static NAVIGATION: RefCell<navigation::Navigation> = RefCell::new(navigation::Navigation::default());
     static OUTPUT: RefCell<[f64; 8]> = const { RefCell::new([0.0; 8]) };
     static HEALTH: RefCell<health::Engines> = RefCell::new(health::Engines::default());
@@ -104,13 +106,17 @@ pub extern "C" fn terrain_sites_mountain_gap()->u32 { terrain_sites::MOUNTAIN_GA
 #[unsafe(no_mangle)]
 pub extern "C" fn ore_generate(width:usize,height:usize,seed:u32,first_group:u32,tutorial:u32)->*const f64 { ORES.with_borrow_mut(|o|o.generate(width,height,seed,first_group,tutorial!=0)) }
 #[unsafe(no_mangle)]
-pub extern "C" fn ore_work_yield(kind:u32,cells:usize)->f64 { ORES.with_borrow_mut(|o|o.work_yield(kind,cells)) }
+pub extern "C" fn ore_produce_gold(cells:usize,now:f64,due:f64,interval:f64)->*const f64 { ORES.with_borrow_mut(|o|o.produce_gold(cells,now,due,interval)) }
 #[unsafe(no_mangle)]
 pub extern "C" fn resource_habitats(width:usize,height:usize)->*const f64 { ORES.with_borrow_mut(|o|o.habitats(width,height)) }
 #[unsafe(no_mangle)]
 pub extern "C" fn resource_group_limit(resource:u32)->u32 { ore::group_limit(resource) }
 #[unsafe(no_mangle)]
 pub extern "C" fn resource_ground_policy(resource:u32,behind_front:u32)->u32 { ore::footprint_ground_policy(resource,behind_front!=0) }
+#[unsafe(no_mangle)]
+pub extern "C" fn prefer_marble_quarry(owned:u32, developed:u32, anchor:u32, current:u32, current_anchor:u32) -> u32 {
+    ore::prefer_marble_quarry(owned, developed, anchor, current, current_anchor) as u32
+}
 #[unsafe(no_mangle)]
 pub extern "C" fn resource_work_access(resource:u32,phase:u32,worker:u32)->u32 { ore::work_access(resource,phase,worker!=0) as u32 }
 #[unsafe(no_mangle)]
@@ -306,13 +312,17 @@ pub extern "C" fn research_constant(index: u32) -> f64 { research::constant(inde
 #[unsafe(no_mangle)]
 pub extern "C" fn research_level(raw: f64) -> f64 { research::level(raw) }
 #[unsafe(no_mangle)]
+pub extern "C" fn research_farm_yield_multiplier(crop_rotation: u32, iron_plows: u32) -> f64 {
+    research::farm_yield_multiplier(crop_rotation != 0, iron_plows != 0)
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn research_allocation(raw: f64) -> f64 { research::allocation(raw) }
 #[unsafe(no_mangle)]
 pub extern "C" fn research_library_multiplier(count: u32) -> f64 { research::library_multiplier(count as usize) }
 #[unsafe(no_mangle)]
 pub extern "C" fn research_graph_prepare(count: u32) -> *mut f64 { RESEARCH.with_borrow_mut(|values| values.prepare_graph(count as usize)) }
 #[unsafe(no_mangle)]
-pub extern "C" fn research_graph_commit(count: u32) { RESEARCH.with_borrow_mut(|values| values.commit_graph(count as usize)); }
+pub extern "C" fn research_graph_commit(count: u32, fixed_costs: f64) { RESEARCH.with_borrow_mut(|values| values.commit_graph(count as usize, fixed_costs as u64)); }
 #[unsafe(no_mangle)]
 pub extern "C" fn research_cost(branch: u32, bonus: f64, scenario: u32) -> f64 { RESEARCH.with_borrow(|values| values.cost(branch as usize, bonus, scenario==2)) }
 #[unsafe(no_mangle)]
@@ -512,14 +522,30 @@ pub extern "C" fn construction_remove(handle: u32, id: f64) { CONSTRUCTION.with_
 #[unsafe(no_mangle)]
 pub extern "C" fn construction_duration(kind: u32) -> f64 { construction::duration(kind) }
 #[unsafe(no_mangle)]
+pub extern "C" fn marble_construction_multiplier(developed: u32) -> f64 { construction::marble_construction_multiplier(developed) }
+#[unsafe(no_mangle)]
+pub extern "C" fn peat_upkeep_multiplier(developed: u32) -> f64 { ore::peat_upkeep_multiplier(developed != 0) }
+#[unsafe(no_mangle)]
+pub extern "C" fn grape_trade_multiplier(developed: u32) -> f64 { ore::grape_trade_multiplier(developed != 0) }
+#[unsafe(no_mangle)]
 pub extern "C" fn construction_access(x: f64, y: f64, width: i32, height: i32) -> *const f64 {
     CONSTRUCTION_LINE.with_borrow_mut(|buffer| buffer.access(x, y, width, height))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn water_cell_navigable(flags: u32) -> u32 {
     // A ford changes land traversal; boats still use the underlying water,
-    // including a ford on a creek. Waterfalls and stairs remain impassable.
-    u32::from(flags & 27 == 17 && (flags & 4 == 0 || flags & 32 != 0))
+    // including a ford on a creek. Ice, waterfalls and stairs are impassable.
+    u32::from(flags & (27 | 64) == 17 && (flags & 4 == 0 || flags & 32 != 0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn snow_speed_multiplier() -> f64 { frost::SNOW_SPEED }
+#[unsafe(no_mangle)]
+pub extern "C" fn polar_sea_lane_width() -> usize { frost::POLAR_SEA_LANE_WIDTH }
+#[unsafe(no_mangle)]
+pub extern "C" fn frost_input(count: usize) -> *mut u8 { FROST.with_borrow_mut(|pockets| pockets.input(count)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn frost_generate(width: usize, height: usize, seed: u32) -> *const u16 {
+    FROST.with_borrow_mut(|pockets| pockets.generate(width, height, seed))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn rowboat_eligible(kind: u32, engineer: u32) -> u32 {
@@ -860,6 +886,19 @@ pub extern "C" fn sim_ai_policy_decide(handle: u32, faction: i32, mode: u32,
         if mode==21 && !game.world.resource::<sim::ai_empire::Empire>().siege_waiting(faction,game.clock().time,d) {return 0.0;}
         sim::ai_policy::decide(&mut game.world, faction, mode, [a,b,c,d,e,f])
     })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_land_trade_input(handle: u32) -> *mut f64 {
+    with_sim(handle, |g| g.world.resource_mut::<sim::land_trade::LandTrade>().input())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_land_trade_quote(handle: u32) -> *const f64 {
+    with_sim(handle, |g| g.world.resource_mut::<sim::land_trade::LandTrade>().quote())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_land_trade_change(end_matches: u32, mode_matches: u32, home: u32) -> u32 {
+    sim::land_trade::route_change(end_matches != 0, mode_matches != 0, home != 0)
 }
 
 #[unsafe(no_mangle)]
@@ -1406,6 +1445,12 @@ pub extern "C" fn sim_structure_nearest(handle: u32, faction: f64, x: f64, y: f6
 pub extern "C" fn sim_structure_near(handle: u32, faction: f64, x: f64, y: f64, radius: f64, class: u32) -> u32 {
     with_sim(handle, |game| game.structures().near(faction, x, y, radius, class) as u32)
 }
+#[unsafe(no_mangle)]
+pub extern "C" fn fountain_radius() -> i32 { sim::structures::FOUNTAIN_RADIUS }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_fountain_covers(handle: u32, faction: f64, x: f64, y: f64) -> u32 {
+    with_sim(handle, |game| game.structures().fountain_covers(faction, x, y) as u32)
+}
 /// [count, ids...] in building order.
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_structure_query(handle: u32, faction: f64, flags: u32, k0: i32, k1: i32, k2: i32, k3: i32) -> *const f64 {
@@ -1844,7 +1889,11 @@ pub extern "C" fn sim_civic_income(handle: u32, amount: f64) {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_civic_factory_income(handle: u32, faction: i32, base: f64) -> f64 {
-    with_sim(handle, |game| game.world.resource::<sim::civic_buildings::CivicBuildings>().factory_income(faction,base))
+    with_sim(handle, |game| game.world.resource_mut::<sim::civic_buildings::CivicBuildings>().factory_income(faction,base))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_civic_coal_cities(handle: u32, count: usize) {
+    with_sim(handle, |game| game.world.resource_mut::<sim::civic_buildings::CivicBuildings>().set_coal_cities(count));
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_civic_dividends(handle: u32) -> *const f64 {
@@ -1874,6 +1923,21 @@ pub extern "C" fn sim_defense_city(handle:u32,faction:i32)->f64{with_sim(handle,
 pub extern "C" fn sim_defense_towers(handle:u32,id:f64)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().towers(id as i64))}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_next(handle:u32,id:f64,now:f64,budget:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().next(id as i64,now,budget))}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_scout_tower_sites(handle: u32, id: f64, blocked: usize) -> *const f64 {
+    with_sim(handle, |g| g.world.resource_mut::<sim::defense_placement::DefensePlacement>().scout_sites(id as i64, blocked))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn scout_tower_hp() -> f64 { sim::kinds::building::SCOUT_TOWER_HP }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn scout_tower_sight() -> f64 { sim::kinds::building::SCOUT_TOWER_SIGHT }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn scout_tower_search_radius() -> i32 { sim::defense_placement::SCOUT_SEARCH_RADIUS }
+
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_rejected(handle:u32,id:f64){with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().rejected(id as i64));}
 

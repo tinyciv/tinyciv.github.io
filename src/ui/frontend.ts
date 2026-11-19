@@ -9,10 +9,11 @@ import { AccountScreen, isAccountView, type AccountView } from './account-screen
 import type { AccountUser } from '../account/client';
 import { FeedbackDialog } from './feedback-dialog';
 import { AUTOSAVE_ID, type StoredGameSummary } from '../game/game-storage';
+import { movementGuideMarkup } from './movement-guide';
 import './frontend.css';
 import './world-generation.css';
 
-export type FrontendView = AccountView | 'main' | 'single' | 'scenarios' | 'saves' | 'servers' | 'lobby' | 'options' | 'controls' | 'fame' | 'credits' | 'loading' | 'error';
+export type FrontendView = AccountView | 'main' | 'game-menu' | 'single' | 'scenarios' | 'save' | 'saves' | 'servers' | 'lobby' | 'options' | 'controls' | 'fame' | 'credits' | 'loading' | 'error';
 /** One finished single-player reign, kept by main in local storage. */
 export interface HallOfFameEntry { result: 'Victory' | 'Defeat'; civilization: string; seed: string; minutes: number; population: number; date: string }
 export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: number; follow: boolean; fullscreen: boolean; banditIntensity: number; enemyStrength: number; autoRebuildDefenses: boolean; infiniteGold?: boolean;
@@ -22,7 +23,7 @@ export type FrontendAction =
   | { type: 'account-submit'; mode: 'login' | 'create-account'; email: string; password: string }
   | { type: 'account-logout' }
   | { type: 'feedback-submit'; message: string; signedIn: boolean }
-  | { type: 'resume' | 'saves' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
+  | { type: 'resume' | 'saves' | 'exit-game' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
   | { type: 'save'; name: string }
   | { type: 'load'; id: string }
   | { type: 'new'; options: NewGameOptions }
@@ -76,6 +77,7 @@ export class Frontend {
   private loadingTitle = 'Loading';
   private progress: number | undefined;
   private cancellableLoading = false;
+  private movementGuide = false;
   private canReturnFromError = true;
   private settings: FrontendSettings = { zoom: 1, minZoom: .55, maxZoom: 3, follow: true, fullscreen: false, banditIntensity: DEFAULT_BANDIT_INTENSITY, enemyStrength: 1, autoRebuildDefenses: true };
   private lobbySignature = '';
@@ -121,7 +123,7 @@ export class Frontend {
       event.stopPropagation();
       if (event.key === 'Escape') {
         event.preventDefault();
-        this.back();
+        if (!event.repeat) this.back();
       }
       if (this.view === 'main' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
         const buttons = [...element.querySelectorAll<HTMLButtonElement>('.menu-button:not(:disabled)')];
@@ -145,13 +147,16 @@ export class Frontend {
         if (node instanceof HTMLInputElement && node.type === 'radio' && !node.checked && node.form?.querySelector(`input[type="radio"][name="${CSS.escape(node.name)}"]:checked`)) return false;
         return true;
       });
-      if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); focusable.at(-1)?.focus(); }
-      else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0]?.focus(); }
+      const index = focusable.indexOf(document.activeElement as HTMLElement);
+      if (event.shiftKey && index <= 0) { event.preventDefault(); focusable.at(-1)?.focus(); }
+      else if (!event.shiftKey && (index < 0 || index === focusable.length - 1)) { event.preventDefault(); focusable[0]?.focus(); }
     });
     this.render();
   }
   get active(): boolean { return !this.element.hidden; }
+  get inGame(): boolean { return this.element.classList.contains('in-game'); }
   get currentView(): FrontendView { return this.view; }
+  setInGame(value: boolean): void { this.element.classList.toggle('in-game', value); }
   setSession(resumable: boolean, online = false): void { this.resumable = resumable; this.online = online; }
   setAccount(user: AccountUser | null): void { this.accountUser = user; this.feedback.setAccount(user); if (this.active) this.render(); }
   openFeedback(): void { this.content.inert = true; this.feedback.open(this.accountUser); }
@@ -165,11 +170,14 @@ export class Frontend {
   setSaves(saves: StoredGameSummary[], defaultName?: string): void {
     this.saves = saves;
     if (defaultName !== undefined) this.saveName = defaultName;
-    if (this.view === 'saves') this.render();
+    if (this.view === 'saves' || this.view === 'save') this.render();
   }
   setSavesBusy(busy: boolean): void {
     this.savesBusy = busy;
-    if (this.view === 'saves') this.render();
+    if (this.view === 'saves' || this.view === 'save') {
+      this.render();
+      if (!this.element.contains(document.activeElement)) this.content.querySelector<HTMLElement>('#frontend-title')?.focus({ preventScroll: true });
+    }
   }
   setSettings(settings: FrontendSettings): void {
     if (this.settings.banditIntensity !== settings.banditIntensity) this.worldSetup.barbarians = settings.banditIntensity;
@@ -182,9 +190,13 @@ export class Frontend {
       this.account.clearMessage();
       this.content.scrollTop = 0;
     }
-    if (['options', 'controls'].includes(view) && !['options', 'controls'].includes(this.view)) this.returnView = this.view;
+    if (this.inGame && view === 'controls') this.returnView = this.view === 'options' ? 'options' : 'game-menu';
+    else if (['options', 'controls'].includes(view) && !['options', 'controls'].includes(this.view)) this.returnView = this.view;
     this.view = view; this.element.hidden = false; this.render(); this.layout();
-    this.element.querySelector<HTMLElement>(isAccountView(view) ? '[name="account-email"]' : view === 'single' ? '.worldgen-back' : view === 'scenarios' ? '[data-select-scenario][aria-pressed="true"]' : 'button:not(:disabled),input:not(:disabled)')?.focus({ preventScroll: true });
+    const focus = isAccountView(view) ? '[name="account-email"]' : view === 'single' ? '.worldgen-back'
+      : view === 'scenarios' ? '[data-select-scenario][aria-pressed="true"]' : view === 'save' ? '[name="save-name"]'
+      : view === 'game-menu' ? '.game-menu-actions [data-frontend-action="resume"]' : 'button:not(:disabled),input:not(:disabled)';
+    (this.element.querySelector<HTMLElement>(focus) ?? this.content.querySelector<HTMLElement>('#frontend-title[tabindex]'))?.focus({ preventScroll: true });
   }
   hide(): void { this.feedback.close(); this.element.hidden = true; }
   /** Select compact controls and fit the illustrated world generation screen. */
@@ -201,12 +213,13 @@ export class Frontend {
       this.element.style.setProperty('--worldgen-y', `${(height - SCENE_HEIGHT * scale) / 2}px`);
     }
   }
-  loading(title: string, _status: string, progress?: number, cancellable = false): void {
+  loading(title: string, _status: string, progress?: number, cancellable = false, movementGuide = false): void {
     const reuse = this.view === 'loading' && this.cancellableLoading === cancellable
-      && this.content.querySelector('progress');
+      && this.movementGuide === movementGuide && this.content.querySelector('progress');
     this.loadingTitle = title; this.status = '';
     this.progress = progress === undefined ? undefined : Math.max(0, Math.min(1, progress));
     this.cancellableLoading = cancellable;
+    this.movementGuide = movementGuide;
     if (!reuse) { this.show('loading'); return; }
     // Keep the animated sprite mounted while completed work updates progress.
     this.element.hidden = false;
@@ -231,7 +244,15 @@ export class Frontend {
     else if (this.view === 'lobby') this.show('servers');
   }
   private back(): void {
-    if (this.view === 'saves' && this.savesBusy) return;
+    if ((this.view === 'saves' || this.view === 'save') && this.savesBusy) return;
+    if (this.inGame) {
+      if (this.view === 'game-menu') this.action({ type: 'resume' });
+      else {
+        this.setStatus('');
+        this.show(this.view === 'controls' && this.returnView === 'options' ? 'options' : 'game-menu');
+      }
+      return;
+    }
     if (isAccountView(this.view)) { this.show(this.view === 'login' ? 'main' : 'login'); return; }
     if (this.view === 'loading') { if (this.cancellableLoading) this.action({ type: 'cancel-loading' }); return; }
     if (this.view === 'error' && !this.canReturnFromError) return;
@@ -334,7 +355,8 @@ export class Frontend {
     if (action === 'back') { this.back(); return; }
     if (action === 'join') { const form = this.element.querySelector<HTMLFormElement>('[data-form="server"]'); if (form) this.readProfile(form); this.action({ type: 'join', roomId: this.selectedRoom, name: this.name, color: this.color }); return; }
     if (action === 'fullscreen') { this.action({ type: 'settings', settings: { fullscreen: !document.fullscreenElement } }); return; }
-    if (action === 'quick') { this.action({ type: 'new', options: { seed: freshSeed(), style: DEFAULT_WORLD_STYLE, landformFamily: 'mixed' } }); return; }
+    if (action === 'quick') { this.action({ type: 'new', options: { seed: freshSeed(), style: DEFAULT_WORLD_STYLE,
+      landformFamily: 'mixed', banditIntensity: DEFAULT_BANDIT_INTENSITY } }); return; }
     if (action) this.action({ type: action } as FrontendAction);
   }
   private change(event: Event): void {
@@ -430,8 +452,15 @@ export class Frontend {
     }
     const active = this.element.contains(document.activeElement) ? document.activeElement as HTMLInputElement : null;
     const focusedName = active?.getAttribute('name');
-    const title: Record<FrontendView, string> = { login: 'Sign in', 'create-account': 'Create account', 'forgot-password': 'Reset password', main: 'TinyCiv', single: 'New Game', scenarios: 'Scenarios', saves: this.resumable && !this.online ? 'Save / Load Game' : 'Load Game', servers: 'Multiplayer', lobby: 'Lobby', options: 'Preferences', controls: 'Controls', fame: 'Hall of Fame', credits: 'Credits', loading: this.loadingTitle, error: 'Error' };
+    const title: Record<FrontendView, string> = { login: 'Sign in', 'create-account': 'Create account', 'forgot-password': 'Reset password', main: 'TinyCiv', 'game-menu': 'Game Menu', single: 'New Game', scenarios: 'Scenarios', save: 'Save Game', saves: this.resumable && !this.online && !this.inGame ? 'Save / Load Game' : 'Load Game', servers: 'Multiplayer', lobby: 'Lobby', options: 'Preferences', controls: 'Controls', fame: 'Hall of Fame', credits: 'Credits', loading: this.loadingTitle, error: 'Error' };
     let body = '';
+    if (this.view === 'game-menu') body = `<nav class="game-menu-actions" aria-label="Game menu">
+      <button type="button" class="primary" data-frontend-action="resume">Resume</button>
+      ${this.online ? '' : '<button type="button" data-view="save">Save Game</button><button type="button" data-frontend-action="saves">Load Game</button>'}
+      <button type="button" data-view="options">Preferences</button>
+      <button type="button" data-view="controls">Controls</button>
+      <button type="button" data-frontend-action="exit-game">Exit to Menu</button>
+    </nav>`;
     if (this.view === 'main') body = `<nav class="menu-buttons" aria-label="Main menu">${this.menuItems().map(([label, attributes]) => `<button class="menu-button" ${attributes}><span>${label}</span></button>`).join('')}</nav>${this.online ? '<p class="frontend-hint">Online matches do not pause.</p>' : ''}`;
     if (this.view === 'main' && this.accountUser) body = `<button class="account-link menu-account" type="button" data-frontend-action="account-logout">${escape(this.accountUser.email)} · Sign out</button>` + body;
     if (isAccountView(this.view)) body = this.account.markup(this.view);
@@ -441,11 +470,12 @@ export class Frontend {
       : '<p class="frontend-hint">No reigns are recorded yet. Win or lose a single-player game to be remembered here.</p>';
     if (this.view === 'credits') body = `<dl class="credits-list">${CREDITS.map(([work, author]) => `<dt>${escape(work)}</dt><dd>${escape(author)}</dd>`).join('')}</dl>`;
     if (this.view === 'single') body = this.worldGenerationFields();
+    const savesDisabled = this.savesBusy ? 'disabled' : '';
+    if (this.view === 'save' || this.view === 'saves' && this.resumable && !this.online && !this.inGame)
+      body = `<form data-form="save" class="frontend-form save-form"><label>Save name<input name="save-name" maxlength="80" required autocomplete="off" value="${escape(this.saveName)}" ${savesDisabled}></label><button class="save-button" type="submit" ${savesDisabled}>Save Game</button></form>`;
     if (this.view === 'saves') {
-      const disabled = this.savesBusy ? 'disabled' : '';
-      body = `${this.resumable && !this.online ? `<form data-form="save" class="frontend-form save-form"><label>Save name<input name="save-name" maxlength="80" required autocomplete="off" value="${escape(this.saveName)}" ${disabled}></label><button class="save-button" type="submit" ${disabled}>Save Game</button></form>` : ''}
-        <p class="frontend-hint">Saved in this browser. Clearing site data removes saved games.</p>
-        ${this.saves.length ? `<ul class="save-list">${this.saves.map(save => `<li${save.id === AUTOSAVE_ID ? ' class="is-autosave"' : ''}><strong>${escape(save.name)}</strong><span>${escape(new Date(save.savedAt).toLocaleString())}</span><span>${escape(save.civilization)} · ${Math.floor(save.time / 60)} min</span><span class="save-seed">${escape(save.seed)}</span><button class="save-button" type="button" data-save-id="${escape(save.id)}" aria-label="${escape(`Load ${save.name}`)}" ${disabled}>Load</button></li>`).join('')}</ul>` : this.savesBusy ? '' : '<p>No saved games.</p>'}`;
+      body += `${this.inGame ? '' : '<p class="frontend-hint">Saved in this browser. Clearing site data removes saved games.</p>'}
+        ${this.saves.length ? `<ul class="save-list">${this.saves.map(save => `<li${save.id === AUTOSAVE_ID ? ' class="is-autosave"' : ''}><strong>${escape(save.name)}</strong><span>${escape(new Date(save.savedAt).toLocaleString())}</span><span>${escape(save.civilization)} · ${Math.floor(save.time / 60)} min</span><span class="save-seed">${escape(save.seed)}</span><button class="save-button" type="button" data-save-id="${escape(save.id)}" aria-label="${escape(`Load ${save.name}`)}" ${savesDisabled}>Load</button></li>`).join('')}</ul>` : this.savesBusy ? '' : '<p>No saved games.</p>'}`;
     }
     if (this.view === 'servers') body = `<div class="server-browser"><div class="server-toolbar"><button data-frontend-action="refresh">Refresh</button><button class="primary" data-frontend-action="join" ${!this.selectedRoom || !this.rooms.some(room => room.id === this.selectedRoom && room.players.length < 2 && room.phase === 'waiting') ? 'disabled' : ''}>Join selected</button></div><div class="server-table-wrap"><table><thead><tr><th>Name</th><th>Location</th><th>Players</th><th>Ping</th></tr></thead><tbody>${this.rooms.length ? this.rooms.map(room => `<tr class="${room.id === this.selectedRoom ? 'is-selected' : ''}"><td><button data-room="${escape(room.id)}" ${room.phase !== 'waiting' || room.players.length >= 2 ? 'disabled' : ''}>${escape(room.name)}</button></td><td>${escape(room.location)}</td><td>${room.players.length} / 2</td><td>${this.ping ? `${Math.round(this.ping)} ms` : '--'}</td></tr>`).join('') : '<tr><td colspan="4">No open games.</td></tr>'}</tbody></table></div><form data-form="server" class="frontend-form server-create"><h2>New 1v1 game</h2>${this.profileFields()}<label>Game name<input name="room-name" maxlength="40" placeholder="Game name"></label><details><summary>World options</summary>${this.worldFields()}</details><button class="primary" type="submit">Create game</button></form></div>`;
     if (this.view === 'lobby') {
@@ -454,17 +484,19 @@ export class Frontend {
     }
     if (this.view === 'options') body = `<div class="frontend-form"><div class="frontend-bandits"><label for="bandit-intensity"><span class="frontend-slider-heading">Bandit intensity<output data-bandit-value for="bandit-intensity"></output></span></label><input id="bandit-intensity" name="bandit-intensity" type="range" min="${MIN_BANDIT_INTENSITY * 100}" max="${MAX_BANDIT_INTENSITY * 100}" step="25" value="${this.settings.banditIntensity * 100}" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>Off</span><span>3×</span></div></div><div class="frontend-bandits"><label for="enemy-strength"><span class="frontend-slider-heading">Enemy strength<output data-enemy-value for="enemy-strength"></output></span></label><input id="enemy-strength" name="enemy-strength" type="range" min="25" max="300" step="25" value="${this.settings.enemyStrength * 100}" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>25%</span><span>300%</span></div></div><label class="frontend-check"><input name="auto-rebuild-defenses" type="checkbox" ${this.settings.autoRebuildDefenses ? 'checked' : ''}>Automatically rebuild defenses</label><label class="frontend-check"><input name="infinite-gold" type="checkbox" ${this.settings.infiniteGold ? 'checked' : ''} ${this.online || this.room ? 'disabled' : ''}>Infinite gold</label>${this.settings.revealMapAvailable ? `<label><input name="reveal-map" type="checkbox" ${this.settings.revealMap ? 'checked' : ''}>Reveal map</label>` : ''}<label>Camera zoom<input name="zoom" type="range" min="${this.settings.minZoom}" max="${this.settings.maxZoom}" step=".05" value="${this.settings.zoom}"></label><label class="frontend-check"><input name="follow" type="checkbox" ${this.settings.follow ? 'checked' : ''}>Follow the Leader</label><button data-frontend-action="fullscreen">${document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'}</button><button data-view="controls">Controls</button></div>`;
     if (this.view === 'controls') body = `<dl class="frontend-controls"><dt>WASD / arrows</dt><dd>Move the Leader; in Formation 3, W/S advance/reverse and A/D strafe; in a boat, W/S control throttle</dd><dt>Right click</dt><dd>Move, attack, or diplomacy</dd><dt>Left click</dt><dd>Select units and buildings</dd><dt>1 / E</dt><dd>Recall; hold E to steer right in a boat or rotate Formation 3</dd><dt>2 / Q</dt><dd>Change stance; hold Q to steer left in a boat or rotate Formation 3</dd><dt>3</dt><dd>Toggle close ranks after Infantry Drill; hold Q/E to rotate continuously; release to stop</dd><dt>4 / 5</dt><dd>Raise/dismiss levy; garrison/recall city defenders</dd><dt>Boats</dt><dd>Hold Q/E to steer; allow room to coast and brake</dd><dt>Shift</dt><dd>Separate mob / travel movement setting</dd><dt>B / F</dt><dd>Buildings / fortifications</dd><dt>C</dt><dd>Clear trees and structures</dd><dt>Mouse wheel</dt><dd>Camera zoom</dd><dt>Home</dt><dd>Center on the Leader</dd><dt>Space / + / -</dt><dd>Pause / speed in single player</dd><dt>Escape</dt><dd>Close panels or open the menu</dd></dl>`;
-    if (this.view === 'loading') body = `<div class="frontend-loading"><span class="frontend-loading-spinner" aria-hidden="true"></span><progress aria-label="Loading progress" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress><output class="frontend-loading-percent" aria-hidden="true">${this.progress === undefined ? '' : `${Math.round(this.progress * 100)}%`}</output></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
+    if (this.view === 'loading') body = `${this.movementGuide ? movementGuideMarkup() : ''}<div class="frontend-loading">${this.movementGuide ? '' : '<span class="frontend-loading-spinner" aria-hidden="true"></span>'}<progress class="frontend-progress" aria-labelledby="frontend-title" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress><output class="frontend-loading-percent" aria-hidden="true">${this.progress === undefined ? '' : `${Math.round(this.progress * 100)}%`}</output></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
     if (this.view === 'error') body = `<div class="frontend-error-actions"><button class="primary" data-frontend-action="retry">Retry</button>${this.canReturnFromError ? '<button data-frontend-action="main">Main menu</button>' : ''}</div>`;
     const heading = this.view === 'main'
       ? '<h1 id="frontend-title" class="menu-title"><span>TinyCiv</span></h1>'
       : this.view === 'single' ? '<header class="worldgen-heading"><span class="worldgen-brand" aria-label="TinyCiv">TinyCiv</span><h1 id="frontend-title">World Generation</h1></header>'
-      : this.view === 'loading' ? `<h1 id="frontend-title" class="frontend-loading-accessible">${escape(this.loadingTitle)}</h1>`
-      : `<header><h1 id="frontend-title">${escape(title[this.view])}</h1>${this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>`;
+      : this.view === 'loading' ? `<h1 id="frontend-title" class="frontend-loading-title">${escape(this.loadingTitle)}</h1>`
+      : this.view === 'game-menu' ? '<h1 id="frontend-title" tabindex="-1">Game Menu</h1><button type="button" class="close-dialog" data-frontend-action="resume" aria-label="Close"></button>'
+      : `<header><h1 id="frontend-title"${this.inGame ? ' tabindex="-1"' : ''}>${escape(title[this.view])}</h1>${this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>`;
     this.element.classList.toggle('is-world-generation', this.view === 'single');
-    this.content.innerHTML = `<section class="frontend-panel ${this.view === 'main' || this.view === 'single' ? '' : 'menu-sheet '}${isAccountView(this.view) ? 'frontend-account ' : ''}frontend-${this.view}">${heading}${body}<p class="frontend-status" role="status" aria-live="polite">${isAccountView(this.view) || this.view === 'loading' ? '' : escape(this.status)}</p></section>`;
-    if (this.view === 'saves') {
-      this.content.querySelector<HTMLElement>('.frontend-saves')?.setAttribute('aria-busy', String(this.savesBusy));
+    const panel = this.inGame ? 'dialog ' : this.view === 'main' || this.view === 'single' ? '' : 'menu-sheet ';
+    this.content.innerHTML = `<section class="frontend-panel ${panel}${isAccountView(this.view) ? 'frontend-account ' : ''}frontend-${this.view}">${heading}${body}<p class="frontend-status" role="status" aria-live="polite">${isAccountView(this.view) || this.view === 'loading' ? '' : escape(this.status)}</p></section>`;
+    if (this.view === 'saves' || this.view === 'save') {
+      this.content.firstElementChild?.setAttribute('aria-busy', String(this.savesBusy));
       const back = this.content.querySelector<HTMLButtonElement>('.frontend-back');
       if (back) back.disabled = this.savesBusy;
     }

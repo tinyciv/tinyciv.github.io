@@ -7,6 +7,7 @@ import { buildingPresent, buildingReady, buildingWidth, buildingHeight, type Bui
 import { terrainNavigationRevision } from './pathfinding';
 import type { ConstructionPlan } from './construction';
 import { constructionPreviewRegion } from './construction-preview-region';
+import { marbleConstructionMultiplier } from './resource-development';
 
 interface PreviewContext {
   world: GameState['world']; tiles: GameState['world']['tiles']; signature: string;
@@ -61,7 +62,7 @@ function previewContext(state: GameState, selection: BuildSelection | undefined,
   const signature = JSON.stringify([faction, state.gameOver, state.world.width, state.world.height,
     region ? [region.left, region.top, region.right, region.bottom, region.terrainRevision, region.claimsRevision]
       : [revisions.sight, revisions.geometry, terrainNavigationRevision(state.world), territory(state).revision], forbiddenRevision(state),
-    engineerBuildMultiplier(state, 'road', faction),
+    engineerBuildMultiplier(state, 'road', faction), marbleConstructionMultiplier(state, faction),
     state.units.filter(unit => unit.hp > 0 && (unit.kind === 'leader' && unit.faction === faction
       || unit.kind === 'sailboat' && (selection === undefined || selection === 'bridge' || selection === 'dock')))
       .map(unit => [unit.id, unit.kind, unit.faction, unit.x, unit.y, unit.embarkedOn, unit.kind === 'sailboat' ? unit.facing : undefined]),

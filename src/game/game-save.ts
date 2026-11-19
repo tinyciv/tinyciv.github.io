@@ -55,7 +55,7 @@ function assembleSave(state: GameState, chunks: readonly string[], paused = stat
   // The native snapshot (clock, RNG, settlements) is taken at the same
   // instant as the dynamic state, preserving the async save's ordering guarantee.
   const simCore = flushSimulationSnapshot(state, paused);
-  const { shellImpacts: _shellImpacts, ...dynamicState } = state;
+  const { shellImpacts: _shellImpacts, gunSmoke: _gunSmoke, ...dynamicState } = state;
   const dynamic = JSON.stringify({ ...dynamicState, paused, world, simCore });
   return `{"version":${GAME_SAVE_VERSION},"terrain":[${chunks.join(',')}],"state":${dynamic}}`;
 }

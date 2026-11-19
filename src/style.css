@@ -4,6 +4,7 @@
   font-synthesis: none; --panel: #1a2225; --muted: #b7b29a; --gold: #c7a66a;
   --hud-scale: .36; --top-scale: .5; --bar-height: 66px;
   --slate: url('/assets/runtime/ui/slate.webp');
+  --science-color: #6be2ce;
   --popup-ink: #f2e6c9; --popup-muted: #b8a88b; --popup-edge: #8b7952;
   --popup-surface: #30261d; --popup-inset: #241c16;
   --popup-frame-art: url('/assets/runtime/ui/city-panel-walnut.png');
@@ -11,6 +12,7 @@
   --popup-close-art: url('/assets/runtime/ui/walnut/close.png');
 }
 * { box-sizing: border-box; }
+.science-text { color: var(--science-color); }
 body { margin: 0; overflow: hidden; }
 button, input, select, textarea, option, optgroup, output, kbd, code, pre, samp { font: inherit; }
 ::placeholder { font-family: inherit; }

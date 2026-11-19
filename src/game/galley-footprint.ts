@@ -5,16 +5,16 @@ export const GALLEY_SCALE = rustEngine.galley_constant(1, 0);
 export const GALLEY_LENGTH = rustEngine.galley_constant(2, 0);
 export const GALLEY_WIDTH = rustEngine.galley_constant(3, 0);
 const TRANSPORT_LENGTH = rustEngine.galley_constant(2, 1), TRANSPORT_WIDTH = rustEngine.galley_constant(3, 1);
+const WARSHIP_LENGTH = rustEngine.naval_constant(10, 0), WARSHIP_WIDTH = rustEngine.naval_constant(11, 0);
 export type GalleyPose = Point & { facing: number; seaInvasion?: number; warship?: Warship };
 export const galleyScale = (boat: Pick<GalleyPose, 'seaInvasion'>): number => boat.seaInvasion === undefined ? GALLEY_SCALE : 1;
-const radius = (boat: GalleyPose): number => (boat.warship ? 2 : boat.seaInvasion === undefined ? GALLEY_WIDTH : TRANSPORT_WIDTH) / 2;
+const radius = (boat: GalleyPose): number => (boat.warship ? WARSHIP_WIDTH : boat.seaInvasion === undefined ? GALLEY_WIDTH : TRANSPORT_WIDTH) / 2;
 const EPSILON = 1e-8;
 
 /** A rounded hull: the bow and stern can turn without reserving empty
  * rectangular corners. Oars and the sail are visual overhang, not obstacles. */
 function spine(boat: GalleyPose): readonly [Point, Point] {
-  const half = ((boat.warship ? 5 : boat.seaInvasion === undefined ? GALLEY_LENGTH : TRANSPORT_LENGTH)
-    - (boat.warship ? 2 : boat.seaInvasion === undefined ? GALLEY_WIDTH : TRANSPORT_WIDTH)) / 2;
+  const half = (boat.warship ? WARSHIP_LENGTH : boat.seaInvasion === undefined ? GALLEY_LENGTH : TRANSPORT_LENGTH) / 2 - radius(boat);
   const x = Math.cos(boat.facing) * half, y = Math.sin(boat.facing) * half;
   return [{ x: boat.x - x, y: boat.y - y }, { x: boat.x + x, y: boat.y + y }];
 }

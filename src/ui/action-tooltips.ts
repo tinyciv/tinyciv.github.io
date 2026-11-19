@@ -4,12 +4,15 @@ import { GUARD_POST_UPKEEP } from '../game/guard-posts';
 import { FORT_UPKEEP } from '../game/forts';
 import { OBSERVATION_POST_UPKEEP } from '../game/observation-posts';
 import type { BuildSelection } from '../game/types';
+import { constructionGoldText } from './number-format';
 
 export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, string> = {
   shack: 'Grows food for the city.',
   cottage: 'Grows food for the city.',
   ruin: 'Remains of a destroyed building.',
   villageTent: 'Houses members of a neutral village.',
+  frontierVillage: '',
+  scoutTower: 'Extends sight.',
   road: 'Speeds travel and makes gates through friendly walls.',
   bridge: 'Crosses water between two banks; Engineering extends the maximum span.',
   irrigation: 'Increases nearby farm yields, with a larger benefit in deserts.',
@@ -34,6 +37,7 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   siegeCannon: 'Fixed rotating cannon: 5× ballista damage; 50% splash to all units and buildings within 2 tiles, including friendlies.',
   observationPost: 'Posts a concealed scout with extended sight on neutral land.',
   well: 'Upgrades nearby homes to level two housing.',
+  fountain: 'Enables level four housing nearby.',
   monument: 'Expands borders with culture and adds 12 loyalty; one loyalty bonus per city.',
   blacksmith: 'Improves army weapons and armor and controls spearmen recruitment.',
   archeryRange: 'Sets the proportion of your retinue trained as archers.',
@@ -41,6 +45,7 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   healerShack: 'Triples healing for friendly units nearby.',
   stable: 'Trains a chosen proportion of the retinue as mounted troops.',
   library: 'Directs gold income into research and sets technology priorities.',
+  marketplace: 'Choose a land trade destination.',
   forum: 'Spend culture on permanent achievements for your faction. Approach within three tiles of the completed forum to open its achievement tree.',
   colosseum: 'Public games: doubles population growth across your realm and triples culture within 5 tiles, fading to normal by 25 tiles. Needs a town of 200 people. Does not stack.',
   barracks: 'Trains pikemen and, after Gunpowder, musketmen. Musters every new recruit for its town. Sets your army composition.',
@@ -61,7 +66,7 @@ export function townBuildDetails({ upkeep, residents }: TownBuildTerms): string 
 
 export function buildTooltip(kind: Exclude<BuildSelection, 'clearTrees'>, gold: number, seconds: number, upkeepMultiplier = 1, town?: TownBuildTerms): string {
   const perTile = ['road', 'bridge', 'wall', 'palisade', 'irrigation', 'camp'].includes(kind) ? ' / tile' : '';
-  const cost = `${Math.round(gold)} gold${perTile}${kind === 'observationPost' ? ' + 1 population' : ''}`;
+  const cost = `${constructionGoldText(gold)} gold${perTile}${kind === 'observationPost' ? ' + 1 population' : ''}`;
   if (kind === 'palace' && town) return actionTooltip(BUILD_DESCRIPTIONS.palace, cost, 0, `Build time: ${Math.round(seconds)}s · ${townBuildDetails(town)}`);
   const upkeep = ({ palace: SETTLEMENT_MAINTENANCE, woodenTower: WATCHTOWER_MAINTENANCE, tower: WATCHTOWER_MAINTENANCE,
     guardPost: GUARD_POST_UPKEEP, fort: FORT_UPKEEP, observationPost: OBSERVATION_POST_UPKEEP, ...BUILDING_UPKEEP } as Partial<Record<BuildSelection, number>>)[kind];

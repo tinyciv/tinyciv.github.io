@@ -1,7 +1,9 @@
 import { BUILDING_KIND_CODES } from './entity-store';
 import { rustEngine } from './rust-engine';
 import { SimSlot, simCore } from './sim-handle';
-import type { Building, BuildingDestruction, GameState } from './types';
+import type { Building, BuildingDestruction, BuildingKind, GameState } from './types';
+
+const kindByCode = new Map(Object.entries(BUILDING_KIND_CODES).map(([kind, code]) => [code, kind as BuildingKind]));
 
 interface View {
     revision: number;
@@ -45,9 +47,10 @@ export function publishBuildingDestructions(state: GameState): void {
     for (let row = 0; row < rows.length; row += 8) {
         const id = rows[row], previous = cached.records.get(id);
         const building = cached.snapshots.get(id) ?? previous?.building;
-        const effect: BuildingDestruction = previous?.time === rows[row + 5] && building === previous.building
+        const kind = kindByCode.get(rows[row + 3]);
+        const effect: BuildingDestruction = previous?.time === rows[row + 5] && kind === previous.kind && building === previous.building
             ? previous : { id, x: rows[row + 1], y: rows[row + 2], faction: rows[row + 4],
-                time: rows[row + 5], width: rows[row + 6], height: rows[row + 7], building };
+                kind, time: rows[row + 5], width: rows[row + 6], height: rows[row + 7], building };
         next.push(effect); records.set(id, effect);
     }
     cached.snapshots.clear(); cached.records = records;

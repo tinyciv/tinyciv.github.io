@@ -1,7 +1,7 @@
 .research-toolbar { position: absolute; left: 604px; top: 2px; display: flex; align-items: center; gap: 8px; width: clamp(218px, calc(100% - 1028px), 334px); height: 44px; padding: 3px 8px; pointer-events: auto; }
 .research-toolbar-icon { width: 28px; height: 28px; flex: none; object-fit: contain; image-rendering: pixelated; }
-.research-toolbar-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 23px; font-weight: 700; line-height: 1; }
-.research-toolbar-eta { flex: none; white-space: nowrap; font-size: 17px; line-height: 1; color: #efd19a; }
+.research-toolbar-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--science-color); font-size: 23px; font-weight: 700; line-height: 1; }
+.research-toolbar-eta { flex: none; white-space: nowrap; font-size: 17px; line-height: 1; color: var(--science-color); }
 @container game-area (max-width: 1250px) {
   .research-toolbar { left: 512px; width: clamp(220px, calc(100% - 880px), 290px); height: 37px; padding: 3px 7px; gap: 6px; }
   .research-toolbar-icon { width: 23px; height: 23px; }

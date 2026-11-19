@@ -1,0 +1,46 @@
+{
+  "variant": "1C \u00b7 Weathered basin",
+  "provider": "PixelLab",
+  "review": "scratch/2026-11-18-fountain-24",
+  "frameSize": [
+    24,
+    24
+  ],
+  "frames": 9,
+  "frameDurationMs": 180,
+  "basinCenterPixels": [
+    12.5,
+    14
+  ],
+  "still": {
+    "endpoint": "/create-object-pro-flash",
+    "objectId": "7c1b33ef-46f5-4ae0-be2a-1418a71d5968",
+    "prompt": "ONE PUBLIC STONE WATER FOUNTAIN, a very small historical strategy game building. True native 24x24 pixel art, freshly redrawn at this exact grid, with a completely transparent background. Single enclosed low rectangular basin, blue water visible inside with calm ripples, central small stone pillar and a brief upright water jet. High top-down orthographic camera facing south, front rim perfectly horizontal; a visible top water plane and a short vertical front face. The whole compact fountain is about 19 to 21 px wide and 18 to 20 px tall, centered at x=12, with the front base near row 21. Keep an unbroken dark outline all around the stone silhouette and a 1\u20132 px clear transparent margin, with coherent left and right sides. Use hard-edged connected pixel clusters, warm charcoal outlines, upper-left light, warm grey stone, saturated but restrained blue water, and a few pale splash pixels. No isometric diamond, rear roof or wall, stairs, big statue, extra jets, person, text, ground tile, scenery, cast shadow, blur or antialiasing. Slightly more natural material rendering. A low square limestone basin with small chamfered corners, a visibly recessed water surface, and a short central pillar. Muted warm limestone and dark teal water. Use only two or three visible stone seams.",
+    "reference": "public/assets/buildings/thermal-bath.png",
+    "referenceCropLTRB": [
+      4,
+      8,
+      28,
+      32
+    ],
+    "seed": 261118242
+  },
+  "animation": {
+    "endpoint": "/animate-with-text-v3",
+    "jobId": "a49ed842-f54e-4fd2-8161-40d3ef39c178",
+    "prompt": "Seamless fountain idle loop. Keep every stone pixel and the entire silhouette of the basin and the central pedestal perfectly still. Only the upright blue-and-cream water jet softly rises and falls by two pixels. One or two short horizontal ripples travel across the blue water inside the rim. High top-down orthographic camera stays locked. Keep the exact sprite position, transparency, original 24x24 grid, and palette. No new objects, ground, shadows, or water outside the existing basin.",
+    "seed": 261118290,
+    "frameHashes": [
+      "286a910243906c3ce4718bc8a50c6060dda08db9b8c61b71d22f1d942e2b1dc2",
+      "f4d43961fd76fab7938ee9a8685929510a4c6e2ea783ce103162b4909704771b",
+      "b792dce8c6ec18ee67598fd1593735ee8a51961dafe8b52038c35e43e39c65af",
+      "e6dbf1d5e4e8019d5a75f6a392750d570672094c5a7795122396667022cda1dd",
+      "b4c7e98a7f5589a98edf0a0f6879c5539e41553ff674896a7926c872b80b8f9a",
+      "61475c25d264674c399dcb582cfc9ebb41696a0451ef594494f429a73110f504",
+      "70e8ee1d48b3cae5acf8a3e9e440ac967b0a40b2552a5f4bfd27f3c45c870a79",
+      "b473fa9ad15f9829dc86793f791a9a2ccf50766f3447a88663ed65d6e1c3518a",
+      "b8c8853fda74282ff725921fa80340759db0584fbce97dbc48d8e877d34d307b"
+    ]
+  },
+  "sheetSha256": "5ff2cddec1efcd088d2cbf038e6f2028b76d050be51a815f6c3b13ecc7fa773a"
+}

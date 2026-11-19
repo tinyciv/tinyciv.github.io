@@ -3,14 +3,14 @@ import './ui/world-viewer.css';
 import { loadGameAssets } from './game/game-assets';
 import { loadGameFonts } from './game/game-font';
 import { setMapRevealed } from './game/fog';
-import { BIOME_NAMES, RESOURCE_NAMES } from './game/geography';
+import { BIOME_NAMES, resourceName } from './game/geography';
 import { Renderer, MAX_ZOOM } from './game/renderer';
 import { ridgeIsLedge } from './game/ridges';
 import { createGame } from './game/simulation';
 import { TILE_SIZE, WATER, type GameState, type Point } from './game/types';
 import { generateWorldAsync } from './world/generator';
 import { LANDSCAPE_CONTROLS, LANDFORM_NAMES, LEDGES_ENABLED, resolveLandscapeParameters, type LandscapeParameter, type LandscapeParameters, type LandformFamily } from './world/options';
-import { AGES, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_SIZES, initialWorldSetup, newGameOptions, type WorldSetup } from './ui/world-generation';
+import { AGES, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_GENERATION_TITLE, WORLD_SIZES, initialWorldSetup, newGameOptions, type WorldSetup } from './ui/world-generation';
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -78,7 +78,7 @@ $('#app').innerHTML = `
     <canvas id="world-view" tabindex="0" aria-label="World terrain. Drag to pan, scroll to zoom, F to fit the map, arrow keys to pan."></canvas>
     <div class="viewer-tools" aria-label="Camera"><button type="button" id="fit">Fit map</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button><button type="button" id="zoom-in" aria-label="Zoom in">+</button><output id="zoom"></output></div>
     <output id="tile-inspection" class="viewer-inspection"></output>
-    <div id="loading" class="viewer-loading" role="progressbar" aria-label="World generation" aria-valuemin="0" aria-valuemax="100"><span class="viewer-spinner" aria-hidden="true"></span><span id="progress">0%</span></div>
+    <div id="loading" class="viewer-loading"><span class="viewer-spinner" aria-hidden="true"></span><span id="world-generation-label">${WORLD_GENERATION_TITLE}</span><progress aria-labelledby="world-generation-label" value="0" max="100"></progress><span id="progress" aria-hidden="true">0%</span></div>
     <div id="error" class="viewer-error" role="alert" hidden></div>
   </section>
 </main>`;
@@ -151,7 +151,7 @@ refreshParameterInputs();
 function progress(amount: number): void {
   const percent = Math.round(amount * 100);
   $('#progress').textContent = `${percent}%`;
-  $('#loading').setAttribute('aria-valuenow', String(percent));
+  $<HTMLProgressElement>('#loading progress').value = percent;
 }
 let loaded = 0;
 const assets = loadGameAssets(renderer);
@@ -302,7 +302,7 @@ canvas.onpointermove = event => {
   }
   const point = renderer.worldPoint(event.clientX, event.clientY), x = Math.floor(point.x), y = Math.floor(point.y);
   const tile = x >= 0 && y >= 0 && x < state.world.width && y < state.world.height ? state.world.tiles[y * state.world.width + x] : undefined;
-  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, tile.resource && RESOURCE_NAMES[tile.resource], ridgeIsLedge(state.world, x, y) && 'Ledge', tile.stair && 'Stair'].filter(Boolean).join(' · ') : '';
+  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, resourceName(tile), ridgeIsLedge(state.world, x, y) && 'Ledge', tile.stair && 'Stair'].filter(Boolean).join(' · ') : '';
 };
 function release(event: PointerEvent): void {
   touches.delete(event.pointerId);

@@ -1,0 +1,88 @@
+.movement-guide {
+  --step-time: .86s;
+  --guide-time: calc(4 * var(--step-time));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 20px;
+  width: min(100%, 386px);
+  margin: 16px auto 22px;
+  padding: 12px 15px;
+  border: 1px solid #655537;
+  background: #16140ee6;
+  color: #eadbb9;
+  font: 18px/1 var(--game-font), monospace;
+}
+.movement-guide figcaption { grid-column: 1 / -1; }
+.movement-guide-keys {
+  display: grid;
+  grid-template-columns: repeat(3, clamp(22px, 6vw, 31px));
+  justify-items: stretch;
+  gap: 4px;
+}
+.movement-guide-keys kbd {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  color: #e3d3ad;
+  background: #332b20;
+  border: 1px solid #806d48;
+  box-shadow: 0 2px #0e0c08;
+  font: 700 17px/1 var(--game-font), monospace;
+  animation: guide-key var(--guide-time) steps(1, end) infinite;
+}
+.movement-guide-keys kbd:first-child { grid-column: 2; grid-row: 1; }
+.movement-guide-keys kbd:nth-child(2) { grid-column: 1; grid-row: 2; }
+.movement-guide-keys kbd:nth-child(3) { grid-column: 2; grid-row: 2; }
+.movement-guide-keys kbd:nth-child(4) { grid-column: 3; grid-row: 2; }
+.movement-guide :is(kbd,i):nth-child(2) { animation-delay: calc(-3 * var(--step-time)); }
+.movement-guide :is(kbd,i):nth-child(3) { animation-delay: calc(-2 * var(--step-time)); }
+.movement-guide :is(kbd,i):nth-child(4) { animation-delay: calc(-1 * var(--step-time)); }
+.movement-guide-field {
+  --guide-x: clamp(20px, 6vw, 47px);
+  --guide-y: 20px;
+  position: relative;
+  height: 104px;
+  overflow: hidden;
+  background: #7f9e46 url('/assets/ui/loading/leader-clearing.webp') center / cover;
+  border: 1px solid #8b7952;
+  image-rendering: pixelated;
+}
+.movement-guide-leader {
+  position: absolute;
+  left: calc(50% - 32px);
+  top: calc(50% - 42px);
+  width: 64px;
+  height: 64px;
+  animation: guide-route var(--guide-time) linear infinite;
+}
+.movement-guide-leader i {
+  position: absolute;
+  inset: 0;
+  background: url('/assets/ui/loading/leader-walk.webp') 0 0 / 256px 256px;
+  animation: guide-direction var(--guide-time) steps(1, end) infinite, guide-walk .4s steps(4) infinite;
+}
+.movement-guide-leader i:nth-child(2) { background-position-y: -64px; }
+.movement-guide-leader i:nth-child(3) { background-position-y: -128px; }
+.movement-guide-leader i:nth-child(4) { background-position-y: -192px; }
+@keyframes guide-key {
+  0% { color: #2b200f; background: #f1c66f; border-color: #ffe1a4; box-shadow: 0 2px #8f632e; }
+  25%, 100% { color: #e3d3ad; background: #332b20; border-color: #806d48; box-shadow: 0 2px #0e0c08; }
+}
+@keyframes guide-direction { 0% { opacity: 1; } 25%, 100% { opacity: 0; } }
+@keyframes guide-walk { to { background-position-x: -256px; } }
+@keyframes guide-route {
+  0%, 100% { transform: translate(var(--guide-x), var(--guide-y)); }
+  25% { transform: translate(var(--guide-x), calc(-1 * var(--guide-y))); }
+  50% { transform: translate(calc(-1 * var(--guide-x)), calc(-1 * var(--guide-y))); }
+  75% { transform: translate(calc(-1 * var(--guide-x)), var(--guide-y)); }
+}
+@media (max-height: 520px) {
+  .movement-guide { margin-block: 10px; }
+  .movement-guide-field { --guide-y: 12px; height: 72px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .movement-guide :is(kbd,.movement-guide-leader,i) { animation: none; }
+  .movement-guide-keys kbd { color: #2b200f; background: #f1c66f; border-color: #ffe1a4; }
+  .movement-guide-leader i:not(:nth-child(3)) { display: none; }
+}

@@ -6,6 +6,8 @@ import { worldRevisions } from './world-revisions';
 import { farmTravelRevision } from './farm-travel';
 import { prepareIrrigation } from './irrigation';
 import { fishingCityFoodPerEconomyCycle } from './fishing';
+import { farmResearchYieldMultiplier } from './research-bonuses';
+import { citiesWithDevelopedCoal, citiesWithDevelopedPeat } from './resource-development';
 import { buildingReady, isFarmKind, type Building, type FarmField, type GameState, type Unit } from './types';
 
 type Input = Building | Unit | FarmField;
@@ -24,12 +26,15 @@ const retinue = (unit: Unit) => ['warrior', 'swordsman', 'spearman', 'pikeman', 
 export class EconomyInputs implements ScalarObserver {
   readonly dirty = new Set<number>();
   readonly residentsDirty = new Set<number>();
+  peatCities: ReadonlySet<number> = new Set();
+  coalCities: ReadonlySet<number> = new Set();
   private full = false;
   private factions = new Map<number, FactionInputs>();
   private members = new WeakMap<object, Member>();
   private nested = new WeakMap<object, Member | number>();
   private factionObjects = new WeakSet<object>();
   private factionIds = new Set<number>();
+  private farmResearchYields = new Map<number, number>();
   private fieldSource?: FarmField[];
   private fieldCount = -1;
   private fieldOrder = new Map<FarmField, number>();
@@ -208,10 +213,19 @@ export class EconomyInputs implements ScalarObserver {
       observeScalars(faction, ['id', 'name', 'population', 'defeated', 'purchasedRetinueSlots', 'villageId', 'villageBonuses', 'achievements'], this);
       if (faction.villageBonuses) { this.nested.set(faction.villageBonuses, faction.id); observeScalars(faction.villageBonuses, ['food'], this); }
     }
-    for (const faction of this.factionIds) if (!factionIds.has(faction)) this.mark(faction);
+    for (const faction of this.factionIds) if (!factionIds.has(faction)) {
+      this.mark(faction);
+      this.farmResearchYields.delete(faction);
+    }
     this.factionIds = factionIds;
     this.checkPalaces();
     if (!full) { this.expandLinks(this.residentsDirty); return; }
+    for (const faction of state.factions) {
+      const multiplier = farmResearchYieldMultiplier(faction);
+      if (this.farmResearchYields.get(faction.id) === multiplier) continue;
+      this.farmResearchYields.set(faction.id, multiplier);
+      this.dirty.add(faction.id);
+    }
     const fields = state.fields;
     if (fields !== this.fieldSource || (fields?.length ?? 0) !== this.fieldCount) {
       if (this.fieldSource) for (const field of this.fieldOrder.keys()) this.remove(field);
@@ -228,11 +242,17 @@ export class EconomyInputs implements ScalarObserver {
     this.world = state.world; this.tiles = state.world.tiles; this.sight = sight; this.travel = travel; this.coverage = coverage;
     if (state.time < this.time) for (const field of this.fieldOrder.keys()) this.watch(this.members.get(field)!);
     for (const field of this.orchards.takeDue(state.time + 1e-7)) this.mark(field.faction);
+    const peatCities = citiesWithDevelopedPeat(state);
+    const coalCities = citiesWithDevelopedCoal(state);
     for (const palace of entityStore(state).buildings.query('palace')) {
       const food = fishingCityFoodPerEconomyCycle(state, palace.id);
       if ((this.fishing.get(palace.id) ?? 0) !== food) this.mark(palace.faction);
       this.fishing.set(palace.id, food);
+      if (peatCities.has(palace.id) !== this.peatCities.has(palace.id)) this.dirty.add(palace.faction);
+      if (coalCities.has(palace.id) !== this.coalCities.has(palace.id)) this.dirty.add(palace.faction);
     }
+    this.peatCities = peatCities;
+    this.coalCities = coalCities;
     this.expandLinks(this.dirty); this.expandLinks(this.residentsDirty);
     this.time = state.time;
   }

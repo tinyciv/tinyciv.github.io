@@ -46,20 +46,20 @@ function residentsChanged(state: GameState): void {
   invalidateCitySummarySnapshot(state); invalidateSettlementDecisions(state);
 }
 /** Deployment transfers one actual resident, rather than creating a free scout. */
-export function placeObservationPost(state: GameState, factionId: number, point: Point): { ok: boolean; message: string } {
+export function placeObservationPost(state: GameState, factionId: number, point: Point, cost: number): { ok: boolean; message: string } {
   const validation = validateObservationPost(state, factionId, point);
   if (!validation.ok) return validation;
   const faction = state.factions.find(candidate => candidate.id === factionId), city = recruitingCity(state, factionId, point);
   if (!faction) return { ok: false, message: 'Your realm can no longer staff observation posts.' };
   if (!city) return { ok: false, message: 'Need 1 resident in a friendly town to staff the observation post.' };
-  if (faction.gold < OBSERVATION_POST_COST) return { ok: false, message: `Need ${OBSERVATION_POST_COST} gold to establish the observation post.` };
+  if (faction.gold < cost) return { ok: false, message: `Need ${Math.ceil(cost)} gold to establish the observation post.` };
   const ownership = cityOwnership(state);
   const house = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === factionId && buildingReady(building)
     && (building.residents ?? 0) > 0 && ownership.building(building)?.id === city.id);
   if (house) house.residents!--;
   else city.unhousedResidents = Math.max(0, (city.unhousedResidents ?? 0) - 1);
   faction.population--;
-  spendGold(state, faction, OBSERVATION_POST_COST, 'construction');
+  spendGold(state, faction, cost, 'construction');
   const x = Math.floor(point.x) + .5, y = Math.floor(point.y) + .5, store = entityStore(state);
   store.units.add({ id: entityStore(state).allocateId(), kind: 'scout', faction: factionId, x, y,
     hp: 100, maxHp: 100, morale: 100, attack: 0, defense: 4, speed: SCOUT_SPEED, range: 0,

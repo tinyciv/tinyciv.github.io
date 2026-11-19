@@ -1,5 +1,4 @@
-import { structureIndex } from './structure-index';
-import { simCore } from './sim-handle';
+import { factoryIncomeQuote } from './factory-economy';
 import { rustEngine } from './rust-engine';
 import { isHumanFaction } from './player-context';
 import { housingGoldBonus } from './wells';
@@ -7,7 +6,7 @@ import type { Faction } from './types';
 import { retinueUpkeep } from './archery';
 import { fieldHarvestYield, harvestFoodPerEconomyCycle } from './farms';
 import { guardPostUpkeep } from './guard-posts';
-import { buildingMaintenance, chargesMaintenance, TAX_INCOME_MULTIPLIER } from './maintenance';
+import { buildingMaintenance, chargesMaintenance, factoryMaintenance, TAX_INCOME_MULTIPLIER } from './maintenance';
 import { houseGoldMultiplier } from './wells';
 import { type Building, type GameState, buildingReady, buildingSize } from './types';
 import { CIVILIZATIONS, civilizationFor } from './civilizations';
@@ -17,7 +16,7 @@ import { cityOwnership } from './city-ownership';
 import { entityStore } from './entity-store';
 import { retinueSlotUpkeep } from './retinue-purchases';
 import { fishingCityFoodPerEconomyCycle } from './fishing';
-import { saltFoodConsumptionMultiplier } from './resource-development';
+import { citiesWithDevelopedPeat, saltFoodConsumptionMultiplier } from './resource-development';
 import { CityEconomyIndex, type CityEconomyCity, type CityEconomyGroup } from './city-economy-index';
 import { simulationReadsActive } from './simulation-reads';
 import { AchievementEffect, achievementEffect } from './achievement-effects';
@@ -257,17 +256,19 @@ function indexedCitySummary(state: GameState, scope: SummaryScope, id: number, r
     return value;
 }
 
-function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents, salt = saltFoodConsumptionMultiplier(state, city.palace.faction)): CitySummary {
-    structureIndex(state);
+function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents,
+    factoryMultiplier: number, salt = saltFoodConsumptionMultiplier(state, city.palace.faction)): CitySummary {
+    const rawGold = rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0,
+        achievementEffect(state.factions.find(faction => faction.id === city.palace.faction), AchievementEffect.tax,
+            (city.population + housingGold) * TAX_INCOME_MULTIPLIER), 1);
     return { ...city,
         food: palaceFoodProduction(city.palace) + fishingCityFoodPerEconomyCycle(state, city.palace.id)
             - city.population * salt,
-        gold: rustEngine.sim_civic_factory_income(simCore(state).handle, city.palace.faction, rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(state.factions.find(faction => faction.id === city.palace.faction), AchievementEffect.tax,
-            (city.population + housingGold) * TAX_INCOME_MULTIPLIER), 1)) };
+        gold: Math.max(0, rawGold) * factoryMultiplier };
 }
 
 function calculateIndexedCitySummary(state: GameState, resident: CityResidents, inputs: CityEconomyCity): CitySummary {
-    const city = initialCitySummary(state, resident, inputs.saltConsumption);
+    const city = initialCitySummary(state, resident, inputs.factoryMultiplier, inputs.saltConsumption);
     if (inputs.capital) {
         const faction = state.factions.find(faction => faction.id === city.palace.faction);
         if (faction) city.gold -= retinueSlotUpkeep(faction);
@@ -275,14 +276,16 @@ function calculateIndexedCitySummary(state: GameState, resident: CityResidents, 
     for (const building of inputs.buildings)
         city.gold -= building.kind === 'guardPost'
             ? building.guardPost?.funded === true && isHumanFaction(state, building.faction) ? guardPostUpkeep(building) : 0
-            : buildingMaintenance(state, building, inputs.maintenanceCapital, inputs.maintenanceCities);
+            : buildingMaintenance(state, building, inputs.maintenanceCapital, inputs.maintenanceCities,
+                building.kind === 'factory' ? factoryMaintenance(!!inputs.peatSupplied) : undefined);
     for (const field of inputs.fields) city.food += harvestFoodPerEconomyCycle(fieldHarvestYield(state, field));
     for (const cost of inputs.unitCosts) city.gold -= cost;
     return city;
 }
 
 function calculateCitySummaries(state: GameState, residents: readonly CityResidents[], faction?: number): CitySummary[] {
-    const cities: CitySummary[] = residents.map(city => initialCitySummary(state, city));
+    const quoteFactoryIncome = factoryIncomeQuote(state);
+    const cities: CitySummary[] = residents.map(city => initialCitySummary(state, city, quoteFactoryIncome(city.palace.faction, 1)));
     const byPalace = new Map(cities.map(city => [city.palace.id, city]));
     // Purchased capacity is one faction-wide expense, including vacant slots.
     // Attribute it once to the capital rather than charging it in every city.
@@ -292,6 +295,7 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
         if (capital) capital.gold -= retinueSlotUpkeep(faction);
     }
     const buildings = entityStore(state).buildings, ownership = cityOwnership(state);
+    const peatCities = citiesWithDevelopedPeat(state);
     for (const building of state.buildings) {
         if (faction !== undefined && building.faction !== faction || !buildingReady(building) || building.villageId !== undefined
             || !chargesMaintenance(building.kind)) continue;
@@ -299,7 +303,8 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
         if (!city) continue;
         const upkeep = building.kind === 'guardPost'
             ? building.guardPost?.funded === true && isHumanFaction(state, building.faction) ? guardPostUpkeep(building) : 0
-            : buildingMaintenance(state, building);
+            : buildingMaintenance(state, building, undefined, undefined,
+                building.kind === 'factory' ? factoryMaintenance(peatCities.has(city.palace.id)) : undefined);
         city.gold -= upkeep;
     }
     const farmCities = new Map<number, CitySummary | undefined>();
@@ -337,6 +342,7 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
 
 /** Match the city cards and treasury. */
 export function cityTaxIncome(state: GameState, faction: Faction): number {
-    structureIndex(state);
-    return rustEngine.sim_civic_factory_income(simCore(state).handle, faction.id, rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0, achievementEffect(faction, AchievementEffect.tax, (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER), 1));
+    const base = rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0,
+        achievementEffect(faction, AchievementEffect.tax, (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER), 1);
+    return factoryIncomeQuote(state)(faction.id, base);
 }

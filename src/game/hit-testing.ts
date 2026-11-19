@@ -1,6 +1,6 @@
 import { villageRelationView } from './settlement-bridge';
 import { playerFaction } from './player-context';
-import { buildingArtTop, buildingWidth, buildingHeight, buildingReady, type Building, type GameState, type Point, type Unit } from './types';
+import { buildingArtTop, buildingWidth, buildingHeight, buildingReady, constructionSiteHidden, type Building, type GameState, type Point, type Unit } from './types';
 import { entityVisible, pointExplored, presentationFog } from './fog';
 import { HOUSE_WELL_BOUNDS, HOUSE_WELL_OFFSET, sharedHouseForWell } from './house-wells';
 import { sharedWallForTower, sharedTowerForWall } from './wall-towers';
@@ -57,6 +57,7 @@ export function buildingAtPoint(state: GameState, point: Point): Building | unde
   }
   let selected: Building | undefined, frontDepth = -Infinity;
   for (const building of state.buildings) {
+    if (constructionSiteHidden(building)) continue;
     if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || !building.construction && (building.kind === 'road' || building.kind === 'bridge' || building.kind === 'irrigation') || !entityVisible(state, building)) continue;
     // Every structure uses its top-left footprint, including two-cell farms.
     const width = buildingWidth(building), height = buildingHeight(building), x = building.x, y = building.y;

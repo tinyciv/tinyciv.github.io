@@ -18,7 +18,7 @@ import { buildingReady, distance, unitMaxHp, type Building, type GameState, type
 
 export type EmpireKind = 'palace' | 'fort' | 'ballista' | 'siegeCannon';
 export interface EmpireOrders {
-  cost(kind: EmpireKind): number;
+  cost(kind: EmpireKind, faction: number): number;
   validateSite(faction:number,kind:EmpireKind,x:number,y:number):{ok:boolean};
   build(faction:number,kind:EmpireKind,x:number,y:number):{ok:boolean};
   campaign(faction:number):number|undefined;
@@ -59,9 +59,9 @@ export function updateFactionEmpires(state:GameState,orders:EmpireOrders):void {
       ||nearbyUnits(state,leader,7).some(unit=>unit.hp>0&&!unit.inside&&atWar(state,faction.id,unit.faction)&&orders.visible(leader,unit));
     const n=cities.length,extraCityUpkeep=n*settlementMaintenance(n+1)-Math.max(0,n-1)*settlementMaintenance(n);
     const values=[faction.gold,reserve,budget.surplus,faction.population,faction.food,n,cities.filter(city=>!buildingReady(city)).length,
-      orders.cost('palace'),extraCityUpkeep,artillery.length,
+      orders.cost('palace', faction.id),extraCityUpkeep,artillery.length,
       Number(isBuildingUnlocked(faction,siegeKind)&&(!cannon||factionHasDevelopedResource(state,faction.id,'iron'))),
-      orders.cost(siegeKind),cannon?BUILDING_UPKEEP.siegeCannon!:0,fortCounts.get(home.id)??0,orders.cost('fort'),FORT_UPKEEP,
+      orders.cost(siegeKind, faction.id),cannon?BUILDING_UPKEEP.siegeCannon!:0,fortCounts.get(home.id)??0,orders.cost('fort', faction.id),FORT_UPKEEP,
       leader.x,leader.y,home.x,home.y,home.id,center(facing).x,center(facing).y,enemy?.id??-1,Number(!!enemy),Number(threatened),
       state.world.width,state.world.height,leader.hp/unitMaxHp(leader),budget.upkeep,Number(isBuildingUnlocked(faction,'fort')),
       store.units.query('soldier').filter(unit=>unit.faction===faction.id&&unit.hp>0&&!unit.inside&&unit.order!=='hold'&&unit.order!=='flee').length,

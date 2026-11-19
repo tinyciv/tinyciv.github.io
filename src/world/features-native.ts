@@ -10,7 +10,7 @@ const STRIDE = 20;
 const TERRAINS = ['ocean', 'coast', 'river', 'lake', 'grassland', 'plains', 'desert', 'tundra'] as const;
 const OVERLAYS = ['none', 'forest', 'jungle', 'swamp', 'glacier', 'volcano', 'ford'] as const;
 const BIOMES = ['temperate', 'taiga', 'tundra', 'rainforest', 'savanna', 'steppe', 'desert', 'wetland', 'alpine'] as const;
-const RESOURCES = [undefined, 'clay', 'copper', 'iron', 'gold', 'stone', 'salt', 'olives', 'fish'] as const;
+const RESOURCES = [undefined, 'clay', 'copper', 'iron', 'gold', 'stone', 'salt', 'olives', 'fish', 'marble', 'peat', 'grapes', 'coal'] as const;
 const KINDS: readonly WorldFeatureKind[] = ['atoll', 'harbor', 'oasis', 'old-river', 'volcanic-island'];
 const CLEAR_FIELDS = ['resource', 'resourceGroup', 'resourceDeveloped', 'oreAnchor', 'oreFamily', 'oreVariant', 'oreWidth', 'oreHeight',
     'relief', 'reliefRegion', 'reliefFlags', 'reliefLevel', 'reliefSpeed', 'reliefRuggedness', 'reliefStyle',

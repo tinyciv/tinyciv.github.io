@@ -16,6 +16,7 @@ import TinyQueue from 'tinyqueue';
 import { entityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { orderedDistanceCells } from './ordered-distance-cells';
+import { overlapsFallenDefense } from './defense-rebuilding';
 
 export interface FarmRelocationPlan { camp: number; palace: number; from: Point; to: Point; }
 export interface FarmRelocationOptions {
@@ -80,7 +81,8 @@ function friendlyGates(state: GameState, faction: number): Set<number> {
 }
 function occupiedCells(state: GameState, faction: number): Set<number> {
   const { width } = state.world, occupied = new Set<number>();
-  for (const building of state.buildings) if (building.hp > 0 && !(building.kind === 'irrigation' && building.faction === faction)) {
+  for (const building of state.buildings) if ((building.hp > 0 || building.kind === 'fort' && building.fort?.destroyed)
+    && !(building.kind === 'irrigation' && building.faction === faction)) {
     for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++)
       occupied.add((building.y + dy) * width + building.x + dx);
   }
@@ -167,7 +169,8 @@ export function planFarmRelocation(state: GameState, palace: Building, camp: Bui
       // every distant ledge apron dominated large-map drag previews.
       if (farmCity(point)?.id !== palace.id || !CAMP_FIELD_OFFSETS.every(([dx, dy]) => {
         const px = point.x + dx, py = point.y + dy, tile = tileAt(state.world, px, py);
-        return !isForbidden(state, px, py, camp.faction) && !occupied(py * width + px) && !!tile && reliefBuildable(tile) && tile.farm === undefined && CLEARABLE.has(tile.overlay)
+        return !isForbidden(state, px, py, camp.faction) && !occupied(py * width + px) && !overlapsFallenDefense(state, camp.kind, px, py)
+          && !!tile && reliefBuildable(tile) && tile.farm === undefined && CLEARABLE.has(tile.overlay)
           && traversable(state.world, px, py) && !!reachable[py * width + px];
       }) || !buildingWithinBorders(state, camp.kind, point.x, point.y, camp.faction, borders)
         || !reliefFootprintAllowed(state.world, point.x, point.y, 1) || !geometry.canAdd(point).ok) continue;

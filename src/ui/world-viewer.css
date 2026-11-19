@@ -34,7 +34,8 @@ label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px;cursor:p
 .viewer-inspection{position:absolute;bottom:14px;left:16px;right:16px;pointer-events:none;color:#e1e5c9;font-size:18px;text-shadow:1px 1px #061413;background:#132521e8;padding:8px 12px;width:fit-content;max-width:calc(100% - 32px)}
 .viewer-inspection:empty{display:none}
 .viewer-minimap{display:block;width:100%;height:150px;margin-top:18px;border:1px solid #8f8056;background:#1c2723;image-rendering:pixelated;cursor:crosshair}
-.viewer-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:16px;background:#13231ee8;font-size:32px;z-index:2}
+.viewer-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#13231ee8;font-size:32px;z-index:2}
+.viewer-loading progress{width:min(280px,65vw);height:12px;accent-color:#e5c174}
 .viewer-loading[hidden]{display:none}
 .viewer-spinner{width:64px;height:64px;background:url('/assets/runtime/ui/loading/spinner.webp') 0 0/1024px 64px no-repeat;image-rendering:pixelated;animation:viewer-spin 1s steps(16) infinite}
 @keyframes viewer-spin{to{background-position-x:-1024px}}

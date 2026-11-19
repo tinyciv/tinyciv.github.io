@@ -2,8 +2,8 @@ import { rustEngine } from './rust-engine';
 import { SIM_ENGINE, SimSlot, simCore, type SimCore } from './sim-handle';
 import type { Faction, GameState, ResearchBranchId, ResearchState } from './types';
 
-const INPUT_HEADER = 15, OUTPUT_HEADER = 20;
-const CREATED = 1, FOCUS = 2, CREDIT = 4, RESERVED = 8, FUNDING = 16, RECEIPTS = 32, PRIORITIES = 64, ALLOCATION = 128;
+const INPUT_HEADER = 16, OUTPUT_HEADER = 22;
+const CREATED = 1, FOCUS = 2, CREDIT = 4, RESERVED = 8, FUNDING = 16, RECEIPTS = 32, PRIORITIES = 64, ALLOCATION = 128, TRADE_CREDIT = 512;
 // Each call imports the whole account from Faction.research, so one engine
 // per game serves every faction (resident accounts arrive in plan step 20).
 const engines = new SimSlot<NativeResearch>();
@@ -13,12 +13,13 @@ const indices = new Map<ResearchBranchId, number>();
 /** Costs and the dependency graph are content. Upload once, retaining labels
  * and descriptions in TypeScript for the existing interface. */
 export function installResearchContent(branches: readonly { id: ResearchBranchId; prerequisites: readonly ResearchBranchId[];
-  tiers: readonly { points: number }[] }[]): void {
+  tiers: readonly { points: number }[]; fixedCost?: boolean }[]): void {
   if (ids.length) throw new Error('Research content is already installed.');
   if (!branches.length || branches.length > 53) throw new Error('Research content requires between 1 and 53 technologies.');
   ids = branches.map(branch => branch.id);
   ids.forEach((id, index) => indices.set(id, index));
   const pointer = rustEngine.research_graph_prepare(ids.length), input = new Float64Array(rustEngine.memory.buffer, pointer, ids.length * 2);
+  let fixedCosts = 0;
   branches.forEach((branch, index) => {
     let prerequisites = 0;
     for (const id of branch.prerequisites) {
@@ -26,9 +27,10 @@ export function installResearchContent(branches: readonly { id: ResearchBranchId
       if (prerequisite === undefined) throw new Error(`Unknown research prerequisite: ${id}`);
       prerequisites += 2 ** prerequisite;
     }
+    if (branch.fixedCost) fixedCosts += 2 ** index;
     input[index * 2] = branch.tiers[0].points; input[index * 2 + 1] = prerequisites;
   });
-  rustEngine.research_graph_commit(ids.length);
+  rustEngine.research_graph_commit(ids.length, fixedCosts);
 }
 
 export const nativeResearchIndex = (id: ResearchBranchId): number => indices.get(id) ?? -1;
@@ -36,7 +38,7 @@ export const nativeResearchCost = (id: ResearchBranchId, bonus: number, scenario
 export interface ResearchContext { now: number; library: boolean; defeated: boolean; gameOver: boolean; paused: boolean }
 export interface ResearchSnapshot {
   flags: number; error: number; resolved?: ResearchBranchId; focus: ResearchBranchId; allocation: number;
-  credit: number; reservedGold: number; reservedScience: number; refundedGold: number; divertedGold: number;
+  credit: number; tradeCredit: number; earnedScience: number; reservedGold: number; reservedScience: number; refundedGold: number; divertedGold: number;
   priorities: ResearchBranchId[]; funding: NonNullable<ResearchState['funding']>; receipts: NonNullable<ResearchState['receipts']>;
   completions: ResearchBranchId[]; rate: number; remainingScience: number; active: boolean;
   levelsChanged: number; progressChanged: number;
@@ -60,7 +62,7 @@ class NativeResearch {
     input[2] = research?.allocation ?? NaN; input[3] = research?.credit ?? NaN; input[4] = research?.reservedGold ?? NaN;
     input[5] = faction?.villageBonuses?.research ?? 0; input[6] = Number(context.library); input[7] = Number(context.defeated);
     input[8] = Number(context.gameOver); input[9] = Number(context.paused); input[10] = Number(research?.funding !== undefined);
-    input[11] = Number(research?.receipts !== undefined); input[12] = Number(research?.priorities !== undefined); input[13] = Number(!!faction); input[14] = scenario;
+    input[11] = Number(research?.receipts !== undefined); input[12] = Number(research?.priorities !== undefined); input[13] = Number(!!faction); input[14] = scenario; input[15] = research?.tradeCredit ?? 0;
     let offset = INPUT_HEADER;
     for (const id of ids) { input[offset++] = research?.levels[id] ?? NaN; input[offset++] = research?.progress[id] ?? NaN; }
     for (const id of priorities) input[offset++] = nativeResearchIndex(id);
@@ -74,7 +76,7 @@ class NativeResearch {
     const snapshot: ResearchSnapshot = { flags: output[0], error: output[1], resolved: output[2] < 0 ? undefined : ids[output[2]],
       focus: ids[output[3]] ?? ids[0], allocation: output[4], credit: output[5], reservedGold: output[6], reservedScience: output[7],
       refundedGold: output[8], divertedGold: output[9], priorities: [], funding: [], receipts: [], completions: [],
-      rate: output[15], remainingScience: output[16], active: !!output[17], levelsChanged: output[18], progressChanged: output[19], branches: [] };
+      tradeCredit: output[20], earnedScience: output[21], rate: output[15], remainingScience: output[16], active: !!output[17], levelsChanged: output[18], progressChanged: output[19], branches: [] };
     offset = OUTPUT_HEADER;
     for (const id of ids) snapshot.branches.push({ id, rawLevel: output[offset++], rawProgress: output[offset++], level: output[offset++], required: output[offset++] });
     for (let index = 0; index < priorityCount; index++) snapshot.priorities.push(ids[output[offset++]]);
@@ -92,6 +94,7 @@ function publish(faction: Faction, snapshot: ResearchSnapshot): void {
   if (snapshot.flags & CREATED) faction.research ??= { focus: ids[0], levels: {}, progress: {} };
   const research = faction.research!;
   if (snapshot.flags & FOCUS) research.focus = snapshot.focus;
+  if (snapshot.flags & TRADE_CREDIT) research.tradeCredit = snapshot.tradeCredit;
   if (snapshot.flags & CREDIT) research.credit = snapshot.credit;
   if (snapshot.flags & RESERVED) research.reservedGold = snapshot.reservedGold;
   if (snapshot.flags & FUNDING) research.funding = snapshot.funding;

@@ -1,0 +1,55 @@
+{
+  "materials": [
+    "stone",
+    "copper",
+    "iron",
+    "gold"
+  ],
+  "width": 240,
+  "height": 336,
+  "bankHeight": 84,
+  "frames": [
+    {
+      "id": "1A",
+      "x": 0,
+      "y": 0,
+      "width": 72,
+      "height": 42
+    },
+    {
+      "id": "1B",
+      "x": 72,
+      "y": 0,
+      "width": 80,
+      "height": 31
+    },
+    {
+      "id": "1C",
+      "x": 152,
+      "y": 0,
+      "width": 80,
+      "height": 45
+    },
+    {
+      "id": "2A",
+      "x": 0,
+      "y": 45,
+      "width": 80,
+      "height": 39
+    },
+    {
+      "id": "2B",
+      "x": 80,
+      "y": 45,
+      "width": 80,
+      "height": 35
+    },
+    {
+      "id": "2C",
+      "x": 160,
+      "y": 45,
+      "width": 80,
+      "height": 39
+    }
+  ]
+}

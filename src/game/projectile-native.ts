@@ -186,7 +186,9 @@ function advanceProjectileBatch(state: GameState, dt: number, hooks: ProjectileH
       // A range ends at its sole potential impact. Capture returned scalars
       // before callbacks can invoke other native rules or grow linear memory.
       const row = end - 1, projectile = projectiles[row], target = batch.targets[row]!;
-      const clear = hooks.clear(projectile, target, pendingStatus === 3);
+      // Cannon flight has already swept the terrain in Rust. Structures only
+      // need an additional contact check for the other projectile types.
+      const clear = projectile.kind === 'cannonball' || hooks.clear(projectile, target, pendingStatus === 3);
       const defense = clear && !('capacity' in target) ? hooks.defense(target, projectile.start) : 1;
       const resultPointer = rustEngine.projectiles_impact(batch.handle, row, Number(clear), target.hp,
         'capacity' in target ? 0 : target.kills ?? 0, defense);

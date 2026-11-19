@@ -6,6 +6,8 @@ import { canTraverseEdge, traversable } from '../src/game/pathfinding';
 import { EARTH_SAMPLES } from '../src/world/data/earth-samples';
 import { treeClimateLatitude } from '../src/world/tree-climate';
 import { DEFAULT_LANDSCAPE_PARAMETERS } from '../src/world/options';
+import { tundraBoundary } from '../src/world/tundra';
+import { settlementCoreMask } from '../src/world/environment-fields';
 
 const passable = (world: World, index: number) => {
   const tile = world.tiles[index];
@@ -249,6 +251,8 @@ describe('geographic world generation', () => {
       }
       const beach = world.tiles.flatMap((tile, i) => tile.beach ? [i] : []);
       const palms = world.tiles.flatMap((tile, i) => tile.palm ? [i] : []);
+      const polarDistance = tundraBoundary(world);
+      expect([...beach, ...palms].every(i => polarDistance(i % world.width, Math.floor(i / world.width)) > 0)).toBe(true);
       expect(beach.length).toBeGreaterThan(100);
       expect(reached.size, `${seed}: no detached inland beaches`).toBe(beach.length);
       expect([...reached.values()]).toContain(3);
@@ -272,7 +276,7 @@ describe('geographic world generation', () => {
 
   it('keeps connected settlements, hierarchical rivers, and configured non-marsh sandy coasts across a hundred worlds', async () => {
     let longestRunTotal = 0;
-    let shoreTotal = 0, sandyShoreTotal = 0, warmBeachTotal = 0, palmTotal = 0;
+    let shoreTotal = 0, sandyShoreTotal = 0, expectedSandyShoreTotal = 0, warmBeachTotal = 0, palmTotal = 0;
     for (let index = 0; index < 100; index++) {
       // Let Vitest service worker messages during this intentionally long sweep.
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -281,13 +285,19 @@ describe('geographic world generation', () => {
       const world = generateWorld(`connected-world-${index}`, 194, 153);
       longestRunTotal += longestStraightRiver(world) / (world.width / 112);
       const shore = new Set([...oceanShore(world)].filter(i => !world.tiles[i].marsh));
-      const sandyShore = [...shore].filter(i => world.tiles[i].terrain === 'desert' || world.tiles[i].terrain === 'plains').length;
-      shoreTotal += shore.size; sandyShoreTotal += sandyShore;
+      const ordinaryShore = [...shore].filter(i => !world.tiles[i].worldFeature);
+      const sandyShore = ordinaryShore.filter(i => world.tiles[i].beach).length;
+      const distance = tundraBoundary(world), cores = settlementCoreMask(world);
+      const eligibleShore = ordinaryShore.reduce((sum, i) => {
+        const latitude = distance(i % world.width, Math.floor(i / world.width));
+        return sum + (cores[i] ? 0 : Math.max(0, Math.min(1, latitude / Math.max(3, world.height * .05))));
+      }, 0);
+      const target = eligibleShore * DEFAULT_LANDSCAPE_PARAMETERS.beachFraction;
+      shoreTotal += ordinaryShore.length; sandyShoreTotal += sandyShore; expectedSandyShoreTotal += target;
       warmBeachTotal += world.tiles.filter((tile, i) => tile.beach && warmLatitude(world, i)).length;
       palmTotal += world.tiles.filter(tile => tile.palm).length;
       expect(world.tiles.every((tile, i) => !tile.palm || warmLatitude(world, i) && tile.treeClass === 'tropical')).toBe(true);
-      expect(sandyShore / shore.size, `seed ${index}: actual sand art at the shoreline`).toBeGreaterThanOrEqual(DEFAULT_LANDSCAPE_PARAMETERS.beachFraction - .10);
-      expect(sandyShore / shore.size, `seed ${index}: actual sand art at the shoreline`).toBeLessThanOrEqual(DEFAULT_LANDSCAPE_PARAMETERS.beachFraction + .10);
+      expect(Math.abs(sandyShore - target) / ordinaryShore.length, `seed ${index}: climate-adjusted shoreline coverage`).toBeLessThan(.10);
       let matching = 0, links = 0;
       for (const i of shore) {
         const x = i % world.width, y = Math.floor(i / world.width);
@@ -327,9 +337,7 @@ describe('geographic world generation', () => {
       expect(disconnectedRiverTiles, `seed ${index}: rivers without cardinal outlet`).toBe(0);
     }
     expect(longestRunTotal / 100, 'average longest straight river segment relative to map width, including broad banks').toBeLessThan(28);
-    // Protected ledge aprons, city cores and polar shores override the beach target.
-    // Retain a tighter aggregate bound while allowing individual coast geometry to vary.
-    expect(Math.abs(sandyShoreTotal / shoreTotal - DEFAULT_LANDSCAPE_PARAMETERS.beachFraction)).toBeLessThan(.05);
+    expect(Math.abs(sandyShoreTotal - expectedSandyShoreTotal) / shoreTotal).toBeLessThan(.05);
     expect(palmTotal / warmBeachTotal, 'occasional palms across warm beaches').toBeGreaterThan(.03);
     expect(palmTotal / warmBeachTotal, 'occasional palms across warm beaches').toBeLessThan(.07);
   // Budget for a hundred full climate/terrain runs and two watershed passes

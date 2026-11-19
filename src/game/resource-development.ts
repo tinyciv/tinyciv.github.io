@@ -7,6 +7,7 @@ import { pointExplored, updateFog } from './fog';
 import { spendGold } from './gold-ledger';
 import { markWorldChanged, worldChangesSince, worldStructureRevision } from './world-revisions';
 import { onResourceDeveloped } from './resource-workers';
+import { rustEngine } from './rust-engine';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, WATER,
   type Building, type GameState, type RegionalResource, type Tile } from './types';
 
@@ -14,7 +15,8 @@ export const RESOURCE_DEVELOPMENT_COST = 50;
 export const SALT_RESIDENTS_PER_TILE = 10;
 export const SALT_FOOD_REDUCTION = .25;
 export const OLIVE_VILLAGE_TRADE_BONUS_PER_TILE = .02;
-export const DEVELOPABLE_RESOURCES = ['copper', 'iron', 'gold', 'stone', 'salt', 'olives'] as const;
+const TRADE_RESOURCES = ['copper', 'iron', 'gold', 'stone', 'salt', 'olives'] as const;
+export const DEVELOPABLE_RESOURCES = [...TRADE_RESOURCES, 'marble', 'peat', 'grapes', 'coal'] as const;
 export type DevelopableResource = typeof DEVELOPABLE_RESOURCES[number];
 export const isDevelopableResource = (resource: RegionalResource | undefined): resource is DevelopableResource =>
   resource !== undefined && (DEVELOPABLE_RESOURCES as readonly RegionalResource[]).includes(resource);
@@ -31,6 +33,7 @@ export interface ResourceDevelopmentStatus {
   totalCount: number;
   city: Building | undefined;
 }
+type FuelResource = 'peat' | 'coal';
 interface ResourceIndex {
   world: GameState['world']; tiles: Tile[]; revision: number; territoryRevision: number; structures: number; buildings: number;
   cityAt: Int32Array; blocked: Uint8Array;
@@ -38,6 +41,7 @@ interface ResourceIndex {
   cityCounts: Map<number, Map<RegionalResource, number>>;
   factionCounts: Map<number, Map<RegionalResource, number>>;
   ownedUndeveloped: Map<number, number[]>;
+  fuelCities: Record<FuelResource, Set<number>>;
 }
 const indexes = new WeakMap<GameState, ResourceIndex>();
 const increments = (map: Map<number, Map<RegionalResource, number>>, key: number, resource: RegionalResource) => {
@@ -47,9 +51,11 @@ const increments = (map: Map<number, Map<RegionalResource, number>>, key: number
 export const resourceGroundAvailable = (tile: Tile | undefined): boolean => !!tile && !WATER.has(tile.terrain)
   && !tile.creek && reliefBuildable(tile);
 
-interface ResourceCell { resource: DevelopableResource; developed: boolean; }
+interface ResourceCell { resource: DevelopableResource; developed: boolean; quarry?: number; }
 interface ResourceCells {
   tiles: Tile[]; cursor?: number; revision: number; cells: Map<number, ResourceCell>;
+  marbleRevision: number; marbleAnchors: Set<number>; developedMarbleTiles: number;
+  developedFuelTiles: Record<FuelResource, number>;
 }
 const deposits = new WeakMap<GameState['world'], ResourceCells>();
 
@@ -58,24 +64,80 @@ const deposits = new WeakMap<GameState['world'], ResourceCells>();
 function resourceCells(world: GameState['world']): ResourceCells {
   let result = deposits.get(world);
   if (!result || result.tiles !== world.tiles) {
-    result = { tiles: world.tiles, revision: 0, cells: new Map() };
+    result = { tiles: world.tiles, revision: 0, cells: new Map(), marbleRevision: 0, marbleAnchors: new Set(),
+      developedMarbleTiles: 0, developedFuelTiles: { peat: 0, coal: 0 } };
     deposits.set(world, result);
   }
   const changes = worldChangesSince(world, result.cursor);
   let changed = false;
   const reconcile = (cell: number) => {
     const tile = world.tiles[cell], previous = result.cells.get(cell);
-    if (!isDevelopableResource(tile.resource) || !resourceGroundAvailable(tile)) {
-      if (previous) { result.cells.delete(cell); changed = true; }
-    } else if (previous?.resource !== tile.resource || previous.developed !== !!tile.resourceDeveloped) {
-      result.cells.set(cell, { resource: tile.resource, developed: !!tile.resourceDeveloped }); changed = true;
+    const resource = isDevelopableResource(tile.resource) && resourceGroundAvailable(tile) ? tile.resource : undefined;
+    const quarry = resource === 'marble' && tile.oreWidth === 2 && tile.oreHeight === 2 ? tile.oreAnchor : undefined;
+    const developed = !!tile.resourceDeveloped;
+    if (!previous && !resource) return;
+    if (previous?.resource === resource && previous?.developed === developed && previous?.quarry === quarry) return;
+    if (resource) result.cells.set(cell, { resource, developed, quarry }); else result.cells.delete(cell);
+    if (previous?.quarry === cell) result.marbleAnchors.delete(cell);
+    if (quarry === cell) result.marbleAnchors.add(cell);
+    if (previous?.resource === 'marble' || resource === 'marble') {
+      result.developedMarbleTiles += Number(resource === 'marble' && developed) - Number(previous?.resource === 'marble' && previous.developed);
+      result.marbleRevision++;
     }
+    if (previous?.developed && (previous.resource === 'peat' || previous.resource === 'coal'))
+      result.developedFuelTiles[previous.resource]--;
+    if (developed && (resource === 'peat' || resource === 'coal')) result.developedFuelTiles[resource]++;
+    changed = true;
   };
   if (changes.full) for (let cell = 0; cell < world.tiles.length; cell++) reconcile(cell);
   else for (const cell of changes.cells) reconcile(cell);
   if (changed) result.revision++;
   result.cursor = changes.revision;
   return result;
+}
+
+function marbleFootprint(world: GameState['world'], resources: ResourceCells, anchor: number | undefined): number[] | undefined {
+  if (anchor === undefined || !resources.marbleAnchors.has(anchor)
+    || anchor % world.width + 1 >= world.width || anchor + world.width + 1 >= world.tiles.length) return;
+  const source = world.tiles[anchor];
+  if (source.oreWidth !== 2 || source.oreHeight !== 2) return;
+  const cells = [anchor, anchor + 1, anchor + world.width, anchor + world.width + 1];
+  if (cells.every(cell => resources.cells.get(cell)?.quarry === anchor)) return cells;
+}
+
+interface MarbleQuarry { anchor: number; developed: number; }
+const marbleAccess = new WeakMap<GameState, {
+  resources: ResourceCells; revision: number; borders: number; active: Map<number, MarbleQuarry>;
+}>();
+
+/** Only changes to a marble deposit or to borders can change the operating quarry. */
+export function activeMarbleQuarry(state: GameState, faction: number, borders?: ReturnType<typeof territory>): MarbleQuarry | undefined {
+  const resources = resourceCells(state.world);
+  if (!resources.developedMarbleTiles) return;
+  borders ??= territory(state);
+  const previous = marbleAccess.get(state);
+  if (previous?.resources === resources && previous.revision === resources.marbleRevision && previous.borders === borders.revision)
+    return previous.active.get(faction);
+  const active = new Map<number, MarbleQuarry>();
+  for (const anchor of resources.marbleAnchors) {
+    const cells = marbleFootprint(state.world, resources, anchor);
+    const owner = territoryValue(borders, anchor);
+    if (!cells || owner === UNCLAIMED) continue;
+    let owned = 0, developed = 0;
+    for (const cell of cells) {
+      owned += Number(territoryValue(borders, cell) === owner);
+      developed += Number(resources.cells.get(cell)!.developed);
+    }
+    const current = active.get(owner);
+    if (rustEngine.prefer_marble_quarry(owned, developed, anchor, current?.developed ?? 0, current?.anchor ?? 0))
+      active.set(owner, { anchor, developed });
+  }
+  marbleAccess.set(state, { resources, revision: resources.marbleRevision, borders: borders.revision, active });
+  return active.get(faction);
+}
+
+export function marbleConstructionMultiplier(state: GameState, faction: number): number {
+  return rustEngine.marble_construction_multiplier(activeMarbleQuarry(state, faction)?.developed ?? 0);
 }
 
 /** One ownership index serves all city food calculations, trade trips and
@@ -98,7 +160,8 @@ function resourceIndex(state: GameState): ResourceIndex {
       if (x >= 0 && y >= 0 && x < world.width && y < world.height) blocked[y * world.width + x] = 1;
   }
   const result: ResourceIndex = { world, tiles: world.tiles, revision, structures, buildings, territoryRevision: borders.revision,
-    cityAt: new Int32Array(world.tiles.length).fill(-1), blocked, cities, cityCounts: new Map(), factionCounts: new Map(), ownedUndeveloped: new Map() };
+    cityAt: new Int32Array(world.tiles.length).fill(-1), blocked, cities, cityCounts: new Map(), factionCounts: new Map(),
+    ownedUndeveloped: new Map(), fuelCities: { peat: new Set(), coal: new Set() } };
   for (const [cell, resource] of resources.cells) {
     const faction = territoryValue(borders, cell);
     if (faction === UNCLAIMED) continue;
@@ -112,7 +175,9 @@ function resourceIndex(state: GameState): ResourceIndex {
     result.cityAt[cell] = city.id;
     if (blocked[cell]) continue;
     if (resource.developed) {
+      if (resource.resource === 'marble' && activeMarbleQuarry(state, faction, borders)?.anchor !== resource.quarry) continue;
       increments(result.cityCounts, city.id, resource.resource); increments(result.factionCounts, faction, resource.resource);
+      if (resource.resource === 'peat' || resource.resource === 'coal') result.fuelCities[resource.resource].add(city.id);
     } else {
       const list = result.ownedUndeveloped.get(faction) ?? []; list.push(cell); result.ownedUndeveloped.set(faction, list);
     }
@@ -145,10 +210,18 @@ export function resourceDevelopmentStatus(state: GameState, x: number, y: number
   const owner = state.factions.find(f => f.id === faction);
   if (state.gameOver || !owner || owner.defeated) return fail('Your realm can no longer develop resources.');
   if (index.blocked[start]) return fail('Remove the building on this resource first.');
+  const quarry = resource === 'marble' ? world.tiles[start].oreAnchor : undefined;
+  if (resource === 'marble') {
+    const borders = territory(state), footprint = marbleFootprint(world, resourceCells(world), quarry);
+    if (!footprint?.every(cell => territoryValue(borders, cell) === faction && !index.blocked[cell]))
+      return fail('The entire marble quarry must be inside your borders.');
+    const active = activeMarbleQuarry(state, faction, borders);
+    if (active && active.anchor !== quarry) return fail('Only one marble quarry per faction.');
+  }
   const seen = new Set<number>([start]), queue = [start];
   for (let head = 0; head < queue.length; head++) {
     const cell = queue[head], tx = cell % world.width, ty = Math.floor(cell / world.width);
-    if (index.cityAt[cell] === city.id && known(cell)) {
+    if ((quarry !== undefined || index.cityAt[cell] === city.id) && known(cell)) {
       result.totalCount++;
       if (world.tiles[cell].resourceDeveloped) result.developedCount++;
       else if (!index.blocked[cell] && resourceGroundAvailable(world.tiles[cell])) result.cells.push(cell);
@@ -156,7 +229,7 @@ export function resourceDevelopmentStatus(state: GameState, x: number, y: number
     for (const [nx, ny] of [[tx, ty - 1], [tx + 1, ty], [tx, ty + 1], [tx - 1, ty]]) {
       const next = ny * world.width + nx;
       if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height || seen.has(next) || !known(next)
-        || world.tiles[next].resource !== resource) continue;
+        || world.tiles[next].resource !== resource || quarry !== undefined && world.tiles[next].oreAnchor !== quarry) continue;
       seen.add(next); queue.push(next);
     }
   }
@@ -194,6 +267,30 @@ export function factionDevelopedResourceCount(state: GameState, faction: number,
 export function cityDevelopedResourceCount(state: GameState, city: Building, resource: RegionalResource): number {
   return resourceIndex(state).cityCounts.get(city.id)?.get(resource) ?? 0;
 }
+const noFuelCities: ReadonlySet<number> = new Set();
+function citiesWithDevelopedFuel(state: GameState, resource: FuelResource): ReadonlySet<number> {
+  return resourceCells(state.world).developedFuelTiles[resource] ? resourceIndex(state).fuelCities[resource] : noFuelCities;
+}
+export function citiesWithDevelopedPeat(state: GameState): ReadonlySet<number> {
+  return citiesWithDevelopedFuel(state, 'peat');
+}
+export function citiesWithDevelopedCoal(state: GameState): ReadonlySet<number> {
+  return citiesWithDevelopedFuel(state, 'coal');
+}
+export function cityHasDevelopedPeat(state: GameState, city: Building | undefined): boolean {
+  return !!city && citiesWithDevelopedPeat(state).has(city.id);
+}
+export function peatUpkeepMultiplier(supplied: boolean): number {
+  return rustEngine.peat_upkeep_multiplier(Number(supplied));
+}
+export function grapeTradeMultiplier(state: GameState, city: Building | undefined): number {
+  return rustEngine.grape_trade_multiplier(city ? cityDevelopedResourceCount(state, city, 'grapes') : 0);
+}
+export function cityDevelopedResourceMask(state: GameState, city: Building): number {
+  const counts = resourceIndex(state).cityCounts.get(city.id);
+  return TRADE_RESOURCES.reduce((mask, resource, i) => counts?.get(resource) ? mask | (1 << i) : mask, 0);
+}
+
 export function saltFoodConsumptionMultiplier(state: GameState, faction: number, population = state.factions.find(owner => owner.id === faction)?.population ?? 0): number {
   if (!(population > 0)) return 1;
   const covered = Math.min(population, factionDevelopedResourceCount(state, faction, 'salt') * SALT_RESIDENTS_PER_TILE);
@@ -209,7 +306,8 @@ export function autoDevelopResources(state: GameState, faction: number, budget: 
   if (isHumanFaction(state, faction) || budget < RESOURCE_DEVELOPMENT_COST) return { ok: false, message: '' };
   const index = resourceIndex(state), seen = new Set<number>(), developed = index.factionCounts.get(faction);
   const priority = (resource: RegionalResource) => resource === 'copper' && !developed?.get(resource) ? 0
-    : resource === 'iron' && !developed?.get(resource) ? 1 : resource === 'salt' ? 2 : resource === 'olives' ? 3 : 4;
+    : resource === 'iron' && !developed?.get(resource) ? 1
+      : resource === 'marble' ? 2 : resource === 'salt' ? 3 : resource === 'olives' ? 4 : 5;
   const cells = [...(index.ownedUndeveloped.get(faction) ?? [])].sort((a, b) => priority(state.world.tiles[a].resource!) - priority(state.world.tiles[b].resource!) || a - b);
   for (const cell of cells) {
     if (seen.has(cell)) continue;

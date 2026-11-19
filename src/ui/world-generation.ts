@@ -1,6 +1,8 @@
 import type { MatchOptions } from '../multiplayer/protocol';
 import type { LandscapeParameters } from '../world/options';
 
+export const WORLD_GENERATION_TITLE = 'Generating world...';
+
 /** Menu presets only. Terrain generation and game difficulty keep their existing owners. */
 export type NewGameOptions = MatchOptions & {
   scenario?: import('../game/scenario-content').ScenarioId;

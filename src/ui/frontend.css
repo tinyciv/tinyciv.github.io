@@ -187,14 +187,47 @@ section.frontend-loading>button{display:block;margin:16px auto 0;text-align:cent
 div.frontend-loading{display:grid;justify-items:center;gap:12px;padding:0}
 .frontend-loading-spinner{display:block;width:64px;height:64px;background:url('/assets/runtime/ui/loading/spinner.webp') 0 0/1024px 64px no-repeat;image-rendering:pixelated;animation:frontend-spinner 1s steps(16) infinite}
 .frontend-loading-percent{font:22px/1 var(--game-font);color:#e8d3a6}
-.frontend-loading-accessible,.frontend-loading progress{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0!important}
+.frontend-loading-title{text-align:center}
+.frontend-progress{display:block;appearance:none;width:min(280px,65vw);height:12px;border:1px solid #846d47;background:#15130f}
+.frontend-progress::-webkit-progress-bar{background:#15130f}
+.frontend-progress::-webkit-progress-value{background:#e5c174}
+.frontend-progress::-moz-progress-bar{background:#e5c174}
+.frontend-progress:not([value]){display:none}
 @keyframes frontend-spinner{to{background-position:-1024px 0}}
 @media(prefers-reduced-motion:reduce){.frontend-loading-spinner{animation:none}}
 .frontend-error-actions{display:flex;flex-wrap:wrap;gap:14px}
-.frontend-boot{position:fixed;inset:0;display:grid;place-items:center;background:#1c1c1c;color:#dfc38a;font:24px var(--game-font)}
-.frontend-boot-loading{display:grid;justify-items:center;gap:16px;width:min(320px,80vw)}
 .game-area.frontend-active :is(.resource-bar,.hud,.selection-panel,#paused,#build-status,#tile-tooltip,#leader-action-feedback){visibility:hidden}
 .game-area.frontend-active #world{cursor:default}
+
+.frontend.in-game { background: #100d0bb3; }
+.frontend.in-game > .menu-back { display: none; }
+.frontend.in-game > .menu-front { padding: 16px; }
+.frontend.in-game .dialog { max-height: calc(100dvh - 32px); }
+.frontend.in-game .dialog h1 {
+  margin: 0 0 16px;
+  padding: 0 44px 16px 0;
+  border-bottom: 2px solid var(--popup-edge);
+  color: var(--popup-ink);
+  font: 700 24px/28px var(--game-font);
+}
+.frontend.in-game .dialog header { position: relative; }
+.frontend.in-game .dialog header h1 { padding-right: 92px; }
+.frontend.in-game .dialog .frontend-back { position: absolute; top: 0; right: 0; min-height: 28px; padding: 3px 12px; }
+.frontend.in-game .dialog button:not(.close-dialog) {
+  border: 2px solid transparent;
+  border-radius: 0;
+  border-image: var(--popup-button-art) 8 12 8 12 fill / 6px 8px / 0 stretch;
+  background: var(--popup-surface);
+  box-shadow: none;
+}
+.frontend.in-game .save-form { padding-bottom: 0; border: 0; }
+.frontend.in-game input[type=range] { width: 100%; padding: 0; border: 0; box-shadow: none; }
+.frontend.in-game input[type=checkbox] { width: 22px; padding: 0; }
+.frontend.in-game .frontend-controls { grid-template-columns: minmax(76px, 1fr) minmax(0, 2fr); font-size: 16px; }
+.game-menu-actions { display: grid; gap: 8px; }
+.frontend .frontend-game-menu { width: min(344px, 100%); }
+.game-menu-actions button { text-align: left; }
+.game-menu-actions button:last-child { margin-top: 8px; }
 
 /* Compact submenu controls. */
 .is-compact .menu-sheet{max-width:min(100%,560px);font-size:18px}

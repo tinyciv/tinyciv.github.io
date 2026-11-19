@@ -22,6 +22,6 @@ export function siteDialogMarkup(site: SiteView): string {
     return `<div class="site-dialog" data-site-id="${site.id}">
       <h2 id="dialog-title">${definition.label} site</h2>
       <img class="site-portrait" src="${runtimeArtUrl(`${import.meta.env.BASE_URL}assets/ui/${definition.portrait}`)}" alt="">
-      <div class="dialog-actions"><button id="site-build" class="primary">Build <span class="upgrade-price">${BUILD_COSTS[kind].gold}${icon('gold')}</span></button><button id="site-later">Later</button></div>
+      <div class="dialog-actions"><button id="site-build" class="primary">Build <span class="upgrade-price"><span class="site-gold">${BUILD_COSTS[kind].gold}</span>${icon('gold')}</span></button><button id="site-later">Later</button></div>
       <p id="site-error" role="status"></p></div>`;
 }

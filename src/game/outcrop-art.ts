@@ -40,7 +40,7 @@ let loading: Promise<void> | undefined, loadingLooseRocks: Promise<void> | undef
 
 export function isOutcrop(tile: Tile | undefined): boolean {
     return !!tile && !WATER.has(tile.terrain) && !tile.creek
-        && (tile.resource === 'stone' || tile.resource === 'copper' || tile.resource === 'iron' || tile.resource === 'gold');
+        && (tile.resource === 'stone' || tile.resource === 'marble' || tile.resource === 'copper' || tile.resource === 'iron' || tile.resource === 'gold');
 }
 function hash(x: number, y: number, seed: number): number {
     let n = Math.imul(x, 0x1f123bb5) ^ Math.imul(y, 0x5f356495) ^ Math.imul(seed, 0x6c8e9cf5);

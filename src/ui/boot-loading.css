@@ -1,0 +1,59 @@
+.boot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 20px;
+  background: #1b1712;
+  color: #e8d3a6;
+  font: 19px/1.15 var(--game-font, 'Pixel Operator'), monospace;
+}
+.boot-loading [hidden] { display: none; }
+.boot-loading-film {
+  width: min(100%, 1152px, 145dvh, calc((100dvh - 96px) * 384 / 208));
+  aspect-ratio: 384 / 208;
+  border: 2px solid #8b7952;
+  box-shadow: 0 0 0 4px #32271b, 0 12px 32px #100c09;
+  background: #4e5535 url('/assets/ui/loading/settlement-assault-poster.webp') center / cover;
+  image-rendering: pixelated;
+}
+.boot-loading-film video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  transition: filter 1.15s ease-in-out;
+}
+.boot-loading-film video.is-finished { filter: sepia(1); }
+.boot-loading-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  width: min(100%, 320px);
+}
+.boot-loading-progress label { grid-column: 1 / -1; }
+.boot-loading-progress progress {
+  width: 100%;
+  height: 10px;
+  appearance: none;
+  border: 1px solid #846d47;
+  background: #15130f;
+  color: #e5c174;
+}
+.boot-loading-progress progress::-webkit-progress-bar { background: #15130f; }
+.boot-loading-progress progress::-webkit-progress-value { background: #e5c174; }
+.boot-loading-progress progress::-moz-progress-bar { background: #e5c174; }
+.boot-loading-progress output { min-width: 4ch; text-align: right; }
+.boot-loading-error { margin: 0; text-align: center; }
+.boot-loading-error button {
+  padding: 6px 12px;
+  border: 2px solid transparent;
+  border-image: url('/assets/runtime/ui/walnut/button.png') 8 12 8 12 fill / 6px 8px / 0 stretch;
+  background: #30261d;
+  color: inherit;
+  font: inherit;
+}

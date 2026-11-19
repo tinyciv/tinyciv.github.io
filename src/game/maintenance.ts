@@ -5,6 +5,8 @@ import { GRANARY_UPKEEP } from './granaries-native';
 import { THERMAL_BATH_UPKEEP } from './thermal-baths-native';
 import { questEffect } from './quest-effects';
 import { INSTITUTION_UPKEEP, institutionUpkeep } from './institution-native';
+import { cityOwnership } from './city-ownership';
+import { citiesWithDevelopedPeat, peatUpkeepMultiplier } from './resource-development';
 import { structuresOf, STRUCTURE_READY } from './structure-index';
 import { buildingReady, type Building, type BuildingKind, type Faction, type GameState } from './types';
 
@@ -31,6 +33,16 @@ export function settlementMaintenance(cities: number, discounted = false): numbe
 export const chargesMaintenance = (kind: BuildingKind): boolean =>
   kind === 'palace' || kind === 'woodenTower' || kind === 'tower' || kind === 'guardPost' || BUILDING_UPKEEP[kind] !== undefined;
 
+export function factoryMaintenance(supplied: boolean): number {
+  return BUILDING_UPKEEP.factory! * peatUpkeepMultiplier(supplied);
+}
+
+export function factoryMaintenanceQuote(state: GameState): (factory: Building) => number {
+  const peatCities = citiesWithDevelopedPeat(state);
+  if (!peatCities.size) return () => BUILDING_UPKEEP.factory!;
+  const ownership = cityOwnership(state);
+  return factory => factoryMaintenance(peatCities.has(ownership.building(factory)?.id ?? -1));
+}
 const taxableFaction = (faction: Faction | undefined): faction is Faction => !!faction
   && faction.id >= 0 && faction.villageId === undefined;
 const completedCivilizationBuilding = (building: Building): boolean => buildingReady(building)
@@ -65,14 +77,15 @@ export function watchtowerMaintenance(state: GameState, faction: number, kind: '
     base * stoneDefenseMultiplier(state, faction, kind));
 }
 
-function charge(state: GameState, building: Building, capital: number | undefined, cities: number): number {
+function charge(state: GameState, building: Building, capital: number | undefined, cities: number, factoryCost?: number): number {
   if (!completedCivilizationBuilding(building)) return 0;
   if (building.kind === 'palace') {
     if (building.id === capital) return 0;
     const upkeep = settlementMaintenance(cities, building.foundingSubsidyFaction === building.faction);
     return rustEngine.exploration_town_upkeep(building.explorationUpkeepUntil ?? 0, state.time, upkeep);
   }
-  if (building.kind === 'hospital' || building.kind === 'factory') return BUILDING_UPKEEP[building.kind]!;
+  if (building.kind === 'hospital') return BUILDING_UPKEEP.hospital!;
+  if (building.kind === 'factory') return factoryCost ?? factoryMaintenanceQuote(state)(building);
   if (building.kind === 'siegeCannon') return BUILDING_UPKEEP.siegeCannon!;
   if (building.kind === 'woodenTower' || building.kind === 'tower') return watchtowerMaintenance(state, building.faction, building.kind);
   if (!isHumanFaction(state, building.faction)) return institutionUpkeep(building.kind);
@@ -81,10 +94,10 @@ function charge(state: GameState, building: Building, capital: number | undefine
 
 /** Mandatory settlement/tower maintenance only. Guard-post service is billed
  * separately, and ordinary housing/farms/infrastructure incur no charge. */
-export function buildingMaintenance(state: GameState, building: Building, capital?: number, cities?: number): number {
+export function buildingMaintenance(state: GameState, building: Building, capital?: number, cities?: number, factoryCost?: number): number {
   const faction = factionById(state, building.faction);
   if (!taxableFaction(faction)) return 0;
-  if (building.kind !== 'palace') return charge(state, building, undefined, 0);
+  if (building.kind !== 'palace') return charge(state, building, undefined, 0, factoryCost);
   if (capital !== undefined && cities !== undefined) return charge(state, building, capital, cities);
   const basis = cityMaintenanceBasis(state, faction.id);
   return charge(state, building, capital ?? basis.capital, cities ?? basis.cities);
@@ -94,8 +107,11 @@ export function factionMaintenanceBreakdown(state: GameState, faction: Faction):
   const result = { settlements: 0, defenses: 0 };
   if (!taxableFaction(faction)) return result;
   const { capital, cities } = cityMaintenanceBasis(state, faction.id);
-  for (const building of structuresOf(state, faction.id, STRUCTURE_READY))
-    result[building.kind === 'palace' ? 'settlements' : 'defenses'] += charge(state, building, capital, cities);
+  let factoryQuote: ReturnType<typeof factoryMaintenanceQuote> | undefined;
+  for (const building of structuresOf(state, faction.id, STRUCTURE_READY)) {
+    const factoryCost = building.kind === 'factory' ? (factoryQuote ??= factoryMaintenanceQuote(state))(building) : undefined;
+    result[building.kind === 'palace' ? 'settlements' : 'defenses'] += charge(state, building, capital, cities, factoryCost);
+  }
   return result;
 }
 

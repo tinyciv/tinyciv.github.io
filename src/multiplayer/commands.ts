@@ -1,3 +1,4 @@
+import { orderMarketRoute } from '../game/trade';
 import { selectMilitaryFormation } from '../game/military-academy';
 import { convertFieldCannon, orderFieldCannon } from '../game/field-cannons-native';
 import { resolveExploration } from '../game/exploration-native';
@@ -172,6 +173,8 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
         if (!branches.has(command.branch)) return fail();
         return command.type === 'research-priority' ? prioritizeResearch(state, building, command.branch) : removeResearchPriority(state, building, command.branch);
       case 'achievement': return ACHIEVEMENTS.some(item => item.id === command.achievement) ? purchaseAchievement(state, building, command.achievement) : fail();
+      case 'market-destination': return command.destination === null || Number.isSafeInteger(command.destination)
+        ? orderMarketRoute(state, building, command.destination) : fail();
       case 'research-allocation': return typeof command.allocation === 'number' ? setResearchAllocation(state, building, command.allocation) : fail();
       case 'immigrant': return importImmigrant(state, building);
       case 'retinue-slot': return purchaseRetinueSlot(state, building);

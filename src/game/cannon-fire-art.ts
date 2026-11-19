@@ -20,6 +20,8 @@ export function loadCannonFireArt(): Promise<void> {
   })();
 }
 
+export const cannonFireImage = (): HTMLImageElement | undefined => image;
+
 /** Presentation interpolation only; the simulation owns every shot time. */
 export function cannonFireFrame(shotAt: number | undefined, time: number): number {
   const age = time - (shotAt ?? -Infinity);

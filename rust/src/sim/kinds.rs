@@ -85,9 +85,15 @@ pub mod building {
     pub const APARTMENTS: u32 = 39;
     pub const FACTORY: u32 = 40;
     pub const GOLD_MINE: u32 = 41;
+    pub const MARKETPLACE: u32 = 42;
+    pub const SCOUT_TOWER: u32 = 43;
+    pub const FRONTIER_VILLAGE: u32 = 44;
+    pub const FOUNTAIN: u32 = 46;
+    pub const SCOUT_TOWER_HP: f64 = 75.0;
+    pub const SCOUT_TOWER_SIGHT: f64 = 13.0;
 
     pub fn width(kind: u32) -> f64 {
-        match kind { SHIPYARD | FORT => 3.0, PALACE | ARCHERY_RANGE | SUPPLY_DEPOT | LIBRARY | COLOSSEUM | BARRACKS | FORUM | GRANARY | THERMAL_BATH | WHALING_POST | FOUNDRY | MILITARY_ACADEMY | HOSPITAL | APARTMENTS | FACTORY | GOLD_MINE => 2.0, _ => 1.0 }
+        match kind { SHIPYARD | FORT => 3.0, PALACE | ARCHERY_RANGE | SUPPLY_DEPOT | LIBRARY | COLOSSEUM | BARRACKS | FORUM | GRANARY | THERMAL_BATH | WHALING_POST | FOUNDRY | MILITARY_ACADEMY | HOSPITAL | APARTMENTS | FACTORY | GOLD_MINE | MARKETPLACE | FRONTIER_VILLAGE => 2.0, _ => 1.0 }
     }
     pub fn height(kind: u32) -> f64 {
         match kind { ARCHERY_RANGE | SUPPLY_DEPOT | BARRACKS => 1.0, _ => width(kind) }

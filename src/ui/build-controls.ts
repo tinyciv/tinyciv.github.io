@@ -4,7 +4,7 @@ import { isSiteBuilding, SITE_DEFINITIONS } from '../game/site-types';
 export type BuildMenu = 'build' | 'fortifications';
 
 /** Building letters are scoped to their menu; movement keys stay available. */
-export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees'>; key: string; label: string }[] = [
+export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees'>; key?: string; label: string }[] = [
   { kind: 'road', key: 'r', label: 'Road' },
   { kind: 'irrigation', key: 'u', label: 'Irrigation' },
   { kind: 'camp', key: 'g', label: 'Farm' },
@@ -28,6 +28,7 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
   { kind: 'whalingPost', key: 'w', label: 'Whaling post' },
   { kind: 'shipyard', key: 's', label: 'Shipyard' },
   { kind: 'well', key: 'l', label: 'Well' },
+  { kind: 'fountain', label: 'Fountain' },
   { kind: 'monument', key: 'm', label: 'Monument' },
   { kind: 'blacksmith', key: 'k', label: 'Blacksmith' },
   { kind: 'archeryRange', key: 'j', label: 'Archery range' },
@@ -35,6 +36,7 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
   { kind: 'healerShack', key: 'p', label: 'Healer’s shack' },
   { kind: 'stable', key: 'y', label: 'Stable' },
   { kind: 'forum', key: 'q', label: 'Forum' },
+  { kind: 'marketplace', key: 'z', label: 'Marketplace' },
   { kind: 'library', key: 'i', label: 'Library' },
   { kind: 'colosseum', key: 'x', label: 'Colosseum' },
   { kind: 'militaryAcademy', key: 'm', label: 'Military Academy' },
@@ -43,7 +45,7 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
 ];
 
 export function buildMenuForSelection(kind: BuildSelection): BuildMenu | null {
-  if (kind === 'clearTrees' || isSiteBuilding(kind)) return null;
+  if (kind === 'clearTrees' || kind === 'scoutTower' || isSiteBuilding(kind)) return null;
   return ['fort', 'wall', 'palisade', 'woodenTower', 'tower', 'guardPost', 'ballista', 'siegeCannon', 'observationPost', 'barracks', 'foundry', 'militaryAcademy'].includes(kind) ? 'fortifications' : 'build';
 }
 
@@ -62,6 +64,8 @@ export function supportsBuildStroke(kind: BuildSelection): boolean {
 export function buildLabel(kind: BuildSelection): string {
   if (kind === 'clearTrees') return 'Clear trees';
   if (kind === 'goldMine') return 'Gold mine';
+  if (kind === 'scoutTower') return 'Scout tower';
+  if (kind === 'frontierVillage') return 'Village';
   const site = Object.values(SITE_DEFINITIONS).find(site => site.building === kind);
   if (site) return site.label;
   return BUILD_OPTIONS.find(option => option.kind === kind)?.label ?? kind.charAt(0).toUpperCase() + kind.slice(1);
