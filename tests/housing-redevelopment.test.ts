@@ -16,6 +16,7 @@ function realm(campCount = 3): GameState {
   const world: World = { width: 40, height: 32, seed: 'farm-redevelopment', source: 'fixture', spawns: [{ x: 10, y: 12 }],
     tiles: Array.from({ length: 1280 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .7, food: 3, production: 1, gold: 0, variation: .5 })) };
   const state = createGame(world), palace = state.buildings.find(building => building.kind === 'palace')!;
+  delete state.factions[0].openingCapitalId;
   palace.governorPermissions = { farms: false, housing: true };
   state.factions[0].gold = 10000; state.raiderCamps = [];
   // This relocation fixture surrounds the city with woodland. Supply enough

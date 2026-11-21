@@ -12,6 +12,7 @@ import { buildingReady, buildingWidth, buildingHeight, isFarmKind,
   type Building, type Faction, type GameState, type Point, type Unit } from './types';
 
 export const BALLISTA_RANGE = 18;
+export const SIEGE_CANNON_RANGE = rustEngine.siege_cannon_range();
 export const BALLISTA_COOLDOWN = 4;
 export const BALLISTA_COST = 300;
 export const BALLISTA_BUILD_SECONDS = 30;
@@ -42,13 +43,14 @@ export function updateBallistae(state: GameState, dt: number, combat: BallistaCo
     if (!clock) { clock = {}; targetClocks.set(ballista, clock); }
     if (simulationReadsActive(state) && !decisionDue(clock, state.time, ballista.id)) continue;
     const from = center(ballista);
+    const range = ballista.kind === 'siegeCannon' ? SIEGE_CANNON_RANGE : BALLISTA_RANGE;
     const candidates: (Building | Unit)[] = [
-      ...nearbyBuildings(state, from, BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS).filter(building => buildingTargetable(building)
+      ...nearbyBuildings(state, from, range + HIGH_GROUND_RANGE_BONUS).filter(building => buildingTargetable(building)
         && !isFarmKind(building.kind) && !['road', 'bridge', 'irrigation', 'ruin'].includes(building.kind)),
-      ...nearbyUnits(state, from, BALLISTA_RANGE + HIGH_GROUND_RANGE_BONUS).filter(unit => unit.hp > 0 && !unit.inside),
+      ...nearbyUnits(state, from, range + HIGH_GROUND_RANGE_BONUS).filter(unit => unit.hp > 0 && !unit.inside),
     ];
     const ranked = battleSupport(state, 2, from, ballista.faction, ballista.id, candidates.map(target => ({ target,
-      hostile: combat.hostile(ballista.faction, target.faction), range: BALLISTA_RANGE + downhillRangeBonus(state.world, from, target) })));
+      hostile: combat.hostile(ballista.faction, target.faction), range: range + downhillRangeBonus(state.world, from, target) })));
     const byId = new Map(candidates.map(target => [target.id, target]));
     let target: Building | Unit | undefined;
     for (let row = 0; row < ranked.length; row += 3) {

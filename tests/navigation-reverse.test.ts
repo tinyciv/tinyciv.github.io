@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { setForbiddenRectangle } from '../src/game/forbidden-zones';
 import { canMove, findPath, movementMultiplier, ReversePathQuery, withNavigationFrame } from '../src/game/pathfinding';
-import { STAIR_UP } from '../src/game/ridges';
 import type { Building, GameState, Point } from '../src/game/types';
 
 function fixture(width = 32, height = 24): GameState {
@@ -47,20 +46,15 @@ describe('shared reverse navigation', () => {
     for (const from of [point(22, 8), point(17, 20), point(3, 2), point(28, 4)]) expectOptimal(state, search, from, goal);
   });
 
-  it.each(['north', 'east', 'south', 'west'] as const)('respects %s stair orientation in both travel directions and after rotation', direction => {
-    const state = fixture();
-    for (let y = 6; y < 13; y++) for (let x = 8; x < 15; x++) state.world.tiles[y * 32 + x].ridge = 1;
-    const high = direction === 'north' ? { x: 11, y: 12 } : direction === 'south' ? { x: 11, y: 6 }
-      : direction === 'east' ? { x: 8, y: 9 } : { x: 14, y: 9 };
-    const up = STAIR_UP[direction], low = point(high.x - up.x, high.y - up.y), inside = point(high.x + up.x, high.y + up.y);
-    state.world.tiles[high.y * 32 + high.x].stair = direction;
-    const ascent = new ReversePathQuery(inside, 0), descent = new ReversePathQuery(low, 0);
-    expectOptimal(state, ascent, low, inside);
-    expectOptimal(state, descent, inside, low);
-    state.world.tiles[high.y * 32 + high.x].stair = direction === 'north' ? 'south' : direction === 'south' ? 'north' : direction === 'east' ? 'west' : 'east';
-    state.world.revision!++;
-    expect(ascent.findReversePath(state, low).path).toBeUndefined();
-    expect(descent.findReversePath(state, inside).path).toBeUndefined();
+  it('routes both ways through a gap in rocks and observes when it closes', () => {
+    const state = fixture(), low = point(5, 9), high = point(19, 9), gap = 9 * 32 + 12;
+    for (let y = 0; y < 24; y++) if (y !== 9) state.world.tiles[y * 32 + 12].rockRelief = 0;
+    const east = new ReversePathQuery(high, 0), west = new ReversePathQuery(low, 0);
+    expectOptimal(state, east, low, high);
+    expectOptimal(state, west, high, low);
+    state.world.tiles[gap].rockRelief = 0; state.world.revision!++;
+    expect(east.findReversePath(state, low).path).toBeUndefined();
+    expect(west.findReversePath(state, high).path).toBeUndefined();
   });
 
   it('retains explored work after remote construction and nonblocking farm changes', () => {

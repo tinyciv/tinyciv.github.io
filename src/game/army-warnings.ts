@@ -1,12 +1,40 @@
 import { atWar } from './relations';
-import { distance, type Building, type GameState, type Point, type Unit } from './types';
+import { isHumanFaction } from './player-context';
+import { buildingWidth, buildingHeight, distance, type Building, type GameState, type Point, type Unit } from './types';
 
 export const ARMY_WARNING_RANGE = 80;
 export const ARMY_WARNING_SECONDS = 6;
 export const MARAUDER_FORMATION_WARNING_COOLDOWN = 60;
 export interface ArmyWarning extends Point {
-  id: number; kind: 'formation' | 'levy' | 'town'; sourceId: number; faction: number;
+  id: number; kind: 'formation' | 'levy' | 'town' | 'attack'; sourceId: number; faction: number;
   createdAt: number; recipients: number[]; color: string; message: string;
+}
+
+const COMBAT_REGION_SIZE = 12;
+const combatReports = new WeakMap<GameState, { interval: number; reported: Set<string> }>();
+
+export function combatWarningRegion(point: Point): string {
+  return `${Math.floor(point.x / COMBAT_REGION_SIZE)}:${Math.floor(point.y / COMBAT_REGION_SIZE)}`;
+}
+
+/** Unit and town damage feed the HUD directly from confirmed hits. Group
+ * nearby hits before publishing so a battle doesn't flood the warning feed. */
+export function announceCombatDamage(state: GameState, target: Unit | Building): void {
+  const town = 'capacity' in target;
+  if (town && target.kind !== 'palace' || !isHumanFaction(state, target.faction)) return;
+  const point = town ? { x: target.x + buildingWidth(target) / 2, y: target.y + buildingHeight(target) / 2 } : target;
+  const interval = Math.floor(state.time / 2);
+  let reports = combatReports.get(state);
+  if (!reports || reports.interval !== interval) {
+    reports = { interval, reported: new Set() };
+    combatReports.set(state, reports);
+  }
+  const region = `${target.faction}:${combatWarningRegion(point)}`;
+  if (reports.reported.has(region)) return;
+  reports.reported.add(region);
+  pushWarning(state, { kind: 'attack', sourceId: target.id, faction: target.faction, createdAt: state.time,
+    recipients: [target.faction], x: point.x, y: point.y, color: '#c52c32',
+    message: town ? 'City under attack' : 'Units under attack' });
 }
 
 function pushWarning(state: GameState, warning: Omit<ArmyWarning, 'id'>): void {
@@ -26,12 +54,12 @@ export function announceTownFounded(state: GameState, town: Building): void {
     && !state.factions.find(f => f.id === viewer)?.defeated);
   if (!recipients.length) return;
   pushWarning(state, { kind: 'town', sourceId: town.id, faction: town.faction, createdAt: state.time, recipients,
-    x: town.x + 1, y: town.y + 1, color: owner.color, message: `The ${owner.name} have founded a new town.` });
+    x: town.x + 1, y: town.y + 1, color: owner.color, message: `The ${owner.name} have founded a new settlement.` });
 }
 
 /** Called only on successful mobilization, never by a render or AI polling loop.
  * Eligibility uses each human's Leader at the instant the army mobilizes. */
-export function announceArmyMobilization(state: GameState, leader: Unit, kind: ArmyWarning['kind']): void {
+export function announceArmyMobilization(state: GameState, leader: Unit, kind: 'formation' | 'levy'): void {
   const recipients = (state.multiplayer?.humanFactionIds ?? [0]).filter(viewer => {
     if (!atWar(state, viewer, leader.faction) || state.factions.find(f => f.id === viewer)?.defeated) return false;
     const player = state.units.find(unit => unit.kind === 'leader' && unit.faction === viewer && unit.hp > 0);

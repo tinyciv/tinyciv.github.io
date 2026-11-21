@@ -1,5 +1,6 @@
 import { warshipGunPoint } from './warship-layout';
 import { recordGunSmoke } from './gun-smoke';
+import { announceCombatDamage } from './army-warnings';
 import { shipName } from './ship-names';
 import { rustEngine } from './rust-engine';
 import { SimSlot, simCore } from './sim-handle';
@@ -35,6 +36,10 @@ export const WEAPON_LABELS = { empty: 'Empty', ballista: 'Ballista', cannon: 'Ca
 export const SHIP_BUILD_GOLD = rustEngine.naval_constant(0, 0);
 export const SHIP_UPKEEP = rustEngine.naval_constant(1, 0);
 export const SHIP_BOUNTY = rustEngine.naval_constant(2, 0);
+export function navalLoadoutRange(marine: MarineType, weapons: readonly NavalWeapon[]): number {
+  return Math.max(rustEngine.naval_constant(13, MARINE_TYPES.indexOf(marine)),
+    ...weapons.map(weapon => rustEngine.naval_constant(12, NAVAL_WEAPONS.indexOf(weapon))));
+}
 const STRIDE = 68;
 // Allow movement between one-second observations and include offset gun mounts.
 const SHORE_OBSERVATION_RADIUS = 28;
@@ -122,7 +127,7 @@ class NavalBridge implements ScalarObserver {
     new Float64Array(rustEngine.memory.buffer, pointer, values.length).set(values);
   }
   geometry(state: GameState): void {
-    const { width, height } = state.world, revision = worldRevisions(state.world).geometry;
+    const { width, height } = state.world, revision = worldRevisions(state.world).sight;
     const replacement = this.source !== state.world || this.base.length !== width * height;
     const changes = replacement || revision !== this.terrain ? worldSightChangesSince(state.world, replacement ? undefined : this.cursor) : undefined;
     const full = replacement || !!changes?.full;
@@ -136,10 +141,11 @@ class NavalBridge implements ScalarObserver {
     const sample = (i: number): void => {
       const x = i % width, y = Math.floor(i / width);
       const tile=tileAt(state.world,x,y);
-      this.base[i] = (navigableWaterCell(state.world, x, y) ? 1 : traversable(state.world, x, y) ? 2 : 0)
+      const value = (navigableWaterCell(state.world, x, y) ? 1 : traversable(state.world, x, y) ? 2 : 0)
         + reliefLevel(tile) * 4 + (tile?.terrain==='coast'?128:0)
         + (tile?.terrain==='coast'||tile?.terrain==='ocean'?256:0);
-      if (!full) cells.add(i);
+      if (!full && this.base[i] !== value) cells.add(i);
+      this.base[i] = value;
     };
     if (full) for (let i = 0; i < this.base.length; i++) sample(i);
     else for (const i of changes?.cells ?? []) sample(i);
@@ -234,7 +240,10 @@ class NavalBridge implements ScalarObserver {
       }
       ship.destination = Number.isFinite(r[20]) ? { x: r[20], y: r[21] } : undefined;
       ship.moving = Math.hypot(previous.x - ship.x, previous.y - ship.y) > .001;
-      if (ship.hp < previous.hp) { ship.lastDamagedAt = state.time; ship.damageFlashAt = state.time; }
+      if (ship.hp < previous.hp) {
+        ship.lastDamagedAt = state.time; ship.damageFlashAt = state.time;
+        announceCombatDamage(state, ship);
+      }
       if (r[22]) ship.healerHealingAt = state.time;
       for (const id of w.passengers ?? []) {
         const passenger = this.store.units.get(id); if (!passenger || passenger.embarkedOn !== ship.id) continue;
@@ -326,14 +335,16 @@ export function shipyardOrder(state: GameState, yard: Building, loadout: NavalLo
   if (result[0]) return { ok: false, message: navalError(result[0]),code:result[0] };
   if (refit && ship?.warship) {
     ship.warship.marine = loadout.marine; ship.warship.weapons = [...loadout.weapons];
+    ship.range = navalLoadoutRange(loadout.marine, loadout.weapons);
   } else {
     const id = entityStore(state).allocateId(), index = SHIP_CLASSES.indexOf(loadout.class), hp = rustEngine.naval_constant(8, index);
-    const name = shipName(state, yard.faction, id);
+    const name = shipName(state, yard.faction, id), readyAt = state.time + rustEngine.naval_constant(5, index);
     entityStore(state).units.add({ id, kind: 'sailboat', faction: yard.faction, x: result[1], y: result[2], facing: result[3],
-      hp, maxHp: hp, morale: 100, attack: 0, defense: 4, speed: rustEngine.naval_constant(6, index), range: 14,
+      hp, maxHp: hp, morale: 100, attack: 0, defense: 4, speed: rustEngine.naval_constant(6, index),
+      range: navalLoadoutRange(loadout.marine, loadout.weapons),
       order: 'hold', cooldown: 0, lastCombat: -100, moving: false, attackTime: 0, sailboat: { dock: yard.id },
       warship: { class: loadout.class, name, yard: yard.id, speed: 0, kills: 0, marine: loadout.marine, crewHp: rustEngine.naval_constant(9, index),
-        weapons: [...loadout.weapons], anchored: false, readyAt: state.time + rustEngine.naval_constant(5, index), nextUpkeepAt: state.time + 30,
+        weapons: [...loadout.weapons], anchored: false, readyAt, nextUpkeepAt: readyAt + 30,
         funded: true, lastAttacker: -1, rewarded: false } });
     spendGold(state, state.factions.find(f => f.id === yard.faction)!, result[4], 'construction');
   }
@@ -374,6 +385,11 @@ export function warshipMove(state: GameState, ship: Unit, point: Point): Result 
   const r = network(state).command(state, 7, context(state, ship, undefined, point));
   if (r[0]) return { ok: false, message: navalError(r[0]) };
   ship.warship!.attackTarget=undefined; ship.destination = { x: r[1], y: r[2] }; return { ok: true, message: 'Sailing.' };
+}
+export function cancelWarshipOrder(state: GameState, ship: Unit): void {
+  if (!ship.warship) return;
+  ship.warship.attackTarget = undefined;
+  network(state).orderChanged();
 }
 /** Read only when a diagnostic asks; ordinary simulation does not sample paths. */
 export function warshipPathStatus(state: GameState, ship: Unit) {

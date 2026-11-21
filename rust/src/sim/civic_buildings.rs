@@ -1,15 +1,13 @@
 //! Civic structures and capturable gold mines. Lifecycle events maintain
-//! hospital spatial trees and factory counts. Mine capture samples troops at
-//! 1 Hz; its spatial query never compares every troop with every building.
+//! factory counts and mine cell membership. Mine capture samples troops at 1 Hz.
 use bevy_ecs::prelude::*;
 use rstar::{RTree, primitives::GeomWithData};
 use std::collections::{BTreeMap, BTreeSet};
-use super::kinds::{unit, building::{HOSPITAL, APARTMENTS, FACTORY, GOLD_MINE, PALACE}};
+use super::kinds::{unit, building::{APARTMENTS, FACTORY, GOLD_MINE, PALACE}};
 
-pub const UNIT_STRIDE: usize = 9;
+pub const UNIT_STRIDE: usize = 6;
 pub const CAPTURE_SECONDS: f64 = 12.0;
 pub const CAPTURE_RADIUS: f64 = 4.0;
-pub const HOSPITAL_RADIUS: f64 = 8.0;
 pub const MINE_WORLD_SHARE: f64 = 0.1;
 const FACTORY_BONUS: f64 = 0.20;
 const COAL_FACTORY_BONUS: f64 = 0.35;
@@ -17,13 +15,18 @@ const COAL_FACTORY_BONUS: f64 = 0.35;
 pub fn targetable(kind: u32, hp: f64) -> bool { kind != GOLD_MINE && hp > 0.0 }
 pub fn removable(kind: u32) -> bool { kind != GOLD_MINE }
 
+pub fn order_overlaps(left: f64, top: f64, right: f64, bottom: f64,
+    x: f64, y: f64, width: f64, height: f64) -> bool {
+    let (x, y) = (x.floor(), y.floor());
+    x <= right && x + width > left && y <= bottom && y + height > top
+}
+
 pub fn constant(kind: u32, property: u32) -> f64 {
     match (kind, property) {
-        (HOSPITAL, 0) => 450.0, (HOSPITAL, 1) => 600.0, (HOSPITAL, 2) => 5.0,
         (APARTMENTS, 0) => 300.0, (APARTMENTS, 1) => 450.0, (APARTMENTS, 2) => 0.0,
         (FACTORY, 0) => 600.0, (FACTORY, 1) => 650.0, (FACTORY, 2) => 8.0,
         (GOLD_MINE, 0) => 0.0, (GOLD_MINE, 1) => 1000.0, (GOLD_MINE, 2) => 0.0,
-        (APARTMENTS, 3) => 24.0, (HOSPITAL, 3) => HOSPITAL_RADIUS,
+        (APARTMENTS, 3) => 24.0,
         (GOLD_MINE, 3) => CAPTURE_SECONDS, (FACTORY, 3) => FACTORY_BONUS,
         (FACTORY, 4) => COAL_FACTORY_BONUS,
         _ => f64::NAN,
@@ -42,7 +45,6 @@ struct Mine { id: i64, owner: i32, x: f64, y: f64, challenger: i32, progress: f6
 #[derive(Resource, Default)]
 pub struct CivicBuildings {
     sites: BTreeMap<i64, Site>,
-    hospitals: BTreeMap<i32, RTree<[f64; 2]>>,
     factories: BTreeMap<i32, usize>,
     coal_cities: BTreeSet<i64>,
     coal_factories: BTreeMap<i32, usize>,
@@ -56,15 +58,12 @@ pub struct CivicBuildings {
 }
 impl CivicBuildings {
     pub fn clear_sites(&mut self) {
-        self.sites.clear(); self.hospitals.clear(); self.factories.clear();
+        self.sites.clear(); self.factories.clear();
         self.mines.clear(); self.mine_cells.clear();
         self.coal_factories.clear(); self.coal_dirty = true;
     }
     pub fn remove(&mut self, id: i64) {
         if let Some(site) = self.sites.remove(&id) {
-            if site.kind == HOSPITAL && site.ready {
-                if let Some(tree) = self.hospitals.get_mut(&site.faction) { tree.remove(&site.center()); }
-            }
             if site.kind == FACTORY && site.ready {
                 if let Some(count) = self.factories.get_mut(&site.faction) { *count = count.saturating_sub(1); }
             }
@@ -78,14 +77,13 @@ impl CivicBuildings {
         }
     }
     pub fn site(&mut self, id: i64, kind: u32, faction: f64, x: f64, y: f64, flags: u32) {
-        if !matches!(kind, HOSPITAL | APARTMENTS | FACTORY | GOLD_MINE | PALACE) || flags & 1 == 0 { self.remove(id); return; }
+        if !matches!(kind, APARTMENTS | FACTORY | GOLD_MINE | PALACE) || flags & 1 == 0 { self.remove(id); return; }
         let site = Site { kind, faction: faction as i32, x, y, ready: flags & 5 == 5 };
         if self.sites.get(&id) == Some(&site) { return; }
         let previous = self.mines.get(&id).copied();
         self.remove(id);
         self.sites.insert(id, site);
         if site.ready && matches!(kind, FACTORY | PALACE) { self.coal_dirty = true; }
-        if site.kind == HOSPITAL && site.ready { self.hospitals.entry(site.faction).or_default().insert(site.center()); }
         if site.kind == FACTORY && site.ready { *self.factories.entry(site.faction).or_default() += 1; }
         if site.kind == GOLD_MINE && site.ready {
             let saved = previous.filter(|mine| mine.owner == site.faction);
@@ -149,31 +147,20 @@ impl CivicBuildings {
         self.earned_gold = values[0]; true
     }
     pub fn prepare(&mut self, words: usize) -> *mut f64 { self.input.resize(words, 0.0); self.input.as_mut_ptr() }
-    /// Outputs tagged records [kind, id, value, extra]: healed HP (0), mine
-    /// owner/capture progress (1), challenger (2), or faction gold receipt (3).
-    pub fn step(&mut self, count: usize, now: f64, elapsed: f64) -> *const f64 {
+    /// Outputs tagged records [kind, id, value, extra]: mine owner and capture
+    /// progress (1), or challenger and contested state (2).
+    pub fn step(&mut self, count: usize, elapsed: f64) -> *const f64 {
         self.output.clear(); self.output.push(0.0);
         let mut presence: BTreeMap<i64, (i32, bool)> = BTreeMap::new();
         for row in 0..count {
             let r = &self.input[row * UNIT_STRIDE..(row + 1) * UNIT_STRIDE];
-            let (id,faction,x,y,hp,max_hp,damaged,flags) = (r[0],r[1] as i32,r[2],r[3],r[4],r[5],r[6],r[7] as u32);
-            if hp <= 0.0 || faction < 0 || flags & 1 == 0 { continue; }
-            let kind = r[8] as u32;
-            if unit::soldier(kind) || kind == unit::LEADER {
-                for mine_id in self.mine_cells.get(&(x.floor() as i32,y.floor() as i32)).into_iter().flatten() {
-                    let Some(mine) = self.mines.get(mine_id) else { continue; };
-                    if (mine.x+1.0-x).powi(2)+(mine.y+1.0-y).powi(2) > CAPTURE_RADIUS.powi(2) { continue; }
-                    let entry = presence.entry(*mine_id).or_insert((faction,false));
-                    if entry.0 != faction { entry.1 = true; }
-                }
-            }
-            let human = kind <= unit::MERCHANT && kind != unit::SUPPLY_CART || kind == unit::MUSKETMAN;
-            if hp < max_hp && now - damaged >= 5.0 && human {
-                if self.hospitals.get(&faction).and_then(|tree| tree.nearest_neighbor([x,y]))
-                    .is_some_and(|point| (point[0]-x).powi(2)+(point[1]-y).powi(2) <= HOSPITAL_RADIUS.powi(2)) {
-                    let quiet = elapsed.min((now-damaged-5.0).max(0.0));
-                    self.output.extend_from_slice(&[0.0,id,(hp+quiet*3.0).min(max_hp),0.0]);
-                }
+            let (faction, x, y, hp, present, kind) = (r[0] as i32, r[1], r[2], r[3], r[4] != 0.0, r[5] as u32);
+            if hp <= 0.0 || faction < 0 || !present || !(unit::soldier(kind) || kind == unit::LEADER) { continue; }
+            for mine_id in self.mine_cells.get(&(x.floor() as i32, y.floor() as i32)).into_iter().flatten() {
+                let Some(mine) = self.mines.get(mine_id) else { continue; };
+                if (mine.x + 1.0 - x).powi(2) + (mine.y + 1.0 - y).powi(2) > CAPTURE_RADIUS.powi(2) { continue; }
+                let entry = presence.entry(*mine_id).or_insert((faction, false));
+                if entry.0 != faction { entry.1 = true; }
             }
         }
         for mine in self.mines.values_mut() {

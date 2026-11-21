@@ -1,7 +1,7 @@
 import { type Tile, type TreeClass, type World } from '../game/types';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
 
-/** Zero at the configured equator; one near cold northern latitudes. */
+/** Distance from the configured equator in units of twice the warm belt's width. */
 export function treeClimateLatitude(y: number, height: number,
   parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): number {
   return Math.abs(y / Math.max(1, height - 1) - parameters.equatorPosition) / (parameters.equatorWidth * 2);
@@ -12,8 +12,8 @@ export function treeClimateLatitude(y: number, height: number,
 export function climateTreeClass(latitude: number, tile: Pick<Tile, 'moisture' | 'elevation' | 'variation' | 'terrain' | 'temperature' | 'biome'>): TreeClass {
   if (tile.terrain === 'tundra') return 'snowy';
   if (tile.temperature !== undefined) {
-    if (tile.temperature < .20 || tile.biome === 'alpine') return 'conifer';
-    if (tile.temperature < .37) return 'conifer';
+    if (tile.temperature < .37 || tile.biome === 'alpine') return 'conifer';
+    if (tile.biome === 'fjords' && tile.terrain !== 'desert' && tile.temperature < .60) return 'conifer';
     if (tile.temperature > .68 && tile.moisture > .49) return 'tropical';
     if (tile.moisture < .43 || tile.biome === 'savanna' || tile.terrain === 'desert') return 'dry';
     return 'temperate';

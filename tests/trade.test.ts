@@ -267,10 +267,9 @@ describe('merchant roads', () => {
     expect(state.factions[0].gold).toBe(0);
   });
 
-  it('paves stairs but never a river, bridge, occupied building, or a solid reserved footprint', () => {
+  it('paves open ground and avoids rivers, bridges, buildings and reserved footprints', () => {
     const state = fixture(), merchant = oneMerchant(state);
     state.world.tiles[8 * 72 + 20].terrain = 'river';
-    state.world.tiles[8 * 72 + 22].stair = 'east'; state.world.tiles[8 * 72 + 22].ridge = 1;
     entityStore(state).buildings.add({ ...city(4, 24, 8), kind: 'camp' }, { ...city(5, 28, 8), kind: 'house', construction: { startedAt: 0, duration: 20 } },
       { ...city(6, 32, 8), kind: 'bridge' });
     for (const [x, y] of [[20, 8], [28, 8], [32, 8], [6, 10]]) {

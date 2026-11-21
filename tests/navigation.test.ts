@@ -5,7 +5,7 @@ import { beginNavigationFrame, endNavigationFrame, invalidateNavigation, canMove
 import { constructionEdges } from '../src/game/builders';
 import { palaceReachability } from '../src/game/placement';
 import { addRiverFords } from '../src/world/generator';
-import { ridgeEdgeAllowed } from '../src/game/ridges';
+import { reliefEdgeAllowed } from '../src/game/relief';
 
 function fixture(width = 12, height = 10): GameState {
   const world: World = {
@@ -47,20 +47,20 @@ describe('shared unit navigation', () => {
     expect(findPath(state, start, goal, 0, false, occupied)[0]).toEqual({ x: 4.5, y: 4.5 });
   });
 
-  it('allows direct travel across forest and jungle overlay edges in every direction', () => {
+  it.each([
+    ['forest', 'temperate'], ['forest', 'forest'], ['jungle', 'rainforest'],
+  ] as const)('allows travel across %s overlay edges in %s in every direction', (overlay, biome) => {
     const state = fixture(), center = { x: 5.5, y: 5.5 };
-    for (const overlay of ['forest', 'jungle'] as const) {
-      tile(state, 5, 5).overlay = overlay;
-      expect(canWalk(state, center.x, center.y, 0)).toBe(true);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const neighbor = { x: center.x + dx, y: center.y + dy };
-        expect(canTraverseEdge(state.world, center, neighbor)).toBe(true);
-        expect(canMove(state, center, neighbor, 0)).toBe(true);
-        expect(canMove(state, neighbor, center, 0)).toBe(true);
-      }
-      const path = findPath(state, { x: 4.5, y: 5.5 }, center, 0);
-      expect(path).toEqual([center]);
+    Object.assign(tile(state, 5, 5), { overlay, biome });
+    expect(canWalk(state, center.x, center.y, 0)).toBe(true);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const neighbor = { x: center.x + dx, y: center.y + dy };
+      expect(canTraverseEdge(state.world, center, neighbor)).toBe(true);
+      expect(canMove(state, center, neighbor, 0)).toBe(true);
+      expect(canMove(state, neighbor, center, 0)).toBe(true);
     }
+    const path = findPath(state, { x: 4.5, y: 5.5 }, center, 0);
+    expect(path).toEqual([center]);
   });
 
   it('walks ford river tiles at 45% speed and uses only completed bridges', () => {
@@ -337,15 +337,13 @@ describe('cached navigation invalidation and soft traffic costs', () => {
     expect(palaceReachability(state, palace)).toEqual(expected);
   });
 
-  it('keeps the flat-edge shortcut identical to ridge rules at corners, stairs, and invalid edges', () => {
+  it('keeps the flat-edge shortcut identical to terrain rules at rock corners and invalid edges', () => {
     const state = fixture(18, 16), world = state.world;
-    for (let y = 5; y <= 12; y++) for (let x = 5; x <= 12; x++) tile(state, x, y).ridge = 1;
-    tile(state, 8, 5).stair = 'south';
-    tile(state, 2, 2).stair = 'east'; // Invalid stairs cannot open ordinary ground.
+    for (let y = 5; y <= 12; y++) for (let x = 5; x <= 12; x++) tile(state, x, y).rockRelief = 0;
     for (let y = 0; y < world.height; y++) for (let x = 0; x < world.width; x++) {
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         const from = { x: x + .5, y: y + .5 }, to = { x: x + dx + .5, y: y + dy + .5 };
-        expect(canTraverseEdge(world, from, to)).toBe(ridgeEdgeAllowed(world, from, to));
+        expect(canTraverseEdge(world, from, to)).toBe(reliefEdgeAllowed(world, from, to));
       }
     }
     expect(canTraverseEdge(world, { x: 1.5, y: 1.5 }, { x: 3.5, y: 1.5 })).toBe(false);

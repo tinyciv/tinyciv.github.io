@@ -18,7 +18,7 @@ it('scatters deterministic, sparse desert-only decoration without changing gamep
   for (const tile of a.tiles) delete tile.desertStone;
   expect(a).toEqual(before);
 });
-it('avoids resources, roads, water features and ledges', () => {
+it('avoids covered resource cells', () => {
   const a = world();
   for (const t of a.tiles) t.resource = 'copper';
   scatterDesertStones(a); expect(a.tiles.some(t => t.desertStone !== undefined)).toBe(false);

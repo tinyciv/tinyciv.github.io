@@ -9,8 +9,7 @@ import { loadWaterMotionArt } from './water-motion-art';
 export interface PunyPixels { width: number; height: number; data: Uint8ClampedArray }
 let atlas: HTMLImageElement | undefined;
 let pixels: PunyPixels | undefined;
-let desertLedges: PunyPixels | undefined;
-let desertLedgeImage: HTMLImageElement | undefined;
+let sandBankPalette: PunyPixels | undefined;
 let loading: Promise<void> | undefined;
 
 function loadAtlas(file: string): Promise<{ image: HTMLImageElement; pixels: PunyPixels }> {
@@ -30,19 +29,17 @@ function loadAtlas(file: string): Promise<{ image: HTMLImageElement; pixels: Pun
 
 export function loadPunyWorld(): Promise<void> {
     return loading ??= Promise.all([loadAtlas('overworld.png'), loadAtlas('desert-ledges.png'), loadCreekArt(), loadDesertStoneArt(), loadTundraArt(), loadWaterMotionArt(), loadFrostArt()]).then(([original, desert]) => {
-        if (desert.pixels.width !== 128 || desert.pixels.height !== 48) throw new Error('Invalid desert ledge sheet.');
+        if (desert.pixels.width !== 128 || desert.pixels.height !== 48) throw new Error('Invalid sandy river bank palette.');
         atlas = original.image;
         pixels = original.pixels;
-        desertLedges = desert.pixels;
-        desertLedgeImage = desert.image;
+        sandBankPalette = desert.pixels;
     });
 }
 
 export const punyWorldImage = () => atlas;
 export const punyWorldPixels = () => pixels;
-/** Approved 1A crop; original atlas coordinates begin at (0, 64). */
-export const punyDesertLedgePixels = () => desertLedges;
-export const punyDesertLedgeImage = () => desertLedgeImage;
+/** Source colors for sandy riverbanks, sampled against the atlas at (0, 64). */
+export const punySandBankPalette = () => sandBankPalette;
 
 export function drawPuny(c: CanvasRenderingContext2D, sx: number, sy: number, sw: number, sh: number, x: number, y: number, w: number, h: number): boolean {
     if (!atlas) return false;

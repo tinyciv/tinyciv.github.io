@@ -5,7 +5,7 @@
   "height": 50,
   "simulatedSeconds": 0,
   "wallSeconds": 0.40304674999999995,
-  "bytes": 259954,
+  "bytes": 259964,
   "cities": [
     {
       "id": 1,
@@ -14,7 +14,8 @@
       "y": 20,
       "population": 30,
       "housing": 34,
-      "food": 12.266666666666683
+      "food": 12.266666666666683,
+      "settlementTier": 0
     },
     {
       "id": 126,
@@ -23,7 +24,8 @@
       "y": 15,
       "population": 30,
       "housing": 34,
-      "food": 12.64000000000001
+      "food": 12.64000000000001,
+      "settlementTier": 0
     }
   ],
   "resources": {
@@ -33,7 +35,7 @@
     "gold": 0,
     "stone": 15,
     "salt": 48,
-    "olives": 79,
+    "olives": 48,
     "fish": 164
   },
   "whales": 2,

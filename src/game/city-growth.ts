@@ -6,10 +6,11 @@ import { rustEngine } from './rust-engine';
 import { SIM_ENGINE, SimSlot, simCore } from './sim-handle';
 import { colosseumGrowthMultiplier } from './colosseum';
 import { recordCampaignPopulation } from './campaign-stats';
+import { settlementPopulationLimit } from './settlement-upgrades';
 
 /** Scale the release allowance too, so banked or enclosed growth is not clipped. */
 export const MAX_CITY_BIRTHS_PER_TICK = rustEngine.population_constant(1);
-const CITY_INPUT_STRIDE = 9, HOUSE_INPUT_STRIDE = 6, CITY_OUTPUT_STRIDE = 3;
+const CITY_INPUT_STRIDE = 10, HOUSE_INPUT_STRIDE = 6, CITY_OUTPUT_STRIDE = 3;
 /** The game's persistent population pools (one engine per simulation core). */
 const engines = new SimSlot<{ handle: number }>();
 function populationEngine(state: GameState): number {
@@ -48,13 +49,17 @@ export function advanceCityPopulation(state: GameState, faction: Faction, summar
     input[offset + 3] = city.population; input[offset + 4] = city.food; input[offset + 5] = palace.populationGrowth ?? 0;
     input[offset + 6] = palace.capacity; input[offset + 7] = palace.unhousedResidents ?? 0;
     input[offset + 8] = palace.depopulated === undefined ? 0 : palace.depopulated ? 2 : 1;
+    input[offset + 9] = settlementPopulationLimit(palace);
   }
   for (let row = 0; row < homes.length; row++) {
     const home = homes[row], offset = cities.length * CITY_INPUT_STRIDE + row * HOUSE_INPUT_STRIDE;
     input[offset] = home.id; input[offset + 1] = home.x; input[offset + 2] = home.y;
     input[offset + 3] = home.residents ?? 0; input[offset + 4] = home.capacity; input[offset + 5] = required[row];
   }
-  const outputPointer = rustEngine.population_run(engine, faction.food, faction.population, huntingMultiplier, unfed, growth, faction.achievements ?? 0);
+  const outputPointer = rustEngine.population_run(engine, faction.food, faction.population, huntingMultiplier, unfed,
+    growth, faction.achievements ?? 0, faction.openingCapitalId ?? -1, faction.openingPopulationPeak ?? 0);
+  if (faction.openingCapitalId !== undefined)
+    faction.openingPopulationPeak = rustEngine.population_opening_peak(engine);
   const output = new Float64Array(rustEngine.memory.buffer, outputPointer, 3 + cities.length * CITY_OUTPUT_STRIDE + homes.length);
   faction.food = output[0]; faction.population = output[1];
   for (let row = 0; row < cities.length; row++) {

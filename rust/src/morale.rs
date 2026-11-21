@@ -15,6 +15,7 @@ pub const LEADER_RADIUS: f64 = 6.0;
 pub const LEADER_LOSS: f64 = 40.0;
 pub const CONTAGION: f64 = 18.0;
 pub const MIN_ROUT: f64 = 15.0;
+const MARAUDER_MAX_MORALE: f64 = 80.0;
 const HISTORY_LIMIT: usize = 2048;
 const FLEE: u32 = 5;
 const RETINUE: u32 = 4;
@@ -25,7 +26,7 @@ const INSIDE: u32 = 256;
 pub fn constant(index: u32) -> f64 {
     match index { 0 => RADIUS, 1 => WINDOW, 2 => LOSS_RATIO, 3 => FLOOR, 4 => MORALE_DRAIN,
         5 => SHOCK_SECONDS, 6 => LEADER_RADIUS, 7 => LEADER_LOSS, 8 => CONTAGION, 9 => MIN_ROUT,
-        10 => HISTORY_LIMIT as f64, _ => f64::NAN }
+        10 => HISTORY_LIMIT as f64, 11 => MARAUDER_MAX_MORALE, _ => f64::NAN }
 }
 fn minimum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.min(b) } }
 fn maximum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) } }
@@ -117,10 +118,14 @@ fn integrate_morale(step: Res<ActorStep>, mut actors: Query<&mut MoraleActor>) {
     let collapsing = flags & 8 != 0; let unfavorable = flags & 16 != 0; let leader = flags & 32 != 0;
     let defeated = flags & 64 != 0; let retinue = flags & 128 != 0; let garrison = flags & 256 != 0;
     let leader_fleeing = flags & 512 != 0; let pack = flags & 1024 != 0;
-    let mut morale = values[0]; let hp = values[1]; let maximum_morale = values[2];
+    let hp = values[1];
     let enemies = values[3]; let allies = values[4]; let routing = values[5]; let fighting_until = values[6];
     let mut shock_until = values[8]; let mut shock_tag = values[9]; let mut shock_routed = values[10];
     let faction = values[11]; let mut rout_until = values[12]; let mut order = values[13] as u32;
+    let (mut morale, maximum_morale) = if faction == -2.0 {
+        let limit = minimum(values[2], MARAUDER_MAX_MORALE);
+        (minimum(values[0], limit), limit)
+    } else { (values[0], values[2]) };
     let previous_order = values[14]; let mut routed = values[15]; let mut actions = 0_u32;
     let standing = if hostile { maximum(1.0, allies - routing) } else { allies };
     let mut change = if enemies == 0.0 { 6.0 } else if near_leader { 2.0 } else { 0.5 };
@@ -314,7 +319,7 @@ mod tests {
         let mut engine = MoraleEngine::default(); engine.prepare(16);
         engine.input[..16].copy_from_slice(&[100.0, 100.0, 100.0, 0.0, 1.0, 0.0, -60.0,
             (8 | 16) as f64, f64::NEG_INFINITY, 0.0, 0.0, -2.0, f64::NEG_INFINITY, 1.0, -1.0, 0.0]);
-        engine.integrate(1, 0.0, 2.0);
+        engine.integrate(1, 0.0, 1.6);
         assert_eq!(engine.output[0], 0.0); assert_eq!(engine.output[2], 4.0); assert_eq!(engine.output[3], 2.0);
         assert_eq!(engine.output[4], 5.0); assert_eq!(engine.output[6], 15.0);
         engine.input[..16].copy_from_slice(&[0.0, 100.0, 100.0, 0.0, 1.0, 0.0, -60.0,

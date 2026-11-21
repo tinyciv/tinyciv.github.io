@@ -3,6 +3,7 @@ import { createNoise2D } from 'simplex-noise';
 import { WATER, type Biome, type World } from '../game/types';
 import { terrainYields } from './generator';
 import { clampUnit, environmentRandom, settlementCoreMask, terrainDistance } from './environment-fields';
+import { longitudeClimate } from './longitude-climate-native';
 
 type Noise = (x: number, y: number) => number;
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
@@ -30,7 +31,8 @@ export function sampleTerrainClimate(x: number, y: number, width: number, height
   // Keep a dry-grass transition even when the selected desert threshold rises
   // above the former fixed plains threshold. Climate controls must not turn
   // the desert directly into lush grass at the next moisture value.
-  const terrain = moisture < desertLimit ? 'desert' : moisture < desertLimit + .14 ? 'plains' : 'grassland';
+  const terrainMoisture = moisture + longitudeClimate(width)[x].terrainMoisture;
+  const terrain = terrainMoisture < desertLimit ? 'desert' : terrainMoisture < desertLimit + .14 ? 'plains' : 'grassland';
   return { moisture, terrain, wx, wy };
 }
 
@@ -58,6 +60,7 @@ export function applyWorldClimate(world: World, parameters: LandscapeParameters 
   const coast = terrainDistance(world, tile => tile.terrain === 'coast' || tile.terrain === 'ocean');
   const fresh = terrainDistance(world, tile => tile.terrain === 'river' || tile.terrain === 'lake', 12);
   const cores = settlementCoreMask(world);
+  const columns = longitudeClimate(width);
   for (let y = 0; y < height; y++) {
     let vapor = .55, previousHeight = 0, barrier = 0;
     for (let n = 0; n < width; n++) {
@@ -78,10 +81,8 @@ export function applyWorldClimate(world: World, parameters: LandscapeParameters 
       tile.rainfall = rainfall;
       tile.moisture = clampUnit(rainfall - Math.max(0, temperature - .56) * .16 + Math.exp(-fresh[cell] / 4) * .10);
       if (!water) {
-        // Hot interiors and rain shadows produce recognisable desert regions,
-        // rather than just a handful of isolated sand cells. Cool, rainy north
-        // and maritime regions still follow the existing climate classification.
-        tile.biome = climateBiome(temperature, rainfall, elevation,
+        // Longitude favors dry ground in the east while drainage uses the sampled rainfall.
+        tile.biome = climateBiome(temperature, rainfall + columns[x].terrainMoisture, elevation,
           .33 + parameters.desertThreshold - DEFAULT_LANDSCAPE_PARAMETERS.desertThreshold);
         const old = terrainYields(tile.terrain, tile.overlay);
         if (!tile.beach && !cores[cell]) {

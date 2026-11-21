@@ -1,0 +1,67 @@
+{
+  "selection": "1A · Splitlog Lair",
+  "file": "barbarian-lair.png",
+  "size": [
+    48,
+    48
+  ],
+  "footprint": [
+    3,
+    3
+  ],
+  "provider": "PixelLab API /v2/create-object-pro-flash",
+  "objectId": "a7d36f20-247b-4fbc-b86a-79a1db33d637",
+  "seed": 261119999,
+  "prompt": "One fortified frontier timber compound, a standalone BUILDING sprite in a 48x48 native pixel grid, exactly a square 3x3 map tile footprint. Face south in high top-down orthographic view, horizontal front wall, upright posts, upper-left light, crisp connected pixels and compact readable forms. Broad weathered amber timber, dark walnut recesses and a few muted rust-red pixels. Short square log palisade with a wide rectangular break centered in the front wall at the bottom. Keep the guard platforms visibly above the perimeter fence and leave visible gaps between their crowns. A single low, simple hide-roof shelter and a small open inner yard. Ground inside the compound only, transparent background outside. One pixel minimum transparent rim on all four sides. No text, people, scenery, diamond or isometric projection, stone walls or decorative spikes on the towers. Fill nearly all the canvas with the square perimeter, about 40 pixels wide. Two compact open timber watchtowers sit at the northwest and northeast corners of the perimeter, one taller. Two separate square ochre deck shapes with dark square interiors. Connect them with a low rear palisade wall. Put the low hide shelter just inside the rear palisade, clearly below the tower crowns. Leave a clear central line from the open south gate to the courtyard. Simple chunky architectural shapes. Only a building viewed from above. No characters, helmets, shields, bodies, additional towers or faces.",
+  "referenceBuildings": {
+    "public/assets/buildings/fort-level-1.png": {
+      "crop": [
+        7,
+        17,
+        31,
+        41
+      ],
+      "offset": [
+        0,
+        0
+      ]
+    },
+    "public/assets/buildings/palisade-tower.png": {
+      "crop": [
+        0,
+        0,
+        16,
+        24
+      ],
+      "offset": [
+        28,
+        0
+      ]
+    },
+    "public/assets/buildings/frontier-village.png": {
+      "crop": [
+        1,
+        1,
+        25,
+        25
+      ],
+      "offset": [
+        0,
+        24
+      ]
+    },
+    "public/assets/buildings/barracks.png": {
+      "crop": [
+        4,
+        8,
+        28,
+        32
+      ],
+      "offset": [
+        24,
+        24
+      ]
+    }
+  },
+  "sha256": "57a8ed9d4a9116c572a6ecfe02914f978376fbb3cec941f8c793d8bbcbcbdc02"
+}

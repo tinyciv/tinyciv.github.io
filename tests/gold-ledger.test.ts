@@ -3,7 +3,7 @@ import { goldFlowSummary, recordGoldInput, recordGoldOutlay, refundGold, spendGo
 import { grantIncome } from '../src/game/resource-income';
 import { parseGameSave, serializeGameSave } from '../src/game/game-save';
 import { fixture } from './helpers/research-income';
-import { RESEARCH_BRANCHES, researchCost, updateResearch } from '../src/game/research';
+import { RESEARCH_BRANCHES, researchCost, setResearchAllocation, updateResearch } from '../src/game/research';
 
 const amount = (rows: {category: string; amount: number}[], category: string) => rows.find(row => row.category === category)?.amount ?? 0;
 const empty = {inputs:[],outlays:[],totalInputs:0,totalOutlays:0,net:0,window:60};
@@ -45,11 +45,12 @@ describe('saved rolling gold transaction ledger', () => {
   });
   it('caps expenses at available gold and preserves fractional refunds without creating Science or gross income', () => {
     const state=fixture(),faction=state.factions[0];faction.gold=1;
+    expect(setResearchAllocation(state,state.buildings[1],.25).ok).toBe(true);
     grantIncome(faction,{gold:8.5},state,'trade'); updateResearch(state,30);
-    expect(faction.gold).toBeCloseTo(7.375);expect(faction.research?.progress.woodenTower).toBe(2.125);
+    expect(faction.gold).toBeCloseTo(7.375);expect(faction.research?.progress.infantryDrill).toBe(2.125);
     spendGold(state,faction,20,'settlements');expect(faction.gold).toBe(0);
     refundGold(state,faction,3.125);expect(faction.gold).toBe(3.125);
-    expect(faction.incomeTotals?.gold).toBe(8.5);expect(faction.research?.progress.woodenTower).toBe(2.125);
+    expect(faction.incomeTotals?.gold).toBe(8.5);expect(faction.research?.progress.infantryDrill).toBe(2.125);
     const summary=goldFlowSummary(state,faction);
     expect(amount(summary.inputs,'trade')).toBe(8.5);expect(amount(summary.inputs,'refunds')).toBe(3.125);
     expect(amount(summary.outlays,'science')).toBe(2.125);expect(amount(summary.outlays,'settlements')).toBe(7.375);
@@ -57,6 +58,7 @@ describe('saved rolling gold transaction ledger', () => {
   });
   it('records only actual Science diversion, returning surplus to gold when the tree finishes', () => {
     const state=fixture(),faction=state.factions[0],cost=RESEARCH_BRANCHES.reduce((sum,b)=>sum+researchCost(faction,b.id),0);
+    expect(setResearchAllocation(state,state.buildings[1],.25).ok).toBe(true);
     grantIncome(faction,{gold:(cost+10)*4},state,'treasure');
     const summary=goldFlowSummary(state,faction);expect(amount(summary.outlays,'science')).toBe(cost);
     expect(summary.totalInputs).toBe((cost+10)*4);expect(summary.net).toBe(faction.gold-2000);

@@ -2,6 +2,8 @@
 //! their occupied ground and mountain cells; hills never support placement.
 use bevy_ecs::prelude::*;
 pub const MOUNTAIN_GAP: i32 = 8;
+const RESOURCE_CLEARANCE: u8 = 8;
+const RESOURCE_RADIUS: usize = 2;
 #[derive(Resource, Default)]
 struct Cells(Vec<f64>);
 #[derive(Resource, Default)]
@@ -15,10 +17,23 @@ fn calculate(size: Res<Dimensions>, cells: Res<Cells>, mut mask: ResMut<Mask>) {
     for cell in 0..n {
         let flags = cells.0[cell] as u32;
         // Bit 1: flat, dry ground. Bit 2: mountain clearance.
-        mask.0[cell] = 2 | u8::from(flags & 3 == 0 && flags & 4 == 0);
+        mask.0[cell] = 2 | RESOURCE_CLEARANCE | u8::from(flags & 3 == 0 && flags & 4 == 0);
     }
     for cell in 0..n {
-        if cells.0[cell] as u32 & 3 != 2 { continue; }
+        let flags = cells.0[cell] as u32;
+        if flags & 8 != 0 {
+            let x = cell % w;
+            let y = cell / w;
+            // All other tile centers less than three tiles away fit in this square.
+            let left = x.saturating_sub(RESOURCE_RADIUS);
+            let right = (x + RESOURCE_RADIUS + 1).min(w);
+            for row in y.saturating_sub(RESOURCE_RADIUS)..(y + RESOURCE_RADIUS + 1).min(h) {
+                for nearby in &mut mask.0[row * w + left..row * w + right] {
+                    *nearby &= !RESOURCE_CLEARANCE;
+                }
+            }
+        }
+        if flags & 3 != 2 { continue; }
         let x = (cell % w) as i32; let y = (cell / w) as i32;
         for dy in -MOUNTAIN_GAP..=MOUNTAIN_GAP { for dx in -MOUNTAIN_GAP..=MOUNTAIN_GAP {
             let nx = x + dx; let ny = y + dy;
@@ -49,5 +64,39 @@ impl TerrainSites {
     }
     pub fn calculate(&mut self, width: usize, height: usize) -> *const u8 {
         self.world.insert_resource(Dimensions { width, height }); self.schedule.run(&mut self.world); self.world.resource::<Mask>().0.as_ptr()
+    }
+
+    /// The local grid contains vacant building sites (1) and the planned town
+    /// streets (2). Keep a completed library beside a street with a clear door.
+    pub fn opening_library(&self, span: i32, origin: i32) -> i32 {
+        let cells = &self.world.resource::<Cells>().0;
+        let cell = |x, y| {
+            if x >= 0 && y >= 0 && x < span && y < span {
+                cells.get((y * span + x) as usize).copied().unwrap_or_default() as u8
+            } else {
+                0
+            }
+        };
+        let mut best = (-1, i32::MAX);
+        for dy in -5_i32..=5 {
+            for dx in -5_i32..=5 {
+                let distance_squared = dx * dx + dy * dy;
+                if !(9..=25).contains(&distance_squared) { continue; }
+                let x = origin + dx;
+                let y = origin + dy;
+                if !(0..2).all(|row| (0..2).all(|column| cell(x + column, y + row) == 1)) {
+                    continue;
+                }
+                let street_access = (0..2).any(|offset| {
+                    [cell(x - 1, y + offset), cell(x + 2, y + offset),
+                        cell(x + offset, y - 1), cell(x + offset, y + 2)].contains(&2)
+                });
+                let score = (distance_squared - 16).abs();
+                if street_access && score < best.1 {
+                    best = (y * span + x, score);
+                }
+            }
+        }
+        best.0
     }
 }

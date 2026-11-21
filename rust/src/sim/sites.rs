@@ -6,8 +6,7 @@ use super::structures::StructureIndex;
 use super::kinds::building::THERMAL_BATH;
 
 const APPROACH: f64 = 3.0;
-const VISIT: f64 = 4.0;
-const BRACKETS: f64 = 5.0;
+const SAMPLE_INTERVAL: f64 = 1.0 / 3.0;
 
 #[derive(Component, Clone, Copy)]
 struct Site { id: usize, x: f64, y: f64, kind: u32 }
@@ -31,7 +30,7 @@ impl Sites {
     pub fn due(&mut self, actor: i32, now: f64) -> bool {
         let next = self.next_sample.entry(actor).or_insert(f64::NEG_INFINITY);
         if now < *next { return false; }
-        *next = now + 0.25; true
+        *next = now + SAMPLE_INTERVAL; true
     }
     pub fn target(&self, index: &StructureIndex, id: usize, x: f64, y: f64, flags: u32) -> i32 {
         let Some((_, site)) = self.rows.get(&id) else { return -1; };
@@ -39,16 +38,12 @@ impl Sites {
         match site.kind { 1 => THERMAL_BATH as i32, _ => -1 }
     }
     /// Count followed by [id, kind, x, y, width, height, approach flags]. Flags:
-    /// 1 Leader within interaction range; 2 still inside this UI visit's halo;
-    /// 4 no building occupies this site; 8 Leader within bracket range.
-    /// Include occupied rows so presentation
-    /// can preserve explored-site memory outside current sight.
+    /// 1 Leader within interaction range; 2 no building occupies this site.
     pub fn sample(&mut self, index: &StructureIndex, x: f64, y: f64, leader_flags: u32) -> *const f64 {
         self.output.clear(); self.output.push(0.0);
         for (_, site) in self.rows.values() {
             let distance = if leader_flags & 31 == 3 && x.is_finite() && y.is_finite() { site.distance(x,y) } else { f64::INFINITY };
-            let flags = u32::from(distance <= APPROACH) | u32::from(distance <= VISIT) << 1
-                | u32::from(!site.occupied(index)) << 2 | u32::from(distance <= BRACKETS) << 3;
+            let flags = u32::from(distance <= APPROACH) | u32::from(!site.occupied(index)) << 1;
             self.output.extend_from_slice(&[site.id as f64, site.kind as f64, site.x, site.y, 2.0, 2.0, flags as f64]);
         }
         self.output[0] = ((self.output.len() - 1) / 7) as f64;

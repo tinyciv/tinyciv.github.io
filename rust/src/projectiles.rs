@@ -340,7 +340,7 @@ mod tests {
         assert_eq!(engine.event, [1.0, 100.0, 92.5]);
         row[6] = CANNONBALL as f64;
         import(&mut engine, &[row], 0.02); engine.advance(0, 1); engine.impact(0, true, 100.0, 500.0, 2.0);
-        assert_eq!(engine.event, [1.0, 100.0, 96.25]);
+        assert_eq!(engine.event, [1.0, 100.0, 99.0625]);
         row[15] = (EXISTS | HOSTILE | BUILDING) as f64;
         import(&mut engine, &[row], 0.02); engine.advance(0, 1); engine.impact(0, true, 100.0, 500.0, 2.0);
         assert_eq!(engine.event, [2.0, 100.0, 0.0]);

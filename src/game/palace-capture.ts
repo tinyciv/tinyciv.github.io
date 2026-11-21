@@ -3,7 +3,7 @@ import { invalidateScheduledHarvests } from './farms';
 import { BUILDING_KIND_CODES, entityStore } from './entity-store';
 import { rustEngine } from './rust-engine';
 import { recordCampaignPopulation } from './campaign-stats';
-import { structureIndex, type StructureIndex } from './structure-index';
+import { structureIndex } from './structure-index';
 import { buildingHeight, buildingPresent, buildingReady, buildingWidth, isFarmKind, isWallKind,
   type Building, type GameState, type Point } from './types';
 
@@ -11,8 +11,6 @@ type CaptureOffer = NonNullable<GameState['palaceCaptures']>[number];
 const DEFENSIVE_BUILDINGS = new Set<Building['kind']>(['fort', 'woodenTower', 'tower', 'guardPost']);
 const defensive = (building: Building): boolean => DEFENSIVE_BUILDINGS.has(building.kind);
 const center = (building: Building): Point => ({ x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 });
-interface DefenseSnapshot { buildings: readonly Building[]; length: number; time: number; revision: number; offers: number; index: StructureIndex; key: number }
-const defenseSnapshots = new WeakMap<GameState, DefenseSnapshot>();
 /** Keep fallen cities in this partition until their pending decisions resolve.
  * Otherwise simultaneous victories would annex the first city's neighbors twice. */
 function cityMembers(state: GameState, palace: Building): Building[] {
@@ -38,19 +36,8 @@ function cityMembers(state: GameState, palace: Building): Building[] {
 export function palaceDefenses(state: GameState, palace: Building): Building[] {
   if (palace.kind !== 'palace' || !rustEngine.battle_city_defended(BUILDING_KIND_CODES[palace.kind], palace.palaceLevel ?? 1)
     || state.villages?.some(v => v.campId === palace.id && v.secededCity)) return [];
-  // The partition of defensive buildings among ready palaces is snapshotted
-  // by the resident building index once per step and topology/offer change.
-  let snapshot = defenseSnapshots.get(state);
-  const revision = state.world.revision ?? 0, offers = state.palaceCaptures?.length ?? 0;
-  if (!snapshot || snapshot.buildings !== state.buildings || snapshot.length !== state.buildings.length || snapshot.time !== state.time
-    || snapshot.revision !== revision || snapshot.offers !== offers) {
-    snapshot = { buildings: state.buildings, length: state.buildings.length, time: state.time, revision, offers,
-      index: structureIndex(state), key: (snapshot?.key ?? 0) + 1 };
-    defenseSnapshots.set(state, snapshot);
-  }
-  const assigned = snapshot.index.defenses(palace.id, snapshot.key);
-  // Keep live references: a defense killed or activated earlier in this same
-  // simulation step must take effect immediately, without another world scan.
+  const assigned = structureIndex(state).defenses(palace.id);
+  // Reservations and fallen defenses can still have an assigned palace.
   return assigned.filter(building => building.faction === palace.faction && buildingPresent(building));
 }
 
@@ -65,6 +52,7 @@ export function captureOffer(state: GameState, palace: Building): CaptureOffer {
     unhousedResidents += overflow; residents += overflow;
   }
   return { palaceId: palace.id, faction: palace.faction, x: palace.x, y: palace.y,
+    settlementTier: palace.settlementTier,
     cityName: palace.cityName ?? faction?.name ?? 'Captured city', buildingIds: buildings.map(building => building.id),
     workerIds: state.units.filter(unit => unit.kind === 'worker' && unit.faction === palace.faction && unit.home === palace.id && unit.hp > 0).map(unit => unit.id),
     population: Math.min(Math.max(0, faction?.population ?? 0), residents), unhousedResidents,
@@ -81,6 +69,7 @@ export function transferCapturedCity(state: GameState, offer: CaptureOffer, pala
     // An unstarted defense order is cancelled when the city falls.
     if (defensive(building) && !state.villages?.some(v => v.faction === offer.faction && v.secededCity)) { building.hp = 0; continue; }
     building.faction = palace.faction;
+    delete building.borderClaimSuspended;
     delete building.repairerId; delete building.farmAbandonedAt;
     const site = building.construction;
     if (site) {

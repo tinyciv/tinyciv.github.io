@@ -138,7 +138,7 @@ function workPoint(state: GameState, site: ResourceWorkSite, approach: Point): P
     const cell = southernResourceCell(site.cells, state.world.width)!;
     const point = pointAt(state, cell);
     // Workers service solid deposits from their exterior approach.
-    const choices = resourceBlocksGround(state.world.tiles[cell], true, cell, state.world.width) || isMineResource(site.resource) ? [approach]
+    const choices = resourceBlocksGround(state.world.tiles[cell], true) || isMineResource(site.resource) ? [approach]
         : [point, ...site.cells.map(cell => pointAt(state, cell)).sort((a, b) => distance(a, approach) - distance(b, approach))];
     return choices.find(goal => canWalk(navigation, goal.x, goal.y, site.faction, undefined, true)
         && (distance(goal, approach) < .12 || findPath(navigation, approach, goal, site.faction, false, undefined, undefined, undefined, false, true).length > 0));
@@ -364,7 +364,7 @@ function workResource(state: GameState, unit: Unit, site: ResourceWorkSite, dt: 
     if (isMineResource(site.resource)) { unit.inside = true; unit.moving = false; unit.order = 'hold'; return; }
     unit.inside = false;
     const front = southernResourceCell(site.cells, state.world.width)!;
-    if (resourceBlocksGround(state.world.tiles[front], true, front, state.world.width)) {
+    if (resourceBlocksGround(state.world.tiles[front], true)) {
         const target = pointAt(state, front);
         unit.order = 'work'; unit.moving = false; unit.facing = Math.atan2(target.y - unit.y, target.x - unit.x); return;
     }

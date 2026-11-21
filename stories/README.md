@@ -108,8 +108,8 @@ interface MountedScenario { state; renderer; canvas; element; playing; step(seco
 
 The mount awaits `loadGameArt()` (`stories/harness/assets.ts`), the same
 loaders `src/main.ts` awaits; `tests/storybook-harness.test.ts` fails if the
-lists drift. The frame loop matches `main.ts` (`frameSimulationDelta` clamp,
-then `renderer.draw`). Paused frames are drawn with `dt = 0`. When ready,
+lists drift. Playback uses the same elapsed-time simulation clock as `main.ts`.
+Rendering runs independently, and paused frames are drawn with `dt = 0`. When ready,
 `.tc-scenario` gets `data-ready="true"`, and `window.__scenario` holds the
 `MountedScenario` for headless checks. Leaving the story destroys the WebGL
 renderer.

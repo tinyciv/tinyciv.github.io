@@ -4,6 +4,16 @@ use super::{Rng, rng::Mulberry32};
 use bevy_ecs::prelude::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+const RUINS: u8 = 0;
+const HUT: u8 = 1;
+const FOSSIL: u8 = 2;
+const DESERT_TILE: u32 = 1 << 6;
+const FOSSIL_DISCOVERY: u8 = 9;
+const FOSSIL_SCIENCE: f64 = 25.0;
+const SITE_SPACING: usize = 14;
+const RUINS_AMBUSH_CHANCE: f64 = 0.05;
+const RUINS_SETTLEMENT_CHANCE: f64 = 0.12;
+
 #[derive(Component, Clone, Copy)]
 struct Encounter {
     id: usize,
@@ -15,6 +25,15 @@ struct Encounter {
     outcome: u8,
     variant: u8,
 }
+
+fn footprint(kind: u8) -> usize {
+    if kind == HUT { 1 } else { 2 }
+}
+
+fn variant_count(kind: u8) -> u8 {
+    if kind == HUT { 2 } else { 3 }
+}
+
 #[derive(Clone, Copy)]
 struct Tile {
     flags: u32,
@@ -65,7 +84,7 @@ impl Exploration {
             .collect();
     }
     fn insert(&mut self, world: &mut World, site: Encounter) {
-        let size = if site.kind == 0 { 2 } else { 1 };
+        let size = footprint(site.kind);
         for dy in 0..size {
             for dx in 0..size {
                 self.cells
@@ -95,17 +114,22 @@ impl Exploration {
         if restore {
             let rows = self.input.clone();
             for r in rows.chunks_exact(8) {
+                let kind = r[1] as u8;
                 let site = Encounter {
                     id: r[0] as usize,
-                    kind: r[1] as u8,
+                    kind,
                     x: r[2] as usize,
                     y: r[3] as usize,
                     status: r[4] as u8,
                     actor: r[5] as i32,
                     outcome: r[6] as u8,
-                    variant: r[7] as u8,
+                    // Ship the existing baked scenario with the current art set.
+                    variant: (r[7] as u8) % variant_count(kind),
                 };
-                if site.x + 2 <= self.width && site.y + 2 <= self.height {
+                let size = footprint(kind);
+                if site.x.saturating_add(size) <= self.width
+                    && site.y.saturating_add(size) <= self.height
+                {
                     self.insert(world, site);
                 }
             }
@@ -140,27 +164,34 @@ impl Exploration {
                 candidates.swap(i, j);
             }
             let wanted = (self.tiles.len() / 5000).clamp(2, 24);
-            for kind in 0..2 {
-                let size = if kind == 0 { 2 } else { 1 };
+            let desert_area = candidates
+                .iter()
+                .filter(|&&c| self.tiles[c].flags & DESERT_TILE != 0)
+                .count();
+            let fossil_wanted = (desert_area / 1200).clamp(1, 12);
+            let mut too_close = vec![false; self.tiles.len()];
+            for (kind, wanted) in [(RUINS, wanted), (HUT, wanted), (FOSSIL, fossil_wanted)] {
+                let size = footprint(kind);
                 let mut placed = 0;
                 for &cell in &candidates {
                     let x = cell % self.width;
                     let y = cell / self.width;
-                    if x < 2 || y < 2 || x + size + 2 >= self.width || y + size + 2 >= self.height {
+                    if too_close[cell] || x < 2 || y < 2 || x + size + 2 >= self.width || y + size + 2 >= self.height {
                         continue;
                     }
-                    if self
-                        .sites
-                        .values()
-                        .any(|(_, s)| (s.x as f64 - x as f64).hypot(s.y as f64 - y as f64) < 14.0)
-                    {
+                    if kind == FOSSIL && (y..y + size).any(|ny| {
+                        (x..x + size).any(|nx| {
+                            let c = ny * self.width + nx;
+                            !reachable[c] || self.tiles[c].flags & DESERT_TILE == 0
+                        })
+                    }) {
                         continue;
                     }
                     if (y - 2..y + size + 2).any(|ny| {
                         (x - 2..x + size + 2).any(|nx| {
                             let t = self.tiles[ny * self.width + nx];
                             t.flags & 6 != 6
-                                || kind == 0 && t.flags & 8 == 0
+                                || kind == RUINS && t.flags & 8 == 0
                                 || t.owner >= 0
                                 || t.seen
                         })
@@ -175,9 +206,16 @@ impl Exploration {
                         status: 0,
                         actor: -1,
                         outcome: 0,
-                        variant: (rng.next_u32() % 3) as u8,
+                        variant: (rng.next_u32() % u32::from(variant_count(kind))) as u8,
                     };
                     self.insert(world, site);
+                    for ny in y.saturating_sub(SITE_SPACING)..=(y + SITE_SPACING).min(self.height - 1) {
+                        for nx in x.saturating_sub(SITE_SPACING)..=(x + SITE_SPACING).min(self.width - 1) {
+                            if x.abs_diff(nx).pow(2) + y.abs_diff(ny).pow(2) < SITE_SPACING.pow(2) {
+                                too_close[ny * self.width + nx] = true;
+                            }
+                        }
+                    }
                     placed += 1;
                     if placed >= wanted {
                         break;
@@ -282,17 +320,24 @@ impl Exploration {
             return self.output.as_ptr();
         };
         let mut site = self.sites[&id].1;
-        let roll = world.resource_mut::<Rng>().0.next_f64();
-        site.outcome = if site.kind == 0 {
-            if roll < 0.05 {
-                3
-            } else {
-                [0, 1, 2, 4][(((roll - 0.05) / 0.95) * 4.0).floor() as usize]
-            }
-        } else if roll < 0.05 {
-            8
+        site.outcome = if site.kind == FOSSIL {
+            FOSSIL_DISCOVERY
         } else {
-            [5, 6, 7][(((roll - 0.05) / 0.95) * 3.0).floor() as usize]
+            let roll = world.resource_mut::<Rng>().0.next_f64();
+            if site.kind == RUINS {
+                let rare_chance = RUINS_AMBUSH_CHANCE + RUINS_SETTLEMENT_CHANCE;
+                if roll < RUINS_AMBUSH_CHANCE {
+                    3
+                } else if roll < rare_chance {
+                    2
+                } else {
+                    [0, 1, 4][(((roll - rare_chance) / (1.0 - rare_chance)) * 3.0).floor() as usize]
+                }
+            } else if roll < 0.05 {
+                8
+            } else {
+                [5, 6, 7][(((roll - 0.05) / 0.95) * 3.0).floor() as usize]
+            }
         };
         site.actor = actor;
         site.status = 1;
@@ -385,7 +430,18 @@ impl Exploration {
         let Some((_, mut site)) = self.sites.get(&id).copied() else {
             return self.output.as_ptr();
         };
-        if site.actor != actor || site.status != 1 || self.input.len() < 12 {
+        if site.actor != actor || site.status != 1 {
+            return self.output.as_ptr();
+        }
+        if site.outcome == FOSSIL_DISCOVERY {
+            if choice == 0 {
+                site.status = 2;
+                self.replace(world, site);
+                self.output = vec![f64::from(FOSSIL_DISCOVERY), FOSSIL_SCIENCE, -1.0, 1.0];
+            }
+            return self.output.as_ptr();
+        }
+        if self.input.len() < 12 {
             return self.output.as_ptr();
         }
         if site.status == 1 && site.outcome == 2 && choice < 0 {
@@ -689,9 +745,6 @@ pub fn ranger(field: u32, value: f64, enabled: bool) -> f64 {
         _ => value,
     }
 }
-pub fn town_upkeep(until: f64, now: f64, value: f64) -> f64 {
-    value * if until > now { 2.0 } else { 1.0 }
-}
 pub fn ranger_recruit(entitled: f64, alive: f64) -> bool {
     entitled > alive
 }
@@ -710,18 +763,15 @@ pub fn ordinary_slots(total: f64, rangers: f64) -> f64 {
     (total - rangers).max(0.0)
 }
 pub fn build_allowed(world: &World, x: i32, y: i32, width: i32, height: i32) -> bool {
-    world
-        .resource::<Exploration>()
-        .sites
-        .values()
-        .all(|(_, s)| {
-            let size = if s.kind == 0 { 2 } else { 1 };
-            s.status == 2
-                || x + width <= s.x as i32
-                || y + height <= s.y as i32
-                || x >= s.x as i32 + size
-                || y >= s.y as i32 + size
+    let exploration = world.resource::<Exploration>();
+    let right = x.saturating_add(width).min(exploration.width as i32);
+    let bottom = y.saturating_add(height).min(exploration.height as i32);
+    (y.max(0)..bottom).all(|ny| {
+        (x.max(0)..right).all(|nx| {
+            let cell = ny as usize * exploration.width + nx as usize;
+            exploration.cells.get(&cell).is_none_or(|id| exploration.sites[id].1.status == 2)
         })
+    })
 }
 
 pub fn ambush_active(finished: bool, standing: usize) -> bool {

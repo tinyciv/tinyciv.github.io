@@ -87,10 +87,10 @@ pub fn unit_roles(traits: &UnitTraits, sleeping: bool) -> u32 {
     if kind == unit::SAILBOAT { mask |= 1 << 12; }
     if unit::retinue(kind) { mask |= RETINUE; }
     if !sleeping { mask |= ACTIVE; }
-    if kind == unit::BOAR || kind == unit::MARSH_BIRD { mask |= WILDLIFE; }
+    if matches!(kind, unit::BOAR | unit::MARSH_BIRD | unit::DEER) { mask |= WILDLIFE; }
     if traits.hp > 0.0 && traits.hp < max_hp { mask |= WOUNDED; }
     if traits.flags & FLAG_DAMAGE_CLOCK_UNSET != 0 { mask |= DAMAGE_CLOCK; }
-    if !unit::civilian(kind, traits.flags & FLAG_ENGINEER != 0) { mask |= COLLISION; }
+    if !unit::civilian(kind, traits.flags & FLAG_ENGINEER != 0) && !unit::livestock(kind) { mask |= COLLISION; }
     mask
 }
 
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(unit_roles(&traits(unit::SLINGER, 0), false), UNIT | SOLDIER | ACTIVE | COLLISION);
         assert_eq!(unit_roles(&traits(unit::LEADER, 0), false), UNIT | LEADER | ACTIVE | COLLISION);
         assert_eq!(unit_roles(&traits(unit::SCOUT, 0), false), UNIT | ACTIVE);
-        assert_eq!(unit_roles(&traits(unit::DEER, 0), false), UNIT | ACTIVE | COLLISION);
+        assert_eq!(unit_roles(&traits(unit::DEER, 0), false), UNIT | ACTIVE | WILDLIFE | COLLISION);
     }
 
     #[test]

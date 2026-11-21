@@ -1,5 +1,4 @@
 import { runtimeArtUrl } from './runtime-art';
-import { ridgeIsLedge } from './ridges';
 import { tileAt, type Tile, type World } from './types';
 
 export type MeadowBiome = 'grassland' | 'plains';
@@ -89,7 +88,7 @@ const hash = (x: number, y: number, salt: number): number => {
  * the renderer's existing occupancy indices before these placements are used. */
 export function meadowBiome(tile: Tile): MeadowBiome | undefined {
     if ((tile.terrain !== 'grassland' && tile.terrain !== 'plains') || tile.overlay !== 'none'
-        || tile.creek || tile.beach || tile.relief || tile.stair || tile.waterfall || tile.marsh || tile.palm || tile.resource
+        || tile.creek || tile.beach || tile.relief || tile.waterfall || tile.marsh || tile.palm || tile.resource
         || tile.geothermal || tile.villageTrail || tile.desertStone !== undefined) return undefined;
     return tile.terrain;
 }
@@ -130,14 +129,14 @@ function tundraEdgeDensity(world: World, x: number, y: number): number {
 }
 
 /** The full animation frame can extend past its root tile. Check it once per
- * placement so every pose keeps ledges and ramps clear. */
+ * placement so every pose keeps waterfalls clear. */
 function meadowFits(world: World, x: number, y: number, tuft: MeadowTuft): boolean {
     const left = x + tuft.x - .5 * MEADOW_TUFT_SCALE;
     const top = y + tuft.y - MEADOW_SPRITES[tuft.variant].anchorY * MEADOW_TUFT_SCALE;
     const right = left + MEADOW_TUFT_SCALE, bottom = top + MEADOW_TUFT_SCALE;
     for (let row = Math.floor(top); row < bottom; row++) for (let col = Math.floor(left); col < right; col++) {
         const tile = tileAt(world, col, row);
-        if (tile && (tile.stair || tile.waterfall || (tile.ridge && ridgeIsLedge(world, col, row)))) return false;
+        if (tile?.waterfall) return false;
     }
     return true;
 }

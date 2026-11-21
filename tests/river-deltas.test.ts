@@ -94,15 +94,15 @@ describe('coastal river delta marshes', () => {
     }
   });
 
-  it('leaves ledges and their complete two-tile access aprons untouched', () => {
+  it('keeps delta growth two tiles away from canyon walls', () => {
     const world = coast();
-    for (let y = 51; y < 55; y++) for (let x = 74; x < 78; x++) Object.assign(world.tiles[y * 128 + x], { ridge: 1, relief: 'hills', ridgeTier: 1 });
+    for (let y = 51; y < 55; y++) for (let x = 74; x < 78; x++) world.tiles[y * 128 + x].canyon = 'wall';
     const before = structuredClone(world); expect(generateRiverDeltas(world)).toHaveLength(1);
     for (let y = 49; y < 57; y++) for (let x = 72; x < 80; x++) {
       const cell = y * 128 + x;
       expect(world.tiles[cell].terrain).toBe(before.tiles[cell].terrain);
       expect(world.tiles[cell].delta).toBeUndefined();
-      expect(world.tiles[cell].ridge).toBe(before.tiles[cell].ridge);
+      expect(world.tiles[cell].canyon).toBe(before.tiles[cell].canyon);
     }
   });
 });

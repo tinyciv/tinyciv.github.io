@@ -8,9 +8,10 @@ Normal session replacement and autosaving apply afterward.
 - **Age of Exploration:** a 320×280 naturally generated archipelago, four
   factions, developed cities, coastal shipyards, armed caravels and three
   marauder camps with ordinary defenders and reserves.
-- **No Man’s Land:** a 240×144 naturally generated continent, two hostile
-  factions and three founding cities per faction. This is 40% shorter than the
-  previous 240×240 world. Native territory grants leave a central frontier.
+- **No Man’s Land:** a 160×130 naturally generated mainland with roughly 40%
+  less dry land, two hostile factions and three founding cities per faction.
+  The inland frontier remains connected. Tower slots are 15 tiles apart
+  along each front, and the map starts explored with fog of war active.
 - **Tutorial:** an 80×30 naturally generated island, two hostile factions with
   one thirty-person city each, a well and a wooden tower. Ordinary founding
   layouts provide homes, roads, farms and workers. The map is revealed, there
@@ -31,7 +32,7 @@ Normal session replacement and autosaving apply afterward.
   quest givers, and no enemies or marauders. Reach 2,000 people as
   quickly as possible; the victory report records elapsed game time. The start
   uses the ordinary twenty-person village, 500 gold, 500 food, starting escort,
-  research rates and fog. Every regional resource and an offshore whale
+  research rates and fog, with no starting towers. Every regional resource and an offshore whale
   are present in the generated world. The reusable start is authored at time zero.
 - **Musketry Deathmatch:** a 160×39 landmass, with a broad natural frontier
   between the factions. Two cities of exactly 150 residents face two equivalent rival
@@ -99,7 +100,9 @@ removals fail the bake. Leaders start on open tiles, and camp gates have physica
 openings. Both shipped saves include these corrections. Scenario construction,
 automatic housing, village development and replacement camps reject placements
 that would split an existing walking region, including queued structures.
-Roads remain walkable.
+Every starting town has a complete, walkable road ring around its footprint.
+Scenario preparation checks both the completed road tiles and the walking
+edges between them.
 
 Run `npm run refine:scenarios` to apply the finalizer to the existing stored
 starts without advancing their simulation clocks or repeating city growth.

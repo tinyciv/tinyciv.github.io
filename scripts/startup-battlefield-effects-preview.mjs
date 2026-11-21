@@ -13,7 +13,7 @@ export async function captureBattlefieldEffects(page) {
       const state = await createScenarioGame(battle ? 'musketry-deathmatch' : 'island-deathmatch');
       state.paused = true;
       setMapRevealed(state, true);
-      const frameTime = state.time + 5;
+      const frameTime = state.time + 1.5;
       let camera;
       if (battle) {
         const muskets = state.units.filter(unit => unit.faction === 0 && unit.kind === 'musketman' && unit.x >= 25);
@@ -21,15 +21,15 @@ export async function captureBattlefieldEffects(page) {
         muskets.forEach((unit, i) => {
           unit.facing = i % 3 === 0 ? -.16 : .08;
           unit.moving = false;
-          for (const age of [4.65 - i % 4 * .25, 2.5 - i % 4 * .2, .82 - i % 3 * .25]) {
+          for (const age of [1.15 - i % 4 * .06, .62 - i % 4 * .05, .25 - i % 3 * .04]) {
             state.time = frameTime - age;
             recordGunSmoke(state, unit, unit.facing, unit.id, false, .48);
           }
           unit.attackTime = .15;
         });
         const puff = state.gunSmoke[0];
-        if (!(gunSmokePose(puff, puff.startedAt + 5)?.alpha > gunSmokePose(puff, puff.startedAt + 5.5)?.alpha)
-          || gunSmokePose(puff, puff.startedAt + 6)) throw new Error('Smoke must linger for five seconds, then fade');
+        if (!(gunSmokePose(puff, puff.startedAt + 1.25)?.alpha > gunSmokePose(puff, puff.startedAt + 1.375)?.alpha)
+          || gunSmokePose(puff, puff.startedAt + 1.5)) throw new Error('Smoke must hold for 1.25 seconds and disappear after 1.5');
         camera = { x: 24, y: 18.5 };
       } else {
         const port = state.buildings.find(b => b.kind === 'shipyard' && b.faction === 0);
@@ -37,7 +37,7 @@ export async function captureBattlefieldEffects(page) {
         if (!port || !ship) throw new Error('Warship preview requires a generated harbor and its starter warship');
         ship.moving = false;
         Object.assign(ship.warship, { anchored: true, speed: 0, weapons: ['cannon', 'ballista', 'cannon'] });
-        state.time = frameTime - 1.6;
+        state.time = frameTime - .4;
         recordGunSmoke(state, warshipGunPoint(ship, 0), .55, ship.id, true, .3);
         camera = { x: (ship.x * 2 + port.x + 1) / 3, y: (ship.y * 2 + port.y + 1) / 3 - .6 };
       }

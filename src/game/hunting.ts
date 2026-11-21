@@ -8,10 +8,11 @@ import { isSoldier } from './types';
 import { seededRandom } from '../world/generator';
 import { pointInSight, updateFog } from './fog';
 import { buildingBlockers, canMove, canWalk } from './pathfinding';
-import { forEachNearbyUnit, indexedLeader, nearbyUnits } from './spatial';
+import { earlyCombatUnits, forEachNearbyUnit, indexedLeader } from './spatial';
 import { buildingReady, buildingWidth, buildingHeight, distance, tileAt, WATER, type Building, type GameState, type Point, type Unit, type WildlifeHerd, type World } from './types';
 import { MARSH_BIRD_FOOD_REWARD, marshBirdFlockTarget, marshFlockGoal, moveMarshBird, spawnMarshBirdFlock } from './marsh-birds';
 import { observeBirdFlock } from './bird-flocks-native';
+import { DEER, deerHerdCapacity, nativeDeerGoal, nativeDeerSpawns } from './deer-native';
 
 export const WILDLIFE_FACTION = -3;
 export const HUNT_FOOD_REWARD = 5;
@@ -26,7 +27,9 @@ export const HERD_GRAZE_MAX_SECONDS = 38;
 export const HERD_STROLL_SECONDS = 5;
 export const HERD_STROLL_SPEED = .55;
 export const HERD_RUN_SPEED = 3.15;
-const grazingDuration = (random: () => number): number => HERD_GRAZE_MIN_SECONDS + random() * (HERD_GRAZE_MAX_SECONDS - HERD_GRAZE_MIN_SECONDS);
+const grazingDuration = (random: () => number, species?: WildlifeHerd['species']): number => species === 'deer'
+  ? DEER.restMin + random() * (DEER.restMax - DEER.restMin)
+  : HERD_GRAZE_MIN_SECONDS + random() * (HERD_GRAZE_MAX_SECONDS - HERD_GRAZE_MIN_SECONDS);
 
 /** Five initial residents eat five food per economy tick. Eight fertile farm
  * cells yield 9.6, so ordinary growth is 1.48154 births per 30 seconds. Ten
@@ -40,7 +43,7 @@ export const EARLY_HUNT_CALIBRATION = {
 };
 
 export function isHuntable(unit: Pick<Unit, 'kind' | 'faction'>): boolean {
-  return (unit.kind === 'boar' || unit.kind === 'marshBird') && unit.faction === WILDLIFE_FACTION;
+  return (unit.kind === 'boar' || unit.kind === 'marshBird' || unit.kind === 'deer') && unit.faction === WILDLIFE_FACTION;
 }
 
 const human = (unit: Unit): boolean => unit.hp > 0 && !unit.inside
@@ -161,17 +164,40 @@ export function spawnWildlifeHerd(state: GameState): WildlifeHerd | undefined {
   }
 }
 
+function spawnDeer(state: GameState, groups: number): void {
+  if (!state.wildlife || groups <= 0) return;
+  const wildlife = state.wildlife, random = randomFor(state);
+  const plans = nativeDeerSpawns(state, groups, Math.floor(random() * 0x100000000));
+  const store = entityStore(state), herds = new Map<number, WildlifeHerd>();
+  let id = Math.max(0, ...wildlife.herds.map(herd => herd.id));
+  for (const { group, sex, x, y, facing } of plans) {
+    let herd = herds.get(group);
+    if (!herd) {
+      herd = { id: ++id, species: 'deer', home: { x, y }, waypoint: { x, y },
+        nextWanderAt: state.time + grazingDuration(random, 'deer') };
+      herds.set(group, herd);
+      wildlife.herds.push(herd);
+    }
+    store.units.add({ id: store.allocateId(), kind: 'deer', deerSex: sex, faction: WILDLIFE_FACTION,
+      herdId: herd.id, x, y, hp: DEER.hp, maxHp: DEER.hp, attack: 0, defense: 0, morale: 100,
+      speed: DEER.strollSpeed, range: 0, order: 'wander', cooldown: 0, lastCombat: -60, moving: false,
+      facing, attackTime: 0, bornAt: state.time });
+  }
+}
+
 /** Called explicitly after initial fog calculation, never as a load migration. */
 export function initializeWildlife(state: GameState): void {
   if (state.wildlife) return;
   state.wildlife = { herds: [], sequence: 0, nextRespawnAt: state.time + WILDLIFE_RESPAWN_MIN, targetHerds: wildlifeHerdTarget(state) };
   for (let i = 0; i < state.wildlife.targetHerds; i++) if (!spawnWildlifeHerd(state)) break;
   for (let i = 0, target = marshBirdFlockTarget(state); i < target; i++) if (!spawnMarshBirdFlock(state, randomFor(state))) break;
+  spawnDeer(state, deerHerdCapacity(state));
   state.wildlife.nextRespawnAt += randomFor(state)() * (WILDLIFE_RESPAWN_MAX - WILDLIFE_RESPAWN_MIN);
 }
 
-function herdGoal(state: GameState, center: Point, anchor: Unit, threat: Point | undefined, random: () => number): Point {
+function herdGoal(state: GameState, herd: WildlifeHerd, center: Point, anchor: Unit, threat: Point | undefined, random: () => number): Point {
   if (anchor.kind === 'marshBird') return marshFlockGoal(state, anchor, center, threat, random);
+  if (anchor.kind === 'deer') return nativeDeerGoal(state, anchor, herd.home ?? center, threat, Math.floor(random() * 0x100000000));
   const away = threat ? Math.atan2(center.y - threat.y, center.x - threat.x) : random() * Math.PI * 2;
   // All twenty probes observe the same buildings. This function runs before
   // the shared navigation frame, so capture their blockers once locally.
@@ -194,30 +220,33 @@ export function updateWildlife(state: GameState): void {
   const wildlife = state.wildlife;
   if (!wildlife) return;
   const byHerd = new Map<number, Unit[]>();
-  for (const unit of state.units) if (isHuntable(unit) && unit.hp > 0 && unit.herdId !== undefined) {
+  for (const unit of entityStore(state).units.query('wildlife')) if (isHuntable(unit) && unit.hp > 0 && unit.herdId !== undefined) {
     const members = byHerd.get(unit.herdId) ?? []; members.push(unit); byHerd.set(unit.herdId, members);
   }
-  wildlife.herds = wildlife.herds.filter(herd => byHerd.has(herd.id));
+  if (wildlife.herds.some(herd => !byHerd.has(herd.id)))
+    wildlife.herds = wildlife.herds.filter(herd => byHerd.has(herd.id));
   for (const herd of wildlife.herds) {
     if (state.time < (herd.nextThinkAt ?? 0)) continue;
     herd.nextThinkAt = state.time + .5;
     const members = byHerd.get(herd.id)!, center = { x: 0, y: 0 };
+    const fleeRadius = herd.species === 'deer' ? DEER.spookRadius : HERD_FLEE_RADIUS;
     for (const member of members) { center.x += member.x / members.length; center.y += member.y / members.length; }
     const anchor = members.reduce((nearest, member) => distance(member, center) < distance(nearest, center) ? member : nearest);
     let threat: Unit | undefined, threatDistance = Infinity;
     let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
     for (const member of members) {
-      left = Math.min(left, member.x - HERD_FLEE_RADIUS); right = Math.max(right, member.x + HERD_FLEE_RADIUS);
-      top = Math.min(top, member.y - HERD_FLEE_RADIUS); bottom = Math.max(bottom, member.y + HERD_FLEE_RADIUS);
+      left = Math.min(left, member.x - fleeRadius); right = Math.max(right, member.x + fleeRadius);
+      top = Math.min(top, member.y - fleeRadius); bottom = Math.max(bottom, member.y + fleeRadius);
     }
-    for (const unit of nearbyUnits(state, center, HERD_FLEE_RADIUS + 3)) {
+    const reach = Math.max(center.x - left, right - center.x, center.y - top, bottom - center.y);
+    for (const unit of earlyCombatUnits(state, center, reach)) {
       // This runs before the simulation's spatial frame. Most humans can be
       // excluded without allocating a member-distance array or taking roots.
       // Bounds cover every member, including a straggler away from the center.
       if (!human(unit) || unit.x <= left || unit.x >= right || unit.y <= top || unit.y >= bottom) continue;
       let d = Infinity;
       for (const member of members) d = Math.min(d, distance(member, unit));
-      if (d < HERD_FLEE_RADIUS && d < threatDistance) { threat = unit; threatDistance = d; }
+      if (d < fleeRadius && d < threatDistance) { threat = unit; threatDistance = d; }
     }
     const wasFleeing = (herd.fleeUntil ?? 0) > state.time;
     const threatMoved = threat && (!herd.lastThreat || distance(threat, herd.lastThreat) > 1.5);
@@ -225,7 +254,7 @@ export function updateWildlife(state: GameState): void {
     if ((herd.fleeUntil ?? 0) > state.time) {
       delete herd.wanderUntil;
       if (!wasFleeing || threatMoved || state.time >= herd.nextWanderAt || distance(center, herd.waypoint) < 1) {
-        herd.waypoint = herdGoal(state, center, anchor, herd.lastThreat, randomFor(state));
+        herd.waypoint = herdGoal(state, herd, center, anchor, herd.lastThreat, randomFor(state));
         herd.nextWanderAt = state.time + 2;
       }
       if (herd.species === 'marshBird') observeBirdFlock(state, members, herd);
@@ -234,19 +263,20 @@ export function updateWildlife(state: GameState): void {
     if (herd.fleeUntil !== undefined || herd.wanderUntil !== undefined && state.time >= herd.wanderUntil) {
       delete herd.fleeUntil; delete herd.lastThreat; delete herd.wanderUntil;
       herd.waypoint = center;
-      herd.nextWanderAt = state.time + grazingDuration(randomFor(state));
+      herd.nextWanderAt = state.time + grazingDuration(randomFor(state), herd.species);
     } else if (herd.wanderUntil === undefined && state.time >= herd.nextWanderAt) {
       // Reaching a waypoint does not cancel the rest period. A short, slow
       // forage walk alternates with much longer grazing, even near obstacles.
-      herd.waypoint = herdGoal(state, center, anchor, undefined, randomFor(state));
-      herd.wanderUntil = state.time + HERD_STROLL_SECONDS;
+      herd.waypoint = herdGoal(state, herd, center, anchor, undefined, randomFor(state));
+      herd.wanderUntil = state.time + (herd.species === 'deer' ? DEER.strollTime : HERD_STROLL_SECONDS);
     }
     if (herd.species === 'marshBird') observeBirdFlock(state, members, herd);
   }
   if (state.time >= wildlife.nextRespawnAt) {
     wildlife.targetHerds = wildlifeHerdTarget(state);
-    if (wildlife.herds.filter(herd => herd.species !== 'marshBird').length < wildlife.targetHerds) spawnWildlifeHerd(state);
+    if (wildlife.herds.filter(herd => herd.species === undefined).length < wildlife.targetHerds) spawnWildlifeHerd(state);
     if (wildlife.herds.filter(herd => herd.species === 'marshBird').length < marshBirdFlockTarget(state)) spawnMarshBirdFlock(state, randomFor(state));
+    if (wildlife.herds.filter(herd => herd.species === 'deer').length < deerHerdCapacity(state)) spawnDeer(state, 1);
     wildlife.nextRespawnAt = state.time + WILDLIFE_RESPAWN_MIN + randomFor(state)() * (WILDLIFE_RESPAWN_MAX - WILDLIFE_RESPAWN_MIN);
   }
   // Keep one previous economy window, so a bonus ending between ticks is still
@@ -255,15 +285,31 @@ export function updateWildlife(state: GameState): void {
     building.huntingBonuses = building.huntingBonuses.filter(bonus => bonus.expiresAt > state.time - HUNT_GROWTH_SECONDS);
 }
 
+const herdIndexes = new WeakMap<WildlifeHerd[], Map<number, WildlifeHerd>>();
+function herdById(state: GameState, id: number | undefined): WildlifeHerd | undefined {
+  const herds = state.wildlife?.herds;
+  if (!herds || id === undefined) return;
+  let index = herdIndexes.get(herds);
+  if (index?.size !== herds.length) {
+    index = new Map(herds.map(herd => [herd.id, herd]));
+    herdIndexes.set(herds, index);
+  }
+  return index.get(id);
+}
+
 export function updateHerdAnimal(state: GameState, unit: Unit, dt: number,
   move: (state: GameState, unit: Unit, goal: Point, dt: number, direct?: boolean) => void): boolean {
   if (!isHuntable(unit)) return false;
   unit.moving = false;
-  const herd = state.wildlife?.herds.find(candidate => candidate.id === unit.herdId);
+  const herd = herdById(state, unit.herdId);
   if (!herd) return true;
   if (unit.kind === 'marshBird') { moveMarshBird(state, unit, herd, dt); return true; }
   const fleeing = (herd.fleeUntil ?? 0) > state.time;
-  unit.order = 'wander'; unit.target = undefined; unit.speed = fleeing ? HERD_RUN_SPEED : HERD_STROLL_SPEED;
+  unit.order = 'wander'; unit.target = undefined;
+  if (unit.kind === 'deer') {
+    unit.deerFleeing = fleeing;
+    unit.speed = fleeing ? DEER.fleeSpeed : DEER.strollSpeed;
+  } else unit.speed = fleeing ? HERD_RUN_SPEED : HERD_STROLL_SPEED;
   if (!fleeing && state.time >= (herd.wanderUntil ?? 0)) {
     // Rest exactly where each animal stopped. Keeping the old path or pulling
     // everyone into formation here creates constant milling while grazing.
@@ -280,7 +326,12 @@ export function updateHerdAnimal(state: GameState, unit: Unit, dt: number,
     // normal movement/collision checks, but avoid a continent-sized A* grid
     // for an animal whose complete straight segment is already traversable.
     // Water, ledges, buildings, and a blocked member still use ordinary paths.
-    const direct = canMove(state, unit, goal, WILDLIFE_FACTION);
+    let direct = canMove(state, unit, goal, WILDLIFE_FACTION);
+    if (unit.kind === 'deer' && !direct) {
+      goal = herd.waypoint;
+      direct = canMove(state, unit, goal, WILDLIFE_FACTION);
+      if (!direct || distance(unit, goal) <= .3) return true;
+    }
     if (direct && unit.path?.length) { unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0; }
     move(state, unit, goal, dt, direct);
   }
@@ -325,7 +376,8 @@ export function rewardHunt(state: GameState, hunter: Pick<Unit, 'faction'>, anim
   const faction = state.factions.find(candidate => candidate.id === hunter.faction && !candidate.defeated);
   if (!faction || animal.huntRewarded) return true;
   animal.huntRewarded = true;
-  const reward = achievementEffect(faction, 0, animal.kind === 'marshBird' ? MARSH_BIRD_FOOD_REWARD : HUNT_FOOD_REWARD);
+  const food = animal.kind === 'marshBird' ? MARSH_BIRD_FOOD_REWARD : animal.kind === 'deer' ? DEER.food : HUNT_FOOD_REWARD;
+  const reward = achievementEffect(faction, 0, food);
   grantIncome(faction, { food: reward }, state);
   const palace = animal.kind === 'boar' ? nearestPalace(state, hunter.faction, animal) : undefined;
   if (palace) (palace.huntingBonuses ??= []).push({ startedAt: state.time, expiresAt: state.time + HUNT_GROWTH_SECONDS });

@@ -30,8 +30,8 @@ describe('coarse sailing distance field',()=>{
   const corners=createSailingDistance(world,(x,y)=>x===y,[{x:2.5,y:2.5}]);
   expect(corners({x:1.5,y:1.5})).toBe(Infinity);
  });
- it('cannot use water across a ledge drop',()=>{
-  const world=waterWorld();for(let y=0;y<12;y++)for(let x=6;x<12;x++)world.tiles[y*12+x].ridge=1;
+ it('cannot use water across blocked terrain',()=>{
+  const world=waterWorld();for(let y=0;y<12;y++)world.tiles[y*12+6].rockRelief=0;
   const distance=createSailingDistance(world,()=>true,[{x:3.5,y:3.5}]);
   expect(distance({x:9.5,y:3.5})).toBe(Infinity);
  });

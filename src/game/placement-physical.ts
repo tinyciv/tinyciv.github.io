@@ -3,7 +3,7 @@ import { hermitCabinOverlaps, placementOccupancy } from './placement-occupancy';
 import { dockPlacement } from './dock';
 import { isForbidden } from './forbidden-zones';
 import { reliefFootprintAllowed } from './relief';
-import { settlementFootprintAllowed } from './terrain-sites';
+import { settlementConstructionAllowed } from './terrain-sites';
 import { traversable } from './pathfinding';
 import { thermalBathSiteError } from './thermal-baths-native';
 import { canShareHouseWellTile } from './house-wells';
@@ -38,9 +38,9 @@ export function validatePhysicalFootprint(state: GameState, kind: BuildingKind, 
   if (hermitCabinOverlaps(state, x, y, width, height))
     return fail(1, 'Leave the hermit and their cabin undisturbed.');
   if (!reliefFootprintAllowed(world, x, y, width, height, isWallKind(kind)))
-    return fail(5, 'Build on one level and leave cliff faces clear.');
-  if (kind === 'palace' && !settlementFootprintAllowed(world, x, y, width, height))
-    return fail(5, 'Place towns on clear low ground.');
+    return fail(5, 'Build on clear ground.');
+  if (kind === 'palace' && !settlementConstructionAllowed(world, x, y, width, height))
+    return fail(5, 'A settlement needs two by two tiles of dry ground.');
   for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
     const cx = x + dx, cy = y + dy, tile = tileAt(world, cx, cy);
     if (!tile || kind !== 'dock' && kind !== 'thermalBath' && (!traversable(world, cx, cy) || WATER.has(tile.terrain))) return fail(5, 'Build on dry land.');

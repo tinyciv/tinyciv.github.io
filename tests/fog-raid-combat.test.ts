@@ -47,7 +47,7 @@ function addRaid(state: GameState, target: Building, x: number, y: number): { at
   Object.assign(attacker, { marauderPack: 999, attack: 24, speed: 2.35, order: 'raid' });
   const pack: MarauderPack = { id: 999, name: 'Scythians', color: '#e87535', targetFaction: 0,
     home: { x, y }, waypoint: { x: target.x + .5, y: target.y + .5 }, nextWanderAt: 0,
-    raid: true, targetBuilding: target.id, spawnedAt: 0, retinueAtSpawn: 2 };
+    raid: true, targetBuilding: target.id, spawnedAt: 0, raidEra: 0 };
   entityStore(state).units.add(attacker); state.marauderPacks!.push(pack);
   return { attacker, pack };
 }

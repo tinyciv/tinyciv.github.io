@@ -6,7 +6,7 @@ import type { Tile, World } from '../src/game/types';
 vi.mock('../src/game/puny-world', async () => {
     const { punyAtlas } = await import('./puny-atlas');
     const atlas = punyAtlas();
-    return { drawPuny: vi.fn(), punyWorldPixels: () => atlas, punyDesertLedgePixels: () => undefined };
+    return { drawPuny: vi.fn(), punyWorldPixels: () => atlas, punySandBankPalette: () => undefined };
 });
 afterEach(() => vi.unstubAllGlobals());
 

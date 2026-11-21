@@ -1,0 +1,254 @@
+{
+  "generator": "PixelLab API",
+  "grounding": "MiniWorld Boar by Shade, CC0-1.0. Native south, east, and north frames used for camera, outline, and pixel scale.",
+  "groundingFile": "public/assets/miniworld/Boar.png",
+  "camera": "high top-down orthographic",
+  "frameSize": [
+    16,
+    16
+  ],
+  "rowOrder": [
+    "south",
+    "north",
+    "east",
+    "west"
+  ],
+  "columns": {
+    "idle": 0,
+    "walk": [
+      1,
+      8
+    ],
+    "run": [
+      9,
+      16
+    ]
+  },
+  "processing": "Native 16px stills cropped from selected 24px uploads with no resampling. The animation atlas packs native PixelLab frames with precise frame selection. West rows mirror east. Three refused PixelLab animation jobs use the generated fallback frames recorded below.",
+  "animals": {
+    "buck": {
+      "baseDesign": "south24",
+      "generator": "/create-object-pro-flash",
+      "baseObject": "f087e8c2-0bad-4534-8ec2-a3836d7f525c",
+      "basePrompt": "ONE isolated tiny pixel art woodland buck deer. FACING SOUTH. A diagonal three-quarter down-right stance so the whole deer body, pointed muzzle, legs and head silhouette are all readable. The unmistakable signature is TWO branching PALE IVORY ANTLERS rising from the top of the head outside the head silhouette, with 2 dark-outlined tiny fork tips each standing against transparency. Antlers are bright cream and contrast sharply with its brown body and ears. Elegant short warm-brown deer torso and four slim legs, cream rump, small black nose. Clearly a roe deer. Native TinyCiv game style with muted autumn woods colors, dark reddish-brown outline and alternating 2-tone hard pixels. Use the existing boar sprite ONLY for art camera and scale; create a new deer silhouette. High top-down orthographic game camera, not isometric. 24x24 canvas; compact sprite occupies only center 16x16, with four transparent pixels padding on each side for the game.  Complete fill shape. Transparent background. No shadow, scene, plants, text, border or loose noise.",
+      "rotation": "/rotate",
+      "animations": {
+        "walk-south": {
+          "job": "e79ff219-7ed5-429d-89b5-81a78fbfcfa7",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119940,
+          "prompt": "The supplied tiny buck deer continues to face down toward the bottom edge and the viewer. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "run-south": {
+          "job": "2e00b755-1069-4f03-a2ad-9c36d8f8d96e",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119943,
+          "prompt": "The supplied tiny buck deer continues to face down toward the bottom edge and the viewer. Quick light-footed deer BOUND in place, with distinctly bent legs gathering underneath, hooves extending forward and back, one subtle lift and fall. No horizontal motion. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "walk-north": {
+          "job": "2d1870bc-ee09-47f1-8a30-be71a07937d0",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119941,
+          "prompt": "The supplied tiny buck deer continues to face up toward the top edge away from the viewer. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "run-north": {
+          "job": "64f764f2-8a4e-4759-94ef-8a3e420fce1d",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119944,
+          "prompt": "The supplied tiny buck deer continues to face up toward the top edge away from the viewer. Quick light-footed deer BOUND in place, with distinctly bent legs gathering underneath, hooves extending forward and back, one subtle lift and fall. No horizontal motion. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "walk-east": {
+          "job": "55784705-5c7a-44f1-80eb-a0e011551412",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119948,
+          "prompt": "The supplied tiny doe deer continues to face right toward the right edge in steep top-down profile. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "motionSource": "doe-walk-east",
+          "processing": "PixelLab buck torso and antlers with the registered PixelLab side gait."
+        },
+        "run-east": {
+          "job": "e394de5b-861c-4734-ba25-872939d1db1e",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119951,
+          "prompt": "The supplied tiny doe deer continues to face right toward the right edge in steep top-down profile. Quick light-footed deer BOUND in place, with distinctly bent legs gathering underneath, hooves extending forward and back, one subtle lift and fall. No horizontal motion. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "motionSource": "doe-run-east",
+          "processing": "PixelLab buck torso and antlers with the registered PixelLab side gait."
+        }
+      },
+      "atlas": "buck.png",
+      "eastRefinement": {
+        "generator": "/edit-image-pixen",
+        "job": "a6c22fb1-86dd-472f-b6cb-28b0da6fece9"
+      },
+      "sha256": "8225bb40456d67736cd8c8302477b0419e856cf67656a4b52613106ec62361cd"
+    },
+    "doe": {
+      "baseDesign": "south24",
+      "generator": "/create-object-pro-flash",
+      "baseObject": "bc843bbf-479c-40a6-9725-164d6aaa7efb",
+      "basePrompt": "ONE isolated tiny pixel art woodland doe deer. FACING SOUTH. A diagonal three-quarter down-right stance so the whole deer body, pointed muzzle, legs and head silhouette are all readable. Female roe deer, completely antlerless. Two obviously tall pointed ears and a small tapered head. Tawny tan coat with light cream underside and dark hooves. Elegant short warm-brown deer torso and four slim legs, cream rump, small black nose. Clearly a roe deer. Native TinyCiv game style with muted autumn woods colors, dark reddish-brown outline and alternating 2-tone hard pixels. Use the existing boar sprite ONLY for art camera and scale; create a new deer silhouette. High top-down orthographic game camera, not isometric. 24x24 canvas; compact sprite occupies only center 16x16, with four transparent pixels padding on each side for the game.  Complete fill shape. Transparent background. No shadow, scene, plants, text, border or loose noise.",
+      "rotation": "/rotate",
+      "animations": {
+        "walk-south": {
+          "job": "02bc835d-9182-4dec-9bcc-247e9ee8a506",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119946,
+          "prompt": "The supplied tiny doe deer continues to face down toward the bottom edge and the viewer. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "run-south": {
+          "job": "c7486f00-d9f4-42c7-ab53-12933acb049e",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119949,
+          "prompt": "The supplied tiny doe deer continues to face down toward the bottom edge and the viewer. Quick light-footed deer BOUND in place, with distinctly bent legs gathering underneath, hooves extending forward and back, one subtle lift and fall. No horizontal motion. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "walk-north": {
+          "job": "db688217-e98b-4fdb-a272-1e643184917f",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119947,
+          "prompt": "The supplied tiny doe deer continues to face up toward the top edge away from the viewer. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "run-north": {
+          "job": "db688217-e98b-4fdb-a272-1e643184917f",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119947,
+          "prompt": "The supplied tiny doe deer continues to face up toward the top edge away from the viewer. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "motionSource": "doe-walk-north",
+          "processing": "Reuse the generated walk frames at the run cadence."
+        },
+        "walk-east": {
+          "job": "55784705-5c7a-44f1-80eb-a0e011551412",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119948,
+          "prompt": "The supplied tiny doe deer continues to face right toward the right edge in steep top-down profile. Slow deliberate four-beat WALK in place, with alternating visible front and rear steps and a tiny natural head bob. The torso stays centered. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "run-east": {
+          "job": "e394de5b-861c-4734-ba25-872939d1db1e",
+          "generator": "/animate-with-text-v3",
+          "seed": 261119951,
+          "prompt": "The supplied tiny doe deer continues to face right toward the right edge in steep top-down profile. Quick light-footed deer BOUND in place, with distinctly bent legs gathering underneath, hooves extending forward and back, one subtle lift and fall. No horizontal motion. Cycle smoothly back to the first pose. Keep the head and antlers or ears the same; the doe is always antlerless. The torso anchors in the same center position with fixed silhouette scale. No turning, translation, camera motion, new antlers, tail changes, stretching, extra limbs, ground, shadows, other animals or effects. High top-down overhead orthographic view as in the exact reference; never isometric. Use the same clipped pixel art palette and no background, blur or anti-aliasing.",
+          "rawFrames": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "atlas": "doe.png",
+      "sha256": "5a42e04a8c29574b7d75f47a2923b20c2fa84f8fab90086ae51f2be45d222149"
+    }
+  }
+}

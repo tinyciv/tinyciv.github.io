@@ -1,0 +1,14 @@
+[
+  {
+    "source": "assets/wildlife/livestock/cow.png",
+    "output": "assets/runtime/wildlife/livestock/cow.webp"
+  },
+  {
+    "source": "assets/wildlife/livestock/horse.png",
+    "output": "assets/runtime/wildlife/livestock/horse.webp"
+  },
+  {
+    "source": "assets/wildlife/livestock/sheep.png",
+    "output": "assets/runtime/wildlife/livestock/sheep.webp"
+  }
+]

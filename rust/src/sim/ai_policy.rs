@@ -121,11 +121,17 @@ impl Policy {
             22 => if self.has(FORTIFY_CITIES) { match v[0] as u32 { 0=>1.0,1=>4.0,2=>2.0,3=>5.0,4=>6.0,5=>3.0,6=>0.0,_=>9.0 } } else { v[0] },
             23 => yes(v[0] >= 14.0),
             24 => yes(self.has(OFFENSIVE_SIEGE) && v[0] >= 103.0 && v[1] >= v[2]+500.0+100.0*p[21]),
-            26 => yes(v[2]-v[4]>=3.0_f64.max(v[5]*0.1)
+            26 => yes(v[4] == 0.0 || v[2]-v[4]>=3.0_f64.max(v[5]*0.1)
                 || self.has(FORTIFY_CITIES) && v[0]>=v[3]+v[1]*p[21]+(v[4]-v[2]).max(v[4])*p[21]*3.0),
             27 => yes(self.has(FORTIFY_CITIES) && v[3]<2.0 && v[0]>=v[1]+v[2]),
             28 => if self.has(OFFENSIVE_SIEGE) {180.0+v[0]*4.0}else{90.0+v[0]*3.0},
             29 => v[0] / (5.0 + v[1] + v[2]/v[3].max(1.0)*6.0) + if v[4]!=0.0 {2.0} else {0.0} + v[5],
+            30 => {
+                let vacancies = v[0] - v[1];
+                let target = if self.has(PROACTIVE_HOUSING) { (v[1] * 0.2).clamp(6.0, 12.0) }
+                    else { (v[1] * 0.15).clamp(4.0, 8.0) };
+                yes(vacancies < target)
+            }
             _ => f64::NAN,
         }
     }

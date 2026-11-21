@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 
 pub const STRIDE: usize = 12;
 pub const RESULT: usize = 3;
+pub const CANNON_RANGE: f64 = 12.0;
 const BUILDING: u32 = 1;
 const TARGETABLE: u32 = 2;
 const HOSTILE: u32 = 4;
@@ -108,9 +109,8 @@ pub fn ready_shot(kind: u32, cooldown: f64, attack: f64, recall: bool, forced: b
     kind == unit::MUSKETMAN && cooldown <= 0.0 && attack > 0.0 && !recall && !forced
 }
 
-pub fn farm_site(stair: u32) -> bool { stair == 0 }
-pub fn governor_purchase(faction: f64, placing_faction: f64, placing: bool, kind: u32) -> bool {
-    !(placing && faction == placing_faction && matches!(kind, building::CAMP | building::HOUSE))
+pub fn governor_purchase(suspended: bool, kind: u32) -> bool {
+    !(suspended && (kind == building::HOUSE || building::farm(kind)))
 }
 pub fn siege_attack(cannon: bool, attack: f64) -> f64 { attack * if cannon { 5.0 } else { 1.0 } }
 pub fn siege_cooldown(cooldown: f64, dt: f64, fired: bool) -> f64 {
@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn cannon_splash_halves_damage_to_units_and_preserves_road_and_bridge_immunity() {
+    fn cannon_splash_scales_damage_to_units_and_preserves_road_and_bridge_immunity() {
         let mut support = BattleSupport::default();
         let soldier = [4.0, 0.5, 0.0, 100.0, 100.0, 0.0, unit::WARRIOR as f64,
             (TARGETABLE | EXPOSED) as f64, 10.0, 0.0, 1.0, 100.0];
@@ -161,6 +161,6 @@ mod tests {
         support.prepare(rows.len());
         for (index, row) in rows.iter().enumerate() { support.input[index * STRIDE..(index + 1) * STRIDE].copy_from_slice(row); }
         support.run(rows.len(), 3, 0.0, 0.0, 0.0, -1.0);
-        assert_eq!(support.output[..7], [2.0, 3.0, 50.0, 2.0, 4.0, 75.0, 0.0]);
+        assert_eq!(support.output[..7], [2.0, 3.0, 50.0, 2.0, 4.0, 87.5, 0.0]);
     }
 }

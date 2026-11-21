@@ -21,7 +21,8 @@ impl Campaign {
         }
     }
     pub fn casualty(&mut self, id: i64, faction: i32, kind: u32, killer: i32, hostile: bool) {
-        if matches!(kind, unit::BOAR | unit::MARSH_BIRD | unit::DEER | unit::BUFFALO | unit::ELEPHANT | unit::OSTRICH) { return; }
+        if matches!(kind, unit::BOAR | unit::MARSH_BIRD | unit::DEER | unit::BUFFALO | unit::ELEPHANT | unit::OSTRICH)
+            || unit::livestock(kind) { return; }
         if self.deaths.insert(id) { self.rows.entry(faction).or_default()[2] += 1.0; }
         if hostile && killer != faction && self.kills.insert(id) {
             self.rows.entry(killer).or_default()[1] += 1.0;

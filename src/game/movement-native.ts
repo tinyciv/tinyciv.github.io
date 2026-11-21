@@ -4,7 +4,14 @@ import type { EntityObserver, EntityStore } from './entity-store';
 import type { GameState, Point, Unit, World } from './types';
 
 export type CollisionTraits = Pick<Unit, 'kind'> & Partial<Pick<Unit,
-  'faction' | 'infantryDrillLeader' | 'engineer' | 'levyAssembling' | 'wallPatrol' | 'inside' | 'humanControlled' | 'embarkedOn'>>;
+  'faction' | 'infantryDrillLeader' | 'engineer' | 'levyAssembling' | 'wallPatrol' | 'inside' | 'humanControlled' | 'embarkedOn' | 'training'>>;
+const RETRAINING = 1 << 6;
+const marchGroups = new WeakMap<CollisionTraits, number>();
+export function setMarchCollisionGroup(unit: Unit, faction?: number): void {
+  if (faction === undefined) marchGroups.delete(unit);
+  else marchGroups.set(unit, -faction - 1);
+}
+export const movementFormation = (unit: CollisionTraits): number => marchGroups.get(unit) ?? unit.infantryDrillLeader ?? NaN;
 
 /** Encoding only: collision classifications and exceptions belong to Rust. */
 export function movementKind(kind: Unit['kind']): number {
@@ -14,13 +21,14 @@ export function movementKind(kind: Unit['kind']): number {
     case 'spearman': case 'pikeman': return 9; case 'archer': case 'musketman': return 10; case 'horseman': return 11; case 'horseArcher': return 12;
     case 'knight': return 13; case 'levyInfantry': return 14; case 'slinger': return 15; case 'skirmisher': return 16;
     case 'fieldCannon': return 18;
+    case 'cow': case 'sheep': case 'horse': return 19;
     case 'marshBird': return 17; default: return 0;
   }
 }
 export function movementFlags(unit: Partial<CollisionTraits>): number {
   return Number(!!unit.engineer) | Number(!!unit.levyAssembling) << 1 | Number(unit.wallPatrol?.wall !== undefined) << 2
     | Number(!!unit.inside) << 3 | Number(!!unit.humanControlled) << 4
-    | Number(unit.kind === 'sailboat' || unit.embarkedOn !== undefined) << 5;
+    | Number(unit.kind === 'sailboat' || unit.embarkedOn !== undefined) << 5 | (unit.training ? RETRAINING : 0);
 }
 
 interface ActorRecord {
@@ -106,17 +114,18 @@ export class NativeMovementWorld {
   }
   private publish(unit: Unit, order: number, bucketOrder: number, indexedCell: number, overlay: boolean): void {
     const previous = this.records.get(unit.id), kind = movementKind(unit.kind), flags = movementFlags(unit);
-    const faction = unit.faction ?? NaN, drill = unit.infantryDrillLeader ?? NaN;
+    const faction = unit.faction ?? NaN, drill = movementFormation(unit);
     const changed = !previous || previous.unit !== unit || previous.x !== unit.x || previous.y !== unit.y || previous.kind !== kind
       || !same(previous.faction, faction) || previous.hp !== unit.hp || previous.flags !== flags || !same(previous.drill, drill)
       || previous.order !== order || previous.bucketOrder !== bucketOrder || !same(previous.indexedCell, indexedCell) || previous.overlay !== overlay;
     if (!changed) return;
     const previousOverlay = previous?.overlay ? Math.floor(previous.y) * this.world.width + Math.floor(previous.x) : NaN;
     const nextOverlay = overlay ? Math.floor(unit.y) * this.world.width + Math.floor(unit.x) : NaN;
-    if (!previous || !same(previous.indexedCell, indexedCell)) {
+    const collisionChanged = previous && ((previous.flags ^ flags) & RETRAINING) !== 0;
+    if (!previous || collisionChanged || !same(previous.indexedCell, indexedCell)) {
       this.invalidateCell(previous?.indexedCell ?? NaN, false); this.invalidateCell(indexedCell, false);
     }
-    if (!same(previousOverlay, nextOverlay)) { this.invalidateCell(previousOverlay, true); this.invalidateCell(nextOverlay, true); }
+    if (collisionChanged || !same(previousOverlay, nextOverlay)) { this.invalidateCell(previousOverlay, true); this.invalidateCell(nextOverlay, true); }
     if (!previous) this.records.set(unit.id, { unit, x: unit.x, y: unit.y, kind, faction, hp: unit.hp, flags, drill,
       order, bucketOrder, indexedCell, overlay });
     else {
@@ -159,7 +168,7 @@ export class NativeMovementWorld {
       if (record) this.syncLive(record.unit);
     }
     return rustEngine.movement_occupant(this.handle, cell, observer.id, movementKind(observer.kind),
-      observer.faction ?? NaN, movementFlags(observer), observer.infantryDrillLeader ?? NaN, mode);
+      observer.faction ?? NaN, movementFlags(observer), movementFormation(observer), mode);
   }
   /** Whether this actor has a resident transform in an active frame. */
   resident(unit: Unit): boolean { return this.active && this.records.get(unit.id)?.unit === unit; }
@@ -168,12 +177,14 @@ export class NativeMovementWorld {
    * authoritative transform; the host mirror and Unit view follow it. */
   steer(unit: Unit, probe: NativeMoveProbe, next: Point, speed: number, dt: number, anchor: Point | undefined, radius: number): SteerResult | undefined {
     this.syncLive(unit);
-    const reach = Math.max(0, speed * dt);
-    const toX = unit.x + Math.max(-reach, Math.min(reach, next.x - unit.x)), toY = unit.y + Math.max(-reach, Math.min(reach, next.y - unit.y));
-    const x0 = Math.max(0, Math.floor(Math.min(unit.x, toX))), x1 = Math.min(this.width - 1, Math.floor(Math.max(unit.x, toX)));
-    const y0 = Math.max(0, Math.floor(Math.min(unit.y, toY))), y1 = Math.min(this.height - 1, Math.floor(Math.max(unit.y, toY)));
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      for (const id of this.candidates(y * this.width + x, 0)) { const record = this.records.get(id); if (record) this.syncLive(record.unit); }
+    if (!unit.training) {
+      const reach = Math.max(0, speed * dt);
+      const toX = unit.x + Math.max(-reach, Math.min(reach, next.x - unit.x)), toY = unit.y + Math.max(-reach, Math.min(reach, next.y - unit.y));
+      const x0 = Math.max(0, Math.floor(Math.min(unit.x, toX))), x1 = Math.min(this.width - 1, Math.floor(Math.max(unit.x, toX)));
+      const y0 = Math.max(0, Math.floor(Math.min(unit.y, toY))), y1 = Math.min(this.height - 1, Math.floor(Math.max(unit.y, toY)));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        for (const id of this.candidates(y * this.width + x, 0)) { const record = this.records.get(id); if (record) this.syncLive(record.unit); }
+      }
     }
     const pointer = rustEngine.movement_steer(this.handle, unit.id, probe.engine.handle, probe.grid, probe.blockers, probe.guard,
       probe.forbidden, Number(probe.exemptCurrent), next.x, next.y, speed, dt, anchor?.x ?? NaN, anchor?.y ?? NaN, radius);

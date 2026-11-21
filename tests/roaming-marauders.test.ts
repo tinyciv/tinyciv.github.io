@@ -21,7 +21,7 @@ function fixture(): GameState {
     time: 0, tick: 0, paused: false, speed: 1, seed: 'sleeping-reserves', rngState: 1, events: [], particles: [], fields: [], projectiles: [], selected: null,
     selectedType: null, buildMode: null, diplomacy: null, gameOver: false, victory: false, marauderPacks: [],
     raiderCamps: [{ id: 1, size: 'small', x: 38, y: 10, width: 9, height: 7, gate: { x: 38, y: 13 }, houses: [3], coreTowers: [4], name: 'Camp', waves: 0, nextRaidAt: 1e9 }],
-    fogRaids: { nextAt: 1e9, waves: 0, pressureVersion: 2 }, raiderSkirmishes: { nextByFaction: { 0: 1e9 }, wavesByFaction: { 0: 0 } } };
+    fogRaids: { nextAt: 1e9, waves: 0, pressureVersion: 2 } };
 }
 const sleepers = (state: GameState) => state.units.filter(unit => unit.faction === -2 && unit.inside);
 

@@ -58,10 +58,10 @@ describe('founding another city', () => {
     expect(faction.population).toBe(previousPopulation + 4);
     expect(faction.firstTownFoundingAvailable).toBeUndefined();
     expect(citySummaries(state).find(summary => summary.palace.id === palace.id)).toMatchObject({ name: 'Roma', housing: 4, population: 4, food: 0 });
-    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(5);
+    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(0);
     expect(state.buildings.filter(building => building.kind === 'house')).toHaveLength(0);
 
-    expect(townBuildTerms(state, faction)).toEqual({ upkeep: 31.25, residents: 0 });
+    expect(townBuildTerms(state, faction)).toEqual({ upkeep: 5, residents: 0 });
     faction.gold = 100;
     expect(buildAt(state, 'palace', 25, 14).ok).toBe(true);
     const later = state.buildings.find(building => building.kind === 'palace' && building.x === 25)!;
@@ -70,8 +70,11 @@ describe('founding another city', () => {
     expect(buildingReady(later)).toBe(true);
     expect(citySummaries(state).find(summary => summary.palace === later)?.population).toBe(0);
     expect(faction.population).toBe(previousPopulation + 4);
-    expect(buildingMaintenance(state, palace)).toBe(11.25);
-    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(42.5);
+    expect(buildingMaintenance(state, palace)).toBe(0);
+    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(0);
+    state.time += 180;
+    expect(buildingMaintenance(state, palace)).toBe(5);
+    expect(factionMaintenanceBreakdown(state, faction).settlements).toBe(10);
   });
 
   it('allows a settlement on an unclaimed footprint beside a foreign guard post', () => {
@@ -93,6 +96,16 @@ describe('founding another city', () => {
     expect(foreignPost.faction).toBe(1);
   });
 
+  it('builds on a clear footprint next to rock formations and mountains', () => {
+    const state = fixture();
+    const rock = 10 * 40 + 23;
+    Object.assign(state.world.tiles[rock], { rockHost: rock, rockRelief: 0 });
+    state.world.tiles[10 * 40 + 24].relief = 'mountains';
+    expect(validateBuildAt(state, 'palace', 20, 10).ok).toBe(true);
+    expect(buildAt(state, 'palace', 20, 10).ok).toBe(true);
+    expect(validateBuildAt(state, 'palace', 23, 10).ok).toBe(false);
+  });
+
   it.each([[0, 0], [1, 0], [0, 1], [1, 1]])('rejects a settlement when only footprint cell (%i, %i) is rival-owned without spending resources', (claimedX, claimedY) => {
     const state = fixture();
     state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' });
@@ -108,13 +121,13 @@ describe('founding another city', () => {
     expect(JSON.stringify(state)).toBe(before);
   });
 
-  it.each(['water', 'occupied', 'field', 'ridge', 'outside world', 'rival territory', 'disconnected'] as const)
+  it.each(['water', 'occupied', 'field', 'rock', 'outside world', 'rival territory', 'disconnected'] as const)
   ('rejects the full two-by-two footprint or inaccessible city: %s', reason => {
     const state = fixture(); let x = 20, y = 10;
     if (reason === 'water') state.world.tiles[11 * 40 + 21].terrain = 'lake';
     if (reason === 'occupied') entityStore(state).buildings.add({ ...city(3, 21), kind: 'well', y: 11 });
     if (reason === 'field') state.fields!.push({ id: 100, camp: 50, faction: 0, x: 21, y: 11, planted: true, food: 1, nextHarvest: 30 });
-    if (reason === 'ridge') state.world.tiles[11 * 40 + 21].ridge = 1;
+    if (reason === 'rock') Object.assign(state.world.tiles[11 * 40 + 21], { rockHost: 11 * 40 + 21, rockRelief: 0 });
     if (reason === 'outside world') { x = 39; state.units[0].x = 38; }
     if (reason === 'rival territory') {
       state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' });

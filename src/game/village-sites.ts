@@ -14,7 +14,7 @@ import { scenarioStructuresAllowed } from './scenario-access-native';
 import { reliefFootprintAllowed } from './relief';
 import { unitSpawnTerrainAllowed } from './terrain-sites';
 import { KIND_BY_CODE, UPGRADE_CODE, type BuildReason, type BuildRequest, type SpawnRow } from './settlement-bridge';
-import { buildingHeight, buildingWidth, isWallKind, tileAt, type Building, type BuildingKind, type GameState, type NeutralVillage, type Point } from './types';
+import { buildingHeight, buildingWidth, isWallKind, type Building, type BuildingKind, type GameState, type NeutralVillage, type Point } from './types';
 
 const HP: Partial<Record<BuildingKind, number>> = { woodenTower: 600, guardPost: 400, library: 750, monument: 250, blacksmith: 250, archeryRange: 250,
   scoutLodge: 250, stable: 250, healerShack: 250, dock: DOCK_HP, house: 160, well: 100, road: 100, villageTent: 160 };
@@ -33,11 +33,7 @@ export function addVillageBuilding(state: GameState, village: NeutralVillage, ki
     hp, maxHp: hp, capacity: 0, residents: 0, armor: kind === 'woodenTower' ? 6 : 0 };
   if (kind === 'house') { building.houseLevel = level; building.houseStyle = 'shack'; building.capacity = houseCapacity(building, undefined, state); }
   if (kind === 'dock') { building.dockFacing = dockPlacement(state, point.x, point.y, village.faction)?.facing; building.dockBoatLaunched = true; }
-  for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++) {
-    const tile = tileAt(state.world, point.x + dx, point.y + dy);
-    if (tile && kind !== 'road') { tile.overlay = tile.overlay === 'ford' ? tile.overlay : 'none'; delete tile.palm; }
-    if (kind === 'road') removeVillageTrailAt(state.world, point.x, point.y);
-  }
+  if (kind === 'road') removeVillageTrailAt(state.world, point.x, point.y);
   entityStore(state).buildings.add(building);
   return building;
 }

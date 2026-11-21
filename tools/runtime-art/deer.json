@@ -1,0 +1,10 @@
+[
+  {
+    "source": "assets/wildlife/deer/buck.png",
+    "output": "assets/runtime/wildlife/deer/buck.webp"
+  },
+  {
+    "source": "assets/wildlife/deer/doe.png",
+    "output": "assets/runtime/wildlife/deer/doe.webp"
+  }
+]

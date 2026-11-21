@@ -33,7 +33,7 @@ describe('desert plains ecotone', () => {
     expect(JSON.stringify(world)).toBe(retained);
   });
 
-  it('does not spread across water or convert beaches, marsh, grassy shores or authored ridge aprons', () => {
+  it('does not spread across water or convert beaches, marsh, grassy shores or uplands', () => {
     const world = flat('protected-ground', 30, 18), tile = (x: number, y: number) => world.tiles[y * world.width + x];
     for (let y = 0; y < world.height; y++) {
       tile(3, y).terrain = 'desert';
@@ -42,7 +42,7 @@ describe('desert plains ecotone', () => {
     tile(20, 8).terrain = 'desert'; tile(20, 8).beach = true;
     tile(10, 8).terrain = 'desert';
     tile(11, 8).marsh = true;
-    tile(9, 8).ridge = 1;
+    tile(9, 8).relief = 'hills';
     tile(10, 11).terrain = 'coast';
     const preserved = [tile(4, 8), tile(20, 8), tile(11, 8), tile(9, 8), tile(10, 10)].map(t => structuredClone(t));
     applyDesertTransitions(world);

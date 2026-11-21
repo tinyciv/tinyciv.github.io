@@ -5,6 +5,10 @@ use super::entities::EntityTables;
 #[derive(Component, Clone, Copy)]
 pub struct Fortification { pub level: u32, pub hp: f64, pub maximum: f64 }
 
+pub fn upkeep(brigade_capacity: u32) -> f64 {
+    20.0 + f64::from(brigade_capacity)
+}
+
 pub fn health_multiplier(level: u32) -> f64 {
     match level { 2 => 3.0, _ => 1.0 }
 }

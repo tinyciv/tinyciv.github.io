@@ -233,8 +233,8 @@ all read them; moving them first avoids interim host uploads.
 ### AI
 
 29. **AI pure rules and camp layout** (after 2, 7). Bandit intensity, pressure ramps, enemy strength, commander promotion and warcamp layout native. Deletes those six files.
-30. **Raider camps and waves** (after 29, 24, 25). Camp lifecycle, wave scheduling, siege reinforcement and raider technology native with PackIndex counters. Deletes raider-camps/fog-raids/raider-technology/roaming-marauders/camp-pressure.
-31. **Marauder packs and specialist planning** (after 30, 28). Pack lifecycle, reserves, skirmishes, camp defense, alarms and motivation planning native. Deletes raider-activity/raid-targeting and the planning halves of alerts/motivations.
+30. **Raider camps and waves** (after 29, 24, 25). Camp lifecycle, wave spawning and siege reinforcement native with PackIndex counters. Raid pacing, stress, era strength and raid choice are already native in `sim/raid_director.rs`; raider-technology.ts and raider-camp-pressure.ts were deleted with it. Deletes raider-camps/fog-raids/roaming-marauders.
+31. **Marauder packs and specialist planning** (after 30, 28). Pack lifecycle, reserves, camp defense, alarms and motivation planning native (recurring skirmishes no longer exist). Deletes raider-activity/raid-targeting and the planning halves of alerts/motivations.
 32. **Sea raids and army warnings** (after 31, 17). Sea invasions and mobilization warnings native. Deletes sea-raids.ts and army-warnings.ts.
 33. **Faction strategy** (after 28, 15, 21). AI missions, campaign ranking, emergency levy and army services native. Deletes faction-strategy/military/ai-profile/budget.
 34. **Guard posts, militia, garrisons and the mass levy** (after 28, 18, 21). Guard upkeep/recruitment/militia, wall patrols, garrison duty and levy conversion/upkeep native. Deletes guard-posts/wall-patrols/garrison/mass-levy.

@@ -1,5 +1,5 @@
 import type { Building, GameState, Unit, ResearchBranchId } from '../../src/game/types';
-import { prioritizeResearch, researchStatus, updateResearch } from '../../src/game/research';
+import { prioritizeResearch, researchAllocation, researchStatus, updateResearch } from '../../src/game/research';
 import { grantIncome } from '../../src/game/resource-income';
 export const building = (id: number, kind: Building['kind'], x = 10, y = 10, faction = 0): Building => ({ id, kind, x, y, faction, hp: 250, maxHp: 250, capacity: 0 });
 export const person = (id: number, kind: Unit['kind'], x = 10.5, y = 12.5, faction = 0): Unit => ({ id, kind, x, y, faction, hp: 100, maxHp: 100,
@@ -17,7 +17,11 @@ export function fixture(): GameState {
 }
 
 /** Deliver paid income and settle its Science reserve for unlock-focused tests. */
-export function points(state: GameState, amount: number): void { grantIncome(state.factions[0], { gold: amount / .25 }, state); updateResearch(state, 1000); }
+export function points(state: GameState, amount: number): void {
+  const faction = state.factions[0];
+  grantIncome(faction, { gold: amount / researchAllocation(faction) }, state);
+  updateResearch(state, 1000);
+}
 export function complete(state: GameState, branch: ResearchBranchId): void {
   prioritizeResearch(state, state.buildings.find(b => b.kind === 'library')!, branch);
   for (let n = 0; !state.factions[0].research?.levels[branch] && n < 20; n++) {

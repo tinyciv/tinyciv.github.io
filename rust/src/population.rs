@@ -3,7 +3,7 @@
 //! Imported row entities and transfer buffers are retained between ticks.
 use bevy_ecs::prelude::*;
 
-pub const CITY_STRIDE: usize = 9;
+pub const CITY_STRIDE: usize = 10;
 pub const HOUSE_STRIDE: usize = 6;
 pub const CITY_OUTPUT_STRIDE: usize = 3;
 pub const GROWTH_SPEED: f64 = 3.0;
@@ -26,7 +26,14 @@ struct City {
     unhoused: f64,
     // 0 = absent, 1 = false, 2 = true. Preserve an absent host property.
     depopulated: u32,
+    population_limit: f64,
     eligible: bool,
+}
+
+impl City {
+    fn remaining_population_slots(&self) -> f64 {
+        (self.population_limit - self.population).floor().max(0.0)
+    }
 }
 
 #[derive(Component, Default)]
@@ -55,6 +62,22 @@ struct BirthTick {
     unfed: f64,
     stocked: bool,
     births: u32,
+    opening: Option<OpeningCapital>,
+}
+
+pub struct OpeningCapital {
+    pub id: i64,
+    pub peak: f64,
+}
+
+impl OpeningCapital {
+    fn observe(&mut self, residents: f64) {
+        self.peak = self.peak.max(residents).min(32.0);
+    }
+
+    fn multiplier(&self) -> f64 {
+        1.0 + 0.8 * ((32.0 - self.peak) / 12.0).clamp(0.0, 1.0)
+    }
 }
 
 fn js_max(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) } }
@@ -81,16 +104,23 @@ fn assign_homes(rows: Res<Rows>, cities: Query<&City>, homes: Query<&Home>, mut 
 }
 
 /// Credit every city before any birth consumes the shared treasury of food.
-fn credit_cities(rows: Res<Rows>, tick: Res<BirthTick>, mut cities: Query<&mut City>) {
+fn credit_cities(rows: Res<Rows>, mut tick: ResMut<BirthTick>, mut cities: Query<&mut City>) {
     for entity in &rows.cities {
         let mut city = cities.get_mut(*entity).expect("imported city");
+        let multiplier = tick.opening.as_mut().filter(|opening| opening.id == city.id)
+            .map_or(1.0, |opening| {
+                opening.observe(city.population);
+                opening.multiplier()
+            });
         city.eligible = false;
         if city.population > 0.0 { city.depopulated = 0; }
-        if city.depopulated == 2 && city.population <= 0.0 { city.credit = 0.0; continue; }
+        let slots = city.remaining_population_slots();
+        if slots == 0.0 || (city.depopulated == 2 && city.population <= 0.0) { city.credit = 0.0; continue; }
         if city.net_food > 0.0 && tick.stocked {
-            city.credit += GROWTH_SPEED * (0.14 + city.net_food / 13.0).min(2.4) * (tick.hunting + tick.growth - 1.0);
+            city.credit += GROWTH_SPEED * (0.14 + city.net_food / 13.0).min(2.4) * (tick.hunting + tick.growth - 1.0) * multiplier;
             city.eligible = true;
         } else if tick.unfed > 1e-7 { city.credit = js_max(0.0, city.credit - 0.3); }
+        city.credit = city.credit.min(slots);
     }
 }
 
@@ -100,9 +130,11 @@ fn release_births(rows: Res<Rows>, groups: Res<HomesByCity>, mut tick: ResMut<Bi
         let mut city = cities.get_mut(*entity).expect("imported city");
         if !city.eligible { continue; }
         let vacant = &groups.0[city.row];
+        let slots = city.remaining_population_slots();
+        let allowance = ((MAX_BIRTHS as f64 * tick.growth).floor().min(slots)) as u32;
         let mut births = 0;
         let mut cursor = 0;
-        while births < (MAX_BIRTHS as f64 * tick.growth).floor() as u32 && tick.food + 1e-7 >= 4.0 {
+        while births < allowance && tick.food + 1e-7 >= 4.0 {
             while let Some(entity) = vacant.get(cursor) {
                 let home = homes.get(*entity).expect("assigned home");
                 if !(home.residents >= home.capacity) { break; }
@@ -126,6 +158,12 @@ fn release_births(rows: Res<Rows>, groups: Res<HomesByCity>, mut tick: ResMut<Bi
             city.credit = js_max(0.0, city.credit - required);
             births += 1;
             tick.births += 1;
+        }
+        // Discard credit beyond the remaining civic capacity, even if an
+        // enclosed home used less than one credit for the last birth.
+        city.credit = city.credit.min(slots - f64::from(births));
+        if let Some(opening) = tick.opening.as_mut().filter(|opening| opening.id == city.id) {
+            opening.observe(city.population + f64::from(births));
         }
     }
 }
@@ -155,7 +193,7 @@ impl Default for PopulationEngine {
 }
 
 impl PopulationEngine {
-    /// Input: city rows [ID,x,y,population,net food,credit,capacity,unhoused,depopulation tag],
+    /// Input: city rows [ID,x,y,population,net food,credit,capacity,unhoused,depopulation tag,population limit],
     /// followed by home rows [ID,x,y,residents,capacity,required credit].
     /// Row entities form a reusable pool: imports change components in place,
     /// and inactive rows never participate in a system query.
@@ -170,15 +208,21 @@ impl PopulationEngine {
 
     #[cfg(test)]
     pub fn run(&mut self, food: f64, population: f64, hunting: f64, unfed: f64) -> *const f64 {
-        self.run_with_growth(food, population, hunting, unfed, 1.0)
+        self.run_with_growth(food, population, hunting, unfed, 1.0, None)
     }
 
-    pub fn run_with_growth(&mut self, food: f64, population: f64, hunting: f64, unfed: f64, growth: f64) -> *const f64 {
+    pub fn opening_peak(&self) -> f64 {
+        self.world.resource::<BirthTick>().opening.as_ref().map_or(0.0, |opening| opening.peak)
+    }
+
+    pub fn run_with_growth(&mut self, food: f64, population: f64, hunting: f64, unfed: f64, growth: f64,
+        opening: Option<OpeningCapital>) -> *const f64 {
         for row in 0..self.city_count {
             let values = &self.input[row * CITY_STRIDE..];
             *self.world.get_mut::<City>(self.city_entities[row]).expect("city pool") = City {
                 id: values[0] as i64, row, x: values[1], y: values[2], population: values[3], net_food: values[4],
-                credit: values[5], capacity: values[6], unhoused: values[7], depopulated: values[8] as u32, eligible: false,
+                credit: values[5], capacity: values[6], unhoused: values[7], depopulated: values[8] as u32,
+                population_limit: values[9], eligible: false,
             };
         }
         for row in 0..self.home_count {
@@ -192,7 +236,7 @@ impl PopulationEngine {
             rows.cities.clear(); rows.cities.extend_from_slice(&self.city_entities[..self.city_count]);
             rows.homes.clear(); rows.homes.extend_from_slice(&self.home_entities[..self.home_count]);
         }
-        *self.world.resource_mut::<BirthTick>() = BirthTick { food, population, hunting, growth, unfed, stocked: food >= 6.0, births: 0 };
+        *self.world.resource_mut::<BirthTick>() = BirthTick { food, population, hunting, growth, unfed, stocked: food >= 6.0, births: 0, opening };
         self.schedule.run(&mut self.world);
         let tick = self.world.resource::<BirthTick>();
         self.output[..3].copy_from_slice(&[tick.food, tick.population, tick.births as f64]);
@@ -226,7 +270,7 @@ impl Engines {
 mod tests {
     use super::*;
 
-    const CITY: [f64; CITY_STRIDE] = [1.0, 10.0, 20.0, 0.0, 24.0, 0.0, 0.0, 0.0, 0.0];
+    const CITY: [f64; CITY_STRIDE] = [1.0, 10.0, 20.0, 0.0, 24.0, 0.0, 0.0, 0.0, 0.0, f64::INFINITY];
     const HOME: [f64; HOUSE_STRIDE] = [10.0, 9.0, 20.0, 0.0, 20.0, 1.0];
     fn import(engine: &mut PopulationEngine, cities: &[[f64; CITY_STRIDE]], homes: &[[f64; HOUSE_STRIDE]]) {
         engine.configure(cities.len(), homes.len());
@@ -320,6 +364,26 @@ mod tests {
         close(engine.output[3], 100.0 + rate(24.0) * 1.1 - 10.0);
         import(&mut engine, &[city], &[]); engine.run(1000.0, 0.0, 1.0, 0.0);
         assert_eq!(engine.output[2], 0.0); close(engine.output[3], 100.0 + rate(24.0));
+    }
+
+    #[test]
+    fn civic_cap_limits_growth_and_preserves_existing_residents() {
+        let mut engine = PopulationEngine::default();
+        let mut city = CITY;
+        city[3] = 79.0;
+        city[5] = 100.0;
+        city[9] = 80.0;
+        let mut home = HOME;
+        home[5] = 1.0 / 1.3;
+        import(&mut engine, &[city], &[home]);
+        engine.run(100.0, 79.0, 1.0, 0.0);
+        assert_eq!(&engine.output, &[96.0, 80.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
+
+        city[3] = 81.0;
+        home[3] = 1.0;
+        import(&mut engine, &[city], &[home]);
+        engine.run(100.0, 81.0, 1.0, 0.0);
+        assert_eq!(&engine.output, &[100.0, 81.0, 0.0, 0.0, 0.0, 0.0, 1.0]);
     }
 
     #[test]

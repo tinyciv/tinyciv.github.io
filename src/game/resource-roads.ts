@@ -51,8 +51,8 @@ function terrainCanReceiveRoad(state: GameState, faction: number, x: number, y: 
   if (!tile || WATER.has(tile.terrain) || tile.resource && tile.oreAnchor === undefined || tile.farm !== undefined
     || overlapsFallenDefense(state, 'road', x, y) || hermitCabinOverlaps(state, x, y)
     || !reliefFootprintAllowed(state.world, x, y) || !walkabilityChecked && !canWalk(state, x + .5, y + .5, faction, undefined, true)) return false;
-  // Access roads preserve crops and trees. They do not demolish structures,
-  // relocate farms, open new gates, or build new crossings over water.
+  // Access roads preserve crops. They do not demolish structures, relocate
+  // farms, open new gates, or build new crossings over water.
   if (!reservationsChecked && (state.fields?.some(field => field.x === x && field.y === y)
     || buildingOverlapsVillageBorders(state, 'road', x, y, faction))) return false;
   return occupants.every(building => building.kind === 'irrigation' && building.faction === faction);

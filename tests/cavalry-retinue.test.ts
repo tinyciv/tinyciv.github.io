@@ -1,4 +1,5 @@
 import { withDevelopedResources } from './helpers/developed-resources';
+import { withHorsePasture } from './helpers/horse-pasture';
 import { describe, expect, it } from 'vitest';
 import { scoutRealm } from './helpers/scouts';
 import { entityStore } from '../src/game/entity-store';
@@ -11,7 +12,7 @@ import { unitRespectsForbidden } from '../src/game/forbidden-zones';
 import { isRetinueMember, type Building } from '../src/game/types';
 
 function realm() {
-  const state = scoutRealm();
+  const state = withHorsePasture(scoutRealm());
   const stable: Building = { id: 102, kind: 'stable', x: 16, y: 12, faction: 0, hp: 250, maxHp: 250, capacity: 0 };
   entityStore(state).buildings.retain(b => b.kind !== 'scoutLodge');
   entityStore(state).buildings.add(stable, { ...stable, id: 103, kind: 'palace', x: 10, y: 9, capacity: 4,
@@ -104,5 +105,16 @@ describe('mounted retinue and stable', () => {
     for (let i = 0; i < 10; i++) for (const role of ['horseman', 'archer', 'spearman', 'warrior'] as const) setSoldierRole(soldier, role);
     expect(soldier.attack).toBeCloseTo(17); expect(soldier.speed).toBeCloseTo(3.96);
     expect(soldier.defense).toBe(4); expect(soldier.maxHp).toBe(100);
+  });
+
+  it('requires a horse pasture for new recruits and mounted assignments', () => {
+    const { state, stable } = realm(), faction = state.factions[0];
+    faction.horsemanFraction = .5;
+    delete state.livestock;
+    expect(nextRecruitRole(state, faction)).toBe('warrior');
+    expect(setHorsemanFraction(state, stable, .25)).toBe(false);
+    expect(faction.horsemanFraction).toBe(.5);
+    expect(setHorsemanFraction(state, stable, 0)).toBe(true);
+    expect(faction.horsemanFraction).toBe(0);
   });
 });

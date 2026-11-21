@@ -4,7 +4,7 @@ import type { LeaderSkillId } from '../game/leader-progression';
 import type { LandformFamily, WorldGenerationStyle } from '../world/options';
 import type { StateDelta } from './state-delta';
 
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 export const FACTION_COLORS = ['#4f9ee8', '#df6262', '#e5b94e', '#8abb69', '#b08ae3', '#ef9d62'] as const;
 export interface MatchOptions { seed: string; style: WorldGenerationStyle; landformFamily: LandformFamily; advancedStart?: AdvancedStartPhase; }
 export interface LobbyPlayer { id: string; name: string; color: string; faction: number; ready: boolean; connected: boolean; }
@@ -31,11 +31,14 @@ export type GameCommand =
   | { type: 'garrison' | 'levy' | 'dismiss-levy' | 'recall' | 'movement' | 'respawn' | 'infantry-formation' }
   | { type: 'stance'; stance: RetinueStance }
   | { type: 'auto-rebuild-defenses'; enabled: boolean }
+  | { type: 'pause-spending'; enabled: boolean }
   | { type: 'learnLeaderSkill'; skill: LeaderSkillId }
   | { type: 'build'; kind: BuildSelection; points: Point[] }
   | { type: 'develop-resource'; x: number; y: number }
+  | { type: 'fence-herd'; herdId: number }
   | { type: 'clear'; start: Point; end: Point }
   | { type: 'forbid'; start: Point; end: Point; enabled: boolean }
+  | { type: 'cancel-area'; start: Point; end: Point }
   | { type: 'diplomacy'; faction: number; action: 'war' | 'confederate' | 'trade' | 'ally' | 'petition'; buildingId?: number }
   | { type: 'capture'; buildingId: number; capture: boolean }
   | { type: 'achievement'; buildingId: number; achievement: import('../game/achievements').AchievementId }
@@ -44,10 +47,11 @@ export type GameCommand =
   | { type: 'research-allocation'; buildingId: number; allocation: number }
   | { type: 'guard-walls'; buildingId: number; enabled: boolean }
   | { type: 'guard-forbidden'; buildingId: number; enabled: boolean }
-  | { type: 'fort-upgrade' | 'fort-brigade' | 'fort-rebuild' | 'immigrant' | 'retinue-slot' | 'guard-upgrade' | 'keep' | 'keep-housing'; buildingId: number }
+  | { type: 'fort-upgrade' | 'fort-brigade' | 'fort-rebuild' | 'immigrant' | 'retinue-slot' | 'guard-upgrade' | 'keep' | 'keep-housing' | 'settlement-upgrade'; buildingId: number }
   | { type: 'orchard'; buildingId: number; count: 1 | 10 }
   | { type: 'blacksmith'; buildingId: number; track: 'armor' | 'weapon' }
-  | { type: 'levy-composition' | 'field-cannons' | 'warriors' | 'archers' | 'spearmen' | 'pikemen' | 'musketmen' | 'swordsmen' | 'horsemen' | 'horse-archers' | 'knights'; buildingId: number; fraction: number }
+  | { type: 'levy-composition'; buildingId: number; fraction: number }
+  | { type: 'field-cannons' | 'warriors' | 'archers' | 'spearmen' | 'pikemen' | 'musketmen' | 'swordsmen' | 'horsemen' | 'horse-archers' | 'knights'; buildingId: number; count: number }
   | { type: 'governor'; buildingId: number; permission: 'farms' | 'housing'; enabled: boolean }
   | { type: 'village'; buildingId: number; action: 'trade' | 'ally' | 'confederate' | 'petition' | 'war' };
 export interface CommandResult { ok: boolean; message?: string; hermitRumor?: string; questAction?: import('../game/quest-types').QuestKind; siteId?: number; }

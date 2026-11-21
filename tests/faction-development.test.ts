@@ -1,7 +1,7 @@
 import { grantIncome } from '../src/game/resource-income';
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { BUILD_COSTS, buildAt, createGame, updateGame, validateBuildAt } from '../src/game/simulation';
+import { BUILD_COSTS, buildAt, createGame, factionBuildGold, updateGame, validateBuildAt } from '../src/game/simulation';
 import { advanceFactionDevelopment, factionCityDevelopmentPriority, factionDevelopmentReserve, factionResearchTarget, updateFactionDevelopment, type DevelopmentKind } from '../src/game/faction-development';
 import { updateFactionDefenses } from '../src/game/faction-defense';
 import { canSustainFactionDefense, factionCommittedBudget } from '../src/game/faction-budget';
@@ -9,7 +9,7 @@ import { factionIrrigationSites } from '../src/game/faction-irrigation';
 import { synchronizeFarms } from '../src/game/farms';
 import { planAutomaticFarmSite } from '../src/game/farm-siting';
 import { cityDevelopmentNeeds } from '../src/game/governor';
-import { RESEARCH_BRANCHES, researchStatus, updateResearch } from '../src/game/research';
+import { RESEARCH_BRANCHES, researchAllocation, researchStatus, updateResearch } from '../src/game/research';
 import type { Building, GameState } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
@@ -129,16 +129,17 @@ describe('rival city development', () => {
     entityStore(state).buildings.add({ ...palace, id: 20001, x: 40, y: 10, governorNextPlanAt: 3 });
     faction.gold = 500;
     updateFactionDevelopment(state, orders(state));
-    expect(researchStatus(state, 1)).toMatchObject({ focus: 'woodenTower', active: true, progress: 0 });
+    expect(researchStatus(state, 1)).toMatchObject({ focus: 'infantryDrill', active: true, progress: 0 });
     expect(faction.gold).toBe(500);
     state.time = 9; updateFactionDevelopment(state, orders(state));
     updateResearch(state, 90);
     expect(researchStatus(state, 1).progress).toBe(0);
     const cost = researchStatus(state, 1).required;
-    grantIncome(faction, { gold: cost / .25 }, state);
+    const share = researchAllocation(faction);
+    grantIncome(faction, { gold: cost / share }, state);
     updateResearch(state,30);
-    expect(faction.gold).toBeCloseTo(500 + cost * 3);
-    expect(researchStatus(state, 1)).toMatchObject({ focus: 'scoutLodge', active: true, progress: 0 });
+    expect(faction.gold).toBeCloseTo(500 + cost / share - cost);
+    expect(researchStatus(state, 1)).toMatchObject({ focus: 'woodenTower', active: true, progress: 0 });
   });
 
   it.each(['farm', 'house'] as const)('preserves the next %s investment without an upfront research reserve', priority => {
@@ -185,7 +186,7 @@ describe('rival city development', () => {
     faction.gold = 150; state.time = 15;
     expect(factionDevelopmentReserve(state, faction)).toBe(0);
     updateFactionDevelopment(state, orders(state));
-    expect(researchStatus(state, 1)).toMatchObject({ focus: 'woodenTower', progress: 0 });
+    expect(researchStatus(state, 1)).toMatchObject({ focus: 'infantryDrill', progress: 0 });
     expect(faction.gold).toBe(150);
   });
 
@@ -213,7 +214,7 @@ describe('rival city development', () => {
     const locked = { ...orders(state), validate: () => { throw Error('Do not search locked branches'); } };
     updateFactionDevelopment(state, locked);
     state.time = 15;
-    updateFactionDefenses(state, { validate: () => { throw Error('Do not search locked defenses'); },
+    updateFactionDefenses(state, { cost: (kind, id) => factionBuildGold(state, kind, id),
       build: () => { throw Error('Do not build locked defenses'); } });
     faction.population = 60;
     faction.research = { focus: 'wall', levels: { wall: 1, woodenTower: 1, archeryRange: 1, blacksmith: 1 }, progress: {} };
@@ -265,7 +266,7 @@ describe('rival city development', () => {
     faction.gold = 70; state.time = 15;
     expect(factionDevelopmentReserve(state, faction)).toBeGreaterThanOrEqual(4 * BUILD_COSTS.camp.gold);
     updateFactionDefenses(state, {
-      validate: (id, kind, x, y) => validateBuildAt(state, kind, x, y, id),
+      cost: (kind, id) => factionBuildGold(state, kind, id),
       build: (id, kind, x, y) => buildAt(state, kind, x, y, id),
     });
     expect(faction.gold).toBeGreaterThanOrEqual(BUILD_COSTS.camp.gold);
@@ -301,7 +302,7 @@ describe('rival city development', () => {
     const state = realm(); state.time = 15;
     for (const farm of own(state, 'camp')) farm.construction = { duration: 10, startedAt: 10, paidGold: 150, waitingForBuilder: true };
     const original = state.buildings.length;
-    updateFactionDefenses(state, { validate: () => ({ ok: true }), build: () => { throw Error('Productive jobs must finish before optional defenses'); } });
+    updateFactionDefenses(state, { cost: (kind, id) => factionBuildGold(state, kind, id), build: () => { throw Error('Productive jobs must finish before optional defenses'); } });
     expect(state.buildings).toHaveLength(original);
   });
 
@@ -370,11 +371,11 @@ describe('rival city development', () => {
     const state = researchRealm(), faction = state.factions[1]; faction.gold = 500;
     for (const farm of own(state, 'camp').slice(0, 3)) farm.construction = { duration: 90, startedAt: 0, waitingForBuilder: true };
     updateFactionDevelopment(state, orders(state));
-    expect(researchStatus(state, 1)).toMatchObject({ focus: 'woodenTower', active: true });
+    expect(researchStatus(state, 1)).toMatchObject({ focus: 'infantryDrill', active: true });
     expect(faction.gold).toBe(500);
-    grantIncome(faction, { gold: researchStatus(state, 1).required / .25 }, state);
+    grantIncome(faction, { gold: researchStatus(state, 1).required / researchAllocation(faction) }, state);
     updateResearch(state,30);
-    expect(faction.research?.levels.woodenTower).toBe(1);
+    expect(faction.research?.levels.infantryDrill).toBe(1);
   });
 
   it('defaults to cheapest available work and honors an explicit priority without losing progress', () => {
@@ -382,7 +383,7 @@ describe('rival city development', () => {
     palace.governorPermissions = { farms: true, housing: true };
     riverFarms(state);
     faction.research = { focus: 'monument', levels: { wall: 1, woodenTower: 1 }, progress: {} };
-    expect(factionResearchTarget(state, faction)).toBe('scoutLodge');
+    expect(factionResearchTarget(state, faction)).toBe('infantryDrill');
     faction.research.priorities = ['monument']; faction.research.progress.monument = 1;
     expect(factionResearchTarget(state, faction)).toBe('irrigation'); // Statehood first needs Grain Storage and Irrigation.
     updateFactionDevelopment(state, orders(state));
@@ -402,7 +403,7 @@ describe('rival city development', () => {
     entityStore(state).buildings.add({ id: 30000, kind: 'guardPost', faction: 1, x: palace.x + 3, y: palace.y,
       hp: 100, maxHp: 100, capacity: 0, construction: { startedAt: 0, duration: 30, waitingForBuilder: true } });
     expect(factionCommittedBudget(state, faction).upkeep).toBe(15);
-    expect(canSustainFactionDefense(state, faction, 'woodenTower')).toBe(false);
+    expect(canSustainFactionDefense(state, faction, 'woodenTower')).toBe(true);
     expect(canSustainFactionDefense(state, faction, 'guardPost')).toBe(false);
   });
 
@@ -411,13 +412,13 @@ describe('rival city development', () => {
     const palace = own(state, 'palace')[0];
     entityStore(state).buildings.add({ id: 30001, kind: 'woodenTower', faction: 1, x: palace.x - 4, y: palace.y - 4,
       hp: 600, maxHp: 600, capacity: 0 });
-    updateFactionDefenses(state, { validate: (id, kind, x, y) => validateBuildAt(state, kind, x, y, id), build: (id, kind, x, y) => buildAt(state, kind, x, y, id) });
+    updateFactionDefenses(state, { cost: (kind, id) => factionBuildGold(state, kind, id), build: (id, kind, x, y) => buildAt(state, kind, x, y, id) });
     expect(own(state, 'palisade')).toHaveLength(0);
     expect(own(state, 'woodenTower').some(tower => tower.id === 30001)).toBe(true);
     expect(state.factions[1].research?.levels.wall).toBeUndefined();
     state.factions[1].villageId = 123; state.time = 30;
     const fail = () => { throw Error('Village must retain its own development system'); };
     updateFactionDevelopment(state, { farms: faction => { if (faction.id === 1) fail(); }, houses: faction => { if (faction.id === 1) fail(); }, validate: fail, build: fail });
-    updateFactionDefenses(state, { validate: fail, build: fail });
+    updateFactionDefenses(state, { cost: fail, build: fail });
   });
 });

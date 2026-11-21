@@ -239,7 +239,7 @@ describe('fog of war', () => {
         expect(seen).not.toBe(plot);
         expect(seen).toMatchObject({ id: 100, planted: true, food: 3, observedAt: 38, harvestedAt: 30, expiresAt: 105 });
         expect(seen.claimedBy).toBeUndefined();
-        expect(fieldGrowth(seen, seen.observedAt)).toBe(1);
+        expect(fieldGrowth(seen, seen.observedAt)).toBeCloseTo(38 / 60);
 
         state.units[0].x = 40.5; updateFog(state);
         Object.assign(plot, { planted: false, food: 0, harvestedAt: 60, nextHarvest: 90, expiresAt: undefined });
@@ -250,7 +250,7 @@ describe('fog of war', () => {
         const restored: GameState = JSON.parse(JSON.stringify(state));
         restored.time = 120;
         expect(updateFog(restored).fields).toEqual([seen]);
-        expect(fieldGrowth(updateFog(restored).fields[0], seen.observedAt)).toBe(1);
+        expect(fieldGrowth(updateFog(restored).fields[0], seen.observedAt)).toBeCloseTo(38 / 60);
         restored.units[0].x = 10.5;
         const revisited = updateFog(restored).fields;
         expect(revisited).toHaveLength(2);

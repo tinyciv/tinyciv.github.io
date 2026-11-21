@@ -28,15 +28,56 @@
     }
   },
   "hut": {
-    "generator": "built-in imagegen",
-    "source": "scratch/2026-11-16-exploration/generated-sheet.png",
-    "references": [
-      "public/assets/buildings/wooden-settlement.png",
-      "public/assets/hermit/cabin.png"
-    ],
-    "approved": "All three variants, 2026-11-16",
+    "generator": "PixelLab API /v2/create-object-pro-flash",
+    "review": "scratch/2026-11-20-goody-hut-redesigns/index.html",
+    "approved": "2D and 1B, 2026-11-20",
     "nativeDimensions": [16, 16],
-    "finishing": "Cropped equal sheet cells, thresholded alpha at 190, registered silhouette, and reduced with nearest-neighbor sampling.",
-    "prompt": "scratch/2026-11-16-exploration/prompt.txt"
+    "view": "High top-down, front-aligned orthographic",
+    "finishing": "Native sprites bottom-aligned with near-black shades matched to the existing hermit cabin.",
+    "variants": {
+      "hut-a.png": {
+        "title": "Timber lodge",
+        "candidate": "2D",
+        "reference": "public/assets/buildings/house-variants/gabled-roof-b.png",
+        "seed": 261120377,
+        "objectId": "3346a5ee-feaf-4460-986a-94b13d253bc0"
+      },
+      "hut-b.png": {
+        "title": "Reed cottage",
+        "candidate": "1B",
+        "reference": "public/assets/hermit/cabin.png",
+        "seed": 261120371,
+        "objectId": "629e690c-1d85-4fc3-b70a-1a7cbbe94223"
+      }
+    }
+  },
+  "fossil": {
+    "generator": "PixelLab API /v2/create-object-pro-flash",
+    "nativeDimensions": [32, 32],
+    "view": "High top-down orthographic",
+    "finishing": "Original PixelLab PNG bytes",
+    "variants": {
+      "fossil-a.png": {
+        "title": "Theropod bones",
+        "candidate": "1A",
+        "review": "scratch/2026-11-20-create-dinosaur-fossils/index.html",
+        "reference": "public/assets/resources/rock-ranges/desert.webp",
+        "seed": 261121087
+      },
+      "fossil-b.png": {
+        "title": "Sauropod ribs",
+        "candidate": "2A",
+        "review": "scratch/2026-11-20-create-dinosaur-fossils/index.html",
+        "reference": "public/assets/exploration/ruins-b.png",
+        "seed": 261120987
+      },
+      "fossil-c.png": {
+        "title": "Crested skull",
+        "candidate": "4A",
+        "review": "scratch/2026-11-20-desert-fossils-set-2/index.html",
+        "reference": "public/assets/exploration/ruins-b.png",
+        "seed": 261121603
+      }
+    }
   }
 }

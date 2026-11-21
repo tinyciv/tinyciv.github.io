@@ -33,13 +33,12 @@ it('keeps tundra in a playable generated world and through normalization', () =>
  normalizePunyWorld(w);expect(w.tiles.filter(t=>t.terrain==='tundra').length).toBe(tundra.length);
 });
 
-it('keeps entire overlapping ledge aprons on one terrain and refreshes tundra fertility', () => {
- const w: World = { width: 40, height: 40, seed:'tundra-apron', source:'test', spawns:[], tiles:Array.from({length:1600},()=>({terrain:'grassland',overlay:'forest',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4,fertility:1})) };
- for(let y=3;y<=22;y++)for(let x=10;x<=15;x++)w.tiles[y*40+x].ridge=1;
+it('refreshes fertility and trees in both tundra caps', () => {
+ const w: World = { width: 40, height: 40, seed:'tundra-fertility', source:'test', spawns:[], tiles:Array.from({length:1600},()=>({terrain:'grassland',overlay:'forest',elevation:.4,moisture:.5,food:3,production:1,gold:0,variation:.4,fertility:1})) };
  applyTundra(w);
- const terrain=w.tiles[3*40+10].terrain;
- for(let y=1;y<=24;y++)for(let x=8;x<=17;x++) expect(w.tiles[y*40+x].terrain).toBe(terrain);
- for(const t of w.tiles) if(t.terrain==='tundra') {expect(t.fertility).toBe(.25);expect(t.treeClass).toBe('snowy');}
+ const tundra = w.tiles.filter(tile => tile.terrain === 'tundra');
+ expect(tundra.length).toBeGreaterThan(0);
+ for(const t of tundra) {expect(t.fertility).toBe(.25);expect(t.treeClass).toBe('snowy');}
 });
 
 it('keeps both polar caps narrow even when the equator is shifted', () => {

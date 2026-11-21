@@ -95,7 +95,7 @@ describe('city secession and reconquest', () => {
   it('offers trade, alliance and war, and changes route and hostility state', () => {
     const { state, city } = loyaltyFixture(); secedeCity(state, city); const village = state.villages![0];
     // A freshly seceded city resents its former owner: alliance needs affiliation 45.
-    expect(villageDiplomacyStatus(state, city, true)).toMatchObject({ trade: { available: true, cost: 250 }, ally: { available: false, cost: 3000 }, war: { available: true, cost: 0 } });
+    expect(villageDiplomacyStatus(state, city, true)).toMatchObject({ trade: { available: true, cost: 200 }, ally: { available: false, cost: 3000 }, war: { available: true, cost: 0 } });
     setSettlementAffiliation(state, city.id, 0, 50);
     expect(villageDiplomacyStatus(state, city, true)?.ally).toMatchObject({ available: true, cost: 3000 });
     expect(performVillageAction(state, city, 'trade', true).ok).toBe(true); expect(villageTradeActive(state, village, 0)).toBe(true);

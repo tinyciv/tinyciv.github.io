@@ -60,9 +60,9 @@ describe('stone deposit plains', () => {
     const world = flat(), at = (x: number, y: number) => world.tiles[y * world.width + x];
     world.spawns = [{ x: 26, y: 21 }];
     Object.assign(at(15, 7), { terrain: 'river', overlay: 'ford', fordAxis: 'vertical' });
-    Object.assign(at(8, 10), { ridge: 1, ridgeTier: 2 });
+    at(8, 10).relief = 'mountains';
     Object.assign(at(20, 10), { creek: true, creekGround: 'grassland' });
-    at(19, 16).beach = true; at(12, 16).marsh = true; at(7, 19).stair = 'north';
+    at(19, 16).beach = true; at(12, 16).marsh = true; at(7, 19).rockHost = 19 * world.width + 7;
     at(5, 19).mountainPass = true; at(5, 22).farm = 1; at(8, 22).overlay = 'volcano';
     const before = structuredClone(world), ground = stonePlainsGroundMask(world), sites = stonePlainsSites(world, ground);
     for (const [x, y] of [[15, 7], [15, 8], [8, 10], [10, 12], [20, 10], [19, 10], [19, 16], [12, 16], [7, 19], [5, 19], [5, 22], [8, 22], [24, 19]])

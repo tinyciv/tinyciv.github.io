@@ -7,9 +7,10 @@ import { hasSightCover, sightDistance } from './sight';
 import { worldSightChangesSince, worldRevisions, worldStructureRevision } from './world-revisions';
 import { entityStore, type EntityStore } from './entity-store';
 import { scenarioCityClaim } from './scenario-claims-native';
-import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
+import { recordStructureChange, simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { territorySightCosts } from './territory-sight';
 import { villageCenter, villageClaimCells } from './settlement-bridge';
+import { structureIndex, structuresOf, STRUCTURE_ALIVE } from './structure-index';
 
 export const UNCLAIMED = -2147483648;
 export interface BorderEdge {
@@ -67,6 +68,38 @@ export const INHERITED_CITY_CULTURE_CAP = 100;
 export const INITIAL_CITY_BORDER_BONUS = 3;
 export const SETTLEMENT_BORDER_BUFFER = 1;
 export const VILLAGE_BORDER_START_RADIUS = 3;
+
+function activeBorderSource(building: Building): boolean {
+    return !building.borderClaimSuspended && buildingReady(building)
+        && (building.kind === 'palace' || building.kind === 'house' || building.kind === 'monument' || building.kind === 'fort');
+}
+
+/** The native index partitions civic claimants at the instant a city falls,
+ * before its former homes can attach themselves to a distant surviving city. */
+export function suspendCityBorderClaims(state: GameState, palace: Building): void {
+    if (palace.construction || palace.faction < 0) return;
+    const claims = structureIndex(state).fallenCityClaims(palace);
+    if (!claims.length) return;
+    for (const building of claims) building.borderClaimSuspended = true;
+    recordStructureChange(state);
+}
+
+/** A new palace restores former civic claims where its own borders reach. */
+export function restoreCityBorderClaims(state: GameState, palace: Building): void {
+    const suspended = structuresOf(state, palace.faction, STRUCTURE_ALIVE, 'house', 'monument')
+        .filter(building => building.borderClaimSuspended);
+    if (!suspended.length) return;
+    recordStructureChange(state);
+    const borders = territory(state);
+    let restored = false;
+    for (const building of suspended) {
+        const cell = building.y * borders.width + building.x;
+        if (territoryValue(borders, cell) !== palace.faction
+            || territoryValue(borders, cell, 1) !== palace.id && territoryValue(borders, cell, 3) !== palace.id) continue;
+        delete building.borderClaimSuspended; restored = true;
+    }
+    if (restored) recordStructureChange(state);
+}
 
 /** Village territory is the Rust claim (design 8.6): a radius-3 disk around
  * the civic lot, cells beside built structures and the current stage's
@@ -302,8 +335,7 @@ function computeTerritory(state: GameState): Territory {
         if (unchanged) {
             index = 0;
             for (const building of state.buildings) {
-                if (!buildingReady(building) || (building.kind !== 'palace' && building.kind !== 'house' && building.kind !== 'monument' && building.kind !== 'fort')
-                    || !previous.levels.has(building.faction)) continue;
+                if (!activeBorderSource(building) || !previous.levels.has(building.faction)) continue;
                 const old = previous.sources[index++];
                 if (!old || old.id !== building.id || old.kind !== building.kind || old.faction !== building.faction
                     || old.x !== building.x || old.y !== building.y
@@ -316,9 +348,7 @@ function computeTerritory(state: GameState): Territory {
     }
     const cultures = new Map(state.factions.filter(faction => faction.id >= 0 && !faction.defeated && faction.villageId === undefined).map(faction => [faction.id, borderCulture(state, faction)]));
     const levels = new Map([...cultures].map(([faction, culture]) => [faction, cultureLevel(culture)]));
-    const sources = state.buildings.filter(building => buildingReady(building)
-        && (building.kind === 'palace' || building.kind === 'house' || building.kind === 'monument' || building.kind === 'fort')
-        && levels.has(building.faction));
+    const sources = state.buildings.filter(building => activeBorderSource(building) && levels.has(building.faction));
     const cities: CityClaim[] = sources.filter(building => building.kind === 'palace').map(building => ({
         id: building.id, faction: building.faction, x: building.x, y: building.y,
         cultureAtFounding: cultureAmount(building.cultureAtFounding),

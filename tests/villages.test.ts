@@ -114,17 +114,17 @@ describe('neutral villages', () => {
     }
   }, 120_000);
 
-  it('charges 250 once for trade and 3000 once for alliance, immediately creating trade while paused', () => {
+  it('charges 200 once for trade and 3000 once for alliance, immediately creating trade while paused', () => {
     const { state, village, camp } = settlement(); state.paused = true;
     expect(performVillageAction(state, camp, 'trade').ok).toBe(true);
-    expect(state.factions[0].gold).toBe(4750); expect(villageTradeActive(state, village)).toBe(true);
+    expect(state.factions[0].gold).toBe(4800); expect(villageTradeActive(state, village)).toBe(true);
     expect(state.tradeRoutes?.filter(route => route.villageId === village.id)).toHaveLength(1);
     expect(performVillageAction(state, camp, 'trade').ok).toBe(false);
-    expect(state.factions[0].gold).toBe(4750);
+    expect(state.factions[0].gold).toBe(4800);
     expect(performVillageAction(state, camp, 'ally').ok).toBe(true);
-    expect(state.factions[0].gold).toBe(1750);
+    expect(state.factions[0].gold).toBe(1800);
     expect(performVillageAction(state, camp, 'ally').ok).toBe(false);
-    expect(state.factions[0].gold).toBe(1750); expect(villageTradeActive(state, village)).toBe(true);
+    expect(state.factions[0].gold).toBe(1800); expect(villageTradeActive(state, village)).toBe(true);
   });
 
   it('keeps alliance and trade independent, including trading after an alliance', () => {
@@ -135,12 +135,12 @@ describe('neutral villages', () => {
     expect(villageDiplomacyStatus(state, camp)?.trade.available).toBe(true);
     expect(performVillageAction(state, camp, 'trade').ok).toBe(true);
     expect(villageRelationView(state, village, 0)).toBe('allied'); expect(villageTradeActive(state, village)).toBe(true);
-    expect(state.factions[0].gold).toBe(1750);
+    expect(state.factions[0].gold).toBe(1800);
   });
 
   it('requires gold and Leader proximity for agreements without charging rejected actions', () => {
-    const { state, camp } = settlement(); state.factions[0].gold = 249;
-    expect(performVillageAction(state, camp, 'trade').message).toBe('Need 250 gold.');
+    const { state, camp } = settlement(); state.factions[0].gold = 199;
+    expect(performVillageAction(state, camp, 'trade').message).toBe('Need 200 gold.');
     state.factions[0].gold = 2999;
     expect(performVillageAction(state, camp, 'ally').message).toBe('Need 3000 gold.');
     state.units[0].x = 0; state.units[0].y = 0;

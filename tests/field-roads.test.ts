@@ -2,10 +2,13 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { buildAt, BUILD_COSTS, cancelConstruction, validateBuildAt } from '../src/game/simulation';
 import { buildStroke, planConstruction } from '../src/game/construction';
+import { constructionRoute } from '../src/game/construction-route';
 import { synchronizeFarms } from '../src/game/farms';
 import { canWalk } from '../src/game/pathfinding';
 import { queueConstruction, CONSTRUCTION_SECONDS } from '../src/game/structures';
 import { addPalaceRoadRing } from '../src/game/palace-roads';
+import { publishFarmRoads, recordFarmRoadCrossing } from '../src/game/farm-roads';
+import { createRoadPurchase } from '../src/game/road-purchase';
 import { planAutomaticFarmSite } from '../src/game/farm-siting';
 import { type Building, type GameState, buildingWidth, buildingHeight } from '../src/game/types';
 
@@ -113,6 +116,26 @@ describe('single crop tiles and displaced roads', () => {
     expect(validateBuildAt(state, 'road', 13, 9).message).toContain('Extend');
     state.buildings[1].faction = 1;
     expect(validateBuildAt(state, 'road', 12, 8)).toMatchObject({ ok: false, message: 'Tile occupied.' });
+  });
+
+  it('leaves the fourth corner open for a deliberate manual road purchase', () => {
+    const state = fixture(), road = state.buildings[2];
+    const pending = { ...road, id: 6, x: 16, y: 11 };
+    queueConstruction(pending, state.time, BUILD_COSTS.road.gold, state);
+    entityStore(state).buildings.add({ ...road, id: 5, x: 16, y: 10 }, pending);
+    const courier = { ...state.units[0], kind: 'worker' as const, x: 17.5, y: 11.5 };
+    recordFarmRoadCrossing(state, courier, 17.5, 10.5);
+    publishFarmRoads(state);
+    const roadAt = (x: number, y: number) => state.buildings.some(b => b.kind === 'road' && b.x === x && b.y === y);
+    expect(roadAt(17, 10)).toBe(true);
+    expect(roadAt(17, 11)).toBe(false);
+    const corner = { x: 17, y: 11 };
+    const route = constructionRoute(state, 'road', { x: 17, y: 10 }, corner);
+    expect(route.at(-1)).toEqual(corner);
+    expect(planConstruction(state, 'road', route)).toMatchObject({ ok: true, tiles: [corner] });
+    const purchase = createRoadPurchase(state, route);
+    expect(purchase.step()).toMatchObject({ ok: true, placed: 1 });
+    expect(roadAt(17, 11)).toBe(true);
   });
 
   it('moves perimeter farms off all twelve future settlement-ring cells', () => {

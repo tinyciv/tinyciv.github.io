@@ -2,7 +2,7 @@ import { rustEngine } from './rust-engine';
 import { worldRevisions, worldSightChangesSince } from './world-revisions';
 import type { Point, World } from './types';
 import type { FogView, SightSource } from './fog';
-import { reliefFlags } from './relief';
+import { reliefFlags, rockFootprint } from './relief';
 
 interface TerrainField {
   handle: number; revision: number; journal?: number;
@@ -12,7 +12,7 @@ const fields = new WeakMap<World, TerrainField>();
 const release = new FinalizationRegistry<number>(handle => rustEngine.terrain_rays_drop(handle));
 const reliefCode = (tile: World['tiles'][number] | undefined): number => {
   const flags = reliefFlags(tile);
-  return !tile || flags & 2 ? 0 : flags & 1 ? 2 : 1;
+  return !tile || flags & 2 ? 0 : flags & 1 ? 2 : rockFootprint(tile) ? 3 : 1;
 };
 
 /** Terrain observations only. Rust owns obstruction policy and traversal.

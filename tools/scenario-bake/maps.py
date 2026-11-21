@@ -71,7 +71,8 @@ def render(scenario):
     image = image.resize((width * scale, height * scale), Image.Resampling.NEAREST)
     draw = ImageDraw.Draw(image)
     factions = {faction['id']: faction['color'] for faction in state['factions']}
-    for building in state['buildings']:
+    # As in the game, road surfaces remain visible where they cross irrigation.
+    for building in sorted(state['buildings'], key=lambda building: building['kind'] != 'irrigation'):
         if building.get('hp', 0) <= 0:
             continue
         x, y = building['x'] * scale, building['y'] * scale

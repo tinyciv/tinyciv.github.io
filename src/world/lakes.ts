@@ -50,7 +50,7 @@ export function lakeAspectRatio(cells: number[], width: number): number {
 }
 
 /** Faults and glacial valleys may be long, but their standing water occupies
- * compact pockets. Place these before relief so ledges respect their shores. */
+ * compact pockets. Place these before the river network so they connect to its drainage. */
 export function placeLandformLakes(world: World, plan: LandformPlan, inland: Int16Array,
   parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): FreshwaterLake[] {
   const { tiles, width, height } = world, lakes: FreshwaterLake[] = [];
@@ -127,10 +127,10 @@ export function placeFreshwaterLakes(tiles: Tile[], width: number, height: numbe
       compactScore: Math.min(inland[i], compactFitDepth) * .35 + tile.moisture * 2 + basin + jitter,
       nearestLakeSquared: Infinity };
   })
-    .filter(({ i }) => inland[i] >= 7 && !tiles[i].ridge).sort((a, b) => b.score - a.score);
+    .filter(({ i }) => inland[i] >= 7).sort((a, b) => b.score - a.score);
   const scatterReach = Math.sqrt(candidates.length / Math.max(1, target)) * 1.6;
   const lakes: FreshwaterLake[] = [], occupied = new Uint8Array(tiles.length);
-  for (let cell = 0; cell < tiles.length; cell++) if (tiles[cell].ridge || WATER.has(tiles[cell].terrain))
+  for (let cell = 0; cell < tiles.length; cell++) if (WATER.has(tiles[cell].terrain))
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const x = cell % width + dx, y = Math.floor(cell / width) + dy;
       if (x >= 0 && y >= 0 && x < width && y < height) occupied[y * width + x] = 1;
@@ -166,9 +166,7 @@ export function placeFreshwaterLakes(tiles: Tile[], width: number, height: numbe
             if (Math.hypot(nx - x, ny - y) > radius) continue;
             const next = ny * width + nx;
             if (nx < 2 || ny < 2 || nx >= width - 2 || ny >= height - 2 || inland[next] < 4
-              || occupied[next] || WATER.has(tiles[next].terrain) || tiles[next].ridge || tiles[next].mountainPass
-              || CARDINAL.some(([dx, dy]) => tiles[next + dy * width + dx]?.stair
-                || tiles[next + dy * width + dx]?.ridge)) { fits = false; continue; }
+              || occupied[next] || WATER.has(tiles[next].terrain) || tiles[next].mountainPass) { fits = false; continue; }
             cells.add(next);
           }
       };

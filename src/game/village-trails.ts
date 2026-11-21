@@ -87,7 +87,8 @@ export function initializeVillageTrails(state: GameState): VillageTrailReport {
           }
           break;
         }
-        if (tile.terrain !== 'river' || tile.relief || blocked[next] || water.length === VILLAGE_TRAIL_MAX_FORD_SPAN) break;
+        if (tile.terrain !== 'river' || tile.relief || blocked[next] || water.length === VILLAGE_TRAIL_MAX_FORD_SPAN
+          || tile.rockRangeGap === 'river' && tile.overlay !== 'ford') break;
         water.push(next); previous = next;
       }
     }

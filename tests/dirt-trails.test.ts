@@ -80,9 +80,9 @@ describe('generated village dirt trails', () => {
   it('rejects wide river spans and cliff banks', () => {
     const wide = fixture(); villages(wide); divide(wide, 'river', 5);
     expect(initializeVillageTrails(wide).routes).toBe(0);
-    const cliff = fixture(); villages(cliff); divide(cliff, 'river', 2);
-    for (let y = 0; y < 24; y++) cliff.world.tiles[y * 32 + 13].ridge = 1;
-    expect(initializeVillageTrails(cliff).routes).toBe(0);
+    const rocks = fixture(); villages(rocks); divide(rocks, 'river', 2);
+    for (let y = 0; y < 24; y++) rocks.world.tiles[y * 32 + 13].rockRelief = 0;
+    expect(initializeVillageTrails(rocks).routes).toBe(0);
   });
 
   it('cannot cut diagonally between two impassable corners', () => {

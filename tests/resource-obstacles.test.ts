@@ -50,20 +50,20 @@ describe('solid stone and ore deposits', () => {
     }
   });
 
-  it.each([[2, 2], [3, 3], [5, 3]])('keeps the back rows of a %i×%i ore deposit open for travel and building', (oreWidth, oreHeight) => {
+  it.each([[2, 2], [3, 3], [5, 3]])('blocks movement and building across a whole %i×%i ore deposit', (oreWidth, oreHeight) => {
     const state = fixture(), { world } = state, oreAnchor = 3 * world.width + 6;
     for (let y = 0; y < oreHeight; y++) for (let x = 0; x < oreWidth; x++)
       Object.assign(world.tiles[oreAnchor + y * world.width + x], { resource: 'gold', oreAnchor, oreWidth, oreHeight });
     markWorldChanged(world, 'appearance');
-    const from = { x: 4.5, y: 3.5 }, behind = { x: 7.5, y: 3.5 }, front = { x: 7.5, y: 3.5 + oreHeight - 1 };
-    expect(resourceFootprintBlocked(world, behind.x, behind.y)).toBe(false);
-    expect(reliefFootprintAllowed(world, behind.x, behind.y)).toBe(true);
-    expect(resourceFootprintBlocked(world, front.x, front.y)).toBe(true);
-    expect(reliefFootprintAllowed(world, front.x, front.y)).toBe(false);
+    const from = { x: 4.5, y: 3.5 }, to = { x: 6.5 + oreWidth, y: 3.5 };
     const check = () => {
-      expect(canMove(state, from, behind, 0)).toBe(true);
-      expect(findPath(state, from, behind, 0).at(-1)).toEqual(behind);
-      expect(canWalk(state, front.x, front.y, 0)).toBe(false);
+      for (let y = 0; y < oreHeight; y++) for (let x = 0; x < oreWidth; x++) {
+        expect(resourceFootprintBlocked(world, 6 + x, 3 + y)).toBe(true);
+        expect(reliefFootprintAllowed(world, 6 + x, 3 + y)).toBe(false);
+        expect(canWalk(state, 6.5 + x, 3.5 + y, 0)).toBe(false);
+      }
+      expect(canMove(state, from, to, 0)).toBe(false);
+      expect(findPath(state, from, to, 0).at(-1)).toEqual(to);
     };
     check();
     withSimulationReads(state, check);
@@ -78,6 +78,18 @@ describe('solid stone and ore deposits', () => {
     delete state.world.tiles[4 * 30 + 6].resource; markWorldChanged(state.world, 'appearance');
     expect(hasStaticPath(state, from, to, 0)).toBe(true);
     expect(findPath(state, from, to, 0).at(-1)).toEqual(to);
+  });
+
+  it('updates a cached walking route when a bare rock footprint occupies the last opening', () => {
+    const state = fixture(), { world } = state, cell = 4 * world.width + 6;
+    const from = { x: 3.5, y: 4.5 }, to = { x: 9.5, y: 4.5 };
+    for (let y = 0; y < world.height; y++) if (y !== 4) world.tiles[y * world.width + 6].rockRelief = 0;
+    markWorldChanged(world, 'geometry');
+    expect(hasStaticPath(state, from, to, 0)).toBe(true);
+    world.tiles[cell].rockHost = cell;
+    markWorldChanged(world, 'geometry', [cell]);
+    expect(canWalk(state, 6.5, 4.5, 0)).toBe(false);
+    expect(hasStaticPath(state, from, to, 0)).toBe(false);
   });
 
   it.each(['house', 'library', 'camp', 'road', 'palisade', 'irrigation', 'palace'] as const)('rejects a %s footprint over a deposit without spending', kind => {

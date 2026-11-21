@@ -12,10 +12,29 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use rustc_hash::FxHashMap;
 
 use crate::jsmath::hypot2;
-use super::kinds::building::{defensive, farm, height, route, wall, width, FOUNTAIN, IRRIGATION, PALACE, RUIN, WOODEN_TOWER};
+use super::kinds::building::{defensive, farm, height, route, wall, width, BARRACKS, FORT, FOUNTAIN, HOUSE, IRRIGATION, MONUMENT, PALACE, RUIN, WALL, WOODEN_TOWER};
+use super::settlement_tiers;
 
 fn obstructs(row: &Structure) -> bool {
     row.flags & PRESENT != 0 && !farm(row.kind) && !route(row.kind) && row.kind != IRRIGATION && row.kind != RUIN
+}
+
+pub fn completes_tile_square(width: i32, height: i32, x: i32, y: i32, occupied: impl Fn(usize) -> bool) -> bool {
+    if !(0..width).contains(&x) || !(0..height).contains(&y) { return false; }
+    for dy in [-1, 1] {
+        for dx in [-1, 1] {
+            let (nx, ny) = (x + dx, y + dy);
+            if (0..width).contains(&nx) && (0..height).contains(&ny)
+                && occupied((y * width + nx) as usize) && occupied((ny * width + x) as usize)
+                && occupied((ny * width + nx) as usize) { return true; }
+        }
+    }
+    false
+}
+
+/// Only finished irrigation can share its footprint with a new farm.
+pub fn farm_can_share_tile(kind: u32, same_owner: bool, ready: bool) -> bool {
+    kind == IRRIGATION && same_owner && ready
 }
 
 pub const ALIVE: u32 = 1;
@@ -26,7 +45,9 @@ pub const FOUNTAIN_RADIUS: i32 = 8;
 /// Candidate classes for nearest/near queries.
 pub const CLASS_REFUGE: u32 = 0;
 pub const CLASS_SHELTER: u32 = 1;
+pub const CLASS_READY_PALACE: u32 = 2;
 fn in_class(class: u32, row: &Structure) -> bool {
+    if class == CLASS_READY_PALACE { return row.kind == PALACE && row.flags & READY != 0; }
     if row.flags & PRESENT == 0 || row.kind == IRRIGATION || farm(row.kind) || route(row.kind) { return false; }
     match class { CLASS_REFUGE => !wall(row.kind), CLASS_SHELTER => true, _ => false }
 }
@@ -70,6 +91,28 @@ impl CellCounts {
     }
 }
 
+#[derive(Default)]
+struct CivicSites {
+    sites: BTreeMap<i64, Structure>,
+    owners: FxHashMap<i64, i64>,
+    counts: FxHashMap<i64, u32>,
+    repartition: bool,
+}
+
+impl CivicSites {
+    fn assign(&mut self, id: i64, palace: Option<i64>) {
+        if let Some(previous) = self.owners.remove(&id) {
+            let count = self.counts.get_mut(&previous).expect("assigned civic site");
+            *count -= 1;
+            if *count == 0 { self.counts.remove(&previous); }
+        }
+        if let Some(palace) = palace {
+            self.owners.insert(id, palace);
+            *self.counts.entry(palace).or_default() += 1;
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct StructureIndex {
     width: i64,
@@ -81,15 +124,22 @@ pub struct StructureIndex {
     journal_floor: f64,
     /// Wall/palisade corner cells, whatever their state.
     wall_cells: CellCounts,
+    ready_stone_walls: i32,
+    ready_barracks: FxHashMap<i64, i32>,
     /// Corner cells of present wooden towers.
     wooden_tower_cells: CellCounts,
     /// Footprint cells of living buildings that are neither farms nor irrigation.
     solid_cells: CellCounts,
+    /// Living roads and bridges, including queued construction reservations.
+    route_cells: CellCounts,
+    /// Farm, irrigation and permanent fort footprints also reserve ground.
+    other_occupied_cells: CellCounts,
     fountain_coverage: FxHashMap<(i64, usize), u16>,
     defenses: BTreeMap<i64, Vec<f64>>,
     output: Vec<f64>,
     scratch: Vec<(f64, u64, i64)>,
-    proximity: FxHashMap<i64, [RTree<SpatialStructure>; 2]>,
+    proximity: FxHashMap<i64, [RTree<SpatialStructure>; 3]>,
+    civics: FxHashMap<i64, CivicSites>,
     clearance: BTreeSet<usize>,
 }
 impl Default for StructureIndex { fn default() -> Self { Self::new(1) } }
@@ -97,11 +147,17 @@ impl Default for StructureIndex { fn default() -> Self { Self::new(1) } }
 impl StructureIndex {
     pub fn new(width: i32) -> Self {
         Self { width: width.max(1) as i64, ordered: BTreeMap::new(), by_faction: BTreeMap::new(), revision: 0.0, journal: VecDeque::new(), journal_floor: 0.0,
-            wall_cells: CellCounts::default(), wooden_tower_cells: CellCounts::default(), solid_cells: CellCounts::default(),
+            wall_cells: CellCounts::default(), ready_stone_walls: 0, ready_barracks: FxHashMap::default(),
+            wooden_tower_cells: CellCounts::default(), solid_cells: CellCounts::default(), route_cells: CellCounts::default(), other_occupied_cells: CellCounts::default(),
             fountain_coverage: FxHashMap::default(),
-            defenses: BTreeMap::new(), output: vec![0.0], scratch: Vec::new(), proximity: FxHashMap::default(), clearance: BTreeSet::new() }
+            defenses: BTreeMap::new(), output: vec![0.0], scratch: Vec::new(), proximity: FxHashMap::default(),
+            civics: FxHashMap::default(), clearance: BTreeSet::new() }
     }
     pub fn width(&self) -> i32 { self.width as i32 }
+    pub fn has_ready_stone_walls(&self) -> bool { self.ready_stone_walls > 0 }
+    pub fn ready_barracks(&self, faction: f64) -> i32 {
+        self.ready_barracks.get(&faction_key(faction)).copied().unwrap_or_default()
+    }
     fn row(world: &World, entity: Entity) -> &Structure { world.get::<Structure>(entity).expect("structure row") }
     fn cell(&self, x: f64, y: f64) -> Option<usize> {
         if !x.is_finite() || !y.is_finite() { return None; }
@@ -111,11 +167,22 @@ impl StructureIndex {
     fn count_cells(&mut self, row: &Structure, delta: i32) {
         let corner = self.cell(row.x, row.y);
         if wall(row.kind) { self.wall_cells.add(corner, delta); }
+        if row.kind == WALL && row.flags & READY != 0 { self.ready_stone_walls += delta; }
+        if row.kind == BARRACKS && row.flags & READY != 0 {
+            let key = faction_key(row.faction);
+            let count = self.ready_barracks.entry(key).or_default();
+            *count += delta;
+            if *count == 0 { self.ready_barracks.remove(&key); }
+        }
         if row.kind == WOODEN_TOWER && row.flags & PRESENT != 0 { self.wooden_tower_cells.add(corner, delta); }
-        if row.flags & ALIVE != 0 && !farm(row.kind) && row.kind != IRRIGATION {
+        let alive = row.flags & ALIVE != 0;
+        if alive && route(row.kind) { self.route_cells.add(corner, delta); }
+        if alive || row.kind == FORT {
+            let solid = alive && !farm(row.kind) && row.kind != IRRIGATION;
             for dy in 0..height(row.kind) as i64 { for dx in 0..width(row.kind) as i64 {
                 let cell = self.cell(row.x + dx as f64, row.y + dy as f64);
-                self.solid_cells.add(cell, delta);
+                let counts = if solid { &mut self.solid_cells } else { &mut self.other_occupied_cells };
+                counts.add(cell, delta);
             } }
         }
         if row.kind == FOUNTAIN && row.flags & READY != 0 {
@@ -153,9 +220,54 @@ impl StructureIndex {
         let trees = self.proximity.entry(faction_key(row.faction)).or_default();
         for (class, tree) in trees.iter_mut().enumerate() {
             if in_class(class as u32, row) {
-                if insert { tree.insert(entry.clone()); } else { tree.remove(&entry); }
+                let entry = if class as u32 == CLASS_READY_PALACE {
+                    let center = [row.x + 1.0, row.y + 1.0];
+                    SpatialStructure { envelope: AABB::from_corners(center, center), ..entry.clone() }
+                } else { entry.clone() };
+                if insert { tree.insert(entry); } else { tree.remove(&entry); }
             }
         }
+    }
+
+    fn index_civic(&mut self, row: Structure, insert: bool) {
+        if row.flags & READY == 0 || !row.faction.is_finite() || row.faction < 0.0 { return; }
+        let faction = faction_key(row.faction);
+        if row.kind == PALACE {
+            if let Some(civics) = self.civics.get_mut(&faction) { civics.repartition = true; }
+        } else if settlement_tiers::civic(row.kind) {
+            let civics = self.civics.entry(faction).or_default();
+            if insert { civics.sites.insert(row.id, row); }
+            else { civics.sites.remove(&row.id); }
+            if civics.repartition { return; }
+            let owner = if insert { self.civic_owner(row) } else { None };
+            self.civics.get_mut(&faction).unwrap().assign(row.id, owner);
+        }
+    }
+
+    fn civic_owner(&mut self, row: Structure) -> Option<i64> {
+        let owner = self.nearest(row.faction, row.x + width(row.kind) / 2.0,
+            row.y + height(row.kind) / 2.0, CLASS_READY_PALACE, 0);
+        owner.is_finite().then_some(owner as i64)
+    }
+
+    pub fn civic_count(&mut self, faction: f64, palace: i64) -> u32 {
+        let key = faction_key(faction);
+        // A new, lost or transferred palace changes the ownership partition.
+        // Hold the rebuild until the next query to coalesce simultaneous edits.
+        if self.civics.get(&key).is_some_and(|sites| sites.repartition) {
+            let mut civics = self.civics.remove(&key).unwrap();
+            civics.owners.clear();
+            civics.counts.clear();
+            for &row in civics.sites.values() {
+                if let Some(owner) = self.civic_owner(row) {
+                    civics.owners.insert(row.id, owner);
+                    *civics.counts.entry(owner).or_default() += 1;
+                }
+            }
+            civics.repartition = false;
+            self.civics.insert(key, civics);
+        }
+        self.civics.get(&key).and_then(|sites| sites.counts.get(&palace)).copied().unwrap_or(0)
     }
 
     /// Publishes a building row. `entity` and `sequence` come from the entity table.
@@ -175,6 +287,7 @@ impl StructureIndex {
             if same_faction && previous.x == x && previous.y == y && previous.kind == kind && previous.flags == flags { return; }
             self.count_cells(&previous, -1);
             self.index_proximity(&previous, false);
+            self.index_civic(previous, false);
             if !same_faction {
                 if let Some(set) = self.by_faction.get_mut(&faction_key(previous.faction)) { set.remove(&previous.sequence); }
                 self.by_faction.entry(faction_key(faction)).or_default().insert(sequence);
@@ -186,6 +299,7 @@ impl StructureIndex {
         world.entity_mut(entity).insert(next);
         self.count_cells(&next, 1);
         self.index_proximity(&next, true);
+        self.index_civic(next, true);
         self.changed(id);
     }
 
@@ -194,6 +308,7 @@ impl StructureIndex {
         let Some(row) = world.get::<Structure>(entity).copied() else { return; };
         self.count_cells(&row, -1);
         self.index_proximity(&row, false);
+        self.index_civic(row, false);
         self.ordered.remove(&row.sequence);
         if let Some(set) = self.by_faction.get_mut(&faction_key(row.faction)) { set.remove(&row.sequence); }
         self.changed(row.id);
@@ -252,14 +367,16 @@ impl StructureIndex {
         scratch.clear();
         let point = [x, y]; let mut boundary = f64::INFINITY;
         for row in tree.nearest_neighbor_iter(point) {
-            let distance = row.distance(&point);
+            let squared = row.distance_2(&point);
+            let (distance, order) = if class == CLASS_READY_PALACE { (squared, row.id as u64) }
+                else { (row.distance(&point), row.sequence) };
             // Include the complete final distance tie, then use registration
             // order. R-tree traversal order must never decide a gameplay tie.
             // Broad-phase squared distances can differ by a rounding unit from
             // the exact JS-compatible hypot used for gameplay ordering.
-            if row.distance_2(&point) > boundary { break; }
-            scratch.push((distance, row.sequence, row.id));
-            if scratch.len() == skip.saturating_add(1) { boundary = row.distance_2(&point) * (1.0 + 1e-12) + 1e-12; }
+            if squared > boundary { break; }
+            scratch.push((distance, order, row.id));
+            if scratch.len() == skip.saturating_add(1) { boundary = squared * (1.0 + 1e-12) + 1e-12; }
         }
         scratch.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal).then(a.1.cmp(&b.1)));
         let result = scratch.get(skip).map_or(f64::NAN, |entry| entry.2 as f64);
@@ -305,6 +422,37 @@ impl StructureIndex {
     /// A living building other than a farm or irrigation covers this tile.
     pub fn solid_at(&self, x: f64, y: f64) -> bool {
         self.cell(x, y).is_some_and(|cell| self.solid_cells.has(cell as f64))
+    }
+
+    pub fn occupied_at(&self, x: f64, y: f64) -> bool {
+        self.cell(x, y).is_some_and(|cell| self.solid_cells.has(cell as f64) || self.other_occupied_cells.has(cell as f64))
+    }
+
+    pub fn completes_road_square(&self, x: i32, y: i32, height: i32) -> bool {
+        completes_tile_square(self.width(), height, x, y, |cell| self.route_cells.has(cell as f64))
+    }
+
+    /// Civilian claim sources whose nearest city was the fallen palace. The
+    /// explicit lost center remains a contender even after its ECS row dies.
+    pub fn fallen_city_claims(&mut self, world: &World, faction: f64, palace: i64, x: f64, y: f64) -> *const f64 {
+        self.output.clear();
+        self.output.push(0.0);
+        let key = faction_key(faction);
+        let other_cities = self.proximity.get(&key).map(|trees| &trees[CLASS_READY_PALACE as usize]);
+        for sequence in self.by_faction.get(&key).into_iter().flatten() {
+            let row = Self::row(world, self.ordered[sequence]);
+            if row.flags & ALIVE == 0 || !matches!(row.kind, HOUSE | MONUMENT) { continue; }
+            let point = [row.x + width(row.kind) / 2.0, row.y + height(row.kind) / 2.0];
+            let distance = (point[0] - x - 1.0).powi(2) + (point[1] - y - 1.0).powi(2);
+            let belongs_elsewhere = other_cities.is_some_and(|tree| {
+                tree.nearest_neighbor_iter(point)
+                    .take_while(|other| other.distance_2(&point) <= distance)
+                    .any(|other| other.id != palace && (other.distance_2(&point) < distance || other.id < palace))
+            });
+            if !belongs_elsewhere { self.output.push(row.id as f64); }
+        }
+        self.output[0] = (self.output.len() - 1) as f64;
+        self.output.as_ptr()
     }
 
     /// Snapshot the partition of defensive buildings among ready palaces of

@@ -51,6 +51,7 @@ export class EconomyInputs implements ScalarObserver {
   private coverage?: Uint8Array;
   private fishing = new Map<number, number>();
   private palaceReady = new WeakMap<Building, boolean>();
+  private palaceInGrace = new WeakMap<Building, boolean>();
   private buildings: EntityObserver<Building>;
   private units: EntityObserver<Unit>;
   constructor(private state: GameState) {
@@ -74,6 +75,13 @@ export class EconomyInputs implements ScalarObserver {
       if (this.palaceReady.get(palace) !== ready) {
         this.mark(palace.faction); const member = this.members.get(palace); if (member) this.watch(member);
         this.palaceReady.set(palace, ready);
+      }
+      if (palace.settlementUpkeepUntil !== undefined) {
+        const inGrace = palace.settlementUpkeepUntil > this.state.time;
+        if (this.palaceInGrace.get(palace) !== inGrace) {
+          this.dirty.add(palace.faction);
+          this.palaceInGrace.set(palace, inGrace);
+        }
       }
     }
   }
@@ -170,7 +178,7 @@ export class EconomyInputs implements ScalarObserver {
         this.orchards.schedule(field, field.orchard.readyAt, field);
       } else this.orchards.cancel(field);
       const tile = this.state.world.tiles[field.y * this.state.world.width + field.x];
-      if (tile) { this.nested.set(tile, member); observeScalars(tile, ['terrain', 'fertility'], this); }
+      if (tile) { this.nested.set(tile, member); observeScalars(tile, ['terrain', 'fertility', 'fertilityGrass'], this); }
     }
   }
   changed(target: object, key: string, previous: unknown, value: unknown): void {

@@ -17,6 +17,8 @@ export interface WaterDepthField {
     geometryRevision: number;
 }
 const cached = new WeakMap<World, WaterDepthField>();
+const WATER_SIGNATURE = 2;
+const FJORD_SIGNATURE = 3;
 
 /** Two-pass chamfer transform: cardinal steps are 1, diagonal steps √2. */
 function distances(world: World, source: (i: number) => boolean): Float32Array {
@@ -51,16 +53,17 @@ export function prepareWaterDepth(world: World): WaterDepthField {
     let changed = !previous || previous.width !== world.width || previous.height !== world.height;
     for (let i = 0; i < signature.length; i++) {
         const tile = world.tiles[i];
-        signature[i] = WATER.has(tile.terrain) && !tile.creek && !tile.riverArt && !tile.waterfall ? 2 : tile.beach ? 1 : 0;
+        const openWater = WATER.has(tile.terrain) && !tile.creek && !tile.riverArt && !tile.waterfall;
+        signature[i] = openWater ? tile.fjord === 'water' ? FJORD_SIGNATURE : WATER_SIGNATURE : Number(!!tile.beach);
         if (!changed && previous!.signature[i] !== signature[i]) changed = true;
     }
     if (!changed) { previous!.revision = world.revision; previous!.geometryRevision = geometryRevision; return previous!; }
-    const distance = distances(world, i => signature[i] < 2), bands = new Uint8Array(signature.length);
+    const distance = distances(world, i => signature[i] < WATER_SIGNATURE), bands = new Uint8Array(signature.length);
     for (let i = 0; i < signature.length; i++) {
-        // Rivers and seas share one continuous field. Terrain labels must never
-        // create a color seam at a river mouth or a coastline boundary.
-        bands[i] = signature[i] < 2 ? 1 : distance[i] >= DEEP_WATER_DISTANCE ? 2
-            : distance[i] <= BEACH_SHELF_WIDTH ? 0 : 1;
+        // Steep fjord banks run into deep water within a few cells of the shore.
+        const fjord = signature[i] === FJORD_SIGNATURE;
+        bands[i] = signature[i] < WATER_SIGNATURE ? 1 : distance[i] >= (fjord ? 3.5 : DEEP_WATER_DISTANCE) ? 2
+            : distance[i] <= (fjord ? 1.7 : BEACH_SHELF_WIDTH) ? 0 : 1;
     }
     const field = { distance, bands, signature, width: world.width, height: world.height, revision: world.revision, geometryRevision };
     cached.set(world, field);

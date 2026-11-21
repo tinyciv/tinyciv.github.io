@@ -2,7 +2,7 @@ import { updateObservationPost } from './observation-posts';
 import { CHECK_INTERVAL } from './work-cadence';
 import { downhillRangeBonus, unitAttackRange } from './combat-range';
 import { isKeep } from './settlement-upgrades';
-import { BALLISTA_RANGE } from './ballista';
+import { BALLISTA_RANGE, SIEGE_CANNON_RANGE } from './ballista';
 import { unitSightRadius } from './fog';
 import { chooseScoutExplorationRoute, reserveScoutExplorationGoal, type ScoutThreat } from './scout-exploration';
 import { unitRespectsForbidden } from './forbidden-zones';
@@ -43,7 +43,8 @@ function observedThreats(state: GameState, scout: Unit, hostile: Hostile): Threa
     if (!buildingReady(building) || !hostile(scout.faction, building.faction)
       || !['tower', 'woodenTower', 'guardPost', 'ballista', 'siegeCannon'].includes(building.kind) && !isKeep(building)) continue;
     const point = { x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 };
-    if (scoutSees(state, scout, point)) threats.push({ ...point, radius: building.kind === 'guardPost' ? 3 : (building.kind === 'ballista' || building.kind === 'siegeCannon' ? BALLISTA_RANGE + 1 : 7) + downhillRangeBonus(state.world, point, scout) });
+    const range = building.kind === 'ballista' ? BALLISTA_RANGE : building.kind === 'siegeCannon' ? SIEGE_CANNON_RANGE : 6;
+    if (scoutSees(state, scout, point)) threats.push({ ...point, radius: building.kind === 'guardPost' ? 3 : range + 1 + downhillRangeBonus(state.world, point, scout) });
   }
   return threats;
 }

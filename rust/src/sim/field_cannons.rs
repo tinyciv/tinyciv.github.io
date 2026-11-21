@@ -8,10 +8,11 @@ use super::{entities::EntityTables, kinds::{building as b, unit as u}};
 
 pub const ROW: usize = 24;
 pub const TARGET: usize = 12;
-pub const RANGE: f64 = 18.0;
-pub const UPKEEP: f64 = 200.0;
+pub const RANGE: f64 = super::battle_support::CANNON_RANGE;
+pub const UPKEEP: f64 = 120.0;
 pub const PERIOD: f64 = 30.0;
-pub const SPEED: f64 = 3.6 * 1.1 * 0.5;
+pub const SPEED_MULTIPLIER: f64 = 1.125;
+pub const SPEED: f64 = 3.6 * 1.1 * SPEED_MULTIPLIER;
 const ACCELERATION_TIME: f64 = 2.5;
 const BRAKING_TIME: f64 = 0.65;
 type Cell = (i32,i32);
@@ -23,6 +24,8 @@ fn neighbors(c:Cell)->[Cell;8]{[(c.0,c.1-1),(c.0+1,c.1),(c.0,c.1+1),(c.0-1,c.1),
 const EXPLICIT:u32=1;
 const ATTACK_GOAL:u32=2;
 const RALLY_GOAL:u32=4;
+const IN_FORMATION:u32=16;
+const OFFENSIVE_SLOT:u32=32;
 const TRAFFIC_YIELD_DELAY: f64 = 4.0;
 const TRAFFIC_PASS_TIME: f64 = 6.0;
 
@@ -151,15 +154,17 @@ impl FieldCannons {
     /// proven disconnected component can choose another nearby open position.
     fn choose_post(&self,id:i64,faction:i32,cannon:&Cannon,x:f64,y:f64,flags:u32,navigation:Option<Navigation>,engines:&crate::movement::Engines)->Option<Cell>{
         let origin=cell(x,y);let radius=if flags&RALLY_GOAL!=0{1}else{6};
+        let available = |c| {
+            // Skip components already proven disconnected from this gun.
+            self.post_open(id,c,navigation,engines) && !cannon.rejected.iter().any(|goal| self.fields.get(&(faction,*goal))
+                .is_some_and(|field|field.frontier.is_empty()&&field.distance.contains_key(&c)))
+        };
+        if flags & OFFENSIVE_SLOT != 0 && available(origin) { return Some(origin); }
         let mut best:Option<(f64,Cell)>=None;
         for dy in -radius..=radius{for dx in -radius..=radius{
             if flags&RALLY_GOAL!=0 && dx*dx+dy*dy>1 {continue;}
             let c=(origin.0+dx,origin.1+dy);
-            if !self.post_open(id,c,navigation,engines) {continue;}
-            // A completed reverse field is also a cached connected component.
-            // Skip that whole component after proving this gun cannot enter it.
-            if cannon.rejected.iter().any(|goal| self.fields.get(&(faction,*goal))
-                .is_some_and(|field|field.frontier.is_empty()&&field.distance.contains_key(&c))) {continue;}
+            if !available(c) {continue;}
             let d=(c.0 as f64+0.5-x).hypot(c.1 as f64+0.5-y);
             let score=d*d+if self.ready_road(c){0.0}else{0.25};
             if best.is_none_or(|(s,p)|score<s||score==s&&c<p){best=Some((score,c));}
@@ -321,7 +326,7 @@ impl FieldCannons {
         self.output[7]=3.0;self.output[8]=SPEED;self.output[9]=RANGE;self.output[10]=v[9]+PERIOD;
         self.output.as_ptr()
     }
-    /// Row: id,faction,x,y,hp,speed,goalX,goalY,facing,cooldown,shotAt,
+    /// Row: id,faction,x,y,hp,marchSpeed,goalX,goalY,facing,cooldown,shotAt,
     /// upkeepAt,funded,attackTime,goalFlags,forcedTarget,rawAttack,gold,
     /// strength,whaleBonus,peatSupplied,shotTarget,damage,reachedGoal.
     /// Output slot 20 reports whether the cannon moved.
@@ -361,30 +366,37 @@ impl FieldCannons {
             }
             if let Some((_,_,i))=best{let v=&self.input[ROW+i*TARGET..ROW+(i+1)*TARGET];
                 self.output[8]=(v[2]-self.output[3]).atan2(v[1]-self.output[2]);self.output[10]=now;self.output[9]=4.0;self.output[13]=0.74;self.output[21]=v[0];cannon.hold_until=now+4.0;
-                let attack = self.output[16] * crate::combat::upkeep_combat_multiplier(self.output[12] != 0.0);
-                self.output[22]=super::battle_support::siege_attack(true,crate::combat::attack_damage(attack*v[5],v[4])*self.output[18]*if v[9]!=0.0{2.0}else{1.0});
+                let damage = crate::combat::attack_damage(self.output[16] * v[5], v[4]);
+                let funded = crate::combat::upkeep_combat_multiplier(self.output[12] != 0.0);
+                self.output[22]=super::battle_support::siege_attack(true,damage*funded*self.output[18]*if v[9]!=0.0{2.0}else{1.0});
             }
         }
         if !self.output[6].is_finite()||self.output[13]>0.0||(flags&EXPLICIT==0||flags&ATTACK_GOAL!=0)&&now<cannon.hold_until{return;}
         let faction=self.output[1] as i32;let navigation=self.navigation.get(&faction).copied();
-        let requested=Some((cell(self.output[6],self.output[7]),flags&!EXPLICIT));
+        let marching = flags & OFFENSIVE_SLOT != 0 && flags & RALLY_GOAL == 0;
+        let route_flags = flags & !(EXPLICIT | IN_FORMATION);
+        let requested_cell = cell(self.output[6],self.output[7]);
+        let requested=Some((requested_cell,route_flags));
         if now>=cannon.next_plan||cannon.requested!=requested||cannon.revision!=self.revision||cannon.navigation!=navigation{
             cannon.next_plan=now+1.0;
             let changed=cannon.requested!=requested||cannon.navigation!=navigation||cannon.revision!=self.revision;
             if changed {cannon.rejected.clear();}
-            let order_changed = cannon.requested.is_some_and(|(_, mode)| mode != flags & !EXPLICIT)
+            let order_changed = cannon.requested.is_some_and(|(_, mode)| mode != route_flags)
                 || flags & EXPLICIT != 0 && cannon.requested != requested;
             // A fresh point order can redirect a gun even while it is yielding.
-            let new_destination = flags == EXPLICIT && cannon.requested != requested;
-            if new_destination || order_changed && !cannon.yielding && now >= cannon.traffic_wait_until {
+            let new_destination = flags & !IN_FORMATION == EXPLICIT && cannon.requested != requested;
+            if new_destination || order_changed && (marching || !cannon.yielding && now >= cannon.traffic_wait_until) {
                 cannon.waypoint = None;
                 cannon.detour.clear();
                 cannon.traffic_block = None;
                 cannon.yielding = false;
                 cannon.traffic_wait_until = 0.0;
             }
-            let keep=!changed && cannon.goal.is_some_and(|goal|self.post_open(id,goal,navigation,engines));
-            if !keep {
+            let has_slot = flags & OFFENSIVE_SLOT == 0 || cannon.goal == Some(requested_cell);
+            let keep=!changed && has_slot && cannon.goal.is_some_and(|goal|self.post_open(id,goal,navigation,engines));
+            if marching {
+                cannon.goal = Some(requested_cell);
+            } else if !keep {
                 cannon.goal = self.choose_post(id,faction,cannon,self.output[6],self.output[7],flags,navigation,engines);
             }
             // Follow-goal updates can keep an in-flight segment while it is open.
@@ -398,13 +410,20 @@ impl FieldCannons {
             cannon.requested=requested;cannon.revision=self.revision;cannon.navigation=navigation;
             self.reserve_post(id,cannon.goal,now);
         }
-        let Some(goal)=cannon.goal else{return;};self.advance_field(faction,goal,cell(self.output[2],self.output[3]),now,engines);
-        let current=cell(self.output[2],self.output[3]);
-        let field=&self.fields[&(faction,goal)];
-        if field.frontier.is_empty()&&!field.settled.contains(&current){
-            if !cannon.rejected.contains(&goal){cannon.rejected.push(goal);}
-            cannon.goal=None;cannon.next_plan=0.0;self.reserve_post(id,None,now);return;
+        let Some(goal)=cannon.goal else{return;};
+        if !marching {
+            let current = cell(self.output[2], self.output[3]);
+            self.advance_field(faction, goal, current, now, engines);
+            let field = &self.fields[&(faction, goal)];
+            if field.frontier.is_empty() && !field.settled.contains(&current) {
+                if !cannon.rejected.contains(&goal) { cannon.rejected.push(goal); }
+                cannon.goal = None;
+                cannon.next_plan = 0.0;
+                self.reserve_post(id, None, now);
+                return;
+            }
         }
+        let march_speed = if self.input[5] > 0.0 { self.input[5] } else { f64::INFINITY };
         let mut remaining=dt;
         for _ in 0..16{
             if remaining<=1e-9{break;}
@@ -417,16 +436,21 @@ impl FieldCannons {
                 let middle = center(current);
                 let off_center = (middle.0 - position.0).hypot(middle.1 - position.1) > 0.001;
                 if current == goal && !off_center { self.output[23] = 1.0; break; }
-                let field = &self.fields[&(faction, goal)];
-                if !field.settled.contains(&current) { break; }
-                let distance = field.distance[&current];
-                // Start the next leg from the gun's actual position. This lets
-                // a redirected gun go sideways or back without recentering first.
-                cannon.waypoint = neighbors(current).into_iter().filter(|&next| {
-                    field.distance.get(&next).is_some_and(|&next_distance| next_distance < distance)
-                        && self.segment_clear(position, center(next), navigation, engines)
-                }).min_by_key(|&next| (field.distance[&next].saturating_add(self.edge_cost(current, next)), next))
-                    .or_else(|| off_center.then_some(current));
+                if marching {
+                    if !self.segment_clear(position, center(goal), navigation, engines) { break; }
+                    cannon.waypoint = Some(goal);
+                } else {
+                    let field = &self.fields[&(faction, goal)];
+                    if !field.settled.contains(&current) { break; }
+                    let distance = field.distance[&current];
+                    // Start the next leg from the gun's actual position. This lets
+                    // a redirected gun go sideways or back without recentering first.
+                    cannon.waypoint = neighbors(current).into_iter().filter(|&next| {
+                        field.distance.get(&next).is_some_and(|&next_distance| next_distance < distance)
+                            && self.segment_clear(position, center(next), navigation, engines)
+                    }).min_by_key(|&next| (field.distance[&next].saturating_add(self.edge_cost(current, next)), next))
+                        .or_else(|| off_center.then_some(current));
+                }
             }
             let Some(next) = cannon.waypoint else { break; };
             if !self.open(next, navigation, engines) { cannon.waypoint = None; cannon.detour.clear(); break; }
@@ -435,14 +459,16 @@ impl FieldCannons {
             let length = dx.hypot(dy);
             if length < 1e-8 { cannon.waypoint = None; continue; }
             let direction = [dx / length, dy / length];
-            let top_speed = SPEED * self.output[19] * self.multiplier(current).min(self.multiplier(next));
+            let formation_speed = if flags & IN_FORMATION != 0 { 1.25 } else { 1.0 };
+            let travel_speed = SPEED * formation_speed * self.output[19] * self.multiplier(current).min(self.multiplier(next));
+            let top_speed = travel_speed.min(march_speed);
             let limit = if (next == goal || cannon.yielding) && cannon.detour.is_empty() {
                 top_speed.min((2.0 * top_speed * length / BRAKING_TIME).sqrt())
             } else { top_speed };
             // Carry momentum along the new heading. The sprite turns at once,
             // while a sharp turn takes time to regain speed.
             let entry_speed = (momentum[0] * direction[0] + momentum[1] * direction[1]).clamp(0.0, limit);
-            let (step, elapsed, exit_speed) = translation(entry_speed, limit, top_speed / ACCELERATION_TIME, length, remaining);
+            let (step, elapsed, exit_speed) = translation(entry_speed, limit, travel_speed / ACCELERATION_TIME, length, remaining);
             let (nx, ny) = (position.0 + direction[0] * step, position.1 + direction[1] * step);
             if let Some(n)=navigation {
                 let engine = engines.get(n.engine);
@@ -453,7 +479,7 @@ impl FieldCannons {
                 }
                 if !engine.artillery_step_clear(id, position.0, position.1, nx, ny) {
                     momentum = [0.0; 2];
-                    if self.recover_route(cannon, id, position, next, (faction, goal), n, engine, now) { continue; }
+                    if !marching && self.recover_route(cannon, id, position, next, (faction, goal), n, engine, now) { continue; }
                     break;
                 }
             }

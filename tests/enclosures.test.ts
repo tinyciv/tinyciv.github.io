@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it, vi } from 'vitest';
-import { forEachEnclosureShimmerSpan, houseBirthProgress, isHouseEnclosed, palaceEnclosures } from '../src/game/enclosures';
+import { forEachEnclosureShimmerSpan, houseBirthProgress, isHouseEnclosed, palaceEnclosures, stoneWalledPalaces } from '../src/game/enclosures';
 import { updateFog } from '../src/game/fog';
 import { synchronizeFarms } from '../src/game/farms';
 import { updateGame } from '../src/game/simulation';
@@ -76,6 +76,20 @@ describe('palace enclosures', () => {
     for (const wall of walls.slice(1)) wall.faction = 1;
     expect(palaceEnclosures(state).regions).toHaveLength(1);
     walls[0].faction = 1; expect(palaceEnclosures(state).regions).toHaveLength(0);
+  });
+
+  it('keeps a gated stone enclosure secure around peaceful visitors and detects hostile intruders', () => {
+    const state = fixture();
+    ring(state);
+    state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' });
+    entityStore(state).buildings.add(building(700, 'road', 6, 11));
+    entityStore(state).units.add({ ...state.units[0], id: 701, faction: 1, kind: 'merchant' });
+    expect(isHouseEnclosed(state, state.buildings[1])).toBe(true);
+    expect(stoneWalledPalaces(state).has(10)).toBe(true);
+    state.factions[1].relation = 'war';
+    expect(isHouseEnclosed(state, state.buildings[1])).toBe(false);
+    expect(stoneWalledPalaces(state).has(10)).toBe(false);
+    expect(palaceEnclosures(state, true).regions).toHaveLength(1);
   });
 
   it('leaks through diagonal gaps, ordinary structures and open map edges', () => {

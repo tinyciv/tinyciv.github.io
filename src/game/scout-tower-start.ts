@@ -1,5 +1,6 @@
 import { territory, UNCLAIMED } from './borders';
 import { entityStore } from './entity-store';
+import { explorationSiteSize } from './exploration-content';
 import { nativeScoutTowerSites } from './faction-defense-native';
 import { rustEngine } from './rust-engine';
 import { territoryValue } from './territory-cells';
@@ -8,6 +9,7 @@ import { buildingReady, type Building, type GameState, type Point } from './type
 /** Adapt the starting world's occupied and reserved cells once, then let the
  * native defense index choose dry, connected positions around each capital. */
 export function placeStartingScoutTowers(state: GameState, add: (faction: number, point: Point) => void): boolean {
+  if (state.world.scenario === 'sandbox' || state.world.scenario === 'no-mans-land') return false;
   const store = entityStore(state), capitals = new Map<number, Building>();
   for (const city of store.buildings.query('palace')) if (buildingReady(city)) {
     const current = capitals.get(city.faction);
@@ -22,7 +24,7 @@ export function placeStartingScoutTowers(state: GameState, add: (faction: number
   };
   for (const unit of state.units) if (unit.hp > 0 && !unit.inside) reserve(unit);
   for (const hermit of state.hermits ?? []) reserve(hermit, hermit.status === 'gone' ? 1 : 2);
-  for (const site of state.explorationSites ?? []) if (site.status !== 2) reserve(site, site.kind === 0 ? 2 : 1);
+  for (const site of state.explorationSites ?? []) if (site.status !== 2) reserve(site, explorationSiteSize(site.kind));
   for (const chest of state.treasures ?? []) if (!chest.collected) reserve(chest);
   const borders = territory(state);
   const radius = rustEngine.scout_tower_search_radius();

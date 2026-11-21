@@ -27,7 +27,7 @@ describe('Formation 3 controls', () => {
     const state = scoutRealm();
     expect(infantryFormationControl(state)).toMatchObject({ active: false, unlocked: false, enabled: false, reason: 'Research Infantry Drill first.' });
     state.factions[0].research!.levels.infantryDrill = 1;
-    expect(infantryFormationControl(state)).toMatchObject({ enabled: false, reason: 'Formation requires 8 living retinue soldiers (4/8).' });
+    expect(infantryFormationControl(state)).toMatchObject({ enabled: false, reason: 'Formation requires 5 living retinue soldiers (4/5).' });
     entityStore(state).units.add(...state.units.slice(1).map((unit, index) => ({ ...unit, id: 20 + index })));
     expect(infantryFormationControl(state)).toMatchObject({ active: false, unlocked: true, enabled: true });
     expect(toggleInfantryFormation(state).ok).toBe(true);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { scoutRealm } from './helpers/scouts';
+import { withHorsePasture } from './helpers/horse-pasture';
 import { entityStore } from '../src/game/entity-store';
 import { areHorseArchersUnlocked, areKnightsUnlocked } from '../src/game/research';
 import { setMountedFraction, setSoldierRole, retinueComposition, retinueUpkeep, updateArcheryTraining } from '../src/game/archery';
@@ -8,7 +9,7 @@ import { applyGameCommand } from '../src/multiplayer/commands';
 import { recolorLightCavalryPixels } from '../src/game/cavalry-art';
 
 function realm() {
-  const state = scoutRealm(), faction = state.factions[0];
+  const state = withHorsePasture(scoutRealm()), faction = state.factions[0];
   const stable = { ...state.buildings[0], id: 102, kind: 'stable' as const, x: 16, y: 12 };
   entityStore(state).buildings.add(stable);
   return { state, faction, stable };
@@ -24,8 +25,8 @@ describe('light and heavy mounted roles', () => {
     expect(setMountedFraction(state, stable, 'horseArcher', .25)).toBe(true);
     expect(setMountedFraction(state, stable, 'horseman', 1)).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({total: 4, knights: 1, horseArchers: 1, horsemen: 2, warriors: 0});
-    expect(applyGameCommand(state, 0, {type: 'horse-archers', buildingId: stable.id, fraction: NaN}).ok).toBe(false);
-    expect(applyGameCommand(state, 0, {type: 'knights', buildingId: stable.id, fraction: 0}).ok).toBe(true);
+    expect(applyGameCommand(state, 0, {type: 'horse-archers', buildingId: stable.id, count: NaN}).ok).toBe(false);
+    expect(applyGameCommand(state, 0, {type: 'knights', buildingId: stable.id, count: 0}).ok).toBe(true);
   });
   it.each(['horseArcher', 'knight'] as const)('trains %s at a stable, preserving wounds and experience, then demobilizes', role => {
     const { state, faction, stable } = realm();
@@ -35,7 +36,7 @@ describe('light and heavy mounted roles', () => {
     soldier.hp = 50; soldier.kills = 12;
     for(let i=0; i<200 && soldier.kind !== role; i++) {state.time += .1; updateArcheryTraining(state,soldier,.1,moveUnit);}
     expect(soldier.kind).toBe(role); expect(soldier.hp / soldier.maxHp!).toBe(.5); expect(soldier.kills).toBe(12);
-    expect(retinueUpkeep(soldier)).toBe(role === 'knight' ? 2 : 1.5);
+    expect(retinueUpkeep(soldier)).toBe(role === 'knight' ? 6 : 4);
     const hp = role === 'knight' ? 180 : 80;
     expect(soldier.maxHp).toBe(hp); expect(soldier.attack).toBeCloseTo(role === 'knight' ? 42.5 : 13.6);
     expect(soldier.defense).toBe(role === 'knight' ? 10 : 2);

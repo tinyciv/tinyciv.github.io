@@ -7,7 +7,7 @@ import { palaceWalkingDistances } from '../src/game/farm-travel';
 import { ensureCollectors, synchronizeFarms, updateCollector } from '../src/game/farms';
 import { isForbidden, setForbiddenRectangle, unitRespectsForbidden } from '../src/game/forbidden-zones';
 import { planHouseAt, planHouseSite } from '../src/game/housing';
-import { queueConstruction, updateConstruction } from '../src/game/structures';
+import { queueConstruction } from '../src/game/structures';
 import { updateMerchant, updateTradeRoutes } from '../src/game/trade';
 import { updateVillageUnit } from '../src/game/villages';
 import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
@@ -31,24 +31,23 @@ function forbid(state: GameState, x: number, y: number, x2 = x, y2 = y, value = 
 }
 
 describe('forbidden civilian work', () => {
-  it('pauses active construction, preserves paid work, and resumes after removal', () => {
+  it('cancels unfinished construction, refunds unused work, and frees the builder', () => {
     const state = fixture();
     const house: Building = { id: 2, kind: 'house', x: 10, y: 8, faction: 0, hp: 160, maxHp: 160, capacity: 4 };
     queueConstruction(house, 0, 125); entityStore(state).buildings.add(house); ensureBuilders(state);
     const worker = state.units[0];
     Object.assign(worker, { x: 9.5, y: 8.5, inside: false, buildSite: house.id, buildPhase: 'working' });
     Object.assign(house.construction!, { waitingForBuilder: false, builderId: worker.id, cleared: true });
-    state.time = 5; forbid(state, 10, 8); updateConstruction(state);
-    expect(house.construction).toMatchObject({ waitingForBuilder: true, pausedAt: 5, paidGold: 125 });
-    state.time = 40; updateConstruction(state);
-    expect(house.construction).toBeDefined(); expect(state.factions[0].gold).toBe(500);
-    forbid(state, 10, 8, 10, 8, false); updateBuilder(state, worker, .1, idleMove);
-    expect(house.construction).toMatchObject({ waitingForBuilder: false, startedAt: 35 });
-    state.time = 35 + 40 / 3 - .1; updateConstruction(state); expect(house.construction).toBeDefined();
-    state.time = 35 + 40 / 3; updateConstruction(state); expect(house.construction).toBeUndefined();
+    state.time = 5; forbid(state, 10, 8);
+    expect(state.buildings).not.toContain(house);
+    expect(state.factions[0].gold).toBeCloseTo(578.13);
+    expect(worker.buildSite).toBeUndefined();
+    expect(worker.buildPhase).toBe('returning');
+    forbid(state, 10, 8, 10, 8, false);
+    expect(state.buildings).not.toContain(house);
   });
 
-  it('does not dispatch builders for forbidden construction, repair, or tree orders', () => {
+  it('clears tree and building orders and prevents repair dispatch inside the zone', () => {
     const state = fixture();
     const site: Building = { id: 2, kind: 'house', x: 10, y: 8, faction: 0, hp: 160, maxHp: 160, capacity: 4 };
     queueConstruction(site, 0, 125); entityStore(state).buildings.add(site);
@@ -59,9 +58,9 @@ describe('forbidden civilian work', () => {
     updateBuilder(state, state.units[0], .1, idleMove);
     expect(state.units[0]).toMatchObject({ inside: true, buildPhase: 'idle' });
     expect(state.units[0].buildSite).toBeUndefined(); expect(state.units[0].repairSite).toBeUndefined();
-    expect(state.units[0].clearTree).toBeUndefined(); expect(state.treeClearings).toHaveLength(1);
-    forbid(state, 10, 6, 13, 9, false); state.time = 3; updateBuilder(state, state.units[0], .1, idleMove);
-    expect(state.units[0].buildSite).toBe(site.id);
+    expect(state.units[0].clearTree).toBeUndefined(); expect(state.treeClearings).toHaveLength(0);
+    expect(state.world.tiles[6 * 24 + 11].overlay).toBe('forest');
+    expect(state.buildings).not.toContain(site);
   });
 
   it('releases a newly forbidden harvest without collecting or deleting it', () => {

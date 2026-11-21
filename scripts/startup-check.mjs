@@ -6,10 +6,11 @@ import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
 import { captureArmsPreview } from './startup-arms-preview.mjs';
 import { captureOffensivePreview } from './startup-offensive-preview.mjs';
-import { captureBuildingPreview } from './startup-building-preview.mjs';
+import { captureMilitaryPreview } from './startup-military-preview.mjs';
+import { captureBarbarianLairPreview, captureBeachedGalleyPreview, captureBuildingPreview, captureCombatEdgePreview, captureThermalBathPreview } from './startup-building-preview.mjs';
 import { captureCannonFirePreview } from './startup-cannon-fire-preview.mjs';
 import { captureShellImpactPreview } from './startup-shell-impact-preview.mjs';
-import { captureMeadowPreview } from './startup-meadow-preview.mjs';
+import { captureFertilityPreview, captureMeadowPreview } from './startup-meadow-preview.mjs';
 import { captureFeedbackPreview } from './startup-feedback-preview.mjs';
 import { captureCivicArtGallery } from './startup-civic-art-gallery.mjs';
 import { captureCivicPreview } from './startup-civic-preview.mjs';
@@ -18,16 +19,19 @@ import { captureAnalyticsPreview } from './startup-analytics-preview.mjs';
 // Use unbundled browser modules to catch initialization cycles hidden by builds.
 // Reuse each entry point's initial world; no rebuild or gameplay scenario.
 // --world checks the menu-free viewer without advancing or interacting with it.
-const worldViewer = process.argv.includes('--world');
-const captureLedges = process.argv.includes('--capture-ledges');
+const captureFjords = process.argv.includes('--capture-fjords');
+const captureSettlementTiers = process.argv.includes('--capture-settlement-tiers');
+const worldViewer = captureFjords || captureSettlementTiers || process.argv.includes('--world');
+const startupTimeout = captureFjords ? 75 : 30;
 const captureQuarry = process.argv.includes('--capture-quarry');
 const captureMarble = process.argv.includes('--capture-marble');
 const captureHarvest = process.argv.includes('--capture-peat-grapes');
 const captureCoal = process.argv.includes('--capture-coal');
 const captureOre = process.argv.includes('--capture-ore');
-const expectLedges = process.env.VITE_ENABLE_LEDGES === 'true';
 const captureUI = process.argv.includes('--capture-ui');
 const captureAgriculture = process.argv.includes('--capture-agriculture');
+const captureOpening = process.argv.includes('--capture-opening');
+const captureStartingLibrary = process.argv.includes('--capture-starting-library');
 const captureAI = process.argv.includes('--capture-ai');
 const captureMilitary = process.argv.includes('--capture-military');
 const captureArms = process.argv.includes('--capture-arms');
@@ -35,15 +39,22 @@ const captureOffensive = process.argv.includes('--capture-offensive');
 const captureBuildings = process.argv.includes('--capture-buildings');
 const captureScoutTowers = process.argv.includes('--capture-scout-towers');
 const checkScoutScenarios = process.argv.includes('--check-scout-scenarios');
+const captureScenarioTownRoads = process.argv.includes('--capture-scenario-town-roads');
+const checkScenarioTownRoads = captureScenarioTownRoads || process.argv.includes('--check-scenario-town-roads');
 const captureMenu = process.argv.includes('--capture-menu');
+const captureMapTools = process.argv.includes('--capture-map-tools');
 const captureArt = process.argv.includes('--capture-art');
 const captureCannonFire = process.argv.includes('--capture-cannon-fire');
 const captureMeadow = process.argv.includes('--capture-meadow');
+const captureFertility = process.argv.includes('--capture-fertility');
 const captureShellImpact = process.argv.includes('--capture-shell-impact');
 const captureFeedback = process.argv.includes('--capture-feedback');
 const captureCivicArt = process.argv.includes('--capture-civic-art');
 const captureCivic = process.argv.includes('--capture-civic');
 const captureAnalytics = process.argv.includes('--capture-analytics');
+const captureAdvancedStart = process.argv.includes('--capture-advanced-start');
+const captureObserver = process.argv.includes('--capture-observer');
+const checkAdvancedStarts = captureAdvancedStart || process.argv.includes('--check-advanced-starts');
 const started = performance.now(), errors = [];
 // Vite treats port 0 as its default port. Choose an unused port explicitly.
 const listener = createPortListener();
@@ -82,15 +93,194 @@ try {
     page.on('response', response => {
       if (response.status() >= 400) fail(`HTTP ${response.status()} ${response.url()}`);
     });
-    timer = setTimeout(() => fail('Startup exceeded 30 seconds'), 30_000);
+    timer = setTimeout(() => fail(`Startup exceeded ${startupTimeout} seconds`), startupTimeout * 1000);
   });
   await Promise.race([failure, (async () => {
     // Attach errors before navigation and avoid networkidle's mandatory delay.
-    await page.goto(`${server.resolvedUrls.local[0]}${worldViewer ? 'world.html?preset=archipelago&seed=world-viewer-review' : ''}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => {
-      if (document.documentElement.dataset.assets === 'error') throw new Error('Game asset loading failed');
-      return document.documentElement.dataset.assets === 'ready';
-    });
+    const open = async (view, waitForMap = false) => {
+      await page.goto(new URL(view, server.resolvedUrls.local[0]).href, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(readyMap => {
+        const { assets, worldViewer } = document.documentElement.dataset;
+        if (assets === 'error') throw new Error('Game asset loading failed');
+        return assets === 'ready' && (!readyMap || worldViewer === 'ready');
+      }, waitForMap);
+    };
+    if (captureFjords) {
+      for (const [preset, style] of [['standard', 'continents'], ['pangaea', 'pangaea'], ['archipelago', 'fractal']]) {
+        const defaultViewer = style === 'continents';
+        await open(defaultViewer ? 'world.html?seed=NORTH-REACH' : `world.html?preset=${preset}&size=tiny&seed=NORTH-REACH`, true);
+        await captureFjordPreview(page, style, defaultViewer);
+      }
+      return;
+    }
+    await open(worldViewer ? 'world.html?preset=archipelago&seed=world-viewer-review' : '');
+    if (captureMilitary) {
+      const recruitment = await page.evaluate(async () => {
+        const { retinueRecruitmentDue } = await import('/src/game/retinue-native.ts');
+        const barracks = Array.from({ length: 11 }, (_, index) => ({
+          id: index + 1, faction: 0, kind: 'barracks', x: index * 2, y: 1, hp: 100,
+          construction: { startedAt: 0, duration: 90 },
+        }));
+        const rival = { id: 12, faction: 1, kind: 'barracks', x: 0, y: 4, hp: 100 };
+        const faction = { id: 0 };
+        const state = { world: { width: 24 }, buildings: [...barracks, rival], units: [],
+          time: 0, tick: 0, speed: 1, paused: true, rngState: 0 };
+        const observe = time => {
+          state.time = time;
+          const due = retinueRecruitmentDue(state, faction, false);
+          return [faction.retinueRecruitmentInterval, faction.nextRetinueAt, due];
+        };
+        const base = observe(0);
+        barracks[0].construction = undefined;
+        const one = observe(5);
+        for (const building of barracks) building.construction = undefined;
+        const capped = observe(9.7);
+        barracks[0].faction = barracks[1].faction = 1;
+        barracks[2].hp = 0;
+        const reduced = observe(12.7);
+        return { base, one, capped, reduced };
+      });
+      assert.deepEqual(recruitment, {
+        base: [10, 10, false], one: [9.4, 9.7, false], capped: [4, 13.7, true], reduced: [5.2, 14, false],
+      });
+    }
+    if (checkAdvancedStarts) {
+      const report = await page.evaluate(async capture => {
+        const { createGame } = await import('/src/game/simulation.ts');
+        const { generateWorld } = await import('/src/world/generator.ts');
+        const { dockBerth, dockMoorings } = await import('/src/game/dock.ts');
+        const { fieldStage } = await import('/src/game/farm-art.ts');
+        const { FIELD_HARVEST_SECONDS, synchronizeWheatFields } = await import('/src/game/farms.ts');
+        const { farmWorkGroups } = await import('/src/game/farm-work-groups.ts');
+        const { planStartingCityFarms, startingRoadRing } = await import('/src/game/settlement-layout.ts');
+        const { createIrrigationConnectionQuery, irrigationYieldMultiplier } = await import('/src/game/irrigation.ts');
+        const { withSimulationReads } = await import('/src/game/simulation-reads.ts');
+        const { buildingWidth, buildingHeight, tileAt, isFarmKind } = await import('/src/game/types.ts');
+        const { raiderCampActive, raiderCampCenter } = await import('/src/game/raider-camps.ts');
+        const coastal = new Set(['dock', 'shipyard', 'whalingPost']);
+        const width = 64, height = 56;
+        const fixture = water => ({ width, height, seed: `advanced-start-${water}`, source: 'test', spawns: [{ x: 31, y: 27 }],
+          tiles: Array.from({ length: width * height }, (_, i) => ({
+            terrain: water === 'coast' && i % width >= 42 ? i % width < 44 ? 'coast' : 'ocean'
+              : water === 'river' && i % width >= 44 && i % width <= 45 ? 'river' : 'grassland',
+            overlay: 'none', elevation: .3, moisture: .7, food: 3, production: 1, gold: 0, variation: .5,
+          })) });
+        const check = (label, world, phase) => {
+          const state = createGame(world, undefined, { advancedStart: phase });
+          if (capture && label === 'generated midpoint') window.__advancedStartReview = state;
+          const buildings = state.buildings.filter(building => building.faction === 0 && building.hp > 0);
+          const palace = buildings.find(building => building.kind === 'palace'), fort = buildings.find(building => building.kind === 'fort');
+          const distance = (x, y) => Math.hypot(x - palace.x - .5, y - palace.y - .5);
+          const key = ({ x, y }) => y * world.width + x;
+          const roads = new Set(buildings.filter(building => building.kind === 'road').map(key));
+          const inside = buildings.filter(building => !coastal.has(building.kind) && !isFarmKind(building.kind)
+            && !['road', 'bridge', 'irrigation', 'fort', 'scoutTower'].includes(building.kind));
+          const urbanRadius = Math.max(...inside.flatMap(building => Array.from({ length: buildingWidth(building) * buildingHeight(building) }, (_, i) =>
+            distance(building.x + i % buildingWidth(building), building.y + Math.floor(i / buildingWidth(building))))));
+          const farms = state.fields.filter(field => field.faction === 0);
+          const openingHarvests = farms.map(field => field.nextHarvest);
+          synchronizeWheatFields(state);
+          const ditches = buildings.filter(building => building.kind === 'irrigation');
+          const connects = createIrrigationConnectionQuery({ ...state, buildings: [] }), fed = new Set();
+          const ditchesConnected = ditches.every(ditch => {
+            if (!connects(ditch.x, ditch.y, fed)) return false;
+            fed.add(key(ditch));
+            return true;
+          });
+          let replant;
+          if (ditches.length) {
+            const layout = { ...state, buildings: state.buildings.filter(building => building.faction !== 0 || !isFarmKind(building.kind)), fields: [] };
+            const withoutDitches = { ...layout, buildings: layout.buildings.filter(building => building.kind !== 'irrigation') };
+            const count = view => withSimulationReads(view, () => planStartingCityFarms(view, palace, 250, world.spawns[0], urbanRadius).length);
+            replant = { irrigated: count(layout), dry: count(withoutDitches) };
+          }
+          const groups = farmWorkGroups(state).groups.filter(group => group.faction === 0);
+          const rectangular = groups.every(({ fields }) => {
+            const xs = fields.map(field => field.x), ys = fields.map(field => field.y);
+            return (Math.max(...xs) - Math.min(...xs) + 1) * (Math.max(...ys) - Math.min(...ys) + 1) === fields.length;
+          });
+          const ports = buildings.filter(building => coastal.has(building.kind));
+          const dock = ports.find(building => building.kind === 'dock'), berth = dock && dockBerth(dock);
+          const camps = state.raiderCamps.filter(camp => raiderCampActive(state, camp)).map(raiderCampCenter)
+            .sort((a, b) => distance(a.x - .5, a.y - .5) - distance(b.x - .5, b.y - .5));
+          const field = { ...farms[0], nextHarvest: 60, food: 4 };
+          return { label, population: state.factions[0].population, farms: farms.length,
+            ditches: ditches.length, ditchesConnected, replant,
+            lakes: world.tiles.filter(tile => tile.terrain === 'lake').length,
+            irrigatedFarms: withSimulationReads(state, () => farms.filter(field => irrigationYieldMultiplier(state, field.x, field.y) > 1).length),
+            outerFarms: farms.every(field => distance(field.x, field.y) > urbanRadius),
+            largestField: Math.max(...groups.map(group => group.fields.length)), rectangular,
+            staggeredOpening: farms.every((field, index) => field.planted && field.nextHarvest === openingHarvests[index]
+              && field.nextHarvest >= state.time && field.nextHarvest < state.time + FIELD_HARVEST_SECONDS)
+              && groups.every(group => group.fields.every(field => field.nextHarvest === group.fields[0].nextHarvest))
+              && new Set(groups.map(group => group.fields[0].nextHarvest)).size > 1,
+            fields: groups.length,
+            singleTileFields: groups.filter(group => group.fields.length === 1).length,
+            ports: ports.map(port => port.kind).sort(),
+            dockAtSea: !dock || ['coast', 'ocean'].includes(tileAt(world, berth.x, berth.y).terrain) && dockMoorings(state, dock).length > 0,
+            ringed: !!fort && [palace, fort, ...inside.filter(building => buildingWidth(building) * buildingHeight(building) >= 4)]
+              .every(building => startingRoadRing(building, buildingWidth(building), buildingHeight(building)).every(point => roads.has(key(point)))),
+            fortFacesCamp: !camps.length || !!fort && (fort.x + 1.5 - palace.x - 1) * (camps[0].x - palace.x - 1)
+              + (fort.y + 1.5 - palace.y - 1) * (camps[0].y - palace.y - 1) > 0,
+            stages: [0, 6, 12, 39].map(time => fieldStage(field, time)),
+          };
+        };
+        return [
+          check('generated midpoint', generateWorld('advanced-infantry-drill'), 'midpoint'),
+          check('river', fixture('river'), 'complete'),
+          check('coast', fixture('coast'), 'complete'),
+          check('dry', fixture('dry'), 'complete'),
+        ];
+      }, captureAdvancedStart);
+      for (const start of report) {
+        const summary = JSON.stringify(start);
+        assert.equal(start.population, 250, summary);
+        assert.ok(start.farms > 16 && start.outerFarms && start.largestField <= 16, summary);
+        assert.ok(start.rectangular && start.largestField >= 9, summary);
+        assert.ok(start.staggeredOpening, 'Opening parcels have different first harvests and each parcel is synchronized');
+        assert.ok(start.singleTileFields <= start.fields / 10, summary);
+        assert.ok(start.ringed && start.fortFacesCamp && start.dockAtSea, summary);
+        assert.ok(start.ditches <= 6 && start.ditchesConnected, summary);
+        assert.deepEqual(start.stages, [0, 1, 2, 3], summary);
+      }
+      assert.deepEqual(report[1].ports, []);
+      assert.deepEqual(report[2].ports, ['dock', 'shipyard', 'whalingPost']);
+      const river = report[1];
+      assert.ok(river.ditches >= 2 && river.irrigatedFarms > 0 && river.replant.irrigated < river.replant.dry, JSON.stringify(river));
+      for (const start of report.slice(1)) assert.equal(start.lakes, 0, JSON.stringify(start));
+      for (const start of report.slice(2)) assert.equal(start.ditches, 0, JSON.stringify(start));
+      const fieldCounts = report.map(start => `${start.label} ${start.singleTileFields}/${start.fields}`).join(', ');
+      console.log(`PASS advanced starts (single-tile fields: ${fieldCounts})`);
+      for (const start of report) if (start.replant) {
+        console.log(`  ${start.label}: ${start.ditches} ditch tiles, ${start.irrigatedFarms} irrigated farm tiles, ${start.replant.dry} → ${start.replant.irrigated} farm tiles with irrigation`);
+      }
+      if (captureAdvancedStart) {
+        await page.setViewportSize({ width: 1440, height: 960 });
+        await page.evaluate(async () => {
+          const { Renderer } = await import('/src/game/renderer.ts');
+          const { setMapRevealed } = await import('/src/game/fog.ts');
+          const state = window.__advancedStartReview;
+          state.paused = true;
+          setMapRevealed(state, true);
+          const town = state.buildings.find(building => building.kind === 'palace' && building.faction === 0);
+          const host = document.createElement('div');
+          host.id = 'advanced-start-review';
+          Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '99999', background: '#20261c' });
+          host.innerHTML = '<canvas style="width:100%;height:100%;display:block"></canvas><canvas hidden></canvas>';
+          document.body.append(host);
+          const [canvas, minimap] = host.querySelectorAll('canvas');
+          const renderer = new Renderer(canvas, minimap);
+          await renderer.initialize();
+          renderer.follow = false;
+          renderer.camera = { x: town.x + 1, y: town.y + 1 };
+          renderer.zoom = .9;
+          renderer.draw(state, 0);
+        });
+        await mkdir('output/startup', { recursive: true });
+        await page.locator('#advanced-start-review').screenshot({ path: 'output/startup/advanced-start.png' });
+        await page.evaluate(() => document.querySelector('#advanced-start-review').remove());
+      }
+    }
     const defenses = await page.evaluate(async viewerMode => {
       const state = viewerMode ? window.__worldViewer.state : window.__game.state;
       const { isHumanFaction } = await import('/src/game/player-context.ts');
@@ -157,53 +347,191 @@ try {
     assert.ok(staffing.dormant > 0, 'Starting civilian jobs should include dormant slots without native actors');
     assert.equal(staffing.missingOutside, 0, 'Every exposed worker must have a native actor');
     const landscape = await page.evaluate(async viewerMode => {
-      const { world } = viewerMode ? window.__worldViewer.state : window.__game.state;
-      const [{ visibleReliefStamps }, { reliefFootprintAllowed }, { ridgeIsLedge, STAIR_UP },
-        { ridgeQuads }, { terrainQuads }, { canTraverseEdge, traversable }] = await Promise.all([
-        import('/src/game/relief-art.ts'), import('/src/game/relief.ts'), import('/src/game/ridges.ts'),
-        import('/src/game/ridge-art.ts'), import('/src/game/terrain.ts'), import('/src/game/pathfinding.ts'),
+      const { world, buildings } = viewerMode ? window.__worldViewer.state : window.__game.state;
+      const [{ visibleReliefStamps }, { traversable }, { settlementFootprintAllowed }] = await Promise.all([
+        import('/src/game/relief-art.ts'), import('/src/game/pathfinding.ts'), import('/src/game/terrain-sites.ts'),
       ]);
-      const minerals = new Set(), stairsByShelf = new Map();
-      let reliefCells = 0, stairs = 0, faces = 0, invalidFaces = 0, invalidStairs = 0;
-      let mixedTerrain = 0, painted = false;
+      const tile = { terrain: 'grassland', overlay: 'none' };
+      const fixture = { width: 8, height: 8, revision: 0, tiles: Array.from({ length: 64 }, () => ({ ...tile })) };
+      fixture.tiles[2 * fixture.width + 6].resource = 'olives';
+      const acceptsThreeTiles = settlementFootprintAllowed(fixture, 2, 2, 2, 2, true);
+      const rejectsTwoTiles = !settlementFootprintAllowed(fixture, 3, 2, 2, 2, true);
+      const capital = buildings.find(building => building.faction === 0 && building.kind === 'palace' && building.initialCity);
+      const clearCapital = !!capital && settlementFootprintAllowed(world, capital.x, capital.y, 2, 2, true);
+      const minerals = new Set();
+      let reliefCells = 0, ledgeCells = 0;
+      let solidCanopy = 0, forestPaths = 0, invalidForest = 0;
+      let pondCells = 0, woodedRiverBanks = 0;
       for (const [cell, tile] of world.tiles.entries()) {
         reliefCells += Number(!!tile.relief);
-        stairs += Number(!!tile.stair);
+        ledgeCells += Number(!!tile.ridge || !!tile.stair);
         if (tile.oreAnchor !== undefined && ['copper', 'iron', 'gold'].includes(tile.resource)) minerals.add(tile.resource);
-        if (!tile.ridge) continue;
         const x = cell % world.width, y = Math.floor(cell / world.width);
-        stairsByShelf.set(tile.ridge, (stairsByShelf.get(tile.ridge) ?? 0) + Number(!!tile.stair));
-        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-          mixedTerrain += Number(world.tiles[(y + dy) * world.width + x + dx]?.terrain !== tile.terrain);
+        if (tile.lakeShape === 'forest-pond' && tile.terrain === 'lake' && !traversable(world, x, y)) pondCells++;
+        if (tile.biome === 'forest') {
+          const tree = tile.overlay === 'forest';
+          invalidForest += Number(tile.terrain !== 'grassland' || !traversable(world, x, y));
+          if (!tree) forestPaths++;
+          if (tree && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) =>
+            x + dx >= 0 && x + dx < world.width && world.tiles[cell + dy * world.width + dx]?.terrain === 'river')) woodedRiverBanks++;
+          if (tree && x + 1 < world.width && y + 1 < world.height &&
+            [cell + 1, cell + world.width, cell + world.width + 1].every(next =>
+              world.tiles[next].biome === 'forest' && world.tiles[next].overlay === 'forest')) solidCanopy++;
         }
-        if (tile.stair) {
-          const up = STAIR_UP[tile.stair], low = { x: x - up.x, y: y - up.y }, high = { x: x + up.x, y: y + up.y };
-          invalidStairs += Number(!traversable(world, low.x, low.y) || !traversable(world, high.x, high.y)
-            || !canTraverseEdge(world, low, { x, y }) || !canTraverseEdge(world, { x, y }, high));
-        }
-        if (!ridgeIsLedge(world, x, y)) continue;
-        faces++;
-        invalidFaces += Number(traversable(world, x, y) || reliefFootprintAllowed(world, x, y)
-          || reliefFootprintAllowed(world, x, y, 1, 1, true));
-        if (!painted) painted = JSON.stringify(terrainQuads(world, x, y)) === JSON.stringify(ridgeQuads(world, x, y));
       }
-      return { reliefCells, minerals: [...minerals].sort(), faces, invalidFaces, invalidStairs, mixedTerrain, painted,
-        stairs, stairsByShelf: [...stairsByShelf.values()], reliefStamps: visibleReliefStamps(world, 0, 0, world.width, world.height).length };
+      return { acceptsThreeTiles, rejectsTwoTiles, clearCapital,
+        reliefCells, ledgeCells, minerals: [...minerals].sort(), solidCanopy, forestPaths, invalidForest, pondCells,
+        woodedRiverBanks, reliefStamps: visibleReliefStamps(world, 0, 0, world.width, world.height).length };
     }, worldViewer);
+    assert.ok(landscape.acceptsThreeTiles && landscape.rejectsTwoTiles && landscape.clearCapital,
+      'The first palace footprint must stay at least three tiles from every resource');
     assert.equal(landscape.reliefCells, 0, 'Generated terrain must have no hills or mountains');
     assert.equal(landscape.reliefStamps, 0, 'Generated terrain must have no hill or mountain sprites');
     assert.deepEqual(landscape.minerals, ['copper', 'gold', 'iron'], 'Generated terrain must retain all ore types');
-    if (expectLedges) {
-      assert.ok(landscape.faces && landscape.stairs, 'The feature flag must enable ledges and stairs');
-      assert.ok(landscape.stairsByShelf.every(count => count === 1), 'Every shelf must have one stair');
-      assert.equal(landscape.mixedTerrain, 0, 'Each ledge and its apron must be on a single terrain type');
-      assert.equal(landscape.invalidStairs, 0, 'Stairs must connect walkable ground with the summit');
-      assert.equal(landscape.invalidFaces, 0, 'Ledge faces must block walking and construction');
-      assert.ok(landscape.painted, 'Terrain must paint the native ledge face');
-    } else {
-      assert.equal(landscape.stairsByShelf.length, 0, 'Ledge shelves must be off by default');
-      assert.equal(landscape.stairs, 0, 'Stairs must be off by default');
+    assert.ok(landscape.solidCanopy > 0 && landscape.forestPaths > 0, 'Forest biomes must have solid stands and open paths');
+    assert.equal(landscape.invalidForest, 0, 'Forest canopy and its grassland paths are walkable');
+    assert.ok(landscape.pondCells >= 6 && landscape.woodedRiverBanks > 0, 'Forests must contain ponds and grow along rivers');
+    const fringe = await page.evaluate(async () => {
+      const { applyForestBiomes } = await import('/src/world/terrain-ecology.ts');
+      const { DEFAULT_LANDSCAPE_PARAMETERS } = await import('/src/world/options.ts');
+      const { traversable } = await import('/src/game/pathfinding.ts');
+      const width = 48, height = 32, edge = 20, count = width * height;
+      const tiles = Array.from({ length: count }, (_, cell) => {
+        const x = cell % width, cold = cell >= width * (height / 2);
+        const terrain = x < edge ? 'grassland' : cold ? 'tundra' : 'plains';
+        const biome = x < edge ? 'temperate' : cold ? 'tundra' : 'steppe';
+        return { terrain, biome, overlay: 'none', elevation: .3, moisture: .56,
+          variation: .5, food: 2, production: 1, gold: 0 };
+      });
+      const world = { width, height, tiles, seed: 'startup-forest-fringe', source: 'startup', spawns: [] };
+      const woodland = Float32Array.from(tiles, tile => tile.terrain === 'grassland' ? .85 : .62);
+      applyForestBiomes(world, { woodland, freshwater: new Int16Array(count).fill(32767) }, DEFAULT_LANDSCAPE_PARAMETERS);
+      let plains = 0, tundra = 0, invalid = 0, near = 0, far = 0;
+      const reach = new Uint8Array(height);
+      for (let cell = 0; cell < count; cell++) {
+        const x = cell % width, y = Math.floor(cell / width), tile = tiles[cell];
+        if (x < edge || tile.overlay !== 'forest') continue;
+        const cold = y >= height / 2;
+        if (cold) tundra++;
+        else plains++;
+        if (x < edge + 4) near++;
+        else if (x >= edge + 8) far++;
+        reach[y] = Math.max(reach[y], x - edge + 1);
+        if (tile.terrain !== (cold ? 'tundra' : 'plains') || tile.biome !== (cold ? 'tundra' : 'steppe')
+          || !traversable(world, x, y) || x >= edge + 11) invalid++;
+      }
+      return { plains, tundra, invalid, near, far, variedReach: new Set(reach).size };
+    });
+    assert.ok(fringe.plains > 0 && fringe.tundra > 0 && fringe.near > fringe.far && fringe.variedReach > 1,
+      'Forest margins must taper unevenly into plains and tundra');
+    assert.equal(fringe.invalid, 0, 'Fringe woodland must retain the ground biome and remain traversable');
+    const deer = await page.evaluate(async viewerMode => {
+      const state = viewerMode ? window.__worldViewer.state : window.__game.state;
+      const { entityStore } = await import('/src/game/entity-store.ts');
+      const { isHuntable } = await import('/src/game/hunting.ts');
+      const { traversable } = await import('/src/game/pathfinding.ts');
+      const { wildlifeFrame, wildlifeImage, wildlifeKind } = await import('/src/game/wildlife-art.ts');
+      const animals = entityStore(state).units.query('wildlife').filter(unit => unit.kind === 'deer');
+      const sexes = new Set(), atlas = new Set();
+      let invalid = 0, animated = true;
+      for (const deer of animals) {
+        sexes.add(deer.deerSex);
+        const kind = wildlifeKind(deer);
+        atlas.add(kind);
+        invalid += Number(!isHuntable(deer) || !traversable(state.world, deer.x, deer.y) || !wildlifeImage(kind));
+        const walk = [0, .2, .4].map(time => wildlifeFrame({ ...deer, moving: true, deerFleeing: false }, time).frame);
+        const run = [0, .2, .4].map(time => wildlifeFrame({ ...deer, moving: true, deerFleeing: true }, time).frame);
+        animated &&= new Set(walk).size > 1 && new Set(run).size > 1 && walk.every(frame => frame >= 1 && frame <= 8)
+          && run.every(frame => frame >= 9 && frame <= 16);
+      }
+      return { sexes: [...sexes].sort(), atlas: [...atlas].sort(), invalid, animated };
+    }, worldViewer);
+    assert.deepEqual(deer.sexes, ['female', 'male'], 'Forest herds must contain bucks and does');
+    assert.deepEqual(deer.atlas, ['buck', 'doe'], 'Deer must use separate atlases for each sex');
+    assert.equal(deer.invalid, 0, 'Deer must spawn on walkable ground and be huntable');
+    assert.ok(deer.animated, 'Deer must use distinct walk and run animation cycles');
+    const livestock = await page.evaluate(async viewerMode => {
+      const game = viewerMode ? window.__worldViewer.state : window.__game.state;
+      const { isHuntable } = await import('/src/game/hunting.ts');
+      const { fenceLivestockHerd, hasLivestock, livestockFenceStatus, pastureYield, planLivestock, advanceLivestock } =
+        await import('/src/game/livestock.ts');
+      const { insideOwnBorders } = await import('/src/game/borders.ts');
+      const { wildlifeImage, wildlifeFrame, wildlifePose } = await import('/src/game/wildlife-art.ts');
+      const species = ['cow', 'horse', 'sheep'];
+      const spawned = new Set(game.livestock?.herds.map(herd => herd.species));
+      const herdSizes = game.livestock?.herds.map(herd => herd.animals.length) ?? [];
+      const noHunting = game.units.filter(unit => species.includes(unit.kind)).every(unit => !isHuntable(unit));
+      const art = species.every(kind => {
+        const horse = kind === 'horse', image = wildlifeImage(kind);
+        return image?.width === (horse ? 64 : 120) && image.height === (horse ? 64 : 96);
+      });
+      const animated = ['cow', 'sheep'].every(kind => {
+        const animal = game.units.find(unit => unit.kind === kind);
+        if (!animal) return false;
+        const idle = { ...animal, moving: false };
+        const frames = [0, .2, .4, .6].map(time => wildlifeFrame({ ...animal, moving: true }, time).frame);
+        return wildlifeFrame(idle, 0).frame === 0 && wildlifePose(idle, 0).bounds.width === 48
+          && new Set(frames).size === 4 && frames.every(frame => frame >= 1 && frame <= 4);
+      });
+      const width = 40, height = 28, y = 13.5;
+      const tiles = Array.from({ length: width * height }, () =>
+        ({ terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 2, production: 1, gold: 0, variation: .5 }));
+      const unit = (id, kind, x, faction) => ({ id, kind, x, y, faction, hp: 20, maxHp: 20, order: 'wander', morale: 100,
+        attack: 0, defense: 0, speed: .56, range: 0, cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0 });
+      const pastures = species.map(kind => {
+        const faction = { id: 0, name: 'Home', color: '#8596e0', relation: 'self', food: 0, gold: 0, production: 0, population: 0,
+          culture: 0, yields: { food: 0, production: 0, gold: 0 }, nextRaid: Infinity, defeated: false };
+        const fixture = {
+          world: { width, height, seed: 'startup-pasture', source: 'startup', tiles, spawns: [], revision: 0 },
+          time: 0, tick: 0, paused: true, speed: 1, rngState: 1, factions: [faction], units: [],
+          buildings: [{ id: 1, kind: 'palace', faction: 0, x: 9, y: 12, hp: 650, maxHp: 650, capacity: 4 }],
+        };
+        let x = 13;
+        while (x < width - 4 && insideOwnBorders(fixture, 0, x + 1.5, y)) x++;
+        const straddles = insideOwnBorders(fixture, 0, x + .5, y) && !insideOwnBorders(fixture, 0, x + 1.5, y);
+        fixture.units = [unit(2, 'leader', x - .5, 0), unit(3, kind, x + .5, -3), unit(4, kind, x + 1.5, -3)];
+        const herd = { id: 0, species: kind, animals: [3, 4], center: { x: x + 1, y }, nextMoveAt: 0 };
+        fixture.livestock = { revision: 0, herds: [herd] };
+        const required = kind === 'horse' ? 'horsebackRiding' : 'animalHusbandry';
+        const wrong = kind === 'horse' ? 'animalHusbandry' : 'horsebackRiding';
+        const unresearched = livestockFenceStatus(fixture, 0);
+        faction.research = { focus: wrong, levels: { [wrong]: 1 }, progress: {} };
+        const wrongResearch = fenceLivestockHerd(fixture, 0);
+        const locked = !hasLivestock(fixture, 0, kind);
+        faction.research = { focus: required, levels: { [required]: 1 }, progress: {} };
+        const result = fenceLivestockHerd(fixture, 0);
+        const pen = herd.pasture;
+        const buffer = pen && [pen.x, pen.y, pen.width, pen.height];
+        const home = { ...herd.center }, positions = fixture.units.slice(1).map(({ x, y }) => ({ x, y }));
+        planLivestock(fixture);
+        advanceLivestock(fixture, 1);
+        const moved = fixture.units.slice(1).filter((animal, i) =>
+          Math.hypot(animal.x - positions[i].x, animal.y - positions[i].y) > 0).length;
+        const wanders = moved === 1 && herd.center.x === home.x && herd.center.y === home.y;
+        const contained = pen && fixture.units.slice(1).every(animal => animal.x >= pen.x && animal.x < pen.x + pen.width
+          && animal.y >= pen.y && animal.y < pen.y + pen.height && Math.hypot(animal.x - herd.center.x, animal.y - herd.center.y) <= 4);
+        return { kind, straddles, unresearched, wrongResearch, locked, result, buffer, expected: [x - 2, 11, 6, 5], contained, wanders,
+          access: hasLivestock(fixture, 0, kind), horseAccess: hasLivestock(fixture, 0, 'horse'), income: pastureYield(herd) };
+      });
+      return { spawned: [...spawned].sort(), herdSizes, noHunting, art, animated, pastures };
+    }, worldViewer);
+    assert.deepEqual(livestock.spawned, ['cow', 'horse', 'sheep'], 'Generated maps must seed all three livestock species');
+    assert.ok(livestock.herdSizes.every(size => size >= 4 && size <= 7), 'Each generated livestock herd must have four to seven animals');
+    assert.ok(livestock.noHunting && livestock.art, 'Livestock must be non-huntable and use their native art');
+    assert.ok(livestock.animated, 'Cows and sheep must use larger sprites and separate idle and walk frames');
+    for (const pasture of livestock.pastures) {
+      const tech = pasture.kind === 'horse' ? 'Horseback Riding' : 'Animal Husbandry';
+      const missing = { ok: false, message: `Requires ${tech}.` };
+      assert.deepEqual(pasture.unresearched, missing);
+      assert.deepEqual(pasture.wrongResearch, missing);
+      assert.ok(pasture.straddles && pasture.locked && pasture.result.ok,
+        `${tech} must fence a ${pasture.kind} herd straddling the border (${JSON.stringify(pasture.result)})`);
+      assert.deepEqual(pasture.buffer, pasture.expected, 'Pastures must add two tiles around every animal');
+      assert.ok(pasture.contained && pasture.wanders && pasture.access && pasture.income.food > 0 && pasture.income.gold > 0,
+        'A fenced herd must graze around a fixed home and produce food and gold');
+      assert.equal(pasture.horseAccess, pasture.kind === 'horse', 'Only a horse pasture must supply mounts');
     }
+    assert.equal(landscape.ledgeCells, 0, 'Generated terrain must have no ledges or stairs');
     if (worldViewer) {
       await page.waitForFunction(() => document.documentElement.dataset.worldViewer === 'ready');
       const meadow = await page.evaluate(async () => {
@@ -212,8 +540,7 @@ try {
         const { MeadowPlacementCache, MEADOW_SPRITES, MEADOW_TUFT_SCALE } = await import('/src/game/meadow-art.ts');
         const { worldRevisions } = await import('/src/game/world-revisions.ts');
         const cache = new MeadowPlacementCache(), geometry = worldRevisions(world).geometry;
-        const { ridgeIsLedge } = await import('/src/game/ridges.ts');
-        const protectedCells = tiles.map((tile, cell) => !!tile.stair || ridgeIsLedge(world, cell % width, Math.floor(cell / width)));
+        const protectedCells = tiles.map(tile => !!tile.waterfall);
         let grass = 0, overlaps = 0;
         for (let cell = 0; cell < tiles.length; cell++) {
           const x = cell % width, y = Math.floor(cell / width);
@@ -231,11 +558,10 @@ try {
         return { grass, overlaps };
       });
       assert.ok(meadow.grass > 0, 'Walkable terrain must retain decorative grass');
-      assert.equal(meadow.overlaps, 0, 'Decorative grass must stay clear of ledges and stairs');
+      assert.equal(meadow.overlaps, 0, 'Decorative grass must stay clear of waterfalls');
       const woodland = await page.evaluate(async () => {
         const { applyTerrainEcology } = await import('/src/world/terrain-ecology.ts');
         const { resolveLandscapeParameters } = await import('/src/world/options.ts');
-        const { ridgeIsLedge } = await import('/src/game/ridges.ts');
         const { canTraverseEdge, traversable } = await import('/src/game/pathfinding.ts');
         const { WATER } = await import('/src/game/types.ts');
         const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -253,7 +579,7 @@ try {
             }
             if (!trees[cell]) continue;
             count++;
-            obstructedTerrain += Number(!!tiles[cell].stair || !!tiles[cell].waterfall || ridgeIsLedge(world, x, y));
+            obstructedTerrain += Number(!!tiles[cell].waterfall);
             if (!directions.some(([dx, dy]) => {
               const nx = x + dx, ny = y + dy;
               if (nx < 0 || ny < 0 || nx >= width || ny >= height) return false;
@@ -273,7 +599,7 @@ try {
         const wet = { width: size, height: size, seed: 'startup-wet-woodland', source: 'startup', spawns: [],
           tiles: Array.from({ length: size * size }, () => ({ terrain: 'grassland', overlay: 'none', biome: 'rainforest',
             moisture: 1, temperature: .8, elevation: .3, variation: .5, food: 3, production: 1, gold: 0 })) };
-        applyTerrainEcology(wet, resolveLandscapeParameters({ forestThreshold: .48, forestNorthBias: .06 }));
+        applyTerrainEcology(wet, resolveLandscapeParameters({ forestThreshold: .48, forestLatitudeBias: .06 }));
         const { trees, ...wetStats } = inspect(wet);
         const density = wetStats.count / trees.length;
         const block = 4, blockArea = block ** 2;
@@ -292,10 +618,10 @@ try {
       });
       assert.ok(woodland.generated.count > 0, 'Generated terrain must retain forests');
       for (const landscape of [woodland.generated, woodland.wet]) {
-        assert.equal(landscape.solidCanopy, 0, 'Woodland must avoid solid 2×2 canopy');
-        assert.equal(landscape.withoutOpening, 0, `Every tree must border a walkable opening (${JSON.stringify(landscape.blocked)})`);
-        assert.equal(landscape.obstructedTerrain, 0, 'Trees must stay off ledge faces, stairs and waterfalls');
+        assert.equal(landscape.obstructedTerrain, 0, 'Trees must stay clear of waterfalls');
       }
+      assert.equal(woodland.wet.solidCanopy, 0, 'Ordinary woodland must avoid solid 2×2 canopy');
+      assert.equal(woodland.wet.withoutOpening, 0, `Ordinary trees must border a walkable opening (${JSON.stringify(woodland.wet.blocked)})`);
       assert.ok(woodland.wet.density > .3, 'Wet woodland must retain substantial stands');
       assert.ok(woodland.wet.dispersion > 1.25, `Wet woodland should cluster at a local scale (${woodland.wet.dispersion.toFixed(2)})`);
       assert.ok(woodland.wet.excessClearings > .02, `Wet woodland should retain small clearings (${woodland.wet.excessClearings.toFixed(3)})`);
@@ -321,32 +647,13 @@ try {
       assert.equal(result.displayedDensity, result.parameters.islandDensity, 'Controls must show the generated settings');
       await mkdir('output/startup', { recursive: true });
       await page.screenshot({ path: 'output/startup/world-viewer.png' });
-      if (captureLedges) {
-        await page.evaluate(() => {
-          const { state, renderer } = window.__worldViewer;
-          const { tiles, width, spawns, secondarySpawns } = state.world;
-          const towns = [...spawns, ...secondarySpawns ?? []];
-          let focus, best = Infinity;
-          for (const [cell, tile] of tiles.entries()) {
-            if (!tile.stair) continue;
-            const x = cell % width + .5, y = Math.floor(cell / width) + .5;
-            const score = Math.min(...towns.map(town => Math.hypot(town.x - x, town.y - y)))
-              + (tile.stair === 'north' ? 0 : 12);
-            if (score < best) { focus = { x, y }; best = score; }
-          }
-          if (!focus) throw new Error('Ledge capture requires an enabled shelf.');
-          renderer.camera = focus;
-          renderer.zoom = 1.25;
-          renderer.draw(state, 0);
-        });
-        await page.locator('#world-view').screenshot({ path: 'output/startup/ledges-enabled.png' });
-      }
+      if (captureFertility) await captureFertilityPreview(page);
       if (captureQuarry) {
         const quarry = await page.evaluate(async () => {
           const { state, renderer } = window.__worldViewer;
           const { width, tiles } = state.world;
           const { buildResourceArtLayout, drawResourceObject } = await import('/src/game/resource-art.ts');
-          const { isSiteMaterial, ORE_FORMATION_COUNT } = await import('/src/game/ore-art.ts');
+          const { ORE_FORMATION_COUNT } = await import('/src/game/ore-art.ts');
           const groups = new Map();
           for (const [cell, tile] of tiles.entries()) {
             if (tile.resource !== 'stone') continue;
@@ -359,7 +666,7 @@ try {
           if (!cells) throw new Error('Quarry capture requires a stone deposit.');
           const layout = buildResourceArtLayout(state.world);
           const first = layout.get(cells[0]), clump = first?.ore;
-          const deposits = [...layout.values()].filter(art => art.oreDraw && art.ore && !isSiteMaterial(art.ore.material)).map(art => art.ore);
+          const deposits = [...layout.values()].filter(art => art.oreDraw && art.ore?.material === 'stone').map(art => art.ore);
           const selectedShapes = ORE_FORMATION_COUNT === 6 && deposits.every(ore => Number.isInteger(ore.formation)
             && ore.formation >= 0 && ore.formation < ORE_FORMATION_COUNT);
           const compactOre = tiles.every(tile => tile.oreAnchor === undefined || tile.oreWidth <= 5 && tile.oreHeight <= 3);
@@ -384,7 +691,7 @@ try {
         });
         assert.ok(quarry.shared && quarry.draws === 1 && quarry.renderedWidth > 16, 'Quarries must render one multi-tile formation per deposit');
         await page.locator('#world-view').screenshot({ path: 'output/startup/quarry-outcrop.png' });
-        assert.ok(quarry.selectedShapes, 'Natural deposits must use only the six selected outcrops');
+        assert.ok(quarry.selectedShapes, 'Stone deposits must use only the six selected outcrops');
         assert.ok(quarry.compactOre, 'World generation must use the standard ore footprints');
       }
       if (captureMarble) {
@@ -447,27 +754,46 @@ try {
       if (captureOre) {
         const deposits = await page.evaluate(async () => {
           const { state } = window.__worldViewer;
+          const { world } = state;
           const { buildResourceArtLayout } = await import('/src/game/resource-art.ts');
-          const ores = [...buildResourceArtLayout(state.world).values()]
+          const ores = [...buildResourceArtLayout(world).values()]
             .filter(art => art.oreDraw && art.ore && !art.ore.developed).map(art => art.ore);
-          return ['copper', 'iron', 'gold'].map(material => {
+          return [['copper', 2], ['iron', 3], ['gold', 5]].map(([material, sampleWidth]) => {
             const matches = ores.filter(ore => ore.material === material);
-            const area = ore => ore.width * ore.height;
-            matches.sort((a, b) => area(b) - area(a)
+            matches.sort((a, b) => Math.abs(a.width - sampleWidth) - Math.abs(b.width - sampleWidth)
               || Number(b.palette === 'grassland') - Number(a.palette === 'grassland'));
             const ore = matches[0];
             if (!ore) throw new Error(`Ore capture requires a ${material} deposit.`);
-            return { material, camera: { x: ore.x + ore.width / 2, y: ore.y + ore.height / 2 } };
+            const cells = ore.visible.map(cell => ore.anchor + cell % ore.width + Math.floor(cell / ore.width) * world.width);
+            return { material, anchor: ore.anchor, width: ore.width, height: ore.height, cells,
+              camera: { x: ore.x + ore.width / 2, y: ore.y + ore.height / 2 } };
           });
         });
-        for (const { material, camera } of deposits) {
-          await page.evaluate(camera => {
-            const { renderer, state } = window.__worldViewer;
-            renderer.camera = camera;
-            renderer.zoom = 2.35;
-            renderer.draw(state, 0);
-          }, camera);
-          await page.locator('#world-view').screenshot({ path: `output/startup/ore-${material}.png` });
+        const renderOre = (deposit, developed) => page.evaluate(async ({ deposit, developed }) => {
+          const { renderer, state } = window.__worldViewer, { world } = state;
+          const { buildResourceArtLayout } = await import('/src/game/resource-art.ts');
+          const { markWorldChanged } = await import('/src/game/world-revisions.ts');
+          for (const cell of deposit.cells) world.tiles[cell].resourceDeveloped = developed;
+          markWorldChanged(world, 'appearance', deposit.cells);
+          const layout = buildResourceArtLayout(world), ore = layout.get(deposit.anchor)?.ore;
+          if (!ore || ore.developed !== !!developed || ore.width !== deposit.width || ore.height !== deposit.height
+            || !deposit.cells.every(cell => layout.get(cell)?.ore === ore)
+            || deposit.cells.filter(cell => layout.get(cell)?.oreDraw).length !== 1)
+            throw new Error(`Invalid ${deposit.material} deposit art`);
+          renderer.camera = deposit.camera;
+          renderer.zoom = 2.35;
+          renderer.draw(state, 0);
+        }, { deposit, developed });
+        for (const deposit of deposits) {
+          try {
+            await renderOre(deposit, undefined);
+            await page.locator('#world-view').screenshot({ path: `output/startup/ore-${deposit.material}.png` });
+            await renderOre(deposit, true);
+            await page.locator('#world-view').screenshot({ path: `output/startup/ore-${deposit.material}-developed.png` });
+          } finally {
+            await renderOre(deposit, undefined);
+          }
+          console.log(`Captured ${deposit.material} deposit and mine (${deposit.width}×${deposit.height})`);
         }
       }
       if (captureAI) {
@@ -564,7 +890,8 @@ try {
             banditIntensity: 0, enemyStrength: 1, autoRebuildDefenses: true });
           preview.show('main');
           host.querySelector('[data-frontend-action="quick"]').click();
-          if (quickStart?.banditIntensity !== 1) throw new Error('Quick Start must use Roaming barbarians');
+          if (quickStart?.style !== 'pangaea' || quickStart.banditIntensity !== 1 || quickStart.banditStrength !== .5)
+            throw new Error('Quick Start must use Pangaea and Roaming barbarians at 50% strength');
           preview.show('scenarios');
           const sandbox = host.querySelector('[data-select-scenario="sandbox"]');
           sandbox.focus(); sandbox.click();
@@ -581,8 +908,12 @@ try {
         assert.equal(loading.value, .67);
         assert.ok(loading.width > 100, 'The progress bar must be visible');
         await page.screenshot({ path: 'output/startup/loading.png' });
+        await captureAccountAndConstructionControls(page);
+        await captureFarmRoads(page);
       }
       if (captureArms) await captureArmsPreview(page);
+      if (captureMilitary) await captureMilitaryPreview(page);
+      if (captureOffensive) await captureOffensivePreview(page);
       if (process.argv.includes('--capture-battlefield-effects')) {
         const { captureBattlefieldEffects } = await import('./startup-battlefield-effects-preview.mjs');
         await captureBattlefieldEffects(page);
@@ -593,12 +924,33 @@ try {
     await page.evaluate(() => {
       const game = window.__game;
       if (!game?.state.units.length || !game.state.buildings.length) throw new Error('Initial world is empty');
+      const palace = game.state.buildings.find(building => building.faction === 0 && building.kind === 'palace');
+      const libraries = game.state.buildings.filter(building => building.faction === 0 && building.kind === 'library');
+      const libraryDistance = palace && libraries.length === 1 ? Math.hypot(libraries[0].x - palace.x, libraries[0].y - palace.y) : 0;
+      if (game.state.factions[0].gold !== 300 || libraryDistance < 3 || libraryDistance > 5 || !(libraries[0]?.hp > 0) || libraries[0].construction)
+        throw new Error('Standard games must start with 300 gold and one finished library 3–5 tiles from the settlement');
+      if (game.state.diplomacyState?.relationships.some(pair => pair.war)
+        || game.state.factions.some(faction => faction.id >= 0 && faction.relation === 'war')) throw new Error('Standard worlds must start at peace');
       if (document.documentElement.dataset.fonts !== 'ready') throw new Error('Game fonts are not ready');
-      window.__startup = { frames: 0, time: game.state.time };
+      const startup = window.__startup = { frames: 0, time: game.state.time, pendingFrames: [] };
       const draw = game.renderer.draw;
-      game.renderer.draw = function (...args) { draw.apply(this, args); window.__startup.frames++; };
+      game.renderer.draw = function (...args) {
+        draw.apply(this, args);
+        if (++startup.frames !== 1) return;
+        startup.timeWithoutRendering = game.state.time;
+        startup.requestFrame = window.requestAnimationFrame;
+        window.requestAnimationFrame = callback => startup.pendingFrames.push(callback);
+      };
       game.state.paused = false;
       game.replaceState(game.state);
+    });
+    // Wait on a timer so this check also works with rendering held.
+    await page.waitForFunction(() => window.__startup.frames === 1 && window.__startup.pendingFrames.length > 0
+      && window.__game.state.time > window.__startup.timeWithoutRendering, null, { polling: 20, timeout: 4000 });
+    await page.evaluate(() => {
+      const { requestFrame, pendingFrames } = window.__startup;
+      window.requestAnimationFrame = requestFrame;
+      for (const callback of pendingFrames) window.requestAnimationFrame(callback);
     });
     await page.waitForFunction(() => window.__startup.frames >= 2
       && window.__game.state.time > window.__startup.time);
@@ -613,6 +965,196 @@ try {
       return renderer.renderStats.sprites > 0 && colors.size > 1;
     });
     assert.ok(painted, 'World renderer produced an empty or uniform frame');
+    if (captureStartingLibrary) {
+      await page.setViewportSize({ width: 1120, height: 740 });
+      await page.evaluate(() => {
+        const { state, renderer } = window.__game;
+        const town = state.buildings.find(building => building.faction === 0 && building.kind === 'palace');
+        const library = state.buildings.find(building => building.faction === 0 && building.kind === 'library');
+        state.paused = true;
+        state.selected = library.id;
+        state.selectedType = 'building';
+        renderer.follow = false;
+        renderer.camera = { x: (town.x + library.x) / 2 + 1, y: (town.y + library.y) / 2 + 1 };
+        renderer.zoom = 1.15;
+        renderer.draw(state, 0);
+      });
+      await mkdir('output/startup', { recursive: true });
+      await page.locator('#selection-panel').getByText('Library', { exact: true }).waitFor();
+      await page.screenshot({ path: 'output/startup/starting-library.png' });
+    }
+    if (captureObserver) {
+      await page.setViewportSize({ width: 1120, height: 740 });
+      const fixture = await page.evaluate(() => {
+        const { state, renderer, replaceState } = window.__game;
+        const city = state.buildings.find(building => building.faction > 0 && building.kind === 'palace' && building.hp > 0);
+        if (!city) throw new Error('The observer preview requires a rival town');
+        state.factions[0].defeated = true;
+        state.units = state.units.filter(unit => unit.faction !== 0);
+        state.buildings = state.buildings.filter(building => building.faction !== 0);
+        state.selected = state.selectedType = null;
+        state.gameOver = true;
+        replaceState(state);
+        renderer.follow = false;
+        return { time: state.time, town: { x: city.x + 1, y: city.y + 1 } };
+      });
+      const observer = page.getByRole('button', { name: 'Stay as observer', exact: true });
+      await observer.waitFor();
+      await page.waitForFunction(() => document.querySelector('#selection-panel').classList.contains('empty'));
+      await mkdir('output/startup', { recursive: true });
+      await page.screenshot({ path: 'output/startup/observer-defeat.png' });
+      await observer.click();
+      await page.getByText('Observing', { exact: true }).waitFor();
+      await page.waitForFunction(time => window.__game.state.time > time + 1 && !window.__game.state.gameOver, fixture.time);
+      const visible = await page.evaluate(async town => {
+        const { state, renderer } = window.__game;
+        const { presentationFog, updateFog, pointInSight } = await import('/src/game/fog.ts');
+        renderer.camera = town;
+        renderer.zoom = .85;
+        return { map: presentationFog(state).visible.every(cell => cell === 1),
+          townInFactionSight: pointInSight(updateFog(state), town.x, town.y) };
+      }, fixture.town);
+      assert.deepEqual(visible, { map: true, townInFactionSight: false });
+      assert.ok(await page.locator('#dialog').isHidden(), 'The defeat dialog must stay closed');
+      assert.ok(await page.locator('.hotbar').isHidden(), 'Observer mode must hide faction commands');
+      await page.screenshot({ path: 'output/startup/observer-revealed.png' });
+      return;
+    }
+    if (captureOpening) {
+      await page.setViewportSize({ width: 1120, height: 740 });
+      const opening = await page.evaluate(async () => {
+        const { state, renderer } = window.__game;
+        state.paused = true;
+        const [{ citySummaries }, { buildCostAt, minimumBuildGold }, { researchCost }, { rustEngine }, { SIM_ENGINE }] = await Promise.all([
+          import('/src/game/cities.ts'), import('/src/game/simulation.ts'), import('/src/game/research.ts'),
+          import('/src/game/rust-engine.ts'), import('/src/game/sim-handle.ts'),
+        ]);
+        const city = citySummaries(state, 0)[0], capital = city.palace;
+        const harvests = state.fields.filter(field => field.faction === 0).map(field => field.nextHarvest);
+        const simulation = rustEngine.sim_create(0);
+        const populationEngine = rustEngine.sim_engine_create(simulation, SIM_ENGINE.population, 0, 0, 0);
+        const growth = [20, 26, 32].map(peak => {
+          const input = rustEngine.population_configure(populationEngine, 1, 1);
+          new Float64Array(rustEngine.memory.buffer, input, 15).set([
+            1, 0, 0, 20, 5, 0, 0, 0, 0,
+            2, 2, 0, 20, 24, 1,
+          ]);
+          const output = rustEngine.population_run(populationEngine, 500, 20, 1, 0, 1, 0, 1, peak);
+          const [, residents, births, credit] = new Float64Array(rustEngine.memory.buffer, output, 4);
+          return { residents, births, credit, peak: rustEngine.population_opening_peak(populationEngine) };
+        });
+        rustEngine.sim_drop(simulation);
+        renderer.follow = false;
+        renderer.camera = { x: capital.x + 1, y: capital.y + 1 };
+        renderer.zoom = 1.05;
+        renderer.draw(state, 0);
+        return { population: city.population, housing: city.housing, first: Math.min(...harvests), last: Math.max(...harvests),
+          house: buildCostAt(state, 'house', capital.x, capital.y).gold, minimum: minimumBuildGold('house', state),
+          research: [researchCost(undefined, 'irrigation'), researchCost(undefined, 'grainStorage')],
+          discounts: Array.from({ length: 6 }, (_, order) => rustEngine.opening_house_credit(order)), growth };
+      });
+      assert.equal(opening.population, 20);
+      assert.equal(opening.housing, 24);
+      assert.ok(opening.first === 8 && opening.last <= 28);
+      assert.equal(opening.house, 22.25);
+      assert.equal(opening.minimum, opening.house);
+      assert.deepEqual(opening.research, [50, 98]);
+      assert.deepEqual(opening.discounts, [20, 16, 12, 8, 4, 0]);
+      assert.deepEqual(opening.growth.map(({ residents, peak }) => [residents, peak]), [[22, 22], [22, 26], [21, 32]]);
+      const baseGrowth = 3 * (0.14 + 5 / 13);
+      assert.ok(opening.growth.every(({ births, credit }, index) => Math.abs(births + credit - baseGrowth * (1.8 - .4 * index)) < 1e-9));
+      console.log('Opening economy:', opening);
+      await mkdir('output/startup', { recursive: true });
+      await page.screenshot({ path: 'output/startup/opening-economy.png' });
+    }
+    if (captureMapTools) {
+      await page.setViewportSize({ width: 1120, height: 740 });
+      await mkdir('output/startup', { recursive: true });
+      await page.evaluate(async () => {
+        const { state, renderer } = window.__game;
+        state.paused = true;
+        const player = state.units.find(unit => unit.kind === 'leader' && unit.faction === 0);
+        const start = { x: Math.floor(player.x) - 2, y: Math.floor(player.y) - 2 };
+        renderer.areaPreview = { tool: 'cancel', start, end: { x: start.x + 4, y: start.y + 4 } };
+        document.querySelector('[data-action="cancel"]').classList.add('active');
+        const { Frontend } = await import('/src/ui/frontend.ts');
+        const host = document.createElement('div');
+        document.body.append(host);
+        const preview = new Frontend(host, () => {});
+        preview.setSession(true, false);
+        preview.hide();
+        window.__mapToolsPreview = { preview, host };
+      });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const toolBoxes = await page.locator('.special-actions button').evaluateAll(buttons =>
+        buttons.map(button => { const { left, top, bottom } = button.getBoundingClientRect(); return { left, top, bottom, tool: button.dataset.action }; }));
+      assert.equal(toolBoxes.length, 5);
+      assert.equal(toolBoxes[4].tool, 'cancel');
+      assert.ok(toolBoxes.every(box => box.top === toolBoxes[0].top && box.bottom <= 740));
+      await page.screenshot({ path: 'output/startup/cancel-area.png' });
+      await page.evaluate(() => {
+        window.__game.renderer.areaPreview = null;
+        const { preview } = window.__mapToolsPreview;
+        preview.setInGame(true);
+        preview.show('game-menu');
+      });
+      const gameMenu = page.getByRole('dialog', { name: 'Game Menu', exact: true });
+      await gameMenu.getByRole('button', { name: 'Resume', exact: true }).waitFor();
+      assert.equal(await gameMenu.locator('.frontend-game-menu').getByRole('heading', { includeHidden: true }).count(), 0);
+      await page.waitForFunction(() => getComputedStyle(window.__mapToolsPreview.host).backdropFilter.includes('sepia(1)'));
+      await page.screenshot({ path: 'output/startup/in-game-menu.png' });
+      await gameMenu.getByRole('button', { name: 'New Game', exact: true }).click();
+      await page.getByRole('heading', { name: 'World Generation' }).waitFor();
+      assert.equal(await page.getByText('Random', { exact: true }).count(), 0);
+      await page.screenshot({ path: 'output/startup/world-generation.png' });
+      await page.locator('.worldgen-back').click();
+      await gameMenu.getByRole('button', { name: 'Resume', exact: true }).waitFor();
+      const guideSteps = await page.evaluate(() => {
+        const { preview, host } = window.__mapToolsPreview;
+        preview.setInGame(false);
+        preview.loading('Generating world', '', .65, false, true);
+        const guide = host.querySelector('.movement-guide');
+        const leader = guide.querySelector('.movement-guide-leader');
+        const keys = [...guide.querySelectorAll('kbd')];
+        const sprites = [...leader.querySelectorAll('span')];
+        const animations = guide.getAnimations({ subtree: true });
+        const sample = time => {
+          for (const animation of animations) { animation.pause(); animation.currentTime = time; }
+          const highlighted = keys.filter(node => getComputedStyle(node).color === 'rgb(43, 32, 15)');
+          const visible = sprites.filter(node => getComputedStyle(node).visibility === 'visible');
+          const { x, y } = leader.getBoundingClientRect();
+          return {
+            keys: highlighted.map(node => node.textContent),
+            sprites: visible.map(node => node.dataset.guideKey),
+            frame: visible[0] && getComputedStyle(visible[0]).backgroundPositionX,
+            x, y
+          };
+        };
+        const result = [0, 800, 1600, 2400, 3200].map(start => [sample(start), sample(start + 100), sample(start + 200)]);
+        sample(1000);
+        return result;
+      });
+      const guideDirections = [['w', 0, -1], ['a', -1, 0], ['s', 0, 1], ['d', 1, 0], ['w', 0, -1]];
+      for (const [index, [boundary, first, second]] of guideSteps.entries()) {
+        const [key, dx, dy] = guideDirections[index];
+        for (const sample of [boundary, first, second]) {
+          assert.deepEqual(sample.keys, [key.toUpperCase()]);
+          assert.deepEqual(sample.sprites, [key]);
+        }
+        assert.deepEqual([Math.sign(second.x - first.x), Math.sign(second.y - first.y)], [dx, dy]);
+        assert.notEqual(first.frame, second.frame, `Leader should advance a walk frame while holding ${key.toUpperCase()}`);
+      }
+      await page.locator('.movement-guide').screenshot({ path: 'output/startup/wasd-guide.png' });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const staticGuide = await page.locator('.movement-guide').evaluate(guide => ({
+        animationCount: guide.getAnimations({ subtree: true }).length,
+        visible: [...guide.querySelectorAll('.movement-guide-leader span')]
+          .filter(node => getComputedStyle(node).visibility === 'visible').map(node => node.dataset.guideKey)
+      }));
+      assert.deepEqual(staticGuide, { animationCount: 0, visible: ['s'] });
+      await page.emulateMedia({ reducedMotion: null });
+      await page.evaluate(() => window.__mapToolsPreview.host.remove());
+    }
     if (captureMenu) {
       await page.setViewportSize({ width: 1280, height: 960 });
       await page.evaluate(async () => {
@@ -635,9 +1177,19 @@ try {
     if (captureArms) await captureArmsPreview(page);
     if (captureOffensive) await captureOffensivePreview(page);
     if (captureBuildings) await captureBuildingPreview(page);
+    if (process.argv.includes('--capture-barbarian-lair')) await captureBarbarianLairPreview(page);
+    if (process.argv.includes('--capture-combat-edge')) await captureCombatEdgePreview(page);
     if (process.argv.includes('--capture-fountain')) {
       const { captureFountainPreview } = await import('./startup-fountain-preview.mjs');
       await captureFountainPreview(page);
+    }
+    if (process.argv.includes('--capture-town-growth')) {
+      const { captureTownGrowthPreview } = await import('./startup-town-growth-preview.mjs');
+      await captureTownGrowthPreview(page);
+    }
+    if (process.argv.includes('--capture-settlement')) {
+      const { captureSettlementPreview } = await import('./startup-settlement-preview.mjs');
+      await captureSettlementPreview(page);
     }
     if (process.argv.includes('--capture-frontier-village')) {
       const { captureFrontierVillagePreview } = await import('./startup-frontier-village-preview.mjs');
@@ -676,61 +1228,95 @@ try {
     if (captureCivicArt) await captureCivicArtGallery(page);
     if (captureCivic) await captureCivicPreview(page);
     if (captureCannonFire) await captureCannonFirePreview(page);
+    if (process.argv.includes('--capture-upkeep')) await captureUpkeepPreview(page);
     if (captureShellImpact) await captureShellImpactPreview(page);
     if (captureMeadow) await captureMeadowPreview(page);
+    if (captureFertility) await captureFertilityPreview(page);
     if (process.argv.includes('--capture-unit-trails')) {
       const { captureUnitTrailsPreview } = await import('./startup-unit-trails-preview.mjs');
       await captureUnitTrailsPreview(page);
     }
-    if (captureMilitary) {
-      // Use a separate frozen state and renderer for visual review. No scenario
-      // is started, no gameplay input is sent, and no save is changed.
-      await page.setViewportSize({ width: 1440, height: 960 });
-      await page.evaluate(async () => {
-        window.__game.state.paused = true;
-        const { createScenarioGame } = await import('/src/game/scenario-loader.ts');
-        const { Renderer } = await import('/src/game/renderer.ts');
-        const { BuildingActivityPopup } = await import('/src/ui/building-activity.ts');
-        const { constructionEdges } = await import('/src/game/builders.ts');
-        const { setMapRevealed } = await import('/src/game/fog.ts');
-        const state = await createScenarioGame('musketry-deathmatch');
-        state.paused = true; setMapRevealed(state, true);
-        const faction = state.factions.find(faction => faction.id === 0);
-        const academy = state.buildings.find(building => building.faction === 0 && building.kind === 'militaryAcademy');
-        const leader = state.units.find(unit => unit.faction === 0 && unit.kind === 'leader');
-        if (!academy || !leader) throw new Error('Military scenario lacks its academy or Leader');
-        const host = document.createElement('div');
-        Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '99999', background: '#20261c' });
-        host.innerHTML = '<canvas style="width:100%;height:520px;display:block"></canvas><canvas hidden></canvas><section class="building-activity" role="dialog" aria-labelledby="building-activity-title" hidden></section>';
-        document.body.append(host);
-        const [canvas, minimap] = host.querySelectorAll('canvas');
-        const renderer = new Renderer(canvas, minimap); await renderer.initialize();
-        renderer.follow = false;
-        renderer.camera = { x: state.world.width / 2, y: state.world.height / 2 };
-        renderer.zoom = Math.min(1400 / (state.world.width * 32), 900 / (state.world.height * 32));
-        renderer.draw(state, 0);
-        window.__militaryReview = { state, renderer, host, academy, leader, faction, BuildingActivityPopup, constructionEdges };
-      });
-      await mkdir('output/startup', { recursive: true });
-      await page.screenshot({ path: 'output/startup/musketry-deathmatch.png', clip: { x: 0, y: 0, width: 1440, height: 520 } });
-      await page.evaluate(() => {
-        const { state, renderer, host, academy, leader, faction, BuildingActivityPopup, constructionEdges } = window.__militaryReview;
-        host.querySelector('canvas').style.height = '100%'; renderer.resize();
-        faction.formationType = 'wide';
-        const edge = constructionEdges(state, academy)[0];
-        if (!edge) throw new Error('Military Academy has no accessible entrance');
-        leader.x = edge.x; leader.y = edge.y; leader.inside = undefined;
-        leader.facing = 0;
-        renderer.camera = { x: academy.x + 2, y: academy.y + 2.5 }; renderer.zoom = 2;
-        renderer.draw(state, 0);
-        const popup = new BuildingActivityPopup(host.querySelector('section'), () => state,
-          point => renderer.screenPoint(point), () => ({ width: renderer.width, height: renderer.height }), () => {}, () => {});
-        popup.toggle(academy); window.__militaryReview.popup = popup;
-      });
-      await page.screenshot({ path: 'output/startup/military-academy.png' });
-    }
+    if (captureMilitary) await captureMilitaryPreview(page);
   })()]);
   clearTimeout(timer);
+  if (process.argv.includes('--check-city-fixes')) {
+    const result = await page.evaluate(async () => {
+      const [{ territory, UNCLAIMED }, { removeBuildings }, { isHouseEnclosed, stoneWalledPalaces },
+        { factionDevelopedResourceCount }, { buildAt, validateBuildAt }] = await Promise.all([
+        import('/src/game/borders.ts'), import('/src/game/construction-cancellation.ts'), import('/src/game/enclosures.ts'),
+        import('/src/game/resource-development.ts'), import('/src/game/simulation.ts'),
+      ]);
+      const width = 36, height = 28;
+      const world = { width, height, seed: 'city-fix-review', source: 'test', spawns: [], revision: 0,
+        tiles: Array.from({ length: width * height }, () => ({
+          terrain: 'grassland', overlay: 'none', elevation: .3, moisture: .5, food: 2, gold: 0, production: 1, variation: .5,
+        })) };
+      const structure = (id, kind, x, y) => ({ id, kind, faction: 0, x, y, hp: 100, maxHp: 100, capacity: 0 });
+      const home = structure(1, 'palace', 10, 10), house = structure(2, 'house', 13, 10);
+      const buildings = [home, house, structure(3, 'palace', 25, 10), structure(4, 'road', 7, 11)];
+      for (let y = 7; y <= 15; y++) for (let x = 7; x <= 17; x++)
+        if (x === 7 || y === 7 || x === 17 || y === 15) buildings.push(structure(buildings.length + 1, 'wall', x, y));
+      const leader = { id: 500, kind: 'leader', faction: 0, x: 20.5, y: 13.5, hp: 100, maxHp: 100, morale: 100,
+        speed: 3.6, range: 4, attack: 10, defense: 3, cooldown: 0, lastCombat: -100, moving: false, facing: 0, attackTime: 0, order: 'hold' };
+      const units = [leader, { ...leader, id: 501, kind: 'merchant', faction: 1, x: 12.5, y: 12.5 }];
+      const factions = [0, 1].map(id => ({ id, name: String(id), color: '#aa6a55', relation: id ? 'peace' : 'self',
+        gold: 1000, food: 500, production: 0, population: 1, nextRaid: Infinity,
+        yields: { gold: 0, food: 0, production: 0 }, defeated: false }));
+      const state = { world, buildings, units, factions, time: 0, tick: 0, paused: true, speed: 1,
+        events: [], particles: [], fields: [], selected: null, selectedType: null, buildMode: null, diplomacy: null,
+        gameOver: false, victory: false, seed: world.seed, rngState: 1 };
+      const iron = 10 * width + 14, copper = 12 * width + 26, rock = 9 * width + 21, forest = 9 * width + 18;
+      Object.assign(world.tiles[iron], { resource: 'iron', resourceDeveloped: true });
+      Object.assign(world.tiles[copper], { resource: 'copper', resourceDeveloped: true });
+      Object.assign(world.tiles[rock], { rockHost: rock, rockRelief: 0 });
+      world.tiles[rock + 1].relief = 'mountains';
+      world.tiles[forest].overlay = 'forest';
+      const visitor = isHouseEnclosed(state, house) && stoneWalledPalaces(state).has(home.id);
+      factions[1].relation = 'war';
+      const intruder = !isHouseEnclosed(state, house) && !stoneWalledPalaces(state).has(home.id);
+      const supplied = factionDevelopedResourceCount(state, 0, 'iron');
+      const preview = validateBuildAt(state, 'palace', 18, 9);
+      const untouchedForest = world.tiles[forest].overlay === 'forest';
+      const ordered = buildAt(state, 'palace', 18, 9);
+      const clearedForest = world.tiles[forest].overlay === 'none';
+      removeBuildings(state, new Set([home.id]));
+      return { visitor, intruder, supplied, preview, untouchedForest, ordered, clearedForest,
+        lostClaim: territory(state).owners[iron] === UNCLAIMED,
+        lostIron: factionDevelopedResourceCount(state, 0, 'iron'),
+        keptCopper: factionDevelopedResourceCount(state, 0, 'copper') };
+    });
+    assert.equal(result.visitor, true);
+    assert.equal(result.intruder, true);
+    assert.equal(result.supplied, 1);
+    assert.equal(result.preview.ok, true, result.preview.message);
+    assert.equal(result.untouchedForest, true);
+    assert.equal(result.ordered.ok, true, result.ordered.message);
+    assert.equal(result.clearedForest, true);
+    assert.equal(result.lostClaim, true);
+    assert.equal(result.lostIron, 0);
+    assert.equal(result.keptCopper, 1);
+    console.log('Frozen city checks passed.');
+  }
+  if (process.argv.includes('--capture-thermal-bath')) await captureThermalBathPreview(page);
+  if (process.argv.includes('--capture-beached-galley')) await captureBeachedGalleyPreview(page);
+  if (process.argv.includes('--check-scenario-camps')) {
+    const { camps, reserves } = await page.evaluate(async () => {
+      const { createScenarioGame } = await import('/src/game/scenario-loader.ts');
+      const state = await createScenarioGame('age-of-exploration');
+      const starts = [...state.world.spawns, ...state.units.filter(unit => unit.kind === 'leader' && unit.faction >= 0)];
+      const camps = state.raiderCamps.map(camp => ({
+        size: camp.size,
+        clearance: Math.min(...starts.map(start => Math.hypot(
+          Math.max(camp.x - start.x, start.x - camp.x - camp.width, 0),
+          Math.max(camp.y - start.y, start.y - camp.y - camp.height, 0)))),
+      }));
+      return { camps, reserves: state.units.filter(unit => unit.faction === -2 && unit.raiderGarrison !== undefined).length };
+    });
+    assert.ok(camps.some(camp => camp.size === 'small') && camps.some(camp => camp.size === 'large'));
+    assert.ok(camps.every(camp => camp.clearance >= 60));
+    assert.ok(reserves > 0, 'Age of Exploration camps must have fresh reserves');
+    console.log('Age of Exploration camps:', { camps, reserves });
+  }
   if (checkScoutScenarios) {
     const counts = await page.evaluate(async () => {
       const { SCENARIOS } = await import('/src/game/scenario-content.ts');
@@ -745,16 +1331,74 @@ try {
       }
       return result;
     });
-    for (const [id, factions] of Object.entries(counts))
-      assert.ok(factions.length && factions.every(count => count >= 2 && count <= 4), `${id} scout towers by faction: ${factions}`);
+    for (const [id, factions] of Object.entries(counts)) {
+      const hasStartingScouts = id !== 'sandbox' && id !== 'no-mans-land';
+      assert.ok(factions.length && factions.every(count => hasStartingScouts ? count >= 2 && count <= 4 : count === 0),
+        `${id} scout towers by faction: ${factions}`);
+    }
     console.log('Scout towers in scenario starts:', counts);
+  }
+  if (checkScenarioTownRoads) {
+    const viewport = page.viewportSize();
+    if (captureScenarioTownRoads) await page.setViewportSize({ width: 960, height: 620 });
+    const counts = await page.evaluate(async capture => {
+      const { SCENARIOS } = await import('/src/game/scenario-content.ts');
+      const { createScenarioGame } = await import('/src/game/scenario-loader.ts');
+      const { assertPreparedTownRoadRings } = await import('/tools/scenario-bake/streets.ts');
+      const counts = {};
+      let preview;
+      for (const { id } of SCENARIOS) {
+        const state = await createScenarioGame(id);
+        counts[id] = assertPreparedTownRoadRings(state);
+        if (capture && id === 'age-of-exploration') preview = state;
+      }
+      if (preview) {
+        const { Renderer } = await import('/src/game/renderer.ts');
+        const { setMapRevealed } = await import('/src/game/fog.ts');
+        const towns = preview.buildings.filter(building => building.kind === 'palace' && building.hp > 0);
+        const town = towns.find(building => building.cityName === 'Persepolis') ?? towns[0];
+        preview.paused = true;
+        setMapRevealed(preview, true);
+        const host = document.createElement('div');
+        Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '99999', background: '#20261c' });
+        host.innerHTML = '<canvas style="width:100%;height:100%;display:block"></canvas><canvas hidden></canvas>';
+        document.body.append(host);
+        const [canvas, minimap] = host.querySelectorAll('canvas');
+        const renderer = new Renderer(canvas, minimap);
+        await renderer.initialize();
+        renderer.follow = false;
+        renderer.camera = { x: town.x + 1, y: town.y + 1 };
+        renderer.zoom = 2.6;
+        renderer.draw(preview, 0);
+        window.__townRoadsPreview = { host, renderer };
+      }
+      return counts;
+    }, captureScenarioTownRoads);
+    for (const [id, count] of Object.entries(counts)) assert.ok(count > 0, `${id} needs at least one town`);
+    console.log('Walkable town road rings in scenario starts:', counts);
+    if (captureScenarioTownRoads) {
+      await mkdir('output/startup', { recursive: true });
+      await page.screenshot({ path: 'output/startup/scenario-town-roads.png' });
+      await page.evaluate(() => {
+        const { host, renderer } = window.__townRoadsPreview;
+        renderer.destroy(); host.remove(); delete window.__townRoadsPreview;
+      });
+      await page.setViewportSize(viewport);
+    }
   }
   if (captureArt) {
     const { captureRuntimeArtReview } = await import('../tools/runtime-art/verify.mjs');
     await captureRuntimeArtReview(browser, server.resolvedUrls.local[0]);
   }
+  if (captureSettlementTiers) {
+    const { captureSettlementTierPreview } = await import('./startup-settlement-tier-preview.mjs');
+    await captureSettlementTierPreview(page);
+  }
   if (captureAnalytics) await captureAnalyticsPreview(browser, server.resolvedUrls.local[0]);
-  console.log(`PASS startup: ${worldViewer ? 'world viewer, full reveal, frozen world, fit camera and screenshot' : 'browser imports, assets, fonts, simulation and world rendering'} (${((performance.now() - started) / 1000).toFixed(1)}s)`);
+  const checked = captureFjords ? 'regional Fjords on Continents, Pangaea and Archipelago'
+    : worldViewer ? 'world viewer, full reveal, frozen world, fit camera and screenshot'
+    : 'browser imports, assets, fonts, simulation and world rendering';
+  console.log(`PASS startup: ${checked} (${((performance.now() - started) / 1000).toFixed(1)}s)`);
 } catch (error) {
   await mkdir('output/startup', { recursive: true });
   await Promise.allSettled([
@@ -767,6 +1411,201 @@ try {
   await browser?.close();
   await server.close();
   await rm(startupCache, { recursive: true, force: true });
+}
+
+async function captureAccountAndConstructionControls(page) {
+  await page.evaluate(() => {
+    window.__startupUI.show('create-account');
+    document.querySelector('#account-username').value = 'fieldworker';
+    document.querySelector('#account-password').value = 'preview';
+    document.querySelector('#account-confirm').value = 'preview';
+    document.querySelector('.account-submit').click();
+  });
+  const dialog = page.locator('.account-dialog[open]');
+  assert.match(await dialog.textContent(), /If you do not provide an email address, we will not be able to reset your password if you forget it\./);
+  await dialog.screenshot({ path: 'output/startup/account-without-email.png' });
+  await dialog.getByRole('button', { name: 'Continue without email' }).click();
+  assert.equal(await dialog.locator('[role="status"]').textContent(), 'Creating account...');
+  await dialog.screenshot({ path: 'output/startup/account-creating.png' });
+  await page.evaluate(() => window.__startupUI.showAccountCreated());
+  await dialog.screenshot({ path: 'output/startup/account-created.png' });
+  await page.evaluate(() => {
+    const preview = window.__startupUI;
+    preview.setAccountBusy(false);
+    preview.setAccount({ id: 'preview', username: 'fieldworker', email: null, displayName: 'fieldworker', createdAt: '2026-11-20T00:00:00Z' });
+    preview.setSession(true);
+    preview.setSaves([{ id: 'single-player', name: 'Autosave', time: 300, seed: 'NORTH-REACH', civilization: 'Roma', savedAt: Date.UTC(2026, 10, 20, 20) }], 'Roma');
+    preview.show('saves');
+  });
+  await page.getByRole('button', { name: 'Save to Cloud' }).waitFor();
+  await page.locator('.frontend-saves').screenshot({ path: 'output/startup/cloud-saves.png' });
+  await page.evaluate(async () => {
+    window.__startupUI.hide();
+    await import('/src/ui/forged-hud.css');
+    await import('/src/ui/reference-buttons.css');
+    const { constructionActionsMarkup } = await import('/src/ui/build-controls-view.ts');
+    const preview = document.createElement('div');
+    preview.className = 'game-area';
+    preview.dataset.startupControls = '';
+    Object.assign(preview.style, { position: 'fixed', right: '0', bottom: '0', width: '520px', height: '120px', zIndex: '99999' });
+    preview.innerHTML = `<div class="special-actions">${constructionActionsMarkup({ build: 'Build', fortifications: 'Fortify', clear: 'Clear', forbid: 'Forbid', cancel: 'Cancel' })}</div>`;
+    document.body.append(preview);
+  });
+  const controls = page.locator('[data-startup-controls] .special-actions');
+  assert.deepEqual(await controls.locator('kbd').allTextContents(), ['B', 'F', 'C']);
+  await controls.screenshot({ path: 'output/startup/construction-shortcuts.png' });
+  await page.locator('[data-startup-controls]').evaluate(node => node.remove());
+}
+
+async function captureFarmRoads(page) {
+  await page.evaluate(async () => {
+    const state = structuredClone(window.__worldViewer.state);
+    const [{ Renderer }, { setMapRevealed }, { reliefFootprintAllowed }, { recordFarmRoadCrossing, publishFarmRoads }, { WATER, buildingWidth, buildingHeight }] = await Promise.all([
+      import('/src/game/renderer.ts'), import('/src/game/fog.ts'), import('/src/game/relief.ts'),
+      import('/src/game/farm-roads.ts'), import('/src/game/types.ts'),
+    ]);
+    const { world } = state;
+    const occupied = new Set();
+    for (const building of state.buildings) for (let y = 0; y < buildingHeight(building); y++) for (let x = 0; x < buildingWidth(building); x++)
+      occupied.add((building.y + y) * world.width + building.x + x);
+    const open = ({ x, y }) => {
+      const cell = y * world.width + x, tile = world.tiles[cell];
+      return tile && !WATER.has(tile.terrain) && tile.farm === undefined && !tile.resource
+        && !occupied.has(cell) && reliefFootprintAllowed(world, x, y);
+    };
+    let route;
+    for (const field of state.fields.filter(field => field.faction === 0)) {
+      for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+        const path = [3, 2, 1].map(step => ({ x: field.x + dx * step, y: field.y + dy * step }));
+        if (path.every(open)) { route = { path, field }; break; }
+      }
+      if (route) break;
+    }
+    if (!route) throw new Error('Farm road preview needs three open tiles beside a field');
+    const { path, field } = route, start = path[0];
+    const courier = state.units.find(unit => unit.faction === 0 && unit.collector);
+    Object.assign(courier, { inside: false, collectPhase: 'outbound', x: field.x + .5, y: field.y + .5 });
+    recordFarmRoadCrossing(state, courier, start.x + .5, start.y + .5);
+    recordFarmRoadCrossing(state, courier, start.x + .5, start.y + .5);
+    const first = state.buildings.length;
+    publishFarmRoads(state);
+    const added = state.buildings.slice(first);
+    if (added.length !== path.length || !path.every(point => added.some(road => road.kind === 'road' && road.x === point.x && road.y === point.y)))
+      throw new Error('Farm roads must cover each open crossing once and preserve the field');
+    Object.assign(courier, { x: path[1].x + .5, y: path[1].y + .5, facing: Math.atan2(field.y - start.y, field.x - start.x), moving: true });
+    const host = document.createElement('div');
+    host.id = 'startup-farm-roads';
+    Object.assign(host.style, { position: 'fixed', inset: '0', margin: 'auto', width: '620px', height: '410px', zIndex: '99999' });
+    host.innerHTML = '<canvas style="width:100%;height:100%;display:block"></canvas><canvas hidden></canvas>';
+    document.body.append(host);
+    const renderer = new Renderer(...host.querySelectorAll('canvas'));
+    await renderer.initialize();
+    setMapRevealed(state, true);
+    renderer.follow = false;
+    renderer.camera = { x: path[1].x + .5, y: path[1].y + .5 };
+    renderer.zoom = 2.1;
+    renderer.draw(state, 0);
+    window.__farmRoadPreview = { host, renderer };
+  });
+  await page.locator('#startup-farm-roads').screenshot({ path: 'output/startup/farm-roads.png' });
+  await page.evaluate(() => {
+    const { host, renderer } = window.__farmRoadPreview;
+    renderer.destroy(); host.remove(); delete window.__farmRoadPreview;
+  });
+}
+
+async function captureFjordPreview(page, style, screenshot) {
+  if (screenshot) {
+    await mkdir('output/startup', { recursive: true });
+    await page.locator('#world-view').screenshot({ path: 'output/startup/fjords-world.png' });
+  }
+  const result = await page.evaluate(async capture => {
+    const { state, renderer } = window.__worldViewer;
+    const { width, height, tiles } = state.world;
+    const [{ navigableWaterCell }, { traversable }, { dockPlacement }, { waterDepthField }, { fishSurfaceFrame }, { TILE_SIZE }] = await Promise.all([
+      import('/src/game/water-navigation.ts'), import('/src/game/pathfinding.ts'), import('/src/game/dock.ts'),
+      import('/src/game/water-depth.ts'), import('/src/game/fishing-art.ts'), import('/src/game/types.ts'),
+    ]);
+    const shore = [], water = [];
+    const waterDepth = waterDepthField(state.world);
+    const saltwater = tile => tile.terrain === 'ocean' || tile.terrain === 'coast';
+    let rocks = 0, ledges = 0, deep = 0, unclassified = 0, otherBiomes = 0;
+    let left = width, top = height, right = 0, bottom = 0;
+    for (const [cell, tile] of tiles.entries()) {
+      const x = cell % width, y = Math.floor(cell / width);
+      if (tile.fjord && tile.biome !== 'fjords') unclassified++;
+      if (tile.biome && tile.biome !== 'fjords') otherBiomes++;
+      if (tile.fjord === 'shore') shore.push({ x, y });
+      if (tile.fjord === 'rock' && tile.rockHost !== undefined) rocks++;
+      if (tile.ridge || tile.stair) ledges++;
+      if (tile.fjord === 'water') {
+        water.push(cell);
+        if (waterDepth.bands[cell] === 2) deep++;
+        left = Math.min(left, x); top = Math.min(top, y);
+        right = Math.max(right, x); bottom = Math.max(bottom, y);
+      }
+    }
+    // Flood open sea once to verify the inlet tags have navigable outlets.
+    const seen = new Uint8Array(tiles.length), queue = [];
+    const visit = (x, y) => {
+      const cell = y * width + x;
+      if (!seen[cell] && saltwater(tiles[cell]) && navigableWaterCell(state.world, x, y)) { seen[cell] = 1; queue.push(cell); }
+    };
+    for (let x = 0; x < width; x++) { visit(x, 0); visit(x, height - 1); }
+    for (let y = 1; y < height - 1; y++) { visit(0, y); visit(width - 1, y); }
+    for (let head = 0; head < queue.length; head++) {
+      const cell = queue[head], x = cell % width, y = Math.floor(cell / width);
+      if (x) visit(x - 1, y);
+      if (x + 1 < width) visit(x + 1, y);
+      if (y) visit(x, y - 1);
+      if (y + 1 < height) visit(x, y + 1);
+    }
+    const dock = shore.some(({ x, y }) => {
+      const berth = dockPlacement(state, x, y)?.berth;
+      return berth && tiles[Math.floor(berth.y) * width + Math.floor(berth.x)].fjord === 'water';
+    });
+    const zones = state.fishing.zones.filter(zone => zone.cells.length && zone.cells.every(cell => tiles[cell].fjord === 'water'));
+    const districtStocks = new Map();
+    for (const zone of zones) {
+      const cell = zone.cells[0], key = `${Math.floor((cell % width) / 12)}:${Math.floor(cell / width / 12)}`;
+      districtStocks.set(key, 1 + (districtStocks.get(key) ?? 0));
+    }
+    const fish = state.fishing.fish.filter(({ x, y }) => tiles[Math.floor(y) * width + Math.floor(x)].fjord === 'water');
+    const report = { style: state.world.generationStyle, family: state.world.landformFamily, unclassified, otherBiomes,
+      water: water.length, deep, rocks, ledges, dock,
+      outlets: water.every(cell => seen[cell]), openShore: shore.filter(({x, y}) => traversable(state.world, x, y)).length,
+      zones: zones.length, splitDistricts: [...districtStocks.values()].filter(count => count === 2).length,
+      fish: fish.length, paused: state.paused && state.time === 0 };
+    if (!capture || !water.length) return report;
+    renderer.camera = { x: (left + right + 1) / 2, y: (top + bottom + 1) / 2 };
+    renderer.zoom = Math.min(renderer.width / ((right - left + 17) * TILE_SIZE),
+      renderer.height / ((bottom - top + 17) * TILE_SIZE), 1.5);
+    // Freeze a normal frame with several simultaneous fish breaches for the screenshot.
+    let best = 0, artTime = 0;
+    for (let frame = 0; frame < 140; frame++) {
+      const time = frame / 5, visible = fish.filter(value => fishSurfaceFrame(value, time) >= 0).length;
+      if (visible > best) { best = visible; artTime = time; }
+    }
+    const pausedTime = state.time;
+    state.time = artTime;
+    try { renderer.draw(state, 0); } finally { state.time = pausedTime; }
+    return { ...report, visibleFish: best };
+  }, screenshot);
+  const summary = JSON.stringify(result);
+  assert.equal(result.style, style, summary);
+  assert.equal(result.family, 'mixed', summary);
+  assert.equal(result.unclassified, 0, summary);
+  assert.ok(result.otherBiomes > result.water, summary);
+  assert.ok(result.paused && result.water > 100 && result.deep > 0 && result.rocks > 15, summary);
+  assert.ok(result.outlets && result.dock && result.openShore > 20, summary);
+  assert.ok(result.zones >= 4 && result.splitDistricts >= 2 && result.fish > 0, summary);
+  assert.equal(result.ledges, 0, summary);
+  if (screenshot) {
+    assert.ok(result.visibleFish > 0, summary);
+    await mkdir('output/startup', { recursive: true });
+    await page.locator('#world-view').screenshot({ path: 'output/startup/fjords.png' });
+  }
+  console.log(`Fjords ${summary}`);
 }
 
 async function captureResourceSites(page, sizes) {
@@ -980,4 +1819,72 @@ async function checkMarbleConstruction(page) {
   assert.ok(result.visibleBonus, 'The marble popup must show its construction discount');
   await page.locator('[data-marble-preview]').screenshot({ path: 'output/startup/marble-construction-discount.png' });
   await page.locator('[data-marble-preview]').evaluate(element => element.remove());
+}
+
+/** Exercise payroll and photograph the selection on a detached, frozen scenario. */
+async function captureUpkeepPreview(page) {
+  await page.setViewportSize({ width: 1040, height: 640 });
+  await page.evaluate(async () => {
+    const { createScenarioGame } = await import('/src/game/scenario-loader.ts');
+    const { Renderer } = await import('/src/game/renderer.ts');
+    const { setMapRevealed } = await import('/src/game/fog.ts');
+    const { retinueUpkeep } = await import('/src/game/archery.ts');
+    const { settleRetinuePayroll } = await import('/src/game/retinue-native.ts');
+    const { unitDamage, unitDefense, hasUnpaidUpkeep } = await import('/src/game/veterancy.ts');
+    const { selectionSummary } = await import('/src/ui/selection-summary.ts');
+    const { icon } = await import('/src/ui/icons.ts');
+    const { wholeNumber } = await import('/src/ui/number-format.ts');
+
+    const state = await createScenarioGame('musketry-deathmatch');
+    state.paused = true;
+    const time = state.time, faction = state.factions.find(owner => owner.id === 0);
+    const musket = state.units.find(unit => unit.faction === 0 && unit.kind === 'musketman' && unit.hp > 0 && !unit.inside);
+    if (!faction || !musket) throw new Error('Upkeep preview requires a musketman');
+    const warrior = { ...musket, kind: 'warrior' }, ranger = { ...musket, kind: 'archer', ranger: true };
+    const bill = retinueUpkeep(musket) + retinueUpkeep(warrior);
+    if (bill !== 5.5 || retinueUpkeep(ranger) !== 0) throw new Error('Unexpected basic or specialist upkeep');
+    const fullDamage = unitDamage(musket, 100, faction), fullDefense = unitDefense(musket, faction);
+    faction.gold = bill - .5;
+    settleRetinuePayroll(state, faction, bill);
+    if (faction.gold !== 0 || unitDamage(musket, 100, faction) !== fullDamage / 2
+      || unitDefense(musket, faction) !== fullDefense / 2 || hasUnpaidUpkeep(warrior, faction) || hasUnpaidUpkeep(ranger, faction))
+      throw new Error('Short payroll must halve specialist damage and defense and exempt warriors and Rangers');
+    faction.gold = bill;
+    settleRetinuePayroll(state, faction, bill);
+    if (faction.gold !== 0 || hasUnpaidUpkeep(musket, faction) || unitDamage(musket, 100, faction) !== fullDamage)
+      throw new Error('Exact payment must restore full strength');
+    settleRetinuePayroll(state, faction, bill);
+
+    setMapRevealed(state, true);
+    state.selected = musket.id; state.selectedType = 'unit';
+    const selection = selectionSummary(state);
+    if (selection?.hint !== 'Unpaid upkeep') throw new Error('The selection must show unpaid upkeep');
+    const host = document.createElement('div');
+    Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '99999', background: '#20261c' });
+    host.innerHTML = '<canvas style="width:100%;height:100%;display:block"></canvas><canvas hidden></canvas>';
+    document.body.append(host);
+    const [canvas, minimap] = host.querySelectorAll('canvas');
+    const renderer = new Renderer(canvas, minimap);
+    await renderer.initialize();
+    renderer.follow = false; renderer.zoom = 4;
+    renderer.camera = { x: musket.x + .9, y: musket.y };
+    renderer.draw(state, 0);
+
+    const panel = document.querySelector('#selection-panel').cloneNode(true);
+    panel.classList.remove('empty');
+    panel.title = selection.title;
+    panel.querySelector('#selection-name').textContent = selection.name;
+    panel.querySelector('#selection-hint').textContent = selection.hint;
+    panel.querySelector('#selection-hint').hidden = false;
+    panel.querySelector('#selection-stats').innerHTML = `<span><span class="stat-label">HP</span> ${wholeNumber(selection.hp)} / ${wholeNumber(selection.maxHp)}</span>
+      <span><span class="stat-label">Attack</span> ${wholeNumber(selection.attack)}</span>
+      <span><span class="stat-label">Defense</span> ${wholeNumber(selection.defense)}</span>`;
+    panel.querySelector('#portrait').innerHTML = icon(selection.picture, selection.factionColor, selection.houseTier, selection.armorLevel);
+    panel.querySelector('#selection-health').style.width = `${selection.hp / selection.maxHp * 100}%`;
+    host.append(panel);
+    await document.fonts.ready;
+    if (!state.paused || state.time !== time) throw new Error('The upkeep preview must remain frozen');
+  });
+  await mkdir('output/startup', { recursive: true });
+  await page.screenshot({ path: 'output/startup/retinue-unpaid-upkeep.png' });
 }

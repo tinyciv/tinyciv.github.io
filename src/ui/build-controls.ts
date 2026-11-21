@@ -21,7 +21,6 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
   { kind: 'siegeCannon', key: 'n', label: 'Siege cannon' },
   { kind: 'house', key: 'h', label: 'House' },
   { kind: 'apartments', key: 'a', label: 'Apartments' },
-  { kind: 'hospital', key: 'd', label: 'Hospital' },
   { kind: 'factory', key: 'f', label: 'Factory' },
   { kind: 'bridge', key: 'v', label: 'Bridge' },
   { kind: 'dock', key: 't', label: 'Dock' },
@@ -41,7 +40,7 @@ export const BUILD_OPTIONS: readonly { kind: Exclude<BuildSelection, 'clearTrees
   { kind: 'colosseum', key: 'x', label: 'Colosseum' },
   { kind: 'militaryAcademy', key: 'm', label: 'Military Academy' },
   { kind: 'barracks', key: 'x', label: 'Barracks' },
-  { kind: 'palace', key: 'n', label: 'Town' },
+  { kind: 'palace', key: 'n', label: 'Build Settlement' },
 ];
 
 export function buildMenuForSelection(kind: BuildSelection): BuildMenu | null {
@@ -66,6 +65,7 @@ export function buildLabel(kind: BuildSelection): string {
   if (kind === 'goldMine') return 'Gold mine';
   if (kind === 'scoutTower') return 'Scout tower';
   if (kind === 'frontierVillage') return 'Village';
+  if (kind === 'barbarianLair') return 'Barbarian lair';
   const site = Object.values(SITE_DEFINITIONS).find(site => site.building === kind);
   if (site) return site.label;
   return BUILD_OPTIONS.find(option => option.kind === kind)?.label ?? kind.charAt(0).toUpperCase() + kind.slice(1);

@@ -10,7 +10,9 @@ const outlines = new Map<string, { canvas: HTMLCanvasElement; top: number }>();
  * roofs and entrances instead of drawing a box around the occupied ground. */
 export function drawBuildingActivityOutline(c: CanvasRenderingContext2D, building: Building, x: number, y: number, size: number, color: string): void {
   if (!punyWorldImage()) return;
-  const key = `${building.kind}:${building.houseLevel ?? 1}:${Number(!!building.orchard)}:${building.id & 1}:${color}`;
+  const key = building.kind === 'palace'
+    ? `palace:${building.palaceLevel ?? 1}:${building.settlementTier ?? 0}:${color}`
+    : `${building.kind}:${building.houseLevel ?? 1}:${Number(!!building.orchard)}:${building.id & 1}:${color}`;
   let cached = outlines.get(key);
   if (!cached) {
     const padding = 6, top = buildingArtTop(building), width = buildingWidth(building), height = buildingHeight(building);

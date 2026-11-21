@@ -1,5 +1,6 @@
 import { applyTundra, tundraBoundary } from './tundra';
 import { generateWinterTerrain } from './frost-native';
+import { generateFertilityGrass } from './fertility-native';
 import { POLAR_SEA_LANE_WIDTH } from './polar-sea';
 import { applyScenarioOceanChannel } from './scenario-geography';
 import { tundraStartAllowed } from '../game/tundra-starts';
@@ -7,17 +8,17 @@ import { scatterDesertStones } from './desert-stones';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type Overlay, type Point, type Terrain, type Tile, type World } from '../game/types';
 import { EARTH_SAMPLES } from './data/earth-samples';
-import { generateLedges } from './ledges-native';
 import { reliefBuildable, reliefFlags } from '../game/relief';
 import { settlementTerrainMask } from '../game/terrain-sites';
 import { addOffshoreIslands, createLandformProfile, landformDensity, type LandformProfile } from './islands';
 import { assignTreeClimate } from './tree-climate';
 import { OPPOSING_FACTION_COUNT } from '../game/civilizations';
-import { DEFAULT_WORLD_STYLE, LANDFORM_KINDS, LEDGES_ENABLED, resolveLandscapeParameters, WORLD_GENERATION_STYLES,
+import { DEFAULT_WORLD_WIDTH, DEFAULT_WORLD_HEIGHT, MAX_WORLD_DIMENSION, DEFAULT_WORLD_STYLE, isLandformFamily, resolveLandscapeParameters, WORLD_GENERATION_STYLES,
   type LandformFamily, type LandscapeParameters, type WorldGenerationOptions, type WorldGenerationStyle } from './options';
 import { placeFreshwaterLakes, placeLandformLakes } from './lakes';
+import { placeForestPonds } from './forest-ponds';
 import { applyLandformHeights, createLandformPlan, shapeLandformCoasts } from './landforms';
-import { applyTerrainEcology, createTerrainEnvironment } from './terrain-ecology';
+import { applyForestBiomes, applyTerrainEcology, createTerrainEnvironment } from './terrain-ecology';
 import { sampleTerrainClimate, applyWorldClimate } from './climate';
 import { generateRiverNetwork, placeNetworkFords, repairRiverDrainage } from './river-network';
 import { generateRiverDeltas } from './river-deltas';
@@ -28,6 +29,8 @@ import { applyDesertTransitions } from './desert-regions';
 import { MIN_FACTION_START_DISTANCE, packSettlementSites, spreadFactionStarts } from './starting-sites';
 import { generateWorldFeatures } from './features-native';
 import { settlementCoreMask } from './environment-fields';
+import { carveFjordCoast, FJORD_TILE_TYPES, reconcileFjordTerrain } from './fjords-native';
+import { assignFjordBiome } from './fjord-biome';
 
 const PATCH = 24;
 const OVERLAP = 7;
@@ -35,9 +38,7 @@ const STRIDE = PATCH - OVERLAP;
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 const DIAGONAL = [...CARDINAL, [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
 const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
-// 30% less area than the earlier 224×179 map (each side × √0.7).
-export const DEFAULT_WORLD_WIDTH = 187;
-export const DEFAULT_WORLD_HEIGHT = 150;
+export { DEFAULT_WORLD_WIDTH, DEFAULT_WORLD_HEIGHT } from './options';
 
 /** A stable, local random stream: generation never mutates Math.random. */
 export function seededRandom(seed: string): () => number {
@@ -478,7 +479,7 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
   // A smooth ranking makes coherent beaches. Reduce the budget near the caps
   // so excluded polar coast does not concentrate sand on other shores.
   shore.sort((a, b) => b.score - a.score || a.index - b.index);
-  const beachCandidates = shore.filter(({ index, warmth }) => warmth > 0 && tiles[index].terrain !== 'tundra' && !settlementClearings[index]);
+  const beachCandidates = shore.filter(({ index, warmth }) => warmth > 0 && tiles[index].terrain !== 'tundra' && !tiles[index].fjord && !settlementClearings[index]);
   const beachBudget = Math.round(beachCandidates.reduce((sum, candidate) => sum + candidate.warmth, 0) * parameters.beachFraction);
   for (const { index, depth } of beachCandidates.slice(0, beachBudget)) {
     sandy[index] = 1; beachDepth[index] = depth;
@@ -498,7 +499,7 @@ function addCoastalBeaches(world: World, attempt: number, parameters: LandscapeP
   for (const i of queue) {
     const tile = tiles[i], x = i % width, y = Math.floor(i / width), source = owner[i];
     if (settlementClearings[i] || raisedApron[i] || tile.marsh || tile.terrain === 'tundra') continue;
-    if (sandy[source] && distance[i] <= beachDepth[source] && polarDistance(x, y) > 0) {
+    if (!tile.fjord && sandy[source] && distance[i] <= beachDepth[source] && polarDistance(x, y) > 0) {
       tile.terrain = 'desert'; tile.overlay = 'none'; tile.beach = true;
       Object.assign(tile, terrainYields(tile.terrain, tile.overlay));
       neighbors(i, next => { if (tiles[next].terrain === 'river' || tiles[next].terrain === 'lake') tile.food = 1; });
@@ -539,7 +540,7 @@ export interface WorldGenerationProgress {
 }
 
 function* generateAttempt(seed: string, width: number, height: number, attempt: number, style: WorldGenerationStyle,
-  parameters: LandscapeParameters, landformFamily: LandformFamily, options: WorldGenerationOptions): Generator<WorldGenerationProgress, World> {
+  parameters: LandscapeParameters, landformFamily: LandformFamily, options: WorldGenerationOptions): Generator<WorldGenerationProgress, World | undefined> {
   const checkpoint = (progress: number, phase: string): WorldGenerationProgress => ({ progress, phase, attempt: attempt + 1 });
   yield checkpoint(0, 'Shaping land');
   // Development maps still hold every starting city. Scale the waterways
@@ -574,6 +575,10 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   const laneCells = POLAR_SEA_LANE_WIDTH * width;
   land.fill(0, 0, laneCells);
   land.fill(0, land.length - laneCells);
+  // Keep small development maps and deliberately cut scenario straits intact.
+  const generateFjords = !profile.compact && oceanChannelWidth <= 0;
+  const fjords = generateFjords ? carveFjordCoast(land, width, height, `${seed}:${attempt}`, plan) : undefined;
+  if (generateFjords && !fjords) return;
   const inland = distanceField(land, width, height, 0);
   const offshore = distanceField(land, width, height, 1);
   const tiles: Tile[] = [];
@@ -587,7 +592,8 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
       const elevation = land[i] ? clamp(0.13 + inland[i] * 0.014 + Math.max(0, 0.22 - ridge) * 2.5) : 0;
       const terrain: Terrain = land[i] ? climate.terrain : offshore[i] <= 2 ? 'coast' : 'ocean';
       const overlay: Overlay = 'none';
-      tiles.push({ terrain, overlay, elevation, moisture, ...terrainYields(terrain, overlay), variation: random() });
+      const fjord = fjords && FJORD_TILE_TYPES[fjords[i]];
+      tiles.push({ terrain, overlay, elevation, moisture, ...terrainYields(terrain, overlay), variation: random(), ...(fjord && { fjord }) });
     }
     if ((y + 1) % 16 === 0 || y === height - 1)
       yield checkpoint(.14 + .14 * (y + 1) / height, 'Shaping terrain');
@@ -595,7 +601,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   const world: World = { width, height, seed, tiles, spawns: [], generationStyle: style,
     generationParameters: { ...parameters }, landformFamily, landformProvinces: plan?.provinces,
     source: `Natural Earth v5.1.2 · geological regions · ${style} · ${landformFamily}` };
-  // Continuous geology is shaped before the renderer's ledges are selected.
+  // Continuous geology supplies elevation for climate and waterways.
   if (plan) applyLandformHeights(world, plan);
   else {
     const environment = createTerrainEnvironment(tiles, width, height, seed, parameters);
@@ -613,6 +619,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
     Math.min(7, land.reduce((sum, value) => sum + value, 0) / 5500)) * parameters.lakeDensity));
   placeFreshwaterLakes(tiles, width, height, `${seed}:${attempt}`, inland,
     { parameters, count: Math.max(1, usualLakes - plannedLakes.length) });
+  placeForestPonds(world, parameters);
   yield checkpoint(.36, 'Carving rivers');
   // Complete waterways before selecting the dry relief footprint.
   // Keep this rainfall event fixed so discharge and channel widths agree.
@@ -623,6 +630,7 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   // Sediment builds coastal wetlands only after the upstream landforms and
   // channel network are complete. Settlement and beach placement respect them.
   world.riverDeltas = options.riverDeltas === false ? [] : generateRiverDeltas(world, POLAR_SEA_LANE_WIDTH);
+  if (fjords) reconcileFjordTerrain(world);
   // Refresh base yields after waterways are carved, adding riverside fertility.
   for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
     const i = y * width + x, tile = tiles[i];
@@ -637,7 +645,8 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   // will subsequently turn into the middle of a snowfield.
   applyTundra(world, parameters);
   yield checkpoint(.68, 'Finding city sites');
-  const minimumFactionDistance = width >= DEFAULT_WORLD_WIDTH && height >= DEFAULT_WORLD_HEIGHT ? MIN_FACTION_START_DISTANCE : 0;
+  // Explicit compact maps need tighter town spacing to hold every starting faction.
+  const minimumFactionDistance = width >= 187 && height >= 150 ? MIN_FACTION_START_DISTANCE : 0;
   world.minimumFactionStartDistance = minimumFactionDistance || undefined;
   // Starting town footprints must stay on buildable low ground.
   const sites = options.settlements === false ? { capitals: [], secondary: [] }
@@ -647,20 +656,22 @@ function* generateAttempt(seed: string, width: number, height: number, attempt: 
   addCoastalBeaches(world, attempt, parameters);
   applyDesertTransitions(world);
   generateWorldFeatures(world);
+  if (fjords) reconcileFjordTerrain(world);
   // Native landforms can add new dry shore, so finalize polar ground before
   // relief palettes, vegetation and resources are selected.
   applyTundra(world, parameters);
-  if (options.ledges ?? LEDGES_ENABLED) generateLedges(world, parameters.reliefCoverage);
   yield checkpoint(.78, 'Growing woodland');
-  applyTerrainEcology(world, parameters);
-  assignTreeClimate(world, parameters);
+  const woodlandHabitat = applyTerrainEcology(world, parameters);
   applySoilFertility(world);
   yield checkpoint(.88, 'Placing resources');
   assignRegionalResources(world);
   applyStonePlains(world);
   scatterDesertStones(world);
+  yield checkpoint(.95, 'Growing forests');
+  applyForestBiomes(world, woodlandHabitat, parameters);
+  if (fjords) assignFjordBiome(world);
+  assignTreeClimate(world, parameters);
   generateWinterTerrain(world);
-  yield checkpoint(1, 'Terrain ready');
   return world;
 }
 
@@ -672,15 +683,24 @@ function* generateWorldSteps(seed: string, width?: number, height?: number,
   const landformFamily = options.landformFamily ?? 'mixed';
   const parameters = resolveLandscapeParameters(options.parameters);
   if (!WORLD_GENERATION_STYLES.includes(style)) throw new RangeError(`Unknown world style: ${style}`);
-  if (landformFamily !== 'mixed' && !(LANDFORM_KINDS as readonly string[]).includes(landformFamily))
+  if (!isLandformFamily(landformFamily))
     throw new RangeError(`Unknown landform family: ${landformFamily}`);
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 24 || height < 24 || width > 512 || height > 512) {
-    throw new RangeError('World dimensions must be integers between 24 and 512 tiles.');
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 24 || height < 24
+    || width > MAX_WORLD_DIMENSION || height > MAX_WORLD_DIMENSION) {
+    throw new RangeError(`World dimensions must be integers between 24 and ${MAX_WORLD_DIMENSION} tiles.`);
   }
+  let foundCoast = false;
   for (let attempt = 0; attempt < 20; attempt++) {
     const world = yield* generateAttempt(seed, width, height, attempt, style, parameters, landformFamily, options);
-    if (options.settlements === false || world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) return world;
+    if (!world) continue;
+    foundCoast = true;
+    if (options.settlements === false || world.spawns.length === OPPOSING_FACTION_COUNT + 1 && world.secondarySpawns?.length === OPPOSING_FACTION_COUNT) {
+      generateFertilityGrass(world);
+      yield { progress: 1, phase: 'Terrain ready', attempt: attempt + 1 };
+      return world;
+    }
   }
+  if (!foundCoast) throw new Error(`Could not generate a connected fjord coast for seed "${seed}".`);
   throw new Error(`Could not find ${OPPOSING_FACTION_COUNT + 1} connected capitals and ${OPPOSING_FACTION_COUNT} second cities for seed "${seed}".`);
 }
 

@@ -12,11 +12,12 @@ import { isKeep } from './settlement-upgrades';
 import { battleSupport } from './battle-support-native';
 import { rustEngine } from './rust-engine';
 
-export const WOODEN_TOWER_RANGE = 6;
+export const WOODEN_TOWER_RANGE = rustEngine.combat_constant(16);
 export const WOODEN_TOWER_ATTACK = 12.5;
 export const WOODEN_TOWER_COOLDOWN = .75;
 export const woodenTowerAttack = (tower: Building, owner: Pick<Faction, 'armorLevel' | 'weaponLevel'> | undefined): number =>
   WOODEN_TOWER_ATTACK * buildingWeaponMultiplier(tower, owner);
+export const towerDamage = (attack: number, defense: number): number => rustEngine.combat_tower_damage(attack, defense);
 
 const targetClocks = new WeakMap<Building, DecisionClock>();
 

@@ -17,13 +17,13 @@ describe('Rust combat rules through the browser bridge', () => {
       expect(rustEngine.combat_equipment_multiplier(level)).toBe(equipmentMultiplier(level as Unit['weaponLevel']));
   });
 
-  it('preserves effective attack, armored damage, brace, and research on an equipped veteran archer', () => {
+  it('doubles an equipped veteran archer’s damage after armor and research', () => {
     const archer = { kind: 'archer' as const, attack: 17, defense: 4, kills: 100, weaponLevel: 3 as const, armorLevel: 1 as const,
       faction: -2, raiderEquipmentMultiplier: 1.2, enemyStrengthMultiplier: 1.5,
       technologyBonus: { attack: 2, defense: 2 }, raiderBonus: { attack: 3, defense: 1 }, brace: { x: 0, y: 0, stillFor: 10, defense: 6 } };
     expect(veterancy(archer)).toBe(2);
-    expect(unitAttack(archer, fletching)).toBeCloseTo(49.3394, 10);
-    expect(unitDamage(archer, 12, fletching)).toBeCloseTo(37.0229, 10);
+    expect(unitAttack(archer, fletching)).toBeCloseTo(98.6788, 10);
+    expect(unitDamage(archer, 12, fletching)).toBeCloseTo(74.0458, 10);
     expect(unitDefense(archer)).toBeCloseTo(21.42, 10);
     expect(incomingUnitDamage(archer, 20)).toBe(20);
   });
@@ -41,6 +41,7 @@ describe('Rust combat rules through the browser bridge', () => {
 
   it('keeps minimum hits after armor and prevents equipped scouts from inflicting damage', () => {
     expect(attackDamage(1, 1000)).toBeCloseTo(2.8);
+    expect(unitDamage({ kind: 'archer', attack: 1 }, 1000)).toBeCloseTo(5.6);
     expect(unitDamage({ kind: 'scout', attack: 100, kills: 500, weaponLevel: 6, technologyBonus: { attack: 20, defense: 20 } }, 0)).toBe(0);
     expect(incomingUnitDamage({ kills: 500 }, -20)).toBe(0);
     expect(attackDamage(Number.NaN, 4)).toBeNaN();

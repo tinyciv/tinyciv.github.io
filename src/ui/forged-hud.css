@@ -4,7 +4,25 @@
   --hud-scale: 1; --top-scale: 1; --bar-height: 46px;
   --forged-panel: url('/assets/runtime/ui/forged/panel-frame-hud.webp');
 }
-.game-area { overflow: hidden; container: game-area / size; }
+.game-area { overflow: clip; container: game-area / size; }
+.game-hud {
+  --game-hud-scale: var(--desktop-hud-scale, 1);
+  position: absolute; top: 0; left: 0; z-index: 3; pointer-events: none;
+  width: calc(100% / var(--game-hud-scale)); height: calc(100% / var(--game-hud-scale));
+  transform: scale(var(--game-hud-scale)); transform-origin: top left;
+  /* HUD queries see this unscaled layout size. */
+  container: game-area / size;
+}
+.game-hud .leader-skills { pointer-events: auto; }
+@media (pointer: coarse) {
+  .game-hud {
+    --game-hud-scale: var(--touch-hud-scale, 1);
+    --hud-safe-left: calc(env(safe-area-inset-left, 0px) / var(--game-hud-scale));
+    --hud-safe-right: calc(env(safe-area-inset-right, 0px) / var(--game-hud-scale));
+    --hud-safe-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--game-hud-scale));
+  }
+  .game-hud:has(.leader-skills:not([hidden])) { z-index: 7; }
+}
 .leader-action-feedback { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%,-100%); pointer-events: none; user-select: none; }
 .leader-action-feedback .hotbar-art { width: 40px; height: 40px; max-width: none; flex: none; filter: drop-shadow(0 1px 2px #000); animation: leader-action-flash 180ms ease-out; }
 .leader-action-label { padding: 2px 6px; border-radius: 3px; background: #081319b3; color: #fff0c8; font: bold 14px/1.15 var(--game-font); white-space: nowrap; text-align: center; text-shadow: 1px 1px 2px #000; }
@@ -33,6 +51,8 @@
 #food-yield.negative, #gold-yield.negative, #culture-rate.negative { color: #e79886; }
 #gold.negative { color: #e79886; }
 .time-controls { display: flex; align-items: stretch; position: absolute; top: 2px; right: 3px; height: 44px; gap: 5px; pointer-events: auto; padding: 0; }
+.game-area.observing :is(.resources, .research-toolbar, #pause-spending, #diplomacy-menu, .hotbar, .special-actions, #leader-xp, .leader-skills) { display: none; }
+#observer-status { margin: 6px; padding: 6px 10px; border-radius: 3px; background: #101b20d9; color: #f2e4ba; font: 18px/1 var(--game-font); }
 /* One surface for the entire top HUD, using the existing approved slate art.
    The brass bevel follows the rounded corners at every panel width. */
 .resources, .research-toolbar, .time-controls button,
@@ -51,6 +71,11 @@
   font-size: 21px; text-shadow: 1px 2px #000;
 }
 .time-controls button#menu { display: flex; gap: 12px; width: 126px; }
+.time-controls button#pause-spending { width: 160px; gap: 6px; font-size: 20px; white-space: nowrap; }
+#pause-spending .symbol-check { --icon-size: 16px; border: 1px solid #ad9059; border-radius: 2px; background: #101b20; }
+#pause-spending[aria-pressed="false"] .symbol-check::before { visibility: hidden; }
+#pause-spending[aria-pressed="true"] .symbol-check { color: #ffe3a3; background: #6c5026; }
+.time-controls button#pause-spending[aria-pressed="true"] { color: #ffe3a3; box-shadow: inset 0 0 0 1px #d6b666, inset 0 0 12px #af792b66, 0 2px 3px #000b; }
 .menu-glyph { display: block; flex: none; width: 17px; height: 14px; background: linear-gradient(to bottom, currentColor 0 3px, transparent 3px 6px, currentColor 6px 9px, transparent 9px 12px, currentColor 12px 14px); color: #d6b879; }
 .time-controls .text-icon, .speed-value { width: auto; height: auto; background: none; font-size: 23px; }
 .time-controls button:hover { filter: brightness(1.25); }
@@ -112,7 +137,6 @@
 .special-actions button { position: relative; min-width: 0; padding: 4px; border: 0; border-radius: 5px; background: var(--forged-panel) center / 100% 100% no-repeat; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 0; text-shadow: 1px 2px #000; }
 .special-actions button > * { pointer-events: none; }
 .special-actions .action-label { font-size: 17px; line-height: 1.1; padding-bottom: 8px; white-space: nowrap; }
-.special-actions kbd { font: inherit; }
 .special-actions button:hover:not(:disabled), .special-actions button:focus-visible { filter: brightness(1.2); }
 .special-actions button.active { box-shadow: inset 0 0 0 2px #ffd85b, inset 0 0 12px #f1ae2980, 0 0 5px #edb735; }
 .command-art { display: block; width: 46px; height: 46px; flex: 0 0 46px; background-image: url('/assets/runtime/ui/forged/action-symbols.webp'); background-repeat: no-repeat; background-size: 200% 200%; }
@@ -128,7 +152,7 @@
 .build-actions { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-auto-rows: max-content; align-content: start; gap: 5px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ad8a55 #111c20; }
 .build-actions button { container-type: inline-size; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 68px; min-width: 0; padding: 19px 7px 7px; gap: 0; }
 .build-actions .action-label { flex-shrink: 0; font: clamp(14px,18cqi,18px)/1.1 var(--game-font); text-wrap: balance; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
-.build-actions kbd { position: absolute; top: 5px; right: 7px; color: #e5c389; font: 13px/1 var(--game-font); }
+:is(.special-actions, .build-actions) kbd { position: absolute; top: 5px; right: 7px; color: #e5c389; font: 13px/1 var(--game-font); }
 .build-actions button.active { outline: 2px solid #d6b666; outline-offset: -5px; }
 .build-actions button:disabled { opacity: .48; }
 /* Transient tool instructions and feedback sit under resources, never in the bottom bar. */
@@ -136,17 +160,17 @@
 .build-status:empty { display: none; }
 .build-status:not(:empty) { margin: 0; }
 #tile-tooltip { position: absolute; z-index: 3; padding: 7px 11px; font-size: 12px; line-height: 1.4; pointer-events: none; bottom: auto; top: 90px; left: 12px; right: auto; max-width: min(620px,calc(100% - 280px)); }
-.game-menu-actions { display: grid; gap: 10px; }
 @container game-area (max-width: 1500px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .9; } }
 @container game-area (max-width: 1250px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .8; } .resources { transform: scale(.85); transform-origin: top left; } .time-controls { transform: scale(.85); transform-origin: top right; } .selection-panel { top: 46px; } }
-@container game-area (max-width: 1000px) { :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .7; } }
-@container game-area (max-width: 870px) {
+@container game-area (max-width: 1000px) {
+  :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .7; }
   .resources, .time-controls { transform: scale(.74); }
+}
+@container game-area (max-width: 880px) {
+  .resources, .time-controls { transform: scale(.65); }
 }
 @container game-area (max-width: 760px) {
   :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .65; }
-  .resources { transform: scale(.65); }
-  .time-controls { transform: scale(.65); }
   .selection-panel { top: 36px; }
   .hud { height: 420px; }
   .minimap-panel { width: 210px; height: 210px; left: 4px; bottom: 0; }
@@ -164,12 +188,21 @@
   .build-status { top: 38px; max-width: calc(100% - 184px); font-size: 11px; left: 6px; }
   #tile-tooltip { top: 124px; max-width: calc(100% - 12px); left: 6px; }
 }
-@container game-area (max-width: 665px) {
+@container game-area (max-width: 770px) {
   .resources { transform: scale(.6); }
   .time-controls { top: 32px; transform: scale(.65); }
   .selection-panel { top: 67px; }
   .build-status { top: 34px; max-width: calc(100% - 180px); }
   #paused { position: absolute; top: 38px; left: 8px; transform: none; font-size: 11px; }
+}
+@media (pointer: fine) {
+  @container game-area (max-width: 510px) {
+    .time-controls button#menu { width: 78px; gap: 6px; }
+    .time-controls button#pause-spending { width: 124px; white-space: normal; }
+    .time-controls button:is(#pause, #speed) { width: 56px; }
+    .build-status { top: 126px; }
+    #paused { top: 102px; }
+  }
 }
 @container game-area (max-width: 360px) {
   :is(.hud, .selection-panel, .leader-skills) { --hud-scale: .58; }
@@ -177,7 +210,7 @@
 }
 
 #tile-tooltip .icon { --icon-size: 17px; }
-.special-actions [data-action="clear"], .special-actions [data-action="forbid"] { touch-action: none; }
+.special-actions :is([data-action="clear"], [data-action="forbid"], [data-action="cancel"]) { touch-action: none; }
 
 .portrait .character-icon { transform: scale(2); image-rendering: pixelated; }
 

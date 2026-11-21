@@ -24,7 +24,7 @@ export const SIM_ENGINE = {
 } as const;
 export type SimEngineKind = typeof SIM_ENGINE[keyof typeof SIM_ENGINE];
 
-const OUTBOX = { time: 0, tick: 1, rng: 2 } as const;
+const OUTBOX = { time: 0, tick: 1, rng: 2, paused: 4, gameOver: 5 } as const;
 const dropSims = new FinalizationRegistry<number>(handle => rustEngine.sim_drop(handle));
 const releaseEngines = new FinalizationRegistry<{ sim: number; kind: number; engine: number }>(
   value => rustEngine.sim_engine_release(value.sim, value.kind, value.engine));
@@ -76,6 +76,15 @@ export class SimCore {
     state.tick = this.tick = outbox[OUTBOX.tick];
   }
   mirrorRandom(state: GameState): void { state.rngState = this.outbox()[OUTBOX.rng]; }
+  continueAsObserver(state: GameState): boolean {
+    this.syncFlags(state);
+    if (!rustEngine.sim_continue_as_observer(this.handle)) return false;
+    const outbox = this.outbox();
+    state.paused = !!outbox[OUTBOX.paused];
+    state.gameOver = !!outbox[OUTBOX.gameOver];
+    this.flags = -1;
+    return true;
+  }
 }
 
 const cores = new WeakMap<GameState, SimCore>();

@@ -1,12 +1,11 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it, vi } from 'vitest';
 import { constructionEdges } from '../src/game/builders';
-import { fogRaidProfile, initializeFogRaids, updateFogRaids, MAX_RAIDER_GROUP_SIZE, MAX_RAIDER_WAVE_SIZE, raiderGroupSize } from '../src/game/fog-raids';
-import { MAX_LIVE_RAIDERS, MAX_LIVE_RAIDERS_PER_CAMP, RAIDER_COLOR, RAIDER_CAMP_REBUILD_SECONDS, RAIDER_CAMP_RETRY_SECONDS, campSpawnTiles, raiderCampActive, raiderCampCenter, raiderCampWarning } from '../src/game/raider-camps';
-import { raiderWaveInterval } from '../src/game/raider-pressure';
+import { fogRaidProfile, initializeFogRaids, updateFogRaids, MAX_RAIDER_GROUP_SIZE, MAX_RAIDER_WAVE_SIZE } from '../src/game/fog-raids';
+import { MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_CAMP_REBUILD_SECONDS, RAIDER_CAMP_RETRY_SECONDS, campSpawnTiles, raiderCampActive, raiderCampCenter, raiderCampPopulationCap, raiderCampWarning } from '../src/game/raider-camps';
 import { canWalk, findPath, travelTimeMapFrom } from '../src/game/pathfinding';
 import { createGame } from '../src/game/simulation';
-import { distance, isWallKind, type Building, type GameState, type Unit, type World } from '../src/game/types';
+import { distance, isWallKind, type Building, type DirectedRaid, type GameState, type RaiderCamp, type Unit, type World } from '../src/game/types';
 import { generateWorld } from '../src/world/generator';
 import { updateFog } from '../src/game/fog';
 import { recordNativeFrame } from './helpers/native-renderer';
@@ -20,8 +19,9 @@ function building(id: number, x: number, y: number, kind: Building['kind'] = 'pa
   return { id, x, y, kind, faction, hp: 100, maxHp: 100, capacity: 0 };
 }
 function fixture(retinue = 2): GameState {
-  const world: World = { width: 80, height: 72, seed: 'camp-raid-test', source: 'test', spawns: [], revision: 0,
-    tiles: Array.from({ length: 80 * 72 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .2,
+  const width = 208, height = 152;
+  const world: World = { width, height, seed: 'camp-raid-test', source: 'test', spawns: [], revision: 0,
+    tiles: Array.from({ length: width * height }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .2,
       moisture: .5, food: 1, production: 0, gold: 0, variation: .5 })) };
   return { world, units: [unit(1, 42.5, 36.5, 'leader'), ...Array.from({ length: retinue }, (_, index) => unit(index + 2, 43.5 + index % 3, 34.5 + Math.floor(index / 3)))],
     buildings: [building(100, 39, 35)], factions: [{ id: 0, name: 'Test', color: '#d54b42', relation: 'self',
@@ -30,82 +30,90 @@ function fixture(retinue = 2): GameState {
     events: [], particles: [], selected: null, selectedType: null, buildMode: null, diplomacy: null,
     gameOver: false, victory: false, seed: world.seed, rngState: 731, marauderPacks: [] };
 }
-function due(state: GameState): void { initializeFogRaids(state); state.time = state.fogRaids!.nextAt; updateFogRaids(state); }
+/** Stand-in for a raid-director decision: a raid against faction 0 waiting at a camp. */
+function announce(state: GameState, total = 2, options: { camp?: RaiderCamp; era?: number; at?: number; warning?: number; motive?: DirectedRaid['motive'] } = {}): RaiderCamp {
+  const camp = options.camp ?? state.raiderCamps!.find(candidate => raiderCampActive(state, candidate))!;
+  const target = state.buildings.find(building => building.kind === 'palace' && building.faction === 0 && building.hp > 0)!;
+  Object.assign(camp, { nextRaidAt: options.at ?? state.time, warningSeconds: options.warning,
+    directedRaid: { faction: 0, target: target.id, motive: options.motive ?? 'assault', initial: total, total, era: options.era ?? 0 } });
+  state.fogRaids!.nextAt = Math.min(state.fogRaids!.nextAt, camp.nextRaidAt);
+  return camp;
+}
+/** After the opening, release one announced raid. */
+function due(state: GameState, total = 2, era = 0): void {
+  initializeFogRaids(state); state.time = Math.max(state.time, 400); announce(state, total, { era }); updateFogRaids(state);
+}
 const raiders = (state: GameState): Unit[] => state.units.filter(unit => state.marauderPacks?.some(pack => pack.raid && pack.id === unit.marauderPack) && unit.hp > 0);
 
 describe('destructible raider camps and ramped waves', () => {
-  it('keeps early formation parties at eighteen units while reducing total wave size only once', () => {
+  it('splits a large announced raid into parties of at most thirty', () => {
     const state = fixture(24); initializeFogRaids(state);
-    const camp = state.raiderCamps![0];
-    for (const other of state.raiderCamps!) other.nextRaidAt = Infinity;
-    camp.nextRaidAt = 300; state.time = 300; state.fogRaids!.nextAt = 300;
+    state.time = 300; const camp = announce(state, 44);
     updateFogRaids(state);
     const attackers = raiders(state), parties = state.marauderPacks!.filter(pack => pack.raid && pack.raiderCamp === camp.id);
-    expect(attackers).toHaveLength(26); // The previous 44-unit wave, rounded after ×0.6.
-    expect(parties.map(pack => attackers.filter(unit => unit.marauderPack === pack.id).length)).toEqual([18, 8]);
-    expect(raiderGroupSize(900)).toBe(MAX_RAIDER_GROUP_SIZE);
+    expect(attackers).toHaveLength(44);
+    expect(parties.map(pack => attackers.filter(unit => unit.marauderPack === pack.id).length)).toEqual([MAX_RAIDER_GROUP_SIZE, 14]);
   });
-  it('reduces opening size by forty percent, recovers through fifteen minutes, and keeps the late cap', () => {
-    expect([0, 60, 120, 180, 240, 300].map(time => fogRaidProfile(2, time).total)).toEqual([2, 2, 7, 12, 17, 22]);
-    expect(fogRaidProfile(2, 60)).toEqual({ total: 2, parties: 1, hp: 70, attack: 13, defense: 2 });
-    expect(fogRaidProfile(2, 300)).toEqual({ total: 22, parties: 2, hp: 91, attack: 17, defense: 3 });
-    expect([360, 600, 900, 1800, 3600].map(time => fogRaidProfile(2, time).total)).toEqual([24, 37, 56, 60, 60]);
-    expect(fogRaidProfile(10000, 86400)).toEqual(fogRaidProfile(60, 3600));
-    expect(fogRaidProfile(2, 900).hp).toBe(fogRaidProfile(2, 300).hp);
-    expect(fogRaidProfile(24, 60).total).toBe(2);
-    expect(fogRaidProfile(24, 300).total).toBeGreaterThan(fogRaidProfile(2, 300).total);
+  it('gives raiders the same era stats however large the defending army is', () => {
+    const small = fixture(2), large = fixture(24);
+    due(small, 6, 2); due(large, 6, 2);
+    const stats = (state: GameState) => raiders(state).filter(unit => !unit.marauderLeader && unit.kind === 'warrior')
+      .map(unit => [unit.maxHp, unit.attack, unit.defense, unit.raiderEquipmentMultiplier]);
+    expect(stats(small)).toEqual(stats(large));
+    expect(stats(small)[0]).toEqual([fogRaidProfile(2).hp, fogRaidProfile(2).attack, fogRaidProfile(2).defense, 1.2]);
   });
 
-  it('starts with slightly more frequent waves and progressively shortens their intervals', () => {
+  it('keeps camps idle until the director builds up to an announced raid after the opening calm', () => {
     const state = fixture(); initializeFogRaids(state);
-    expect(state.raiderCamps!.map(camp => camp.nextRaidAt)).toEqual([60, 86]);
-    const arrivals: number[] = [];
-    for (let wave = 0; wave < 6; wave++) {
-      state.time = state.fogRaids!.nextAt;
-      updateFogRaids(state); arrivals.push(state.time);
-      // Let the previous wave leave the muster area for this scheduling check.
-      for (const unit of raiders(state)) unit.hp = 0;
+    expect(state.raiderCamps!.every(camp => camp.nextRaidAt === Number.MAX_SAFE_INTEGER && !camp.directedRaid)).toBe(true);
+    let first = Infinity;
+    for (state.time = 1; state.time <= 300 && first === Infinity; state.time++) {
+      updateFogRaids(state);
+      if (state.fogRaids!.waves) first = state.time;
+      if (state.time === 150) expect(state.raiderCamps!.some(camp => camp.directedRaid)).toBe(false);
     }
-    expect(arrivals.slice(0, 2)).toEqual([60, 86]);
-    expect(arrivals[2]).toBeCloseTo(60 + 2 * raiderWaveInterval(60));
-    expect(arrivals[3]).toBeCloseTo(86 + 2 * raiderWaveInterval(86));
-    expect(arrivals.slice(1).every((time, i) => time - arrivals[i] < 30)).toBe(true);
-    expect(state.fogRaids!.waves).toBe(6);
+    expect(first).toBeGreaterThan(150);
+    expect(first).toBeLessThan(300);
+    expect(state.marauderPacks!.filter(pack => pack.raid).every(pack => pack.directorFaction === 0)).toBe(true);
+    // One raid at a time: no second departure while the first band is out.
+    const waves = state.fogRaids!.waves;
+    for (const end = first + 120; state.time <= end; state.time++) updateFogRaids(state);
+    expect(state.fogRaids!.waves).toBe(waves);
   });
 
-  it('allows eight separate live waves, then waits for one to finish', () => {
+  it('allows six simultaneous opening waves, then waits for one to finish', () => {
     const state = fixture(); initializeFogRaids(state);
-    for (let wave = 0; wave < 8; wave++) {
-      state.time = state.fogRaids!.nextAt;
+    for (let wave = 0; wave < 6; wave++) {
+      state.time = 60 + wave * 10; announce(state);
       for (const unit of raiders(state)) unit.lastCombat = state.time; // These waves remain actively engaged.
       updateFogRaids(state);
       for (const unit of raiders(state)) { unit.x = 42.5; unit.y = 40.5; }
     }
-    expect(state.fogRaids!.waves).toBe(8);
-    state.time = state.fogRaids!.nextAt;
+    expect(state.fogRaids!.waves).toBe(6);
+    state.time = 130; announce(state);
       for (const unit of raiders(state)) unit.lastCombat = state.time; // These waves remain actively engaged.
       updateFogRaids(state);
-    expect(state.fogRaids!.waves).toBe(8);
+    expect(state.fogRaids!.waves).toBe(6);
+    expect(state.raiderCamps!.some(camp => camp.directedRaid)).toBe(true); // Retrying, not dropped.
     const firstTime = state.marauderPacks!.find(pack => pack.raid)!.spawnedAt;
     const firstIds = new Set(state.marauderPacks!.filter(pack => pack.raid && pack.spawnedAt === firstTime).map(pack => pack.id));
     for (const unit of state.units) if (firstIds.has(unit.marauderPack ?? -1)) unit.hp = 0;
     state.time = state.fogRaids!.nextAt;
       for (const unit of raiders(state)) unit.lastCombat = state.time; // These waves remain actively engaged.
       updateFogRaids(state);
-    expect(state.fogRaids!.waves).toBe(9);
+    expect(state.fogRaids!.waves).toBe(7);
   });
 
   it('musters a bounded late wave on connected ground around its camp', () => {
     const state = fixture(); initializeFogRaids(state);
-    for (const camp of state.raiderCamps!.slice(1)) camp.nextRaidAt = Infinity;
-    state.time = 3600; updateFogRaids(state);
+    state.time = 3600; announce(state, MAX_RAIDER_WAVE_SIZE, { era: 6 }); updateFogRaids(state);
     expect(raiders(state)).toHaveLength(MAX_RAIDER_WAVE_SIZE);
     const camp = state.raiderCamps![0];
     expect(raiders(state).every(unit => findPath(state, unit, { x: camp.gate.x + .5, y: camp.gate.y + .5 }, -2).length > 0
       || Math.floor(unit.x) === camp.gate.x && Math.floor(unit.y) === camp.gate.y)).toBe(true);
   });
 
-  it('plateaus over four hours even when every wave returns alive and no raiders are killed', () => {
+  it('stays within every budget over four hours even when every raid returns alive and no raiders are killed', () => {
     const state = fixture(); initializeFogRaids(state);
     // Wilderness bands and raiders without a pack must share the same budget.
     state.marauderPacks!.push({ id: 500, name: 'Wanderers', color: RAIDER_COLOR, targetFaction: 0,
@@ -124,13 +132,11 @@ describe('destructible raider camps and ramped waves', () => {
       expect(living.length).toBeLessThanOrEqual(MAX_LIVE_RAIDERS);
       for (const camp of state.raiderCamps!) {
         const packs = new Set(state.marauderPacks!.filter(pack => pack.raiderCamp === camp.id).map(pack => pack.id));
-        expect(living.filter(unit => packs.has(unit.marauderPack ?? -1)).length).toBeLessThanOrEqual(MAX_LIVE_RAIDERS_PER_CAMP);
+        expect(living.filter(unit => packs.has(unit.marauderPack ?? -1)).length).toBeLessThanOrEqual(raiderCampPopulationCap(state, camp));
       }
     }
-    expect(Math.max(...counts)).toBe(MAX_LIVE_RAIDERS);
-    expect(counts.slice(-100).every(count => count === MAX_LIVE_RAIDERS)).toBe(true);
-    expect(state.fogRaids!.waves).toBe(4);
-    expect(state.marauderPacks!.length).toBe(7); // Six camp parties and one wilderness band.
+    // Paced raids keep coming without ever exceeding either budget.
+    expect(state.fogRaids!.waves).toBeGreaterThan(4);
     console.log('four-hour raider saturation', { max: Math.max(...counts), final: counts.at(-1),
       waves: state.fogRaids!.waves, packs: state.marauderPacks!.length, elapsedMs: performance.now() - start });
   });
@@ -148,7 +154,7 @@ describe('destructible raider camps and ramped waves', () => {
     expect(camp.waves).toBe(0);
     expect(state.units.filter(unit => unit.hp > 0 && unit.faction === -2)).toHaveLength(MAX_LIVE_RAIDERS);
     for (const dead of state.units.filter(unit => unit.faction === -2).slice(0, 13)) dead.hp = 0;
-    state.time = state.fogRaids!.nextAt; updateFogRaids(state);
+    state.time = 3601; announce(state, MAX_RAIDER_WAVE_SIZE, { camp, era: 6 }); updateFogRaids(state);
     const newRaid = state.units.filter(unit => unit.bornAt === state.time && unit.faction === -2);
     expect(newRaid).toHaveLength(13);
     expect(newRaid.filter(unit => unit.marauderLeader)).toHaveLength(1);
@@ -168,7 +174,7 @@ describe('destructible raider camps and ramped waves', () => {
       hp: 40, maxHp: 100, kills: 7, marauderPack: i < 30 ? 500 : undefined, marauderLeader: i === 0,
     });
     const before = state.units.map(unit => [unit.id, unit.hp, unit.x, unit.y, unit.kills]);
-    state.time = 3600; updateFogRaids(state);
+    state.time = 3600; announce(state, 30, { camp, era: 6 }); updateFogRaids(state);
     expect(state.units.map(unit => [unit.id, unit.hp, unit.x, unit.y, unit.kills])).toEqual(before);
     expect(camp.waves).toBe(1);
     expect(state.marauderPacks).toHaveLength(1);
@@ -188,36 +194,21 @@ describe('destructible raider camps and ramped waves', () => {
     expect(points.every(point => point.x < riverX)).toBe(true);
   });
 
-  it('builds compact tent camps with wooden towers, complete palisade wards, and owned gates', () => {
+  it('sends an opening raid from a compact camp with no fortified camp available', () => {
     const state = fixture(); initializeFogRaids(state);
-    expect(state.raiderCamps).toHaveLength(2);
-    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(['medium', 'small']);
-    for (const camp of state.raiderCamps!) {
-      const profile = { small: { tents: [3, 5], towers: 5, tiers: 2 }, medium: { tents: [6, 9], towers: 6, tiers: 3 },
-        large: { tents: [10, 18], towers: 7, tiers: 4 } }[camp.size];
-      expect(camp.houses.length).toBeGreaterThanOrEqual(profile.tents[0]); expect(camp.houses.length).toBeLessThanOrEqual(profile.tents[1]);
-      expect(distance(raiderCampCenter(camp), { x: 40, y: 36 })).toBeGreaterThanOrEqual(21);
-      const structures = state.buildings.filter(b => b.raiderCamp === camp.id);
-      expect(structures.every(b => b.faction === -2 && b.capacity === 0)).toBe(true);
-      expect(structures.filter(b => b.kind === 'palisade').length).toBeGreaterThan(0);
-      expect(structures.filter(b => b.kind === 'woodenTower')).toHaveLength(profile.towers);
-      const roadCells = new Set(structures.filter(b => b.kind === 'road').map(b => `${b.x},${b.y}`));
-      expect(structures.filter(b => isWallKind(b.kind) && roadCells.has(`${b.x},${b.y}`))).toHaveLength(profile.tiers);
-      for (const house of structures.filter(b => b.kind === 'villageTent')) {
-        expect(house.x).toBeGreaterThanOrEqual(camp.x); expect(house.x).toBeLessThan(camp.x + camp.width);
-        expect(house.y).toBeGreaterThanOrEqual(camp.y); expect(house.y).toBeLessThan(camp.y + camp.height);
-      }
-      const atGate = structures.filter(b => b.x === camp.gate.x && b.y === camp.gate.y);
-      expect(atGate.map(b => b.kind).sort()).toEqual(['road', 'wall']);
-      expect(canWalk(state, camp.gate.x + .5, camp.gate.y + .5, -2)).toBe(true);
-      expect(canWalk(state, camp.gate.x + .5, camp.gate.y + .5, 0)).toBe(false);
-    }
+    const camp = state.raiderCamps!.find(candidate => candidate.size === 'small')!;
+    entityStore(state).buildings.retain(b => b.raiderCamp === undefined || b.raiderCamp === camp.id);
+    state.raiderCamps = [camp];
+    for (state.time = 1; state.time <= 300 && !camp.waves; state.time++) updateFogRaids(state);
+    expect(camp.waves).toBe(1);
+    expect(raiders(state).length).toBeGreaterThan(0);
+    expect(state.marauderPacks!.filter(pack => pack.raid).map(pack => pack.raiderCamp)).toEqual([camp.id]);
   });
 
   it('spawns only at a surviving camp, at full health, with an accessible building objective', () => {
-    const state = fixture(8); state.units[1].hp = 0; due(state);
-    const spawned = raiders(state), profile = fogRaidProfile(7, state.time);
-    expect(spawned).toHaveLength(profile.total);
+    const state = fixture(8); state.units[1].hp = 0; due(state, 5);
+    const spawned = raiders(state), profile = fogRaidProfile(0);
+    expect(spawned).toHaveLength(5);
     expect(state.fogRaids!.waves).toBe(1);
     expect(new Set(spawned.map(unit => `${unit.x},${unit.y}`)).size).toBe(spawned.length);
     for (const raider of spawned) {
@@ -228,21 +219,21 @@ describe('destructible raider camps and ramped waves', () => {
       expect(raider.hp).toBeCloseTo(profile.hp * (raider.marauderLeader ? 1.2 : 1));
       expect(raider.hp).toBe(raider.maxHp);
       expect(raider.speed).toBeCloseTo(raider.marauderLeader ? 3.525 : 2.35);
-      expect(pack.color).toBe(RAIDER_COLOR); expect(pack.retinueAtSpawn).toBe(7);
+      expect(pack.color).toBe(RAIDER_COLOR); expect(pack).toMatchObject({ directorFaction: 0, raidEra: 0 });
       expect(canWalk(state, pack.home.x, pack.home.y, -2)).toBe(true);
       expect(constructionEdges(state, target).some(edge => findPath(state, raider, edge, -2).length > 0)).toBe(true);
     }
     expect(state.events).toEqual([]);
   });
 
-  it.each([60, 180, 300, 1800])('applies commander bonuses and archer role stats to each party at %i seconds', time => {
+  it.each([0, 1, 2, 6])('applies commander bonuses and archer role stats to each party at era %i', era => {
     const state = fixture(2); initializeFogRaids(state);
-    // Exercise one camp's full wave, including multiple parties at mature strength.
-    for (const camp of state.raiderCamps!.slice(1)) camp.nextRaidAt = Infinity;
-    state.time = time; updateFogRaids(state);
-    const profile = fogRaidProfile(2, time), spawned = raiders(state);
-    expect(spawned).toHaveLength(profile.total);
-    expect(spawned.filter(unit => unit.marauderLeader)).toHaveLength(profile.parties);
+    // Exercise one camp's full raid, including multiple parties at mature strength.
+    state.time = 400; announce(state, 44, { era }); updateFogRaids(state);
+    const profile = fogRaidProfile(era), spawned = raiders(state);
+    expect(spawned).toHaveLength(44);
+    expect(spawned.filter(unit => unit.marauderLeader)).toHaveLength(2);
+    if (era >= 2) expect(spawned.some(unit => unit.kind === 'archer')).toBe(true);
     for (const id of new Set(spawned.map(unit => unit.marauderPack))) {
       const group = spawned.filter(unit => unit.marauderPack === id);
       expect(group.length).toBeLessThanOrEqual(MAX_RAIDER_GROUP_SIZE);
@@ -256,20 +247,21 @@ describe('destructible raider camps and ramped waves', () => {
     }
   });
 
-  it('shows a ten-second warning only for the camp whose party is next', () => {
+  it('shows a warning only for a camp with an announced raid, for that raid\'s warning time', () => {
     const state = fixture(); initializeFogRaids(state);
     const [first, second] = state.raiderCamps!;
+    announce(state, 2, { camp: first, at: 60, warning: 10 }); announce(state, 2, { camp: second, at: 90, warning: 45 });
     state.time = 49.9; expect(raiderCampWarning(state, first)).toBe(false);
     state.time = 50; expect(raiderCampWarning(state, first)).toBe(true);
-    expect(raiderCampWarning(state, second)).toBe(false);
+    expect(raiderCampWarning(state, second)).toBe(true); // A siege-length announcement starts earlier.
     state.time = 60; updateFogRaids(state);
     expect(raiderCampWarning(state, first)).toBe(false);
-    state.time = 80; expect(raiderCampWarning(state, second)).toBe(true);
+    expect(raiderCampWarning(state, { ...second, directedRaid: undefined })).toBe(false);
   });
 
   it('draws a jumping red warning for explored camps without revealing unexplored ones', () => {
     const state = fixture(); initializeFogRaids(state); state.time = 55;
-    const fog = updateFog(state), camp = state.raiderCamps![0], center = raiderCampCenter(camp);
+    const fog = updateFog(state), camp = announce(state, 2, { at: 60, warning: 10 }), center = raiderCampCenter(camp);
     const draw = (time: number) => {
       state.time = time;
       return recordNativeFrame(state, { fog }).texts.filter(text => text.color === '#ff3b30');
@@ -287,11 +279,13 @@ describe('destructible raider camps and ramped waves', () => {
     for (const house of state.buildings) if (first.coreTowers!.includes(house.id) && house.id !== first.coreTowers![0]) house.hp = 0;
     expect(raiderCampActive(state, first)).toBe(true); due(state);
     expect(state.marauderPacks!.some(pack => pack.raiderCamp === first.id)).toBe(true);
+    announce(state, 2, { camp: first, at: state.time + 20 });
     const original = raiders(state).map(unit => unit.id);
     state.buildings.find(building => building.id === first.coreTowers![0])!.hp = 0;
     updateFogRaids(state); expect(first.destroyed).toBe(true); expect(raiderCampWarning(state, first)).toBe(false);
+    expect(first.directedRaid).toBeUndefined(); // The announced raid is cancelled with its camp.
     expect(first.replacementAt).toBe(state.time + RAIDER_CAMP_REBUILD_SECONDS);
-    due(state);
+    state.time += 1; due(state);
     expect(state.marauderPacks!.filter(pack => pack.raiderCamp === first.id)).toHaveLength(0); // Survivors find a living camp or resume attacking.
     expect(original.every(id => state.units.some(unit => unit.id === id))).toBe(true);
     const restored = structuredClone(state); initializeFogRaids(restored);
@@ -314,7 +308,7 @@ describe('destructible raider camps and ramped waves', () => {
     expect(restored.raiderCamps).toHaveLength(original.length);
     expect(restored.raiderCamps!.every(camp => raiderCampActive(restored, camp) && !original.includes(camp.id))).toBe(true);
     for (const camp of restored.raiderCamps!) {
-      expect(camp.nextRaidAt).toBeGreaterThanOrEqual(restored.time + 60);
+      expect(camp.nextRaidAt).toBe(Number.MAX_SAFE_INTEGER);
       for (let y = camp.y - 1; y <= camp.y + camp.height; y++) for (let x = camp.x - 1; x <= camp.x + camp.width; x++)
         expect(fog.visible[y * fog.width + x]).toBe(0);
     }
@@ -328,7 +322,7 @@ describe('destructible raider camps and ramped waves', () => {
     const state = fixture(); initializeFogRaids(state);
     for (const building of state.buildings) if (building.raiderCamp && building.kind === 'woodenTower') building.hp = 0;
     updateFogRaids(state);
-    state.time = RAIDER_CAMP_REBUILD_SECONDS;
+    state.time = Math.max(...state.raiderCamps!.map(camp => camp.replacementAt!));
     const fog = updateFog(state); fog.visible.fill(1);
     updateFogRaids(state);
     expect(state.raiderCamps!.every(camp => camp.destroyed)).toBe(true);
@@ -340,7 +334,7 @@ describe('destructible raider camps and ramped waves', () => {
     const first = fixture(), second = fixture(); initializeFogRaids(first); initializeFogRaids(second);
     expect(first.raiderCamps).toEqual(second.raiderCamps); expect(first.buildings).toEqual(second.buildings);
     first.time = 51;
-    const restored = structuredClone(first); initializeFogRaids(restored, 30);
+    const restored = structuredClone(first); initializeFogRaids(restored);
     expect(restored.raiderCamps).toEqual(first.raiderCamps); expect(restored.fogRaids).toEqual(first.fogRaids);
     due(first); due(restored); expect(restored.units).toEqual(first.units); expect(restored.marauderPacks).toEqual(first.marauderPacks);
   });
@@ -373,16 +367,16 @@ describe('destructible raider camps and ramped waves', () => {
   });
 
   it('does not put camps on disconnected land or force them into water', () => {
-    const state = fixture();
-    for (let y = 0; y < 72; y++) for (let x = 0; x < 80; x++)
-      if (Math.max(Math.abs(x - 40), Math.abs(y - 36)) === 9) state.world.tiles[y * 80 + x].terrain = 'river';
+    const state = fixture(), { width, height } = state.world;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++)
+      if (Math.max(Math.abs(x - 40), Math.abs(y - 36)) === 9) state.world.tiles[y * width + x].terrain = 'river';
     initializeFogRaids(state); expect(state.raiderCamps).toEqual([]);
     state.time = 600; updateFogRaids(state); expect(raiders(state)).toEqual([]);
   });
 
   it('pauses due parties, and stops after the game has ended', () => {
-    const state = fixture(); initializeFogRaids(state); state.time = 60; state.paused = true;
-    updateFogRaids(state); expect(raiders(state)).toEqual([]); expect(state.raiderCamps![0].nextRaidAt).toBe(60);
+    const state = fixture(); initializeFogRaids(state); state.time = 400; announce(state); state.paused = true;
+    updateFogRaids(state); expect(raiders(state)).toEqual([]); expect(state.raiderCamps![0].nextRaidAt).toBe(state.time);
     state.paused = false; state.gameOver = true; updateFogRaids(state); expect(raiders(state)).toEqual([]);
     state.gameOver = false; updateFogRaids(state); expect(raiders(state)).toHaveLength(2);
   });
@@ -399,7 +393,7 @@ describe('destructible raider camps and ramped waves', () => {
     const access = travelTimeMapFrom(planning, palaceEdges, -2, 2.35, Infinity);
     for (const camp of state.raiderCamps!) expect(Number.isFinite(access[camp.gate.y * state.world.width + camp.gate.x])).toBe(true);
     due(state); const spawned = raiders(state).filter(unit => state.marauderPacks!.some(pack => pack.id === unit.marauderPack && !pack.microRaid));
-    expect(spawned).toHaveLength(fogRaidProfile(2, state.time).total);
+    expect(spawned).toHaveLength(2);
     for (const raider of spawned) {
       const pack = state.marauderPacks!.find(pack => pack.id === raider.marauderPack)!;
       const target = state.buildings.find(building => building.id === pack.targetBuilding)!;

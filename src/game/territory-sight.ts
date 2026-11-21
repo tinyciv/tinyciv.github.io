@@ -97,8 +97,8 @@ export function territorySightCosts(world: World, origin: Point, radius: number,
         const target = (y - top) * width + x - left;
         costs[target] = Infinity;
         if (!world.tiles[y * world.width + x]) return;
-        if (!rustEngine.terrain_rays_clear(terrain, origin.x, origin.y, x + .5, y + .5, 1)) return;
-        let cost = 0;
+        let cost = rustEngine.terrain_rays_sight_penalty(terrain, origin.x, origin.y, x + .5, y + .5);
+        if (cost > radius) return;
         for (let i = ray.start; i < ray.end; i++) {
             // Both endpoints are in the world, so their straight segment is
             // too. A zero-length initial boundary tile contributes nothing.

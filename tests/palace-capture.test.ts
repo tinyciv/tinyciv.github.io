@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { commandAttackAt, resolvePalaceCapture, updateGame, validateBuildAt } from '../src/game/simulation';
 import { buildingReady, type Building, type GameState, type Unit } from '../src/game/types';
 import { canWalk } from '../src/game/pathfinding';
-import { territory } from '../src/game/borders';
+import { territory, UNCLAIMED } from '../src/game/borders';
 import { citySummaries } from '../src/game/cities';
 import { palaceDefenses } from '../src/game/palace-capture';
+import { factionDevelopedResourceCount, resourceCityAt } from '../src/game/resource-development';
 
 const idle = { up: false, down: false, left: false, right: false };
 const palace = (id: number, x: number, faction: number): Building => ({
@@ -103,6 +104,30 @@ describe('conquered palace decisions', () => {
     expect(state.palaceCaptures).toEqual([]);
     updateGame(state, .1, idle);
     expect(state.gameOver).toBe(true); expect(state.victory).toBe(true);
+  });
+
+  it('clears a fallen city’s civilian claims and exports while retaining genuinely overlapping claims', () => {
+    const state = fixture();
+    const house = structure(10, 'house', 17, 10);
+    entityStore(state).buildings.add(house, { ...palace(3, 25, 1), hp: 650 });
+    const lost = 9 * state.world.width + 18;
+    const shared = 11 * state.world.width + 20;
+    Object.assign(state.world.tiles[lost], { resource: 'iron', resourceDeveloped: true });
+    Object.assign(state.world.tiles[shared], { resource: 'copper', resourceDeveloped: true });
+    expect(factionDevelopedResourceCount(state, 1, 'iron')).toBe(1);
+    expect(resourceCityAt(state, 20, 11)?.id).toBe(2);
+
+    updateGame(state, .1, idle);
+    expect(state.factions[1].defeated).toBe(false);
+    expect(house.borderClaimSuspended).toBe(true);
+    expect(territory(state).owners[lost]).toBe(UNCLAIMED);
+    expect(factionDevelopedResourceCount(state, 1, 'iron')).toBe(0);
+    expect(resourceCityAt(state, 20, 11)?.id).toBe(3);
+    expect(factionDevelopedResourceCount(state, 1, 'copper')).toBe(1);
+
+    expect(resolvePalaceCapture(state, 2, true).ok).toBe(true);
+    expect(house.borderClaimSuspended).toBeUndefined();
+    expect(factionDevelopedResourceCount(state, 0, 'iron')).toBe(1);
   });
 
   it('also offers capture for a melee victory while the rival retains its other city', () => {

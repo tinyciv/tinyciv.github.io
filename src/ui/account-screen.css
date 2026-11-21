@@ -2,16 +2,12 @@
 .frontend-account.menu-sheet{padding:18px 22px;container-type:inline-size}
 .frontend-account>header{margin-bottom:10px}
 .frontend .frontend-account h1{font-size:32px}
-.account-intro{margin:0 0 16px;color:#d5c8a7;font-size:20px;line-height:1.2}
 /* Outrank the shared menu-button rules, regardless of stylesheet load order.
  * Size labels against the panel width, leaving room for each plate's brass stud. */
 .frontend .frontend-account .account-plate{width:100%;height:44px;aspect-ratio:auto;padding:0 12px 2px 15%;justify-content:center;font:700 clamp(16px,6.6cqi,22px)/1 var(--game-font);letter-spacing:0;text-align:center}
-.frontend .frontend-account .account-plate>span{min-width:0;max-width:100%;white-space:normal}
-.frontend .account-plate::before,.frontend .account-plate::after{inset:-5px}
-.frontend .account-plate:hover::after,.frontend .account-plate:focus-visible::after{opacity:1}
+.frontend .frontend-account .account-plate>span:not([aria-hidden]){min-width:0;max-width:100%;white-space:normal}
 .frontend .account-plate:focus-visible{outline:2px solid #f7dfa0;outline-offset:5px}
-.account-divider{display:flex;align-items:center;gap:10px;margin:15px 0 12px;color:#b9b195;font-size:16px}
-.account-divider::before,.account-divider::after{content:'';height:1px;flex:1;background:#786440}
+.account-divider{height:1px;margin:15px 0 12px;background:#786440}
 .account-form{display:grid;gap:6px}
 .account-form label{font-size:18px;line-height:1.1}
 .account-form input+label{margin-top:5px}
@@ -29,3 +25,12 @@
 .frontend .frontend-account .account-guest{margin-top:14px}
 .frontend-main>.menu-account{max-width:100%;overflow-wrap:anywhere;text-shadow:1px 1px #17130b}
 .frontend.is-compact .frontend-account .account-plate{height:44px;aspect-ratio:auto;padding:0 12px 2px 15%;font-size:clamp(16px,6.6cqi,22px)}
+.frontend.is-creating-account .frontend-account{visibility:hidden}
+.frontend .account-dialog{width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:22px;border:1px solid #9b7a49;border-radius:8px;background:#221b13;color:#f4e6c3;box-shadow:0 10px 35px #0009;font:20px/1.25 var(--game-font)}
+.account-dialog::backdrop{background:#0b0906b8}
+.frontend .account-dialog h2{margin:0;font:700 24px/1.15 var(--game-font)}
+.account-dialog p{margin:12px 0 18px}
+.account-dialog-actions{display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-end}
+.frontend .account-dialog .menu-button{min-height:40px;height:auto;padding:7px 14px 7px 33px;font:700 19px/1.1 var(--game-font);white-space:normal}
+.frontend .account-dialog .menu-button:focus-visible{outline:2px solid #f7dfa0;outline-offset:4px}
+.account-dialog-progress{display:flex;align-items:center;justify-content:center;min-height:64px;gap:10px;text-align:center}

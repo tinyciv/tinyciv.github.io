@@ -7,7 +7,7 @@ fn rank(seed:u32,cell:usize)->u32{let mut v=seed^(cell as u32).wrapping_mul(3747
 impl Planner{
     pub fn prepare(&mut self,length:usize)->*mut f64{self.input.resize(length,0.0);self.input.as_mut_ptr()}
     /// Header: width,height,seed,buildingCount,capitalX,capitalY.
-    /// Tiles: obstacleBits (cover/ridge/stair/river/palm/resources),owner,movementEdges,walkable.
+    /// Tiles: obstacleBits, owner, movementEdges, walkable.
     /// Buildings: x,y,width,height,camp,bridge.
     pub fn run(&mut self)->*const f64{
         self.output.clear();self.output.push(0.0);if self.input.len()<6{return self.output.as_ptr();}

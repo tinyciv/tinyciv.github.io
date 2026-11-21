@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
-import { canReleaseRaiderReserve, defendRaiderCamp, initializeRaiderSkirmishes, releaseRaiderReserve, updateRaiderActivity, updateRaiderReturn, RAIDER_CAMP_RESERVES } from '../src/game/raider-activity';
+import { canReleaseRaiderReserve, defendRaiderCamp, releaseRaiderReserve, updateRaiderActivity, updateRaiderReturn, RAIDER_CAMP_RESERVES } from '../src/game/raider-activity';
 import { beginBattleRout } from '../src/game/battle-morale';
 import { notifyRaiderAttack, updateRaiderAlert, RAIDER_ALARM_RADIUS, RAIDER_ALARM_SECONDS } from '../src/game/raider-alerts';
 import { MAX_LIVE_RAIDERS, MAX_LIVE_RAIDERS_PER_CAMP } from '../src/game/raider-camps';
 import { continueAfterVictory, updateGame } from '../src/game/simulation';
 import { canWalk, travelTimeMap } from '../src/game/pathfinding';
-import { fogRaidProfile, updateFogRaids } from '../src/game/fog-raids';
+import { updateFogRaids } from '../src/game/fog-raids';
+import { raidDirectorView } from '../src/game/raid-director';
 import { type GameState, type MarauderPack, type Unit } from '../src/game/types';
 import { nativeFixture } from './helpers/native-fixture';
 
@@ -32,6 +33,11 @@ function returned(state: GameState, count = 1): { pack: MarauderPack; members: U
   state.marauderPacks!.push(pack);
   const members = Array.from({ length: count }, (_, i) => ({ ...person(100 + i, 37.5, 18.5), marauderPack: 10, hp: 43, kills: 31 }));
   entityStore(state).units.add(...members); return { pack, members };
+}
+/** Stand-in for a raid-director decision: an assault on the palace departing at `at`. */
+function announce(state: GameState, at: number, total = 2): void {
+  Object.assign(state.raiderCamps![0], { nextRaidAt: at, directedRaid: { faction: 0, target: 2, motive: 'assault', initial: total, total, era: 0 } });
+  state.fogRaids!.nextAt = at;
 }
 const defenders = (state: GameState) => state.units.filter(unit => state.marauderPacks?.some(pack => pack.campDefense && pack.id === unit.marauderPack));
 
@@ -133,7 +139,6 @@ describe('camp activity and small raids', () => {
     const state = fixture(), { pack, members } = returned(state), reserve = members[0];
     delete pack.raiderCamp; pack.raid = false; pack.returning = false;
     beginBattleRout(state, reserve);
-    state.raiderSkirmishes = { nextByFaction: { 0: 1 }, wavesByFaction: { 0: 0 } };
     state.time = 2;
     updateRaiderActivity(state);
     expect(reserve).toMatchObject({ marauderPack: pack.id, routed: true, order: 'flee', routUntil: 15 });
@@ -170,20 +175,18 @@ describe('camp activity and small raids', () => {
     expect(reserve.inside).toBe(true);
   });
 
-  it('resumes both raid clocks after Keep playing without bypassing the victory menu', () => {
+  it('resumes announced raids after Keep playing without bypassing the victory menu', () => {
     const state = fixture();
-    state.time = 60; state.raiderCamps![0].nextRaidAt = 60; state.fogRaids!.nextAt = 60;
-    state.raiderSkirmishes = { nextByFaction: { 0: 60 }, wavesByFaction: { 0: 0 } };
+    state.time = 60; announce(state, 60);
     state.gameOver = true; state.victory = true; state.paused = true;
     updateFogRaids(state);
-    expect(state.fogRaids!.waves).toBe(0); expect(state.raiderSkirmishes.wavesByFaction[0]).toBe(0);
+    expect(state.fogRaids!.waves).toBe(0);
     expect(continueAfterVictory(state)).toBe(true);
     updateFogRaids(state);
-    expect(state.fogRaids!.waves).toBe(1); expect(state.raiderSkirmishes.wavesByFaction[0]).toBe(1);
-    expect(state.marauderPacks!.some(pack => pack.microRaid)).toBe(true);
-    expect(state.marauderPacks!.some(pack => pack.raid && !pack.microRaid)).toBe(true);
-    state.time = 90; updateFogRaids(state);
-    expect(state.fogRaids!.waves).toBe(2); expect(state.raiderSkirmishes.wavesByFaction[0]).toBe(2);
+    expect(state.fogRaids!.waves).toBe(1);
+    expect(state.marauderPacks!.some(pack => pack.raid && !pack.microRaid && pack.directorFaction === 0)).toBe(true);
+    state.time = 90; announce(state, 90); updateFogRaids(state);
+    expect(state.fogRaids!.waves).toBe(2);
     expect(state.units.filter(unit => unit.hp > 0 && unit.faction === -2).length).toBeLessThanOrEqual(MAX_LIVE_RAIDERS_PER_CAMP);
   });
 
@@ -333,33 +336,16 @@ describe('camp activity and small raids', () => {
     expect(members.filter(unit => !unit.inside).every(unit => entityStore(state).units.query('active').includes(unit))).toBe(true);
   });
 
-  it('seeds real reachable opening attacks and fairly schedules 1–3-person early parties for full factions', () => {
+  it('opens with a quiet calm for every full faction: no opening parties and no village pacing', () => {
     const state = fixture();
     state.factions.push({ ...state.factions[0], id: 1, relation: 'peace' }, { ...state.factions[0], id: 2, relation: 'peace', villageId: 1 });
     entityStore(state).buildings.add({ ...state.buildings[0], id: 30, faction: 1, x: 53, y: 18 });
     entityStore(state).units.add({ ...person(31, 55.5, 20.5, 1), kind: 'leader' });
-    const clock = structuredClone(state.fogRaids);
-    initializeRaiderSkirmishes(state);
-    expect(state.marauderPacks!.filter(pack => pack.microRaid).map(pack => pack.targetFaction).sort()).toEqual([0, 1]);
-    for (const pack of state.marauderPacks!) {
-      const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === pack.targetFaction)!;
-      const travel = travelTimeMap(state, leader, -2, 2.35, 18);
-      const members = state.units.filter(unit => unit.marauderPack === pack.id);
-      expect(members).toHaveLength(2);
-      for (const unit of members) expect(travel[Math.floor(unit.y) * state.world.width + Math.floor(unit.x)]).toBeLessThanOrEqual(18);
-    }
-    expect(state.raiderSkirmishes!.nextByFaction[2]).toBeUndefined();
-    for (let wave = 0; wave < 5; wave++) {
-      state.time = Math.max(...Object.values(state.raiderSkirmishes!.nextByFaction));
-      updateRaiderActivity(state);
-      for (const faction of [0, 1]) {
-        const pack = state.marauderPacks!.filter(pack => pack.microRaid && pack.targetFaction === faction && pack.spawnedAt === state.time).at(-1)!;
-        expect(pack).toBeDefined(); expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(Math.max(1, Math.round((wave + 1) * .6)));
-        expect(state.raiderSkirmishes!.nextByFaction[faction] - state.time).toBeGreaterThanOrEqual(18);
-        expect(state.raiderSkirmishes!.nextByFaction[faction] - state.time).toBeLessThanOrEqual(24);
-      }
-    }
-    expect(state.fogRaids).toEqual(clock); expect(fogRaidProfile(5, 60).total).toBe(2);
+    for (state.time = 1; state.time <= 240; state.time += 1) { updateFogRaids(state); updateRaiderActivity(state); }
+    expect(state.units.filter(unit => unit.faction === -2)).toHaveLength(0);
+    expect(state.fogRaids!.waves).toBe(0);
+    expect([0, 1].map(faction => raidDirectorView(state, faction)?.phase)).toEqual(['calm', 'calm']);
+    expect(raidDirectorView(state, 2)).toBeUndefined();
   });
 
   it('does not count garrisoned or small parties against ordinary-wave slots and reuses sleeping veterans', () => {
@@ -370,7 +356,7 @@ describe('camp activity and small raids', () => {
       state.marauderPacks!.push({ ...pack, id, raid: true, returning: false, microRaid: true, spawnedAt: i });
       entityStore(state).units.add({ ...person(200 + i, 25.5, 30.5), marauderPack: id });
     }
-    state.time = 60; state.raiderCamps![0].nextRaidAt = 60; state.fogRaids!.nextAt = 60;
+    state.time = 60; announce(state, 60);
     updateFogRaids(state);
     expect(state.fogRaids!.waves).toBe(1); expect(unit.inside).toBe(false); expect(unit.marauderPack).not.toBe(pack.id);
     expect(unit.hp / unit.maxHp!).toBeCloseTo(.43); expect(unit.kills).toBe(31);

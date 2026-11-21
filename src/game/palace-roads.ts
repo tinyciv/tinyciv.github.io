@@ -8,6 +8,7 @@ import { hermitCabinOverlaps } from './placement-occupancy';
 import { overlapsFallenDefense } from './defense-rebuilding';
 import { reliefFootprintAllowed } from './relief';
 import { farmAt, planRoadFarmRelocation, relocateFarm } from './farm-relocation';
+import { structureIndex } from './structure-index';
 import { buildingReady, buildingSize, buildingWidth, buildingHeight, isFarmKind, isWallKind, tileAt, WATER, type Building, type GameState } from './types';
 
 /** A completed city receives its own free perimeter road. Occupied or natural
@@ -20,6 +21,7 @@ export function addPalaceRoadRing(state: GameState, palace: Building): number {
     if (x === palace.x - 1 || x === palace.x + size || y === palace.y - 1 || y === palace.y + size) ring.add(y * state.world.width + x);
   let id = 0, added = 0, removedPalm = false, removedTrail = false;
   const changed: number[] = [];
+  const routes = structureIndex(state);
   for (const entity of state.units) id = Math.max(id, entity.id);
   for (const entity of state.buildings) id = Math.max(id, entity.id);
   for (let y = palace.y - 1; y <= palace.y + size; y++) for (let x = palace.x - 1; x <= palace.x + size; x++) {
@@ -27,7 +29,8 @@ export function addPalaceRoadRing(state: GameState, palace: Building): number {
     if (overlapsFallenDefense(state, 'road', x, y) || hermitCabinOverlaps(state, x, y)
       || buildingOverlapsVillageBorders(state, 'road', x, y, palace.faction)) continue;
     const tile = tileAt(state.world, x, y);
-    if (!tile || isForbidden(state, x, y, palace.faction) || WATER.has(tile.terrain) || !traversable(state.world, x, y) || !reliefFootprintAllowed(state.world, x, y)) continue;
+    if (!tile || isForbidden(state, x, y, palace.faction) || WATER.has(tile.terrain) || !traversable(state.world, x, y)
+      || !reliefFootprintAllowed(state.world, x, y) || routes.completesRoadSquare(x, y)) continue;
     if (state.buildings.some(building => {
       if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || x < building.x || y < building.y
         || x >= building.x + buildingWidth(building) || y >= building.y + buildingHeight(building)) return false;

@@ -3,7 +3,7 @@
   html, body, #app, .game-area { overscroll-behavior: none; }
   #world, .mobile-controls { touch-action: none; }
   .mobile-controls:not([hidden]) { display: block; position: absolute; inset: 0; z-index: 3; pointer-events: none; user-select: none; }
-  .mobile-stick { position: absolute; left: max(16px,env(safe-area-inset-left)); bottom: 82px; width: 112px; height: 112px; border: 2px solid #c6ad776b; border-radius: 50%; background: #111d25a6; box-shadow: inset 0 0 16px #0007; pointer-events: auto; }
+  .mobile-stick { position: absolute; left: max(16px,var(--hud-safe-left,env(safe-area-inset-left))); bottom: 82px; width: 112px; height: 112px; border: 2px solid #c6ad776b; border-radius: 50%; background: #111d25a6; box-shadow: inset 0 0 16px #0007; pointer-events: auto; }
   .mobile-stick-cross::before, .mobile-stick-cross::after { content: ''; position: absolute; background: #b8b4a133; left: 24px; top: 55px; width: 64px; height: 1px; }
   .mobile-stick-cross::after { transform: rotate(90deg); }
   .mobile-stick-knob { position: absolute; left: 34px; top: 34px; width: 40px; height: 40px; border: 2px ridge #bba36c; border-radius: 50%; background: #2a3a40de; box-shadow: 0 2px 6px #0007; pointer-events: none; }
@@ -14,16 +14,15 @@
   .mobile-turns button { font-size: 30px; }
   .mobile-rotate-hint { display: none; }
   .hud { --hud-scale: 1; transform: none; width: 100%; height: 100%; }
-  .hotbar { left: auto; right: 112px; width: calc(100% - 170px); transform: scale(.7); transform-origin: bottom right; bottom: max(8px,env(safe-area-inset-bottom)); height: 58px; padding: 0; gap: 4px; grid-template-columns: repeat(5,minmax(0,1fr)); background: none; }
+  .hotbar { left: auto; right: 112px; width: calc(100% - 170px); transform: scale(.7); transform-origin: bottom right; bottom: max(8px,var(--hud-safe-bottom,env(safe-area-inset-bottom))); height: 58px; padding: 0; gap: 4px; grid-template-columns: repeat(5,minmax(0,1fr)); background: none; }
   .hotbar::before, .action-slot:not([data-hotbar-action]), .action-slot kbd { display: none; }
   .action-slot { height: 58px; min-width: 44px; }
   .hotbar-art { width: 27px; height: 27px; }
   .hotbar-label { font-size: 12px; }
-  .special-actions { transform: scale(.7); transform-origin: bottom right; width: 142px; height: 118px; right: 4px; bottom: max(4px,env(safe-area-inset-bottom)); padding: 5px; gap: 3px; }
+  .special-actions { transform: scale(.7); transform-origin: bottom right; width: 142px; height: 118px; right: 4px; bottom: max(4px,var(--hud-safe-bottom,env(safe-area-inset-bottom))); padding: 5px; gap: 3px; }
   .special-actions button { min-height: 50px; justify-content: center; }
   .special-actions .command-art { width: 23px; height: 23px; flex-basis: 23px; }
   .special-actions .action-label { font-size: 18px; padding: 0; }
-  .special-actions kbd { display: none; }
   .build-panel, .build-panel.is-building-menu { transform: scale(.7); transform-origin: bottom right; right: 5px; bottom: 88px; width: min(354px,calc((100cqw - 10px) / .7)); max-height: calc((100cqh - 144px) / .7); padding: 38px 8px 14px; }
   .build-actions { gap: 3px; }
   .build-actions button { min-height: 68px; padding-top: 19px; }
@@ -35,7 +34,7 @@
   .minimap-control { bottom: 9px; width: 32px; height: 32px; font-size: 20px; }
   #minimap-zoom-in { left: 0; } #minimap-zoom-out { right: 0; }
   .resource-bar { height: 44px; }
-  .research-toolbar { left: 362px; right: auto; top: 3px; width: min(260px,calc(100% - 684px)); height: 37px; }
+  .research-toolbar { left: 362px; right: auto; top: 3px; width: min(260px,calc(100% - 818px)); height: 37px; }
   .research-toolbar-name { font-size: 20px; }
   .research-toolbar-eta { font-size: 15px; }
   .resources { transform: none; height: 44px; }
@@ -48,10 +47,12 @@
   .resource strong { font-size: calc(16px * var(--value-fit,1)); }
   .resource.population .resource-values > span { font-size: 15px; }
   #food-yield, #gold-yield, #culture-rate { font-size: 12px; }
-  .time-controls { top: 0; right: max(4px,env(safe-area-inset-right)); height: 44px; transform: none; gap: 2px; }
+  .time-controls { top: 0; right: max(4px,var(--hud-safe-right,env(safe-area-inset-right))); height: 44px; transform: none; gap: 2px; }
   .time-controls button, .time-controls button#speed { min-width: 44px; width: 44px; height: 44px; }
+  #speed .speed-value { font-size: 18px; }
   .time-controls button#menu { width: 88px; min-width: 88px; gap: 6px; font-size: 16px; }
   .time-controls button#diplomacy-menu { width: 128px; padding: 0 6px; font-size: 17px; }
+  .time-controls button#pause-spending { width: 132px; gap: 4px; font-size: 17px; }
   #menu .text-icon { display: none; }
   .selection-panel { top: 49px; right: 4px; width: 194px; height: 88px; padding: 9px; transform: none; gap: 6px; }
   .portrait { width: 40px; flex-basis: 40px; height: 60px; }
@@ -70,23 +71,34 @@
   .frontend { padding: 12px; }
   .frontend button, .dialog button { min-height: 44px; }
 }
-@media (pointer: coarse) and (max-height: 360px) {
-  .minimap-panel { width: 90px; height: 90px; }
-  #minimap { left: 15px; top: 12px; width: 61px; height: 61px; }
-  .minimap-north { left: 37px; top: 4px; }
-  .minimap-control { bottom: 2px; }
-  .mobile-stick { width: 96px; height: 96px; }
-  .mobile-stick-knob { left: 26px; top: 26px; }
-  .mobile-stick-cross::before, .mobile-stick-cross::after { left: 16px; top: 47px; }
+@media (pointer: coarse) {
+  @container game-area (max-height: 380px) {
+    .minimap-panel { width: 90px; height: 90px; }
+    #minimap { left: 15px; top: 12px; width: 61px; height: 61px; }
+    .minimap-north { left: 37px; top: 4px; }
+    .minimap-control { bottom: 2px; }
+    .mobile-stick { width: 96px; height: 96px; }
+    .mobile-stick-knob { left: 26px; top: 26px; }
+    .mobile-stick-cross::before, .mobile-stick-cross::after { left: 16px; top: 47px; }
+  }
 }
 @media (pointer: coarse) and (orientation: landscape) {
-  @container game-area (max-width: 920px) {
+  @container game-area (max-width: 1020px) {
     .research-toolbar { left: 124px; top: 50px; width: 210px; }
   }
-  @container game-area (max-width: 665px) {
+  @container game-area (max-width: 800px) {
     .time-controls { top: 45px; }
     .research-toolbar { top: 94px; width: min(210px, calc(100% - 326px)); }
     .selection-panel { top: 94px; }
+  }
+}
+@media (pointer: coarse) {
+  @container game-area (max-width: 480px) {
+    .time-controls button#pause-spending { width: clamp(80px, calc(100cqw - 240px), 132px); gap: 3px; font-size: 16px; white-space: normal; }
+    #pause-spending .symbol-check { --icon-size: 14px; }
+    .time-controls button#menu { width: 50px; min-width: 50px; }
+    .time-controls #menu .menu-glyph { display: none; }
+    .time-controls button#diplomacy-menu { width: 86px; padding: 0 2px; font-size: 14px; }
   }
 }
 @media (pointer: coarse) and (orientation: portrait) {

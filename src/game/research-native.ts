@@ -13,13 +13,12 @@ const indices = new Map<ResearchBranchId, number>();
 /** Costs and the dependency graph are content. Upload once, retaining labels
  * and descriptions in TypeScript for the existing interface. */
 export function installResearchContent(branches: readonly { id: ResearchBranchId; prerequisites: readonly ResearchBranchId[];
-  tiers: readonly { points: number }[]; fixedCost?: boolean }[]): void {
+  tiers: readonly { points: number }[]; fixedCost?: boolean; costScale?: number }[]): void {
   if (ids.length) throw new Error('Research content is already installed.');
   if (!branches.length || branches.length > 53) throw new Error('Research content requires between 1 and 53 technologies.');
   ids = branches.map(branch => branch.id);
   ids.forEach((id, index) => indices.set(id, index));
-  const pointer = rustEngine.research_graph_prepare(ids.length), input = new Float64Array(rustEngine.memory.buffer, pointer, ids.length * 2);
-  let fixedCosts = 0;
+  const pointer = rustEngine.research_graph_prepare(ids.length), input = new Float64Array(rustEngine.memory.buffer, pointer, ids.length * 3);
   branches.forEach((branch, index) => {
     let prerequisites = 0;
     for (const id of branch.prerequisites) {
@@ -27,10 +26,12 @@ export function installResearchContent(branches: readonly { id: ResearchBranchId
       if (prerequisite === undefined) throw new Error(`Unknown research prerequisite: ${id}`);
       prerequisites += 2 ** prerequisite;
     }
-    if (branch.fixedCost) fixedCosts += 2 ** index;
-    input[index * 2] = branch.tiers[0].points; input[index * 2 + 1] = prerequisites;
+    const row = index * 3;
+    input[row] = branch.tiers[0].points;
+    input[row + 1] = prerequisites;
+    input[row + 2] = branch.fixedCost ? 0 : branch.costScale ?? 1;
   });
-  rustEngine.research_graph_commit(ids.length, fixedCosts);
+  rustEngine.research_graph_commit(ids.length);
 }
 
 export const nativeResearchIndex = (id: ResearchBranchId): number => indices.get(id) ?? -1;

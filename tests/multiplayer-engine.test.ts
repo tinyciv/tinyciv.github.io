@@ -6,7 +6,7 @@ import { updateFog, pointInSight } from '../src/game/fog';
 import { setForbiddenRectangle, isForbidden } from '../src/game/forbidden-zones';
 import { buildStroke } from '../src/game/construction';
 import { clearArea } from '../src/game/area-tools';
-import { prioritizeResearch, researchCost, updateResearch } from '../src/game/research';
+import { prioritizeResearch, researchAllocation, researchCost, updateResearch } from '../src/game/research';
 import { entityStore } from '../src/game/entity-store';
 import { getFactionStrategy } from '../src/game/faction-strategy';
 import { updateTreasureChests } from '../src/game/treasure';
@@ -40,9 +40,10 @@ describe('authoritative two-human engine', () => {
   it('creates two equally funded human capitals at separated starting sites without rival governors or villages', () => {
     const state = createDuelGame(world(), ['Host', 'Guest'], ['#3366ff', '#dd3333']);
     expect(state.factions.map(f => [f.id, f.name, f.gold, f.food, f.population])).toEqual([
-      [0, 'Host', 500, 500, 20], [1, 'Guest', 500, 500, 20],
+      [0, 'Host', 300, 500, 20], [1, 'Guest', 300, 500, 20],
     ]);
     expect(state.buildings.filter(b => b.kind === 'palace').map(b => b.faction)).toEqual([0, 1]);
+    expect(state.buildings.filter(b => b.kind === 'library' && !b.construction).map(b => b.faction)).toEqual([0, 1]);
     expect(state.multiplayer?.humanFactionIds).toEqual([0, 1]);
     expect(state.villages ?? []).toEqual([]);
     expect(state.world.spawns).toEqual([world().spawns[0], world().spawns[1]]);
@@ -117,6 +118,18 @@ describe('authoritative two-human engine', () => {
     expect(state.factions.map(f => f.gold)).toEqual([500, 500]);
   });
 
+  it.each([false, true])('honors a guest road command that intentionally completes a 2×2 square (stroke: %s)', stroke => {
+    const state = fixture();
+    const road = { kind: 'road' as const, faction: 1, hp: 100, maxHp: 100, capacity: 0 };
+    entityStore(state).buildings.add({ ...road, id: 30, x: 50, y: 10 },
+      { ...road, id: 31, x: 51, y: 10 }, { ...road, id: 32, x: 50, y: 11 });
+    const corner = { x: 51, y: 11 };
+    const points = stroke ? [{ x: 51, y: 10 }, corner] : [corner];
+    expect(applyGameCommand(state, 1, { type: 'build', kind: 'road', points }).ok).toBe(true);
+    expect(state.buildings.find(b => b.kind === 'road' && b.x === corner.x && b.y === corner.y)?.faction).toBe(1);
+    expect(state.factions.map(f => f.gold)).toEqual([500, 500 - BUILD_COSTS.road.gold]);
+  });
+
   it('rejects enemy priorities while guest income researches its own queue', () => {
     const state = fixture(), guest = getLeader(state, 1)!;
     const library = { id: 30, faction: 1, kind: 'library' as const, x: 52, y: 11, hp: 100, maxHp: 100, capacity: 0 };
@@ -124,10 +137,11 @@ describe('authoritative two-human engine', () => {
     expect(prioritizeResearch(state, library, 'woodenTower').ok).toBe(false);
     withPlayerFaction(state, 1, () => {
       expect(prioritizeResearch(state, library, 'woodenTower').ok).toBe(true);
-      grantIncome(state.factions[1], { gold: researchCost(state.factions[1], 'woodenTower') / .25 }, state);
+      const faction = state.factions[1];
+      grantIncome(faction, { gold: researchCost(faction, 'woodenTower') / researchAllocation(faction) }, state);
     });
     updateResearch(state, 1000);
-    expect(state.factions[1].research).toMatchObject({ focus: 'scoutLodge', levels: { woodenTower: 1 } });
+    expect(state.factions[1].research).toMatchObject({ focus: 'infantryDrill', levels: { woodenTower: 1 } });
     expect(state.factions[0].gold).toBe(500);
     expect(guest.target).toBeUndefined();
   });

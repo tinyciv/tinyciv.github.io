@@ -13,6 +13,7 @@ import { loadQuestArt } from './quest-art';
 import { loadGameFonts } from './game-font';
 import { loadPalaceSprite } from './palace-sprite';
 import { loadFrontierVillageArt } from './frontier-village-art';
+import { loadBarbarianLairArt } from './barbarian-lair-art';
 import { loadFortArt } from './fort-art';
 import { loadStoneWallTowerArt } from './stone-wall-tower-art';
 import { loadPalisadeTowerArt } from './palisade-tower-art';
@@ -50,6 +51,8 @@ import { loadWildlifeArt } from './wildlife-art';
 import { loadMerchantArt } from './merchant-art';
 import { loadVegetationArt } from './vegetation-art';
 import { loadMeadowArt } from './meadow-art';
+import { loadFertilityGrassArt } from './fertility-grass-art';
+import { loadRockFootPlantArt } from './rock-foot-plants';
 import type { Renderer } from './renderer';
 
 /** Shared startup artwork; the viewer uses the same assets as the game. */
@@ -71,6 +74,7 @@ export function loadGameAssets(renderer: Renderer): Promise<void>[] {
     renderer.initialize(),
     loadPalaceSprite(),
     loadFrontierVillageArt(),
+    loadBarbarianLairArt(),
     loadFortArt(),
     loadStoneWallTowerArt(),
     loadPalisadeTowerArt(),
@@ -108,5 +112,7 @@ export function loadGameAssets(renderer: Renderer): Promise<void>[] {
     loadMerchantArt(),
     loadVegetationArt(),
     loadMeadowArt(),
+    loadFertilityGrassArt(),
+    loadRockFootPlantArt(),
   ];
 }

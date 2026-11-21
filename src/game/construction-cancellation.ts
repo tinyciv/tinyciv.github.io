@@ -8,6 +8,7 @@ import { clearBuildingFootprint } from './construction-clearance';
 import { updateWallStats } from './wall-stats';
 import { constructionHead } from './bridge-construction';
 import { forgetNativeConstruction, nativeConstructionProgress, nativeConstructionRefund } from './construction-native';
+import { suspendCityBorderClaims } from './borders';
 
 /** Clear occupants before removing a bridge or the road through a gate. */
 export function prepareConstructionCancellation(state: GameState, building: Building): boolean {
@@ -35,9 +36,14 @@ export function cancellationRefund(state: GameState, building: Building): number
 /** Shared by cancellation and road replacement; no completed building is
  * removed by the public cancel command. Workers must relinquish obsolete jobs. */
 export function removeBuildings(state: GameState, ids: Set<number>): void {
+  const buildings = entityStore(state).buildings;
   if (!state.buildings.some(building => ids.has(building.id))) return;
-  for (const id of ids) forgetNativeConstruction(state, id);
-  entityStore(state).buildings.retain(building => !ids.has(building.id));
+  for (const id of ids) {
+    const building = buildings.get(id);
+    if (building?.kind === 'palace' && building.hp > 0) suspendCityBorderClaims(state, building);
+    forgetNativeConstruction(state, id);
+  }
+  buildings.retain(building => !ids.has(building.id));
   state.projectiles = state.projectiles?.filter(projectile => !ids.has(projectile.target));
   for (const unit of state.units) {
     if (unit.forcedAttack && ids.has(unit.forcedAttack.target)) unit.forcedAttack = undefined;

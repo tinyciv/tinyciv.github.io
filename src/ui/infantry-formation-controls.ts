@@ -1,4 +1,4 @@
-import { militaryFormationType } from '../game/military-academy';
+import { militaryFormationLabel, militaryFormationType } from '../game/military-academy';
 import { infantryFormationActive, infantryFormationSoldierCount, INFANTRY_FORMATION_MIN_START, INFANTRY_FORMATION_MIN_REMAINING } from '../game/infantry-drill';
 import { playerFaction } from '../game/player-context';
 import { researchLevel } from '../game/research';
@@ -29,6 +29,7 @@ export function infantryFormationControl(state: GameState) {
   const soldiers = infantryFormationSoldierCount(state, faction);
   const reason = !unlocked ? 'Research Infantry Drill first.' : !available ? 'Your Leader must be alive and on land.'
     : !active && soldiers < INFANTRY_FORMATION_MIN_START ? `Formation requires ${INFANTRY_FORMATION_MIN_START} living retinue soldiers (${soldiers}/${INFANTRY_FORMATION_MIN_START}).` : '';
+  const formation = type === 'loose' ? 'Loose order · 2 ranks · 1-tile spacing' : `${militaryFormationLabel(type)} ranks around the Leader`;
   return { active, unlocked, enabled: !reason, reason,
-    title: reason || `Formation (3) · ${active ? 'Active · A/D strafe · W/S advance/reverse · Hold Q/E to rotate' : `Close ranks around the Leader · ${type} · 105% speed · +25% frontal damage · ${type === 'wide' ? '+30% missile fire rate' : '+50% frontal defense'}`} · Requires ${INFANTRY_FORMATION_MIN_START} soldiers to form; below ${INFANTRY_FORMATION_MIN_REMAINING}, all ranks and the Leader rout.` };
+    title: reason || `Formation (3) · ${active ? 'Active · A/D strafe · W/S advance/reverse · Hold Q/E to rotate' : `${formation} · 105% speed · +25% frontal damage · ${type === 'wide' ? '+30% missile fire rate' : '+50% frontal defense'}`} · Requires ${INFANTRY_FORMATION_MIN_START} soldiers to form; below ${INFANTRY_FORMATION_MIN_REMAINING}, all ranks and the Leader rout.` };
 }

@@ -2,11 +2,12 @@ import type { BuildSelection } from '../game/types';
 import { BUILD_OPTIONS, buildMenuForSelection } from './build-controls';
 
 /** Construction control markup shared by the game and isolated UI previews. */
-export function constructionActionsMarkup(titles: Record<'build' | 'fortifications' | 'clear' | 'forbid', string>): string {
-  return `<button data-action="build" aria-keyshortcuts="B" aria-expanded="false" aria-controls="build-panel" title="${titles.build}"><span class="action-label">Build</span></button>
-    <button data-action="fortifications" aria-keyshortcuts="F" aria-expanded="false" aria-controls="build-panel" title="${titles.fortifications}"><span class="action-label">Fortify</span></button>
-    <button data-action="clear" aria-keyshortcuts="C" title="${titles.clear}"><span class="action-label">Clear</span></button>
-    <button data-action="forbid" title="${titles.forbid}"><span class="action-label">Forbid</span></button>`;
+export function constructionActionsMarkup(titles: Record<'build' | 'fortifications' | 'clear' | 'forbid' | 'cancel', string>): string {
+  return `<button data-action="build" aria-keyshortcuts="B" aria-expanded="false" aria-controls="build-panel" title="${titles.build}"><kbd aria-hidden="true">B</kbd><span class="action-label">Build</span></button>
+    <button data-action="fortifications" aria-keyshortcuts="F" aria-expanded="false" aria-controls="build-panel" title="${titles.fortifications}"><kbd aria-hidden="true">F</kbd><span class="action-label">Fortify</span></button>
+    <button data-action="clear" aria-keyshortcuts="C" title="${titles.clear}"><kbd aria-hidden="true">C</kbd><span class="action-label">Clear</span></button>
+    <button data-action="forbid" title="${titles.forbid}"><span class="action-label">Forbid</span></button>
+    <button data-action="cancel" title="${titles.cancel}"><span class="action-label">Cancel</span></button>`;
 }
 
 export function buildingButtonsMarkup(titleForOption: (kind: Exclude<BuildSelection, 'clearTrees'>) => string): string {

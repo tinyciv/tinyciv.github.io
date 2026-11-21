@@ -1,8 +1,9 @@
 export const WORLD_GENERATION_STYLES = ['continents', 'pangaea', 'fractal'] as const;
 export type WorldGenerationStyle = typeof WORLD_GENERATION_STYLES[number];
 export const DEFAULT_WORLD_STYLE: WorldGenerationStyle = 'fractal';
-export const LEDGES_ENABLED = (import.meta.env?.VITE_ENABLE_LEDGES
-  ?? (typeof process === 'undefined' ? undefined : process.env.VITE_ENABLE_LEDGES)) === 'true';
+export const DEFAULT_WORLD_WIDTH = 374;
+export const DEFAULT_WORLD_HEIGHT = 300;
+export const MAX_WORLD_DIMENSION = 520;
 export const WORLD_STYLE_NAMES: Record<WorldGenerationStyle, string> = {
   continents: 'Continents', pangaea: 'Pangaea', fractal: 'Fractal',
 };
@@ -14,6 +15,8 @@ export const LANDFORM_NAMES: Record<LandformFamily, string> = {
   'dissected-plateau': 'Dissected plateaus', 'rift-lakes': 'Rift valleys and lakes',
   'glacial-coast': 'Glacial coasts', 'rolling-uplands': 'Rolling uplands',
 };
+export const isLandformFamily = (value: unknown): value is LandformFamily =>
+  typeof value === 'string' && Object.hasOwn(LANDFORM_NAMES, value);
 
 /** Defaults are the approved Fractal gallery sample #20 (FRACTAL-STUDY-2026).
  * Public controls for every landscape stage. Distances are game-grid scales,
@@ -36,10 +39,10 @@ export const LANDSCAPE_CONTROLS = {
   desertThreshold: { group: 'Climate', label: 'Desert aridity threshold', default: 0.4759, min: .43, max: .57 },
   forestThreshold: { group: 'Woodland', label: 'Woodland threshold', default: 0.5668, min: .48, max: .61 },
   forestPatchScale: { group: 'Woodland', label: 'Woodland patch size', default: 0.9499, min: .65, max: 1.6 },
-  forestNorthBias: { group: 'Woodland', label: 'Northern woodland bias', default: 0.1114, min: .06, max: .2 },
+  forestLatitudeBias: { group: 'Woodland', label: 'Polar woodland bias', default: 0.1114, min: .06, max: .2 },
   riparianBoost: { group: 'Woodland', label: 'Freshwater moisture boost', default: 0.2281, min: .08, max: .26 },
   ruggednessScale: { group: 'Relief', label: 'Rugged province size', default: 0.9685, min: .65, max: 1.6 },
-  reliefCoverage: { group: 'Ledges', label: 'Ledge coverage', default: 0.0924, min: .04, max: .14 },
+  reliefCoverage: { group: 'Relief', label: 'Raised land target', default: 0.0924, min: .04, max: .14 },
   mountainShare: { group: 'Mountains', label: 'Mountain share of relief', default: 0.2956, min: .25, max: .7 },
   mountainClumpShare: { group: 'Mountains', label: 'Compact mountain weight', default: 0.2669, min: .1, max: .7 },
   mountainStringShare: { group: 'Mountains', label: 'Broken mountain weight', default: 0.2074, min: .1, max: .7 },
@@ -55,7 +58,7 @@ export const LANDSCAPE_CONTROLS = {
   compactLakeAspectMax: { group: 'Lakes', label: 'Compact lake maximum aspect', default: 1.5773, min: 1.2, max: 2 },
   riverCount: { group: 'Rivers', label: 'River network density', default: 7, min: 3, max: 11 },
   riverWidth: { group: 'Rivers', label: 'River width', default: 1.2025, min: .7, max: 1.3 },
-  riverMeander: { group: 'Rivers', label: 'River meander', default: 0.9306, min: .6, max: 1.5 },
+  riverMeander: { group: 'Rivers', label: 'River meander', default: 1.44, min: .6, max: 1.5 },
   beachFraction: { group: 'Coasts', label: 'Sandy coastline share', default: 0.4255, min: .25, max: .7 },
   beachWidth: { group: 'Coasts', label: 'Beach width', default: 0.8142, min: .65, max: 1.3 },
   palmDensity: { group: 'Coasts', label: 'Beach palm density', default: 1.1131, min: .4, max: 1.6 },
@@ -90,7 +93,7 @@ export function resolveLandscapeParameters(overrides: Partial<LandscapeParameter
   // Sea level changes the continental coast envelope, preserving seeded shape
   // variation. Water coverage is a target, not a post-generation tile quota.
   preset((parameters.seaLevel - 70) / 10, { landScale: [1.15, .85] });
-  // Young geology has more exposed ledges when the feature is enabled.
+  // Standalone relief studies use world age to vary raised land coverage.
   preset(parameters.age - 4, { reliefCoverage: [.14, .04] });
   // Moisture feeds rainfall, drainage, biomes, vegetation and soil downstream.
   preset(parameters.climate - 1, { moisture: [.44, .62], desertThreshold: [.57, .43], forestThreshold: [.61, .48] });
@@ -101,8 +104,6 @@ export interface WorldGenerationOptions {
   style?: WorldGenerationStyle;
   parameters?: Partial<LandscapeParameters>;
   landformFamily?: LandformFamily;
-  /** Override the ledge feature flag for this generated world. */
-  ledges?: boolean;
   /** Disable only for comparison studies of the underlying coastline. */
   riverDeltas?: boolean;
   /** Scenarios supply their own founding sites after generating natural terrain. */

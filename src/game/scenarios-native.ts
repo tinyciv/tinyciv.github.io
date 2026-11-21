@@ -5,11 +5,12 @@ import { mirrorScenarioLandscape } from '../world/scenario-geography';
 import { SHIP_CLASSES, MARINE_TYPES, NAVAL_WEAPONS } from './warships-native';
 import { type ScenarioId, SCENARIOS } from './scenario-content';
 import { reliefFootprintAllowed } from './relief';
-import { settlementTerrainMask } from './terrain-sites';
+import { settlementTerrainMask, STARTING_RESOURCE_CLEARANCE } from './terrain-sites';
 import { traversable } from './pathfinding';
 import { navigableWaterCell } from './water-navigation';
 import { RESEARCH_BRANCHES } from './research';
 import { assignOreDeposits } from '../world/ore-native';
+import { generateFertilityGrass } from '../world/fertility-native';
 import { buildingWidth, buildingHeight } from './types';
 import type { BuildingKind, World, WarshipClass, MarineType, NavalWeapon, ResearchBranchId } from './types';
 
@@ -31,7 +32,7 @@ const kinds = Object.fromEntries(Object.entries(BUILDING_KIND_CODES).map(([kind,
 
 /** Observation transport into the native scenario planner. Terrain is always
  * produced by the normal geography/climate/river/ecology generator. */
-export function scenarioTerrain(handle: number, world: World): void {
+export function scenarioTerrain(handle: number, world: World, occupied?: ReadonlySet<number>): void {
   const mask = settlementTerrainMask(world), facts = new Float64Array(world.tiles.length * 2);
   for (let i = 0; i < world.tiles.length; i++) {
     const x=i%world.width,y=Math.floor(i/world.width),tile=world.tiles[i];
@@ -39,13 +40,15 @@ export function scenarioTerrain(handle: number, world: World): void {
       | (navigableWaterCell(world,x,y) && (tile.terrain === 'ocean' || tile.terrain === 'coast') ? 4 : 0)
       | (tile.terrain==='river'||tile.terrain==='lake'?8:0);
     if(tile.overlay==='forest')facts[i*2]|=16;
+    if(occupied?.has(i))facts[i*2]|=32;
+    if(mask[i]&STARTING_RESOURCE_CLEARANCE)facts[i*2]|=64;
     facts[i*2+1] = tile.food * (tile.fertility ?? 1);
   }
   const pointer = rustEngine.sim_scenario_input(handle, facts.length, world.width, world.height);
   new Float64Array(rustEngine.memory.buffer,pointer,facts.length).set(facts);
 }
-export function scenarioEquipment(handle:number, world:World): ScenarioBuilding[] {
-  scenarioTerrain(handle,world);
+export function scenarioEquipment(handle:number, world:World, occupied: ReadonlySet<number>): ScenarioBuilding[] {
+  scenarioTerrain(handle,world,occupied);
   const pointer=rustEngine.sim_scenario_equipment(handle), count=new Float64Array(rustEngine.memory.buffer,pointer,1)[0];
   const rows=new Float64Array(rustEngine.memory.buffer,pointer+8,count*7).slice();
   return Array.from({length:count},(_,i)=>({kind:kinds[rows[i*7]],faction:rows[i*7+1],x:rows[i*7+2],y:rows[i*7+3],residents:0,houseLevel:0,initialCity:false}));
@@ -62,13 +65,28 @@ export function scenarioPlan(id: ScenarioId, seed: string = id): ScenarioPlan {
   if (code < 0) throw new Error('Unknown scenario.');
   const handle = rustEngine.sim_create(261116);
   try {
-    for(let attempt=0;attempt<(id==='tutorial'||id==='island-deathmatch'||id==='sandbox'||id==='musketry-deathmatch'?128:12);attempt++) {
+    for(let attempt=0;attempt<(id==='age-of-exploration'?12:128);attempt++) {
       const exploration=id==='age-of-exploration';
+      const frontier=id==='no-mans-land';
       const tutorial=id==='tutorial'||id==='island-deathmatch', island=id==='island-deathmatch', sandbox=id==='sandbox', musket=id==='musketry-deathmatch';
-      const world=generateWorld(`Scenario:${id}:${seed}:${attempt}`,musket?160:island?110:tutorial||sandbox?80:exploration?320:240,musket?39:island?50:sandbox?60:tutorial?30:exploration?280:144,
-        tutorial||sandbox||musket?{style:'pangaea',oceanChannelWidth:island?4:undefined,settlements:false,landformFamily:'rolling-uplands',parameters:{seaLevel:60,age:5,forestThreshold:.61,forestNorthBias:.06,riverCount:3,lakeDensity:.5}}
-          :{style:exploration?'fractal':'pangaea',parameters:exploration?{islandDensity:1.8,islandSize:1.5}:undefined});
-      if (musket) mirrorScenarioLandscape(world);
+      const world=generateWorld(`Scenario:${id}:${seed}:${attempt}`,musket?160:island?110:tutorial||sandbox?80:exploration?320:160,musket?39:island?50:sandbox?60:tutorial?30:exploration?280:130,
+        tutorial||sandbox||musket?{style:'pangaea',oceanChannelWidth:island?4:undefined,settlements:false,landformFamily:'rolling-uplands',parameters:{seaLevel:60,age:5,forestThreshold:.61,forestLatitudeBias:.06,riverCount:3,lakeDensity:.5}}
+          : frontier ? {style:'pangaea',settlements:false,landformFamily:'rolling-uplands',parameters:{riverCount:6,riverWidth:.7,lakeDensity:.5,lakeSize:.65}}
+          : {style:'fractal',parameters:{islandDensity:1.8,islandSize:1.5}});
+      if (musket) {
+        // Mirroring discards the east half. Retry a seed if the seam cuts a
+        // grove, which could leave fewer than five tiles or split its footprint.
+        let cutsGrove = false;
+        for (let cell = world.width / 2 - 1; cell < world.tiles.length; cell += world.width) {
+          const west = world.tiles[cell], east = world.tiles[cell + 1];
+          if (west.resource === 'olives' && east.resource === 'olives' && west.resourceGroup === east.resourceGroup) {
+            cutsGrove = true;
+            break;
+          }
+        }
+        if (cutsGrove) continue;
+        mirrorScenarioLandscape(world);
+      }
       // Select an ordinary generated landscape that contains every regional
       // resource; no resource or terrain cells are painted for Sandbox.
       if(sandbox) {
@@ -128,6 +146,7 @@ export function scenarioPlan(id: ScenarioId, seed: string = id): ScenarioPlan {
         for (const prerequisite of RESEARCH_BRANCHES.find(branch => branch.id === id)!.prerequisites) include(prerequisite);
       };
       if (island) for (const tech of ['sailing','whaling','woodenTower','monument','blacksmith','archeryRange','siegeEngines'] as const) include(tech);
+      if (musket || tutorial) generateFertilityGrass(world);
       return {world,buildings,ships,gold,food,population,researchLevel,banditIntensity,startingResearch:[...startingResearch],
         musketFraction:musket?values[cursor++]:undefined,startingCannons:musket?values[cursor++]:undefined,completeLayouts:musket?!!values[cursor++]:undefined};
     }

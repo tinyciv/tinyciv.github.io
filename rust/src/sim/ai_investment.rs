@@ -2,18 +2,19 @@
 //! executes ordinary commands; eligibility, recruitment mixes and site ranking
 //! stay native. Scratch buffers are bounded and owned by this game's ECS.
 use bevy_ecs::prelude::*;
-use super::{achievements, ai_policy::{Policy, PURCHASES}, granaries};
+use super::{achievements, ai_policy::{Policy, PURCHASES}, granaries, settlement_tiers};
 
 pub const MAX_FARMS: usize = 256;
 pub const MAX_SITES: usize = 256;
 const MAX_INPUT: usize = 4 + MAX_FARMS * 2;
-/// 0 granary, 1 barracks, 2 forum. Shared by construction and maintenance.
+/// Shared by construction and maintenance.
 pub fn constant(kind: u32, upkeep: bool) -> f64 {
     match (kind, upkeep) {
         (0, false) => granaries::GOLD, (0, true) => granaries::UPKEEP,
-        (1, false) => 300.0, (1, true) => 30.0,
+        (1, false) => 300.0, (1, true) => 12.0,
         (2, false) => 300.0, (2, true) => 3.0,
-        (3..=5, _) => super::civic_buildings::constant(match kind {3=>super::kinds::building::HOSPITAL,4=>super::kinds::building::APARTMENTS,_=>super::kinds::building::FACTORY}, if upkeep {2}else{0}),
+        (4, _) => super::civic_buildings::constant(super::kinds::building::APARTMENTS, if upkeep { 2 } else { 0 }),
+        (5, _) => super::civic_buildings::constant(super::kinds::building::FACTORY, if upkeep { 2 } else { 0 }),
         _ => f64::NAN,
     }
 }
@@ -34,9 +35,10 @@ impl Investments {
         self.output.clear(); self.output.push(values.len() as f64); self.output.extend_from_slice(values);
     }
     /// Mode 0: kind,gold,reserve,surplus,cityPopulation,farmCount,culture,owned,leaderDistance.
-    /// Mode 1: ready-tech flags,gold,reserve,surplus,projectedMusketCount,soldierCount,cannonShare.
+    /// Mode 1: ready-tech flags, recurring wages budget, retinue slots, cannon share.
     /// Mode 2: city top-left x,y,width,height, then farm center x,y pairs.
     /// Mode 3: culture,owned -> one eligible achievement ID, or -1.
+    /// Mode 6: tier, local population, realm population, food, gold, net gold, civic buildings.
     pub fn plan(&mut self, mode: u32, policy: Policy) -> *const f64 {
         self.output.clear(); self.output.push(0.0);
         if !self.input.iter().all(|v| v.is_finite()) { return self.output.as_ptr(); }
@@ -51,7 +53,6 @@ impl Investments {
                     1 => policy.has(PURCHASES) && v[4] >= 24.0,
                     2 => policy.has(PURCHASES) && v[4] >= 12.0 && v[8] <= 12.0
                         && achievement(v[6], v[7] as u32) >= 0,
-                    3 => v[4] >= 40.0,
                     4 => v[4] >= 30.0 && v.get(10).copied().unwrap_or(v[4]) <= v[4] + 12.0,
                     5 => v[4] >= 40.0 && v[3] >= 25.0 && v.get(9).copied().unwrap_or(0.0) < 5.0,
                     _ => false,
@@ -59,34 +60,48 @@ impl Investments {
                 let affordable = v[1] >= cost + v[2] + upkeep * 2.0 && v[3] >= upkeep + 3.0;
                 self.publish(&[f64::from((useful && affordable) as u8)]);
             }
-            1 if self.input.len() == 6 || self.input.len() == 7 => {
+            1 if self.input.len() == 4 => {
+                use super::{kinds::unit::*, retinue::upkeep};
                 let v = &self.input; let flags = v[0] as u32;
                 let has = |bit: u32| flags & (1_u32 << bit) != 0;
-                let pikes = policy.has(PURCHASES) && has(5);
-                // Budget a whole target squad's extra wages before preferring
-                // muskets. A treasury runway prevents immediate oscillation
-                // when the first newly trained soldiers enter the wage ledger.
-                let extra = ((v[5] * 0.25).ceil() - v[4]).max(0.0)
-                    * super::retinue::upkeep(super::kinds::unit::MUSKETMAN);
-                let muskets = policy.has(PURCHASES) && has(6)
-                    && v[1] >= v[2] + extra * 3.0 && v[3] >= extra + 3.0;
-                let knight = if has(3) {0.25} else {0.0};
-                let horse = if has(1) && !has(3) {0.25} else {0.0};
-                let horse_archer = if has(2) {0.15} else {0.0};
-                let swords = if has(4) && !pikes {0.25} else {0.0};
-                let archer = if has(0) && !muskets {0.25} else {0.0};
-                let cannon = v.get(6).copied().unwrap_or(0.0).clamp(0.0,1.0);
-                let mut mix = [knight, horse_archer, horse, swords, archer, 0.0,
-                    if pikes {0.30} else {0.0}, if muskets {0.25} else {0.0}, cannon];
-                let total = mix[..8].iter().sum::<f64>();
-                if total > 1.0-cannon {for share in &mut mix[..8]{*share *= (1.0-cannon)/total;}}
-                self.publish(&mix);
+                let slots = v[2].floor().max(1.0);
+                let cannon = v[3].clamp(0.0, 1.0);
+                let mut remaining = slots - (cannon * slots).round();
+                // Price whole recruits against a baseline of warriors. The
+                // reserved cannon slots already have their own upkeep budget.
+                let mut premium_budget = (v[1] - 3.0 - remaining * upkeep(WARRIOR)).max(0.0);
+                let mut allocate = |kind, share: f64| {
+                    let premium = upkeep(kind) - upkeep(WARRIOR);
+                    let count = (slots * share).round().min(remaining).min((premium_budget / premium).floor());
+                    premium_budget -= count * premium;
+                    remaining -= count;
+                    count / slots
+                };
+                let pikes = if policy.has(PURCHASES) && has(5) { allocate(PIKEMAN, 0.30) } else { 0.0 };
+                let swords = if has(4) && pikes == 0.0 { allocate(SWORDSMAN, 0.25) } else { 0.0 };
+                let muskets = if policy.has(PURCHASES) && has(6) { allocate(MUSKETMAN, 0.25) } else { 0.0 };
+                let archers = if has(0) { allocate(ARCHER, (0.25 - muskets).max(0.0)) } else { 0.0 };
+                let knights = if has(3) { allocate(KNIGHT, 0.25) } else { 0.0 };
+                let horses = if has(1) { allocate(HORSEMAN, (0.25 - knights).max(0.0)) } else { 0.0 };
+                let horse_archers = if has(2) { allocate(HORSE_ARCHER, 0.15) } else { 0.0 };
+                self.publish(&[knights, horse_archers, horses, swords, archers, 0.0, pikes, muskets, cannon]);
             }
             2|5 if self.input.len() >= 4 && self.input.len() % 2 == 0 => self.granary_sites(mode==5),
             4 if self.input.len()==4=>{let v=&self.input;let sites=super::scenarios::civic_sites(v[0],v[1],v[2],v[3]);self.publish(&sites);},
             3 if self.input.len() == 2 => {
                 let id = if policy.has(PURCHASES) {achievement(self.input[0], self.input[1] as u32)} else {-1};
                 self.publish(&[id as f64]);
+            }
+            6 if self.input.len() == 7 => {
+                let v = &self.input;
+                let tier = v[0] as usize;
+                let limit = settlement_tiers::term(tier, 0);
+                // Leave enough for another settlement and three cycles of any
+                // projected deficit after paying for a civic promotion.
+                let reserve = 100.0 + (-v[5]).max(0.0) * 3.0;
+                let promote = v[1] >= limit * 0.85 && v[3] >= v[2]
+                    && settlement_tiers::upgrade(tier, v[6] as u32, v[4] - reserve) == 0;
+                self.publish(&[f64::from(u8::from(promote))]);
             }
             _ => {},
         }
@@ -137,23 +152,23 @@ mod tests {
             planner.input[1] = constant(kind, false) + 99.0;
             planner.plan(0, policy); assert_eq!(planner.output, vec![1.0, 0.0]);
         }
-        planner.input = vec![1.0, 1000.0, 100.0, 32.0, 30.0, 8.0, 500.0, 0.0, 2.0];
+        planner.input = vec![1.0, 1000.0, 100.0, 14.0, 30.0, 8.0, 500.0, 0.0, 2.0];
         planner.plan(0, policy); assert_eq!(planner.output[1], 0.0);
         planner.input = vec![2.0, 1000.0, 100.0, 40.0, 30.0, 8.0, 500.0, 0.0, 20.0];
         planner.plan(0, policy); assert_eq!(planner.output[1], 0.0);
     }
     #[test]
-    fn infantry_mix_is_bounded_and_retains_funded_trained_muskets() {
+    fn infantry_mix_is_bounded_by_recurring_income() {
         let mut planner = Investments::default(); let policy = Policy::builtin(3).unwrap();
-        planner.input = vec![127.0, 1000.0, 100.0, 100.0, 0.0, 16.0];
+        planner.input = vec![127.0, 100.0, 16.0, 0.0];
         planner.plan(1, policy);
         assert!(planner.output[1..].iter().sum::<f64>() <= 1.0);
-        assert_eq!(planner.output[7], 0.30); assert_eq!(planner.output[8], 0.25);
+        assert_eq!(planner.output[7], 5.0 / 16.0); assert_eq!(planner.output[8], 0.25);
         assert_eq!(planner.output[4], 0.0); assert_eq!(planner.output[5], 0.0);
-        planner.input[3] = 3.0; planner.input[4] = 4.0;
-        planner.plan(1, policy); assert_eq!(planner.output[8], 0.25);
-        planner.input[4] = 0.0;
-        planner.plan(1, policy); assert_eq!(planner.output[8], 0.0); assert_eq!(planner.output[5], 0.25);
+        planner.input[1] = 13.0;
+        planner.input[0] = 65.0;
+        planner.plan(1, policy);
+        assert_eq!(planner.output[8], 0.0); assert_eq!(planner.output[5], 2.0 / 16.0);
     }
     #[test]
     fn achievement_choice_honors_every_prerequisite_and_stops_when_complete() {

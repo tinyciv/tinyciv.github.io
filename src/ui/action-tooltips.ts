@@ -1,8 +1,9 @@
-import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE, WATCHTOWER_MAINTENANCE, type townBuildTerms } from '../game/maintenance';
+import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE, SETTLEMENT_UPKEEP_GRACE, WATCHTOWER_MAINTENANCE, type townBuildTerms } from '../game/maintenance';
 import { ECONOMY_INTERVAL } from '../game/economy-constants';
 import { GUARD_POST_UPKEEP } from '../game/guard-posts';
 import { FORT_UPKEEP } from '../game/forts';
 import { OBSERVATION_POST_UPKEEP } from '../game/observation-posts';
+import { FIELD_CANNON_UPKEEP } from '../game/field-cannon-config';
 import type { BuildSelection } from '../game/types';
 import { constructionGoldText } from './number-format';
 
@@ -12,6 +13,7 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   ruin: 'Remains of a destroyed building.',
   villageTent: 'Houses members of a neutral village.',
   frontierVillage: '',
+  barbarianLair: '',
   scoutTower: 'Extends sight.',
   road: 'Speeds travel and makes gates through friendly walls.',
   bridge: 'Crosses water between two banks; Engineering extends the maximum span.',
@@ -19,11 +21,10 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   camp: 'Grows grain that peasants carry to the town or its granary.',
   granary: 'Peasants collect grain from here, extending this city’s farming area. +25% food from friendly farms within 6 tiles. One per city; bonuses do not stack.',
   militaryAcademy: 'Choose your army’s formation.',
-  foundry: 'Equips field cannon. Upkeep: 200 gold / 30s.',
+  foundry: `Equips field cannon · ${FIELD_CANNON_UPKEEP} gold / ${ECONOMY_INTERVAL}s per cannon`,
   thermalBath: 'Build over a mud pool. Adds 30% house capacity to the nearest friendly town, rounded to whole residents. Does not stack.',
   house: 'Adds housing so this city can grow.',
   apartments: 'Dense housing for a growing city.',
-  hospital: 'Heals friendly people nearby.',
   factory: 'Increases your realm’s gold output.',
   goldMine: 'Control with troops to earn a share of world gold output.',
   palisade: 'A wooden barrier that blocks enemies; roads make gates.',
@@ -34,7 +35,7 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   fort: 'Claims nearby unowned land and fires at enemy units and buildings.',
   supplyDepot: 'Sends healing supplies to the Leader and nearby troops.',
   ballista: 'Slowly fires long-range bolts, prioritizing enemy buildings before units.',
-  siegeCannon: 'Fixed rotating cannon: 5× ballista damage; 50% splash to all units and buildings within 2 tiles, including friendlies.',
+  siegeCannon: 'Heavy damage to buildings. Splash can hit friendly units and buildings.',
   observationPost: 'Posts a concealed scout with extended sight on neutral land.',
   well: 'Upgrades nearby homes to level two housing.',
   fountain: 'Enables level four housing nearby.',
@@ -48,8 +49,8 @@ export const BUILD_DESCRIPTIONS: Record<Exclude<BuildSelection, 'clearTrees'>, s
   marketplace: 'Choose a land trade destination.',
   forum: 'Spend culture on permanent achievements for your faction. Approach within three tiles of the completed forum to open its achievement tree.',
   colosseum: 'Public games: doubles population growth across your realm and triples culture within 5 tiles, fading to normal by 25 tiles. Needs a town of 200 people. Does not stack.',
-  barracks: 'Trains pikemen and, after Gunpowder, musketmen. Musters every new recruit for its town. Sets your army composition.',
-  palace: 'Founds a city with its own borders, housing, food and governor.',
+  barracks: 'Trains pikemen and, after Gunpowder, musketmen. Musters recruits for its town. Each completed barracks cuts recruitment time by 6%, up to 60%.',
+  palace: 'Claims land and establishes a new population center.',
   whalingPost: 'Launches one whaling ship with a 300-tile range. Needs a 2×2 shore site. Each whale delivery earns 250 gold and refreshes +5% movement for all your ships and units for 60 seconds.',
   shipyard: 'Requires a city of 100 people. Builds and repairs warships.',
   dock: 'Supports one fishing vessel carrying up to 20 food per trip; overfishing can permanently collapse the shared fishery. Provides a boat for the Leader. Receives trade ships from neutral village docks over connected water, with no distance limit. Deliveries earn 0.05 gold per water-route tile, or 0.4 gold with trade ties (8×). Paid on arrival; the return journey earns nothing.',
@@ -61,14 +62,15 @@ export function actionTooltip(description: string, cost: string | number = 0, co
 type TownBuildTerms = ReturnType<typeof townBuildTerms>;
 
 export function townBuildDetails({ upkeep, residents }: TownBuildTerms): string {
-  return `${upkeep} gold / ${ECONOMY_INTERVAL}s upkeep${residents ? ` · ${residents} residents in your first new town` : ''}`;
+  const maintenance = upkeep ? `${upkeep} gold / ${ECONOMY_INTERVAL}s upkeep after ${SETTLEMENT_UPKEEP_GRACE}s` : 'No upkeep';
+  return `${maintenance}${residents ? ` · ${residents} founding residents` : ''}`;
 }
 
 export function buildTooltip(kind: Exclude<BuildSelection, 'clearTrees'>, gold: number, seconds: number, upkeepMultiplier = 1, town?: TownBuildTerms): string {
   const perTile = ['road', 'bridge', 'wall', 'palisade', 'irrigation', 'camp'].includes(kind) ? ' / tile' : '';
   const cost = `${constructionGoldText(gold)} gold${perTile}${kind === 'observationPost' ? ' + 1 population' : ''}`;
-  if (kind === 'palace' && town) return actionTooltip(BUILD_DESCRIPTIONS.palace, cost, 0, `Build time: ${Math.round(seconds)}s · ${townBuildDetails(town)}`);
-  const upkeep = ({ palace: SETTLEMENT_MAINTENANCE, woodenTower: WATCHTOWER_MAINTENANCE, tower: WATCHTOWER_MAINTENANCE,
+  if (kind === 'palace') return actionTooltip(BUILD_DESCRIPTIONS.palace, cost, 0, `Build time: ${Math.round(seconds)}s · ${townBuildDetails(town ?? { upkeep: SETTLEMENT_MAINTENANCE, residents: 0 })}`);
+  const upkeep = ({ woodenTower: WATCHTOWER_MAINTENANCE, tower: WATCHTOWER_MAINTENANCE,
     guardPost: GUARD_POST_UPKEEP, fort: FORT_UPKEEP, observationPost: OBSERVATION_POST_UPKEEP, ...BUILDING_UPKEEP } as Partial<Record<BuildSelection, number>>)[kind];
-  return actionTooltip(BUILD_DESCRIPTIONS[kind], cost, 0, `Build time: ${Math.round(seconds)}s${upkeep ? ` · Upkeep: ${Math.round(upkeep * upkeepMultiplier * 100) / 100} gold${perTile} / 30s${kind === 'palace' ? ', rising with each town' : ''}` : ''}`);
+  return actionTooltip(BUILD_DESCRIPTIONS[kind], cost, 0, `Build time: ${Math.round(seconds)}s${upkeep ? ` · Upkeep: ${Math.round(upkeep * upkeepMultiplier * 100) / 100} gold${perTile} / 30s` : ''}`);
 }

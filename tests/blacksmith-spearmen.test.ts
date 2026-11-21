@@ -17,11 +17,11 @@ describe('blacksmith spearman allocation', () => {
     const { state, smithy, range } = fixture();
     delete state.factions[0].research!.levels.militaryTactics;
     expect(setSpearmanFraction(state, smithy, .5)).toBe(false);
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, fraction: .5 }).ok).toBe(false);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, count: 2 }).ok).toBe(false);
     state.factions[0].research!.levels.militaryTactics = 1;
     expect(setSpearmanFraction(state, state.buildings[1], .5)).toBe(false);
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: range.id, fraction: .5 }).ok).toBe(true);
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, fraction: .5 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: range.id, count: 2 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: smithy.id, count: 2 }).ok).toBe(true);
     const trainees = state.units.filter(unit => unit.training);
     expect(trainees).toHaveLength(2);
     expect(trainees.every(unit => unit.training?.range === smithy.id && unit.training.role === 'spearman')).toBe(true);

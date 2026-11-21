@@ -9,6 +9,8 @@
   cursor: help; pointer-events: auto; touch-action: manipulation;
 }
 .army-warning-sign { animation: army-warning-flash .7s ease-in-out infinite; }
+.army-warning[data-kind="attack"] { animation: army-warning-flash .8s ease-in-out infinite; }
+.army-warning[data-kind="attack"] .army-warning-sign { animation: none; }
 .army-warning:hover, .army-warning:active { background: var(--faction-color); border-color: #fff5d3; }
 .army-warning:focus-visible { outline: 2px solid white; outline-offset: 4px; }
 .army-warning-bearing {
@@ -25,4 +27,6 @@
 }
 .army-warning-sign.town-icon { width: 26px; height: 26px; background: var(--town-icon) center / contain no-repeat; image-rendering: pixelated; }
 @keyframes army-warning-flash { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
-@media (prefers-reduced-motion: reduce) { .army-warning-sign { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .army-warning-sign, .army-warning[data-kind="attack"] { animation: none; }
+}

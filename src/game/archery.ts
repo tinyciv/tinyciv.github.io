@@ -1,23 +1,22 @@
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { rustEngine } from './rust-engine';
 import { isOffensiveMember } from './offensive-native';
-import { UNIT_KIND_CODES, BUILDING_KIND_CODES } from './entity-store';
-import { allocateRetinueFraction, nativeRetinueTargets, nativeRecruitRole, RETINUE_ROLES } from './retinue-native';
+import { entityStore, UNIT_KIND_CODES, BUILDING_KIND_CODES } from './entity-store';
+import { allocateRetinueCount, allocateRetinueFraction, nativeRetinueTargets, nativeRecruitRole, RETINUE_ROLES } from './retinue-native';
 import { areSwordsmenUnlocked, areArchersUnlocked, areSpearmenUnlocked, arePikemenUnlocked, areMusketmenUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked, researchLevel } from './research';
 import { buildingActivityAvailable, isCompositionBuilding } from './building-activity';
 import { constructionEdges } from './builders';
 import { canMove, canWalk, hasStaticPath } from './pathfinding';
-import { nearbyUnits, unitOccupancy } from './spatial';
-import { entityStore } from './entity-store';
+import { indexedLeader, nearbyUnits, refreshIndexedUnit, unitOccupancy } from './spatial';
 import { structuresOf, STRUCTURE_READY } from './structure-index';
 import { purchasedRetinueSlots } from './retinue-purchases';
 import { leaderRetinueBonus } from './leader-progression';
 import { factionHasDevelopedResource } from './resource-development';
+import { hasLivestock } from './livestock';
 import { cityOwnership } from './city-ownership';
-import { isMountedKind, buildingHeight, buildingReady, buildingWidth, distance, isRetinueMember, type Building, type Faction, type GameState, type Point, type Unit } from './types';
+import { buildingHeight, buildingReady, buildingWidth, distance, isMountedKind, isRetinueMember, type Building, type Faction, type GameState, type Point, type Unit } from './types';
 
 export const ARCHER_RANGE = 4;
-export const ARCHER_EXTRA_UPKEEP = .5;
 export const ARCHERY_TRAINING_SECONDS = 2;
 export function desiredRetinueSize(faction: Faction, leader?: Unit): number {
   const population = Math.max(0, faction.population);
@@ -49,7 +48,6 @@ const RANGER_UPKEEP = rustEngine.exploration_ranger(3, 1, 1);
 const RANGER_FLEE_RADIUS = rustEngine.exploration_ranger(2, 1.8, 1);
 export const retinueUpkeep = (unit: Pick<Unit, 'kind'> & { ranger?: boolean }): number => unit.ranger ? RANGER_UPKEEP : upkeepByKind[unit.kind];
 export const unitAttackTiming = (unit: Pick<Unit, 'kind'>) => timingByKind[unit.kind];
-export const mountedSpeedMultiplier = (kind: Unit['kind']): number => kind === 'knight' ? 1.45 : isMountedKind(kind) ? HORSEMAN_SPEED_MULTIPLIER : 1;
 export const swordsmanFraction = (faction: Faction): number => areSwordsmenUnlocked(faction) ? Math.min(fractionOf(faction.swordsmanFraction), 1 - mountedFraction(faction)) : 0;
 export const archerFraction = (faction: Faction): number => Math.min(fractionOf(faction.archerFraction), 1 - mountedFraction(faction) - swordsmanFraction(faction));
 export const spearmanFraction = (faction: Faction): number => Math.min(fractionOf(faction.spearmanFraction), Math.max(0, 1 - mountedFraction(faction) - swordsmanFraction(faction) - archerFraction(faction)));
@@ -65,44 +63,74 @@ export const canRecruitSpearmen = (state: GameState, faction: Faction): boolean 
   areSpearmenUnlocked(faction) && factionHasDevelopedResource(state, faction.id, 'copper');
 const members = (state: GameState, factionId: number): Unit[] => state.units.filter(unit => unit.faction === factionId
   && unit.hp > 0 && isRetinueMember(unit) && unit.marauderPack === undefined);
+const SPEARMAN_MASK = 1 << RETINUE_ROLES.indexOf('spearman');
+const MOUNTED_MASK = RETINUE_ROLES.reduce((mask, role, index) => mask | Number(isMountedKind(role)) << index, 0);
 function roleUnlockMask(faction: Faction | undefined): number {
   const unlocked = [areKnightsUnlocked(faction), areHorseArchersUnlocked(faction), areHorsemenUnlocked(faction),
     areSwordsmenUnlocked(faction), areArchersUnlocked(faction), areSpearmenUnlocked(faction), arePikemenUnlocked(faction), areMusketmenUnlocked(faction), researchLevel(faction, 'fieldCannon') > 0, true];
   return unlocked.reduce((mask, allowed, index) => mask | Number(allowed) << index, 0);
 }
+function trainableRoleMask(state: GameState, faction: Faction, unlocked: number): number {
+  if (unlocked & SPEARMAN_MASK && !canRecruitSpearmen(state, faction)) unlocked &= ~SPEARMAN_MASK;
+  if (unlocked & MOUNTED_MASK && !hasLivestock(state, faction.id, 'horse')) unlocked &= ~MOUNTED_MASK;
+  return unlocked;
+}
+const ordinarySlots = (faction: Faction | undefined, total: number): number =>
+  Math.floor(rustEngine.exploration_ordinary_slots(total, faction?.rangerCompanions ?? 0));
+
 function compositionTargets(state: GameState, faction: Faction | undefined, total: number): Record<RetinueRole, number> {
-  return nativeRetinueTargets(state, faction, rustEngine.exploration_ordinary_slots(total, faction?.rangerCompanions ?? 0), roleUnlockMask(faction));
+  return nativeRetinueTargets(state, faction, ordinarySlots(faction, total), roleUnlockMask(faction));
 }
-export function retinueComposition(state: GameState, factionId: number): { total: number; fieldCannons: number; currentFieldCannons: number; horseArchers: number; currentHorseArchers: number; knights: number; currentKnights: number; swordsmen: number; currentSwordsmen: number; archers: number; spearmen: number; pikemen: number; currentPikemen: number; musketmen: number; currentMusketmen: number; horsemen: number; warriors: number; currentHorsemen: number; currentArchers: number; currentSpearmen: number; training: number } {
+
+export function retinueComposition(state: GameState, factionId: number) {
   const faction = state.factions.find(faction => faction.id === factionId);
-  const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === factionId && unit.hp > 0);
-  const total = faction ? desiredRetinueSize(faction, leader) : 0;
-  const wanted = compositionTargets(state, faction, total), soldiers = members(state, factionId).filter(unit => !unit.ranger);
-  return { total, fieldCannons: wanted.fieldCannon, currentFieldCannons: soldiers.filter(unit => unit.kind === 'fieldCannon').length, horseArchers: wanted.horseArcher, knights: wanted.knight, currentHorseArchers: soldiers.filter(u => u.kind === 'horseArcher').length, currentKnights: soldiers.filter(u => u.kind === 'knight').length, swordsmen: wanted.swordsman, currentSwordsmen: soldiers.filter(unit => unit.kind === 'swordsman').length, archers: wanted.archer, spearmen: wanted.spearman, horsemen: wanted.horseman, warriors: wanted.warrior,
-    currentHorsemen: soldiers.filter(unit => unit.kind === 'horseman').length,
-    currentArchers: soldiers.filter(unit => unit.kind === 'archer').length,
-    currentSpearmen: soldiers.filter(unit => unit.kind === 'spearman').length,
-    musketmen: wanted.musketman, currentMusketmen: soldiers.filter(unit => unit.kind === 'musketman').length,
-    pikemen: wanted.pikeman, currentPikemen: soldiers.filter(unit => unit.kind === 'pikeman').length,
-    training: soldiers.filter(unit => unit.training).length };
+  const total = faction ? desiredRetinueSize(faction, indexedLeader(state, factionId)) : 0;
+  const slots = ordinarySlots(faction, total);
+  const wanted = nativeRetinueTargets(state, faction, slots, roleUnlockMask(faction));
+  const current: Record<RetinueRole, number> = { warrior: 0, swordsman: 0, spearman: 0, pikeman: 0, musketman: 0,
+    archer: 0, horseman: 0, horseArcher: 0, knight: 0, fieldCannon: 0 };
+  let training = 0;
+  for (const unit of entityStore(state).units.queryFaction('retinue', factionId)) {
+    if (unit.hp <= 0 || unit.marauderPack !== undefined || unit.ranger) continue;
+    current[unit.kind as RetinueRole]++;
+    if (unit.training) training++;
+  }
+  return {
+    total, slots, training, warriors: wanted.warrior, currentWarriors: current.warrior,
+    archers: wanted.archer, currentArchers: current.archer, horsemen: wanted.horseman, currentHorsemen: current.horseman,
+    horseArchers: wanted.horseArcher, currentHorseArchers: current.horseArcher, knights: wanted.knight, currentKnights: current.knight,
+    swordsmen: wanted.swordsman, currentSwordsmen: current.swordsman, spearmen: wanted.spearman, currentSpearmen: current.spearman,
+    pikemen: wanted.pikeman, currentPikemen: current.pikeman, musketmen: wanted.musketman, currentMusketmen: current.musketman,
+    fieldCannons: wanted.fieldCannon, currentFieldCannons: current.fieldCannon,
+  };
 }
+
+/** Set an exact quota at the current capacity and retain the resulting mix as it grows. */
+export function setRetinueCount(state: GameState, building: Building, role: RetinueRole, count: number): boolean {
+  const faction = state.factions.find(candidate => candidate.id === building.faction);
+  if (!Number.isSafeInteger(count) || count < 0 || !faction
+    || !isCompositionBuilding(building) || !buildingActivityAvailable(state, building)) return false;
+  const total = ordinarySlots(faction, desiredRetinueSize(faction, indexedLeader(state, faction.id)));
+  if (count > total) return false;
+  const unlocked = roleUnlockMask(faction);
+  const trainable = trainableRoleMask(state, faction, unlocked);
+  const schools = structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry');
+  if (!allocateRetinueCount(state, faction, role, count, total, schools, unlocked, trainable)) return false;
+  scheduleArcheryTraining(state, true);
+  return true;
+}
+
 /** All composition buildings edit the same faction-wide quotas. Training still
  * takes place at each role's own school, using the normal recruitment rules. */
 export function setRetinueFraction(state: GameState, building: Building, role: RetinueRole, fraction: number): boolean {
   const faction = state.factions.find(faction => faction.id === building.faction);
   if (!buildingActivityAvailable(state, building) || !isCompositionBuilding(building) || !faction
     || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) return false;
-  if (fraction > 0 && (role === 'archer' && !areArchersUnlocked(faction)
-    || role === 'swordsman' && !areSwordsmenUnlocked(faction)
-    || role === 'spearman' && !canRecruitSpearmen(state, faction)
-    || role === 'pikeman' && !arePikemenUnlocked(faction)
-    || role === 'musketman' && !areMusketmenUnlocked(faction)
-    || role === 'fieldCannon' && !researchLevel(faction, 'fieldCannon')
-    || !mountedRoleUnlocked(faction, role))) return false;
+  const trainable = trainableRoleMask(state, faction, roleUnlockMask(faction));
   if (!allocateRetinueFraction(state, faction, role, fraction, [knightFraction(faction), horseArcherFraction(faction),
     horsemanFraction(faction), swordsmanFraction(faction), archerFraction(faction), spearmanFraction(faction), pikemanFraction(faction), musketmanFraction(faction), fieldCannonFraction(faction)],
     structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'),
-    roleUnlockMask(faction) & (canRecruitSpearmen(state, faction) ? -1 : ~(1 << RETINUE_ROLES.indexOf('spearman'))))) return false;
+    trainable)) return false;
   scheduleArcheryTraining(state, true);
   return true;
 }
@@ -121,6 +149,7 @@ const ROLE_STATS = Object.fromEntries([...RETINUE_ROLES, 'scout'].map((role, ind
   hp: rustEngine.retinue_stat(index, 0), attack: rustEngine.retinue_stat(index, 1), defense: rustEngine.retinue_stat(index, 2),
   speed: rustEngine.retinue_stat(index, 3), range: rustEngine.retinue_stat(index, 4),
 }])) as Record<RetinueRole | 'scout', { hp: number; attack: number; defense: number; speed: number; range: number }>;
+export const retinueSpeedMultiplier = (kind: Unit['kind']): number => ROLE_STATS[kind as RetinueRole]?.speed ?? 1;
 const roleSchool = (role: RetinueRole, school: Building): boolean =>
   !!rustEngine.retinue_training_school(RETINUE_ROLES.indexOf(role), BUILDING_KIND_CODES[school.kind]);
 /** Preserve wounds, equipment, squad identity and veterancy across role changes.
@@ -143,27 +172,33 @@ export function setSoldierRole(unit: Unit, role: RetinueRole | 'scout'): void {
   }
 }
 export function nextRecruitRole(state: GameState, faction: Faction): RetinueRole {
-  return recruitRole(state, faction, canRecruitSpearmen(state, faction));
+  return recruitRole(state, faction, canRecruitSpearmen(state, faction), hasLivestock(state, faction.id, 'horse'));
 }
 /** The advanced scenario grants an already equipped escort once at creation. */
 export function advancedStartingEscortRole(state: GameState, faction: Faction): RetinueRole {
-  return recruitRole(state, faction, areSpearmenUnlocked(faction));
+  return recruitRole(state, faction, areSpearmenUnlocked(faction), true);
 }
-function recruitRole(state: GameState, faction: Faction, spearsAvailable: boolean): RetinueRole {
+function recruitRole(state: GameState, faction: Faction, spearsAvailable: boolean, horsesAvailable: boolean): RetinueRole {
   const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === faction.id && unit.hp > 0);
   const soldiers = members(state, faction.id).filter(unit => !unit.ranger);
   compositionTargets(state, faction, desiredRetinueSize(faction, leader));
-  return nativeRecruitRole(state, soldiers, structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'), spearsAvailable);
+  return nativeRecruitRole(state, soldiers, structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry'),
+    spearsAvailable, horsesAvailable);
 }
 const clearTrainingPath = (unit: Unit): void => {
-  unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.target = undefined; unit.repathAt = 0;
+  unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.target = undefined; unit.repathAt = 0; unit.stuckFor = 0;
 };
+function endTraining(state: GameState, unit: Unit): void {
+  delete unit.training;
+  clearTrainingPath(unit);
+  refreshIndexedUnit(state, unit);
+}
 const nextPlans = new WeakMap<GameState, number>();
 const trainingDeferrals = new WeakMap<Unit, {state: GameState; until: number}>();
 /** Explicit field orders and an unreachable school take priority over retraining. */
 export function interruptOutboundTraining(state: GameState, unit: Unit): void {
   if (unit.training?.enteredAt !== undefined) return;
-  if (unit.training) { delete unit.training; clearTrainingPath(unit); }
+  if (unit.training) endTraining(state, unit);
   trainingDeferrals.set(unit, {state, until: state.time + 30});
 }
 /** One allocator owns combat roles, so the building sliders cannot send
@@ -171,24 +206,25 @@ export function interruptOutboundTraining(state: GameState, unit: Unit): void {
 export function scheduleArcheryTraining(state: GameState, immediate = false): void {
   if (!immediate && state.time < (nextPlans.get(state) ?? 0)) return;
   nextPlans.set(state, state.time + 1);
+  const changed = new Set<Unit>();
   for (const faction of state.factions) {
+    const trainable = trainableRoleMask(state, faction, roleUnlockMask(faction));
     const schools = structuresOf(state, faction.id, STRUCTURE_READY, 'archeryRange', 'blacksmith', 'stable', 'barracks', 'foundry');
     const soldiers = members(state, faction.id).filter(unit => !unit.ranger);
     // Entered trainees finish safely; only outbound trips can be cancelled.
     for (const unit of soldiers) if (immediate && unit.training && unit.training.enteredAt === undefined) {
-      delete unit.training; clearTrainingPath(unit);
+      delete unit.training; clearTrainingPath(unit); changed.add(unit);
     }
     const wanted = compositionTargets(state, faction, soldiers.length + (faction.rangerCompanions ?? 0)), projected: Record<RetinueRole, number> = { fieldCannon: 0, warrior: 0, swordsman: 0, spearman: 0, pikeman: 0, musketman: 0, archer: 0, horseman: 0, horseArcher: 0, knight: 0 };
     for (const unit of soldiers) projected[(unit.training?.role ?? unit.kind) as RetinueRole]++;
     for (const role of ['fieldCannon', 'knight', 'horseArcher', 'horseman', 'archer', 'spearman', 'pikeman', 'musketman', 'swordsman', 'warrior'] as const) {
-      if (role === 'swordsman' && !areSwordsmenUnlocked(faction) || role === 'archer' && !areArchersUnlocked(faction) || role === 'spearman' && !canRecruitSpearmen(state, faction) || role === 'pikeman' && !arePikemenUnlocked(faction) || role === 'musketman' && !areMusketmenUnlocked(faction)
-    || role === 'fieldCannon' && !researchLevel(faction, 'fieldCannon') || !mountedRoleUnlocked(faction, role)) continue;
+      if (!(trainable & (1 << RETINUE_ROLES.indexOf(role)))) continue;
       const classrooms = schools.filter(school => roleSchool(role, school));
       let needed = wanted[role] - projected[role];
       if (needed <= 0 || !classrooms.length) continue;
       const candidates = soldiers.filter(unit => unit.kind !== role && !unit.training && !unit.garrison && !unit.inside && !unit.routed && unit.order !== 'flee' && !isOffensiveMember(state, unit)
         && unit.recallIssuedAt === undefined && !unit.forcedAttack
-        && !(trainingDeferrals.get(unit)?.state === state && trainingDeferrals.get(unit)!.until > state.time))
+        && (immediate || !(trainingDeferrals.get(unit)?.state === state && trainingDeferrals.get(unit)!.until > state.time)))
         .sort((a, b) => Math.min(...classrooms.map(school => distance(a, school))) - Math.min(...classrooms.map(school => distance(b, school))) || a.id - b.id);
       for (const unit of candidates) {
         const from = unit.kind as RetinueRole;
@@ -198,11 +234,14 @@ export function scheduleArcheryTraining(state: GameState, immediate = false): vo
         if (!school) continue;
         unit.training = { range: school.id, role };
         clearTrainingPath(unit);
+        changed.add(unit);
         projected[from]--; projected[role]++;
         if (!--needed) break;
       }
     }
   }
+  // Publish only the final assignments so reassigned groups stay out of the collision index.
+  for (const unit of changed) refreshIndexedUnit(state, unit);
 }
 interface TrainingPlan extends DecisionClock { training: NonNullable<Unit['training']>; goal?: Point }
 const trainingPlans = new WeakMap<Unit, TrainingPlan>();
@@ -214,8 +253,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
   const training = unit.training;
   if (!training) return false;
   let plan = trainingPlans.get(unit);
-  if (!plan) { plan = { training }; trainingPlans.set(unit, plan); }
-  if (plan.training !== training) { plan.training = training; plan.goal = undefined; }
+  if (plan?.training !== training) { plan = { training }; trainingPlans.set(unit, plan); }
   const school = entityStore(state).buildings.get(training.range);
   const range = school && school.faction === unit.faction && buildingReady(school) ? school : undefined;
   const validSchool = range && roleSchool(training.role, range);
@@ -224,7 +262,7 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
     // clear cells after collapse, waiting safely if a crowd occupies every exit.
     if (training.enteredAt !== undefined) {
       if (!decisionDue(plan, state.time, unit.id)) return true;
-      const occupied = unitOccupancy(state, unit), options: Point[] = school ? constructionEdges(state, school) : [];
+      const occupied = unitOccupancy(state, { ...unit, training: undefined }), options: Point[] = school ? constructionEdges(state, school) : [];
       if (!school) for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++)
         options.push({ x: Math.floor(unit.x) + dx + .5, y: Math.floor(unit.y) + dy + .5 });
       const exit = options.sort((a, b) => distance(unit, a) - distance(unit, b)).find(point =>
@@ -236,30 +274,32 @@ export function updateArcheryTraining(state: GameState, unit: Unit, dt: number, 
       if (!exit) return true;
       unit.x = exit.x; unit.y = exit.y; unit.joiningRetinue = true;
     }
-    unit.inside = false; delete unit.training; unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.repathAt = 0;
+    unit.inside = false;
+    endTraining(state, unit);
     return false;
   }
+  const supplied = training.role === 'spearman' ? factionHasDevelopedResource(state, unit.faction, 'copper')
+    : !isMountedKind(training.role) || hasLivestock(state, unit.faction, 'horse');
   if (training.enteredAt !== undefined) {
-    // A lost mine pauses unissued spears; existing soldiers retain their arms.
-    if (training.role === 'spearman' && !factionHasDevelopedResource(state, unit.faction, 'copper')) return true;
+    if (!supplied) return true;
     if (state.time - training.enteredAt < ARCHERY_TRAINING_SECONDS || !decisionDue(plan, state.time, unit.id)) return true;
-    const edges = constructionEdges(state, range), occupied = unitOccupancy(state, unit);
+    const edges = constructionEdges(state, range), occupied = unitOccupancy(state, { ...unit, training: undefined });
     const exit = edges.find(edge => !occupied.has(Math.floor(edge.y) * state.world.width + Math.floor(edge.x)));
     if (!exit) return true;
     setSoldierRole(unit, training.role);
     if (training.role === 'fieldCannon') unit.fieldCannon = {
       nextUpkeepAt: state.time + rustEngine.field_cannon_constant(3), funded: true, supplyCity: cityOwnership(state).building(range)?.id,
     };
-    entityStore(state).units.updateRoles(unit);
     unit.inside = false; unit.x = exit.x; unit.y = exit.y;
-    delete unit.training; unit.joiningRetinue = true;
-    unit.path = undefined; unit.pathGoal = undefined; unit.destination = undefined; unit.target = undefined; unit.repathAt = 0;
+    unit.joiningRetinue = true;
+    endTraining(state, unit);
+    entityStore(state).units.updateRoles(unit);
     return true;
   }
-  if (training.role === 'spearman' && !factionHasDevelopedResource(state, unit.faction, 'copper')) {
-    delete unit.training; clearTrainingPath(unit); return false;
+  if (!supplied) {
+    endTraining(state, unit); return false;
   }
-  if (unit.routed || (unit.lastDamagedAt ?? -100) > state.time - 3) return false;
+  if (unit.routed) { interruptOutboundTraining(state, unit); return false; }
   const gap = Math.hypot(Math.max(range.x - unit.x, 0, unit.x - range.x - buildingWidth(range)),
     Math.max(range.y - unit.y, 0, unit.y - range.y - buildingHeight(range)));
   if (gap <= .65) {

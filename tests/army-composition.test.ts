@@ -4,6 +4,7 @@ import { entityStore } from '../src/game/entity-store';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { scoutRealm } from './helpers/scouts';
 import { withDevelopedResources } from './helpers/developed-resources';
+import { withHorsePasture } from './helpers/horse-pasture';
 
 const controls = ['archeryRange', 'blacksmith', 'barracks', 'stable'] as const;
 const roles = [
@@ -14,7 +15,7 @@ const fields = ['archerFraction', 'spearmanFraction', 'swordsmanFraction', 'pike
   'horsemanFraction', 'horseArcherFraction', 'knightFraction'] as const;
 
 function fixture() {
-  const state = withDevelopedResources(scoutRealm(), ['copper']), faction = state.factions[0];
+  const state = withHorsePasture(withDevelopedResources(scoutRealm(), ['copper'])), faction = state.factions[0];
   Object.assign(faction.research!.levels, { metalCasting: 1, urbanMilitia: 1, horsebackRiding: 1, compoundBow: 1, stirrups: 1 });
   const buildings = controls.map((kind, index) => ({ ...state.buildings[0], id: 300 + index, kind, x: 14 }));
   entityStore(state).buildings.add(...buildings);
@@ -26,7 +27,7 @@ describe.each(controls)('shared army controls at %s', kind => {
     const { state, faction, buildings } = fixture();
     faction.knightFraction = 1;
     const building = buildings.find(building => building.kind === kind)!;
-    expect(applyGameCommand(state, 0, { type, buildingId: building.id, fraction: .5 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type, buildingId: building.id, count: 2 }).ok).toBe(true);
     const counts = retinueComposition(state, 0);
     expect(counts[count]).toBe(2);
     expect(roles.reduce((sum, [, role]) => sum + counts[role], 0)).toBe(counts.total);
@@ -38,17 +39,17 @@ describe('retinue allocation changes', () => {
   it('consumes spare warrior slots before changing other assigned roles', () => {
     const { state, faction, buildings } = fixture(), buildingId = buildings[0].id;
     faction.archerFraction = .25;
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId, fraction: .5 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId, count: 2 }).ok).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({ archers: 1, spearmen: 2, warriors: 1 });
-    expect(applyGameCommand(state, 0, { type: 'swordsmen', buildingId, fraction: .5 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'swordsmen', buildingId, count: 2 }).ok).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({ archers: 1, swordsmen: 2, spearmen: 1, warriors: 0 });
   });
 
   it('keeps reduced allocations from returning after their replacement is reduced', () => {
     const { state, faction, buildings } = fixture(), buildingId = buildings[0].id;
     faction.knightFraction = 1;
-    expect(applyGameCommand(state, 0, { type: 'pikemen', buildingId, fraction: 1 }).ok).toBe(true);
-    expect(applyGameCommand(state, 0, { type: 'pikemen', buildingId, fraction: .25 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'pikemen', buildingId, count: 4 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'pikemen', buildingId, count: 1 }).ok).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({ knights: 0, pikemen: 1, warriors: 3 });
     expect(faction.knightFraction).toBe(0);
   });
@@ -56,9 +57,9 @@ describe('retinue allocation changes', () => {
   it('accounts for pikemen when directly exchanging warriors and archers', () => {
     const { state, faction, buildings } = fixture(), buildingId = buildings[0].id;
     faction.pikemanFraction = .5;
-    expect(applyGameCommand(state, 0, { type: 'warriors', buildingId, fraction: .25 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'warriors', buildingId, count: 1 }).ok).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({ pikemen: 2, warriors: 1, archers: 1 });
-    expect(applyGameCommand(state, 0, { type: 'warriors', buildingId, fraction: 1 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'warriors', buildingId, count: 4 }).ok).toBe(true);
     expect(retinueComposition(state, 0)).toMatchObject({ pikemen: 0, warriors: 4, archers: 0 });
   });
 
@@ -66,7 +67,7 @@ describe('retinue allocation changes', () => {
     const { state, buildings } = fixture();
     const stable = buildings.find(building => building.kind === 'stable')!;
     const smithy = buildings.find(building => building.kind === 'blacksmith')!;
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: stable.id, fraction: .5 }).ok).toBe(true);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId: stable.id, count: 2 }).ok).toBe(true);
     const trainees = state.units.filter(unit => unit.training?.role === 'spearman');
     expect(trainees).toHaveLength(2);
     expect(trainees.every(unit => unit.training?.range === smithy.id)).toBe(true);
@@ -75,12 +76,20 @@ describe('retinue allocation changes', () => {
   it('preserves research and command validation at shared controls', () => {
     const { state, faction, buildings } = fixture(), buildingId = buildings[0].id;
     delete faction.research!.levels.metalCasting;
-    expect(applyGameCommand(state, 0, { type: 'swordsmen', buildingId, fraction: .5 }).ok).toBe(false);
+    expect(applyGameCommand(state, 0, { type: 'swordsmen', buildingId, count: 2 }).ok).toBe(false);
     delete faction.research!.levels.militaryTactics;
-    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId, fraction: .5 }).ok).toBe(false);
-    for (const fraction of [NaN, Infinity, -.01, 1.01]) {
-      expect(applyGameCommand(state, 0, { type: 'archers', buildingId, fraction }).ok).toBe(false);
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId, count: 2 }).ok).toBe(false);
+    for (const count of [NaN, Infinity, -1, 1.5, 5]) {
+      expect(applyGameCommand(state, 0, { type: 'archers', buildingId, count }).ok).toBe(false);
     }
     expect(fields.every(field => faction[field] === undefined)).toBe(true);
+  });
+
+  it('assigns one slot in a large retinue without changing other specialist counts', () => {
+    const { state, faction, buildings } = fixture(), buildingId = buildings[0].id;
+    faction.bonusRetinueSlots = 246;
+    faction.archerFraction = .12;
+    expect(applyGameCommand(state, 0, { type: 'spearmen', buildingId, count: 1 }).ok).toBe(true);
+    expect(retinueComposition(state, 0)).toMatchObject({ slots: 250, archers: 30, spearmen: 1, warriors: 219 });
   });
 });

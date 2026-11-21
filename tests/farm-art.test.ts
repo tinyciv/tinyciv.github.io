@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { drawFarmField, drawFarmOcclusion, drawFoodExpiryClock, farmOcclusionHeight, fieldGrowth, fieldStage, loadFarmArt, orchardAppearance } from '../src/game/farm-art';
+import { drawFarmField, drawFarmOcclusion, drawFoodExpiryClock, farmOcclusionHeight, fieldGrowth, fieldStage, loadFarmArt, orchardAppearance, wheatJoinMask } from '../src/game/farm-art';
 import { CAMP_FIELD_OFFSETS, FIELD_HARVEST_SECONDS } from '../src/game/farms';
 import type { Building, FarmField } from '../src/game/types';
 import { punyAtlas } from './puny-atlas.js';
@@ -17,7 +17,8 @@ const field = (x: number, y: number, faction = 0): FarmField => ({ id: y * 100 +
 
 beforeAll(async () => {
   const paths = ['farms/turned-loam-joins.png', 'pixelhole-overworld/Seedling-Wheat-Joins.png',
-    'pixelhole-overworld/Green-Wheat-Joins.png', 'pixelhole-overworld/Wheatfield-Joins.png'];
+    'pixelhole-overworld/Green-Wheat-Joins.png', 'pixelhole-overworld/Wheatfield-Joins.png',
+    'farms/wheat-growth-joins.png'];
   const sheets = paths.map(file => punyAtlas(new URL(`../public/assets/${file}`, import.meta.url)));
   vi.stubGlobal('document', { createElement: () => {
     let pixels = sheets[0];
@@ -42,9 +43,9 @@ afterAll(() => vi.unstubAllGlobals());
 
 describe('grain harvest appearance', () => {
   it.each([
-    [0, 0, 'turned-loam-joins.png'], [5.999, 0, 'turned-loam-joins.png'],
-    [6, 1, 'Seedling-Wheat-Joins.png'], [11.999, 1, 'Seedling-Wheat-Joins.png'],
-    [12, 2, 'Green-Wheat-Joins.png'], [38.999, 2, 'Green-Wheat-Joins.png'],
+    [0, 0, 'turned-loam-joins.png'], [5.999, 0, 'wheat-growth-joins.png'],
+    [6, 1, 'Seedling-Wheat-Joins.png'], [11.999, 1, 'wheat-growth-joins.png'],
+    [12, 2, 'Green-Wheat-Joins.png'], [38.999, 2, 'wheat-growth-joins.png'],
     [39, 3, 'Wheatfield-Joins.png'], [45, 3, 'Wheatfield-Joins.png'], [60, 3, 'Wheatfield-Joins.png'],
   ] as const)
     ('draws growth at %s seconds with stage %s from %s', (time, stage, filename) => {
@@ -54,10 +55,11 @@ describe('grain harvest appearance', () => {
       drawFarmField(c, 0, 0, 32, time, plot, 255);
       const crop = context.drawImage.mock.calls[0];
       expect(crop[0].filename).toBe(filename);
-      expect(crop.slice(1)).toEqual([240, 240, 16, 16, 0, 0, 32, 32]);
+      expect(crop.slice(3)).toEqual([16, 16, 0, 0, 32, 32]);
+      if (filename !== 'wheat-growth-joins.png') expect(crop.slice(1, 3)).toEqual([240, 240]);
     });
 
-  it.each([[6, 'Seedling-Wheat-Joins.png'], [15, 'Green-Wheat-Joins.png'], [39, 'Wheatfield-Joins.png']])
+  it.each([[4, 'wheat-growth-joins.png'], [6, 'Seedling-Wheat-Joins.png'], [15, 'Green-Wheat-Joins.png'], [39, 'Wheatfield-Joins.png']])
     ('uses the same joined tile for the field and foreground at %s seconds', (time, filename) => {
       const plot = field(1, 1);
       const context = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(), drawImage: vi.fn() };
@@ -65,12 +67,22 @@ describe('grain harvest appearance', () => {
       drawFarmField(c, 32, 32, 32, Number(time), plot, joins);
       const crop = context.drawImage.mock.calls[0];
       expect(crop[0].filename).toBe(filename);
-      expect(crop.slice(1, 5)).toEqual([48, 16, 16, 16]);
+      if (filename !== 'wheat-growth-joins.png') expect(crop.slice(1, 5)).toEqual([48, 16, 16, 16]);
       context.drawImage.mockClear();
       drawFarmOcclusion(c, 32, 32, 32, Number(time), plot, 48, 48, false, joins);
       expect(context.drawImage).toHaveBeenCalledOnce();
       expect(context.drawImage.mock.calls[0].slice(0, 5)).toEqual(crop.slice(0, 5));
     });
+
+  it('shares frames across synchronized fields and preserves a different observed frame in fog', () => {
+    const left = field(1, 1), right = field(2, 1);
+    const at = (x: number, y: number) => x === right.x && y === right.y ? right : undefined;
+    expect(fieldKey(left, 4, 2)).toBe(fieldKey(right, 4, 2));
+    expect(fieldKey(left, 4, 2)).not.toBe(fieldKey(left, 5, 2));
+    expect(wheatJoinMask(left, 4, at)).toBe(2);
+    expect(wheatJoinMask(left, 4, at, () => 3)).toBe(0);
+    expect(fieldKey({ ...left, planted: false }, 4)).toBe(fieldKey(left, 0));
+  });
 
   it('keeps seedling occlusion below green crops and green crops below golden wheat', () => {
     const plot = field(1, 1);
@@ -86,7 +98,7 @@ describe('grain harvest appearance', () => {
   });
 
   it('hides only lower legs in grown grain and leaves a walker in front of the southern crop edge', () => {
-    const plot = { ...field(1, 1), food: 1 };
+    const plot = { ...field(1, 1), nextHarvest: 0 };
     expect(farmOcclusionHeight(plot, 0)).toBeLessThan(.4);
     expect(farmOcclusionHeight({ ...plot, planted: false }, 0)).toBe(0);
     const context = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(), drawImage: vi.fn() };
@@ -140,13 +152,14 @@ describe('grain harvest appearance', () => {
     expect(keys.size).toBe(6);
   });
 
-  it('grows toward its scheduled crop and keeps ready grain visibly ripe until pickup', () => {
+  it('shows each stage of the new crop while the previous harvest awaits pickup', () => {
     const plot = field(1, 1);
     expect(fieldGrowth(plot, 0)).toBe(0);
     expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS / 2)).toBe(.5);
     expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS)).toBe(1);
     plot.food = 1.1; plot.nextHarvest = FIELD_HARVEST_SECONDS * 2;
-    expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS + 1)).toBe(1);
+    expect([60, 66, 72, 99].map(time => fieldStage(plot, time))).toEqual([0, 1, 2, 3]);
+    expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS + 1)).toBeCloseTo(1 / 60);
     plot.food = 0; plot.harvestedAt = FIELD_HARVEST_SECONDS * 7 / 6;
     expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS * 7 / 6)).toBeCloseTo(1 / 6);
     expect(fieldGrowth(plot, FIELD_HARVEST_SECONDS * 2)).toBe(1);

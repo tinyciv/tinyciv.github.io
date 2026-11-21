@@ -106,7 +106,7 @@ describe('semantic world revisions', () => {
     const world = fixture(); delete world.revision;
     const first = worldRevisions(world);
     expect(worldRevisions(world)).toBe(first);
-    world.tiles[0].ridge = 1;
+    world.tiles[0].rockRelief = 0;
     const changed = worldRevisions(world);
     expect(changed).toEqual({ appearance: 1, sight: 1, geometry: 1 });
     expect(worldRevisions(world)).toBe(changed);

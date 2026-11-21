@@ -40,10 +40,10 @@ describe('new palace perimeter roads', () => {
     expect(state.buildings.filter(building => building.kind === 'road')).toHaveLength(12);
   });
 
-  it('preserves buildings, existing roads, water, and ledges while passing under friendly fields', () => {
+  it('preserves buildings, existing roads, water, and rocks while passing under friendly fields', () => {
     const { state, palace } = fixture();
     state.world.tiles[4 * 16 + 4].terrain = 'ocean';
-    state.world.tiles[4 * 16 + 5].ridge = 1;
+    Object.assign(state.world.tiles[4 * 16 + 5], { rockHost: 4 * 16 + 5, rockRelief: 0 });
     entityStore(state).buildings.add({ ...palace, id: 2, kind: 'house', x: 6, y: 4, capacity: 4 },
       { ...palace, id: 3, kind: 'road', x: 7, y: 4, faction: 1 },
       { ...palace, id: 4, kind: 'camp', x: 7, y: 5 });
@@ -64,5 +64,13 @@ describe('new palace perimeter roads', () => {
     addPalaceRoadRing(state, palace);
     expect(canWalk(state, 5, 4, 0)).toBe(true);
     expect(canWalk(state, 6, 4, 0)).toBe(false);
+  });
+
+  it('leaves a gap where the automatic ring would complete a 2×2 road square', () => {
+    const { state, palace } = fixture();
+    entityStore(state).buildings.add({ ...palace, id: 2, kind: 'road', x: 4, y: 3 },
+      { ...palace, id: 3, kind: 'road', x: 5, y: 3 });
+    expect(addPalaceRoadRing(state, palace)).toBe(11);
+    expect(state.buildings.some(b => b.kind === 'road' && b.x === 5 && b.y === 4)).toBe(false);
   });
 });

@@ -13,6 +13,18 @@ const allowed: NetworkPlacement = { ok: true, message: '' };
 const cachedQueries = new WeakMap<GameState, { store: EntityStore; membership: number; structure: number;
   world: GameState['world']; revision: number; query: ReturnType<typeof createNetworkPlacementQuery> }>();
 
+/** Whether occupying this tile would fill a 2×2 square. */
+export function completesTileSquare(width: number, height: number, x: number, y: number, occupied: (cell: number) => boolean): boolean {
+  if (!(x >= 0 && x < width && y >= 0 && y < height)) return false;
+  const cell = y * width + x;
+  for (const dy of [-1, 1]) for (const dx of [-1, 1]) {
+    if (x + dx < 0 || x + dx >= width || y + dy < 0 || y + dy >= height) continue;
+    const row = dy * width;
+    if (occupied(cell + dx) && occupied(cell + row) && occupied(cell + row + dx)) return true;
+  }
+  return false;
+}
+
 /** A road may open an existing friendly or unclaimed wall without first
  * connecting to a road network. Orders reserve this gateway immediately. */
 export function hasGateWall(state: GameState, x: number, y: number, faction = playerFaction(state)): boolean {
@@ -40,7 +52,7 @@ export function createNetworkPlacementQuery(state: GameState) {
     const x = index % width, y = Math.floor(index / width);
     return cardinal.filter(([dx, dy]) => inside(x + dx, y + dy)).map(([dx, dy]) => (y + dy) * width + x + dx);
   };
-  return (kind: BuildingKind, x: number, y: number, faction = playerFaction(state), additions: readonly Building[] = []): NetworkPlacement => {
+  return (kind: BuildingKind, x: number, y: number, faction = playerFaction(state), additions: readonly Building[] = [], manualRoad = false): NetworkPlacement => {
     if (!isRoute(kind) && !isWallKind(kind)) return allowed;
     x = Math.floor(x); y = Math.floor(y);
     const index = y * width + x, addedRoutes = new Set<number>(), addedRoads = new Set<number>(), addedWalls = new Set<number>();
@@ -65,20 +77,12 @@ export function createNetworkPlacementQuery(state: GameState) {
       if (addsWall) for (const changed of [index, ...neighbors(index)]) if (wallAt(changed)
         && neighbors(changed).filter(wallAt).length > 3)
           return { ok: false, message: 'Walls may form lines, corners or T junctions, but not four-way crosses.' };
-      for (const oy of [-1, 0]) for (const ox of [-1, 0]) {
-        const left = x + ox, top = y + oy;
-        if (inside(left, top) && inside(left + 1, top + 1)
-          && [0, 1].every(dy => [0, 1].every(dx => wallAt((top + dy) * width + left + dx))))
-          return { ok: false, message: 'Walls must remain lines or junctions; leave an opening in a 2×2 block.' };
-      }
+      if (completesTileSquare(width, height, x, y, wallAt))
+        return { ok: false, message: 'Walls must remain lines or junctions; leave an opening in a 2×2 block.' };
     }
+    if (isRoute(kind) && !(kind === 'road' && manualRoad) && completesTileSquare(width, height, x, y, routeAt))
+      return { ok: false, message: 'Roads must remain lines or junctions.' };
     if (isRoute(kind) && !openingGate) {
-      for (const oy of [-1, 0]) for (const ox of [-1, 0]) {
-        const left = x + ox, top = y + oy;
-        if (inside(left, top) && inside(left + 1, top + 1)
-          && [0, 1].every(dy => [0, 1].every(dx => routeAt((top + dy) * width + left + dx))))
-          return { ok: false, message: 'Roads must remain lines or junctions.' };
-      }
       const junctionAt = (at: number) => routeAt(at) && neighbors(at).filter(routeAt).length >= 3;
       for (const changed of [index, ...neighbors(index)]) if (junctionAt(changed)) {
         const cx = changed % width, cy = Math.floor(changed / width), radius = Math.ceil(MIN_ROAD_JUNCTION_SPACING);
@@ -114,14 +118,14 @@ export function createNetworkPlacementQuery(state: GameState) {
 }
 
 /** All living orders reserve network spacing, including paused construction. */
-export function validateNetworkPlacement(state: GameState, kind: BuildingKind, x: number, y: number, faction = playerFaction(state)): NetworkPlacement {
+export function validateNetworkPlacement(state: GameState, kind: BuildingKind, x: number, y: number, faction = playerFaction(state), manualRoad = false): NetworkPlacement {
   if (!isRoute(kind) && !isWallKind(kind)) return allowed;
-  if (!simulationReadsActive(state)) return createNetworkPlacementQuery(state)(kind, x, y, faction);
+  if (!simulationReadsActive(state)) return createNetworkPlacementQuery(state)(kind, x, y, faction, undefined, manualRoad);
   const store = entityStore(state), membership = store.buildings.revision, structure = structureChangeRevision(state);
   const revision = worldStructureRevision(state.world), previous = cachedQueries.get(state);
   if (previous?.store === store && previous.membership === membership && previous.structure === structure
-    && previous.world === state.world && previous.revision === revision) return previous.query(kind, x, y, faction);
+    && previous.world === state.world && previous.revision === revision) return previous.query(kind, x, y, faction, undefined, manualRoad);
   const query = createNetworkPlacementQuery(state);
   cachedQueries.set(state, { store, membership, structure, world: state.world, revision, query });
-  return query(kind, x, y, faction);
+  return query(kind, x, y, faction, undefined, manualRoad);
 }

@@ -1,5 +1,5 @@
 .movement-guide {
-  --step-time: .86s;
+  --step-time: .8s;
   --guide-time: calc(4 * var(--step-time));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -30,16 +30,17 @@
   box-shadow: 0 2px #0e0c08;
   font: 700 17px/1 var(--game-font), monospace;
   animation: guide-key var(--guide-time) steps(1, end) infinite;
+  animation-delay: var(--direction-offset, 0s);
 }
-.movement-guide-keys kbd:first-child { grid-column: 2; grid-row: 1; }
-.movement-guide-keys kbd:nth-child(2) { grid-column: 1; grid-row: 2; }
-.movement-guide-keys kbd:nth-child(3) { grid-column: 2; grid-row: 2; }
-.movement-guide-keys kbd:nth-child(4) { grid-column: 3; grid-row: 2; }
-.movement-guide :is(kbd,i):nth-child(2) { animation-delay: calc(-3 * var(--step-time)); }
-.movement-guide :is(kbd,i):nth-child(3) { animation-delay: calc(-2 * var(--step-time)); }
-.movement-guide :is(kbd,i):nth-child(4) { animation-delay: calc(-1 * var(--step-time)); }
+.movement-guide-keys [data-guide-key="w"] { grid-column: 2; grid-row: 1; }
+.movement-guide-keys [data-guide-key="a"] { grid-column: 1; grid-row: 2; }
+.movement-guide-keys [data-guide-key="s"] { grid-column: 2; grid-row: 2; }
+.movement-guide-keys [data-guide-key="d"] { grid-column: 3; grid-row: 2; }
+.movement-guide [data-guide-key="a"] { --direction-offset: calc(-3 * var(--step-time)); --walk-row: -64px; }
+.movement-guide [data-guide-key="s"] { --direction-offset: calc(-2 * var(--step-time)); --walk-row: -128px; }
+.movement-guide [data-guide-key="d"] { --direction-offset: calc(-1 * var(--step-time)); --walk-row: -192px; }
 .movement-guide-field {
-  --guide-x: clamp(20px, 6vw, 47px);
+  --guide-x: min(20%, 47px);
   --guide-y: 20px;
   position: relative;
   height: 104px;
@@ -49,40 +50,48 @@
   image-rendering: pixelated;
 }
 .movement-guide-leader {
+  --guide-center-x: calc(50% - 32px);
+  --guide-center-y: calc(50% - 29px);
+  --guide-left: calc(var(--guide-center-x) - var(--guide-x));
+  --guide-right: calc(var(--guide-center-x) + var(--guide-x));
+  --guide-top: calc(var(--guide-center-y) - var(--guide-y));
+  --guide-bottom: calc(var(--guide-center-y) + var(--guide-y));
   position: absolute;
-  left: calc(50% - 32px);
-  top: calc(50% - 42px);
+  left: var(--guide-center-x);
+  top: var(--guide-center-y);
   width: 64px;
   height: 64px;
   animation: guide-route var(--guide-time) linear infinite;
 }
-.movement-guide-leader i {
+.movement-guide-leader span {
   position: absolute;
   inset: 0;
-  background: url('/assets/ui/loading/leader-walk.webp') 0 0 / 256px 256px;
+  background: url('/assets/ui/loading/leader-walk.webp') 0 var(--walk-row, 0px) / 256px 256px no-repeat;
+  visibility: hidden;
   animation: guide-direction var(--guide-time) steps(1, end) infinite, guide-walk .4s steps(4) infinite;
+  animation-delay: var(--direction-offset, 0s), 0s;
 }
-.movement-guide-leader i:nth-child(2) { background-position-y: -64px; }
-.movement-guide-leader i:nth-child(3) { background-position-y: -128px; }
-.movement-guide-leader i:nth-child(4) { background-position-y: -192px; }
 @keyframes guide-key {
   0% { color: #2b200f; background: #f1c66f; border-color: #ffe1a4; box-shadow: 0 2px #8f632e; }
   25%, 100% { color: #e3d3ad; background: #332b20; border-color: #806d48; box-shadow: 0 2px #0e0c08; }
 }
-@keyframes guide-direction { 0% { opacity: 1; } 25%, 100% { opacity: 0; } }
-@keyframes guide-walk { to { background-position-x: -256px; } }
+@keyframes guide-direction { 0% { visibility: visible; } 25%, 100% { visibility: hidden; } }
+@keyframes guide-walk {
+  from { background-position: 0 var(--walk-row, 0px); }
+  to { background-position: -256px var(--walk-row, 0px); }
+}
+/* Position and facing update with the key paint while generation occupies the main thread. */
 @keyframes guide-route {
-  0%, 100% { transform: translate(var(--guide-x), var(--guide-y)); }
-  25% { transform: translate(var(--guide-x), calc(-1 * var(--guide-y))); }
-  50% { transform: translate(calc(-1 * var(--guide-x)), calc(-1 * var(--guide-y))); }
-  75% { transform: translate(calc(-1 * var(--guide-x)), var(--guide-y)); }
+  0%, 100% { left: var(--guide-right); top: var(--guide-bottom); }
+  25% { left: var(--guide-right); top: var(--guide-top); }
+  50% { left: var(--guide-left); top: var(--guide-top); }
+  75% { left: var(--guide-left); top: var(--guide-bottom); }
 }
 @media (max-height: 520px) {
   .movement-guide { margin-block: 10px; }
   .movement-guide-field { --guide-y: 12px; height: 72px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .movement-guide :is(kbd,.movement-guide-leader,i) { animation: none; }
-  .movement-guide-keys kbd { color: #2b200f; background: #f1c66f; border-color: #ffe1a4; }
-  .movement-guide-leader i:not(:nth-child(3)) { display: none; }
+  .movement-guide :is(kbd,.movement-guide-leader,.movement-guide-leader span) { animation: none; }
+  .movement-guide-leader [data-guide-key="s"] { visibility: visible; }
 }

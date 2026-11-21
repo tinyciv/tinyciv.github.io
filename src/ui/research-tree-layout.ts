@@ -2,12 +2,12 @@ import { RESEARCH_BRANCHES, type ResearchBranchId } from '../game/research';
 
 /** Agriculture above, military below. Prerequisite order minimizes crossings. */
 export const RESEARCH_COLUMNS: readonly (readonly ResearchBranchId[])[] = [
-  ['irrigation', 'scoutLodge', 'woodenTower'],
+  ['irrigation', 'animalHusbandry', 'scoutLodge', 'woodenTower', 'infantryDrill'],
   ['grainStorage', 'drainage', 'commerce', 'archeryRange', 'wall', 'sailing'],
-  ['cropRotation', 'monument', 'traditionalMedicine', 'blacksmith', 'engineering', 'whaling'],
+  ['cropRotation', 'monument', 'traditionalMedicine', 'blacksmith', 'engineering', 'whaling', 'officerCorps'],
   ['coinage', 'culturalIdentity', 'metalTools', 'militaryTactics', 'roadBuilding', 'lateenSails'],
-  ['ironPlows', 'urbanPlanning', 'reinforcedDefenses', 'fletching', 'infantryDrill'],
-  ['siegeEngines', 'horsebackRiding', 'metalCasting', 'officerCorps', 'massLevy'],
+  ['ironPlows', 'urbanPlanning', 'reinforcedDefenses', 'fletching'],
+  ['siegeEngines', 'horsebackRiding', 'metalCasting', 'massLevy'],
   ['supplyTrain', 'compoundBow', 'stirrups', 'urbanMilitia', 'navalEngineering'],
   ['populism', 'gunpowder'],
   ['fieldCannon', 'militaryScience'],
@@ -18,7 +18,7 @@ export const RESEARCH_COLUMN_PITCH = 352;
 const ROW_PITCH = 96;
 const BOARD_MARGIN = 18;
 const FIRST_ROW_CENTER = BOARD_MARGIN + RESEARCH_CARD_HEIGHT / 2;
-const rows = [[1, 2.5, 4], [1, 2, 3, 4, 6, 7], [0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4], [1, 2, 3, 4, 5], [1, 2, 3, 4, 6], [1.5, 4], [4, 5]];
+const rows = [[0, 1, 2.5, 4, 5.5], [1, 2, 3, 4, 6, 7], [0, 1, 2, 3, 4, 5, 7.05], [1, 2, 3, 4, 5, 6], [0, 1, 2, 3], [1, 2, 3, 5], [1, 2, 3, 4, 6], [1.5, 4], [4, 5]];
 const columnLeft = (column: number) => BOARD_MARGIN + column * RESEARCH_COLUMN_PITCH;
 const rowCenter = (row: number) => FIRST_ROW_CENTER + row * ROW_PITCH;
 export const RESEARCH_BOARD_WIDTH = columnLeft(RESEARCH_COLUMNS.length - 1) + RESEARCH_CARD_WIDTH + BOARD_MARGIN;
@@ -40,6 +40,7 @@ const channels: Partial<Record<ResearchBranchId, Partial<Record<ResearchBranchId
   commerce: { coinage: [1.4] },
   cropRotation: { ironPlows: [0] },
   fletching: { compoundBow: [1.6] },
+  infantryDrill: { metalCasting: [7.9, 7.8, 6.65, 4.6], officerCorps: [7.6] },
   lateenSails: { navalEngineering: [5.5, 5.9] },
   metalCasting: { gunpowder: [3.6] },
   militaryTactics: { massLevy: [5] },

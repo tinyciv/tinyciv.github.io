@@ -44,8 +44,9 @@ export class MobileControls {
   }
   private move(event: PointerEvent) {
     event.preventDefault();
-    const rect = this.stick.getBoundingClientRect(), radius = rect.width * .32;
-    const x = event.clientX - rect.left - rect.width / 2, y = event.clientY - rect.top - rect.height / 2;
+    const rect = this.stick.getBoundingClientRect(), width = this.stick.offsetWidth, radius = width * .32;
+    const x = ((event.clientX - rect.left) / rect.width - .5) * width;
+    const y = ((event.clientY - rect.top) / rect.height - .5) * width;
     const distance = Math.hypot(x, y), scale = Math.min(1, radius / Math.max(1, distance));
     this.knob.style.transform = `translate(${x * scale}px,${y * scale}px)`;
     const active = distance > 11, threshold = distance * .38;

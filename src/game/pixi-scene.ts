@@ -1,5 +1,10 @@
 import { Container, Graphics, GraphicsContext, Sprite, Texture, WebGLRenderer } from 'pixi.js';
 import { NativeArt, type BakedArt } from './native-art';
+import type { TerrainChunkSource } from './terrain';
+
+const TERRAIN_CHUNK_EDGE = 1024;
+const NATIVE_TERRAIN_SCALE = .5;
+const RESIDENT_TERRAIN_CHUNKS = 64;
 
 /** The world is a native Pixi display list. Canvas is used only to bake art. */
 export class PixiScene {
@@ -88,7 +93,7 @@ export class PixiScene {
     }
     /** Dense pixel effects use one reusable texture instead of thousands of
      * transient vector rectangles and their per-frame GPU tessellation. */
-    rasterLayer(name: string, key: readonly unknown[], width: number, height: number, draw: (context: CanvasRenderingContext2D) => void, x = 0, y = 0): void {
+    rasterLayer(name: string, key: readonly unknown[], width: number, height: number, draw: (context: CanvasRenderingContext2D) => void, x = 0, y = 0, scale = 1): void {
         width = Math.max(1, Math.ceil(width)); height = Math.max(1, Math.ceil(height));
         let layer = this.rasterLayers.get(name);
         if (layer && (layer.canvas.width !== width || layer.canvas.height !== height)) {
@@ -104,36 +109,51 @@ export class PixiScene {
             context.clearRect(0, 0, width, height); context.save(); draw(context); context.restore();
             layer.texture.source.update(); layer.key = key; this.layerUploads++;
         }
-        this.image(layer.texture, x, y, width, height);
+        this.image(layer.texture, x, y, width * scale, height * scale);
     }
     invalidateTerrain(region?: { x: number; y: number; width: number; height: number }) {
         if (!region) { this.terrainRevision++; return; }
         // Keep clean resident chunks, including those outside the viewport.
         // Dirty offscreen chunks upload lazily when the camera reaches them.
-        for (const [key, chunk] of this.chunks) {
-            const [column, row] = key.split(',').map(Number), x = column * 1024, y = row * 1024;
-            if (x < region.x + region.width && x + chunk.canvas.width > region.x
-                && y < region.y + region.height && y + chunk.canvas.height > region.y) chunk.revision = -1;
+        const left = Math.max(0, Math.floor(region.x / TERRAIN_CHUNK_EDGE));
+        const top = Math.max(0, Math.floor(region.y / TERRAIN_CHUNK_EDGE));
+        const right = Math.ceil((region.x + region.width) / TERRAIN_CHUNK_EDGE);
+        const bottom = Math.ceil((region.y + region.height) / TERRAIN_CHUNK_EDGE);
+        for (let row = top; row < bottom; row++) for (let column = left; column < right; column++) {
+            const chunk = this.chunks.get(`${column},${row}`);
+            if (chunk) chunk.revision = -1;
         }
     }
-    terrain(canvas: HTMLCanvasElement, x: number, y: number, scale: number, width: number, height: number) {
-        const edge = 1024;
+    terrain(source: HTMLCanvasElement | TerrainChunkSource, x: number, y: number, scale: number, width: number, height: number) {
+        const edge = TERRAIN_CHUNK_EDGE;
         const left = Math.max(0, Math.floor(-x / scale / edge)), top = Math.max(0, Math.floor(-y / scale / edge));
-        const right = Math.min(Math.ceil(canvas.width / edge), Math.ceil((width - x) / scale / edge));
-        const bottom = Math.min(Math.ceil(canvas.height / edge), Math.ceil((height - y) / scale / edge));
+        const right = Math.min(Math.ceil(source.width / edge), Math.ceil((width - x) / scale / edge));
+        const bottom = Math.min(Math.ceil(source.height / edge), Math.ceil((height - y) / scale / edge));
+        const backingScale = 'paint' in source ? NATIVE_TERRAIN_SCALE : 1;
         for (let row = top; row < bottom; row++) for (let column = left; column < right; column++) {
             const key = `${column},${row}`, sx = column * edge, sy = row * edge;
             let chunk = this.chunks.get(key);
             if (!chunk) {
-                const tile = document.createElement('canvas'); tile.width = Math.min(edge, canvas.width - sx); tile.height = Math.min(edge, canvas.height - sy);
+                const width = Math.min(edge, source.width - sx), height = Math.min(edge, source.height - sy);
+                const tile = document.createElement('canvas'); tile.width = width * backingScale; tile.height = height * backingScale;
                 const texture = Texture.from(tile); texture.source.scaleMode = 'nearest';
                 chunk = { canvas: tile, texture, revision: -1 }; this.chunks.set(key, chunk);
             }
+            const logicalWidth = chunk.canvas.width / backingScale, logicalHeight = chunk.canvas.height / backingScale;
             if (chunk.revision !== this.terrainRevision) {
-                chunk.canvas.getContext('2d')!.drawImage(canvas, sx, sy, chunk.canvas.width, chunk.canvas.height, 0, 0, chunk.canvas.width, chunk.canvas.height);
+                const context = chunk.canvas.getContext('2d')!;
+                if ('paint' in source) source.paint(context, sx, sy, logicalWidth, logicalHeight);
+                else context.drawImage(source, sx, sy, logicalWidth, logicalHeight, 0, 0, logicalWidth, logicalHeight);
                 chunk.texture.source.update(); chunk.revision = this.terrainRevision; this.terrainUploads++;
             }
-            this.image(chunk.texture, x - this.world.x + sx * scale, y - this.world.y + sy * scale, chunk.canvas.width * scale, chunk.canvas.height * scale);
+            this.image(chunk.texture, x - this.world.x + sx * scale, y - this.world.y + sy * scale, logicalWidth * scale, logicalHeight * scale);
+        }
+        if (this.chunks.size > RESIDENT_TERRAIN_CHUNKS) for (const [key, chunk] of this.chunks) {
+            const [column, row] = key.split(',').map(Number);
+            if (column >= left && column < right && row >= top && row < bottom) continue;
+            chunk.texture.destroy(true);
+            this.chunks.delete(key);
+            if (this.chunks.size <= RESIDENT_TERRAIN_CHUNKS) break;
         }
     }
     updateFog(canvas: HTMLCanvasElement) {

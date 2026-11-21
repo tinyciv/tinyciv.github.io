@@ -8,7 +8,7 @@ pub struct Program { pub words: Vec<f64> }
 
 pub fn fact_count(mode:u32)->Option<usize> {
     Some(match mode {0=>3,1|2=>6,3=>3,4=>2,5=>3,6=>6,7=>3,8=>3,9=>3,10=>2,
-        11=>4,12=>3,13=>0,14=>3,15|16=>0,17=>2,18=>1,19=>6,21=>4,22|23=>1,24=>3,26=>6,27=>4,28=>1,29=>6,_=>return None})
+        11=>4,12=>3,13=>0,14=>3,15|16=>0,17=>2,18=>1,19=>6,21=>4,22|23=>1,24=>3,26=>6,27=>4,28=>1,29=>6,30=>2,_=>return None})
 }
 fn arity(op:u32)->Option<usize> {Some(match op {0..=2=>0,10..=19|22|23=>2,20|24|25=>1,21=>3,_=>return None})}
 
@@ -60,7 +60,7 @@ impl Program {
 pub fn normalize(mode:u32,value:f64,facts:&[f64;6])->f64 {
     match mode {
         0=>value.floor().clamp(0.0,facts[0].max(0.0)),
-        1..=4|6|7|11|14|18|21|23|24|26|27=>(value!=0.0) as u8 as f64,
+        1..=4|6|7|11|14|18|21|23|24|26|27|30=>(value!=0.0) as u8 as f64,
         8=>value.ceil().clamp(0.0,10_000.0),
         13|15=>value.floor().clamp(1.0,8.0),16=>value.ceil().clamp(1.0,20.0),
         9|10=>value.clamp(0.0,1e9),12=>value.clamp(0.0,4.0),

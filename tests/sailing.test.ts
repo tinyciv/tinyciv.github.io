@@ -102,13 +102,11 @@ describe('sailboats and Leader transport',()=>{
   expect(commandSailingMove(state,captain,{x:12.5,y:5.5}).ok).toBe(true);sailFor(state,captain,8);
   expect(boat.x).toBeCloseTo(12.5,1);expect(boat.y).toBeCloseTo(5.5,1);expect(captain.x).toBe(boat.x);
  });
- it('launches and boards on a level plateau lake without sailing across cliff drops',()=>{
-  const state=fixture();for(const tile of state.world.tiles)tile.ridge=1;
+ it('launches and boards on a lake',()=>{
+  const state=fixture();for(const tile of state.world.tiles)if(tile.terrain==='coast')tile.terrain='lake';
   updateSailboatLaunches(state);const captain=state.units[0],boat=state.units.find(u=>u.kind==='sailboat')!;
   expect(boat).toBeDefined();expect(boardBoat(state,boat,captain).ok).toBe(true);
   expect(sailingPath(state,boat,{x:12.5,y:8.5}).length).toBeGreaterThan(0);
-  for(let x=0;x<state.world.width;x++)delete state.world.tiles[7*state.world.width+x].ridge;
-  expect(sailingPath(state,boat,{x:12.5,y:8.5})).toEqual([]);
  });
  it('treats waterfall faces as barriers in both directions while keeping the level river reaches open',()=>{
   const {state,boat}=launched();

@@ -9,12 +9,13 @@ import { DEFAULT_LANDSCAPE_PARAMETERS } from './options';
 const STRIDE = 20;
 const TERRAINS = ['ocean', 'coast', 'river', 'lake', 'grassland', 'plains', 'desert', 'tundra'] as const;
 const OVERLAYS = ['none', 'forest', 'jungle', 'swamp', 'glacier', 'volcano', 'ford'] as const;
-const BIOMES = ['temperate', 'taiga', 'tundra', 'rainforest', 'savanna', 'steppe', 'desert', 'wetland', 'alpine'] as const;
+const BIOMES = ['temperate', 'taiga', 'tundra', 'rainforest', 'savanna', 'steppe', 'desert', 'wetland', 'alpine', 'forest', 'fjords'] as const;
 const RESOURCES = [undefined, 'clay', 'copper', 'iron', 'gold', 'stone', 'salt', 'olives', 'fish', 'marble', 'peat', 'grapes', 'coal'] as const;
 const KINDS: readonly WorldFeatureKind[] = ['atoll', 'harbor', 'oasis', 'old-river', 'volcanic-island'];
 const CLEAR_FIELDS = ['resource', 'resourceGroup', 'resourceDeveloped', 'oreAnchor', 'oreFamily', 'oreVariant', 'oreWidth', 'oreHeight',
+    'rockFormation', 'rockHost', 'rockOre', 'rockAlternate', 'rockMirror', 'rockRelief', 'rockTree', 'rockArrangement', 'rockRangeLength', 'rockRangeId', 'rockRangeGap',
     'relief', 'reliefRegion', 'reliefFlags', 'reliefLevel', 'reliefSpeed', 'reliefRuggedness', 'reliefStyle',
-    'ridge', 'ridgeTier', 'stair', 'mountainPass', 'hillBiome', 'canyon', 'treeClass', 'desertStone',
+    'mountainPass', 'canyon', 'treeClass', 'desertStone',
     'beach', 'palm', 'marsh', 'oxbow', 'lakeShape', 'geothermal', 'geothermalAnchor'] as const;
 
 export function generateWorldFeatures(world: World): number {
@@ -28,7 +29,7 @@ export function generateWorldFeatures(world: World): number {
         const input = new Float64Array(rustEngine.memory.buffer, pointer, count * STRIDE + starts.length * 2 + 2);
         world.tiles.forEach((tile, cell) => input.set([
             TERRAINS.indexOf(tile.terrain), OVERLAYS.indexOf(tile.overlay), tile.elevation, tile.moisture,
-            tile.temperature ?? .55, tile.variation, Number(!!tile.ridge || !reliefAllowsTrees(tile)),
+            tile.temperature ?? .55, tile.variation, Number(!!tile.fjord || !reliefAllowsTrees(tile)),
             tile.reliefRegion ?? 0, tile.reliefRuggedness ?? 0, BIOMES.indexOf(tile.biome ?? 'temperate'),
             RESOURCES.indexOf(tile.resource), Number(!!tile.beach) | Number(!!tile.palm) << 1 | Number(!!tile.marsh) << 2 | Number(!!tile.oxbow) << 3,
             tile.reliefStyle ?? 0, tile.rainfall ?? tile.moisture, tile.fertility ?? 1, 0,

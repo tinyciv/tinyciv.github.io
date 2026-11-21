@@ -30,7 +30,8 @@
     "defenseAffordable": { "mode": 26, "facts": ["gold", "upkeep", "surplus", "cost", "extraUpkeep", "population"] },
     "fortBrigade": { "mode": 27, "facts": ["gold", "reserve", "cost", "level"] },
     "campaignDuration": { "mode": 28, "facts": ["travelSeconds"] },
-    "huntRank": { "mode": 29, "facts": ["reward", "distance", "enemyPower", "friendlyPower", "leader", "continuity"] }
+    "huntRank": { "mode": 29, "facts": ["reward", "distance", "enemyPower", "friendlyPower", "leader", "continuity"] },
+    "housingDemand": { "mode": 30, "facts": ["housing", "population"] }
   },
   "operators": { "add": 10, "sub": 11, "mul": 12, "div": 13, "min": 14, "max": 15, "lt": 16, "le": 17, "gt": 18, "ge": 19, "not": 20, "if": 21, "and": 22, "or": 23, "ceil": 24, "floor": 25 }
 }

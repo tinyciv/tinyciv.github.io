@@ -23,12 +23,7 @@ export function loadVegetationArt(): Promise<void> {
 }
 
 /** Native Medieval World silhouettes, grouped into compatible local families.
- * Every tall tree uses its complete16×32 source rectangle and ground footing. */
-export const OLIVE_RESOURCE_VARIANTS: readonly VegetationSprite[] = [
-  sprite('medieval', 64, 96), sprite('medieval', 64, 112, 32),
-];
-
-/** Olive-colored trees are reserved for resource groves, not ordinary forests. */
+ * Every tall tree uses its complete 16×32 source rectangle and ground footing. */
 export const TREE_FAMILIES: Readonly<Record<TreeClass, readonly VegetationSprite[]>> = {
   tropical: [sprite('medieval', 0, 48), sprite('medieval', 0, 64, 32), sprite('medieval', 32, 64, 32)],
   dry: [sprite('medieval', 32, 0), sprite('medieval', 32, 16, 32), sprite('medieval', 96, 48), sprite('medieval', 96, 64, 32)],

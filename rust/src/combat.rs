@@ -2,10 +2,12 @@
 //! simulation builds. Callers supply research effects, never precomputed hits.
 
 const DAMAGE_MULTIPLIER: f64 = 0.7;
-pub const CANNON_UNIT_DAMAGE_MULTIPLIER: f64 = 0.5;
+pub const WOODEN_TOWER_RANGE: f64 = 6.0;
+pub const CANNON_UNIT_DAMAGE_MULTIPLIER: f64 = 0.125;
 const ELITE_DAMAGE_MULTIPLIER: f64 = 2.3;
 const ELITE_DAMAGE_TAKEN_MULTIPLIER: f64 = 0.15;
 const RAIDER_ATTACK_MULTIPLIER: f64 = 0.85;
+const ARCHER_HIT_MULTIPLIER: f64 = 2.0;
 const VETERANCY_KILLS: [f64; 4] = [10.0, 100.0, 250.0, 500.0];
 const EQUIPMENT_MULTIPLIERS: [f64; 7] = [1.0, 1.15, 1.3, 1.5, 1.7, 1.9, 2.1];
 const ATTACK_BONUSES: [f64; 5] = [0.0, 3.0, 7.0, 12.0, 0.0];
@@ -13,7 +15,8 @@ const DEFENSE_BONUSES: [f64; 5] = [0.0, 2.0, 5.0, 8.0, 0.0];
 
 /// Stable metadata ABI, read once by the presentation layer. 0..=2: damage
 /// factors, 3..=6: rank thresholds, 7..=13: equipment multipliers,
-/// 14: maximum equipment tier, 15: marauder damage factor.
+/// 14: maximum equipment tier, 15: marauder damage factor, 16: tower range,
+/// 17: archer damage factor.
 pub fn constant(index: u32) -> f64 {
     match index {
         0 => DAMAGE_MULTIPLIER,
@@ -23,6 +26,8 @@ pub fn constant(index: u32) -> f64 {
         7..=13 => EQUIPMENT_MULTIPLIERS[(index - 7) as usize],
         14 => (EQUIPMENT_MULTIPLIERS.len() - 1) as f64,
         15 => RAIDER_ATTACK_MULTIPLIER,
+        16 => WOODEN_TOWER_RANGE,
+        17 => ARCHER_HIT_MULTIPLIER,
         _ => f64::NAN,
     }
 }
@@ -62,8 +67,16 @@ pub fn attack_damage(attack: f64, defense: f64) -> f64 {
     maximum(4.0, attack - defense) * DAMAGE_MULTIPLIER
 }
 
+pub fn tower_damage(attack: f64, defense: f64) -> f64 {
+    attack_damage(attack, defense) * 1.5
+}
+
 pub fn upkeep_combat_multiplier(funded: bool) -> f64 {
     if funded { 1.0 } else { 0.5 }
+}
+
+pub fn unit_hit_multiplier(kind: u32) -> f64 {
+    if kind == crate::sim::kinds::unit::ARCHER { ARCHER_HIT_MULTIPLIER } else { 1.0 }
 }
 
 fn raw_attack(scout: u32, attack: f64, kills: f64, weapon: u32, equipment: f64) -> f64 {
@@ -167,6 +180,8 @@ mod tests {
     #[test]
     fn scales_minimum_hits_after_armor_and_prevents_scout_damage() {
         close(attack_damage(1.0, 1000.0), 2.8);
+        close(tower_damage(12.5, 1000.0), 4.2);
+        close(tower_damage(12.5, 4.0), 8.925);
         close(unit_damage(0, 1.0, 500.0, 0, 1.0, 1.15, 1, 1.5, 0.0, 0.0, 1000.0),
             4.0 * 0.7 * 2.3 * 1.15 * 0.85 * 1.5);
         assert_eq!(unit_damage(1, 100.0, 500.0, 6, 1.6, 1.15, 1, 3.0, 10.0, 10.0, 0.0), 0.0);

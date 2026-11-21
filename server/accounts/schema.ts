@@ -4,11 +4,27 @@ export const SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS accounts;
 CREATE TABLE IF NOT EXISTS accounts.users (
   id uuid PRIMARY KEY,
-  email text NOT NULL UNIQUE CHECK (email = lower(email) AND length(email) <= 254),
+  username text NOT NULL CHECK (username ~ '^[A-Za-z0-9_.-]{1,40}$'),
+  email text UNIQUE CHECK (email = lower(email) AND length(email) <= 254),
   password_hash text NOT NULL CHECK (password_hash ~ '^scrypt\\$131072\\$8\\$1\\$[a-f0-9]{32}\\$[a-f0-9]{64}$'),
   display_name text NOT NULL CHECK (length(display_name) BETWEEN 1 AND 40),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE accounts.users ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE accounts.users ADD COLUMN IF NOT EXISTS username text CHECK (username ~ '^[A-Za-z0-9_.-]{1,40}$');
+CREATE UNIQUE INDEX IF NOT EXISTS users_username ON accounts.users (lower(username));
+CREATE TABLE IF NOT EXISTS accounts.game_saves (
+  user_id uuid NOT NULL REFERENCES accounts.users(id) ON DELETE CASCADE,
+  id varchar(36) NOT NULL,
+  name varchar(80) NOT NULL,
+  saved_at timestamptz NOT NULL DEFAULT now(),
+  game_time double precision NOT NULL,
+  seed varchar(256) NOT NULL,
+  civilization varchar(100) NOT NULL,
+  payload bytea NOT NULL,
+  PRIMARY KEY (user_id, id)
+);
+CREATE INDEX IF NOT EXISTS game_saves_recent ON accounts.game_saves (user_id, saved_at DESC, id);
 CREATE TABLE IF NOT EXISTS accounts.user_data (
   user_id uuid PRIMARY KEY REFERENCES accounts.users(id) ON DELETE CASCADE,
   data jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(data) = 'object' AND octet_length(data::text) <= 16384),

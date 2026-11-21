@@ -18,6 +18,8 @@ const RELATED: Record<LandformKind, [LandformKind, LandformKind]> = {
   'glacial-coast': ['folded-range', 'rolling-uplands'], 'rolling-uplands': ['river-basin', 'dissected-plateau'],
 };
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+// The authored valley curves are drawn at this meander setting.
+const valleyReferenceMeander = .9306;
 const clamp = (n: number, low = 0, high = 1) => Math.max(low, Math.min(high, n));
 const smooth = (n: number) => { const t = clamp(n); return t * t * (3 - 2 * t); };
 function randomStream(seed: string): () => number {
@@ -215,7 +217,7 @@ export function createLandformPlan(seed: string, width: number, height: number, 
     reshapeCurve(ridge.points, mountainExtent * elongation, parameters.mountainBend / defaults.mountainBend);
     ridge.width *= bulk;
   }
-  for (const valley of plan.valleys) reshapeCurve(valley.points, 1, parameters.riverMeander / defaults.riverMeander);
+  for (const valley of plan.valleys) reshapeCurve(valley.points, 1, parameters.riverMeander / valleyReferenceMeander);
   const sample = (p: LandformProvince, x: number, y: number): { height: number; resistance: number; uplift: number } => {
     const { x: u, y: v } = local(p, x, y), radius = Math.hypot(u, v);
     const broad = noise(x / (32 * scale * provinceScale) + 13, y / (32 * scale * provinceScale) - 71);

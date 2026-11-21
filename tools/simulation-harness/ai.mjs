@@ -71,7 +71,9 @@ export function createScenario(engine, name, seed, seedIndex, fixtures = {}) {
 function createMusketryScenario(engine, seed, frozenArtifact) {
   const artifact = frozenArtifact ?? new URL('../../public/scenarios/musketry-deathmatch.json.gz', import.meta.url);
   const bytes = readFileSync(artifact);
-  const state = engine.migrateGame(engine.parseGameSave(gunzipSync(bytes).toString('utf8')));
+  const state = engine.parseGameSave(gunzipSync(bytes).toString('utf8'));
+  engine.generateFertilityGrass(state.world);
+  engine.migrateGame(state);
   let rng = 2166136261;
   for (let index = 0; index < seed.length; index++) rng = Math.imul(rng ^ seed.charCodeAt(index), 16777619);
   engine.seedSimulationRandom(state, rng >>> 0);

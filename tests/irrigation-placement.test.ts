@@ -90,16 +90,21 @@ describe('irrigation placement and construction', () => {
     expect(state.factions[0].gold).toBe(1755);
   });
 
-  it.each(['forest', 'palm', 'marsh'] as const)('preserves %s while ordering and completing a ditch', vegetation => {
+  it.each(['forest', 'palm', 'marsh'] as const)('clears trees while preserving wetland plants when building a ditch through %s', vegetation => {
     const state = fixture(), tile = state.world.tiles[target.y * state.world.width + target.x];
-    if (vegetation === 'forest') tile.overlay = 'forest';
+    if (vegetation === 'forest') { tile.overlay = 'forest'; tile.biome = 'forest'; }
     else tile[vegetation] = true;
     const before = { ...tile };
-    expect(buildAt(state, 'irrigation', target.x, target.y).ok).toBe(true);
+    expect(planConstruction(state, 'irrigation', [target]).ok).toBe(true);
     expect(tile).toEqual(before);
+    expect(buildAt(state, 'irrigation', target.x, target.y).ok).toBe(true);
+    expect(tile.overlay).toBe('none');
+    expect(tile.palm).toBeUndefined();
+    expect(tile.marsh).toBe(before.marsh);
+    const cleared = { ...tile };
     const ditch = state.buildings.find(building => building.kind === 'irrigation')!;
     complete(state, ditch);
-    expect(tile).toEqual(before);
+    expect(tile).toEqual(cleared);
   });
 
   it('charges exactly fifty gold, allows outside borders, and completes through a palace builder', () => {

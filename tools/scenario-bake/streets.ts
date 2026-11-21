@@ -1,18 +1,42 @@
 import { auditScenarioStreets, scenarioRoadPlan, scenarioStreetRelocationSites } from '../../src/game/scenario-access-native';
 import { explorationHost } from '../../src/game/exploration-host';
 import { entityStore } from '../../src/game/entity-store';
-import { canWalk, invalidateNavigation } from '../../src/game/pathfinding';
+import { buildingBlockerView, canTraverseEdge, canWalk, invalidateNavigation } from '../../src/game/pathfinding';
 import { markWorldChanged } from '../../src/game/world-revisions';
 import { refreshAfterBuildingRemoval, validateBuildAt } from '../../src/game/simulation';
 import { planRoadFarmRelocation, relocateFarm, farmAt } from '../../src/game/farm-relocation';
 import { removeBuildings } from '../../src/game/construction-cancellation';
 import { sharedHouseForWell, sharedWellForHouse } from '../../src/game/house-wells';
-import { buildingHeight, buildingWidth, isFarmKind, type GameState } from '../../src/game/types';
+import { startingRoadRing } from '../../src/game/settlement-layout';
+import { buildingHeight, buildingReady, buildingWidth, isFarmKind, type GameState } from '../../src/game/types';
 
 const cellOf=(state:GameState,b:{x:number;y:number})=>b.y*state.world.width+b.x;
 const streetFactions=(state:GameState)=>state.factions.filter(f=>!f.defeated);
 export function scenarioStreetsSummary(state:GameState){
   return streetFactions(state).map(f=>({faction:f.id,...auditScenarioStreets(state,f.id)}));
+}
+
+/** Check the actual road tiles and movement rules of a finished scenario. */
+export function assertPreparedTownRoadRings(state: GameState): number {
+  const roads = new Set<number>();
+  const towns = [];
+  for (const building of state.buildings) {
+    if (!buildingReady(building)) continue;
+    if (building.kind === 'road') roads.add(cellOf(state, building));
+    if (building.kind === 'palace') towns.push(building);
+  }
+  for (const town of towns) {
+    const ring = startingRoadRing(town, buildingWidth(town), buildingHeight(town));
+    const blockers = buildingBlockerView(state, town.faction);
+    for (const [index, point] of ring.entries()) {
+      const next = ring[(index + 1) % ring.length];
+      if (!roads.has(cellOf(state, point)) || !canWalk(state, point.x, point.y, town.faction, blockers, true, true)
+        || !canTraverseEdge(state.world, point, next)) {
+        throw new Error(`${state.world.scenario}: ${town.cityName ?? town.id} needs a continuous, walkable road ring at ${point.x},${point.y}.`);
+      }
+    }
+  }
+  return towns.length;
 }
 
 /** Offline authoring only. Rust selects reservations, relocation choices and
@@ -80,6 +104,7 @@ export function repairPreparedStreets(state:GameState,progress?:(value:unknown)=
     const after=scenarioStreetsSummary(state);
     const errors=after.filter(r=>r.missingRing.length||r.unserved.length||r.roadRegions!==r.expectedRoadRegions||r.blockedRoads.length);
     if(errors.length)throw new Error('Scenario streets remain incomplete: '+JSON.stringify(errors));
+    assertPreparedTownRoadRings(state);
     if(state.time!==clock||stocks.some(({f,gold,food,population,research})=>f.gold!==gold||f.food!==food||f.population!==population||JSON.stringify(f.research)!==research))
       throw new Error('Street preparation must preserve campaign clocks, population, stocks and research.');
     return {before,after,moved,removedRoads,roadsAdded,farmsMoved,farmsCleared};

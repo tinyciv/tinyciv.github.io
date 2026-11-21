@@ -2,6 +2,7 @@ import { applySoilFertility } from './soil';
 import { createNoise2D } from 'simplex-noise';
 import { WATER, type World } from '../game/types';
 import { environmentRandom } from './environment-fields';
+import { longitudeClimate } from './longitude-climate-native';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
 import { terrainYields } from './generator';
 
@@ -9,8 +10,10 @@ import { terrainYields } from './generator';
 export function tundraBoundary(world: World): (x: number, y: number) => number {
   const noise = createNoise2D(environmentRandom(`${world.seed}:tundra`));
   const span = Math.max(1, world.height - 1);
+  const columns = longitudeClimate(world.width);
   return (x, y) => {
-    const edge = .12 + noise(x * .025, y * .025) * .022 + noise(x * .09 + 37, y * .09) * .008;
+    const edge = .12 + columns[x].tundraEdge
+      + noise(x * .025, y * .025) * .022 + noise(x * .09 + 37, y * .09) * .008;
     return Math.min(y, world.height - 1 - y) - edge * span;
   };
 }
@@ -41,11 +44,6 @@ export function applyTundra(world: World, _parameters: LandscapeParameters = DEF
       tile[resource] = Math.max(0, tile[resource] + next[resource] - old[resource]);
   }
   for (const tile of world.tiles) {
-    if (tile.hillBiome) {
-      if (tile.terrain === 'desert') tile.hillBiome = 'desert-hills';
-      else if (tile.terrain === 'grassland') tile.hillBiome = 'forest-hills';
-      else delete tile.hillBiome;
-    }
     if (tile.terrain === 'tundra') {
       tile.biome = 'tundra'; delete tile.beach; delete tile.palm; delete tile.marsh; delete tile.desertStone;
       if (tile.overlay === 'forest' || tile.overlay === 'jungle') tile.treeClass = 'snowy';

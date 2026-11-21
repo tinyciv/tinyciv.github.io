@@ -54,7 +54,7 @@ describe('local sight-patch invalidation', () => {
         state.world.tiles[1].overlay = 'forest'; markWorldChanged(state.world, 'sight', [1]);
         updateFog(state); expect(sightDistance).not.toHaveBeenCalled(); expectFreshVisibility(state);
         const cell = 18 * state.world.width + 40;
-        state.world.tiles[cell].ridge = 1; markWorldChanged(state.world, 'geometry', [cell]);
+        state.world.tiles[cell].reliefLevel = 1; markWorldChanged(state.world, 'geometry', [cell]);
         expectFreshVisibility(state);
     });
 

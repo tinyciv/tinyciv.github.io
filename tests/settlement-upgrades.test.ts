@@ -41,7 +41,7 @@ function fixture() {
   return { state, settlement, leader, player: state.factions[0] };
 }
 
-describe('Settlement to Keep upgrade', () => {
+describe('Settlement defense upgrade', () => {
   it('refreshes the visible building immediately while paused without rebuilding terrain or sight', () => {
     const { state, settlement } = fixture();
     state.world.revision = 0;
@@ -87,7 +87,7 @@ describe('Settlement to Keep upgrade', () => {
     const { state, settlement, player } = fixture();
     settlement.hp *= fraction;
     const original = structuredClone(settlement), originalFaction = structuredClone(player);
-    expect(upgradeSettlement(state, settlement)).toEqual({ ok: true, message: 'Willowhearth upgraded to a Keep.' });
+    expect(upgradeSettlement(state, settlement)).toEqual({ ok: true, message: 'Defenses upgraded in Willowhearth.' });
     expect(settlement).toEqual({ ...original, palaceLevel: 2, maxHp: KEEP_MAX_HP, hp: KEEP_MAX_HP * fraction, capacity: KEEP_HOUSING });
     expect(KEEP_MAX_HP).toBe(6500);
     expect([buildingWidth(settlement), buildingHeight(settlement)]).toEqual([2, 2]);
@@ -95,7 +95,7 @@ describe('Settlement to Keep upgrade', () => {
       goldLedger: [{ time: state.time, inputs: {}, outlays: { upgrades: KEEP_UPGRADE_COST } }] });
     expect(state.buildings[0]).toBe(settlement);
     const upgraded = structuredClone(settlement);
-    expect(upgradeSettlement(state, settlement)).toEqual({ ok: false, message: 'Already a Keep.' });
+    expect(upgradeSettlement(state, settlement)).toEqual({ ok: false, message: 'Defenses already upgraded.' });
     expect(settlement).toEqual(upgraded);
     expect(player.gold).toBe(0);
   });
@@ -165,11 +165,14 @@ describe('Settlement to Keep upgrade', () => {
     expect(settlement).toMatchObject({ maxHp: 6500, hp: 2600, palaceLevel: 2 });
   });
 
-  it('labels only upgraded palaces as Keeps', () => {
+  it('labels civic tiers independently of Keep fortification', () => {
     const { settlement } = fixture();
     expect(settlementLabel(settlement)).toBe('Settlement');
     expect(isKeep({ ...settlement, palaceLevel: 1 })).toBe(false);
-    expect(settlementLabel({ ...settlement, palaceLevel: 2 })).toBe('Keep');
+    settlement.palaceLevel = 2;
+    expect(settlementLabel(settlement)).toBe('Settlement');
+    settlement.settlementTier = 2;
+    expect(settlementLabel(settlement)).toBe('City');
     expect(isKeep({ kind: 'house', palaceLevel: 2 })).toBe(false);
   });
 

@@ -1,14 +1,17 @@
 import { type FogView, pointInSight } from './fog';
-import { friendlyGateAccess, terrainNavigationEdges, traversable } from './pathfinding';
+import { friendlyGateAccess, scenarioAccessTerrain } from './pathfinding';
 import { RAIDER_FACTION, raiderCampActive } from './raider-camps';
-import { buildingReady, buildingWidth, buildingHeight, isWallKind, type Building, type GameState, type World, WATER } from './types';
+import { buildingReady, buildingWidth, buildingHeight, isWallKind, type Building, type GameState, type World } from './types';
 import { entityStore, type EntityStore } from './entity-store';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { worldRevisions, worldStructureRevision } from './world-revisions';
-import { reliefFlags } from './relief';
+import { rustEngine } from './rust-engine';
+import { simCore } from './sim-handle';
+import { structureIndex } from './structure-index';
+import { atWar } from './relations';
 
 export const ENCLOSED_HOUSE_GROWTH_MULTIPLIER = 1.3;
-export interface PalaceEnclosure { faction: number; palaces: number[]; cells: number[] }
+export interface PalaceEnclosure { faction: number; palaces: number[]; cells: number[]; stonePalaces?: number[] }
 export interface PalaceEnclosures {
   width: number;
   height: number;
@@ -19,52 +22,43 @@ export interface PalaceEnclosures {
   cells: number[];
 }
 interface CachedEnclosures extends PalaceEnclosures {
-  world: World; tiles: World['tiles']; signature: string; terrain: EnclosureTerrain;
+  world: World; tiles: World['tiles']; signature: string;
   regionByFaction: ReadonlyMap<number, Int32Array>;
   occupied?: { signature: string; result: PalaceEnclosures };
+  securitySample?: { time: number; diplomacy: GameState['diplomacyState']; result: PalaceEnclosures };
 }
 const caches = new WeakMap<GameState, CachedEnclosures>();
 const validations = new WeakMap<GameState, { geometry: CachedEnclosures; store: EntityStore; key: string }>();
-interface EnclosureTerrain {
-  worldRevision: number; revision: number; ground: Uint8Array; relief: Uint8Array;
-}
-/** Roads, harvesting and cleared trees change world.revision but not the
- * defensive topology. Retain flood geometry unless ground or relief
- * actually change; bridge/wall/palace changes are checked separately. */
-function enclosureTerrain(world: World, previous?: CachedEnclosures): EnclosureTerrain {
-  const count = world.width * world.height, worldRevision = worldRevisions(world).geometry;
-  const old = previous?.world === world && previous.tiles === world.tiles && previous.width === world.width
-    && previous.height === world.height ? previous.terrain : undefined;
-  if (old?.worldRevision === worldRevision) return old;
-  const terrain = old ?? { worldRevision, revision: 0, ground: new Uint8Array(count),
-    relief: new Uint8Array(count) };
-  let changed = !old;
-  for (let i = 0; i < count; i++) {
-    const tile = world.tiles[i];
-    const ground = tile.terrain === 'river' ? (tile.overlay === 'ford' ? 3 : 2)
-      : WATER.has(tile.terrain) || tile.overlay === 'volcano' || tile.overlay === 'glacier' ? 1 : 0;
-    const relief = reliefFlags(tile);
-    if (terrain.ground[i] !== ground || terrain.relief[i] !== relief) changed = true;
-    terrain.ground[i] = ground; terrain.relief[i] = relief;
-  }
-  terrain.worldRevision = worldRevision;
-  if (changed) terrain.revision++;
-  return terrain;
-}
+const stoneCities = new WeakMap<PalaceEnclosures, ReadonlySet<number>>();
+const noStoneCities: ReadonlySet<number> = new Set();
 
 /** Wilderness bands have no permanent settlement. Their current reachable
  * component is an enemy origin too; a city with enemies inside is not secure.
  * Keep this cheap occupancy check separate from the cached terrain floods. */
 function secureEnclosures(state: GameState, geometry: CachedEnclosures): PalaceEnclosures {
+  if (!simulationReadsActive(state)) return sampleSecurity(state, geometry);
+  const sample = geometry.securitySample;
+  if (sample && sample.diplomacy === state.diplomacyState && state.time >= sample.time && state.time < sample.time + 1) return sample.result;
+  const result = sampleSecurity(state, geometry);
+  geometry.securitySample = { time: state.time, diplomacy: state.diplomacyState, result };
+  return result;
+}
+
+function sampleSecurity(state: GameState, geometry: CachedEnclosures): PalaceEnclosures {
   if (!geometry.regions.length) return geometry;
-  const occupied = new Set<number>();
+  const occupied = new Set<number>(), relations = new Map<number, Map<number, boolean>>();
   for (const unit of state.units) {
     if (unit.hp <= 0 || unit.inside || unit.faction < 0 && unit.faction !== RAIDER_FACTION) continue;
     const x = Math.floor(unit.x), y = Math.floor(unit.y);
     if (x < 0 || y < 0 || x >= geometry.width || y >= geometry.height) continue;
     for (const [faction, regions] of geometry.regionByFaction) {
       const region = regions[y * geometry.width + x];
-      if (region && !friendlyGateAccess(state, faction, unit.faction)) occupied.add(region);
+      if (!region || faction === unit.faction || occupied.has(region)) continue;
+      let pair = relations.get(faction);
+      if (!pair) { pair = new Map(); relations.set(faction, pair); }
+      let hostile = pair.get(unit.faction);
+      if (hostile === undefined) { hostile = atWar(state, faction, unit.faction); pair.set(unit.faction, hostile); }
+      if (hostile) occupied.add(region);
     }
   }
   if (!occupied.size) return geometry;
@@ -82,13 +76,41 @@ function secureEnclosures(state: GameState, geometry: CachedEnclosures): PalaceE
   return result;
 }
 
+function markStoneEnclosures(state: GameState, walls: readonly Building[], palaces: ReadonlyMap<number, Building>,
+  regions: Iterable<PalaceEnclosure>): void {
+  if (!walls.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const wall of walls) {
+    minX = Math.min(minX, wall.x); minY = Math.min(minY, wall.y);
+    maxX = Math.max(maxX, wall.x); maxY = Math.max(maxY, wall.y);
+  }
+  // Every non-wall tile beyond these bounds can reach the exterior. Include
+  // one open tile of padding, then search only the stone walls' footprint.
+  const left = minX - 1, top = minY - 1, width = maxX - minX + 3, height = maxY - minY + 3;
+  const size = width * height, handle = simCore(state).handle;
+  const input = rustEngine.sim_city_planning_input(handle, size);
+  const wallMask = new Uint8Array(rustEngine.memory.buffer, input, size).fill(0);
+  for (const wall of walls) wallMask[(wall.y - top) * width + wall.x - left] = 1;
+  const output = rustEngine.sim_stone_exterior(handle, width, height);
+  const exterior = new Uint8Array(rustEngine.memory.buffer, output, size);
+  for (const region of regions) region.stonePalaces = region.palaces.filter(id => {
+    const palace = palaces.get(id)!;
+    const right = palace.x + buildingWidth(palace), bottom = palace.y + buildingHeight(palace);
+    if (palace.x <= minX || palace.y <= minY || right > maxX || bottom > maxY) return false;
+    for (let y = palace.y; y < bottom; y++) for (let x = palace.x; x < right; x++)
+      if (exterior[(y - top) * width + x - left] !== 0) return false;
+    return true;
+  });
+}
+
 /** Walls may meet water, but diagonal gaps remain breaches just as they do for movement. */
 /** Guards need the physical interior even when an intruder suspends its growth bonus. */
 export function palaceEnclosures(state: GameState, includeOccupied = false): PalaceEnclosures {
   const { world } = state, { width, height } = world, total = width * height;
   const previous = caches.get(state), trusted = simulationReadsActive(state), store = entityStore(state);
   const camps = (state.raiderCamps ?? []).filter(camp => raiderCampActive(state, camp));
-  const factions = state.factions.map(faction => `${faction.id},${faction.relation},${faction.defeated}`).join(';');
+  const factions = `${Number(!!state.multiplayer)};${state.diplomacyState?.accessRevision ?? 0};`
+    + state.factions.map(faction => `${faction.id},${faction.relation},${faction.defeated}`).join(';');
   const campKey = camps.map(camp => `${camp.id},${camp.gate.x},${camp.gate.y}`).join(';');
   const key = `${worldRevisions(world).geometry}|${worldStructureRevision(world)}|${entityStore(state).buildings.revision}|${structureChangeRevision(state)}|${factions}|${campKey}`;
   const validated = validations.get(state);
@@ -98,8 +120,8 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
   if (!trusted) validations.delete(state);
   const relevant = state.buildings.filter(building => buildingReady(building)
     && (isWallKind(building.kind) || building.kind === 'palace' || building.kind === 'bridge'));
-  const terrain = enclosureTerrain(world, previous);
-  const signature = `${width},${height},${terrain.revision}|${factions}|${relevant.map(building => `${building.id},${building.kind},${building.faction},${building.x},${building.y}`).join(';')}|${campKey}`;
+  const terrain = scenarioAccessTerrain(world);
+  const signature = `${width},${height},${terrain.version}|${factions}|${relevant.map(building => `${building.id},${building.kind},${building.faction},${building.x},${building.y}`).join(';')}|${campKey}`;
   if (previous?.world === world && previous.tiles === world.tiles && previous.signature === signature) {
     if (trusted) validations.set(state, { geometry: previous, store, key });
     return includeOccupied ? previous : secureEnclosures(state, previous);
@@ -107,17 +129,14 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
   const walls = relevant.filter(building => isWallKind(building.kind));
   const palaces = relevant.filter(building => building.kind === 'palace' && building.faction >= 0
     && !state.factions.find(faction => faction.id === building.faction)?.defeated);
+  const palacesById = new Map(palaces.map(palace => [palace.id, palace]));
   const bridges = new Set(relevant.filter(building => building.kind === 'bridge').map(building => building.y * width + building.x));
-  const ground = new Uint8Array(total);
-  for (let index = 0; index < total; index++) {
-    const tile = world.tiles[index];
-    ground[index] = Number(traversable(world, index % width, Math.floor(index / width))
-      || WATER.has(tile.terrain) && bridges.has(index));
-  }
+  const ground = terrain.open.slice();
+  for (const index of bridges) if (terrain.bridgeGround[index]) ground[index] = 1;
   const regions: PalaceEnclosure[] = [], byFaction = new Map<number, Uint8Array>(), highlighted = new Uint8Array(total);
   // The world geometry mask is independent of faction walls and bridges. It
   // already encodes bounds, mountain cores, diagonal corners and resources.
-  const movementEdges = terrainNavigationEdges(world);
+  const movementEdges = terrain.edges;
   const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
   const neighbors = (index: number, visit: (next: number) => void): void => {
     const x = index % width, y = Math.floor(index / width);
@@ -133,11 +152,13 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
   };
   for (const faction of new Set(palaces.map(palace => palace.faction))) {
     const ownWalls = new Uint8Array(total), defenses = new Uint8Array(total);
+    const stoneWalls: Building[] = [];
     for (const wall of walls) if (friendlyGateAccess(state, faction, wall.faction)) {
       const index = wall.y * width + wall.x;
       if (wall.x < 0 || wall.y < 0 || wall.x >= width || wall.y >= height) continue;
       defenses[index] = 1;
       if (wall.faction === faction) ownWalls[index] = 1;
+      if (wall.kind === 'wall') stoneWalls.push(wall);
     }
     if (!ownWalls.some(Boolean)) continue;
     const components = new Int32Array(total), protectedCells = new Uint8Array(total), accepted = new Map<number, PalaceEnclosure>();
@@ -241,7 +262,9 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
       regions.push(region); accepted.set(component, region);
       for (const cell of cells) { protectedCells[cell] = 1; highlighted[cell] = 1; }
     }
-    if (accepted.size) byFaction.set(faction, protectedCells);
+    if (!accepted.size) continue;
+    byFaction.set(faction, protectedCells);
+    markStoneEnclosures(state, stoneWalls, palacesById, accepted.values());
   }
   const cells: number[] = [];
   for (let index = 0; index < total; index++) if (highlighted[index]) cells.push(index);
@@ -251,10 +274,24 @@ export function palaceEnclosures(state: GameState, includeOccupied = false): Pal
     if (!mask) { mask = new Int32Array(total); regionByFaction.set(region.faction, mask); }
     for (const cell of region.cells) mask[cell] = index + 1;
   });
-  const result: CachedEnclosures = { width, height, regions, byFaction, cells, world, tiles: world.tiles, signature, terrain, regionByFaction };
+  const result: CachedEnclosures = { width, height, regions, byFaction, cells, world, tiles: world.tiles, signature, regionByFaction };
   caches.set(state, result);
   if (trusted) validations.set(state, { geometry: result, store, key });
   return includeOccupied ? result : secureEnclosures(state, result);
+}
+
+export function stoneWalledPalaces(state: GameState): ReadonlySet<number> {
+  if (simulationReadsActive(state)) {
+    structureIndex(state);
+    if (!rustEngine.sim_has_ready_stone_walls(simCore(state).handle)) return noStoneCities;
+  } else if (!state.buildings.some(building => building.kind === 'wall' && buildingReady(building))) return noStoneCities;
+  const enclosures = palaceEnclosures(state);
+  let ids = stoneCities.get(enclosures);
+  if (!ids) {
+    ids = new Set(enclosures.regions.flatMap(region => region.stonePalaces ?? []));
+    stoneCities.set(enclosures, ids);
+  }
+  return ids;
 }
 
 export function isHouseEnclosed(state: GameState, house: Building, enclosures = palaceEnclosures(state)): boolean {
@@ -274,8 +311,7 @@ export function houseBirthProgress(state: GameState, house: Building, enclosures
   return isHouseEnclosed(state, house, enclosures) ? 1 / ENCLOSED_HOUSE_GROWTH_MULTIPLIER : 1;
 }
 
-/** Approved Pixel glints preset: Fast (1.5×), 250% intensity. */
-export const ENCLOSURE_SHIMMER = { speed: 1.5, intensity: 2.5 } as const;
+export const ENCLOSURE_SHIMMER = { speed: 1.5, intensity: 1.25 } as const;
 interface ShimmerSample { u: number; glint: boolean; seed: number }
 interface ShimmerCell { index: number; x: number; y: number; min: number; max: number; samples: ShimmerSample[] }
 interface ShimmerRegion { min: number; span: number; start: number; cells: ShimmerCell[] }

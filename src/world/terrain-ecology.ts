@@ -1,9 +1,12 @@
 import { createNoise2D } from 'simplex-noise';
 import { reliefEdgeAllowed, reliefGroundWalkable, reliefLevel, reliefAllowsTrees } from '../game/relief';
-import { STAIR_UP } from '../game/ridges';
+import { resourceBlocksGround } from '../game/resource-terrain';
 import { rustEngine } from '../game/rust-engine';
 import { WATER, type Tile, type World } from '../game/types';
+import { markWorldChanged } from '../game/world-revisions';
 import { terrainYields } from './generator';
+import { settlementCoreMask } from './environment-fields';
+import { longitudeClimate } from './longitude-climate-native';
 import { DEFAULT_LANDSCAPE_PARAMETERS, type LandscapeParameters } from './options';
 
 export interface TerrainEnvironment {
@@ -16,6 +19,9 @@ export interface TerrainEnvironment {
 }
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const CARDINAL = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+const DENSE_TREES = 2;
+const FRINGE_TREES = 3;
+const DENSE_HABITAT = 1 << 4;
 function randomStream(seed: string): () => number {
   let state = 2166136261;
   for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16777619);
@@ -45,13 +51,18 @@ function freshwaterDistance(tiles: Tile[], width: number, height: number): Int16
  * scattering each independently. This is a landscape-inspired construction,
  * not a calibrated erosion model: frequencies and cover are gameplay scales. */
 export function createTerrainEnvironment(tiles: Tile[], width: number, height: number, seed: string,
-  parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): TerrainEnvironment {
+  parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS,
+  water = freshwaterDistance(tiles, width, height)): TerrainEnvironment {
   const random = randomStream(`${seed}:terrain-environment`), noise = createNoise2D(random), detail = createNoise2D(random);
   const axis = random() * Math.PI, cosine = Math.cos(axis), sine = Math.sin(axis);
   const ruggedness = new Float32Array(tiles.length), moisture = new Float32Array(tiles.length);
   const woodland = new Float32Array(tiles.length), orientation = new Float32Array(tiles.length);
-  const water = freshwaterDistance(tiles, width, height);
+  const columns = longitudeClimate(width);
   const sampleHeight = (x: number, y: number) => tiles[Math.max(0, Math.min(height - 1, y)) * width + Math.max(0, Math.min(width - 1, x))].elevation;
+  const equator = parameters.equatorPosition, polarDistance = Math.min(equator, 1 - equator);
+  // Give both map edges the full boost even when the warm belt is off-center.
+  const woodlandLatitude = Float32Array.from({ length: height }, (_, y) =>
+    clamp(Math.abs(y / Math.max(1, height - 1) - equator) / polarDistance));
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const cell = y * width + x, tile = tiles[cell];
     const wx = x + noise(x * .018 + 71, y * .018 - 19) * 8;
@@ -76,36 +87,31 @@ export function createTerrainEnvironment(tiles: Tile[], width: number, height: n
     const broad = noise(wx * .039 / forestScale + 137, wy * .039 / forestScale + 91);
     const grove = detail(wx * .095 / forestScale - 29, wy * .095 / forestScale + 53);
     const edge = detail(wx * .22 / forestScale + 17, wy * .22 / forestScale - 31);
-    const north = (parameters.equatorPosition - y / (height - 1)) / parameters.equatorPosition;
     const biomeCover = tile.biome === 'rainforest' ? .10 : tile.biome === 'taiga' ? .025
       : tile.biome === 'tundra' ? -.18 : tile.biome === 'alpine' ? -.25 : tile.biome === 'savanna' ? -.055 : 0;
     woodland[cell] = clamp(.50 + broad * .23 + grove * .20 + edge * .055
-      + (moisture[cell] - .5) * .65 + ruggedness[cell] * .045 + north * parameters.forestNorthBias + biomeCover);
+      + (moisture[cell] - .5) * .65 + ruggedness[cell] * .045 + woodlandLatitude[y] * parameters.forestLatitudeBias + biomeCover + columns[x].woodland);
   }
   return { ruggedness, moisture, woodland, orientation };
 }
 
+function setTreeCover(tile: Tile, forest: boolean): void {
+  const old = terrainYields(tile.terrain, tile.overlay);
+  tile.overlay = forest ? 'forest' : 'none';
+  const next = terrainYields(tile.terrain, tile.overlay);
+  for (const resource of ['food', 'production', 'gold'] as const)
+    tile[resource] = Math.max(0, tile[resource] + next[resource] - old[resource]);
+  if (!forest) delete tile.treeClass;
+}
+
 /** Transport regional habitat and walkable edges to the native stand planner. */
-export function applyTerrainEcology(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): void {
-  const { width, height, tiles } = world, fields = createTerrainEnvironment(tiles, width, height, world.seed, parameters);
-  const clear = new Uint8Array(tiles.length), spawns = [...world.spawns, ...(world.secondarySpawns ?? [])];
+export function applyTerrainEcology(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS) {
+  const { width, height, tiles } = world, freshwater = freshwaterDistance(tiles, width, height);
+  const fields = createTerrainEnvironment(tiles, width, height, world.seed, parameters, freshwater);
+  const clear = settlementCoreMask(world);
   const ground = new Uint8Array(tiles.length);
-  for (const spawn of spawns) {
-    const cx = Math.floor(spawn.x), cy = Math.floor(spawn.y);
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-      const x = cx + dx, y = cy + dy;
-      if (x >= 0 && y >= 0 && x < width && y < height) clear[y * width + x] = 1;
-    }
-  }
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const cell = y * width + x, tile = tiles[cell];
-    if (tile.stair) {
-      const up = STAIR_UP[tile.stair];
-      for (const step of [-1, 0, 1]) {
-        const nx = x + up.x * step, ny = y + up.y * step;
-        if (nx >= 0 && ny >= 0 && nx < width && ny < height) clear[ny * width + nx] = 1;
-      }
-    }
     if (tile.marsh || WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
     ground[cell] = Number(reliefGroundWalkable(world, x, y));
   }
@@ -113,7 +119,8 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
   const input = new Float64Array(rustEngine.memory.buffer, pointer, tiles.length * 2);
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const cell = y * width + x, tile = tiles[cell];
-    if (!ground[cell] || !reliefAllowsTrees(tile) || clear[cell] || tile.beach || tile.palm || tile.mountainPass) continue;
+    if (!ground[cell] || !reliefAllowsTrees(tile) || clear[cell] || tile.beach || tile.palm || tile.mountainPass
+      || tile.fjord === 'shore') continue;
     const dry = tile.terrain === 'desert';
     // Limit desert groves to the wetter pockets.
     const suitability = fields.woodland[cell] - parameters.forestThreshold - (dry ? .14 : 0);
@@ -135,12 +142,65 @@ export function applyTerrainEcology(world: World, parameters: LandscapeParameter
     const tile = tiles[cell];
     if (tile.marsh) { tile.biome = 'wetland'; tile.moisture = Math.max(.9, tile.moisture); continue; }
     if (WATER.has(tile.terrain) || !['none', 'forest', 'jungle'].includes(tile.overlay)) continue;
-    const old = terrainYields(tile.terrain, tile.overlay);
-    tile.overlay = trees[cell] ? 'forest' : 'none';
-    const next = terrainYields(tile.terrain, tile.overlay);
-    for (const resource of ['food', 'production', 'gold'] as const)
-      tile[resource] = Math.max(0, tile[resource] + next[resource] - old[resource]);
+    setTreeCover(tile, !!trees[cell]);
     tile.moisture = fields.moisture[cell];
-    if (tile.overlay !== 'forest') delete tile.treeClass;
   }
+  return { woodland: fields.woodland, freshwater };
+}
+
+/** Plan the forest and its woodland fringe after reserving deposit access. */
+export function applyForestBiomes(world: World, habitat: ReturnType<typeof applyTerrainEcology>, parameters: LandscapeParameters): void {
+  const { width, height, tiles } = world;
+  const cores = settlementCoreMask(world, 8);
+  const ground = Uint8Array.from(tiles, (tile, cell) => Number(
+    (!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier'
+      || tile.terrain === 'river' && tile.overlay === 'ford')
+    && !tile.waterfall && !resourceBlocksGround(tile)
+    && reliefGroundWalkable(world, cell % width, Math.floor(cell / width))));
+  const pointer = rustEngine.woodland_input(tiles.length);
+  const input = new Float64Array(rustEngine.memory.buffer, pointer, tiles.length * 2);
+  for (let cell = 0; cell < tiles.length; cell++) {
+    if (!ground[cell]) continue;
+    const x = cell % width, y = Math.floor(cell / width), tile = tiles[cell];
+    let edges = 0;
+    let resourceApproach = false;
+    for (let direction = 0; direction < CARDINAL.length; direction++) {
+      const [dx, dy] = CARDINAL[direction], nx = x + dx, ny = y + dy, next = ny * width + nx;
+      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+      const neighbor = tiles[next];
+      resourceApproach ||= neighbor.rockHost !== undefined || !!neighbor.resource && !WATER.has(neighbor.terrain);
+      if (ground[next]) edges |= 1 << direction;
+    }
+    input[cell * 2 + 1] = edges;
+    if (!edges || WATER.has(tile.terrain) || cores[cell] || resourceApproach || tile.resource || tile.rockRangeGap || tile.beach || tile.palm
+      || tile.marsh || tile.creek || tile.worldFeature || tile.relief || tile.canyon || tile.mountainPass
+      || tile.rockHost !== undefined || tile.overlay === 'swamp' || tile.fjord === 'shore') continue;
+    const dry = tile.terrain === 'desert';
+    if (dry && (tile.moisture <= .46 || tile.desertStone !== undefined)) continue;
+    const distance = habitat.freshwater[cell];
+    const woodedClimate = tile.biome === 'temperate' || tile.biome === 'taiga'
+      || tile.biome === 'wetland' && distance <= 2;
+    const riparian = Math.max(0, 1 - distance / 9) * .15;
+    const exposed = dry ? .25 : tile.terrain === 'tundra' ? .12 : tile.terrain === 'plains' ? .09 : 0;
+    input[cell * 2] = 1 + habitat.woodland[cell] + riparian - parameters.forestThreshold - exposed;
+    // The low four bits retain cardinal walkability for the native planner.
+    if (tile.terrain === 'grassland' && woodedClimate && !tile.fjord) input[cell * 2 + 1] |= DENSE_HABITAT;
+  }
+  const seed = Math.floor(randomStream(`${world.seed}:dense-forest`)() * 0x100000000);
+  const output = rustEngine.forest_biomes_generate(width, height, seed, parameters.forestPatchScale);
+  const cover = new Uint8Array(rustEngine.memory.buffer, output, tiles.length);
+  let changed = false;
+  for (let cell = 0; cell < cover.length; cell++) {
+    const layout = cover[cell], tile = tiles[cell];
+    if (!layout) continue;
+    if (layout === FRINGE_TREES) {
+      if (tile.overlay === 'forest' || tile.overlay === 'jungle') continue;
+      setTreeCover(tile, true);
+    } else {
+      tile.biome = 'forest';
+      setTreeCover(tile, layout === DENSE_TREES);
+    }
+    changed = true;
+  }
+  if (changed) markWorldChanged(world, 'geometry');
 }

@@ -1,4 +1,5 @@
 import { clearDesertStones } from './desert-stones';
+import { clearBuildingVegetation } from './construction-vegetation';
 import { rustEngine } from './rust-engine';
 import { observeScalars, type ScalarObserver } from './scalar-observer';
 import { simCore } from './sim-handle';
@@ -17,13 +18,14 @@ export const UNIT_KIND_CODES: Record<UnitKind, number> = {
   slinger: 0, skirmisher: 1, levyInfantry: 2, supplyCart: 3, leader: 4, warrior: 5, swordsman: 6, spearman: 7, pikeman: 8,
   archer: 9, horseman: 10, horseArcher: 11, knight: 12, scout: 13, militia: 14, worker: 15, merchant: 16, sailboat: 17,
   boar: 18, marshBird: 19, deer: 20, buffalo: 21, elephant: 22, ostrich: 23, musketman: 24, fieldCannon: 25,
+  cow: 26, sheep: 27, horse: 28,
 };
 export const BUILDING_KIND_CODES: Record<BuildingKind, number> = {
   fort: 0, supplyDepot: 1, palace: 2, camp: 3, house: 4, shack: 5, cottage: 6, road: 7, wall: 8, palisade: 9,
   bridge: 10, dock: 11, irrigation: 12, ruin: 13, tower: 14, woodenTower: 15, well: 16, monument: 17, blacksmith: 18,
   guardPost: 19, archeryRange: 20, scoutLodge: 21, observationPost: 22, healerShack: 23, ballista: 24, siegeCannon: 30, stable: 25,
-  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37, hospital: 38, apartments: 39, factory: 40, goldMine: 41, marketplace: 42, scoutTower: 43,
-  frontierVillage: 44, fountain: 46,
+  library: 26, villageTent: 27, colosseum: 28, barracks: 29, forum: 31, granary: 32, thermalBath: 33, shipyard: 34, whalingPost: 35, foundry: 36, militaryAcademy: 37, apartments: 39, factory: 40, goldMine: 41, marketplace: 42, scoutTower: 43,
+  frontierVillage: 44, fountain: 46, barbarianLair: 47,
 };
 const UNKNOWN_KIND = 255;
 const UNITS = 0, BUILDINGS = 1;
@@ -90,13 +92,13 @@ class EntityCollection<T extends { id: number; faction: number }, R extends stri
   }
   private register(value: T, notify = true): void {
     if (this.records.has(value.id)) throw new Error(`Duplicate entity ID: ${value.id}`);
-    if (notify) this.onRegister?.(value);
     if (!Number.isSafeInteger(value.id)) throw new Error(`Invalid simulation entity ID: ${value.id}`);
     const dormant = !this.detached && this.startsDormant?.(value);
     if (!this.detached) {
       const inserted = dormant ? rustEngine.sim_worker_slot_insert(this.sim, value.id) : rustEngine.sim_entity_insert(this.sim, this.table, value.id);
       if (!inserted) throw new Error(`Duplicate entity ID: ${value.id}`);
     }
+    if (notify) this.onRegister?.(value);
     if (dormant) this.dormant.add(value);
     else this.dormant.delete(value);
     this.records.set(value.id, value);
@@ -253,7 +255,10 @@ export class EntityStore {
     return this.buildingCollection ??= new EntityCollection(owned.buildings, buildings => { owned.buildings = buildings; }, buildingRoles, sim, BUILDINGS,
       (building, _sleep, track) => rustEngine.sim_building_traits(sim, building.id, BUILDING_KIND_CODES[building.kind] ?? UNKNOWN_KIND,
         Number(!!building.construction), Number(track)),
-      building => clearDesertStones(this.state.world, building));
+      building => {
+        clearDesertStones(this.state.world, building);
+        clearBuildingVegetation(this.state.world, building);
+      });
   }
   setUnitRole(unit: Unit, role: Pick<Unit, 'kind' | 'builder' | 'collector'>): void {
     // A changed role wakes the unit.

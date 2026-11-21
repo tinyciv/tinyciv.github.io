@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CIVILIZATIONS, RIVAL_STARTING_GOLD, STARTING_FACTION_COUNT, OPPOSING_FACTION_COUNT } from '../src/game/civilizations';
 import { citySummaries, nextCityName } from '../src/game/cities';
 import { createGame } from '../src/game/simulation';
-import { hasStaticPath } from '../src/game/pathfinding';
-import { buildingHeight, buildingWidth, isWallKind, tileAt, WATER, type Building } from '../src/game/types';
+import { hasStaticPath, hasStaticPathBetween } from '../src/game/pathfinding';
+import { constructionEdges } from '../src/game/builders';
+import { buildingHeight, buildingReady, buildingWidth, isWallKind, tileAt, WATER, type Building } from '../src/game/types';
 import { generateWorld } from '../src/world/generator';
 
 describe('six-civilization starting worlds', () => {
@@ -24,7 +25,7 @@ describe('six-civilization starting worlds', () => {
       expect(towns.map(city => city.name)).toEqual(CIVILIZATIONS[faction.id].cities.slice(0, towns.length));
       expect(towns.every(city => city.population === (faction.id === 0 ? 20 : 5) && city.housing >= city.population)).toBe(true);
       expect(faction.population).toBe(faction.id === 0 ? 20 : 10);
-      expect(faction.gold).toBe(faction.id === 0 ? 500 : RIVAL_STARTING_GOLD);
+      expect(faction.gold).toBe(faction.id === 0 ? 300 : RIVAL_STARTING_GOLD);
       if (towns.length === 2) {
         const [first, second] = towns.map(town => town.palace);
         expect(hasStaticPath(state, { x: first.x - .5, y: first.y + .5 },
@@ -34,6 +35,14 @@ describe('six-civilization starting worlds', () => {
       expect(nextCityName(state, faction.id)).toBe(CIVILIZATIONS[faction.id].cities[towns.length]);
       expect(state.rngState).toBe(rng);
     }
+    const libraries = state.buildings.filter(building => building.kind === 'library' && building.faction === 0);
+    expect(libraries).toHaveLength(1);
+    const [library] = libraries, capital = palaces.find(palace => palace.faction === 0)!;
+    const libraryDistance = Math.hypot(library.x - capital.x, library.y - capital.y);
+    expect(buildingReady(library)).toBe(true);
+    expect(libraryDistance).toBeGreaterThanOrEqual(3);
+    expect(libraryDistance).toBeLessThanOrEqual(5);
+    expect(hasStaticPathBetween(state, constructionEdges(state, capital), constructionEdges(state, library), 0)).toBe(true);
     const occupied = new Map<number, Building>();
     for (const building of state.buildings.filter(building => building.faction >= 0)) {
       for (let y = building.y; y < building.y + buildingHeight(building); y++)
@@ -59,22 +68,5 @@ describe('six-civilization starting worlds', () => {
     expect(palaces).toHaveLength(STARTING_FACTION_COUNT + OPPOSING_FACTION_COUNT);
     for (let i = 0; i < palaces.length; i++) for (let j = 0; j < i; j++)
       expect(Math.max(Math.abs(palaces[i].x - palaces[j].x), Math.abs(palaces[i].y - palaces[j].y))).toBeGreaterThanOrEqual(2);
-  });
-});
-
-describe('native ledge shelves', () => {
-  it.each(['CROWN', '42', 'first-light'])('keeps each enabled shelf and its apron on one terrain type on %s', seed => {
-    const world = generateWorld(seed, undefined, undefined, { ledges: true });
-    expect(world.tiles.some(tile => tile.stair)).toBe(true);
-    for (const [cell, tile] of world.tiles.entries()) {
-      expect(tile.relief).toBeUndefined();
-      if (!tile.ridge) continue;
-      const x = cell % world.width, y = Math.floor(cell / world.width);
-      expect(tile.resource).toBeUndefined();
-      expect(WATER.has(tile.terrain)).toBe(false);
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-        expect(tileAt(world, x + dx, y + dy)?.terrain).toBe(tile.terrain);
-      }
-    }
   });
 });

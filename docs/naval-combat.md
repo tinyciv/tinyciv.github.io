@@ -2,7 +2,7 @@
 
 Shipyards occupy 3×3 map cells (96×96 rendered pixels; 48×48 source art). Sailing unlocks them. Placement requires a completed friendly city with at least 100 residents, one shipyard per city, dry clear land, friendly borders, a builder route and at least one edge adjacent to navigable coastal water. Rivers and lakes do not qualify. Construction costs 500 gold and takes 90 seconds.
 
-Each shipyard builds and supports one warship. A ship costs 500 gold, takes 30 seconds to finish and includes eight marines. Its first 30 seconds of service are included; subsequent service costs 50 gold every 30 seconds. Unpaid service reduces speed to 40% and disables weapons until the next paid service interval. Upkeep consumes available gold without creating debt.
+Each shipyard builds and supports one warship. A ship costs 500 gold, takes 30 seconds to finish and includes eight marines. Its first 30 seconds of service are included. Subsequent service costs 50 gold every 30 seconds. Unpaid ships run at half top speed and deal half weapon damage until the next paid service interval. Upkeep consumes available gold without creating debt.
 
 An anchored warship repairs its hull at 2.4 HP per second within three tiles of any completed shipyard owned by its faction. Range is measured from the physical hull to the shipyard footprint; the nearby-yard check runs once per second. Repairing ships show the existing pulsing green healing cross above their nameplate. Warships do not also receive ordinary land-unit regeneration.
 

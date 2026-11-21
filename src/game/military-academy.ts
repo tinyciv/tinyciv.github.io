@@ -8,9 +8,13 @@ import type { GameState, MilitaryFormationType } from './types';
 export type { MilitaryFormationType } from './types';
 export const MILITARY_ACADEMY_GOLD = rustEngine.military_academy_constant(0);
 export const MILITARY_ACADEMY_HP = rustEngine.military_academy_constant(1);
-export const MILITARY_FORMATION_TYPES: readonly MilitaryFormationType[] = ['wide', 'standard', 'deep'];
-export const militaryFormationCode = (type: MilitaryFormationType | undefined): number => type === 'wide' ? 0 : type === 'deep' ? 2 : 1;
+export const MILITARY_FORMATION_TYPES: readonly MilitaryFormationType[] = ['wide', 'standard', 'deep', 'loose'];
+export function militaryFormationCode(type: MilitaryFormationType | undefined): number {
+  return type === undefined ? 1 : MILITARY_FORMATION_TYPES.indexOf(type);
+}
 const fromCode = (code: number): MilitaryFormationType => MILITARY_FORMATION_TYPES[code] ?? 'standard';
+export const militaryFormationLabel = (type: MilitaryFormationType): string =>
+  type === 'loose' ? 'Loose order' : type[0].toUpperCase() + type.slice(1);
 
 /** Structure events maintain the native academy counts. These calls only
  * publish the faction's research/preference mirrors and read native rules. */
@@ -33,5 +37,6 @@ export function selectMilitaryFormation(state: GameState, type: MilitaryFormatio
     return { ok: false, message: 'Requires Military Science and a completed Military Academy.' };
   owner.formationType = type;
   invalidateDecisions(state);
-  return { ok: true, message: `${type[0].toUpperCase()}${type.slice(1)} formation selected.` };
+  const label = militaryFormationLabel(type);
+  return { ok: true, message: type === 'loose' ? `${label} selected.` : `${label} formation selected.` };
 }

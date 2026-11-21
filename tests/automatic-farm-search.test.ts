@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
 import { createAutomaticFarmSiteSearch, planAutomaticFarmSite, validateAutomaticFarmSite, type FarmSiteSearchResult } from '../src/game/farm-siting';
-import * as ridges from '../src/game/ridges';
+import * as relief from '../src/game/relief';
 import * as blocks from '../src/game/farm-blocks';
 import * as siting from '../src/game/farm-siting';
 import { advanceAutomaticDevelopment, BUILD_COSTS } from '../src/game/simulation';
@@ -50,7 +50,7 @@ describe('resumable automatic farm searches', () => {
 
   it('bounds both candidate filtering and expensive scoring per turn', () => {
     const state = fixture(), search = createAutomaticFarmSiteSearch(state, state.buildings[0]);
-    const footprint = vi.spyOn(ridges, 'ridgeFootprintAllowed');
+    const footprint = vi.spyOn(relief, 'reliefFootprintAllowed');
     const original = blocks.farmBlockPlacementQuery;
     let scoring = 0;
     vi.spyOn(blocks, 'farmBlockPlacementQuery').mockImplementation((...args) => {
@@ -67,10 +67,16 @@ describe('resumable automatic farm searches', () => {
     expect(result.done).toBe(true);
   });
 
-  it.each(['occupied', 'field', 'water', 'forbidden', 'new city'] as const)('rejects a quoted site after a live %s change', change => {
+  it.each(['occupied', 'queued building footprint', 'unfinished ditch', 'field', 'water', 'forbidden', 'new city'] as const)('rejects a quoted site after a live %s change', change => {
     const state = fixture(), palace = state.buildings[0], plan = planAutomaticFarmSite(state, palace)!;
     const { x, y } = plan.point;
     if (change === 'occupied') entityStore(state).buildings.add(building(2, 'road', x, y));
+    if (change === 'queued building footprint' || change === 'unfinished ditch') {
+      const site = change === 'queued building footprint' ? building(2, 'library', x - 1, y - 1) : building(2, 'irrigation', x, y);
+      site.hp = 1;
+      site.construction = { startedAt: state.time, duration: 4, waitingForBuilder: true };
+      entityStore(state).buildings.add(site);
+    }
     if (change === 'field') state.fields!.push({ id: 10, camp: 99, faction: 0, x, y, planted: false, food: 0, nextHarvest: 60 });
     if (change === 'water') {
       state.world.tiles[y * 64 + x].terrain = 'lake'; recordWorldTileChanges(state.world, [y * 64 + x]);
@@ -78,6 +84,10 @@ describe('resumable automatic farm searches', () => {
     if (change === 'forbidden') state.forbiddenZones = { cells: [y * 64 + x], revision: 1 };
     if (change === 'new city') entityStore(state).buildings.add(building(2, 'palace', x + 1, y));
     expect(validateAutomaticFarmSite(state, palace, plan.point)).toBeUndefined();
+    if (change === 'unfinished ditch') {
+      state.buildings[1].construction = undefined;
+      expect(validateAutomaticFarmSite(state, palace, plan.point)?.irrigatedPlots).toBe(1);
+    }
   });
 
   it('finishes despite unrelated edits and pays once for the live accepted plot', () => {

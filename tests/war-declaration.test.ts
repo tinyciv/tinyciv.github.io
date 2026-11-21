@@ -91,10 +91,10 @@ describe('village agreements through the building diplomacy popup', () => {
     entityStore(state).units.add(villager);
     expect(neutralVillageEntityAt(state, { x: 12.5, y: 9.15 })).toBe(villager);
     expect(diplomacyAction(state, 1, 'trade', villager.id).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(3750);
+    expect(state.factions[0].gold).toBe(3800);
     villager.hp = 0;
     expect(diplomacyAction(state, 1, 'ally', villager.id).ok).toBe(false);
-    expect(state.factions[0].gold).toBe(3750);
+    expect(state.factions[0].gold).toBe(3800);
   });
 
   it('only offers peaceful, living villages and marks surviving allied camps', () => {
@@ -119,19 +119,19 @@ describe('village agreements through the building diplomacy popup', () => {
     expect(villageDiplomacyStatus(state, tent, true)?.trade.available).toBe(true);
     expect(warDeclarationTargetAt(state, 12.5, 10.5)).toBe(tent);
     expect(diplomacyAction(state, 1, 'trade', tent.id).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(3750);
+    expect(state.factions[0].gold).toBe(3800);
     expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['trade', true]);
     setSettlementAffiliation(state, 3, 0, 50);
     expect(state.tradeRoutes?.filter(route => route.villageId === 1)).toHaveLength(1);
     expect(warDeclarationTargetAt(state, 12.5, 10.5)).toBe(tent);
     expect(diplomacyAction(state, 1, 'ally', tent.id).ok).toBe(true);
-    expect(state.factions[0].gold).toBe(750);
+    expect(state.factions[0].gold).toBe(800);
     expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['allied', true]);
     expect(state.factions[0].villageBonuses?.research).toBe(.15);
     expect(JSON.stringify(leader)).toBe(orders);
     expect(diplomacyAction(state, 1, 'trade', tent.id).ok).toBe(false);
     expect(diplomacyAction(state, 1, 'ally', tent.id).ok).toBe(false);
-    expect(state.factions[0].gold).toBe(750);
+    expect(state.factions[0].gold).toBe(800);
     expect(diplomacyAction(state, 1, 'war', tent.id).ok).toBe(true);
     expect([villageRelationView(state, state.villages![0], 0), villageTrading(state, state.villages![0], 0)]).toEqual(['war', false]);
     expect(state.factions[0].villageBonuses?.research).toBe(0);
@@ -147,7 +147,7 @@ describe('village agreements through the building diplomacy popup', () => {
         if (condition === 'foreign') tent.faction = 0;
         if (condition === 'dead camp') state.buildings[1].hp = 0;
         if (condition === 'dead leader') state.units[0].hp = 0;
-        if (condition === 'insufficient gold') state.factions[0].gold = 249;
+        if (condition === 'insufficient gold') state.factions[0].gold = 199;
         const gold = state.factions[0].gold;
         expect(diplomacyAction(state, 1, action, tent.id).ok).toBe(false);
         expect(state.factions[0].gold).toBe(gold);

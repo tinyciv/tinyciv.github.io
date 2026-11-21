@@ -10,6 +10,7 @@ const key = (point: Point): string => `${point.x},${point.y}`;
 /** Rival starting grants keep the existing spaced tower sites, with open
  * approaches around every tower rather than palisade enclosures. */
 export function establishFactionStartingDefenses(state: GameState, palace: Building, create: Create): void {
+  if (state.world.scenario === 'sandbox' || state.world.scenario === 'no-mans-land') return;
   for (let index = factionCityTowers(state, palace).length; index < FACTION_CITY_TOWERS; index++) {
     const enclosure = nextFactionTowerEnclosure(state, palace);
     if (!enclosure) break;

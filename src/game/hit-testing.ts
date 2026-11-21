@@ -9,16 +9,18 @@ import { roadConnections, roadCoversPixel } from './road-sprites';
 import { placementOccupancy } from './placement-occupancy';
 import { dockArtBounds, dockConstructionBounds } from './naval-art';
 import { galleyContainsPoint } from './galley-footprint';
+import { isLargeLivestock } from './wildlife-art';
 
 /** Match upright figures above their footing and the full oriented galley hull.
  * This affects pointing only; physical boat clearance uses the same hull geometry. */
 export function unitAtPoint(state: GameState, point: Point): Unit | undefined {
   return state.units.filter(unit => {
-    if (unit.hp <= 0 || unit.inside || !entityVisible(state, unit)) return false;
+    if (unit.hp <= 0 || unit.inside || !entityVisible(state, unit, true)) return false;
     if (unit.kind === 'sailboat') return galleyContainsPoint(unit, point, .06);
     const boat = unit.aboardRiverTrade;
-    const dx = (point.x - unit.x) / (boat ? .5 : .46);
-    const dy = (point.y - (unit.y - (boat ? 0 : .35))) / .6;
+    const largerAnimal = isLargeLivestock(unit.kind);
+    const dx = (point.x - unit.x) / (largerAnimal ? .68 : boat ? .5 : .46);
+    const dy = (point.y - (unit.y - (boat ? 0 : largerAnimal ? .23 : .35))) / .6;
     return dx * dx + dy * dy <= 1;
   // When figures overlap, the southern figure is drawn on top.
   }).sort((a, b) => b.y - a.y || Math.abs(a.x - point.x) - Math.abs(b.x - point.x))[0];
@@ -40,7 +42,7 @@ export function neutralVillageEntityAt(state: GameState, point: Point): Building
 export function buildingAtPoint(state: GameState, point: Point): Building | undefined {
   const tileX = Math.floor(point.x), tileY = Math.floor(point.y);
   const occupancy = placementOccupancy(state);
-  const occupants = (x: number, y: number) => occupancy.at(x, y).filter(other => other.hp > 0 && entityVisible(state, other));
+  const occupants = (x: number, y: number) => occupancy.at(x, y).filter(other => other.hp > 0 && entityVisible(state, other, true));
   const local = occupants(tileX, tileY);
   const ditch = local.find(b => b.kind === 'irrigation');
   if (ditch) {
@@ -58,13 +60,13 @@ export function buildingAtPoint(state: GameState, point: Point): Building | unde
   let selected: Building | undefined, frontDepth = -Infinity;
   for (const building of state.buildings) {
     if (constructionSiteHidden(building)) continue;
-    if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || !building.construction && (building.kind === 'road' || building.kind === 'bridge' || building.kind === 'irrigation') || !entityVisible(state, building)) continue;
+    if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed) || !building.construction && (building.kind === 'road' || building.kind === 'bridge' || building.kind === 'irrigation') || !entityVisible(state, building, true)) continue;
     // Every structure uses its top-left footprint, including two-cell farms.
     const width = buildingWidth(building), height = buildingHeight(building), x = building.x, y = building.y;
-    // Every hit area (dock jetties, well overhangs, tower tops) lies within one
-    // tile of the footprint. Reject distant structures before the shared-tile
-    // lookups below, which each scan every building: a click was O(n²).
-    if (point.x < x - 1 || point.x >= x + Math.max(width, 2) + 1 || point.y < y - 1 || point.y >= y + Math.max(height, 2) + 1) continue;
+    // Include the elevated settlement art before performing shared-tile lookups.
+    const top = buildingArtTop(building);
+    if (point.x < x - 1 || point.x >= x + Math.max(width, 2) + 1
+      || point.y < y + Math.min(top, -1) || point.y >= y + Math.max(height, 2) + 1) continue;
     const attachedWell = !!sharedHouseForWell(building, state.buildings);
     const mountedTower = !!sharedWallForTower(building, state.buildings);
     const towerOnWall = sharedTowerForWall(building, state.buildings);
@@ -75,9 +77,9 @@ export function buildingAtPoint(state: GameState, point: Point): Building | unde
     const bounds = dockBounds ? { left: dockBounds.x / 32, top: dockBounds.y / 32,
       right: (dockBounds.x + dockBounds.width) / 32, bottom: (dockBounds.y + dockBounds.height) / 32 }
       : attachedWell ? HOUSE_WELL_BOUNDS
-      : mountedTower ? { left: 0, top: buildingArtTop(building), right: 1, bottom: building.construction ? .5 : .25 }
+      : mountedTower ? { left: 0, top, right: 1, bottom: building.construction ? .5 : .25 }
       : towerOnWall ? { left: 0, top: towerOnWall.construction ? .5 : .25, right: 1, bottom: 1 }
-      : { left: 0, top: buildingArtTop(building), right: width, bottom: height };
+      : { left: 0, top, right: width, bottom: height };
     if (point.x < x + bounds.left || point.x >= x + bounds.right
       || point.y < y + bounds.top || point.y >= y + bounds.bottom) continue;
     // Renderer uses stable ascending depth: later entries win an equal depth.

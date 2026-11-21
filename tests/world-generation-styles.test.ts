@@ -43,7 +43,7 @@ function connectedTowns(world: World): void {
 describe('explicit world generation styles', () => {
   it.each(['CROWN', '42', 'first-light'])('makes distinct continent, supercontinent, and branching-island geographies for %s', seed => {
     const proceduralStyles = WORLD_GENERATION_STYLES;
-    const worlds = proceduralStyles.map(style => generateWorld(seed, 274, 216, { style, ledges: false }));
+    const worlds = proceduralStyles.map(style => generateWorld(seed, 274, 216, { style }));
     const [continents, pangaea, fractal] = worlds.map(landmasses);
     expect(continents[1].length).toBeGreaterThan(4000);
     expect(continents[0].length / continents.reduce((sum, mass) => sum + mass.length, 0)).toBeLessThan(.85);

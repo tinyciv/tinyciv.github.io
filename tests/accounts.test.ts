@@ -19,8 +19,8 @@ describe('account password storage', () => {
     expect(await verifyPassword('test-only sample password', 'scrypt$1$1$1$00$00')).toBe(false);
   });
   it('accepts the supported minimum and bounds UTF-8 input before hashing', () => {
-    expect(validPassword('0123456789')).toBe(true);
-    expect(validPassword('012345678')).toBe(false);
+    expect(validPassword('a')).toBe(true);
+    expect(validPassword('')).toBe(false);
     expect(validPassword('😊'.repeat(300))).toBe(false);
     expect(validPassword({})).toBe(false);
   });

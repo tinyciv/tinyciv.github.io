@@ -7,6 +7,7 @@ import '../../src/ui/reference-buttons.css';
 import type { BuildSelection } from '../../src/game/types';
 import { buildMenuForSelection, type BuildMenu } from '../../src/ui/build-controls';
 import { constructionActionsMarkup, buildingButtonsMarkup } from '../../src/ui/build-controls-view';
+import { fitGameHud } from '../../src/ui/game-viewport';
 
 interface Args { menu: BuildMenu; interactionStates: boolean }
 
@@ -24,15 +25,16 @@ export const Civilian: StoryObj<Args> = {
     const host = document.createElement('main');
     host.className = 'game-area';
     host.style.background = '#101719';
-    host.innerHTML = `<footer class="hud" aria-label="Game controls">
+    host.innerHTML = `<div class="game-hud"><footer class="hud" aria-label="Game controls">
       <section class="special-actions" aria-label="Actions">${constructionActionsMarkup({
-        build: 'Build', fortifications: 'Fortify', clear: 'Clear', forbid: 'Forbid',
+        build: 'Build', fortifications: 'Fortify', clear: 'Clear', forbid: 'Forbid', cancel: 'Cancel',
       })}</section>
       <section class="build-panel${args.menu === 'build' ? ' is-building-menu' : ''}" id="build-panel" role="region" aria-label="${args.menu === 'build' ? 'Leader buildings' : 'Leader fortifications'}" data-menu="${args.menu}">
         <button id="close-build" aria-label="Close construction menu" title="Close (Esc)">×</button>
         <div class="build-actions">${buildingButtonsMarkup(() => '')}</div>
       </section>
-    </footer>`;
+    </footer></div>`;
+    fitGameHud(host);
     host.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
       button.hidden = buildMenuForSelection(button.dataset.build as BuildSelection) !== args.menu;
       const selected = args.interactionStates && button.dataset.build === (args.menu === 'build' ? 'road' : 'palisade');

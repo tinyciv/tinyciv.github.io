@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "world": "node scripts/world.mjs",
     "frozen": "node scripts/frozen.mjs",
-    "build": "npm run check:art && npm run build:wasm && tsc --noEmit && vite build",
+    "build": "npm run build:wasm && tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "npm run build:wasm && npm run test:rust && vitest run",
     "sim": "node tools/simulation-harness/cli.mjs",

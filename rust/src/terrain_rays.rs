@@ -1,15 +1,18 @@
-//! Shared, immutable mountain obstruction field. Sight can reveal the first
-//! mountain tile, but neither sight nor any projectile can pass through it.
-//! The host refreshes the field only after relief geometry changes.
+//! Shared, immutable terrain ray field. Mountain silhouettes stop sight.
+//! Individual rock formations shorten sight and stop projectiles.
 use bevy_ecs::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
+
+const MOUNTAIN: u8 = 1;
+const ROCK: u8 = 3;
+const ROCK_SIGHT_PENALTY: f64 = 0.5;
 
 #[derive(Default)]
 pub struct MountainGrid {
     width: usize,
     height: usize,
-    mountains: Vec<u8>,
+    obstructions: Vec<u8>,
     /// Hill-only groups of at least 20 edge-connected cells adjoining mountains.
     foothills: Vec<u8>,
     prefix: Vec<u32>,
@@ -20,9 +23,9 @@ pub struct MountainTerrain(pub Arc<MountainGrid>);
 
 impl MountainGrid {
     fn new(width: usize, height: usize, input: &[f64]) -> Self {
-        // Transport encoding: flat 0, mountains 1, hills 2. Hills never block rays.
+        // Transport encoding: flat 0, mountain 1, hill 2, solid rock 3.
         let kinds: Vec<u8> = input.iter().take(width * height).map(|v| *v as u8).collect();
-        let mountains: Vec<u8> = kinds.iter().map(|kind| u8::from(*kind == 1)).collect();
+        let obstructions: Vec<u8> = kinds.iter().map(|&kind| if matches!(kind, MOUNTAIN | ROCK) { kind } else { 0 }).collect();
         let mut foothills = vec![0; kinds.len()];
         let mut seen = vec![false; kinds.len()];
         let mut group = Vec::new();
@@ -36,7 +39,7 @@ impl MountainGrid {
                 let cell = group[head]; head += 1;
                 let (x, y) = (cell % width, cell / width);
                 let mut visit = |next: usize| {
-                    if kinds[next] == 1 { mountain = true; }
+                    if matches!(kinds[next], MOUNTAIN | ROCK) { mountain = true; }
                     if kinds[next] == 2 && !seen[next] { seen[next] = true; group.push(next); }
                 };
                 if x > 0 { visit(cell - 1); }
@@ -53,19 +56,19 @@ impl MountainGrid {
         for y in 0..height {
             let mut row = 0;
             for x in 0..width {
-                row += mountains[y * width + x] as u32;
+                row += u32::from(obstructions[y * width + x] != 0);
                 prefix[(y + 1) * stride + x + 1] = prefix[y * stride + x + 1] + row;
             }
         }
-        Self { width, height, mountains, foothills, prefix }
+        Self { width, height, obstructions, foothills, prefix }
     }
 
-    fn mountain(&self, x: i32, y: i32) -> bool {
-        x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height
-            && self.mountains[y as usize * self.width + x as usize] != 0
+    fn obstruction(&self, x: i32, y: i32) -> u8 {
+        if x < 0 || y < 0 || x as usize >= self.width || y as usize >= self.height { return 0; }
+        self.obstructions[y as usize * self.width + x as usize]
     }
 
-    fn contains_mountains(&self, left: i32, top: i32, right: i32, bottom: i32) -> bool {
+    fn contains_obstructions(&self, left: i32, top: i32, right: i32, bottom: i32) -> bool {
         if self.width == 0 || self.height == 0 { return false; }
         let x0 = left.clamp(0, self.width as i32) as usize;
         let y0 = top.clamp(0, self.height as i32) as usize;
@@ -78,7 +81,7 @@ impl MountainGrid {
     }
 
     pub fn nearby(&self, x: f64, y: f64, radius: f64) -> bool {
-        self.contains_mountains((x - radius).floor() as i32, (y - radius).floor() as i32,
+        self.contains_obstructions((x - radius).floor() as i32, (y - radius).floor() as i32,
             (x + radius).floor() as i32, (y + radius).floor() as i32)
     }
 
@@ -86,14 +89,23 @@ impl MountainGrid {
     /// cells touched at a diagonal corner. A visible target exempts only its
     /// own mountain tile, never a mountain before it or beside that corner.
     pub fn first_blocked(&self, sx: f64, sy: f64, tx: f64, ty: f64, visible_target: bool) -> Option<f64> {
+        self.trace(sx, sy, tx, ty, visible_target).err()
+    }
+
+    /// Extra distance consumed by solid rock along a sight ray.
+    pub fn sight_penalty(&self, sx: f64, sy: f64, tx: f64, ty: f64) -> f64 {
+        self.trace(sx, sy, tx, ty, true).unwrap_or(f64::INFINITY)
+    }
+
+    fn trace(&self, sx: f64, sy: f64, tx: f64, ty: f64, sight: bool) -> Result<f64, f64> {
         // An unattached field preserves standalone projectile-engine usage.
-        if self.width == 0 || self.height == 0 { return None; }
-        if ![sx, sy, tx, ty].iter().all(|v| v.is_finite()) { return Some(0.0); }
+        if self.width == 0 || self.height == 0 { return Ok(0.0); }
+        if ![sx, sy, tx, ty].iter().all(|v| v.is_finite()) { return Err(0.0); }
         let (mut x, mut y) = (sx.floor() as i32, sy.floor() as i32);
         let (end_x, end_y) = (tx.floor() as i32, ty.floor() as i32);
         if x < 0 || y < 0 || x as usize >= self.width || y as usize >= self.height
             || end_x < 0 || end_y < 0 || end_x as usize >= self.width || end_y as usize >= self.height {
-            return Some(0.0);
+            return Err(0.0);
         }
         let (dx, dy) = (tx - sx, ty - sy);
         let vertical_edge = dx == 0.0 && sx.fract() == 0.0;
@@ -101,17 +113,21 @@ impl MountainGrid {
         // Include every cell touched by either endpoint, as well as rays
         // lying along a grid line. The same segment must obstruct in either
         // direction, including one starting exactly on a mountain corner.
-        if !self.contains_mountains(x.min(end_x) - i32::from(sx.min(tx).fract() == 0.0),
+        if !self.contains_obstructions(x.min(end_x) - i32::from(sx.min(tx).fract() == 0.0),
             y.min(end_y) - i32::from(sy.min(ty).fract() == 0.0),
-            x.max(end_x), y.max(end_y)) { return None; }
-        let solid = |x, y| !(visible_target && x == end_x && y == end_y) && self.mountain(x, y);
+            x.max(end_x), y.max(end_y)) { return Ok(0.0); }
+        let solid = |x, y| match self.obstruction(x, y) {
+            MOUNTAIN => !(sight && x == end_x && y == end_y),
+            ROCK => !sight,
+            _ => false,
+        };
         let endpoint_blocked = |px: f64, py: f64| {
             let (x, y) = (px.floor() as i32, py.floor() as i32);
             solid(x, y) || px.fract() == 0.0 && solid(x - 1, y)
                 || py.fract() == 0.0 && solid(x, y - 1)
                 || px.fract() == 0.0 && py.fract() == 0.0 && solid(x - 1, y - 1)
         };
-        if endpoint_blocked(sx, sy) { return Some(0.0); }
+        if endpoint_blocked(sx, sy) { return Err(0.0); }
         // A ray exactly along a tile edge touches both sides. In particular,
         // integer-centered towers cannot shoot along a mountain's boundary.
         let blocked = |x, y| solid(x, y)
@@ -125,10 +141,14 @@ impl MountainGrid {
         let mut cross_x = if step_x != 0 { ((if step_x > 0 { x + 1 } else { x }) as f64 - sx) / dx } else { f64::INFINITY };
         let mut cross_y = if step_y != 0 { ((if step_y > 0 { y + 1 } else { y }) as f64 - sy) / dy } else { f64::INFINITY };
         let mut entry = 0.0;
+        let mut rock_fraction = 0.0;
         loop {
-            if blocked(x, y) { return Some(entry); }
+            if blocked(x, y) { return Err(entry); }
+            let in_rock = sight && self.obstruction(x, y) == ROCK;
             if x == end_x && y == end_y {
-                return if endpoint_blocked(tx, ty) { Some(1.0) } else { None };
+                if endpoint_blocked(tx, ty) { return Err(1.0); }
+                if in_rock { rock_fraction += 1.0 - entry; }
+                return Ok(if rock_fraction > 0.0 { dx.hypot(dy) * rock_fraction * ROCK_SIGHT_PENALTY } else { 0.0 });
             }
             // Rounding at t=1 can otherwise cross past an already reached
             // endpoint axis, especially when traveling toward an integer
@@ -136,9 +156,11 @@ impl MountainGrid {
             // the endpoint, so traversal is bounded by Manhattan tile span.
             if x == end_x { cross_x = f64::INFINITY; }
             if y == end_y { cross_y = f64::INFINITY; }
-            entry = cross_x.min(cross_y).clamp(0.0, 1.0);
+            let exit = cross_x.min(cross_y).clamp(0.0, 1.0);
+            if in_rock { rock_fraction += exit - entry; }
+            entry = exit;
             if (cross_x - cross_y).abs() < 1e-10 {
-                if blocked(x + step_x, y) || blocked(x, y + step_y) { return Some(entry); }
+                if blocked(x + step_x, y) || blocked(x, y + step_y) { return Err(entry); }
             }
             if cross_x == cross_y {
                 x += step_x; y += step_y; cross_x += delta_x; cross_y += delta_y;
@@ -194,16 +216,16 @@ impl TerrainRays {
             if kind == 1 && terrain.foothills[cell] == 0 { return false; }
             if let Some(&visible) = sight.visible.get(&(cell, kind)) { return visible; }
             // Elevated silhouettes can be recognized beyond ordinary ground
-            // sight and woodland. Intervening mountains still stop the ray;
-            // only the destination's own mountain cell is exempted.
+            // sight and woodland. Apply the same mountain and rock geometry.
             let radius = if kind == 2 { 36.0 } else { 12.0 };
             let (x, y) = ((cell % terrain.width) as f64 + 0.5, (cell / terrain.width) as f64 + 0.5);
             let mut visible = false;
             'buckets: for by in ((y - radius) / LANDMARK_BUCKET).floor() as i32..=((y + radius) / LANDMARK_BUCKET).floor() as i32 {
                 for bx in ((x - radius) / LANDMARK_BUCKET).floor() as i32..=((x + radius) / LANDMARK_BUCKET).floor() as i32 {
                     for &(sx, sy) in sight.observers.get(&(bx, by)).into_iter().flatten() {
-                        if (sx - x).powi(2) + (sy - y).powi(2) <= radius * radius
-                            && terrain.first_blocked(sx, sy, x, y, true).is_none() {
+                        let distance_squared = (sx - x).powi(2) + (sy - y).powi(2);
+                        if distance_squared <= radius * radius
+                            && terrain.sight_penalty(sx, sy, x, y) <= radius - distance_squared.sqrt() {
                             visible = true; break 'buckets;
                         }
                     }

@@ -122,7 +122,7 @@ function findConstructionRoute(state: GameState, kind: 'road' | 'wall' | 'palisa
   type Node = { p: Point; cost: number; parent?: Node; score: number; additions: Building[] };
   const reservation = (p: Point): Building => ({ id: -1, kind: kind as Building['kind'], faction, ...p, hp: 1, maxHp: 1, capacity: 0 });
   const networkFits = (p: Point, additions: Building[]) => kind === 'irrigation' || existing.has(key(p)) || upgrades.has(key(p))
-    || networkQuery!(kind as Building['kind'], p.x, p.y, faction, additions).ok;
+    || networkQuery!(kind as Building['kind'], p.x, p.y, faction, additions, true).ok;
   const initialAdditions = kind === 'irrigation' || existing.has(key(start)) || upgrades.has(key(start)) ? [] : [reservation(start)];
   let closest: Point[] = [start], closestDistance = manhattan(start, end);
   for (let attempt = 0; attempt < 6; attempt++) {

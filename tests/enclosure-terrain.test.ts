@@ -2,7 +2,7 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { palaceEnclosures } from '../src/game/enclosures';
 import { canMove, canWalk, findPath } from '../src/game/pathfinding';
-import { type Building, type GameState, type Point, type Tile } from '../src/game/types';
+import { type Building, type GameState, type Tile } from '../src/game/types';
 
 const ENEMY = -2;
 const building = (id: number, kind: Building['kind'], x: number, y: number): Building => ({
@@ -38,12 +38,11 @@ function expectEnemyAccess(state: GameState, accessible: boolean): void {
   for (const next of path) { expect(canMove(state, previous, next, ENEMY)).toBe(true); previous = next; }
 }
 
-/** The city's plateau has one eastern stair. A U-shaped wall surrounds its
- * low apron without placing a building on the stair or its landing tile. */
-function defendedPlateau(): GameState {
+/** The city's rocky boundary leaves one eastern approach with a U-shaped wall. */
+function defendedPocket(): GameState {
   const state = fixture();
-  for (let y = 7; y <= 18; y++) for (let x = 7; x <= 18; x++) tile(state, x, y).ridge = 1;
-  tile(state, 18, 12).stair = 'west';
+  for (let y = 7; y <= 18; y++) for (let x = 7; x <= 18; x++)
+    if ((x === 7 || x === 18 || y === 7 || y === 18) && (x !== 18 || y !== 12)) tile(state, x, y).rockRelief = 0;
   for (let y = 10; y <= 14; y++) wall(state, 21, y);
   for (const y of [10, 14]) for (let x = 19; x <= 20; x++) wall(state, x, y);
   state.world.revision!++;
@@ -59,8 +58,8 @@ function naturalBoundary(state: GameState, apply: (tile: Tile) => void): void {
 }
 
 describe('enclosure and enemy terrain traversal agree', () => {
-  it('protects a plateau with walls around its low approach and loses protection when the approach is breached', () => {
-    const state = defendedPlateau();
+  it('protects a rocky pocket with walls around its approach and loses protection when the approach is breached', () => {
+    const state = defendedPocket();
     expect(canMove(state, { x: 19.5, y: 12.5 }, { x: 18.5, y: 12.5 }, ENEMY)).toBe(true);
     expectEnemyAccess(state, false);
     expect(palaceEnclosures(state).regions).toHaveLength(1);
@@ -69,33 +68,32 @@ describe('enclosure and enemy terrain traversal agree', () => {
     expect(palaceEnclosures(state).regions).toHaveLength(0);
   });
 
-  it.each([
-    { direction: 'south', x: 12, y: 7, approach: { x: 12.5, y: 6.5 } },
-    { direction: 'north', x: 12, y: 18, approach: { x: 12.5, y: 19.5 } },
-    { direction: 'east', x: 7, y: 12, approach: { x: 6.5, y: 12.5 } },
-    { direction: 'west', x: 18, y: 9, approach: { x: 19.5, y: 9.5 } },
-  ] as const)('opening a correctly oriented $direction stair invalidates the enclosure', ({ direction, x, y, approach }) => {
-    const state = defendedPlateau(), high: Point = { x: x + .5, y: y + .5 };
+  it('invalidates the enclosure when a new gap opens in the rocks', () => {
+    const state = defendedPocket(), approach = { x: 12.5, y: 6.5 }, gap = { x: 12.5, y: 7.5 };
+    expect(canMove(state, approach, gap, ENEMY)).toBe(false);
     expect(palaceEnclosures(state).regions).toHaveLength(1);
-    expect(canMove(state, approach, high, ENEMY)).toBe(false);
-    tile(state, x, y).stair = direction; state.world.revision!++;
-    expect(canMove(state, approach, high, ENEMY)).toBe(true);
+    delete tile(state, 12, 7).rockRelief; state.world.revision!++;
+    expect(canMove(state, approach, gap, ENEMY)).toBe(true);
     expectEnemyAccess(state, true);
     expect(palaceEnclosures(state).regions).toHaveLength(0);
   });
 
-  it('does not invent a crossing from a stair facing away from the low ground', () => {
-    const state = defendedPlateau();
-    tile(state, 12, 7).stair = 'north'; state.world.revision!++;
-    expect(canMove(state, { x: 12.5, y: 6.5 }, { x: 12.5, y: 7.5 }, ENEMY)).toBe(false);
-    expectEnemyAccess(state, false);
+  it('updates a rock or ore opening without a separate wall or relief change', () => {
+    const state = defendedPocket();
+    const barrier = state.buildings.find(item => item.kind === 'wall' && item.x === 21 && item.y === 12)!;
+    barrier.hp = 0;
+    tile(state, 21, 12).resource = 'stone';
+    state.world.revision!++;
     expect(palaceEnclosures(state).regions).toHaveLength(1);
+    delete tile(state, 21, 12).resource;
+    state.world.revision!++;
+    expect(palaceEnclosures(state).regions).toHaveLength(0);
   });
 
-  it('does not count a cliffside wall as a defense when removing it cannot open a path', () => {
-    const state = defendedPlateau();
-    delete tile(state, 18, 12).stair;
-    wall(state, 7, 12); state.world.revision!++;
+  it('does not count a wall beside a rock as a defense when removing it cannot open a path', () => {
+    const state = defendedPocket();
+    tile(state, 18, 12).rockRelief = 0;
+    wall(state, 8, 12); state.world.revision!++;
     expectEnemyAccess(state, false);
     expect(palaceEnclosures(state).regions).toHaveLength(0);
   });

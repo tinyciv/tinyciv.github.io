@@ -58,7 +58,7 @@
   "height": 39,
   "simulatedSeconds": 0,
   "wallSeconds": 2.193955833,
-  "bytes": 281747,
+  "bytes": 280799,
   "cities": [
     {
       "id": 1,
@@ -67,7 +67,8 @@
       "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -18.380000000000003
+      "food": -12.350000000000044,
+      "settlementTier": 1
     },
     {
       "id": 121,
@@ -76,7 +77,8 @@
       "y": 18,
       "population": 150,
       "housing": 156,
-      "food": 50.09199999999995
+      "food": 35.98000000000002,
+      "settlementTier": 1
     },
     {
       "id": 249,
@@ -85,7 +87,8 @@
       "y": 18,
       "population": 150,
       "housing": 156,
-      "food": -19.45999999999995
+      "food": -12.350000000000044,
+      "settlementTier": 1
     },
     {
       "id": 369,
@@ -94,7 +97,8 @@
       "y": 18,
       "population": 150,
       "housing": 156,
-      "food": 51.31599999999998
+      "food": 35.98000000000002,
+      "settlementTier": 1
     }
   ],
   "resources": {
@@ -112,7 +116,7 @@
     "orchards": 0,
     "completedDitches": 0,
     "irrigatedFields": 0,
-    "fields": 940
+    "fields": 922
   },
   "iron": [
     {
@@ -134,5 +138,24 @@
     ],
     "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
     "previousSha256": "c63768df35c2f299e0b748e53f7aeab5e9c6f995dbba07d9033fd80b26dcb599"
+  },
+  "farmLayout": {
+    "shapes": {
+      "4x4": 30,
+      "4x3": 6,
+      "3x4": 4,
+      "3x3": 4,
+      "3x2": 20,
+      "2x3": 8,
+      "2x2": 6,
+      "3x1": 10,
+      "1x3": 4,
+      "2x1": 10,
+      "1x2": 8,
+      "1x1": 8,
+      "1x4": 2
+    },
+    "bundleSha256": "24e3a98f614eb68d8cc0a1362cf92ce904a0581574fc0f125a5db32544e742f7",
+    "wasmSha256": "96f578d7d3dd6b7b5454c18fcebec67770aa94f5609e80cbe854253852ebe31f"
   }
 }

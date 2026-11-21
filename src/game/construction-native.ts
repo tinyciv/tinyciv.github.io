@@ -8,7 +8,7 @@ import type { Building, BuildingKind, GameState, Point, Unit } from './types';
 export const CONSTRUCTION_KINDS: readonly BuildingKind[] = ['observationPost', 'fort', 'supplyDepot', 'villageTent', 'stable',
   'palace', 'camp', 'house', 'shack', 'cottage', 'road', 'wall', 'irrigation', 'palisade', 'bridge', 'tower', 'woodenTower',
   'ruin', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'library', 'scoutLodge', 'healerShack', 'ballista', 'dock',
-  'colosseum', 'barracks', 'siegeCannon', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine', 'marketplace', 'scoutTower', 'fountain'];
+  'colosseum', 'barracks', 'siegeCannon', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'apartments', 'factory', 'goldMine', 'marketplace', 'scoutTower', 'fountain'];
 const kindIndices = new Map(CONSTRUCTION_KINDS.map((kind, index) => [kind, index]));
 export const nativeConstructionDuration = (kind: BuildingKind): number => rustEngine.construction_duration(kindIndices.get(kind)!);
 export const CONSTRUCTION_INVALIDATE = 1, CONSTRUCTION_CLEARANCE = 2, CONSTRUCTION_COMPLETE = 4, CONSTRUCTION_SKIP = 8;

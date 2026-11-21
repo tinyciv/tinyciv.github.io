@@ -4,7 +4,6 @@ import { generateWorld, seededRandom } from '../src/world/generator';
 import { createNoise2D } from 'simplex-noise';
 import { sampleTerrainClimate } from '../src/world/climate';
 import { resolveLandscapeParameters } from '../src/world/options';
-import { ridgeGroundWalkable, ridgeIsLedge, STAIR_UP } from '../src/game/ridges';
 import { WATER, type World } from '../src/game/types';
 import { canTraverseEdge, traversable } from '../src/game/pathfinding';
 
@@ -12,10 +11,6 @@ function flat(seed = 'ecology-test', width = 96, height = 80): World {
   return { seed, width, height, source: 'ecology fixture', spawns: [], tiles: Array.from({ length: width * height }, (_, i) => ({
     terrain: i % width === 8 ? 'river' : 'grassland', overlay: 'none', elevation: .3, moisture: .55,
     food: 3, production: 1, gold: 0, variation: .5 })) };
-}
-function shelf(world: World, x: number, y: number, size: number, id: number, tier: 1 | 2 = 1): void {
-  for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++)
-    Object.assign(world.tiles[(y + dy) * world.width + x + dx], { ridge: id, ridgeTier: tier, relief: tier === 2 ? 'mountains' : 'hills' });
 }
 function mean(values: number[]): number { return values.reduce((sum, value) => sum + value, 0) / values.length; }
 
@@ -101,28 +96,21 @@ describe('correlated terrain ecology', () => {
     expect(mean(wetBank)).toBeGreaterThan(mean(inland) + .08);
   });
 
-  it('grows forest on both hill and upper mountain floors while keeping cliff, ramp and settlement access clear', () => {
-    const world = flat(); shelf(world, 18, 15, 25, 1); shelf(world, 24, 21, 13, 1, 2);
-    shelf(world, 55, 15, 23, 2);
+  it('grows woodland on hills and keeps blocked ground, mountain passes and towns clear', () => {
+    const world = flat(), at = (x: number, y: number) => world.tiles[y * world.width + x];
+    for (let y = 15; y < 40; y++) for (let x = 18; x < 43; x++) at(x, y).relief = 'hills';
+    for (let y = 21; y < 34; y++) for (let x = 24; x < 37; x++) at(x, y).relief = 'mountains';
     world.spawns = [{ x: 67.5, y: 25.5 }];
-    world.tiles[27 * world.width + 18].stair = 'east';
-    world.tiles[27 * world.width + 24].stair = 'east';
-    world.tiles[40 * world.width + 50].mountainPass = true;
+    at(50, 40).mountainPass = true;
+    at(18, 27).rockRelief = 0;
     const water = world.tiles.map(tile => WATER.has(tile.terrain) ? { ...tile } : null);
-    applyTerrainEcology(world);
-    const wooded = world.tiles.flatMap((tile, i) => tile.overlay === 'forest' && tile.ridge ? [i] : []);
-    expect(wooded.some(i => world.tiles[i].ridgeTier === 1)).toBe(true);
-    expect(wooded.some(i => world.tiles[i].ridgeTier === 2)).toBe(true);
+    applyTerrainEcology(world, resolveLandscapeParameters({ forestThreshold: .48 }));
+    expect(world.tiles.some(tile => tile.relief === 'hills' && tile.overlay === 'forest')).toBe(true);
     for (let i = 0; i < world.tiles.length; i++) {
       const tile = world.tiles[i], x = i % world.width, y = Math.floor(i / world.width);
-      if (ridgeIsLedge(world, x, y) || tile.stair || tile.mountainPass) expect(tile.overlay).toBe('none');
       if (water[i]) expect(tile).toEqual(water[i]);
-      if (tile.stair) {
-        const up = STAIR_UP[tile.stair], offset = up.y * world.width + up.x;
-        expect(world.tiles[i - offset].overlay).toBe('none'); expect(world.tiles[i + offset].overlay).toBe('none');
-      }
-      if (Math.abs(x - 67) <= 2 && Math.abs(y - 25) <= 2) expect(tile.overlay).toBe('none');
-      if (tile.overlay === 'forest') expect(ridgeGroundWalkable(world, x, y)).toBe(true);
+      if (tile.relief === 'mountains' || tile.rockRelief === 0 || tile.mountainPass || Math.abs(x - 67) <= 2 && Math.abs(y - 25) <= 2)
+        expect(tile.overlay).toBe('none');
     }
     expectOpenWoodland(world);
   });
@@ -131,7 +119,6 @@ describe('correlated terrain ecology', () => {
     const saturated = flat('saturated-open-woodland', 64, 64);
     for (const tile of saturated.tiles) if (!WATER.has(tile.terrain))
       Object.assign(tile, { moisture: 1, biome: 'rainforest', temperature: .8 });
-    shelf(saturated, 18, 12, 26, 1); shelf(saturated, 24, 18, 13, 1, 2);
     const parameters = resolveLandscapeParameters({ forestThreshold: .48, moisture: .62, riparianBoost: .26 });
     const repeated = structuredClone(saturated);
     applyTerrainEcology(saturated, parameters); applyTerrainEcology(repeated, parameters);
@@ -143,19 +130,30 @@ describe('correlated terrain ecology', () => {
     expectOpenWoodland(saturated);
   });
 
-  it('produces open woodland and keeps cliff faces clear in all three production geographies', () => {
+  it('grows solid grassland forests with passable trails in all three production geographies', () => {
     for (const style of ['continents', 'pangaea', 'fractal'] as const) {
       const world = generateWorld('BTV-world-modes-review', 274, 216, { style });
       const land = world.tiles.filter(tile => !WATER.has(tile.terrain));
       const forests = land.filter(tile => tile.overlay === 'forest');
-      // Regional forests retain their climate preference while individual
-      // trees leave open ground throughout even the wettest stands.
       expect(forests.length / land.length).toBeGreaterThan(.15);
-      expect(forests.length / land.length).toBeLessThan(.32);
-      expectOpenWoodland(world);
+      expect(forests.length / land.length).toBeLessThan(.5);
+      let broadCanopy = 0, forestPaths = 0;
       world.tiles.forEach((tile, i) => {
-        if (tile.ridge && ridgeIsLedge(world, i % world.width, Math.floor(i / world.width))) expect(tile.overlay).toBe('none');
+        const x = i % world.width, y = Math.floor(i / world.width);
+        if (tile.biome !== 'forest') return;
+        expect(tile.terrain).toBe('grassland');
+        expect(traversable(world, x, y)).toBe(true);
+        if (tile.overlay === 'none') {
+          forestPaths++;
+        } else {
+          expect(tile.overlay).toBe('forest');
+          if (x + 1 < world.width && y + 1 < world.height
+            && [i + 1, i + world.width, i + world.width + 1].every(next =>
+              world.tiles[next].biome === 'forest' && world.tiles[next].overlay === 'forest')) broadCanopy++;
+        }
       });
+      expect(broadCanopy).toBeGreaterThan(0);
+      expect(forestPaths).toBeGreaterThan(0);
       for (const spawn of [...world.spawns, ...world.secondarySpawns!]) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
         expect(world.tiles[(Math.floor(spawn.y) + dy) * world.width + Math.floor(spawn.x) + dx].overlay).toBe('none');
     }

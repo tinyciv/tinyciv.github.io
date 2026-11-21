@@ -68,27 +68,39 @@ function wideChannel(seed: string, horizontal: boolean, depth: number): World {
   }) };
 }
 
+function waterConnectedToSea(world: World): Set<number> {
+  const connected = new Set<number>(), queue: number[] = [];
+  for (let i = 0; i < world.tiles.length; i++) if (['ocean', 'coast'].includes(world.tiles[i].terrain)) {
+    connected.add(i); queue.push(i);
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const cell = queue[head], x = cell % world.width, y = Math.floor(cell / world.width);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, next = ny * world.width + nx;
+      if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height || connected.has(next) || !WATER.has(world.tiles[next].terrain)) continue;
+      connected.add(next); queue.push(next);
+    }
+  }
+  return connected;
+}
+
 describe('wide meandering rivers and complete fords', () => {
   it('keeps rivers connected to the sea when their drainage crosses scattered lakes', () => {
     const world = generateWorld('connected-world-7', 274, 216, { style: 'fractal', parameters: chosenLandscape.parameters });
-    const connected = new Set<number>(), queue: number[] = [];
-    for (let i = 0; i < world.tiles.length; i++) if (['ocean', 'coast'].includes(world.tiles[i].terrain)) {
-      connected.add(i); queue.push(i);
-    }
-    for (let head = 0; head < queue.length; head++) {
-      const cell = queue[head], x = cell % world.width, y = Math.floor(cell / world.width);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy, next = ny * world.width + nx;
-        if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height || connected.has(next) || !WATER.has(world.tiles[next].terrain)) continue;
-        connected.add(next); queue.push(next);
-      }
-    }
+    const connected = waterConnectedToSea(world);
     expect(world.tiles.some(tile => tile.terrain === 'lake')).toBe(true);
     const isolated = world.tiles.flatMap((tile, cell) => tile.terrain === 'river' && !connected.has(cell) ? [cell] : []);
     // Skipping lake vertices during smoothing painted a detached 14-cell
     // river patch here, instead of following the actual lake entrance/exit.
     expect(isolated).toEqual([]);
   });
+
+  it('widens rivers without cycling into isolated forest ponds', () => {
+    const world = generateWorld('FERN-HOLLOW');
+    const connected = waterConnectedToSea(world);
+    expect(world.tiles.some((tile, cell) => tile.lakeShape === 'forest-pond' && !connected.has(cell))).toBe(true);
+    expect(world.tiles.every((tile, cell) => tile.terrain !== 'river' || connected.has(cell))).toBe(true);
+  }, 30_000);
 
   it('crosses every tile of three- and five-tile rivers in both directions', () => {
     const observedWidths = new Set<number>(); let irregular = 0;

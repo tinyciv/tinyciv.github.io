@@ -6,11 +6,11 @@ import { WATER, type World } from '../src/game/types';
 function watershed(seed = 'SINUOUS-BASIN', width = 96, height = 80): World {
   return { width, height, seed, spawns: [], source: 'test', tiles: Array.from({ length: width * height }, (_, cell) => {
     const x = cell % width, y = Math.floor(cell / width), ocean = x < 2 || y < 2 || x >= width - 2 || y >= height - 2;
-    const ridge = !ocean && x >= 39 && x <= 57 && y >= 25 && y <= 50;
+    const upland = !ocean && x >= 39 && x <= 57 && y >= 25 && y <= 50;
     return { terrain: ocean ? 'ocean' : 'grassland', overlay: 'none', rainfall: .7, moisture: .7,
-      elevation: ocean ? 0 : .1 + Math.min(x, width - x, y, height - y) * .008 + Math.sin(x * .08) * .07 + Math.cos(y * .11) * .05 + (ridge ? .4 : 0),
+      elevation: ocean ? 0 : .1 + Math.min(x, width - x, y, height - y) * .008 + Math.sin(x * .08) * .07 + Math.cos(y * .11) * .05 + (upland ? .4 : 0),
       food: 3, production: 1, gold: 0, variation: .5,
-      ...(ridge ? { ridge: 1, ridgeTier: 1 as const, relief: 'mountains' as const } : {}) };
+      ...(upland ? { relief: 'mountains' as const } : {}) };
   }) };
 }
 
@@ -70,7 +70,7 @@ describe('sinuous river networks after landforms', () => {
     expect(world.tiles.reduce((sum, tile) => sum + (tile.drainage! < 0 ? tile.flow! : 0), 0)).toBeGreaterThan(oldOutlet);
   });
 
-  it('keeps reservoirs level with one spillway and repairs dry ledge profiles without moving river beds', () => {
+  it('keeps reservoirs level with one spillway and repairs dry elevations without moving river beds', () => {
     const world = watershed('RESERVOIR-BENDS'), lake: number[] = [];
     for (let y = 35; y < 43; y++) for (let x = 21; x < 29; x++) {
       const cell = y * world.width + x; lake.push(cell);
@@ -133,8 +133,6 @@ describe('sinuous river networks after landforms', () => {
 
   it('places complete repeatable fords and keeps broad main channels closed', () => {
     const world = watershed(); generateRiverNetwork(world, DEFAULT_LANDSCAPE_PARAMETERS);
-    // Relief reconstruction clears the carved water footprint before crossings.
-    for (const tile of world.tiles) if (tile.terrain === 'river') { delete tile.ridge; delete tile.ridgeTier; }
     expect(placeNetworkFords(world)).toBe(true);
     const fords = world.tiles.flatMap((tile, cell) => tile.overlay === 'ford' ? [cell] : []);
     expect(fords.length).toBeGreaterThan(10);
@@ -144,7 +142,7 @@ describe('sinuous river networks after landforms', () => {
       for (const sign of [-1, 1]) {
         let next = cell;
         while (world.tiles[next].terrain === 'river') { expect(world.tiles[next].overlay).toBe('ford'); next += sign * step; }
-        expect(WATER.has(world.tiles[next].terrain) || world.tiles[next].ridge).toBeFalsy();
+        expect(WATER.has(world.tiles[next].terrain) || world.tiles[next].relief).toBeFalsy();
       }
       if (tile.channel === 'main') expect(tile.channelWidth).toBeLessThanOrEqual(2.5);
     }

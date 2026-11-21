@@ -10,6 +10,7 @@ import { houseCapacity } from './wells';
 import { invalidateSettlementDecisions } from './settlement-decisions';
 import { entityStore } from './entity-store';
 import { refundGold } from './gold-ledger';
+import { FIELD_CANNON_UPKEEP } from './field-cannon-config';
 import { buildingReady, type Building, type BuildingKind, type Faction, type GameState, type ResearchBranchId } from './types';
 import { rustEngine } from './rust-engine';
 import { simCore } from './sim-handle';
@@ -17,16 +18,16 @@ import { installResearchContent, nativeResearchCost, nativeResearchIndex, runNat
 export type { ResearchBranchId } from './types';
 
 export interface ResearchTier { name: string; points: number; description: string }
-export interface ResearchBranch { id: ResearchBranchId; label: string; prerequisites: readonly ResearchBranchId[]; tiers: readonly ResearchTier[]; fixedCost?: boolean }
+export interface ResearchBranch { id: ResearchBranchId; label: string; prerequisites: readonly ResearchBranchId[]; tiers: readonly ResearchTier[]; fixedCost?: boolean; costScale?: number }
 const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
-  { id: 'woodenTower', label: 'Fortification', prerequisites: [], tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, militia, and town upgrades to Keeps with ten times the health.' }] },
-  { id: 'wall', label: 'Masonry', prerequisites: ['woodenTower'], tiers: [{ name: 'Masonry', points: 24, description: 'Unlocks walls and gates.' }] },
+  { id: 'woodenTower', label: 'Fortification', prerequisites: [], fixedCost: true, tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, militia, and town upgrades to Keeps with ten times the health.' }] },
+  { id: 'wall', label: 'Masonry', prerequisites: ['woodenTower'], costScale: .5, tiers: [{ name: 'Masonry', points: 24, description: 'Unlocks walls and gates.' }] },
   { id: 'monument', label: 'Statehood', prerequisites: ['grainStorage'], tiers: [{ name: 'Statehood', points: 42, description: 'Unlocks culture-producing monuments.' }] },
   { id: 'blacksmith', label: 'Bronze Working', prerequisites: ['wall'], tiers: [{ name: 'Bronze Working', points: 87, description: 'Unlocks blacksmiths. Armor/weapon upgrades require three additional developed iron tiles per purchase across both tracks.' }] },
   { id: 'archeryRange', label: 'Archery', prerequisites: ['scoutLodge'], tiers: [{ name: 'Archery', points: 63, description: 'Unlocks archery ranges, archer training, and recruits.' }] },
   { id: 'irrigation', label: 'Irrigation', prerequisites: [], tiers: [{ name: 'Irrigation', points: 30, description: 'Unlocks irrigation channels for watering farms.' }] },
   { id: 'drainage', label: 'Drainage', prerequisites: ['irrigation'], tiers: [{ name: 'Drainage', points: 42, description: 'Civilians automatically fill freshwater bodies of up to three tiles beside two or more friendly farm tiles. Each water tile requires eight seconds of work on site.' }] },
-  { id: 'scoutLodge', label: 'Exploration', prerequisites: [], tiers: [{ name: 'Exploration', points: 30, description: 'Unlocks Scouts’ Lodges and their concealed observation posts.' }] },
+  { id: 'scoutLodge', label: 'Exploration', prerequisites: [], costScale: .5, tiers: [{ name: 'Exploration', points: 30, description: 'Unlocks Scouts’ Lodges and their concealed observation posts.' }] },
   { id: 'sailing', label: 'Sailing', prerequisites: ['scoutLodge'], tiers: [{ name: 'Sailing', points: 30, description: 'Unlocks coastal docks. Each dock supports one fishing vessel carrying up to 20 food per trip, and a galley for the Leader. Overfishing can permanently collapse a fishery. Cities beside the same navigable river can also establish automatic river trade.' }] },
   { id: 'whaling', label: 'Whaling', prerequisites: ['sailing'], tiers: [{ name: 'Whaling', points: 60, description: 'Unlocks coastal whaling posts. Each launches one whaling ship. Whale deliveries earn 250 gold and give all your ships and units +5% movement for 60 seconds. Further deliveries refresh the duration.' }] },
   { id: 'lateenSails', label: 'Lateen Sails', prerequisites: ['sailing', 'engineering'], tiers: [{ name: 'Lateen Sails', points: 80, description: 'Unlocks caravels: three weapon mounts and 15% more speed than war galleys.' }] },
@@ -34,22 +35,22 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'traditionalMedicine', label: 'Traditional Medicine', prerequisites: ['grainStorage', 'scoutLodge'], tiers: [{ name: 'Traditional Medicine', points: 42, description: 'Unlocks healers’ shacks: friendly units within four tiles heal three times faster inside their borders, after the normal recovery delay. Overlapping shacks do not stack.' }] },
   { id: 'reinforcedDefenses', label: 'Reinforced Defenses', prerequisites: ['metalTools'], tiers: [{ name: 'Reinforced Defenses', points: 63, description: 'Walls and towers gain 30% maximum health.' }] },
   { id: 'coinage', label: 'Coinage', prerequisites: ['monument', 'commerce'], tiers: [{ name: 'Coinage', points: 54, description: 'Caravan deliveries earn 20% more gold.' }] },
-  { id: 'urbanPlanning', label: 'Urban Planning', prerequisites: ['coinage', 'metalTools'], tiers: [{ name: 'Urban Planning', points: 75, description: 'Each house gains one housing place.' }] },
+  { id: 'urbanPlanning', label: 'Urban Planning', prerequisites: ['coinage', 'metalTools'], tiers: [{ name: 'Urban Planning', points: 75, description: 'Unlocks fountains and apartments. Each house gains one housing place.' }] },
   { id: 'metalCasting', label: 'Metal Casting', prerequisites: ['reinforcedDefenses', 'infantryDrill'], tiers: [{ name: 'Metal Casting', points: 100, description: 'Unlocks swordsmen at blacksmiths: twice the attack of spearmen, with lower defense and no piercing thrust.' }] },
   { id: 'metalTools', label: 'Metal Tools', prerequisites: ['blacksmith'], tiers: [{ name: 'Metal Tools', points: 63, description: 'Construction and repair speed increases by 25%.' }] },
   { id: 'fletching', label: 'Fletching', prerequisites: ['archeryRange', 'metalTools'], tiers: [{ name: 'Fletching', points: 42, description: 'Archers deal 15% more damage.' }] },
   { id: 'grainStorage', label: 'Grain Storage', prerequisites: ['irrigation'], tiers: [{ name: 'Grain Storage', points: 42, description: 'Newly harvested grain stays fresh 50% longer, including while carried. Unlocks one granary per city: an additional collection point and +25% food from friendly farms within six tiles.' }] },
   { id: 'militaryTactics', label: 'Military Tactics', prerequisites: ['blacksmith', 'archeryRange'], tiers: [{ name: 'Military Tactics', points: 63, description: 'Unlocks spearmen at blacksmiths with developed copper: stronger armor and thrusts piercing two enemies behind the first.' }] },
-  { id: 'infantryDrill', label: 'Infantry Drill', prerequisites: ['militaryTactics'], tiers: [{ name: 'Infantry Drill', points: 42, description: 'Unlocks Formation 3 for the Leader’s retinue.' }] },
-  { id: 'siegeEngines', label: 'Siege Engines', prerequisites: ['reinforcedDefenses', 'fletching'], tiers: [{ name: 'Siege Engines', points: 87, description: 'Unlocks ballistae and siege cannons: eighteen-tile range, automatic assembly outside borders, and slow shots aimed at buildings. Siege cannons require developed iron.' }] },
-  { id: 'horsebackRiding', label: 'Horseback Riding', prerequisites: ['scoutLodge'], tiers: [{ name: 'Horseback Riding', points: 63, description: 'Unlocks stables and fast unarmored spear horsemen. Assign mounted retinue at a stable; running charges deal bonus and area damage.' }] },
+  { id: 'infantryDrill', label: 'Infantry Drill', prerequisites: [], fixedCost: true, tiers: [{ name: 'Infantry Drill', points: 10, description: 'Unlocks Formation 3 for the Leader’s retinue.' }] },
+  { id: 'siegeEngines', label: 'Siege Engines', prerequisites: ['reinforcedDefenses', 'fletching'], tiers: [{ name: 'Siege Engines', points: 87, description: 'Unlocks ballistae and siege cannons. Siege cannons require developed iron.' }] },
+  { id: 'horsebackRiding', label: 'Horseback Riding', prerequisites: ['scoutLodge'], tiers: [{ name: 'Horseback Riding', points: 63, description: 'Unlocks horse pastures, stables, and fast spear horsemen. Running charges deal bonus and area damage.' }] },
   { id: 'compoundBow', label: 'Compound Bow', prerequisites: ['horsebackRiding', 'fletching'], tiers: [{ name: 'Compound Bow', points: 90, description: 'Unlocks horse archers at stables with Horseback Riding: fast, lightly protected cavalry firing arrows at range.' }] },
   { id: 'stirrups', label: 'Stirrups', prerequisites: ['horsebackRiding', 'metalCasting'], tiers: [{ name: 'Stirrups', points: 120, description: 'Unlocks armored knights at stables: 180 base health, 43 base attack, 10 defense and powerful running charges. Higher upkeep than light cavalry.' }] },
   { id: 'supplyTrain', label: 'Supply train', prerequisites: ['traditionalMedicine'], tiers: [{ name: 'Supply train', points: 54, description: 'Unlocks supply depots. Each sends a vulnerable, population-free handcart to the Leader every 30 seconds. Delivery heals the Leader and friendly units within 8 tiles by up to 10 HP. Destroyed carts award no gold.' }] },
   { id: 'massLevy', label: 'Mass levy', prerequisites: ['militaryTactics'], tiers: [{ name: 'Mass levy', points: 63, description: 'The Leader can levy up to one third of the population. Levy infantry fight on formation wings with half warrior attack and defense, equipment upgrades, and 80% morale. Upkeep is 5 gold per soldier every 30 seconds; bankruptcy sends them home.' }] },
   { id: 'urbanMilitia', label: 'Urban militia', prerequisites: ['massLevy'], tiers: [{ name: 'Urban militia', points: 80, description: 'Unlocks barracks and pikemen: spearman attack with 50% more defense and 25% more reach; their thrusts pierce enemies behind and knock them back. Every new recruit for a town with a barracks musters there.' }] },
   { id: 'populism', label: 'Populism', prerequisites: ['supplyTrain', 'stirrups'], tiers: [{ name: 'Populism', points: 150, description: 'Unlocks the Colosseum (needs a town of 200 people): population grows twice as fast across the realm, and culture triples within 5 tiles, fading to normal by 25 tiles. Colosseums do not stack.' }] },
-  { id: 'fieldCannon', label: 'Field cannon', prerequisites: ['gunpowder', 'siegeEngines'], tiers: [{ name: 'Field cannon', points: 180, description: 'Foundries equip field cannon. Fastest on roads; slow across open ground. Upkeep: 200 gold / 30s.' }] },
+  { id: 'fieldCannon', label: 'Field cannon', prerequisites: ['gunpowder', 'siegeEngines'], tiers: [{ name: 'Field cannon', points: 180, description: `Foundries equip field cannon. Fastest on roads. ${FIELD_CANNON_UPKEEP} gold / 30s per cannon.` }] },
   { id: 'gunpowder', label: 'Gunpowder', prerequisites: ['metalCasting', 'urbanMilitia'], tiers: [{ name: 'Gunpowder', points: 150, description: 'Barracks equip musketmen. Leaders carry firearms.' }] },
   { id: 'culturalIdentity', label: 'Cultural Identity', prerequisites: ['monument', 'traditionalMedicine'], tiers: [{ name: 'Cultural Identity', points: 75, description: 'Unlocks forums, where culture purchases permanent faction achievements.' }] },
   { id: 'engineering', label: 'Engineering', prerequisites: ['wall'], tiers: [{ name: 'Engineering', points: 42, description: 'Bridges can cross up to 8 water tiles instead of 2. Clear land is required at both ends.' }] },
@@ -59,6 +60,7 @@ const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
   { id: 'cropRotation', label: 'Crop Rotation', prerequisites: ['grainStorage'], fixedCost: true, tiers: [{ name: 'Crop Rotation', points: 60, description: '+15% farm yield.' }] },
   { id: 'ironPlows', label: 'Iron Plows', prerequisites: ['cropRotation', 'metalTools'], fixedCost: true, tiers: [{ name: 'Iron Plows', points: 90, description: '+20% farm yield.' }] },
   { id: 'commerce', label: 'Commerce', prerequisites: ['scoutLodge'], tiers: [{ name: 'Commerce', points: 45, description: 'Unlocks Marketplaces.' }] },
+  { id: 'animalHusbandry', label: 'Animal Husbandry', prerequisites: [], fixedCost: true, tiers: [{ name: 'Animal Husbandry', points: 30, description: 'Fence cattle and sheep for food and gold.' }] },
 ];
 const baseBranchById = new Map(BASE_RESEARCH_BRANCHES.map(branch => [branch.id, branch]));
 const depthCache = new Map<ResearchBranchId, number>();
@@ -67,21 +69,16 @@ export function researchDepth(id: ResearchBranchId): number {
   if (!depthCache.has(id)) depthCache.set(id, Math.max(-1, ...baseBranchById.get(id)!.prerequisites.map(researchDepth)) + 1);
   return depthCache.get(id)!;
 }
-const researchStages = 6;
-/** Fortification retains its introductory price. Every later branch ramps
- * linearly by dependency stage, reaching five times its old cost at the end. */
+installResearchContent(BASE_RESEARCH_BRANCHES);
 export const RESEARCH_BRANCHES: readonly ResearchBranch[] = BASE_RESEARCH_BRANCHES.map(branch => ({
-  ...branch, tiers: branch.tiers.map(tier => ({ ...tier, points: branch.fixedCost || branch.id === 'woodenTower' ? tier.points
-    : Math.round(tier.points * (1 + 4 * Math.min(researchStages, researchDepth(branch.id) + 1) / researchStages)) * (branch.id === 'scoutLodge' || branch.id === 'wall' ? .5 : 1) })),
+  ...branch, tiers: branch.tiers.map(tier => ({ ...tier, points: nativeResearchCost(branch.id, 0) })),
 }));
-installResearchContent(RESEARCH_BRANCHES);
 const branchById = (id: ResearchBranchId): ResearchBranch => RESEARCH_BRANCHES.find(branch => branch.id === id)!;
 export function researchLevel(faction: Pick<Faction, 'research'> | undefined, branch: ResearchBranchId): number {
   return rustEngine.research_level(faction?.research?.levels[branch] ?? NaN);
 }
 export function buildingResearchRequirement(kind: BuildingKind): ResearchBranchId | undefined {
-  if (kind === 'hospital') return 'traditionalMedicine';
-  if (kind === 'apartments') return 'urbanPlanning';
+  if (kind === 'apartments' || kind === 'fountain') return 'urbanPlanning';
   if (kind === 'factory') return 'metalCasting';
   if (kind === 'militaryAcademy') return 'militaryScience';
   if (kind === 'foundry') return 'fieldCannon';
@@ -222,6 +219,9 @@ export function advanceResearchIncome(state: GameState, faction: Faction, grossG
 export function receiveTradeScience(state: GameState, faction: Faction, science: number): number {
   if (science <= 0) return 0;
   return runNativeResearch(state, faction, nativeContext(state, faction, hasLibrary(state, faction.id)), 7, 0, science).earnedScience;
+}
+export function grantExplorationScience(state: GameState, faction: Faction, science: number): void {
+  runNativeResearch(state, faction, nativeContext(state, faction, hasLibrary(state, faction.id)), 8, 0, science);
 }
 /** Native completion events retain their order; the browser applies only
  * derived-building updates, ledger refunds, and existing player messages. */

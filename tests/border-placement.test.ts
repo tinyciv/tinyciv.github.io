@@ -8,7 +8,6 @@ import { constructionLine, planConstruction } from '../src/game/construction';
 import { recordTraffic, ROAD_TRAFFIC_THRESHOLD, updateTraffic } from '../src/game/traffic';
 import { synchronizeFarms } from '../src/game/farms';
 import { updateFog } from '../src/game/fog';
-import { ridgeFootprintAllowed } from '../src/game/ridges';
 import { type Building, type BuildingKind, type GameState } from '../src/game/types';
 
 function fixture(): GameState {
@@ -62,20 +61,11 @@ describe('construction territory rules', () => {
         expect(buildingWithinBorders(state, 'bridge', 40, 12)).toBe(false);
     });
 
-    it('allows construction on stairs and landings while rejecting cliff faces and mixed-height footprints', () => {
-        const state = fixture();
-        state.world.tiles[12 * 40 + 17].ridge = 1;
+    it('allows construction beside rock formations while keeping their footprints clear', () => {
+        const state = fixture(), rock = 12 * 40 + 17;
+        Object.assign(state.world.tiles[rock], { rockHost: rock, rockRelief: 0 });
         expect(validateBuildAt(state, 'camp', 16, 12).ok).toBe(true);
         expect(validateBuildAt(state, 'camp', 17, 12).ok).toBe(false);
-        // A valid north-facing flight joins low ground to the plateau interior.
-        for (let y = 9; y <= 12; y++) for (let x = 15; x <= 18; x++) state.world.tiles[y * 40 + x].ridge = 1;
-        state.world.tiles[12 * 40 + 16].stair = 'north';
-        state.world.revision!++;
-        expect(validateBuildAt(state, 'wall', 16, 12).ok).toBe(true);
-        expect(validateBuildAt(state, 'wall', 16, 13).ok).toBe(true);
-        expect(validateBuildAt(state, 'wall', 16, 11).ok).toBe(true);
-        expect(validateBuildAt(state, 'camp', 17, 12).ok).toBe(false);
-        expect(ridgeFootprintAllowed(state.world, 16, 12, 1, 2)).toBe(false);
     });
 
     it('allows farm plots beyond the border while keeping complete world bounds and palace claims', () => {

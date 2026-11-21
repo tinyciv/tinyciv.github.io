@@ -1,4 +1,4 @@
-.research-toolbar { position: absolute; left: 604px; top: 2px; display: flex; align-items: center; gap: 8px; width: clamp(218px, calc(100% - 1028px), 334px); height: 44px; padding: 3px 8px; pointer-events: auto; }
+.research-toolbar { position: absolute; left: 604px; top: 2px; display: flex; align-items: center; gap: 8px; width: clamp(218px, calc(100% - 1194px), 334px); height: 44px; padding: 3px 8px; pointer-events: auto; }
 .research-toolbar-icon { width: 28px; height: 28px; flex: none; object-fit: contain; image-rendering: pixelated; }
 .research-toolbar-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--science-color); font-size: 23px; font-weight: 700; line-height: 1; }
 .research-toolbar-eta { flex: none; white-space: nowrap; font-size: 17px; line-height: 1; color: var(--science-color); }
@@ -12,17 +12,20 @@
   .research-toolbar-icon { display: none; }
 }
 @media (pointer: fine) {
-  @container game-area (max-width: 1100px) {
+  @container game-area (max-width: 1411px) {
+    .research-toolbar { top: 50px; }
+  }
+  @container game-area (max-width: 1250px) {
     .research-toolbar { top: 44px; }
     .selection-panel { top: 88px; }
   }
-  @container game-area (max-width: 760px) {
+  @container game-area (max-width: 880px) {
     .research-toolbar { left: auto; right: 4px; top: 36px; height: 29px; padding: 3px 5px; gap: 4px; }
     .research-toolbar-name { font-size: 19px; }
     .research-toolbar-eta { font-size: 14px; }
     .selection-panel { top: 76px; }
   }
-  @container game-area (max-width: 665px) {
+  @container game-area (max-width: 770px) {
     .research-toolbar { left: 5px; right: auto; top: 68px; width: min(250px, calc(100% - 10px)); }
     .selection-panel { top: 106px; }
   }

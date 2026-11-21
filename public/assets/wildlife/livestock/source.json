@@ -1,0 +1,242 @@
+{
+  "rowOrder": [
+    "south",
+    "north",
+    "east",
+    "west"
+  ],
+  "animals": {
+    "cow": {
+      "frameSize": [
+        24,
+        24
+      ],
+      "atlasSize": [
+        120,
+        96
+      ],
+      "columns": {
+        "idle": 0,
+        "walk": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "generator": "PixelLab API",
+      "subject": "Original black-and-white adult dairy cow",
+      "view": "High top-down orthographic",
+      "source": {
+        "endpoint": "/create-object-pro-flash",
+        "objectId": "4d675742-b367-4386-9968-855fa0bc16c6",
+        "selectedVariant": "1B",
+        "grounding": "Existing MiniWorld boar, public/assets/miniworld/Boar.png (Shade, CC0-1.0)."
+      },
+      "rotations": {
+        "endpoint": "/rotate",
+        "seeds": {
+          "north": 261120632,
+          "east": 261120633
+        },
+        "grounding": "Directional pose guides from the preceding game cow sheet."
+      },
+      "animation": {
+        "endpoint": "/animate-with-text-v3",
+        "west": "Mirrored east",
+        "directions": {
+          "south": {
+            "jobId": "7fb10c87-100d-4972-bb76-c1ea204baf7c",
+            "selectedFrames": [
+              1,
+              3,
+              4,
+              6
+            ]
+          },
+          "north": {
+            "jobId": "43eeb9df-fa5c-41da-9b88-7602f801d0f5",
+            "selectedFrames": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "east": {
+            "jobId": "e94a2904-cc3c-4c1f-ac2e-46e88dc47ca2",
+            "selectedFrames": [
+              1,
+              3,
+              5,
+              6
+            ]
+          }
+        }
+      },
+      "packing": {
+        "cellSize": [
+          24,
+          24
+        ],
+        "columns": [
+          "idle",
+          "walk-1",
+          "walk-2",
+          "walk-3",
+          "walk-4"
+        ],
+        "rows": [
+          "south",
+          "north",
+          "east",
+          "west"
+        ],
+        "alpha": "Binary",
+        "processing": "Unscaled native pixel extraction, detached background removal, and per-direction alignment."
+      },
+      "sha256": "d56ba3d83c19a9acb6cf9fdb3ddf6f278b689d966e10b8f11765e0227de3254a"
+    },
+    "sheep": {
+      "frameSize": [
+        24,
+        24
+      ],
+      "atlasSize": [
+        120,
+        96
+      ],
+      "columns": {
+        "idle": 0,
+        "walk": [
+          1,
+          4
+        ]
+      },
+      "generator": "PixelLab API",
+      "atlas": "sheep.png",
+      "camera": "high top-down orthographic, screen-aligned and non-isometric",
+      "grounding": {
+        "creator": "Shade",
+        "source": "MiniWorld Sprites",
+        "file": "Animals/Sheep.png",
+        "url": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+        "license": "CC0-1.0",
+        "usage": "Existing TinyCiv sheep frames centered on a transparent canvas for game camera, pose, and pixel style."
+      },
+      "design": "Rounded ivory fleece with charcoal face and short legs",
+      "rowOrder": [
+        "south",
+        "north",
+        "east",
+        "west"
+      ],
+      "processing": "Original generated pixels. Alpha threshold and island cleanup, native crop, row registration without scaling, ordered walk keyframe selection, and horizontal reflection for west.",
+      "directions": {
+        "south": {
+          "idle": {
+            "endpoint": "/create-object-pro-flash",
+            "object": "55284ba8-af61-42be-9b6a-50b8f97f1014",
+            "seed": 261120420,
+            "prompt": "ONE isolated original pixel art adult sheep. Facing SOUTH, toward the lower edge of frame and viewer. Face and ears centered in front, woolly back visible farther up frame behind its head, two forelegs below the chin, most of the view shows the top of its back. A stout woolly sheep with a rounded ivory fleece, several broad wool lobes, a charcoal gray face, short ears sticking sideways and short soot-gray legs. No horns. Thick fluffy back with a coherent rounded silhouette, body clearly distinct from the short slender legs. Classic TinyCiv/MiniWorld style, crisp 1-pixel dark warm-gray contour, two or three broad tones per material, a restrained warm-ivory sheep fleece with soft muted ash-brown shadows. High top-down orthographic camera at about 60 degrees from the ground. Do not use isometric diagonals or a side-on camera. Reference is existing tiny sheep. Follow the camera, poses and pixel aesthetic only, and draw a distinctly fuller grown animal. In a 24x24 transparent native pixel canvas, keep the complete animal centered and cover 16 to 18 pixels in its widest dimension. No scene, ground, other animals, grass, cast shadows, text, effects, antialiasing, gloss, or dithering.",
+            "requestCanvasSize": [
+              24,
+              24
+            ]
+          },
+          "walk": {
+            "endpoint": "/animate-with-text-v3",
+            "job": "16456268-d42f-4a13-81ff-d16f5b8a72ff",
+            "seed": 261120460,
+            "prompt": "The supplied adult sheep takes a slow relaxed four-beat walking cycle in place, still facing SOUTH. Move its four short charcoal legs in alternating slow steps with visible hoof positions. One tiny natural head bob. A complete evenly paced walk loop ending back at the original stand phase. Keep its round pale wool body and same head and ears centered; fixed proportions and facing. The camera stays high overhead orthographic, fixed angle, never an isometric view. No translation, rolling, jumping, motion effects, new limbs, detached pixels, visual smears, scenery, ground or shadows. Reuse the same limited palette, chunky crisp outlines, hard pixel edges, exactly the native transparent sprite.",
+            "frames": [
+              1,
+              3,
+              5,
+              7
+            ]
+          }
+        },
+        "north": {
+          "idle": {
+            "endpoint": "/rotate",
+            "seed": 261120441,
+            "sourceDirection": "south",
+            "targetDirection": "north",
+            "requestCanvasSize": [
+              32,
+              32
+            ]
+          },
+          "walk": {
+            "endpoint": "/animate-with-text-v3",
+            "job": "7d781839-2c80-404a-9de1-d51225f7ef96",
+            "seed": 261120461,
+            "prompt": "The supplied adult sheep takes a slow relaxed four-beat walking cycle in place, still facing NORTH. Move its four short charcoal legs in alternating slow steps with visible hoof positions. One tiny natural head bob. A complete evenly paced walk loop ending back at the original stand phase. Keep its round pale wool body and same head and ears centered; fixed proportions and facing. The camera stays high overhead orthographic, fixed angle, never an isometric view. No translation, rolling, jumping, motion effects, new limbs, detached pixels, visual smears, scenery, ground or shadows. Reuse the same limited palette, chunky crisp outlines, hard pixel edges, exactly the native transparent sprite.",
+            "frames": [
+              1,
+              3,
+              5,
+              7
+            ]
+          }
+        },
+        "east": {
+          "idle": {
+            "endpoint": "/edit-image-pixen",
+            "job": "47521b90-5efb-4a80-9d6a-ae167f99071b",
+            "seed": 261120490,
+            "prompt": "Keep the exact EAST pose, horizontal torso with face at far RIGHT and tail at LEFT. Redesign the sheep with thick fluffy ivory fleece, broad beige wool clusters, dark charcoal face, small downward ears, short charcoal legs and a short cream tail. Keep its orthographic high top-down game camera, size and placement. Crisp pixel shading, clean single dark outline, no horns. One isolated sheep on transparency. No ground, shadow or effects.",
+            "requestCanvasSize": [
+              24,
+              24
+            ],
+            "grounding": "Existing east pose cropped to its silhouette and scaled to the intended frame footprint as a PixelLab pose reference."
+          },
+          "walk": {
+            "endpoint": "/animate-with-text-v3",
+            "job": "8e6427e4-dd53-4d8d-87f6-f11c41e362f2",
+            "seed": 261120462,
+            "prompt": "The supplied adult sheep takes a slow relaxed four-beat walking cycle in place, still facing EAST. Move its four short charcoal legs in alternating slow steps with visible hoof positions. One tiny natural head bob. A complete evenly paced walk loop ending back at the original stand phase. Keep its round pale wool body and same head and ears centered; fixed proportions and facing. The camera stays high overhead orthographic, fixed angle, never an isometric view. No translation, rolling, jumping, motion effects, new limbs, detached pixels, visual smears, scenery, ground or shadows. Reuse the same limited palette, chunky crisp outlines, hard pixel edges, exactly the native transparent sprite.",
+            "frames": [
+              1,
+              3,
+              5,
+              7
+            ]
+          }
+        },
+        "west": {
+          "reflectedFrom": "east"
+        }
+      },
+      "sha256": "dd1389322bc9031e83188b73ff4059dfd44300764ec0b58ac204d121b35a61c5"
+    },
+    "horse": {
+      "creator": "Shade",
+      "source": "MiniWorld Sprites",
+      "original": "Animals/Horse(32x32).png",
+      "url": "https://merchant-shade.itch.io/16x16-mini-world-sprites",
+      "license": "CC0-1.0",
+      "adaptation": "The three original walk rows were cropped and resized to 16px, with horizontal mirroring for west.",
+      "sha256": "7f423f550c02c070cdd28244bc113c24e6285a7bb9b33d1dc44390acbc067630",
+      "frameSize": [
+        16,
+        16
+      ],
+      "atlasSize": [
+        64,
+        64
+      ],
+      "columns": {
+        "idle": 0,
+        "walk": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    }
+  }
+}

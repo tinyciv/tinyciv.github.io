@@ -16,7 +16,7 @@ The harness runs the actual simulation with identical conditions for legacy, agg
 
 - Build with **F, then V** after Masonry. Costs **300 gold**, occupies **2×2 tiles entirely inside your own borders**, and takes **60 seconds** to construct.
 - Has the health and armor of a masonry wall, including applicable research/equipment bonuses. Fires arrows at **two distinct targets** per volley with watchtower damage, range and cadence.
-- Costs **20 gold every 30 seconds**. An unpaid Fort suspends attacks and recalls its patrol until service can be funded.
+- Costs **20 gold every 30 seconds**, plus **1 per brigade slot**. An unpaid Fort suspends attacks and recalls its patrol until service can be funded.
 - Projects borders with a base radius of **6.5 tiles**, plus cultural growth. Each friendly completed monument within ten tiles adds two tiles, capped at six additional tiles.
 - Combat destruction leaves a permanent foundation belonging to the original faction. Enemy border expansion and area clearing cannot take or remove it. Approach with the Leader and use **Rebuild Fort** for **150 gold**, retaining brigade upgrades. The owner may explicitly clear their own Fort.
 - Buy **Skirmisher Brigade** in the Fort popup: **150 gold for 3**, then **200 for 6**, then **300 for 10** skirmishers. They patrol up to twelve tiles, throw javelins at range five, and evade enemies approaching within three tiles. They are independent of the Leader's retinue.

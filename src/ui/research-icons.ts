@@ -11,11 +11,12 @@ import { SCIENCE_ICON_URL } from './science-icon';
 const RESEARCH_ICON_BRANCHES: readonly ResearchBranchId[] = [
   'woodenTower', 'wall', 'reinforcedDefenses', 'monument', 'coinage', 'urbanPlanning', 'scoutLodge',
   'blacksmith', 'metalTools', 'archeryRange', 'fletching', 'irrigation', 'grainStorage',
-  'sailing', 'whaling', 'militaryScience', 'officerCorps',
+  'sailing', 'whaling', 'militaryScience', 'officerCorps', 'animalHusbandry',
 ];
 
 /** Existing forged glyphs plus the native healer artwork for medicine. */
 export function researchIconUrl(branch: ResearchBranchId): string {
+  if (branch === 'animalHusbandry') return `${import.meta.env.BASE_URL}assets/runtime/ui/resources/food.webp`;
   // Reuse the approved imagegen retinue command artwork.
   if (branch === 'officerCorps') return `${import.meta.env.BASE_URL}assets/runtime/ui/forged/retinue-actions-pixel.webp`;
   if (branch === 'cropRotation') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/grainStorage.webp`;

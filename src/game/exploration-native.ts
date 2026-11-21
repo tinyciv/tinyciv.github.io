@@ -8,10 +8,11 @@ import { territoryValue } from './territory-cells';
 import { traversable, terrainNavigationEdges, invalidateNavigation, buildingBlockers } from './pathfinding';
 import { settlementTerrainMask } from './terrain-sites';
 import { reliefFootprintAllowed } from './relief';
+import { forestBlocksConstruction } from './geography';
 import { updateFog, revealExplorationCells, invalidateFog } from './fog';
 import { playerFaction } from './player-context';
 import { constructionEdges } from './builders';
-import { RESEARCH_BRANCHES, researchCost, grantExplorationTechnology } from './research';
+import { RESEARCH_BRANCHES, researchCost, grantExplorationScience, grantExplorationTechnology } from './research';
 import { awardLeaderXp, readLeaderProgression } from './leader-progression';
 import { grantIncome } from './resource-income';
 import { HOUSE_BASE_CAPACITIES } from './housing-config';
@@ -26,13 +27,13 @@ import { setSoldierRole } from './archery';
 import { ensureMarauderLeaders } from './marauder-leaders';
 import { updateMarauderFormations } from './marauder-formations';
 import { sightDistance } from './sight';
-import { buildingReady, buildingWidth, buildingHeight, type GameState, type Point, type Unit } from './types';
+import { buildingReady, buildingWidth, buildingHeight, type Faction, type GameState, type Point, type Unit } from './types';
+import { EXPLORATION_MESSAGES, explorationSiteSize, FOSSIL_DISCOVERY_OUTCOME, type ExplorationSiteKind } from './exploration-content';
 
 export interface ExplorationSite extends Point {
-    id: number; kind: 0 | 1; status: number; actor: number; outcome: number; variant: number;
+    id: number; kind: ExplorationSiteKind; status: number; actor: number; outcome: number; variant: number;
 }
 export { EXPLORATION_MESSAGES, RUINS_OFFER } from './exploration-content';
-import { EXPLORATION_MESSAGES } from './exploration-content';
 const initialized = new SimSlot<boolean>();
 function input(state: GameState, data: readonly number[]): void {
     const pointer = rustEngine.sim_exploration_input(simCore(state).handle, data.length);
@@ -52,7 +53,7 @@ function geometry(state: GameState, actor: number, current?: number): void {
     for (const h of state.hermits ?? []) occupied.add(h.y * world.width + h.x);
     for (const c of state.treasures ?? []) if (!c.collected) occupied.add(c.y * world.width + c.x);
     for (const site of state.explorationSites ?? []) if (site.id !== current && site.status !== 2) {
-        const size = site.kind === 0 ? 2 : 1;
+        const size = explorationSiteSize(site.kind);
         for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) occupied.add((site.y + dy) * world.width + site.x + dx);
     }
     const roots = new Set(entityStore(state).units.query('leader').filter(u => u.hp > 0 && !u.inside && u.embarkedOn === undefined
@@ -60,8 +61,10 @@ function geometry(state: GameState, actor: number, current?: number): void {
     const data = new Array<number>(n * 4);
     world.tiles.forEach((tile, cell) => {
         const x = cell % world.width, y = Math.floor(cell / world.width), walk = traversable(world, x, y);
+        const openDesert = tile.terrain === 'desert' && !tile.beach && !tile.creek && !tile.snow && !tile.geothermal && !tile.resource;
         data[cell * 4] = Number(walk && !solid.has(cell)) | Number(walk && tile.overlay === 'none' && !occupied.has(cell)) << 1
-            | Number(reliefFootprintAllowed(world, x, y)) << 2 | Number((terrain[cell] & 3) === 3) << 3 | Number(roots.has(cell)) << 4 | Number(walk) << 5;
+            | Number(reliefFootprintAllowed(world, x, y)) << 2 | Number(!forestBlocksConstruction(tile) && (terrain[cell] & 3) === 3) << 3
+            | Number(roots.has(cell)) << 4 | Number(walk) << 5 | Number(openDesert) << 6;
         data[cell * 4 + 1] = edges[cell]; data[cell * 4 + 2] = territoryValue(owners, cell); data[cell * 4 + 3] = Number(!!fog.explored[cell]);
     });
     input(state, data); rustEngine.sim_exploration_geometry(simCore(state).handle, world.width, world.height);
@@ -77,7 +80,7 @@ export function initializeExploration(state: GameState): void {
     const count = new Float64Array(rustEngine.memory.buffer, p, 1)[0], rows = new Float64Array(rustEngine.memory.buffer, p + 8, count * 8).slice();
     state.explorationSites = Array.from({ length: count }, (_, i) => {
         const r = rows.subarray(i * 8, i * 8 + 8);
-        return { id: r[0], kind: r[1] as 0 | 1, x: r[2], y: r[3], status: r[4], actor: r[5], outcome: r[6], variant: r[7] };
+        return { id: r[0], kind: r[1] as ExplorationSiteKind, x: r[2], y: r[3], status: r[4], actor: r[5], outcome: r[6], variant: r[7] };
     });
     initialized.set(state, true);
 }
@@ -101,12 +104,8 @@ export function updateExploration(state: GameState): void {
             resolveExploration(state, site.id, 0, actor);
     }
 }
-export function resolveExploration(state: GameState, id: number, choice: number, actor = playerFaction(state)): { ok: boolean; message: string } {
-    initializeExploration(state);
-    const site = state.explorationSites?.find(s => s.id === id), faction = state.factions.find(f => f.id === actor);
-    const leader = entityStore(state).units.query('leader').find(u => u.faction === actor);
-    if (!site || site.actor !== actor || site.status !== 1 || !faction || faction.defeated || state.gameOver || !leader) return { ok: false, message: 'This discovery is no longer available.' };
-    const host = explorationHost();
+function prepareExplorationReward(state: GameState, id: number, faction: Faction, leader: Unit) {
+    const actor = faction.id;
     geometry(state, actor, id);
     const buildings = entityStore(state).buildings.query('palace').filter(buildingReady);
     const capital = buildings.filter(b => b.faction === actor).sort((a, b) => a.id - b.id)[0];
@@ -124,6 +123,15 @@ export function resolveExploration(state: GameState, id: number, choice: number,
     for (const b of RESEARCH_BRANCHES) data.push(researchCost(faction, b.id, state), faction.research?.levels[b.id] ?? 0,
         b.prerequisites.reduce((mask, id) => mask + 2 ** RESEARCH_BRANCHES.findIndex(branch => branch.id === id), 0));
     data.push(...targets); input(state, data);
+    return capital;
+}
+export function resolveExploration(state: GameState, id: number, choice: number, actor = playerFaction(state)): { ok: boolean; message: string } {
+    initializeExploration(state);
+    const site = state.explorationSites?.find(s => s.id === id), faction = state.factions.find(f => f.id === actor);
+    const leader = entityStore(state).units.query('leader').find(u => u.faction === actor);
+    if (!site || site.actor !== actor || site.status !== 1 || !faction || faction.defeated || state.gameOver || !leader) return { ok: false, message: 'This discovery is no longer available.' };
+    const host = explorationHost();
+    const capital = site.outcome === FOSSIL_DISCOVERY_OUTCOME ? undefined : prepareExplorationReward(state, id, faction, leader);
     const p = rustEngine.sim_exploration_reward(simCore(state).handle, id, actor, choice);
     const result = new Float64Array(rustEngine.memory.buffer, p, rustEngine.sim_exploration_length(simCore(state).handle)).slice();
     simCore(state).mirrorRandom(state);
@@ -133,6 +141,7 @@ export function resolveExploration(state: GameState, id: number, choice: number,
     const [outcome, amount, technology] = result; site.outcome = outcome;
     if (outcome === 0 || outcome === 8) grantIncome(faction, { gold: amount }, state, 'treasure');
     if (outcome === 1) grantExplorationTechnology(state, faction, RESEARCH_BRANCHES[technology].id);
+    if (outcome === FOSSIL_DISCOVERY_OUTCOME) grantExplorationScience(state, faction, amount);
     if (outcome === 7) awardLeaderXp(state, amount, actor);
     if (outcome === 6) { faction.rangerCompanions = (faction.rangerCompanions ?? 0) + amount; faction.bonusRetinueSlots = (faction.bonusRetinueSlots ?? 0) + amount; }
     let pack: NonNullable<GameState['marauderPacks']>[number] | undefined;
@@ -141,7 +150,7 @@ export function resolveExploration(state: GameState, id: number, choice: number,
         const [op, x, y, value] = result.subarray(i, i + 4);
         if (op === 1) {
             const town = host.building(state, 'palace', actor, { x, y });
-            town.capacity = value; town.unhousedResidents = value; town.explorationUpkeepUntil = state.time + amount;
+            town.capacity = value; town.unhousedResidents = value; town.settlementUpkeepUntil = state.time + amount;
             faction.population += value;
             recordCampaignPopulation(state, faction);
             addPalaceRoadRing(state, town);
@@ -174,8 +183,11 @@ export function resolveExploration(state: GameState, id: number, choice: number,
     if (revealed.length) revealExplorationCells(state, actor, revealed);
     if (outcome !== 2) state.particles.push({ x: leader.x, y: leader.y, text: EXPLORATION_MESSAGES[outcome], color: '#ffffff',
         kind: 'exploration', life: 12, duration: 12, faction: actor, followUnit: leader.id });
-    markWorldChanged(state.world, 'structure'); invalidateNavigation(state); invalidateFog(state); invalidateCitySummarySnapshot(state); invalidateSettlementDecisions(state);
-    host.changed(state, actor);
+    markWorldChanged(state.world, 'structure');
+    if (outcome !== FOSSIL_DISCOVERY_OUTCOME) {
+        invalidateNavigation(state); invalidateFog(state); invalidateCitySummarySnapshot(state); invalidateSettlementDecisions(state);
+        host.changed(state, actor);
+    }
     return { ok: true, message: '' };
 }
 export function makeRanger(unit: Unit): void {

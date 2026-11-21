@@ -63,7 +63,7 @@ describe('native casualty resources and morale actors', () => {
   it('ends a four-second casualty shock without bypassing the fifteen-second marauder rout deadline', () => {
     const state = fixture(), actor = soldier(1, -2); entityStore(state).units.add(actor);
     actor.target = 9; actor.destination = { x: 20, y: 20 }; actor.path = [{ x: 11, y: 10 }];
-    expect(integrateBattleMorale(state, actor, 2, { ...calm, collapsing: true })).toBe(true);
+    expect(integrateBattleMorale(state, actor, 1.6, { ...calm, collapsing: true })).toBe(true);
     expect(actor).toMatchObject({ morale: 0, order: 'flee', routOrder: 'hold', routed: true, routUntil: 15,
       casualtyShock: { until: 4, routed: true } });
     expect(actor.target).toBeUndefined(); expect(actor.path).toBeUndefined(); expect(actor.destination).toBeUndefined();

@@ -7,13 +7,14 @@ import { isHumanFaction } from './player-context';
 import { isBuildingUnlocked } from './research';
 import { factionHasDevelopedResource } from './resource-development';
 import { FORT_UPKEEP } from './forts';
-import { BUILDING_UPKEEP, settlementMaintenance } from './maintenance';
+import { BUILDING_UPKEEP, townBuildTerms } from './maintenance';
 import { constructionEdges } from './builders';
 import { hasStaticPath } from './pathfinding';
 import { atWar } from './relations';
 import { nearbyUnits } from './spatial';
 import { simCore } from './sim-handle';
 import { rustEngine } from './rust-engine';
+import { structuresOf, STRUCTURE_ALIVE } from './structure-index';
 import { buildingReady, distance, unitMaxHp, type Building, type GameState, type Point, type Unit } from './types';
 
 export type EmpireKind = 'palace' | 'fort' | 'ballista' | 'siegeCannon';
@@ -31,13 +32,14 @@ const copy=(pointer:number):number[]=>Array.from(new Float64Array(rustEngine.mem
  * planning cadence, investment choice, candidate cursor and expedition goal. */
 export function updateFactionEmpires(state:GameState,orders:EmpireOrders):void {
   const handle=simCore(state).handle;
+  const activeOffensives = new Set(state.offensives?.filter(order => order.phase !== 'captured').map(order => order.faction));
   for(const faction of state.factions) {
     if(faction.id<=0||isHumanFaction(state,faction.id)||faction.villageId!==undefined||faction.defeated||faction.relation==='confederated') continue;
     if(!rustEngine.sim_ai_empire_due(handle,faction.id,state.time)) continue;
-    const store=entityStore(state),leader=store.units.query('leader').find(unit=>unit.faction===faction.id&&unit.hp>0);
-    const owned=state.buildings.filter(building=>building.faction===faction.id&&building.hp>0);
+    const store=entityStore(state),leader=store.units.queryFaction('leader',faction.id).find(unit=>unit.hp>0);
+    const owned=structuresOf(state,faction.id,STRUCTURE_ALIVE);
     const cities=owned.filter(building=>building.kind==='palace'),ready=cities.filter(buildingReady);
-    if(!leader||leader.order==='hold'||leader.forcedAttack||!ready.length) {
+    if(!leader||leader.inside||leader.embarkedOn!==undefined||leader.order==='hold'||leader.forcedAttack||!ready.length) {
       rustEngine.sim_ai_empire_feedback(handle,faction.id,state.time,0,0,0);continue;
     }
     const ownership=cityOwnership(state),fortCounts=new Map<number,number>();
@@ -45,6 +47,9 @@ export function updateFactionEmpires(state:GameState,orders:EmpireOrders):void {
       const city=ownership.building(fort);if(city)fortCounts.set(city.id,(fortCounts.get(city.id)??0)+1);
     }
     const home=ready.slice().sort((a,b)=>(fortCounts.get(a.id)??0)-(fortCounts.get(b.id)??0)||distance(a,leader)-distance(b,leader)||a.id-b.id)[0];
+    // Anchor city searches at the newest settled frontier. Patrol movements
+    // and the distribution of pending forts cannot change these candidates.
+    const expansionHome = ready.reduce((frontier, city) => city.id > frontier.id ? city : frontier);
     const targetId=orders.campaign(faction.id);
     const target=targetId===undefined?undefined:store.buildings.get(targetId);
     const enemy=target&&buildingReady(target)&&atWar(state,faction.id,target.faction)?target:undefined;
@@ -57,29 +62,40 @@ export function updateFactionEmpires(state:GameState,orders:EmpireOrders):void {
     const artillery=enemy?owned.filter(building=>(building.kind==='ballista'||building.kind==='siegeCannon')&&distance(center(building),center(enemy))<=18):[];
     const threatened=owned.some(building=>state.time-(building.lastAttacked??-Infinity)<8)
       ||nearbyUnits(state,leader,7).some(unit=>unit.hp>0&&!unit.inside&&atWar(state,faction.id,unit.faction)&&orders.visible(leader,unit));
-    const n=cities.length,extraCityUpkeep=n*settlementMaintenance(n+1)-Math.max(0,n-1)*settlementMaintenance(n);
-    const values=[faction.gold,reserve,budget.surplus,faction.population,faction.food,n,cities.filter(city=>!buildingReady(city)).length,
+    const extraCityUpkeep = townBuildTerms(state, faction).upkeep;
+    const values=[faction.gold,reserve,budget.surplus,faction.population,faction.food,cities.length,cities.length-ready.length,
       orders.cost('palace', faction.id),extraCityUpkeep,artillery.length,
       Number(isBuildingUnlocked(faction,siegeKind)&&(!cannon||factionHasDevelopedResource(state,faction.id,'iron'))),
       orders.cost(siegeKind, faction.id),cannon?BUILDING_UPKEEP.siegeCannon!:0,fortCounts.get(home.id)??0,orders.cost('fort', faction.id),FORT_UPKEEP,
       leader.x,leader.y,home.x,home.y,home.id,center(facing).x,center(facing).y,enemy?.id??-1,Number(!!enemy),Number(threatened),
       state.world.width,state.world.height,leader.hp/unitMaxHp(leader),budget.upkeep,Number(isBuildingUnlocked(faction,'fort')),
-      store.units.query('soldier').filter(unit=>unit.faction===faction.id&&unit.hp>0&&!unit.inside&&unit.order!=='hold'&&unit.order!=='flee').length,
+      store.units.queryFaction('soldier',faction.id).filter(unit=>unit.hp>0&&!unit.inside&&unit.order!=='hold'&&unit.order!=='flee').length,
       owned.filter(building=>building.construction&&['house','camp','well','library'].includes(building.kind)
-        &&ownership.building(building)?.id===home.id).length];
+        &&ownership.building(building)?.id===home.id).length,
+      expansionHome.x,expansionHome.y,expansionHome.id,Number(activeOffensives.has(faction.id))];
     const pointer=rustEngine.sim_ai_empire_input(handle);
-    new Float64Array(rustEngine.memory.buffer,pointer,33).set(values);
-    const [action,x,y]=copy(rustEngine.sim_ai_empire_plan(handle,faction.id,state.time));
-    if(!action)continue;
-    const kind:EmpireKind=action===1?'palace':action===2?siegeKind:'fort';
-    const feedback=(result:number)=>rustEngine.sim_ai_empire_feedback(handle,faction.id,state.time,result,x,y);
-    if((faction.constructionPauseUntil?.[kind]??0)>state.time
-      ||action===1&&!factionAIDecision(state,faction.id,'citySpacing',Math.min(...cities.map(city=>distance(city,{x,y}))))
-      ||!orders.validateSite(faction.id,kind,x,y).ok) {feedback(0);continue;}
-    if(orders.build(faction.id,kind,x,y).ok) {feedback(2);continue;}
-    const proposed:Building={id:-1,kind,faction:faction.id,x,y,hp:1,maxHp:1,capacity:0};
-    if(!constructionEdges(state,proposed).slice(0,2).some(goal=>hasStaticPath(state,leader,goal,faction.id))) {feedback(0);continue;}
-    feedback(1);
+    new Float64Array(rustEngine.memory.buffer,pointer,values.length).set(values);
+    // A sample rejected for terrain or spacing can move the city's cursor
+    // forward in the same turn. Stop after a real order or approach probe.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const [action,x,y,retained]=copy(rustEngine.sim_ai_empire_plan(handle,faction.id,state.time));
+      if(!action) break;
+      const kind:EmpireKind=action===1?'palace':action===2?siegeKind:'fort';
+      const feedback=(result:number, goal?: Point)=>rustEngine.sim_ai_empire_feedback(handle,faction.id,state.time,result,goal?.x??0,goal?.y??0);
+      if (retained && kind !== 'fort' && distance(leader, { x: x + .5, y: y + .5 }) > 10) break;
+      if((faction.constructionPauseUntil?.[kind]??0)>state.time
+        ||action===1&&!factionAIDecision(state,faction.id,'citySpacing',Math.min(...cities.map(city=>distance(city,{x,y}))))
+        ||!orders.validateSite(faction.id,kind,x,y).ok) {feedback(0);if (action === 1) continue;break;}
+      if(orders.build(faction.id,kind,x,y).ok) {feedback(2);break;}
+      // A failed local fort order cannot be made legal by moving the Leader.
+      // Traveling orders retain one actual reachable building entrance.
+      if (kind === 'fort' || retained || distance(leader, { x: x + .5, y: y + .5 }) <= 10) {feedback(0);break;}
+      const proposed:Building={id:-1,kind,faction:faction.id,x,y,hp:1,maxHp:1,capacity:0};
+      const approach = constructionEdges(state,proposed).sort((a,b)=>distance(a,leader)-distance(b,leader))
+        .find(goal=>hasStaticPath(state,leader,goal,faction.id));
+      feedback(approach ? 1 : 0, approach);
+      break;
+    }
   }
 }
 

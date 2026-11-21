@@ -4,35 +4,39 @@
   "height": 280,
   "simulatedSeconds": 6710.000000005579,
   "wallSeconds": 40.370369875,
-  "bytes": 4721418,
+  "bytes": 4721355,
   "cities": [
     {
       "id": 1,
       "faction": 0,
       "population": 221,
       "housing": 221,
-      "food": 157.74666666666684
+      "food": 157.74666666666684,
+      "settlementTier": 2
     },
     {
       "id": 133,
       "faction": 1,
       "population": 269,
       "housing": 269,
-      "food": 193.79333333333363
+      "food": 193.79333333333363,
+      "settlementTier": 2
     },
     {
       "id": 265,
       "faction": 2,
       "population": 205,
       "housing": 205,
-      "food": 71.31999999999994
+      "food": 71.31999999999994,
+      "settlementTier": 2
     },
     {
       "id": 395,
       "faction": 3,
       "population": 355,
       "housing": 355,
-      "food": 167.62000000000066
+      "food": 167.62000000000066,
+      "settlementTier": 3
     }
   ],
   "agriculture": {
@@ -526,7 +530,7 @@
     "gold": 123,
     "stone": 148,
     "salt": 1057,
-    "olives": 578,
+    "olives": 460,
     "fish": 3125
   },
   "polarSeaLanes": {

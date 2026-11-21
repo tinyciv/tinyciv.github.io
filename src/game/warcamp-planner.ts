@@ -1,31 +1,32 @@
-import { type World, type Point, type CampSize, WATER } from './types';
+import { buildingSize, type World, type Point, type CampSize, WATER } from './types';
 export type { CampSize } from './types';
 import { traversable, canTraverseEdge } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
+import { completesTileSquare } from './network-placement';
 
 export interface CampSizeProfile {
-  readonly tierCount:number;
   readonly minTents:number;
   readonly maxTents:number;
   readonly minTowers:number;
-  readonly towersPerTier:readonly number[];
 }
 /** Shared physical capacity targets; production uses these to balance encounters. */
 export const CAMP_SIZE_PROFILES = {
-  small:{tierCount:2,minTents:3,maxTents:5,minTowers:5,towersPerTier:[4,1]},
-  medium:{tierCount:3,minTents:6,maxTents:9,minTowers:6,towersPerTier:[4,1,1]},
-  large:{tierCount:4,minTents:10,maxTents:18,minTowers:7,towersPerTier:[4,1,1,1]},
+  small:{minTents:3,maxTents:5,minTowers:5},
+  medium:{minTents:6,maxTents:9,minTowers:6},
+  large:{minTents:10,maxTents:18,minTowers:7},
 } as const satisfies Readonly<Record<CampSize,CampSizeProfile>>;
 
 /** Pure, bounded terrain-aware layout planner. No state mutation or artwork dependency. */
 export interface CampLayout {
   id:string; size:CampSize; name:string; subtitle:string; description:string;
-  width:number; height:number; tierCount:number; previousWidth:number; previousHeight:number;
-  walls:{x:number;y:number;tier:number}[];
-  gates:{x:number;y:number;tier:number;axis:'ns'|'ew'}[];
-  towers:{x:number;y:number;tier:number}[];
-  tents:{x:number;y:number;tier:number}[];
-  /** Tier 1 is the stone keep; other enclosures are independent palisade posts. */
+  width:number; height:number; previousWidth:number; previousHeight:number;
+  walls:Point[];
+  gate:Point;
+  towers:(Point & { core:boolean })[];
+  tents:Point[];
+  /** Northwest tile of the lair, centered in the stone ring. */
+  lair:Point;
+  /** Open ground inside the stone gate where returning commanders regroup. */
   refuge:Point;
   signs:Point[]; paths:Point[];
   zones:{x:number;y:number;width:number;height:number;label:string}[];
@@ -38,7 +39,7 @@ export interface CampPlanningOptions {
   /** Solid existing structures; these additionally block traversal. World-linear indices. */
   obstacles?:ReadonlySet<number>;
   /** Global strategic reachability. Only finite values on the local border seed access. */
-  access?:Float64Array;
+  access?: Float32Array | Float64Array;
   /** False permits clearing only occupied forest/jungle plots after a plan is accepted. */
   preserveTrees?:boolean;
 }
@@ -52,10 +53,22 @@ export interface AdaptiveCampPlan {
   searchBounds?:SearchBounds;
   bounds:{x:number;y:number;width:number;height:number}|null;
   checks:{valid:boolean;issues:string[]};
-  metrics:{candidateCount:number;wallTiles:number;tentCount:number;tierCount:number;naturalBarrierTiles?:number};
+  metrics:{candidateCount:number;wallTiles:number;tentCount:number;naturalBarrierTiles?:number};
 }
 const DIRS=[[-1,0],[0,-1],[1,0],[0,1]] as const;
 const ALL_DIRS=[...DIRS,[-1,-1],[1,-1],[1,1],[-1,1]];
+const LAIR_SIZE = buildingSize({ kind: 'barbarianLair' });
+const LAIR_OFFSET = Math.floor(LAIR_SIZE / 2);
+const CORE_WALL_RADIUS = LAIR_OFFSET + 3;
+const CORE_TOWER_OFFSET = CORE_WALL_RADIUS - 1;
+
+export function campLairCells(lair: Point): Point[] {
+  return Array.from({ length: LAIR_SIZE ** 2 }, (_, cell) => ({
+    x: lair.x + cell % LAIR_SIZE,
+    y: lair.y + Math.floor(cell / LAIR_SIZE),
+  }));
+}
+
 const id=(w:World,p:Point)=>p.y*w.width+p.x;
 const point=(w:World,k:number):Point=>({x:k%w.width,y:Math.floor(k/w.width)});
 const inside=(w:World,x:number,y:number)=>x>=0&&y>=0&&x<w.width&&y<w.height;
@@ -87,55 +100,138 @@ function border(w:World):number[]{
   for(let y=t+1;y<b;y++)a.push(y*w.width+l,y*w.width+r);
   const access=optionsOf(w)?.access;return access?a.filter(k=>Number.isFinite(access[k])):a;
 }
-interface Enclosure { center:Point; cells:Point[]; gate:CampLayout['gates'][number]; tier:number }
-/** A 5×5 perimeter leaves a true 3×3 court. Each outpost is independent,
- * so tents and patrol roads remain scattered on the open ground between them. */
-function enclosure(w:World,c:Point,tier:number,occupied:Set<number>,seed:number):Enclosure|null {
-  for(let y=c.y-2;y<=c.y+2;y++)for(let x=c.x-2;x<=c.x+2;x++)
-    if(!isBuildable(w,x,y)||occupied.has(y*w.width+x))return null;
+
+/** Work back from a destination until it joins a route. Terrain like fords
+ * stays open between road segments. */
+function joinCampTrail(world: World, walkable: ReadonlyMap<number, number | null>, roadable: ReadonlySet<number>,
+  routes: Set<number>, roads: Set<number>, destination: number): void {
+  const { width, height } = world;
+  const roadAt = (cell: number) => roads.has(cell);
+  if (routes.has(destination) || !walkable.has(destination)) return;
+
+  const towardsDestination = new Map<number, number | null>([[destination, null]]);
+  const queue = [destination];
+  for (let head = 0; head < queue.length; head++) {
+    const cell = queue[head], from = point(world, cell);
+    for (const [dx, dy] of DIRS) {
+      const x = from.x + dx, y = from.y + dy, next = y * width + x;
+      if (!inside(world, x, y) || !walkable.has(next) || towardsDestination.has(next)
+        || !canTraverseEdge(world, from, { x, y })) continue;
+      if (routes.has(next)) {
+        for (let step: number | null = cell; step !== null; step = towardsDestination.get(step) ?? null) {
+          routes.add(step);
+          const p = point(world, step);
+          if (roadable.has(step) && !completesTileSquare(width, height, p.x, p.y, roadAt)) roads.add(step);
+        }
+        return;
+      }
+      towardsDestination.set(next, cell);
+      queue.push(next);
+    }
+  }
+}
+
+function campTrails(world: World, bounds: SearchBounds, blocked: Set<number>, outside: Map<number, number | null>,
+  gate: number, refuge: number, destinations: number[]): Point[] {
+  // A ford or detour may lead outside the area where we lay road tiles.
+  const walkable = flood(world, blocked, [gate]).parent;
+  const withinCamp = ({ x, y }: Point) => x >= bounds.x - 2 && x < bounds.x + bounds.width + 2
+    && y >= bounds.y - 2 && y < bounds.y + bounds.height + 2;
+  const roadable = new Set<number>();
+  for (let y = bounds.y - 2; y < bounds.y + bounds.height + 2; y++) {
+    for (let x = bounds.x - 2; x < bounds.x + bounds.width + 2; x++) {
+      const cell = y * world.width + x;
+      if (walkable.has(cell) && isBuildable(world, x, y)) roadable.add(cell);
+    }
+  }
+  // Lead from the gate toward the edge of the camp along its existing
+  // strategic approach. Then branch to the more distant buildings first.
+  let approach = gate;
+  for (let next = outside.get(approach); next != null && withinCamp(point(world, next)); next = outside.get(approach)) approach = next;
+  const gatePoint = point(world, gate);
+  const distanceToGate = (cell: number) => {
+    const { x, y } = point(world, cell);
+    return Math.abs(x - gatePoint.x) + Math.abs(y - gatePoint.y);
+  };
+  destinations.sort((a, b) => distanceToGate(b) - distanceToGate(a) || a - b);
+  // Camp sizes cap the number of searches at three towers and eighteen tents,
+  // plus the two gate approaches. Each search only visits the local site.
+  const routes = new Set([gate]), roads = new Set([gate]);
+  for (const destination of [refuge, approach, ...destinations]) joinCampTrail(world, walkable, roadable, routes, roads, destination);
+  return [...roads].map(cell => point(world, cell));
+}
+/** The stone ring gives the lair an open aisle inside the corner towers. */
+function stoneEnclosure(w:World,c:Point,seed:number):{cells:Point[];gate:Point}|null {
+  const radius = CORE_WALL_RADIUS;
+  for(let y=c.y-radius;y<=c.y+radius;y++)for(let x=c.x-radius;x<=c.x+radius;x++)
+    if(!isBuildable(w,x,y))return null;
   const cells:Point[]=[];
-  for(let y=c.y-2;y<=c.y+2;y++)for(let x=c.x-2;x<=c.x+2;x++)
-    if(Math.abs(x-c.x)===2||Math.abs(y-c.y)===2)cells.push({x,y});
-  const sides=[{x:c.x,y:c.y+2,axis:'ns' as const},{x:c.x+2,y:c.y,axis:'ew' as const},
-    {x:c.x,y:c.y-2,axis:'ns' as const},{x:c.x-2,y:c.y,axis:'ew' as const}];
+  for(let y=c.y-radius;y<=c.y+radius;y++)for(let x=c.x-radius;x<=c.x+radius;x++)
+    if(Math.abs(x-c.x)===radius||Math.abs(y-c.y)===radius)cells.push({x,y});
+  const sides=[{x:c.x,y:c.y+radius},{x:c.x+radius,y:c.y},{x:c.x,y:c.y-radius},{x:c.x-radius,y:c.y}];
   const gate=sides.sort((a,b)=>noise(a.x,a.y,seed)-noise(b.x,b.y,seed)).find(g=>{
     const dx=Math.sign(g.x-c.x),dy=Math.sign(g.y-c.y);
-    return isBuildable(w,g.x+dx,g.y+dy)&&!occupied.has((g.y+dy)*w.width+g.x+dx);
+    return isBuildable(w,g.x+dx,g.y+dy);
   });
-  return gate?{center:c,cells,gate:{...gate,tier},tier}:null;
+  return gate ? {cells,gate} : null;
 }
 function assemble(w:World,c:Point,seed:number,candidateCount:number,size:CampSize,variant:number):AdaptiveCampPlan|null {
-  const profile=CAMP_SIZE_PROFILES[size],reserved=new Set<number>(),enclosures:Enclosure[]=[];
-  const reserve=(e:Enclosure)=>{
-    enclosures.push(e);
-    // A full cell of open ground separates every pair of defensive rings.
-    for(let y=e.center.y-3;y<=e.center.y+3;y++)for(let x=e.center.x-3;x<=e.center.x+3;x++)reserved.add(y*w.width+x);
+  const profile = CAMP_SIZE_PROFILES[size];
+  const core = stoneEnclosure(w, c, seed + variant);
+  if (!core) return null;
+  const gate = core.gate, gateKey = id(w, gate);
+  const walls = core.cells.filter(p => id(w, p) !== gateKey);
+  const lair = { x: c.x - LAIR_OFFSET, y: c.y - LAIR_OFFSET };
+  if (!reliefFootprintAllowed(w, lair.x, lair.y, LAIR_SIZE)) return null;
+  const refuge = {
+    x: c.x + Math.sign(core.gate.x - c.x) * (LAIR_OFFSET + 1),
+    y: c.y + Math.sign(core.gate.y - c.y) * (LAIR_OFFSET + 1),
   };
-  const core=enclosure(w,c,1,reserved,seed+variant);if(!core)return null;reserve(core);
+  const refugeKey = id(w, refuge);
+  const corners = [-CORE_TOWER_OFFSET, CORE_TOWER_OFFSET];
+  const towers: CampLayout['towers'] = corners.flatMap(dy => corners.map(dx => ({ x:c.x+dx, y:c.y+dy, core:true })));
+  const blocked = new Set([...walls, ...towers, ...campLairCells(lair)].map(p => id(w, p)));
+  const starts = border(w), access = flood(w, blocked, starts);
+  if (!access.parent.has(refugeKey)) return null;
+  const route = new Set<number>();
+  const connect = (parents: Map<number,number|null>, start: number) => {
+    for (let k: number | null = start; k !== null && parents.has(k); k = parents.get(k) ?? null) route.add(k);
+  };
+  connect(access.parent, refugeKey);
+
+  // A watchtower occupies one plot. Reserve its approach and keep towers
+  // dispersed without requiring a separate clearing for a perimeter wall.
   const posts:Point[]=[];
-  for(let dy=-8;dy<=8;dy++)for(let dx=-8;dx<=8;dx++)
-    if(Math.max(Math.abs(dx),Math.abs(dy))>=6&&Math.hypot(dx,dy)<=10)posts.push({x:c.x+dx,y:c.y+dy});
+  const minPostDistance = CORE_WALL_RADIUS + 4;
+  const maxPostDistance = minPostDistance + 2;
+  for(let dy=-maxPostDistance;dy<=maxPostDistance;dy++)for(let dx=-maxPostDistance;dx<=maxPostDistance;dx++)
+    if(Math.max(Math.abs(dx),Math.abs(dy))>=minPostDistance&&Math.hypot(dx,dy)<=maxPostDistance+2)posts.push({x:c.x+dx,y:c.y+dy});
   posts.sort((a,b)=>noise(a.x,a.y,seed+variant*31)-noise(b.x,b.y,seed+variant*31));
-  for(const point of posts){
-    if(enclosures.length>=profile.tierCount)break;
-    const post=enclosure(w,point,enclosures.length+1,reserved,seed);if(post)reserve(post);
+  const outposts: Point[] = [], approaches: number[] = [];
+  let local = flood(w, blocked, [refugeKey]);
+  for (const post of posts) {
+    const key = id(w, post);
+    if (!isBuildable(w, post.x, post.y) || route.has(key)
+      || outposts.some(other => Math.max(Math.abs(post.x - other.x), Math.abs(post.y - other.y)) < 6)) continue;
+    const approach = local.parent.get(key);
+    if (approach == null) continue;
+    const door = point(w, approach);
+    if (!isBuildable(w, door.x, door.y)) continue;
+    connect(local.parent, approach);
+    outposts.push(post);
+    approaches.push(approach);
+    towers.push({ ...post, core:false });
+    blocked.add(key);
+    if (towers.length === profile.minTowers) break;
+    local = flood(w, blocked, [refugeKey]);
   }
-  if(enclosures.length!==profile.tierCount)return null;
-  const gates=enclosures.map(e=>e.gate),gateKeys=new Set(gates.map(g=>id(w,g)));
-  const walls=enclosures.flatMap(e=>e.cells.filter(p=>!gateKeys.has(id(w,p))).map(p=>({...p,tier:e.tier})));
-  const towers:CampLayout['towers']=[...[-1,1].flatMap(dy=>[-1,1].map(dx=>({x:c.x+dx,y:c.y+dy,tier:1}))),
-    ...enclosures.slice(1).map(e=>({...e.center,tier:e.tier}))];
-  const blocked=new Set([...walls,...towers].map(p=>id(w,p))),starts=border(w),access=flood(w,blocked,starts);
-  if(gates.some(g=>!access.parent.has(id(w,g)))||!access.parent.has(id(w,c)))return null;
-  const route=new Set<number>();
-  const connect=(parents:Map<number,number|null>,k:number)=>{while(parents.has(k)){route.add(k);const n=parents.get(k);if(n==null)break;k=n;}};
-  for(const g of gates)connect(access.parent,id(w,g));connect(access.parent,id(w,c));
-  const footprint=enclosures.flatMap(e=>e.cells),xs=footprint.map(p=>p.x),ys=footprint.map(p=>p.y);
+  if (towers.length !== profile.minTowers) return null;
+  const footprint=[...core.cells,...outposts],xs=footprint.map(p=>p.x),ys=footprint.map(p=>p.y);
   const left=Math.min(...xs)-2,right=Math.max(...xs)+2,top=Math.min(...ys)-2,bottom=Math.max(...ys)+2;
   const candidates:Point[]=[];
   for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++){
-    if(enclosures.some(e=>Math.abs(x-e.center.x)<=2&&Math.abs(y-e.center.y)<=2))continue;
-    const k=y*w.width+x;if(isBuildable(w,x,y)&&!route.has(k))candidates.push({x,y});
+    if(Math.max(Math.abs(x-c.x),Math.abs(y-c.y))<=CORE_WALL_RADIUS)continue;
+    const k=y*w.width+x;if(isBuildable(w,x,y)&&!blocked.has(k)&&!route.has(k))candidates.push({x,y});
   }
   // Scatter clusters among outposts instead of filling a gridded tent ward.
   candidates.sort((a,b)=>noise(a.x,a.y,seed)-noise(b.x,b.y,seed));
@@ -143,43 +239,57 @@ function assemble(w:World,c:Point,seed:number,candidateCount:number,size:CampSiz
   for(const p of candidates){
     if(tents.length>=profile.maxTents)break;
     const k=id(w,p),door=k+w.width;
-    if(!isBuildable(w,p.x,p.y+1)||blocked.has(door)||gateKeys.has(door)||tents.some(t=>Math.abs(t.x-p.x)+Math.abs(t.y-p.y)<3))continue;
+    if(!isBuildable(w,p.x,p.y+1)||blocked.has(door)||door===gateKey||tents.some(t=>Math.abs(t.x-p.x)+Math.abs(t.y-p.y)<3))continue;
     blocked.add(k);const walk=flood(w,blocked,starts);
-    if(!walk.parent.has(door)||!walk.parent.has(id(w,c))||gates.some(g=>!walk.parent.has(id(w,g)))||tents.some(t=>!walk.parent.has(id(w,t)+w.width))){blocked.delete(k);continue;}
-    tents.push({...p,tier:0});
+    if(!walk.parent.has(door)||!walk.parent.has(refugeKey)||tents.some(t=>!walk.parent.has(id(w,t)+w.width))){blocked.delete(k);continue;}
+    tents.push(p);
   }
   if(tents.length<profile.minTents)return null;
-  route.clear();const final=flood(w,blocked,[id(w,c)]);
-  for(const g of gates)connect(final.parent,id(w,g));for(const t of tents)connect(final.parent,id(w,t)+w.width);
-  // One short public approach joins the open camp road network to outside land.
-  const entrance=flood(w,blocked,starts);connect(entrance.parent,id(w,gates[0]));
-  const all=[...walls,...gates,...towers,...tents],bounds={x:Math.min(...all.map(p=>p.x)),y:Math.min(...all.map(p=>p.y)),width:0,height:0};
+  const all=[...walls,gate,...towers,...tents],bounds={x:Math.min(...all.map(p=>p.x)),y:Math.min(...all.map(p=>p.y)),width:0,height:0};
   bounds.width=Math.max(...all.map(p=>p.x))-bounds.x+1;bounds.height=Math.max(...all.map(p=>p.y))-bounds.y+1;
+  const entrance = flood(w, blocked, starts);
+  const paths = campTrails(w, bounds, blocked, entrance.parent, gateKey, refugeKey,
+    [...approaches, ...tents.map(tent => id(w, tent) + w.width)]);
   const layout:CampLayout={id:'adaptive',size,name:`${size[0].toUpperCase()+size.slice(1)} Marauder Camp`,subtitle:'Fortified refuge and scattered outposts',description:'',
-    width:w.width,height:w.height,tierCount:profile.tierCount,previousWidth:25,previousHeight:25,walls,gates,towers,tents,refuge:{...c},signs:[],
-    paths:[...route].map(k=>point(w,k)).filter(p=>isBuildable(w,p.x,p.y)&&!blocked.has(id(w,p))&&p.x>=bounds.x-2&&p.x<bounds.x+bounds.width+2&&p.y>=bounds.y-2&&p.y<bounds.y+bounds.height+2),zones:[]};
-  const plan:AdaptiveCampPlan={layout,status:'placed',reason:'A stone refuge, separate palisade watchposts and scattered tents fit the existing ground.',bounds,checks:{valid:true,issues:[]},
-    adjustments:['The inner stone ring encloses a 3×3 court with four corner towers.',`${profile.tierCount-1} independent palisade outposts protect the tent camp.`,`Only occupied plots are cleared; terrain is never filled or moved.`],
-    metrics:{candidateCount,wallTiles:walls.length,tentCount:tents.length,tierCount:profile.tierCount,naturalBarrierTiles:0}};
+    width:w.width,height:w.height,previousWidth:25,previousHeight:25,walls,gate,towers,tents,lair,refuge,signs:[],paths,zones:[]};
+  const plan:AdaptiveCampPlan={layout,status:'placed',reason:'A stone refuge, freestanding watchtowers and scattered tents fit the existing ground.',bounds,checks:{valid:true,issues:[]},
+    adjustments:['A 9×9 stone ring surrounds the 3×3 lair, a walking aisle and four corner towers.',`${outposts.length} freestanding watchtowers protect the tent camp.`,'Only occupied plots are cleared; terrain is never filled or moved.'],
+    metrics:{candidateCount,wallTiles:walls.length,tentCount:tents.length,naturalBarrierTiles:0}};
   plan.checks=validateLocalPlan(w,plan);return plan.checks.valid?plan:null;
 }
 function validateLocalPlan(w:World,plan:AdaptiveCampPlan):{valid:boolean;issues:string[]}{
   if(!plan.layout)return{valid:plan.status==='rejected',issues:[]};
   const l=plan.layout,profile=CAMP_SIZE_PROFILES[l.size],issues:string[]=[];
-  const walls=new Set(l.walls.map(p=>id(w,p))),gates=new Set(l.gates.map(p=>id(w,p))),defenses=new Set([...walls,...gates]);
-  if(l.gates.length!==profile.tierCount||l.towers.length!==profile.minTowers)issues.push('Incorrect outpost capacity');
+  const gateKey = id(w, l.gate), defenses = new Set([...l.walls.map(p => id(w, p)), gateKey]);
+  const center = { x: l.lair.x + LAIR_OFFSET, y: l.lair.y + LAIR_OFFSET };
+  const lair = campLairCells(l.lair);
+  if(l.towers.length!==profile.minTowers)issues.push('Incorrect tower count');
   if(l.tents.length<profile.minTents||l.tents.length>profile.maxTents)issues.push('Incorrect tent capacity');
-  if(l.towers.filter(p=>p.tier===1).length!==4||l.towers.filter(p=>p.tier===1).some(p=>Math.abs(p.x-l.refuge.x)!==1||Math.abs(p.y-l.refuge.y)!==1))issues.push('Invalid core corner towers');
-  const core=[...l.walls,...l.gates].filter(p=>p.tier===1);
-  if(core.length!==16||core.some(p=>Math.max(Math.abs(p.x-l.refuge.x),Math.abs(p.y-l.refuge.y))!==2))issues.push('Core does not enclose exactly 3×3');
-  for(const p of [...l.walls,...l.gates,...l.tents,...l.towers,...l.signs,...l.paths])if(!isBuildable(w,p.x,p.y))issues.push('Unbuildable structure');
+  const coreTowers = l.towers.filter(p => p.core);
+  if(coreTowers.length!==4||coreTowers.some(p=>Math.abs(p.x-center.x)!==CORE_TOWER_OFFSET||Math.abs(p.y-center.y)!==CORE_TOWER_OFFSET))issues.push('Invalid core corner towers');
+  const core=[...l.walls,l.gate];
+  if(core.length!==CORE_WALL_RADIUS*8||core.some(p=>Math.max(Math.abs(p.x-center.x),Math.abs(p.y-center.y))!==CORE_WALL_RADIUS))issues.push('Invalid stone ring around lair');
+  if (!reliefFootprintAllowed(w, l.lair.x, l.lair.y, LAIR_SIZE)) issues.push('Unbuildable lair footprint');
+  for(const p of [...core,...l.tents,...l.towers,...lair,...l.signs,...l.paths])if(!isBuildable(w,p.x,p.y))issues.push('Unbuildable structure');
   for(const k of defenses){if([1,w.width,w.width+1].every(offset=>defenses.has(k+offset)))issues.push('Double-thick wall');if(DIRS.filter(([dx,dy])=>defenses.has(k+dy*w.width+dx)).length>3)issues.push('Four-way wall junction');}
-  const solids=[...l.walls,...l.tents,...l.towers].map(p=>id(w,p));
-  if(new Set(solids).size!==solids.length||solids.some(k=>gates.has(k)))issues.push('Overlapping structures');
-  const blocked=new Set(solids),friendly=flood(w,blocked,[id(w,l.refuge)],true),hostile=flood(w,new Set([...blocked,...gates]),border(w),true);
-  for(const p of [...l.gates,...l.tents.map(t=>({...t,y:t.y+1}))])if(!friendly.parent.has(id(w,p)))issues.push('Unreachable gate or tent door');
+  const solids=[...l.walls,...l.tents,...l.towers,...lair].map(p=>id(w,p));
+  if(new Set(solids).size!==solids.length||solids.includes(gateKey))issues.push('Overlapping structures');
+  const blocked=new Set(solids),friendly=flood(w,blocked,[id(w,l.refuge)]),hostile=flood(w,new Set([...blocked,gateKey]),border(w),true);
+  const aisleRadius = LAIR_OFFSET + 1;
+  for (let dy = -aisleRadius; dy <= aisleRadius; dy++) for (let dx = -aisleRadius; dx <= aisleRadius; dx++)
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === aisleRadius && !friendly.parent.has(id(w, { x: center.x + dx, y: center.y + dy })))
+      issues.push('Blocked aisle around lair');
+  for(const p of [l.gate,...l.tents.map(t=>({...t,y:t.y+1}))])if(!friendly.parent.has(id(w,p)))issues.push('Unreachable gate or tent door');
+  for (const tower of l.towers) if (!tower.core && !DIRS.some(([dx, dy]) => {
+    const x = tower.x + dx, y = tower.y + dy, cell = y * w.width + x;
+    return inside(w, x, y) && friendly.parent.has(cell) && hostile.parent.has(cell);
+  })) issues.push('Unreachable freestanding tower');
   if(hostile.parent.has(id(w,l.refuge)))issues.push('Hostile bypass into refuge');
   if(!flood(w,blocked,border(w),true).parent.has(id(w,l.refuge)))issues.push('No strategic approach');
+  const roads = new Set(l.paths.map(p => id(w, p)));
+  if (!roads.has(gateKey)) issues.push('Missing gate trail');
+  const roadAt = (cell: number) => roads.has(cell);
+  if (l.paths.some(p => completesTileSquare(w.width, w.height, p.x, p.y, roadAt))) issues.push('Roads fill a 2×2 square');
   for(const p of l.paths)if(blocked.has(id(w,p))||!friendly.parent.has(id(w,p)))issues.push('Invalid road');
   return{valid:issues.length===0,issues:[...new Set(issues)]};
 }
@@ -192,7 +302,7 @@ function planLocalCamp(world:World,anchor:Point,seed=1):AdaptiveCampPlan{
     count++;if(c.x<4||c.y<4||c.x>=world.width-4||c.y>=world.height-4)continue;
     const placed=assemble(world,c,seed,count,size,variant);if(placed)return placed;
   }
-  return{layout:null,status:'rejected',reason:`No safe ${size} camp fit found.`,adjustments:[`Tested ${count} bounded layouts without changing terrain.`],bounds:null,checks:{valid:true,issues:[]},metrics:{candidateCount:count,wallTiles:0,tentCount:0,tierCount:0}};
+  return{layout:null,status:'rejected',reason:`No safe ${size} camp fit found.`,adjustments:[`Tested ${count} bounded layouts without changing terrain.`],bounds:null,checks:{valid:true,issues:[]},metrics:{candidateCount:count,wallTiles:0,tentCount:0}};
 }
 
 /** Copy only a small window and remap masks; tile records are shared read-only. */
@@ -212,8 +322,8 @@ function translatePlan(plan:AdaptiveCampPlan,dx:number,dy:number,width:number,he
   const shift=<T extends Point>(p:T):T=>({...p,x:p.x+dx,y:p.y+dy});
   const l=plan.layout;
   return{...plan,bounds:plan.bounds?{...plan.bounds,x:plan.bounds.x+dx,y:plan.bounds.y+dy}:null,
-    layout:l?{...l,width,height,walls:l.walls.map(shift),gates:l.gates.map(shift),towers:l.towers.map(shift),
-      tents:l.tents.map(shift),refuge:shift(l.refuge),signs:l.signs.map(shift),paths:l.paths.map(shift),zones:l.zones.map(shift)}:null};
+    layout:l?{...l,width,height,walls:l.walls.map(shift),gate:shift(l.gate),towers:l.towers.map(shift),
+      tents:l.tents.map(shift),lair:shift(l.lair),refuge:shift(l.refuge),signs:l.signs.map(shift),paths:l.paths.map(shift),zones:l.zones.map(shift)}:null};
 }
 /** Production options enable a maximum 31×31 search; returned coordinates are global. */
 export function planCamp(world:World,anchor:Point,seed=1,options?:CampPlanningOptions):AdaptiveCampPlan {

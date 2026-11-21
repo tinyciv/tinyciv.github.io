@@ -12,19 +12,19 @@ function fixture(resource: RegionalResource, cells: [number, number][], develope
 }
 
 describe('developed resource composition', () => {
-    it('places one mine per connected developed component without replacing the remaining ore', () => {
-        const world = fixture('copper', [[1, 1], [2, 1], [1, 2], [2, 2], [5, 2], [5, 3]]);
-        const layout = [...buildResourceArtLayout(world).values()];
-        expect(layout.filter(item => item.worksite)).toHaveLength(2);
-        expect(layout.filter(item => !item.worksite)).toHaveLength(4);
-        expect(layout.every(item => item.fences === 0 && item.road === 0)).toBe(true);
-        expect([...buildResourceArtLayout(world)].filter(([, art]) => art.worksite).map(([cell]) => cell)).toEqual([21, 35]);
-        world.tiles[2 * 10 + 2].resourceDeveloped = false;
-        expect(buildResourceArtLayout(world).get(22)!.worksite).toBe(false);
+    it('draws one developed mine for a partially worked deposit', () => {
+        const world = fixture('copper', [[1, 1], [2, 1], [1, 2], [2, 2]], false);
+        const cells = [11, 12, 21, 22];
+        for (const cell of cells) Object.assign(world.tiles[cell], { oreAnchor: 11, oreWidth: 2, oreHeight: 2 });
+        expect(buildResourceArtLayout(world).get(11)?.ore?.developed).toBe(false);
+        world.tiles[22].resourceDeveloped = true;
+        const layout = [...buildResourceArtLayout(world).values()], mine = layout[0].ore;
+        expect(mine).toMatchObject({ material: 'copper', width: 2, height: 2, developed: true });
+        expect(layout.filter(resourceHasObject)).toHaveLength(1);
+        expect(layout.every(art => art.ore === mine && art.fences === 0 && art.road === 0)).toBe(true);
     });
-    it('puts metal entrances on the southern edge, centered deterministically within that row', () => {
-        const world = fixture('iron', [[2, 1], [2, 2], [1, 3], [2, 3], [3, 3]]);
-        expect([...buildResourceArtLayout(world)].filter(([, art]) => art.worksite).map(([cell]) => cell)).toEqual([32]);
+    it('centers the worker approach deterministically on the southern edge', () => {
+        expect(southernResourceCell([31, 32, 33, 22, 12], 10)).toBe(32);
         expect(southernResourceCell([31, 33, 22, 12], 10)).toBe(31);
         expect(southernResourceCell([12, 22, 33, 31], 10)).toBe(31);
         expect(southernResourceCell([], 10)).toBeUndefined();
@@ -34,7 +34,7 @@ describe('developed resource composition', () => {
         const cells = [...layout.values()], stone = cells[0].ore;
         expect(stone).toMatchObject({ material: 'stone', width: 2, height: 2, developed: false });
         expect(cells.filter(resourceHasObject)).toHaveLength(1);
-        expect(cells.every(art => art.developed && art.ore === stone && !art.worksite && !art.fences && !art.road)).toBe(true);
+        expect(cells.every(art => art.developed && art.ore === stone && !art.fences && !art.road)).toBe(true);
     });
     it('fences only the developed grove perimeter, including partially worked boundaries', () => {
         const world = fixture('olives', [[2, 2], [3, 2], [2, 3], [3, 3]]);
@@ -45,7 +45,6 @@ describe('developed resource composition', () => {
         expect(layout.get(33)!.fences).toBe(6); // south/east
         expect(layout.get(32)!.gate).toBe(4);
         expect([...layout.values()].filter(art => art.gate)).toHaveLength(1);
-        expect([...layout.values()].some(item => item.worksite)).toBe(false);
         world.tiles[33].resourceDeveloped = false;
         const partial = buildResourceArtLayout(world);
         expect(partial.get(23)!.fences & 4).toBe(4);
@@ -54,12 +53,13 @@ describe('developed resource composition', () => {
     });
     it('preserves separate deposits even when two different group identities touch', () => {
         const world = fixture('iron', [[2, 2], [3, 2]]); world.tiles[23].resourceGroup = 2;
-        expect([...buildResourceArtLayout(world).values()].filter(item => item.worksite)).toHaveLength(2);
+        const layout = [...buildResourceArtLayout(world).values()];
+        expect(layout.filter(resourceHasObject)).toHaveLength(2);
+        expect(new Set(layout.map(art => art.ore)).size).toBe(2);
     });
     it('keeps a salt approach inside the patch and opens exactly one perimeter gate', () => {
         const world = fixture('salt', [[2, 2], [3, 2], [4, 2], [2, 3], [3, 3], [2, 4], [3, 4]]);
         const layout = buildResourceArtLayout(world);
-        expect([...layout.values()].filter(art => art.worksite)).toHaveLength(0);
         expect([...layout.values()].every(resourceHasObject)).toBe(true);
         expect([...layout.values()].filter(art => art.gate)).toHaveLength(1);
         const directions = [[0, -1], [1, 0], [0, 1], [-1, 0]];

@@ -9,6 +9,7 @@ import { cityDevelopmentNeeds, governorPermissions, withCityPlanning, withCityPl
 import { planHouseSite } from './housing';
 import { houseLevel, WELL_POPULATION_REQUIREMENT, WELL_RADIUS } from './wells';
 import { areSwordsmenUnlocked, areArchersUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked, arePikemenUnlocked, areMusketmenUnlocked, isBuildingUnlocked, researchStatus } from './research';
+import { desiredRetinueSize } from './archery';
 import { type Building, type Faction, type GameState, type ResearchBranchId, buildingReady, buildingWidth, buildingHeight, distance, isFarmKind } from './types';
 import { SimulationEvents } from './simulation-events';
 import { entityStore } from './entity-store';
@@ -24,9 +25,11 @@ import { buildingDisplacesFarms } from './farm-relocation';
 import { placementOccupancy } from './placement-occupancy';
 import { INSTITUTION_KIND, nativeInstitutionPlan, type InstitutionKind } from './institution-native';
 import { granaryCity } from './granaries-native';
-import { structuresOf, STRUCTURE_ALIVE, STRUCTURE_READY } from './structure-index';
+import { structureIndex, structuresOf, STRUCTURE_ALIVE, STRUCTURE_READY } from './structure-index';
 import { farmCityQuery } from './farm-travel';
 import { canReachConstruction } from './builders';
+import { hasLivestock } from './livestock';
+import { settlementPopulationLimit, upgradeSettlementTier } from './settlement-upgrades';
 
 type DevelopmentWork = 'validation' | 'farm-validation' | 'action';
 type DevelopmentTask = Generator<DevelopmentWork, void, void>;
@@ -40,7 +43,7 @@ export interface DevelopmentOrders {
 }
 const PLAYER_PLAN_SECONDS = 30;
 const LIBRARY_COST = 200;
-const productiveKinds = ['camp', 'house', 'well', 'monument', 'library', 'guardPost', 'archeryRange', 'blacksmith', 'healerShack', 'stable', 'fort', 'supplyDepot', 'granary', 'barracks', 'forum', 'hospital', 'apartments', 'factory'];
+const productiveKinds = ['camp', 'house', 'well', 'monument', 'library', 'guardPost', 'archeryRange', 'blacksmith', 'healerShack', 'stable', 'fort', 'supplyDepot', 'granary', 'barracks', 'forum', 'apartments', 'factory'];
 interface CityPlan {
   palace: Building; faction: Faction; interval: number; factionOrder: number; order: number; seen: number;
 }
@@ -137,10 +140,17 @@ function canSaveForLibrary(state: GameState, faction: Faction, palace: Building)
  * Do not buy another safety-margin farm while food is accumulating and births
  * have nowhere to live. A genuine food deficit still takes precedence. */
 export function factionCityDevelopmentPriority(state: GameState, palace: Building): 'farm' | 'house' | null {
-  const needs = cityDevelopmentNeeds(state, palace), faction = state.factions.find(candidate => candidate.id === palace.faction);
-  if (palace.faction > 0 && !isHumanFaction(state,palace.faction) && governorPermissions(palace).housing
-    && factionAIDecision(state,palace.faction,'housingPriority',needs.housing,needs.population,needs.foodCapacity,faction?.food??0)) return 'house';
-  if (palace.faction > 0 && !isHumanFaction(state, palace.faction) && governorPermissions(palace).housing && needs.housing <= needs.population + 2
+  const needs = cityDevelopmentNeeds(state, palace);
+  if (palace.faction <= 0 || isHumanFaction(state,palace.faction) || !governorPermissions(palace).housing) return needs.priority;
+  const limit = settlementPopulationLimit(palace);
+  if (needs.housing >= limit || needs.population >= limit) return needs.priority;
+  // Completed and pending beds both count. Once the city has room to grow,
+  // keep its treasury for actual shortages and funded civic investments.
+  if (!factionAIDecision(state, palace.faction, 'housingDemand', needs.housing, needs.population))
+    return needs.priority === 'house' ? null : needs.priority;
+  const faction = state.factions.find(candidate => candidate.id === palace.faction);
+  if (factionAIDecision(state,palace.faction,'housingPriority',needs.housing,needs.population,needs.foodCapacity,faction?.food??0)) return 'house';
+  if (needs.housing <= needs.population + 2
     && needs.foodCapacity > needs.population && (faction?.food ?? 0) >= Math.max(12, needs.population * 2)) return 'house';
   return needs.priority;
 }
@@ -258,6 +268,7 @@ function upgradeAllowedNow(state: GameState, faction: Faction, kind: Development
 function* developInstitution(state: GameState, faction: Faction, palace: Building, kind: InstitutionKind,
   orders: DevelopmentOrders): Generator<DevelopmentWork, boolean, void> {
   if (!upgradeAllowedNow(state, faction, kind)) return false;
+  if (kind === 'apartments' && cityDevelopmentNeeds(state, palace).housing >= settlementPopulationLimit(palace)) return false;
   const existing = () => structuresOf(state, faction.id, STRUCTURE_ALIVE, kind).some(building =>
     kind === 'granary' ? granaryCity(state, building)?.id === palace.id
       : kind !== 'forum' ? ownedByCity(state, building, palace) : true);
@@ -315,7 +326,7 @@ function* buildCityUpgrade(state: GameState, faction: Faction, palace: Building,
     // while this city's candidate scan was suspended.
     if (kind === 'library' ? !libraryPlacementAllowed(state, faction.id, { x: point.x + 1, y: point.y + 1 })
       : state.buildings.some(building => building.hp > 0 && building.faction === faction.id && building.kind === kind
-        && (!['guardPost', 'healerShack', 'fort', 'barracks', 'hospital', 'apartments', 'factory'].includes(kind) || ownedByCity(state, building, palace)))) return true;
+        && (!['guardPost', 'healerShack', 'fort', 'barracks', 'apartments', 'factory'].includes(kind) || ownedByCity(state, building, palace)))) return true;
     const built = orders.build(faction.id, kind, point.x, point.y).ok; yield 'action';
     if (built) return true;
   }
@@ -326,10 +337,14 @@ function* buildCityUpgrade(state: GameState, faction: Faction, palace: Building,
 function* establishResearch(state: GameState, faction: Faction, palace: Building, orders: DevelopmentOrders): Generator<DevelopmentWork, boolean, void> {
   if (!libraryPlacementAllowed(state, faction.id, { x: palace.x + 1, y: palace.y + 1 }) || !canSaveForLibrary(state, faction, palace)
     || (faction.constructionPauseUntil?.library ?? 0) > state.time) return false;
+  const first = needsLibrary(state, faction);
+  if (!first && factionCityDevelopmentPriority(state, palace)) return false;
   const needs = cityDevelopmentNeeds(state, palace);
   if (governorPermissions(palace).housing && needs.housing - needs.population <= needs.housing * .25
     && (yield* improveHousing(state, faction, palace, orders))) return true;
-  if (faction.gold < LIBRARY_COST * marbleConstructionMultiplier(state, faction.id) + factionCommittedBudget(state, faction).upkeep) return true;
+  const budget = factionCommittedBudget(state, faction);
+  if (faction.gold < LIBRARY_COST * marbleConstructionMultiplier(state, faction.id) + budget.upkeep)
+    return first && needs.housing > needs.population && budget.surplus > 0;
   return (yield* buildCityUpgrade(state, faction, palace, 'library', orders));
 }
 
@@ -339,17 +354,23 @@ function* establishResearch(state: GameState, faction: Faction, palace: Building
 function updateFactionComposition(state: GameState, faction: Faction): void {
   const owned = state.buildings.filter(building => building.faction === faction.id && building.hp > 0);
   const ready = new Set(owned.filter(buildingReady).map(building => building.kind));
+  const stableSupplied = ready.has('stable') && hasLivestock(state, faction.id, 'horse');
   const flags = Number(areArchersUnlocked(faction) && ready.has('archeryRange'))
-    | Number(areHorsemenUnlocked(faction) && ready.has('stable')) << 1
-    | Number(areHorseArchersUnlocked(faction) && ready.has('stable')) << 2
-    | Number(areKnightsUnlocked(faction) && ready.has('stable')) << 3
+    | Number(areHorsemenUnlocked(faction) && stableSupplied) << 1
+    | Number(areHorseArchersUnlocked(faction) && stableSupplied) << 2
+    | Number(areKnightsUnlocked(faction) && stableSupplied) << 3
     | Number(areSwordsmenUnlocked(faction) && ready.has('blacksmith')) << 4
     | Number(arePikemenUnlocked(faction) && ready.has('barracks')) << 5
     | Number(areMusketmenUnlocked(faction) && ready.has('barracks')) << 6;
-  const soldiers = entityStore(state).units.query('soldier').filter(unit => unit.faction === faction.id && unit.hp > 0);
+  const units = entityStore(state).units;
+  const leader = units.queryFaction('leader', faction.id).find(unit => unit.hp > 0);
+  const soldiers = units.queryFaction('retinue', faction.id).filter(unit => unit.hp > 0 && !unit.ranger);
+  const slots = Math.max(soldiers.length, desiredRetinueSize(faction, leader) - (faction.rangerCompanions ?? 0));
   const budget = factionCommittedBudget(state, faction);
-  const mix = nativeInstitutionPlan(state, faction.id, 1, [flags, faction.gold, factionDevelopmentReserve(state, faction),
-    budget.surplus, soldiers.filter(unit => (unit.training?.role ?? unit.kind) === 'musketman').length, soldiers.length, faction.fieldCannonFraction ?? 0]);
+  const research = ready.has('library') ? researchStatus(state, faction.id) : undefined;
+  const science = research && !research.completed ? budget.taxes * research.allocation : 0;
+  const mix = nativeInstitutionPlan(state, faction.id, 1, [flags, budget.surplus + budget.retinueWages - science,
+    slots, faction.fieldCannonFraction ?? 0]);
   [faction.knightFraction, faction.horseArcherFraction, faction.horsemanFraction, faction.swordsmanFraction,
     faction.archerFraction, faction.spearmanFraction, faction.pikemanFraction, faction.musketmanFraction, faction.fieldCannonFraction] = mix;
 }
@@ -366,7 +387,6 @@ function* developUnlockedBuildings(state: GameState, faction: Faction, palace: B
   if (yield* developInstitution(state, faction, palace, 'forum', orders)) return;
   if (yield* developInstitution(state, faction, palace, 'apartments', orders)) return;
   if (yield* developInstitution(state, faction, palace, 'factory', orders)) return;
-  if (yield* developInstitution(state, faction, palace, 'hospital', orders)) return;
   const upgrades = ([['guardPost', 200], ['archeryRange', 400], ['blacksmith', 200], ['healerShack', HEALER_SHACK_COST], ['stable', 350],
     ['supplyDepot', SUPPLY_DEPOT_COST], ['fort', FORT_GOLD]] as const)
     .map(([kind,cost],index)=>({kind,cost,rank:factionAIDecision(state,faction.id,'developmentRank',index)}))
@@ -523,10 +543,15 @@ function* planCityDevelopment(state: GameState, orders: DevelopmentOrders, plan:
     if (faction.id > 0 && !isHumanFaction(state, faction.id) && state.buildings.filter(building => building.construction && productiveKinds.includes(building.kind)
       && ownedByCity(state, building, palace)).length < 3 && (yield* establishResearch(state, faction, palace, orders))) return;
     const currentNeeds = faction.id > 0 && !isHumanFaction(state, faction.id) ? cityDevelopmentNeeds(state, palace) : undefined;
+    const limit = settlementPopulationLimit(palace);
+    if (currentNeeds && Number.isFinite(limit) && nativeInstitutionPlan(state, faction.id, 6, [palace.settlementTier ?? 0,
+      currentNeeds.population, faction.population, faction.food, faction.gold, faction.yields.gold,
+      structureIndex(state).civicCount(palace)])[0]
+      && withCityPlanningMutation(state, () => upgradeSettlementTier(state, palace, faction.id)).ok) return;
     // Wells are cheap growth infrastructure, not a reward for finishing every
     // safety-margin farm first. Reserve food production, then avoid hitting a
     // housing ceiling while the farm governor continuously queues more work.
-    if (currentNeeds && governorPermissions(palace).housing && currentNeeds.foodCapacity > currentNeeds.population
+    if (currentNeeds && currentNeeds.housing < limit && governorPermissions(palace).housing && currentNeeds.foodCapacity > currentNeeds.population
       && (currentNeeds.housing - currentNeeds.population <= currentNeeds.housing * .3
         || factionAIDecision(state,faction.id,'housingInfrastructure',currentNeeds.housing,currentNeeds.population,currentNeeds.foodCapacity))
       && (yield* improveHousing(state, faction, palace, orders))) return;

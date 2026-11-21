@@ -1,5 +1,4 @@
-/** Mine entrances face south. Keep simulation destinations and the artwork on
- * the same southernmost outcrop, using a stable centered choice for wide rows. */
+/** Pick a stable, centered access cell on the southern edge of a deposit. */
 export function southernResourceCell(cells: readonly number[], width: number): number | undefined {
     if (!cells.length) return undefined;
     const centerX = cells.reduce((sum, cell) => sum + cell % width, 0) / cells.length;

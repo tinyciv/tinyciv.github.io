@@ -6,7 +6,11 @@ export const CANNON_FIRE_FRAME_COUNT = 9;
 export const CANNON_FIRE_FRAME_SECONDS = .09;
 export const CANNON_FIRE_SECONDS = CANNON_FIRE_FRAME_COUNT * CANNON_FIRE_FRAME_SECONDS;
 const ORIGIN = { x: 16, y: 25 };
+const SMOKE_VARIANTS = 3;
+const SMOKE_WIDTH = 18;
+const SMOKE_HEIGHT = 19;
 let image: HTMLImageElement | undefined;
+let smokeSheet: HTMLCanvasElement | undefined;
 let loading: Promise<void> | undefined;
 
 export function loadCannonFireArt(): Promise<void> {
@@ -21,6 +25,27 @@ export function loadCannonFireArt(): Promise<void> {
 }
 
 export const cannonFireImage = (): HTMLImageElement | undefined => image;
+
+export function gunSmokeFrame(variant: number) {
+  if (!image) return;
+  if (!smokeSheet) {
+    const sheet = document.createElement('canvas');
+    sheet.width = SMOKE_VARIANTS * SMOKE_WIDTH;
+    sheet.height = SMOKE_HEIGHT;
+    const context = sheet.getContext('2d')!;
+    for (let i = 0; i < SMOKE_VARIANTS; i++) {
+      const frame = CANNON_FIRE_FRAME_COUNT - SMOKE_VARIANTS + i;
+      context.drawImage(image, frame * CANNON_FIRE_FRAME_SIZE + 6, 3, SMOKE_WIDTH, SMOKE_HEIGHT,
+        i * SMOKE_WIDTH, 0, SMOKE_WIDTH, SMOKE_HEIGHT);
+    }
+    context.globalCompositeOperation = 'source-atop';
+    context.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    context.fillRect(0, 0, sheet.width, sheet.height);
+    smokeSheet = sheet;
+  }
+  const rect: [number, number, number, number] = [variant * SMOKE_WIDTH, 0, SMOKE_WIDTH, SMOKE_HEIGHT];
+  return { image: smokeSheet, rect };
+}
 
 /** Presentation interpolation only; the simulation owns every shot time. */
 export function cannonFireFrame(shotAt: number | undefined, time: number): number {

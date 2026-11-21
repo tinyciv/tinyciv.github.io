@@ -1,4 +1,4 @@
-import { ARMY_WARNING_SECONDS, type ArmyWarning } from '../game/army-warnings';
+import { ARMY_WARNING_SECONDS, combatWarningRegion, type ArmyWarning } from '../game/army-warnings';
 import { entityStore } from '../game/entity-store';
 import { playerFaction } from '../game/player-context';
 import type { GameState, Point, World } from '../game/types';
@@ -13,7 +13,7 @@ export class ArmyWarningFeed {
   private viewer = -1;
   private seen = 0;
   private time = -Infinity;
-  private active = new Map<number, PresentedArmyWarning>();
+  private active = new Map<number | string, PresentedArmyWarning>();
   update(state: GameState, now: number): PresentedArmyWarning[] {
     const viewer = playerFaction(state);
     if (state.world !== this.world || viewer !== this.viewer || state.time < this.time
@@ -26,11 +26,13 @@ export class ArmyWarningFeed {
       if (event.id <= this.seen) continue;
       this.seen = event.id;
       if (event.recipients.includes(viewer) && event.createdAt <= state.time
-        && state.time - event.createdAt < ARMY_WARNING_SECONDS)
-        this.active.set(event.id, { ...event, expiresAt: now + ARMY_WARNING_SECONDS * 1000 });
+        && state.time - event.createdAt < ARMY_WARNING_SECONDS) {
+        const key = event.kind === 'attack' ? combatWarningRegion(event) : event.id;
+        this.active.set(key, { ...event, expiresAt: now + ARMY_WARNING_SECONDS * 1000 });
+      }
     }
-    for (const [id, event] of this.active) {
-      if (now >= event.expiresAt) { this.active.delete(id); continue; }
+    for (const [key, event] of this.active) {
+      if (now >= event.expiresAt) { this.active.delete(key); continue; }
       const source = entityStore(state).units.get(event.sourceId);
       if (source && source.hp > 0 && !source.inside) { event.x = source.x; event.y = source.y; }
     }

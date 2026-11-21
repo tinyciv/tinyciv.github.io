@@ -12,6 +12,10 @@ const WHALE_GOLD: f64 = 250.0;
 const RANGE: u16 = 48;
 const WHALING_RANGE: u16 = 300;
 const WHALE_COAST_BUFFER: u8 = 10;
+const DISTRICT_SIZE: usize = 12;
+const MIN_DISTRICT_CELLS: usize = 12;
+const WATER_CELL: u8 = 1;
+const FJORD_WATER_CELL: u8 = 2;
 const SITE_STRIDE: usize = 11;
 const BOAT_STRIDE: usize = 18;
 pub fn constant(i: u32) -> f64 { match i { 0 => CATCH, 1 => STOCK, 2 => WHALE_GOLD, 3 => 60.0, 4 => 1.05, 5 => 300.0, 6 => 400.0, 7 => WHALING_RANGE as f64, _ => 0.0 } }
@@ -44,7 +48,7 @@ pub struct Fisheries {
     boats: BTreeMap<i64,Entity>, sites: BTreeMap<i64,Site>, fields: BTreeMap<(usize,u32),Field>,
     replacements: BTreeMap<i64,f64>, buffs: BTreeMap<i32,f64>,
     blockers: BTreeMap<(i32,i32),Vec<[f64;5]>>, boat_buckets: BTreeMap<(i32,i32),Vec<usize>>, initialized: bool, next_tick: f64, geometry_output: bool,
-    world_islands_applied: bool,
+    world_islands_applied: bool, newly_split_fjords: BTreeSet<i64>,
     boat_indices: BTreeMap<i64,usize>,
     maneuvers: BTreeMap<i64,Maneuver>, requests: BTreeMap<i64,usize>, waiting: VecDeque<i64>,
     maneuver_jobs: BTreeMap<i64,ManeuverJob>, maneuver_queue: VecDeque<i64>,
@@ -322,15 +326,17 @@ fn generate(world:&mut World,n:&mut Fisheries,seed:u32){
     let large_water = crate::ore::large_water_bodies(n.width, n.height, &n.water);
     let mut visited=vec![false;n.edges.len()];let mut groups=BTreeMap::<(usize,usize,usize),Vec<usize>>::new();let mut component=0;
     for start in 0..n.edges.len(){if visited[start]||!n.open(start){continue;}let mut queue=VecDeque::from([start]);visited[start]=true;
-        while let Some(c)=queue.pop_front(){if n.habitat[c]>0 && large_water[c] {groups.entry((component,c%n.width/12,c/n.width/12)).or_default().push(c);}
+        while let Some(c)=queue.pop_front(){if n.habitat[c]>0 && large_water[c] {
+            groups.entry((component,c%n.width/DISTRICT_SIZE,c/n.width/DISTRICT_SIZE)).or_default().push(c);
+        }
             for d in 0..4{if let Some(next)=n.neighbor(c,d){if !visited[next]{visited[next]=true;queue.push_back(next);}}}
         }component+=1;
     }
     // Eligible water bodies split by district boundaries still receive a stock.
-    let represented:BTreeSet<usize>=groups.iter().filter(|(_,cells)|cells.len()>=12).map(|(key,_)|key.0).collect();
+    let represented:BTreeSet<usize>=groups.iter().filter(|(_,cells)|cells.len()>=MIN_DISTRICT_CELLS).map(|(key,_)|key.0).collect();
     let mut small=BTreeMap::<usize,Vec<usize>>::new();
     for (key,cells) in &groups{if !represented.contains(&key.0){small.entry(key.0).or_default().extend(cells);}}
-    groups.retain(|_,cells|cells.len()>=12);
+    groups.retain(|_,cells|cells.len()>=MIN_DISTRICT_CELLS);
     for (component,cells) in small{groups.insert((component,usize::MAX,usize::MAX),cells);}
     for (i,(_,cells)) in groups.into_iter().enumerate(){
         let id=i as i64+1;let mut whale_candidates=Vec::new();
@@ -355,7 +361,19 @@ fn index_resources(world:&World,n:&mut Fisheries){
 }
 pub fn commit(world:&mut World,mode:u32,count:usize,width:usize,height:usize,seed:u32,now:f64){
     world.resource_scope(|world,mut n:Mut<Fisheries>|{match mode {
-        0=>{n.width=width;n.height=height;n.edges=n.input[..count].iter().map(|v|*v as u8).collect();n.habitat=n.input[count..count*2].iter().map(|v|*v as u8).collect();n.water=n.input[count*2..count*3].iter().map(|v|*v!=0.0).collect();n.fields.clear();if !n.initialized{generate(world,&mut n,seed);n.next_tick=now+1.0;}index_resources(world,&mut n);},
+        0=>{
+            n.width=width;n.height=height;
+            n.edges=n.input[..count].iter().map(|v|*v as u8).collect();
+            n.habitat=n.input[count..count*2].iter().map(|v|*v as u8).collect();
+            n.water=n.input[count*2..count*3].iter().map(|v|*v as u8 & WATER_CELL != 0).collect();
+            n.fields.clear();
+            if !n.initialized {
+                generate(world,&mut n,seed);
+                n.newly_split_fjords=split_fjord_zones(world,&mut n);
+                n.next_tick=now+1.0;
+            }
+            index_resources(world,&mut n);
+        },
         1=>{let mut sites=BTreeMap::new();for r in n.input[..count*SITE_STRIDE].chunks_exact(SITE_STRIDE){let s=Site{id:r[0]as i64,kind:r[1]as u32,faction:r[2]as i32,city:r[3]as i64,ready:r[6]!=0.0,tech:r[7]!=0.0,home:(r[8],r[9]),active:r[10]!=0.0};sites.insert(s.id,s);}n.sites=sites;},
         2=>{restore(world,&mut n);},
         3=>{n.blockers.clear();let input=n.input[..count*5].to_vec();for r in input.chunks_exact(5){n.blockers.entry(((r[0]/8.0).floor()as i32,(r[1]/8.0).floor()as i32)).or_default().push([r[0],r[1],r[2],r[3],r[4]]);}},
@@ -370,7 +388,8 @@ pub fn commit(world:&mut World,mode:u32,count:usize,width:usize,height:usize,see
                 }).collect();
                 // A district takes only its highest applicable density, even
                 // when different island annuli overlap the same original stock.
-                refine_island_zones(world,&mut n,&islands);
+                let fjords=std::mem::take(&mut n.newly_split_fjords);
+                refine_island_zones(world,&mut n,&islands,&fjords);
                 n.world_islands_applied=true;
             }
         },
@@ -391,7 +410,7 @@ fn restore(world:&mut World,n:&mut Fisheries){
     }
     for _ in 0..buffs{n.buffs.insert(r[p]as i32,r[p+1]);p+=2;}
     for _ in 0..replacements{n.replacements.insert(r[p]as i64,r[p+1]);p+=2;}
-    n.initialized=true;n.world_islands_applied=true;n.geometry_output=true;index_resources(world,n);
+    n.initialized=true;n.world_islands_applied=true;n.newly_split_fjords.clear();n.geometry_output=true;index_resources(world,n);
 }
 fn maintain(world:&mut World,n:&mut Fisheries,now:f64,boats:&mut Vec<Vessel>){
     boats.retain(|b|{let valid=b.hp>0.0&&n.sites.get(&b.site).is_some_and(|s|s.ready&&s.active&&s.faction==b.faction&&s.city>=0);
@@ -555,10 +574,48 @@ pub fn status(world:&mut World,id:i64)->*const f64 {
 /// disjoint spatial partition and normal stock.
 pub fn atoll_fisheries(world: &mut World, cx: f64, cy: f64, rx: f64, ry: f64, multiplier: u32) -> u32 {
     world.resource_scope(|world, mut n: Mut<Fisheries>|
-        refine_island_zones(world,&mut n,&[([cx,cy,rx,ry],multiplier as usize)]))
+        refine_island_zones(world,&mut n,&[([cx,cy,rx,ry],multiplier as usize)],&BTreeSet::new()))
 }
 
-fn refine_island_zones(world: &mut World, n: &mut Fisheries, islands: &[([f64;4],usize)]) -> u32 {
+/// Split the sheltered cells of each eligible district into two full stocks.
+/// An intersecting ordinary coast retains its own stock and district id.
+fn split_fjord_zones(world: &mut World, n: &mut Fisheries) -> BTreeSet<i64> {
+    let count = n.edges.len();
+    let water_flags = &n.input[count * 2..count * 3];
+    let sheltered = |cell: usize| water_flags[cell] as u8 & FJORD_WATER_CELL != 0;
+    let mut fjords = BTreeSet::new();
+    if !water_flags.iter().any(|&flags| flags as u8 & FJORD_WATER_CELL != 0) { return fjords; }
+
+    let mut next_id = n.zones.keys().chain(n.whales.keys()).copied().max().unwrap_or(0) + 1;
+    let mut added = Vec::new();
+    for &entity in n.zones.values() {
+        let Some(mut zone) = world.get_mut::<Fishery>(entity) else { continue; };
+        if zone.cells.iter().filter(|&&cell| sheltered(cell)).take(MIN_DISTRICT_CELLS).count() < MIN_DISTRICT_CELLS {
+            continue;
+        }
+        let (inlet, ordinary): (Vec<_>, Vec<_>) = zone.cells.iter().copied().partition(|&cell| sheltered(cell));
+        let mut partitions = Vec::with_capacity(2);
+        partition_fishery(inlet, n.width, 2, &mut partitions);
+        if ordinary.is_empty() {
+            zone.cells = partitions.pop().unwrap().into();
+            fjords.insert(zone.id);
+        } else {
+            zone.cells = ordinary.into();
+        }
+        for cells in partitions {
+            let id = next_id;
+            next_id += 1;
+            added.push(Fishery { id, cells: cells.into(), stock: STOCK, capacity: STOCK, collapsed: false });
+            fjords.insert(id);
+        }
+    }
+    for zone in added {
+        n.zones.insert(zone.id, world.spawn(zone).id());
+    }
+    fjords
+}
+
+fn refine_island_zones(world: &mut World, n: &mut Fisheries, islands: &[([f64;4],usize)], excluded: &BTreeSet<i64>) -> u32 {
     if !n.initialized || n.width == 0 { return 0; }
     let islands:Vec<_>=islands.iter().filter(|(r,multiplier)|
         r.iter().all(|value|value.is_finite())&&r[2]>0.0&&r[3]>0.0&&(2..=8).contains(multiplier)).collect();
@@ -566,7 +623,7 @@ fn refine_island_zones(world: &mut World, n: &mut Fisheries, islands: &[([f64;4]
     // Snapshot original districts before replacing any. Each disjoint replacement
     // has ordinary capacity, so splitting doubles/quadruples the stock per area.
     let selected: Vec<(Fishery,usize)> = n.zones.values().filter_map(|entity| world.get::<Fishery>(*entity))
-        .filter(|zone|zone.cells.len()>=12).filter_map(|zone| {
+        .filter(|zone|zone.cells.len()>=MIN_DISTRICT_CELLS && !excluded.contains(&zone.id)).filter_map(|zone| {
             let multiplier=islands.iter().filter(|(r,_)|zone.cells.iter().any(|&cell| {
                 let (x,y)=n.point(cell);
                 let radius_squared=((x-r[0])/r[2]).powi(2)+((y-r[1])/r[3]).powi(2);

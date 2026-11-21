@@ -109,21 +109,24 @@ describe('Scouts Lodge world exploration', () => {
     expect(updateFog(state).explored[34 * 84 + 65]).toBe(1);
   });
 
-  it.each([false, true])('uses stairs to explore a wooded ridge: %s', ramp => {
+  it.each([false, true])('explores a wooded pocket when its rock barrier has an opening (%s)', opening => {
     const state = fixture(), scout = state.units[1];
+    const inside = (x: number, y: number) => x > 48 && x < 60 && y > 26 && y < 38;
     for (let y = 26; y <= 38; y++) for (let x = 48; x <= 60; x++) {
-      const tile = state.world.tiles[y * 84 + x]; tile.ridge = 1; tile.overlay = 'forest';
+      const tile = state.world.tiles[y * 84 + x];
+      if (inside(x, y)) tile.overlay = 'forest';
+      else if (!opening || x !== 48 || y !== 32) tile.rockRelief = 0;
     }
-    if (ramp) state.world.tiles[32 * 84 + 48].stair = 'east';
     state.world.revision = 1;
-    state.fog = { width: 84, height: 64, seed: 'scouts', explored: state.world.tiles.map(tile => Number(!tile.ridge)) };
-    let visitedHigh = false, previous = { x: scout.x, y: scout.y };
+    state.fog = { width: 84, height: 64, seed: 'scouts',
+      explored: state.world.tiles.map((_, cell) => Number(!inside(cell % 84, Math.floor(cell / 84)))) };
+    let visited = false, previous = { x: scout.x, y: scout.y };
     advance(state, 35, unit => {
       expect(canMove(state, previous, unit, 0)).toBe(true); previous = { x: unit.x, y: unit.y };
       expect(canWalk(state, unit.x, unit.y, 0)).toBe(true);
-      visitedHigh ||= !!state.world.tiles[Math.floor(unit.y) * 84 + Math.floor(unit.x)].ridge;
+      visited ||= inside(Math.floor(unit.x), Math.floor(unit.y));
     });
-    expect(visitedHigh).toBe(ramp);
+    expect(visited).toBe(opening);
   });
 
   it('respects forbidden corridors and explores them when the restriction is removed', () => {

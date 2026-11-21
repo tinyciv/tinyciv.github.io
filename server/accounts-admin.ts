@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, renameSync, chmodSync } from 'node:fs';
 import { Pool, escapeLiteral } from 'pg';
 import { SCHEMA } from './accounts/schema';
 import { validPasswordHash } from './accounts/password';
-import { normalizedEmail } from './accounts/http';
+import { normalizedEmail, normalizedUsername } from './accounts/http';
 import { accountDatabase } from './accounts/database';
 import { withPrivateJson } from './accounts/private-json';
 
@@ -118,15 +118,17 @@ async function analyticsAccount(): Promise<void> {
 async function importUser(): Promise<void> {
   const input = JSON.parse(readFileSync(0, 'utf8'));
   const email = normalizedEmail(input.email);
-  if (!email || !validPasswordHash(input.passwordHash)) throw new Error('A valid email and salted scrypt hash are required.');
+  const username = normalizedUsername(input.username);
+  if (!username || !validPasswordHash(input.passwordHash)) throw new Error('A valid username and salted scrypt hash are required.');
+  if (input.email != null && !email) throw new Error('Enter a valid email address.');
   const pool = accountDatabase();
   try {
     // Never replace an existing account or silently reset its password.
-    const result = await pool.query(`INSERT INTO accounts.users(id,email,password_hash,display_name)
-      VALUES ($1,$2,$3,$4) ON CONFLICT(email) DO NOTHING RETURNING id`,
-    [randomUUID(), email, input.passwordHash, email.split('@')[0].slice(0, 40)]);
+    const result = await pool.query(`INSERT INTO accounts.users(id,username,email,password_hash,display_name)
+      VALUES ($1,$2,$3,$4,$2) ON CONFLICT DO NOTHING RETURNING id`,
+    [randomUUID(), username, email ?? null, input.passwordHash]);
     if (!result.rows.length) throw new Error('Account already exists; no password changed.');
-    console.log(JSON.stringify({ created: true, email }));
+    console.log(JSON.stringify({ created: true, username, email: email ?? null }));
   } finally { await pool.end(); }
 }
 

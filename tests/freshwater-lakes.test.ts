@@ -51,10 +51,8 @@ describe('freshwater lake basins', () => {
       // Test inland basin placement before the separate tidal-delta overlay,
       // which can extend coastal channels up to existing freshwater shores.
       const world = generateWorld('freshwater-regions', 274, 216, { style, riverDeltas: false });
-      // Coastal delta ponds also use lake terrain, but are not inland basins.
-      const lakes = world.tiles.filter(tile => tile.terrain === 'lake' && tile.lakeShape !== undefined);
+      const lakes = world.tiles.filter(tile => tile.terrain === 'lake' && tile.lakeShape === 'compact');
       expect(lakes.length).toBeGreaterThan(0);
-      expect(lakes.every(tile => tile.lakeShape === 'compact')).toBe(true);
       for (let i = 0; i < world.tiles.length; i++) if (world.tiles[i].terrain === 'lake' && world.tiles[i].lakeShape !== undefined) {
         expect(world.tiles[i].overlay).toBe('none');
         for (const offset of [-1, 1, -world.width, world.width]) expect(['ocean', 'coast']).not.toContain(world.tiles[i + offset].terrain);

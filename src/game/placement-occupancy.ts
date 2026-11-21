@@ -1,7 +1,8 @@
 import { dockBerth } from './dock';
-import { entityStore, type EntityStore } from './entity-store';
+import { BUILDING_KIND_CODES, entityStore, type EntityStore } from './entity-store';
+import { rustEngine } from './rust-engine';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
-import { buildingHeight, buildingWidth, type Building, type GameState } from './types';
+import { buildingHeight, buildingReady, buildingWidth, type Building, type GameState } from './types';
 import { worldStructureRevision } from './world-revisions';
 
 export interface PlacementOccupancy {
@@ -17,6 +18,10 @@ const caches = new WeakMap<GameState, CachedOccupancy>();
 const EMPTY: readonly Building[] = Object.freeze([]);
 const contains = (building: Building, x: number, y: number): boolean => x >= building.x && y >= building.y
   && x < building.x + buildingWidth(building) && y < building.y + buildingHeight(building);
+
+export function farmCanShareTile(building: Building, faction: number): boolean {
+  return !!rustEngine.farm_can_share_tile(BUILDING_KIND_CODES[building.kind], Number(building.faction === faction), Number(buildingReady(building)));
+}
 
 /** Keep all layers and dead structures: callers decide which overlaps are
  * permitted, and destroyed Fort foundations remain reserved. Runtime mutation

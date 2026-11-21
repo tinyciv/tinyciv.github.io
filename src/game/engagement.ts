@@ -159,9 +159,8 @@ export function releaseAttackSpot(state: GameState, unit: Unit): void { claims.g
 export function movementCongestion(state: GameState, unit: Unit, visitObstruction?: (other: Unit, cell: number) => void,
   result = new Map<number, number>()): Map<number, number> {
   result.clear();
-  // Civilian footprints never obstruct or collide, including with military
-  // units. Their route queries need neither army scans nor reservation costs.
-  if (civilianFootprint(unit)) return result;
+  // Actors that pass through traffic need neither army scans nor reservation costs.
+  if (unit.training || civilianFootprint(unit)) return result;
   const add = (index: number, cost: number) => { result.set(index, (result.get(index) ?? 0) + cost); };
   // The maintained role excludes ordinary civilians once, instead of testing
   // every sleeping worker for each military route. Engineers, wildlife and all
@@ -171,7 +170,7 @@ export function movementCongestion(state: GameState, unit: Unit, visitObstructio
   for (const other of candidates) {
     // Dead and indoor units never obstruct (the native rule's first two
     // conditions); skip them before crossing into the collision policy.
-    if (!(other.hp > 0) || other.inside || !unitBlocksNavigationCell(unit, other)) continue;
+    if (!(other.hp > 0) || other.inside || other.training || !unitBlocksNavigationCell(unit, other)) continue;
     const index = cell(state, other);
     visitObstruction?.(other, index);
     if (other.faction !== unit.faction) continue;

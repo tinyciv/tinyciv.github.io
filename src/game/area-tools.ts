@@ -2,13 +2,16 @@ import { rustEngine } from './rust-engine';
 import { BUILDING_KIND_CODES, entityStore } from './entity-store';
 import { playerFaction } from './player-context';
 import { type Building, type GameState, type Point, buildingWidth, buildingHeight, tileAt } from './types';
-import { cancelConstruction, refreshAfterBuildingRemoval } from './simulation';
+import { cancelConstruction, cancelConstructionOrders, cancelMapCommands, refreshAfterBuildingRemoval } from './simulation';
+import { setForbiddenRectangle } from './forbidden-zones';
 import { prepareConstructionCancellation, removeBuildings } from './construction-cancellation';
 import { pauseCityConstruction } from './governor';
 import { territory } from './borders';
 import { buildingWithinBorders } from './property-territory';
 import { buildStroke } from './construction';
 import { hasTree } from './tree-clearing';
+import { invalidateDecisions } from './decision-schedule';
+import { simulationReadsActive } from './simulation-reads';
 
 export interface AreaToolResult {
   ok: boolean;
@@ -56,21 +59,69 @@ function unavailable(): AreaToolResult {
 
 export function cancelConstructionInArea(state: GameState, start: Point, end: Point, factionId = playerFaction(state)): AreaToolResult {
   if (state.gameOver || !state.factions.some(faction => faction.id === factionId)) return unavailable();
-  const sites = new Map<number, Building>();
-  for (const building of buildingsInArea(state, start, end, factionId)) {
-    if (building.construction) sites.set(building.construction.bridge?.ids[0] ?? building.id, building);
-  }
-  // Remove a queued wall before its gate road so the road cannot close that wall on an occupant.
-  const orders = [...sites.values()].sort((a, b) => Number(a.kind === 'road') - Number(b.kind === 'road'));
-  let count = 0, refund = 0;
-  for (const site of orders) {
-    const result = cancelConstruction(state, site.id, factionId);
-    if (result.ok) { count++; refund += result.refund; }
-  }
-  const skipped = orders.length - count;
+  const { count, refund, skipped } = cancelBuildingOrders(state, areaOverlapTest(state, start, end), factionId);
   const message = count ? `Cancelled ${count} building${count === 1 ? '' : 's'}. Refunded ${refund} gold.`
     : skipped ? 'A gate is occupied and has no safe exit.' : 'No unfinished friendly buildings in this area.';
   return { ok: count > 0, count, refund, skipped, message };
+}
+
+type AreaOverlap = (point: Point, width?: number, height?: number) => boolean;
+
+export function areaOverlapTest(state: GameState, start: Point, end: Point): AreaOverlap {
+  const bounds = rectangle(state, start, end);
+  if (!bounds) return () => false;
+  const { left, top, right, bottom } = bounds;
+  return ({ x, y }, width = 1, height = 1) => !!rustEngine.sim_order_overlaps(left, top, right, bottom, x, y, width, height);
+}
+
+function cancelBuildingOrders(state: GameState, overlaps: AreaOverlap, factionId: number) {
+  const role = simulationReadsActive(state) ? 'construction' : 'building';
+  const orders = entityStore(state).buildings.queryFaction(role, factionId).filter(building =>
+    building.construction && rustEngine.civic_building_removable(BUILDING_KIND_CODES[building.kind])
+      && overlaps(building, buildingWidth(building), buildingHeight(building)));
+  return cancelConstructionOrders(state, orders, factionId);
+}
+
+function cancelCivilianJobs(state: GameState, overlaps: AreaOverlap, factionId: number) {
+  const store = entityStore(state);
+  const result = cancelBuildingOrders(state, overlaps, factionId);
+  let clearings = 0;
+  if (state.treeClearings?.length) {
+    state.treeClearings = state.treeClearings.filter(order => {
+      if (order.faction !== factionId || !overlaps(order)) return true;
+      clearings++;
+      const worker = order.workerId === undefined ? undefined : store.units.get(order.workerId);
+      if (worker?.clearTree?.x === order.x && worker.clearTree?.y === order.y) {
+        worker.clearTree = undefined; worker.clearProgress = undefined;
+        worker.destination = undefined; worker.path = undefined; worker.pathGoal = undefined;
+        worker.repathAt = 0; worker.moving = false; worker.attackTime = 0;
+        worker.buildPhase = worker.inside ? 'idle' : 'returning';
+      }
+      return false;
+    });
+    if (clearings) invalidateDecisions(state);
+  }
+  return { ...result, count: result.count + clearings };
+}
+
+export function cancelCivilianJobsInArea(state: GameState, start: Point, end: Point): AreaToolResult {
+  if (state.gameOver) return unavailable();
+  const jobs = cancelCivilianJobs(state, areaOverlapTest(state, start, end), playerFaction(state));
+  return { ...jobs, ok: jobs.count > 0, message: cancellationMessage(jobs.count, jobs.refund, jobs.skipped) };
+}
+
+function cancellationMessage(count: number, refund: number, skipped: number): string {
+  return [count ? `Cancelled ${count} order${count === 1 ? '' : 's'}.` : '',
+    refund ? `Refunded ${Math.round(refund)} gold.` : '',
+    skipped ? 'Kept occupied crossings with no safe exit.' : ''].filter(Boolean).join(' ') || 'No orders in this area.';
+}
+
+export function cancelArea(state: GameState, start: Point, end: Point): AreaToolResult {
+  if (state.gameOver) return unavailable();
+  const faction = playerFaction(state), overlaps = areaOverlapTest(state, start, end);
+  const jobs = cancelCivilianJobs(state, overlaps, faction);
+  const count = jobs.count + cancelMapCommands(state, overlaps, faction) + Number(setForbiddenRectangle(state, start, end, false).count > 0);
+  return { ...jobs, count, ok: count > 0, message: cancellationMessage(count, jobs.refund, jobs.skipped) };
 }
 
 function crossingLast(a: Building, b: Building): number {

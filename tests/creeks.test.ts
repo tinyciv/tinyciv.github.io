@@ -143,9 +143,9 @@ describe('narrow natural creeks', () => {
     expect(onlyCreeks.fishing!.fish).toEqual([]);
   });
 
-  it('retains freshwater irrigation and ford crossings on a level mountain shelf', () => {
+  it('retains freshwater irrigation and ford crossings on raised ground', () => {
     const state = fixture();
-    for (const tile of state.world.tiles) { tile.ridge = 1; tile.ridgeTier = 3; }
+    for (const tile of state.world.tiles) tile.reliefLevel = 1;
     river(state, 16, 12, true);
     expect(isFreshwaterSource(state, 16, 12)).toBe(true);
     expect(irrigationConnects(state, 15, 12)).toBe(true);

@@ -66,7 +66,7 @@ describe('Rust runtime loading and entity publications', () => {
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
     const draws = [mulberry32(), mulberry32(), mulberry32()];
-    expect(report).toEqual({ owned: 2, remaining: 1, draws, rng: state, imports: [], abi: 13, grew: true,
+    expect(report).toEqual({ owned: 2, remaining: 1, draws, rng: state, imports: [], abi: 18, grew: true,
       original: [-7, Number.MAX_SAFE_INTEGER, 0], first: [Number.MAX_SAFE_INTEGER, 0, -7], firstRole: [Number.MAX_SAFE_INTEGER],
       second: [-7, 2 ** 32 + 1], secondRole: [2 ** 32 + 1],
       duplicate: 0, missing: 0xffffffff, removedSoldier: true, next: 2 ** 32 + 2 });
@@ -84,6 +84,6 @@ describe('Rust runtime loading and entity publications', () => {
       const entities = Array.from(new Float64Array(engine.memory.buffer, pointer + 8, new Float64Array(engine.memory.buffer, pointer, 1)[0]));
       console.log(JSON.stringify({ abi: engine.simulation_abi_version(), entities }));
     `);
-    expect(report).toEqual({ abi: 13, entities: [-42] });
+    expect(report).toEqual({ abi: 18, entities: [-42] });
   });
 });

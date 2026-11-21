@@ -1,5 +1,5 @@
 import { actionTooltip } from './action-tooltips';
-import { RESEARCH_BRANCHES, researchStatus, type ResearchBranchId, type ResearchStatus } from '../game/research';
+import { DEFAULT_RESEARCH_ALLOCATION, RESEARCH_BRANCHES, researchStatus, type ResearchBranchId, type ResearchStatus } from '../game/research';
 import type { Building, GameState } from '../game/types';
 import { researchIconUrl } from './research-icons';
 import { formatResearchCost } from './research-format';
@@ -35,9 +35,10 @@ export class ResearchTree {
       const path = researchEdgePath(prerequisite, branch.id);
       return `<g class="research-edge" data-from="${prerequisite}" data-to="${branch.id}"><title>${definitions.get(prerequisite)!.label} required for ${branch.label}</title><path class="research-edge-halo" d="${path}"/><path class="research-edge-line" d="${path}" marker-end="url(#research-arrow)"/></g>`;
     })).join('');
+    const allocation = Math.round(DEFAULT_RESEARCH_ALLOCATION * 100);
     element.innerHTML = `<div class="research-funding">
-      <label for="research-allocation"><span>Gold income to <span class="science-text">Science</span></span><output for="research-allocation" class="research-allocation-value">25%</output></label>
-      <input id="research-allocation" name="research-allocation" type="range" min="0" max="100" step="5" value="25" aria-label="Gold income allocated to research">
+      <label for="research-allocation"><span>Gold income to <span class="science-text">Science</span></span><output for="research-allocation" class="research-allocation-value">${allocation}%</output></label>
+      <input id="research-allocation" name="research-allocation" type="range" min="0" max="100" step="5" value="${allocation}" aria-label="Gold income allocated to research">
     </div>
     <div class="research-queue"><span class="research-queue-label">Priorities</span><div class="research-queue-list" aria-label="Research priorities"></div></div>
     <div class="research-tree-scroll" aria-label="Technology tree"><div class="research-board" style="width:${RESEARCH_BOARD_WIDTH}px;height:${RESEARCH_BOARD_HEIGHT}px;--research-card-width:${RESEARCH_CARD_WIDTH}px;--research-card-height:${RESEARCH_CARD_HEIGHT}px">

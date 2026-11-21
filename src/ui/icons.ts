@@ -20,7 +20,7 @@ import { pikemanIconUrl } from '../game/pikeman-art';
 
 /** HUD pictures use the same source art as the world. */
 const worldIcons: Record<string, [number, number]> = {
-  food: [0, 28], wheat: [0, 28], gold: [1, 26], coins: [1, 26],
+  food: [0, 28], wheat: [0, 28],
   hammer: [1, 27], tools: [1, 27], materials: [1, 27],
   road: [3, 2], wall: [17, 27], bridge: [22, 29], palisade: [17, 27], woodenTower: [7, 27],
   home: [7, 27], terrain: [0, 5],
@@ -46,7 +46,6 @@ function farmIconUrl(): string {
 /** Every building portrait calls the world renderer, including gate clipping. */
 export function buildingIconUrl(selection: BuildingKind | 'trail', color: string, tier = 1, gate = false, palaceLevel: 1 | 2 = 1): string {
   if (selection === 'marketplace') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/coinage.webp`;
-  if (selection === 'hospital') return `${import.meta.env.BASE_URL}assets/runtime/ui/thermal-bath.webp`;
   if (selection === 'apartments') return `${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/urbanPlanning.webp`;
   if (selection === 'factory') return `${import.meta.env.BASE_URL}assets/runtime/ui/foundry.webp`;
   if (selection === 'goldMine') return `${import.meta.env.BASE_URL}assets/runtime/ui/resources/gold.webp`;
@@ -73,7 +72,7 @@ export function buildingIconUrl(selection: BuildingKind | 'trail', color: string
 }
 export function icon(name: string, color = '#f34f59', houseStyle?: HouseStyle | number, armorLevel = 0): string {
   if (name === 'scoutTower') return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/research/forged/scoutLodge.webp">`;
-  if (['hospital', 'apartments', 'factory', 'goldMine', 'marketplace'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl(name as BuildingKind, color)}">`;
+  if (['apartments', 'factory', 'goldMine', 'marketplace'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl(name as BuildingKind, color)}">`;
   if (['gold', 'coins', 'food', 'wheat', 'culture'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/resources/${name === 'coins' ? 'gold' : name === 'wheat' ? 'food' : name}.webp">`;
   if (['shipyard', 'warGalley', 'caravel', 'frigate'].includes(name)) return `<img aria-hidden="true" alt="" class="icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/naval/${name === 'warGalley' ? 'galley' : name}.webp">`;
   if (name === 'whalingPost') return `<img aria-hidden="true" alt="" class="icon" src="${buildingIconUrl('whalingPost', color)}">`;

@@ -1,0 +1,22 @@
+{
+  "nativePixelsPerTile": 16,
+  "review": "scratch/2026-11-19-imagegen-gold-outcrop",
+  "sha256": "8c24065e4d1b95c165e9f6b5cb4cf2a522bfe71dbf95f33ad9605fe964fd6a07",
+  "rows": [
+    {
+      "material": "rocky ground",
+      "provider": "PixelLab",
+      "variants": 8,
+      "prompts": [
+        "rocky-ground-prompt.json",
+        "rocky-ground-dense-prompt.json"
+      ]
+    },
+    {
+      "material": "gold deposit",
+      "provider": "ImageGen",
+      "variants": 8,
+      "prompt": "gold-tile-prompt.txt"
+    }
+  ]
+}

@@ -20,8 +20,8 @@ import { distance, isSoldier, type GameState, type InputState, type Point, type 
 export const INFANTRY_FORMATION_SPEED = .7 * 1.5;
 export const INFANTRY_CATCHUP_MULTIPLIER = 1.25;
 export const INFANTRY_SPACING = .72;
-export const INFANTRY_FORMATION_MIN_START = 8;
 export const INFANTRY_FORMATION_MIN_REMAINING = 5;
+export const INFANTRY_FORMATION_MIN_START = INFANTRY_FORMATION_MIN_REMAINING;
 const BODY_RADIUS = .17, SETTLED_DISTANCE = .008;
 const copy = (point: Point): Point => ({ x: point.x, y: point.y });
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
@@ -126,7 +126,7 @@ export function toggleInfantryFormation(state: GameState): { ok: boolean; messag
   announceArmyMobilization(state, leader, 'formation');
   return { ok: true, message: 'Forming ranks around the Leader.' };
 }
-/** Native drill geometry fixes the rank count at two, three or four. */
+/** Read the native formation's local offsets from the Leader. */
 export function infantryRectangleOffsets(count: number, type: MilitaryFormationType = 'standard'): Point[] {
   count = Math.max(0, Math.floor(count));
   const code = militaryFormationCode(type);
@@ -136,9 +136,9 @@ export function infantryRectangleOffsets(count: number, type: MilitaryFormationT
   }));
 }
 function synchronizeSlots(state: GameState, formation: InfantryFormationState, members: Unit[], rt: Runtime): void {
-  const byId = new Map(members.map(unit => [unit.id, unit]));
   if (rt.validatedType === formation.type && rt.validatedSlots === formation.slots && formation.slots.length === members.length
     && members.every(unit => rt.validatedRoles?.get(unit.id) === unit.kind)) return;
+  const byId = new Map(members.map(unit => [unit.id, unit]));
   const role = (unit: Unit): 'levy' | 'ranged' | 'melee' => unit.kind === 'levyInfantry' ? 'levy' : unit.kind === 'archer' || unit.range > 1.5 ? 'ranged' : 'melee';
   const offsets = infantryRectangleOffsets(members.length, formation.type);
   // Local +x is forward and y is lateral. The least protected troops occupy
@@ -148,21 +148,27 @@ function synchronizeSlots(state: GameState, formation: InfantryFormationState, m
   const rangedCount = members.filter(unit => role(unit) === 'ranged').length;
   const rear = new Set(offsets.filter(offset => !wings.has(offset)).sort((a, b) => a.x - b.x || Math.abs(a.y) - Math.abs(b.y) || a.y - b.y).slice(0, rangedCount));
   const slotRole = (offset: Point) => wings.has(offset) ? 'levy' : rear.has(offset) ? 'ranged' : 'melee';
+  const offsetKey = (point: Point): string => `${point.x}:${point.y}`;
+  const offsetsByPosition = new Map(offsets.map(offset => [offsetKey(offset), offset]));
   const valid = rt.validatedType === formation.type && formation.slots.length === members.length && formation.slots.every(slot => {
-    const member = byId.get(slot.id), offset = offsets.find(point => point.x === slot.x && point.y === slot.y);
+    const member = byId.get(slot.id), offset = offsetsByPosition.get(offsetKey(slot));
     return !!member && !!offset && role(member) === slotRole(offset);
   });
   if (valid) { rt.validatedSlots = formation.slots; rt.validatedRoles = new Map(members.map(unit => [unit.id, unit.kind])); return; }
-  const remaining = members.slice().sort((a, b) => a.id - b.id), slots: InfantryFormationState['slots'] = [];
-  for (const offset of offsets) {
-    const old = formation.slots.find(slot => slot.x === offset.x && slot.y === offset.y
-      && byId.has(slot.id) && role(byId.get(slot.id)!) === slotRole(offset));
-    if (old) { slots.push(old); remaining.splice(remaining.findIndex(unit => unit.id === old.id), 1); }
-    else slots.push({ id: -1, ...offset });
-  }
+  const oldByPosition = new Map(formation.slots.map(slot => [offsetKey(slot), slot]));
+  const retained = new Set<number>();
+  const slots = offsets.map(offset => {
+    const old = oldByPosition.get(offsetKey(offset));
+    const member = old && byId.get(old.id);
+    if (!old || !member || retained.has(member.id) || role(member) !== slotRole(offset)) return { id: -1, ...offset };
+    retained.add(member.id);
+    return old;
+  });
+  const remaining = { levy: [] as number[], ranged: [] as number[], melee: [] as number[] };
+  for (const unit of members.slice().sort((a, b) => b.id - a.id))
+    if (!retained.has(unit.id)) remaining[role(unit)].push(unit.id);
   for (let index = 0; index < slots.length; index++) if (slots[index].id < 0) {
-    const next = remaining.findIndex(unit => role(unit) === slotRole(offsets[index]));
-    slots[index].id = remaining.splice(next, 1)[0].id;
+    slots[index].id = remaining[slotRole(offsets[index])].pop()!;
   }
   const artilleryRear = cannonRearGoals(state, members, new Map(slots.map(slot => [slot.id, { x: slot.x, y: slot.y }])), { x: 0, y: 0 }, 0);
   formation.slots = slots.map(slot => ({ id: slot.id, ...artilleryRear.get(slot.id)! })); rt.validatedType = formation.type; rt.validatedSlots = formation.slots; rt.validatedRoles = new Map(members.map(unit => [unit.id, unit.kind]));

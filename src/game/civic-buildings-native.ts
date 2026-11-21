@@ -5,32 +5,31 @@ import { structureIndex, structuresOf, STRUCTURE_ALIVE } from './structure-index
 import { markWorldChanged } from './world-revisions';
 import { grantIncome } from './resource-income';
 import { reliefFootprintAllowed } from './relief';
-import { buildingWidth, buildingHeight, unitMaxHp, WATER, type BuildingKind, type GameState, type Point } from './types';
+import { buildingWidth, buildingHeight, WATER, type BuildingKind, type GameState, type Point } from './types';
 
-const CODES = { hospital: 38, apartments: 39, factory: 40, goldMine: 41 } as const;
+const CODES = { apartments: 39, factory: 40, goldMine: 41 } as const;
 export type CivicBuildingKind = keyof typeof CODES;
 export const civicBuildingProperty = (kind: CivicBuildingKind, property: number): number => rustEngine.civic_building_constant(CODES[kind], property);
 export const COAL_FACTORY_GOLD_BONUS = civicBuildingProperty('factory', 4);
 export const isCivicBuilding = (kind: BuildingKind): kind is CivicBuildingKind => kind in CODES;
-const UNIT_STRIDE = 9;
+const UNIT_STRIDE = 6;
 
-/** Transport for one native 1 Hz pass. Site membership, spatial hospital
- * lookups, biological eligibility and capture decisions live in Rust. */
+/** Transport for the native 1 Hz control-point capture pass. */
 export function updateCivicBuildings(state: GameState, elapsed: number): void {
   const store = entityStore(state), index = structureIndex(state), handle = simCore(state).handle;
   const mines = index.query(undefined, STRUCTURE_ALIVE, ['goldMine']);
+  if (!mines.length) return;
   for (const mine of mines) rustEngine.sim_civic_mine_progress(handle, mine.id, mine.mineCaptureFaction ?? -1, mine.mineCaptureProgress ?? 0);
-  const units = [...new Set([...store.units.query('soldier'), ...store.units.query('leader'), ...store.units.query('wounded')])];
+  const units = [...store.units.query('soldier'), ...store.units.query('leader')];
   const pointer = rustEngine.sim_civic_prepare(handle, units.length * UNIT_STRIDE);
   const input = new Float64Array(rustEngine.memory.buffer, pointer, units.length * UNIT_STRIDE);
   for (let row = 0; row < units.length; row++) {
     const unit = units[row], offset = row * UNIT_STRIDE;
-    input[offset] = unit.id; input[offset + 1] = unit.faction; input[offset + 2] = unit.x; input[offset + 3] = unit.y;
-    input[offset + 4] = unit.hp; input[offset + 5] = unitMaxHp(unit); input[offset + 6] = unit.lastDamagedAt ?? 0;
-    input[offset + 7] = Number(!unit.inside && unit.embarkedOn === undefined && !unit.aboardRowboat);
-    input[offset + 8] = UNIT_KIND_CODES[unit.kind];
+    input[offset] = unit.faction; input[offset + 1] = unit.x; input[offset + 2] = unit.y; input[offset + 3] = unit.hp;
+    input[offset + 4] = Number(!unit.inside && unit.embarkedOn === undefined && !unit.aboardRowboat);
+    input[offset + 5] = UNIT_KIND_CODES[unit.kind];
   }
-  publish(state, rustEngine.sim_civic_step(handle, units.length, state.time, elapsed));
+  publish(state, rustEngine.sim_civic_step(handle, units.length, elapsed));
 }
 
 function publish(state: GameState, pointer: number): void {
@@ -40,10 +39,7 @@ function publish(state: GameState, pointer: number): void {
   const store = entityStore(state);
   for (let row = 0; row < count; row++) {
     const [kind, id, value, extra] = values.subarray(row * 4, row * 4 + 4);
-    if (kind === 0) {
-      const unit = store.units.get(id); if (!unit) continue;
-      unit.hp = value; unit.healerHealingAt = state.time; store.units.updateRoles(unit, false);
-    } else if (kind === 1) {
+    if (kind === 1) {
       const mine = store.buildings.get(id); if (!mine) continue;
       if (mine.faction !== value) {
         mine.faction = value; store.buildings.updateRoles(mine);

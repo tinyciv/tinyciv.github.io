@@ -5,7 +5,7 @@ import { accountDatabase, accountsConfigured } from '../accounts/database';
 import { analyticsConfig } from './config';
 import { gameAnalyticsStatus } from './gameanalytics';
 import { SCENARIOS } from '../../src/game/scenario-content';
-import { LANDFORM_KINDS } from '../../src/world/options';
+import { isLandformFamily } from '../../src/world/options';
 import type { TelemetryEvent, TelemetryKind, WorldType } from '../../src/telemetry/types';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -44,7 +44,7 @@ function eventFrom(input: unknown): TelemetryEvent {
   const e = input as TelemetryEvent;
   if (![e.id,e.visitorId,e.sessionId].every(id => typeof id === 'string' && UUID.test(id))
     || !KINDS.includes(e.kind) || !WORLDS.includes(e.worldType) || !SCENARIO_IDS.has(e.scenario)
-    || ![...WORLDS,'archipelago'].includes(e.worldPreset) || !['mixed',...LANDFORM_KINDS].includes(e.landform)
+    || ![...WORLDS,'archipelago'].includes(e.worldPreset) || !isLandformFamily(e.landform)
     || !['menu','singleplayer','multiplayer'].includes(e.mode)
     || typeof e.build !== 'string' || !/^[\w.-]{1,32}$/.test(e.build)
     || !Number.isSafeInteger(e.sessionNum) || e.sessionNum < 1 || e.sessionNum > 2147483647

@@ -13,11 +13,16 @@ const WARRIOR: usize = 9;
 pub struct RetinueComposition(pub [f64; ROLE_COUNT], pub [f64; ROLE_COUNT * 2], pub [f64; ROLE_COUNT]);
 
 impl RetinueComposition {
-    /// Quotas include outbound trainees. Copper only gates new spear issues;
-    /// a lost mine leaves the requested spear quota intact.
-    pub fn recruit(&self, schools: u64, spears_available: bool) -> usize {
+    /// Quotas include outbound trainees. Equipment resources gate new recruits
+    /// while reserving their requested slots if access is lost.
+    pub fn recruit(&self, schools: u64, spears_available: bool, horses_available: bool) -> usize {
         for role in [CANNON, 0, 1, 2, 4, 5, 6, 7, 3] {
-            if self.2[role] >= self.1[ROLE_COUNT + role] || role == 5 && !spears_available { continue; }
+            if self.2[role] >= self.1[ROLE_COUNT + role]
+                || role == 5 && !spears_available
+                || role <= 2 && !horses_available
+            {
+                continue;
+            }
             if school_available(role, schools) { return role; }
         }
         WARRIOR
@@ -47,15 +52,29 @@ impl RetinueComposition {
         if fraction > 0.0 && !available(role) { return false; }
         // Work in whole percentage points so repeated edits cannot accumulate
         // floating-point oversubscription or hide a one-percent allocation.
-        let mut shares = [0_i32; ROLE_COUNT];
+        let mut shares = [0; ROLE_COUNT];
         let mut remaining = 100;
         for (index, value) in self.0[..WARRIOR].iter().enumerate() {
-            let value = if value.is_finite() { (value.clamp(0.0, 1.0) * 100.0).round() as i32 } else { 0 };
+            let value = if value.is_finite() { (value.clamp(0.0, 1.0) * 100.0).round() as usize } else { 0 };
             shares[index] = value.min(remaining);
             remaining -= shares[index];
         }
         shares[WARRIOR] = remaining;
-        let requested = (fraction * 100.0).round() as i32;
+        self.set_slots(shares, 100, role, (fraction * 100.0).round() as usize, available)
+    }
+
+    pub fn set_count(&mut self, role: usize, count: f64, total: usize, schools: u64, unlocked: u32, trainable: u32) -> bool {
+        if role >= ROLE_COUNT || total == 0 || !count.is_finite() || count.fract() != 0.0 || !(0.0..=total as f64).contains(&count) {
+            return false;
+        }
+        let available = |role: usize| role == WARRIOR || trainable & (1 << role) != 0 && school_available(role, schools);
+        if count > 0.0 && !available(role) { return false; }
+        self.plan(total as f64, unlocked);
+        let slots = std::array::from_fn(|index| self.1[ROLE_COUNT + index] as usize);
+        self.set_slots(slots, total, role, count as usize, available)
+    }
+
+    fn set_slots(&mut self, mut shares: [usize; ROLE_COUNT], total: usize, role: usize, requested: usize, available: impl Fn(usize) -> bool) -> bool {
         // Warriors are the baseline role, so returning specialists never
         // requires Archery research. Reducing warriors needs a real school
         // for the receiving specialty instead of creating an unusable quota.
@@ -65,15 +84,15 @@ impl RetinueComposition {
             shares[receiver] += shares[WARRIOR] - requested;
         }
         shares[role] = requested;
-        let mut overflow = (shares.iter().sum::<i32>() - 100).max(0);
+        let mut overflow = shares.iter().sum::<usize>().saturating_sub(total);
         for index in (0..ROLE_COUNT).rev() {
             if index == role { continue; }
             let removed = shares[index].min(overflow);
             shares[index] -= removed;
             overflow -= removed;
         }
-        shares[WARRIOR] += 100 - shares.iter().sum::<i32>();
-        for (value, share) in self.0.iter_mut().zip(shares) { *value = share as f64 / 100.0; }
+        shares[WARRIOR] += total - shares.iter().sum::<usize>();
+        for (value, share) in self.0.iter_mut().zip(shares) { *value = share as f64 / total as f64; }
         true
     }
 }
@@ -86,7 +105,7 @@ pub fn stat(role: usize, field: usize) -> f64 {
         [1.0, 1.5, 0.75, 1.65, 1.4], [1.0, 2.0, 1.0, 1.0, 1.1],
         [2.0 / 3.0, 0.8, 0.5, 1.0, 4.0], [1.0, 1.0, 1.5, 1.0, 1.4],
         [1.0, 1.0, 2.25, 1.0, 1.75], [0.8, 1.5, 0.75, 1.0, 6.5],
-        [2.0, 0.8 * 4.0 / 0.95 * 5.0, 0.75, 0.5, super::field_cannons::RANGE],
+        [2.0, 0.8 * 4.0 / 0.95 * 5.0, 0.75, super::field_cannons::SPEED_MULTIPLIER, super::field_cannons::RANGE],
         [1.0, 1.0, 1.0, 1.0, 1.1], [1.0, 0.0, 1.0, 1.2, 0.0],
     ];
     STATS.get(role).and_then(|row| row.get(field)).copied().unwrap_or(f64::NAN)
@@ -94,7 +113,52 @@ pub fn stat(role: usize, field: usize) -> f64 {
 
 pub fn upkeep(kind: u32) -> f64 {
     use super::kinds::unit::*;
-    match kind { FIELD_CANNON => super::field_cannons::UPKEEP, KNIGHT | MUSKETMAN => 2.0, HORSE_ARCHER => 1.5, HORSEMAN | ARCHER => 1.0, _ => 0.5 }
+    match kind {
+        WARRIOR => 0.5,
+        SPEARMAN => 1.0,
+        ARCHER => 1.5,
+        SWORDSMAN => 2.0,
+        PIKEMAN => 2.5,
+        HORSEMAN => 3.0,
+        HORSE_ARCHER => 4.0,
+        MUSKETMAN => 5.0,
+        KNIGHT => 6.0,
+        FIELD_CANNON => super::field_cannons::UPKEEP,
+        _ => 0.0,
+    }
+}
+
+/// A realm pays its standing retinue together. A short payday never creates debt.
+#[derive(Resource, Default)]
+pub struct RetinuePayroll([f64; 3]);
+
+impl RetinuePayroll {
+    pub fn settle(&mut self, gold: f64, due: f64) -> *const f64 {
+        let [remaining, paid] = crate::progression::charge(gold, due);
+        self.0 = [remaining, paid, f64::from((paid + 1e-7 >= due) as u8)];
+        self.0.as_ptr()
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct RetinueRecruitment([f64; 3]);
+
+impl RetinueRecruitment {
+    /// [next deadline, current interval, attempt due]. A change in the number
+    /// of completed barracks scales the work remaining on a pending recruit.
+    pub fn tick(&mut self, now: f64, next_at: f64, previous_interval: f64, barracks: i32, starting_escort: bool) -> *const f64 {
+        let interval = f64::from(100 - 6 * barracks.clamp(0, 10)) / 10.0;
+        let deadline = if next_at.is_nan() || starting_escort {
+            now + interval
+        } else if next_at > now && previous_interval > 0.0 && previous_interval != interval {
+            now + (next_at - now) * (interval / previous_interval)
+        } else {
+            next_at
+        };
+        let due = starting_escort || now + 1e-7 >= deadline;
+        self.0 = [if due { now + interval } else { deadline }, interval, u32::from(due).into()];
+        self.0.as_ptr()
+    }
 }
 
 pub fn attack_timing(kind: u32, animation: bool) -> f64 {
@@ -123,7 +187,7 @@ pub fn fraction(raw: f64, remaining: f64, unlocked: bool) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sim::kinds::building::{ARCHERY_RANGE, BLACKSMITH};
+    use crate::sim::kinds::building::{ARCHERY_RANGE, BLACKSMITH, STABLE};
 
     #[test]
     fn specialists_need_their_completed_school_for_commands_and_recruits() {
@@ -131,8 +195,19 @@ mod tests {
         assert!(!composition.set_fraction(ARCHER, 1.0, 1 << BLACKSMITH, u32::MAX));
         assert!(composition.set_fraction(ARCHER, 1.0, 1 << ARCHERY_RANGE, u32::MAX));
         composition.plan(4.0, u32::MAX);
-        assert_eq!(composition.recruit(1 << BLACKSMITH, true), WARRIOR);
-        assert_eq!(composition.recruit(1 << ARCHERY_RANGE, true), ARCHER);
+        assert_eq!(composition.recruit(1 << BLACKSMITH, true, true), WARRIOR);
+        assert_eq!(composition.recruit(1 << ARCHERY_RANGE, true, true), ARCHER);
+    }
+
+    #[test]
+    fn horse_access_gates_each_mount_without_erasing_its_quota() {
+        for role in 0..=2 {
+            let mut composition = RetinueComposition::default();
+            composition.0[role] = 1.0;
+            composition.plan(4.0, u32::MAX);
+            assert_eq!(composition.recruit(1 << STABLE, true, false), WARRIOR);
+            assert_eq!(composition.recruit(1 << STABLE, false, true), role);
+        }
     }
 
     #[test]

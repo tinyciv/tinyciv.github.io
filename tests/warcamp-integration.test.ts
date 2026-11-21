@@ -1,13 +1,14 @@
 import { defendRaiderCamp, updateRaiderReturn } from '../src/game/raider-activity';
 import { updateFogRaids } from '../src/game/fog-raids';
 import { describe, expect, it } from 'vitest';
+import { banditSpawnDeadline } from '../src/game/bandit-intensity';
 import { constructionEdges } from '../src/game/builders';
 import { entityStore } from '../src/game/entity-store';
 import { updateFog } from '../src/game/fog';
 import { canMove, canWalk, findPath, withNavigationFrame } from '../src/game/pathfinding';
 import { initializeRaiderCamps, raiderCampActive, raiderCampCenter, updateRaiderCamps,
   RAIDER_CAMP_REBUILD_SECONDS, RAIDER_CAMP_RETRY_SECONDS, RAIDER_FACTION, raiderCampSupply, raiderCampPopulationCap, raiderCampPartySize } from '../src/game/raider-camps';
-import { ridgeFootprintAllowed } from '../src/game/ridges';
+import { reliefFootprintAllowed } from '../src/game/relief';
 import { updateWallOwnership, NEUTRAL_WALL_FACTION } from '../src/game/wall-ownership';
 import { markWorldChanged, worldRevisions } from '../src/game/world-revisions';
 import { buildingHeight, buildingSize, distance, type Building, type GameState, type Point, type Unit, type World, WATER } from '../src/game/types';
@@ -20,21 +21,19 @@ function soldier(id: number, x: number, y: number): Unit {
     speed: 3.6, range: 1.1, order: 'follow', cooldown: 0, lastCombat: -60, moving: false, facing: 0, attackTime: 0 };
 }
 function fixture(): GameState {
-  const width = 112, height = 96;
+  const width = 240, height = 192;
   const world: World = { width, height, seed: 'warcamp-integration', source: 'test', spawns: [],
     tiles: Array.from({ length: width * height }, (_, cell) => ({ terrain: 'grassland', overlay: 'none', elevation: .2,
       moisture: .5, food: 1, production: 0, gold: 0, variation: (cell * 29 % 997) / 997 })) };
   return { world, units: [soldier(1, 49.5, 40.5)], buildings: [structure(100, 'palace', 46, 39)],
-    factions: [], time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null,
+    factions: [{ id: 0, name: 'Test', color: '#d54b42', relation: 'self', food: 500, gold: 500, production: 0,
+      population: 20, culture: 0, yields: { food: 0, gold: 0, production: 0 }, nextRaid: Infinity, defeated: false }],
+    time: 0, tick: 0, paused: false, speed: 1, events: [], particles: [], selected: null, selectedType: null,
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: world.seed, rngState: 731, marauderPacks: [] };
 }
 const cellKey = (world: World, p: Point) => Math.floor(p.y) * world.width + Math.floor(p.x);
 const steps = [[-1,-1], [0,-1], [1,-1], [-1,0], [1,0], [-1,1], [0,1], [1,1]];
-const sizeExpectations = {
-  small: { tiers: 2, tents: [3, 5], towers: [5, 5] },
-  medium: { tiers: 3, tents: [6, 9], towers: [6, 6] },
-  large: { tiers: 4, tents: [10, 18], towers: [7, 7] },
-} as const;
+const balancedSizes = ['large', 'large', 'small', 'small'];
 
 /** Probe instantiated structures with the same edges and gate ownership used
  * by moving units, rather than trusting the planner's own validation result. */
@@ -58,42 +57,67 @@ function gateDepths(state: GameState, gates: Set<number>, faction: number): Floa
 }
 
 describe('terrain-fitted warcamps in the live game', () => {
-  it('balances three genuinely different camp sizes with the correct real defensive depth', () => {
+  it('places as many compact outposts as fortified camps outside the 60-tile starting buffer', () => {
     const state = fixture(); initializeRaiderCamps(state);
-    expect(state.raiderCamps).toHaveLength(3);
-    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(['large', 'medium', 'small']);
+    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(balancedSizes);
+    const palace = state.buildings[0], origins = [{ x: palace.x + 1, y: palace.y + 1 }, state.units[0]];
     const { width } = state.world;
     for (const camp of state.raiderCamps!) {
-      const profile = sizeExpectations[camp.size!];
+      for (const origin of origins) {
+        const closest = { x: Math.max(camp.x, Math.min(camp.x + camp.width, origin.x)),
+          y: Math.max(camp.y, Math.min(camp.y + camp.height, origin.y)) };
+        expect(distance(origin, closest)).toBeGreaterThanOrEqual(60);
+      }
       const buildings = state.buildings.filter(b => b.raiderCamp === camp.id);
-      const walls = buildings.filter(b => (b.kind === 'palisade' || b.kind === 'wall')), roads = new Set(buildings.filter(b => b.kind === 'road').map(b => cellKey(state.world, b)));
+      const walls = buildings.filter(b => b.kind === 'wall'), roads = new Set(buildings.filter(b => b.kind === 'road').map(b => cellKey(state.world, b)));
       expect(buildings.filter(b => b.kind === 'road').every(road => road.roadStyle === 'trail')).toBe(true);
+      expect(roads.has(cellKey(state.world, camp.gate))).toBe(true);
+      for (const key of roads) if (key % width < width - 1)
+        expect([key + 1, key + width, key + width + 1].every(cell => roads.has(cell))).toBe(false);
       const wallCells = new Set(walls.map(b => cellKey(state.world, b))), gates = new Set([...wallCells].filter(k => roads.has(k)));
       const tents = buildings.filter(b => b.kind === 'villageTent'), towers = buildings.filter(b => b.kind === 'woodenTower');
-      expect(new Set(buildings.map(b => b.kind))).toEqual(new Set(['wall', 'palisade', 'road', 'villageTent', 'woodenTower']));
-      expect(gates.size).toBe(profile.tiers);
-      expect(towers.length).toBeGreaterThanOrEqual(profile.towers[0]); expect(towers.length).toBeLessThanOrEqual(profile.towers[1]);
-      expect(tents.length).toBeGreaterThanOrEqual(profile.tents[0]); expect(tents.length).toBeLessThanOrEqual(profile.tents[1]);
       expect(camp.houses.slice().sort((a,b) => a-b)).toEqual(tents.map(t => t.id).sort((a,b) => a-b));
+      const start = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
+      expect(constructionEdges(state, palace).some(exit => findPath(state, start, exit, RAIDER_FACTION).length > 0)).toBe(true);
+      if (camp.size === 'small') {
+        expect(new Set(buildings.map(b => b.kind))).toEqual(new Set(['road', 'villageTent', 'woodenTower']));
+        expect(tents).toHaveLength(3);
+        expect(towers).toHaveLength(1);
+        expect(camp.coreTowers).toEqual([towers[0].id]);
+        expect(canWalk(state, start.x, start.y, 0)).toBe(true);
+        expect(tents.every(tent => roads.has((tent.y + 1) * width + tent.x))).toBe(true);
+        continue;
+      }
+      expect(new Set(buildings.map(b => b.kind))).toEqual(new Set(['wall', 'road', 'villageTent', 'woodenTower', 'barbarianLair']));
+      const lairs = buildings.filter(b => b.kind === 'barbarianLair');
+      expect(lairs).toHaveLength(1);
+      const lair = lairs[0];
+      expect([buildingSize(lair), buildingHeight(lair)]).toEqual([3, 3]);
+      const center = { x: lair.x + 1, y: lair.y + 1 };
+      expect(walls).toHaveLength(32);
+      expect(walls.every(b => Math.max(Math.abs(b.x-center.x), Math.abs(b.y-center.y)) === 4)).toBe(true);
+      expect(gates).toEqual(new Set([cellKey(state.world, camp.gate)]));
+      expect(towers).toHaveLength(7);
+      expect(tents.length).toBeGreaterThanOrEqual(10); expect(tents.length).toBeLessThanOrEqual(18);
       expect(towers.every(t => !wallCells.has(cellKey(state.world, t)) && !gates.has(cellKey(state.world, t)))).toBe(true);
       expect(camp.coreTowers).toHaveLength(4);
-      expect(towers.filter(t=>camp.coreTowers!.includes(t.id)).every(t=>Math.abs(t.x+.5-camp.refuge!.x)===1&&Math.abs(t.y+.5-camp.refuge!.y)===1)).toBe(true);
+      expect(towers.filter(t=>camp.coreTowers!.includes(t.id)).every(t=>Math.abs(t.x-center.x)===3&&Math.abs(t.y-center.y)===3)).toBe(true);
       for (const k of wallCells) expect([1, width, width + 1].every(offset => wallCells.has(k + offset))).toBe(false);
       for (const k of gates) {
         expect(canWalk(state, k % width + .5, Math.floor(k / width) + .5, RAIDER_FACTION)).toBe(true);
         expect(canWalk(state, k % width + .5, Math.floor(k / width) + .5, 0)).toBe(false);
       }
       const friendly = gateDepths(state, gates, RAIDER_FACTION), hostile = gateDepths(state, gates, 0);
+      const outerTowers = towers.filter(tower => !camp.coreTowers!.includes(tower.id));
+      expect(outerTowers.every(tower => constructionEdges(state, tower)
+        .some(edge => hostile[cellKey(state.world, edge)] === 0))).toBe(true);
       const doorDepths = tents.map(t => friendly[(t.y + 1) * width + t.x]);
       expect(doorDepths.every(Number.isFinite)).toBe(true);
       expect(new Set(doorDepths)).toEqual(new Set([0]));
       expect(friendly[cellKey(state.world,camp.refuge!)]).toBe(1);
       expect(hostile[cellKey(state.world,camp.refuge!)]).toBe(Infinity);
       expect(tents.every(t => Number.isFinite(hostile[(t.y + 1) * width + t.x]))).toBe(true);
-      const start = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
-      expect(constructionEdges(state, state.buildings[0]).some(exit => findPath(state, start, exit, RAIDER_FACTION).length > 0)).toBe(true);
     }
-    expect(state.raiderCamps!.map(c=>c.coreTowers!.length)).toEqual([4,4,4]);
   });
 
   it('refreshes existing camp roads without changing ordinary roads or gate ownership', () => {
@@ -124,13 +148,13 @@ describe('terrain-fitted warcamps in the live game', () => {
     expect(state.world.revision).toBe(revision! + 1);
   });
 
-  it('preserves the existing river, trees, yields, and ridge terrain while fitting actual structures', () => {
+  it('preserves the existing river, trees, yields, and rocky ground while fitting actual structures', () => {
     const state = fixture(), { width, height } = state.world;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const tile = state.world.tiles[y * width + x];
-      if (x >= 73 + Math.round(2 * Math.sin(y / 6)) && x <= 79) { tile.terrain = 'river'; tile.elevation = .04; }
+      if (y < height - 24 && x >= 73 + Math.round(2 * Math.sin(y / 6)) && x <= 79) { tile.terrain = 'river'; tile.elevation = .04; }
       if (x < 2 && y % 3 !== 0) tile.overlay = 'forest';
-      if (x > 80 && y < 25) { tile.ridge = 1; tile.ridgeTier = 1; tile.relief = 'hills'; tile.elevation = .7; }
+      if (x > 80 && y < 25) { tile.rockRelief = 0; tile.elevation = .7; }
     }
     const before = JSON.stringify(state.world.tiles);
     initializeRaiderCamps(state);
@@ -140,11 +164,11 @@ describe('terrain-fitted warcamps in the live game', () => {
       const tile = state.world.tiles[cellKey(state.world, b)];
       expect(WATER.has(tile.terrain)).toBe(false);
       expect(['forest', 'jungle']).not.toContain(tile.overlay);
-      expect(ridgeFootprintAllowed(state.world, b.x, b.y)).toBe(true);
+      expect(reliefFootprintAllowed(state.world, b.x, b.y)).toBe(true);
     }
   });
 
-  it('keeps every outpost owned until the final core tower falls, then opens the abandoned gates', () => {
+  it('keeps the stone enclosure owned until the final core tower falls, then opens its gate', () => {
     const state = fixture(); initializeRaiderCamps(state);
     const camp = state.raiderCamps!.find(camp => camp.size === 'large')!;
     // Other same-faction settlements must not supply this camp's property claim.
@@ -160,18 +184,18 @@ describe('terrain-fitted warcamps in the live game', () => {
     updateWallOwnership(state);
     expect(walls.every(b => b.faction === NEUTRAL_WALL_FACTION)).toBe(true);
     expect(state.buildings.some(b => b.raiderCamp === camp.id && b.kind === 'woodenTower' && b.hp > 0)).toBe(true);
-    for (const gate of camp.gates!) expect(canWalk(state, gate.x + .5, gate.y + .5, 0)).toBe(true);
+    expect(canWalk(state, camp.gate.x + .5, camp.gate.y + .5, 0)).toBe(true);
   });
 
-  it('keeps a connected raised plateau usable across the bounded planner window', () => {
+  it('keeps connected uplands usable across the bounded planner window', () => {
     const state = fixture();
-    for (const tile of state.world.tiles) { tile.ridge = 1; tile.ridgeTier = 1; tile.relief = 'hills'; tile.elevation = .7; }
+    for (const tile of state.world.tiles) { tile.reliefLevel = 1; tile.elevation = .7; }
     initializeRaiderCamps(state);
-    expect(state.raiderCamps).toHaveLength(3);
+    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(balancedSizes);
     for (const camp of state.raiderCamps!) {
       const start = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
       expect(constructionEdges(state, state.buildings[0]).some(exit => findPath(state, start, exit, RAIDER_FACTION).length > 0)).toBe(true);
-      expect(state.buildings.filter(b => b.raiderCamp === camp.id).every(b => ridgeFootprintAllowed(state.world, b.x, b.y))).toBe(true);
+      expect(state.buildings.filter(b => b.raiderCamp === camp.id).every(b => reliefFootprintAllowed(state.world, b.x, b.y))).toBe(true);
     }
   });
 
@@ -202,7 +226,7 @@ describe('terrain-fitted warcamps in the live game', () => {
     const farm = structure(201, 'camp', Math.floor(first.x) + 4, Math.floor(first.y));
     entityStore(state).buildings.add(pending, farm);
     state.fields = [{ id: 300, camp: farm.id, faction: 0, x: farm.x + 1, y: farm.y + 1, planted: true, food: 5, nextHarvest: 100 }];
-    const scout = soldier(2, second.x, second.y); entityStore(state).units.add(scout);
+    const scout: Unit = { ...soldier(2, second.x, second.y), kind: 'warrior' }; entityStore(state).units.add(scout);
     const saved = JSON.stringify({ pending, farm, field: state.fields[0], scout });
     initializeRaiderCamps(state);
     expect(state.raiderCamps!.length).toBeGreaterThan(0);
@@ -232,29 +256,32 @@ describe('terrain-fitted warcamps in the live game', () => {
     initializeRaiderCamps(state);
     expect(state.raiderCamps).toEqual([]); expect(state.buildings).toEqual(original);
     expect(JSON.stringify(state.world.tiles)).toBe(before);
-    expect(state.raiderCampPopulationRetryAt).toBe(RAIDER_CAMP_RETRY_SECONDS);
+    const retryAt = banditSpawnDeadline(state, RAIDER_CAMP_RETRY_SECONDS);
+    expect(state.raiderCampPopulationRetryAt).toBe(retryAt);
     for (const tile of state.world.tiles) if (tile.terrain === 'river') tile.terrain = 'grassland';
     markWorldChanged(state.world, 'geometry');
-    state.time = RAIDER_CAMP_RETRY_SECONDS - .1; updateRaiderCamps(state);
+    state.time = retryAt - .1; updateRaiderCamps(state);
     expect(state.raiderCamps).toEqual([]);
-    state.time = RAIDER_CAMP_RETRY_SECONDS; updateRaiderCamps(state);
-    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(['large', 'medium', 'small']);
+    state.time = retryAt; updateRaiderCamps(state);
+    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(balancedSizes);
     expect(state.raiderCampPopulationRetryAt).toBeUndefined();
   });
 
-  it.each(['small', 'medium', 'large'] as const)('restores a destroyed %s camp without duplicating the surviving classes or revealing a new site', size => {
+  it.each(['small', 'large'] as const)('restores a destroyed %s camp while preserving the surviving camps and staying out of sight', size => {
     const state = fixture(); initializeRaiderCamps(state);
     const original = state.raiderCamps!.map(camp => camp.id), terrain = JSON.stringify(state.world.tiles);
     const victim = state.raiderCamps!.find(camp => camp.size === size)!;
     for (const id of victim.coreTowers!) state.buildings.find(b => b.id === id)!.hp = 0;
-    updateRaiderCamps(state); state.time = RAIDER_CAMP_REBUILD_SECONDS;
+    const rebuildAt = banditSpawnDeadline(state, RAIDER_CAMP_REBUILD_SECONDS);
+    updateRaiderCamps(state); state.time = rebuildAt;
     const fog = updateFog(state); fog.visible.fill(1);
     updateRaiderCamps(state);
-    expect(victim.destroyed).toBe(true); expect(victim.replacementAt).toBe(state.time + RAIDER_CAMP_RETRY_SECONDS);
+    const retryAt = banditSpawnDeadline(state, RAIDER_CAMP_RETRY_SECONDS);
+    expect(victim.destroyed).toBe(true); expect(victim.replacementAt).toBe(retryAt);
     expect(state.raiderCamps!.filter(camp => camp.id !== victim.id).every(camp => raiderCampActive(state, camp))).toBe(true);
-    fog.visible.fill(0); state.time += RAIDER_CAMP_RETRY_SECONDS; updateRaiderCamps(state);
+    fog.visible.fill(0); state.time = retryAt; updateRaiderCamps(state);
     expect(state.raiderCamps).toHaveLength(original.length);
-    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(['large', 'medium', 'small']);
+    expect(state.raiderCamps!.map(camp => camp.size).sort()).toEqual(balancedSizes);
     expect(state.raiderCamps!.every(camp => raiderCampActive(state, camp))).toBe(true);
     const replacements = state.raiderCamps!.filter(camp => !original.includes(camp.id));
     expect(replacements).toHaveLength(1); expect(replacements[0].size).toBe(size);
@@ -282,24 +309,28 @@ describe('terrain-fitted warcamps in the live game', () => {
 });
 
 describe('marauder refuge and tent-dependent recruitment', () => {
-  it('losing tents proportionally reduces raids and capacity, while the core survives', () => {
-    const state=fixture(); initializeRaiderCamps(state); const camp=state.raiderCamps![0];
-    expect(raiderCampSupply(state,camp)).toBe(1); expect(raiderCampPopulationCap(state,camp)).toBe(90);
+  it.each([['small', 24, 12], ['large', 90, 30]] as const)('scales %s camp recruitment with the remaining tents', (size, capacity, partySize) => {
+    const state=fixture(); initializeRaiderCamps(state); const camp=state.raiderCamps!.find(candidate => candidate.size === size)!;
+    state.time=1000;
+    expect(raiderCampSupply(state,camp)).toBe(1); expect(raiderCampPopulationCap(state,camp)).toBe(capacity);
+    expect(raiderCampPartySize(state,camp,30)).toBe(partySize);
     const half=Math.floor(camp.houses.length/2);
     for(const id of camp.houses.slice(0,half))state.buildings.find(b=>b.id===id)!.hp=0;
     expect(raiderCampSupply(state,camp)).toBeCloseTo((camp.houses.length-half)/camp.houses.length);
-    expect(raiderCampPartySize(state,camp,30)).toBeLessThan(30);
+    expect(raiderCampPartySize(state,camp,30)).toBeLessThan(partySize);
     for(const id of camp.houses)state.buildings.find(b=>b.id===id)!.hp=0;
     expect(raiderCampActive(state,camp)).toBe(true);expect(raiderCampPopulationCap(state,camp)).toBe(5);
     expect(raiderCampPartySize(state,camp,60)).toBe(1);
-    camp.nextRaidAt=state.time=1000;
-    for(const other of state.raiderCamps!)if(other!==camp)other.nextRaidAt=Infinity;
+    entityStore(state).buildings.retain(b => b.raiderCamp === undefined || b.raiderCamp === camp.id);
+    state.raiderCamps = [camp];
+    camp.nextRaidAt = state.time;
+    camp.directedRaid = { faction: 0, target: state.buildings[0].id, motive: 'assault', initial: 30, total: 30, era: 1 };
     updateFogRaids(state);
     const packs=new Set(state.marauderPacks!.filter(p=>p.raiderCamp===camp.id).map(p=>p.id));
     expect(state.units.filter(u=>packs.has(u.marauderPack??-1))).toHaveLength(1);
   });
   it('kills recruitment immediately when all four core towers fall, even with every tent standing', () => {
-    const state=fixture(); initializeRaiderCamps(state); const camp=state.raiderCamps![0];
+    const state=fixture(); initializeRaiderCamps(state); const camp=state.raiderCamps!.find(candidate => candidate.size === 'large')!;
     for(const id of camp.coreTowers!.slice(1))state.buildings.find(b=>b.id===id)!.hp=0;
     expect(raiderCampActive(state,camp)).toBe(true);
     state.buildings.find(b=>b.id===camp.coreTowers![0])!.hp=0;
@@ -310,7 +341,7 @@ describe('marauder refuge and tent-dependent recruitment', () => {
     expect(camp.houses.every(id=>state.buildings.find(b=>b.id===id)!.hp>0)).toBe(true);
   });
   it('takes retreating commanders through the stone gate before sheltering in an inner tower', () => {
-    const state=fixture(); initializeRaiderCamps(state);const camp=state.raiderCamps![0];
+    const state=fixture(); initializeRaiderCamps(state);const camp=state.raiderCamps!.find(candidate => candidate.size === 'large')!;
     const commander:Unit={...soldier(9000,camp.gate.x+.5,camp.gate.y+.5),faction:-2,kind:'warrior' as const,marauderLeader:true,marauderPack:1};
     entityStore(state).units.add(commander);
     const pack={id:1,name:'Retreat',color:'#111',targetFaction:0,raiderCamp:camp.id,home:camp.refuge!,waypoint:camp.refuge!,nextWanderAt:0,returning:true};

@@ -2,13 +2,14 @@ import { runtimeArtUrl } from '../game/runtime-art';
 import { FACTION_COLORS, type LobbyRoom, type MatchOptions } from '../multiplayer/protocol';
 import { DEFAULT_WORLD_STYLE, LANDFORM_NAMES, WORLD_GENERATION_STYLES, WORLD_STYLE_DESCRIPTIONS, WORLD_STYLE_NAMES } from '../world/options';
 import { DEFAULT_BANDIT_INTENSITY, MIN_BANDIT_INTENSITY, MAX_BANDIT_INTENSITY } from '../game/bandit-intensity';
-import { AGES, BARBARIANS, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_SIZES, initialWorldSetup, newGameOptions, type NewGameOptions } from './world-generation';
+import { BARBARIANS, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_SIZES, initialWorldSetup, newGameOptions, type NewGameOptions } from './world-generation';
 import type { AdvancedStartPhase } from '../game/advanced-start';
 import { SCENARIOS, type ScenarioId } from '../game/scenario-content';
 import { AccountScreen, isAccountView, type AccountView } from './account-screen';
-import type { AccountUser } from '../account/client';
+import type { AccountCredentials, AccountUser } from '../account/client';
 import { FeedbackDialog } from './feedback-dialog';
 import { AUTOSAVE_ID, type StoredGameSummary } from '../game/game-storage';
+import { menuPlate } from './menu-plate';
 import { movementGuideMarkup } from './movement-guide';
 import './frontend.css';
 import './world-generation.css';
@@ -20,8 +21,8 @@ export interface FrontendSettings { zoom: number; minZoom: number; maxZoom: numb
   /** Development builds offer Reveal map for an offline game in progress. */
   revealMapAvailable?: boolean; revealMap?: boolean; }
 export type FrontendAction =
-  | { type: 'account-submit'; mode: 'login' | 'create-account'; email: string; password: string }
-  | { type: 'account-logout' }
+  | ({ type: 'account-submit' } & AccountCredentials)
+  | { type: 'account-logout' | 'account-guest' }
   | { type: 'feedback-submit'; message: string; signedIn: boolean }
   | { type: 'resume' | 'saves' | 'exit-game' | 'multiplayer' | 'refresh' | 'leave' | 'start' | 'retry' | 'main' | 'cancel-loading' }
   | { type: 'save'; name: string }
@@ -33,6 +34,8 @@ export type FrontendAction =
   | { type: 'ready'; ready: boolean }
   | { type: 'settings'; settings: Partial<FrontendSettings> };
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+const menuButton = ([label, attributes]: [string, string]) =>
+  `<button type="button" class="menu-button" ${attributes}>${menuPlate}<span>${label}</span></button>`;
 /** Advanced start slider: 0 standard, 1 midpoint research, 2 every technology. */
 const START_STEPS: readonly (AdvancedStartPhase | undefined)[] = [undefined, 'midpoint', 'complete'];
 const START_LABELS = ['Off', 'Midpoint', 'All techs'];
@@ -84,13 +87,12 @@ export class Frontend {
   private hallOfFame: HallOfFameEntry[] = [];
   private readonly content: HTMLElement;
   private readonly feedback: FeedbackDialog;
-  private readonly account = new AccountScreen();
+  private readonly account: AccountScreen;
   private accountUser: AccountUser | null = null;
   private accountBusy = false;
   private layoutKey = '';
   constructor(readonly element: HTMLElement, private readonly action: (action: FrontendAction) => void) {
     element.className = 'frontend'; element.setAttribute('role', 'dialog'); element.setAttribute('aria-modal', 'true');
-    element.setAttribute('aria-labelledby', 'frontend-title');
     const backdrop = document.createElement('picture');
     backdrop.className = 'menu-back'; backdrop.setAttribute('aria-hidden', 'true');
     backdrop.innerHTML = `
@@ -100,6 +102,7 @@ export class Frontend {
     this.content = document.createElement('div');
     this.content.className = 'menu-front';
     element.replaceChildren(backdrop, this.content);
+    this.account = new AccountScreen(element);
     this.feedback = new FeedbackDialog(element, message => this.action({ type: 'feedback-submit', message, signedIn: this.accountUser !== null }), () => {
       this.content.inert = false;
       this.content.querySelector<HTMLButtonElement>('[data-frontend-action="help"]')?.focus({ preventScroll: true });
@@ -121,12 +124,13 @@ export class Frontend {
     });
     element.addEventListener('keydown', event => {
       event.stopPropagation();
+      if (this.account.modalOpen) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         if (!event.repeat) this.back();
       }
-      if (this.view === 'main' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-        const buttons = [...element.querySelectorAll<HTMLButtonElement>('.menu-button:not(:disabled)')];
+      if ((this.view === 'main' || this.view === 'game-menu') && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        const buttons = [...this.content.querySelectorAll<HTMLButtonElement>('.menu-buttons .menu-button:not(:disabled)')];
         const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
         buttons[(index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus();
         event.preventDefault(); return;
@@ -158,15 +162,20 @@ export class Frontend {
   get currentView(): FrontendView { return this.view; }
   setInGame(value: boolean): void { this.element.classList.toggle('in-game', value); }
   setSession(resumable: boolean, online = false): void { this.resumable = resumable; this.online = online; }
-  setAccount(user: AccountUser | null): void { this.accountUser = user; this.feedback.setAccount(user); if (this.active) this.render(); }
+  setAccount(user: AccountUser | null): void {
+    this.accountUser = user; this.feedback.setAccount(user);
+    if (this.active && !isAccountView(this.view)) this.render();
+  }
   openFeedback(): void { this.content.inert = true; this.feedback.open(this.accountUser); }
   setFeedbackBusy(busy: boolean): void { this.feedback.setBusy(busy); }
   setFeedbackResult(message: string, success = false): void { this.feedback.result(message, success); }
   setAccountBusy(busy: boolean): void {
     this.accountBusy = busy;
     this.element.querySelectorAll<HTMLButtonElement>('.account-submit,[data-frontend-action="account-logout"]').forEach(button => button.disabled = busy);
+    if (!busy && this.account.modalOpen) this.account.creationStatus();
   }
-  setAccountMessage(message: string): void { this.account.setMessage(this.element, message); }
+  setAccountMessage(message: string): void { this.account.setMessage(message); }
+  showAccountCreated(): void { this.account.creationStatus('Account created!'); }
   setSaves(saves: StoredGameSummary[], defaultName?: string): void {
     this.saves = saves;
     if (defaultName !== undefined) this.saveName = defaultName;
@@ -185,7 +194,7 @@ export class Frontend {
   }
   setHallOfFame(entries: HallOfFameEntry[]): void { this.hallOfFame = entries; if (this.view === 'fame' && this.active) this.render(); }
   show(view: FrontendView = 'main'): void {
-    if (isAccountView(this.view)) this.account.rememberEmail(this.element.querySelector('[data-form="account"]'));
+    if (isAccountView(this.view)) this.account.rememberFields(this.element.querySelector('[data-form="account"]'));
     if (this.view !== view) {
       this.account.clearMessage();
       this.content.scrollTop = 0;
@@ -193,7 +202,8 @@ export class Frontend {
     if (this.inGame && view === 'controls') this.returnView = this.view === 'options' ? 'options' : 'game-menu';
     else if (['options', 'controls'].includes(view) && !['options', 'controls'].includes(this.view)) this.returnView = this.view;
     this.view = view; this.element.hidden = false; this.render(); this.layout();
-    const focus = isAccountView(view) ? '[name="account-email"]' : view === 'single' ? '.worldgen-back'
+    const focus = view === 'login' ? '[name="account-identifier"]' : view === 'create-account' ? '[name="account-username"]'
+      : view === 'forgot-password' ? '[name="account-email"]' : view === 'single' ? '.worldgen-back'
       : view === 'scenarios' ? '[data-select-scenario][aria-pressed="true"]' : view === 'save' ? '[name="save-name"]'
       : view === 'game-menu' ? '.game-menu-actions [data-frontend-action="resume"]' : 'button:not(:disabled),input:not(:disabled)';
     (this.element.querySelector<HTMLElement>(focus) ?? this.content.querySelector<HTMLElement>('#frontend-title[tabindex]'))?.focus({ preventScroll: true });
@@ -244,7 +254,7 @@ export class Frontend {
     else if (this.view === 'lobby') this.show('servers');
   }
   private back(): void {
-    if ((this.view === 'saves' || this.view === 'save') && this.savesBusy) return;
+    if (this.accountBusy || (this.view === 'saves' || this.view === 'save') && this.savesBusy) return;
     if (this.inGame) {
       if (this.view === 'game-menu') this.action({ type: 'resume' });
       else {
@@ -253,7 +263,8 @@ export class Frontend {
       }
       return;
     }
-    if (isAccountView(this.view)) { this.show(this.view === 'login' ? 'main' : 'login'); return; }
+    if (this.view === 'login') { this.action({ type: 'account-guest' }); return; }
+    if (isAccountView(this.view)) { this.show('login'); return; }
     if (this.view === 'loading') { if (this.cancellableLoading) this.action({ type: 'cancel-loading' }); return; }
     if (this.view === 'error' && !this.canReturnFromError) return;
     if (this.view === 'lobby') { this.action({ type: 'leave' }); return; }
@@ -268,22 +279,21 @@ export class Frontend {
   }
   private worldGenerationFields(): string {
     const setup = this.worldSetup;
-    const nearest = BARBARIANS.reduce((best, choice) => typeof setup.barbarians === 'number'
-      && Math.abs(choice.value - setup.barbarians) < Math.abs(best.value - setup.barbarians) ? choice : best, BARBARIANS[0]);
+    const nearest = BARBARIANS.reduce((best, choice) =>
+      Math.abs(choice.value - setup.barbarians) < Math.abs(best.value - setup.barbarians) ? choice : best, BARBARIANS[0]);
     const radio = (name: string, value: string, label: string, checked: boolean, title = label) =>
       `<label class="worldgen-radio" title="${escape(title)}"><input type="radio" name="${name}" value="${value}" ${checked ? 'checked' : ''}><span>${label}</span></label>`;
-    const environment = (name: 'climate' | 'temperature' | 'age', heading: string, labels: readonly string[]) =>
+    const environment = (name: 'climate' | 'temperature', heading: string, labels: readonly string[]) =>
       `<fieldset class="worldgen-environment worldgen-${name}"><legend>${heading}</legend><div class="worldgen-region-preview" aria-hidden="true"></div><div class="worldgen-environment-choices">${labels.map((label, index) => `<label class="worldgen-tile" title="${label}"><input type="radio" name="world-${name}" value="${index}" ${setup[name] === index ? 'checked' : ''}><span class="worldgen-thumb" aria-hidden="true"></span><span>${label}</span></label>`).join('')}</div></fieldset>`;
-    return `<form data-form="single" class="worldgen-form" data-climate="${setup.climate}" data-temperature="${setup.temperature}" data-age="${setup.age}">
-      <fieldset class="worldgen-size"><legend>World Size</legend><div class="worldgen-radio-list">${WORLD_SIZES.map(size => radio('world-size', size.id, size.label, setup.size === size.id, `${size.label} · ${size.width} × ${size.height} tiles`)).join('')}${radio('world-size', 'random', 'Random', setup.size === 'random')}</div></fieldset>
+    return `<form data-form="single" class="worldgen-form" data-climate="${setup.climate}" data-temperature="${setup.temperature}">
+      <fieldset class="worldgen-size"><legend>World Size</legend><div class="worldgen-radio-list">${WORLD_SIZES.map(size => radio('world-size', size.id, size.label, setup.size === size.id, `${size.label} · ${size.width} × ${size.height} tiles`)).join('')}</div></fieldset>
       <div class="worldgen-map" role="img" aria-label="Illustration of the selected world shape"><span class="worldgen-map-art"></span></div>
-      <fieldset class="worldgen-barbarians"><legend>Barbarians</legend><div class="worldgen-radio-list">${BARBARIANS.map(choice => radio('world-barbarians', String(choice.value), choice.label, setup.barbarians !== 'random' && nearest === choice, `${choice.label} · ${choice.value * 100}% bandit intensity`)).join('')}${radio('world-barbarians', 'random', 'Random', setup.barbarians === 'random')}</div></fieldset>
-      <fieldset class="worldgen-land"><legend>Land Mass and Water Coverage</legend><div class="worldgen-land-choices">${LAND_MASSES.map(mass => `<div class="worldgen-land-group" data-landmass="${mass.id}"><div class="worldgen-water-choices">${[80, 70, 60].map(water => `<label class="worldgen-tile" title="${mass.label} · ${water}% water target"><input type="radio" name="world-landmass" id="world-landmass-${mass.id}-${water}" value="${mass.id}:${water}" aria-label="${mass.label}, ${water}% Water" ${setup.landmass === mass.id && setup.water === water ? 'checked' : ''}><span class="worldgen-thumb" aria-hidden="true"></span></label>`).join('')}</div><h3><label for="world-landmass-${mass.id}-70" data-landmass-caption="${mass.id}">${mass.label}${setup.landmass === mass.id ? ` (${setup.water}% Water)` : ''}</label></h3></div>`).join('')}</div>${radio('world-landmass', 'random', 'Random', setup.landmass === 'random')}</fieldset>
-      ${environment('climate', 'Climate', CLIMATES)}${environment('temperature', 'Temperature', TEMPERATURES)}${environment('age', 'Age', AGES)}
-      <label class="worldgen-radio worldgen-random-environment"><input type="checkbox" name="world-random-environment" aria-label="Random climate, temperature and age" ${setup.randomEnvironment ? 'checked' : ''}><span>Random</span></label>
-      <footer class="worldgen-footer"><button class="menu-button worldgen-back" type="button" data-frontend-action="back"><span>Back</span></button>
+      <fieldset class="worldgen-barbarians"><legend>Barbarians</legend><div class="worldgen-radio-list">${BARBARIANS.map(choice => radio('world-barbarians', String(choice.value), choice.label, nearest === choice, `${choice.label} · ${choice.value * 100}% bandit intensity`)).join('')}</div></fieldset>
+      <fieldset class="worldgen-land"><legend>Land Mass and Water Coverage</legend><div class="worldgen-land-choices">${LAND_MASSES.map(mass => `<div class="worldgen-land-group" data-landmass="${mass.id}"><div class="worldgen-water-choices">${[80, 70, 60].map(water => `<label class="worldgen-tile" title="${mass.label} · ${water}% water target"><input type="radio" name="world-landmass" id="world-landmass-${mass.id}-${water}" value="${mass.id}:${water}" aria-label="${mass.label}, ${water}% Water" ${setup.landmass === mass.id && setup.water === water ? 'checked' : ''}><span class="worldgen-thumb" aria-hidden="true"></span></label>`).join('')}</div><h3><label for="world-landmass-${mass.id}-70" data-landmass-caption="${mass.id}">${mass.label}${setup.landmass === mass.id ? ` (${setup.water}% Water)` : ''}</label></h3></div>`).join('')}</div></fieldset>
+      ${environment('climate', 'Climate', CLIMATES)}${environment('temperature', 'Temperature', TEMPERATURES)}
+      <footer class="worldgen-footer"><button class="menu-button worldgen-back" type="button" data-frontend-action="back">${menuPlate}<span>Back</span></button>
       <label class="worldgen-advanced-start" title="${START_TITLES[this.advancedStart]}"><span>Advanced Start</span><input type="range" name="advanced-start" min="0" max="2" step="1" value="${this.advancedStart}" aria-valuetext="${START_LABELS[this.advancedStart]}"><output data-start-value>${START_LABELS[this.advancedStart]}</output></label>
-      <button class="menu-button worldgen-generate" type="submit"><span>Generate World</span></button></footer></form>`;
+      <button class="menu-button worldgen-generate" type="submit">${menuPlate}<span>Generate World</span></button></footer></form>`;
   }
   private updateStartLabel(input: HTMLInputElement): void {
     const step = Number(input.value) || 0, output = input.parentElement?.querySelector('output');
@@ -292,9 +302,7 @@ export class Frontend {
     input.parentElement?.setAttribute('title', START_TITLES[step]);
   }
   private updateWorldGeneration(form: HTMLFormElement): void {
-    for (const name of ['climate', 'temperature', 'age'] as const) form.dataset[name] = String(this.worldSetup[name]);
-    form.classList.toggle('is-random-environment', this.worldSetup.randomEnvironment);
-    form.classList.toggle('is-random-land', this.worldSetup.landmass === 'random');
+    for (const name of ['climate', 'temperature'] as const) form.dataset[name] = String(this.worldSetup[name]);
     for (const mass of LAND_MASSES) {
       const caption = form.querySelector(`[data-landmass-caption="${mass.id}"]`);
       if (caption) caption.textContent = mass.label + (this.worldSetup.landmass === mass.id ? ` (${this.worldSetup.water}% Water)` : '');
@@ -303,7 +311,7 @@ export class Frontend {
     if (map) {
       map.dataset.landmass = this.worldSetup.landmass;
       map.dataset.water = String(this.worldSetup.water);
-      map.setAttribute('aria-label', `${this.worldSetup.landmass === 'random' ? 'Random world shape' : LAND_MASSES.find(mass => mass.id === this.worldSetup.landmass)!.label}, ${this.worldSetup.water}% water target. Illustrative preview.`);
+      map.setAttribute('aria-label', `${LAND_MASSES.find(mass => mass.id === this.worldSetup.landmass)!.label}, ${this.worldSetup.water}% water target. Illustrative preview.`);
     }
   }
   private profileFields(): string {
@@ -327,7 +335,7 @@ export class Frontend {
       this.action({ type: 'save', name }); return;
     }
     if (form.dataset.form === 'account') {
-      if (!this.accountBusy) this.account.submit(form, this.element, (mode, email, password) => this.action({ type: 'account-submit', mode, email, password }));
+      if (!this.accountBusy) this.account.submit(form, credentials => this.action({ type: 'account-submit', ...credentials }));
       return;
     }
     if (form.dataset.form === 'single') {
@@ -339,8 +347,8 @@ export class Frontend {
     if (form.dataset.form === 'profile') { this.readProfile(form); this.action({ type: 'profile', name: this.name, color: this.color }); }
   }
   private click(event: Event): void {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button || button.disabled) return;
-    if (button.dataset.accountAction === 'google') { this.account.google(this.element); return; }
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button || button.disabled || this.accountBusy) return;
+    if (button.dataset.accountAction === 'google') { this.account.google(); return; }
     if (button.dataset.view) { this.show(button.dataset.view as FrontendView); return; }
     if (button.dataset.selectScenario) { this.selectScenario(button.dataset.selectScenario as ScenarioId); return; }
     if (button.dataset.scenario) {
@@ -355,22 +363,21 @@ export class Frontend {
     if (action === 'back') { this.back(); return; }
     if (action === 'join') { const form = this.element.querySelector<HTMLFormElement>('[data-form="server"]'); if (form) this.readProfile(form); this.action({ type: 'join', roomId: this.selectedRoom, name: this.name, color: this.color }); return; }
     if (action === 'fullscreen') { this.action({ type: 'settings', settings: { fullscreen: !document.fullscreenElement } }); return; }
-    if (action === 'quick') { this.action({ type: 'new', options: { seed: freshSeed(), style: DEFAULT_WORLD_STYLE,
-      landformFamily: 'mixed', banditIntensity: DEFAULT_BANDIT_INTENSITY } }); return; }
+    if (action === 'quick') { this.action({ type: 'new', options: { seed: freshSeed(), style: 'pangaea',
+      landformFamily: 'mixed', banditIntensity: DEFAULT_BANDIT_INTENSITY, banditStrength: .5 } }); return; }
     if (action) this.action({ type: action } as FrontendAction);
   }
   private change(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.form?.dataset.form === 'single') {
       if (input.name === 'world-size') this.worldSetup.size = input.value;
-      if (input.name === 'world-barbarians') this.worldSetup.barbarians = input.value === 'random' ? 'random' : Number(input.value);
+      if (input.name === 'world-barbarians') this.worldSetup.barbarians = Number(input.value);
       if (input.name === 'world-landmass') {
         const [mass, water] = input.value.split(':');
         this.worldSetup.landmass = mass as typeof this.worldSetup.landmass;
-        if (water) this.worldSetup.water = Number(water);
+        this.worldSetup.water = Number(water);
       }
-      for (const name of ['climate', 'temperature', 'age'] as const) if (input.name === `world-${name}`) { this.worldSetup[name] = Number(input.value); this.worldSetup.randomEnvironment = false; (input.form.elements.namedItem('world-random-environment') as HTMLInputElement).checked = false; }
-      if (input.name === 'world-random-environment') this.worldSetup.randomEnvironment = input.checked;
+      for (const name of ['climate', 'temperature'] as const) if (input.name === `world-${name}`) this.worldSetup[name] = Number(input.value);
       if (input.name === 'advanced-start') this.advancedStart = Number(input.value) || 0;
       this.updateWorldGeneration(input.form);
     }
@@ -413,8 +420,8 @@ export class Frontend {
     const scenario = SCENARIOS.find(scenario => scenario.id === this.selectedScenario)!;
     return `<header class="scenario-heading"><h2 id="scenario-name">${escape(scenario.name)}</h2><span>${scenario.factions} faction${scenario.factions === 1 ? '' : 's'} · ${escape(scenario.size)}</span></header>
       <figure class="scenario-world"><img src="${runtimeArtUrl(`${import.meta.env.BASE_URL}${scenario.mapPreview}`)}" alt="World map for ${escape(scenario.name)}" draggable="false"><figcaption>World map</figcaption></figure>
-      <div class="scenario-copy"><p class="scenario-description">${escape(scenario.description)}</p><ul class="scenario-features">${scenario.features.map(feature => `<li>${escape(feature)}</li>`).join('')}</ul></div>
-      <button class="menu-button scenario-start" type="button" data-scenario="${scenario.id}" aria-label="Play ${escape(scenario.name)}"><span>Play scenario</span></button>`;
+      <div class="scenario-copy"><p class="scenario-description">${escape(scenario.description)}</p></div>
+      <button class="menu-button scenario-start" type="button" data-scenario="${scenario.id}" aria-label="Play ${escape(scenario.name)}">${menuPlate}<span>Play scenario</span></button>`;
   }
   private selectScenario(id: ScenarioId): void {
     if (!SCENARIOS.some(scenario => scenario.id === id)) return;
@@ -442,6 +449,12 @@ export class Frontend {
     if (!this.accountUser) items.push(['Sign in / Create account', 'data-view="login"']);
     return items;
   }
+  private gameMenuItems(): [string, string][] {
+    const items: [string, string][] = [['Resume', 'data-frontend-action="resume"']];
+    if (!this.online) items.push(['New Game', 'data-view="single"'], ['Save Game', 'data-view="save"'], ['Load Game', 'data-frontend-action="saves"']);
+    items.push(['Preferences', 'data-view="options"'], ['Controls', 'data-view="controls"'], ['Exit to Menu', 'data-frontend-action="exit-game"']);
+    return items;
+  }
   private render(): void {
     const form = this.element.querySelector<HTMLFormElement>('form');
     if (form && !(this.view === 'lobby' && form.dataset.form === 'server')) {
@@ -454,28 +467,22 @@ export class Frontend {
     const focusedName = active?.getAttribute('name');
     const title: Record<FrontendView, string> = { login: 'Sign in', 'create-account': 'Create account', 'forgot-password': 'Reset password', main: 'TinyCiv', 'game-menu': 'Game Menu', single: 'New Game', scenarios: 'Scenarios', save: 'Save Game', saves: this.resumable && !this.online && !this.inGame ? 'Save / Load Game' : 'Load Game', servers: 'Multiplayer', lobby: 'Lobby', options: 'Preferences', controls: 'Controls', fame: 'Hall of Fame', credits: 'Credits', loading: this.loadingTitle, error: 'Error' };
     let body = '';
-    if (this.view === 'game-menu') body = `<nav class="game-menu-actions" aria-label="Game menu">
-      <button type="button" class="primary" data-frontend-action="resume">Resume</button>
-      ${this.online ? '' : '<button type="button" data-view="save">Save Game</button><button type="button" data-frontend-action="saves">Load Game</button>'}
-      <button type="button" data-view="options">Preferences</button>
-      <button type="button" data-view="controls">Controls</button>
-      <button type="button" data-frontend-action="exit-game">Exit to Menu</button>
-    </nav>`;
-    if (this.view === 'main') body = `<nav class="menu-buttons" aria-label="Main menu">${this.menuItems().map(([label, attributes]) => `<button class="menu-button" ${attributes}><span>${label}</span></button>`).join('')}</nav>${this.online ? '<p class="frontend-hint">Online matches do not pause.</p>' : ''}`;
-    if (this.view === 'main' && this.accountUser) body = `<button class="account-link menu-account" type="button" data-frontend-action="account-logout">${escape(this.accountUser.email)} · Sign out</button>` + body;
+    if (this.view === 'game-menu') body = `<nav class="menu-buttons game-menu-actions" aria-label="Game menu">${this.gameMenuItems().map(menuButton).join('')}</nav>`;
+    if (this.view === 'main') body = `<nav class="menu-buttons" aria-label="Main menu">${this.menuItems().map(menuButton).join('')}</nav>${this.online ? '<p class="frontend-hint">Online matches do not pause.</p>' : ''}`;
+    if (this.view === 'main' && this.accountUser) body = `<button class="account-link menu-account" type="button" data-frontend-action="account-logout" ${this.accountBusy ? 'disabled' : ''}>${escape(this.accountUser.displayName)} · Sign out</button>` + body;
     if (isAccountView(this.view)) body = this.account.markup(this.view);
-    if (this.view === 'scenarios') body = `<div class="scenario-browser"><nav class="scenario-list menu-buttons" aria-label="Scenarios">${SCENARIOS.map(scenario => `<button class="menu-button scenario-choice${scenario.id === this.selectedScenario ? ' is-selected' : ''}" type="button" data-select-scenario="${scenario.id}" aria-pressed="${scenario.id === this.selectedScenario}" aria-controls="scenario-information"><span>${escape(scenario.name)}</span></button>`).join('')}</nav><section id="scenario-information" class="scenario-information" aria-labelledby="scenario-name">${this.scenarioInformation()}</section></div>`;
+    if (this.view === 'scenarios') body = `<div class="scenario-browser"><nav class="scenario-list menu-buttons" aria-label="Scenarios">${SCENARIOS.map(scenario => `<button class="menu-button scenario-choice${scenario.id === this.selectedScenario ? ' is-selected' : ''}" type="button" data-select-scenario="${scenario.id}" aria-pressed="${scenario.id === this.selectedScenario}" aria-controls="scenario-information">
+      ${menuPlate}<span>${escape(scenario.name)}</span></button>`).join('')}</nav><section id="scenario-information" class="scenario-information" aria-labelledby="scenario-name">${this.scenarioInformation()}</section></div>`;
     if (this.view === 'fame') body = this.hallOfFame.length
       ? `<ol class="fame-list">${this.hallOfFame.slice(0, 12).map(entry => `<li class="fame-${entry.result.toLowerCase()}"><strong>${escape(entry.result)} · ${escape(entry.civilization)}</strong><span>Population ${Math.round(entry.population)} · ${Math.max(1, Math.round(entry.minutes))} min · ${escape(entry.date)}</span><span class="fame-seed">${escape(entry.seed)}</span></li>`).join('')}</ol>`
-      : '<p class="frontend-hint">No reigns are recorded yet. Win or lose a single-player game to be remembered here.</p>';
+      : '<p class="frontend-hint">No recorded reigns.</p>';
     if (this.view === 'credits') body = `<dl class="credits-list">${CREDITS.map(([work, author]) => `<dt>${escape(work)}</dt><dd>${escape(author)}</dd>`).join('')}</dl>`;
     if (this.view === 'single') body = this.worldGenerationFields();
     const savesDisabled = this.savesBusy ? 'disabled' : '';
     if (this.view === 'save' || this.view === 'saves' && this.resumable && !this.online && !this.inGame)
-      body = `<form data-form="save" class="frontend-form save-form"><label>Save name<input name="save-name" maxlength="80" required autocomplete="off" value="${escape(this.saveName)}" ${savesDisabled}></label><button class="save-button" type="submit" ${savesDisabled}>Save Game</button></form>`;
+      body = `<form data-form="save" class="frontend-form save-form"><label>Save name<input name="save-name" maxlength="80" required autocomplete="off" value="${escape(this.saveName)}" ${savesDisabled}></label><button class="menu-button save-button" type="submit" ${savesDisabled}>${menuPlate}<span>${this.accountUser ? 'Save to Cloud' : 'Save Game'}</span></button></form>`;
     if (this.view === 'saves') {
-      body += `${this.inGame ? '' : '<p class="frontend-hint">Saved in this browser. Clearing site data removes saved games.</p>'}
-        ${this.saves.length ? `<ul class="save-list">${this.saves.map(save => `<li${save.id === AUTOSAVE_ID ? ' class="is-autosave"' : ''}><strong>${escape(save.name)}</strong><span>${escape(new Date(save.savedAt).toLocaleString())}</span><span>${escape(save.civilization)} · ${Math.floor(save.time / 60)} min</span><span class="save-seed">${escape(save.seed)}</span><button class="save-button" type="button" data-save-id="${escape(save.id)}" aria-label="${escape(`Load ${save.name}`)}" ${savesDisabled}>Load</button></li>`).join('')}</ul>` : this.savesBusy ? '' : '<p>No saved games.</p>'}`;
+      body += this.saves.length ? `<ul class="save-list">${this.saves.map(save => `<li${save.id === AUTOSAVE_ID ? ' class="is-autosave"' : ''}><strong>${escape(save.name)}</strong><span>${escape(new Date(save.savedAt).toLocaleString())}</span><span>${escape(save.civilization)} · ${Math.floor(save.time / 60)} min</span><span class="save-seed">${escape(save.seed)}</span><button class="menu-button save-button" type="button" data-save-id="${escape(save.id)}" aria-label="${escape(`Load ${save.name}`)}" ${savesDisabled}>${menuPlate}<span>Load</span></button></li>`).join('')}</ul>` : this.savesBusy ? '' : '<p>No saved games.</p>';
     }
     if (this.view === 'servers') body = `<div class="server-browser"><div class="server-toolbar"><button data-frontend-action="refresh">Refresh</button><button class="primary" data-frontend-action="join" ${!this.selectedRoom || !this.rooms.some(room => room.id === this.selectedRoom && room.players.length < 2 && room.phase === 'waiting') ? 'disabled' : ''}>Join selected</button></div><div class="server-table-wrap"><table><thead><tr><th>Name</th><th>Location</th><th>Players</th><th>Ping</th></tr></thead><tbody>${this.rooms.length ? this.rooms.map(room => `<tr class="${room.id === this.selectedRoom ? 'is-selected' : ''}"><td><button data-room="${escape(room.id)}" ${room.phase !== 'waiting' || room.players.length >= 2 ? 'disabled' : ''}>${escape(room.name)}</button></td><td>${escape(room.location)}</td><td>${room.players.length} / 2</td><td>${this.ping ? `${Math.round(this.ping)} ms` : '--'}</td></tr>`).join('') : '<tr><td colspan="4">No open games.</td></tr>'}</tbody></table></div><form data-form="server" class="frontend-form server-create"><h2>New 1v1 game</h2>${this.profileFields()}<label>Game name<input name="room-name" maxlength="40" placeholder="Game name"></label><details><summary>World options</summary>${this.worldFields()}</details><button class="primary" type="submit">Create game</button></form></div>`;
     if (this.view === 'lobby') {
@@ -483,17 +490,25 @@ export class Frontend {
       body = room ? `<nav class="lobby-tabs" aria-label="Lobby tabs"><button class="is-active" type="button">Team</button><button data-view="options">Options</button><button data-view="controls">Controls</button></nav><h2>${escape(room.name)}</h2><p class="frontend-hint">${escape(room.location)} · ${escape(room.options.seed)} · ${WORLD_STYLE_NAMES[room.options.style]}</p><div class="lobby-players">${[0, 1].map(faction => { const player = room.players.find(player => player.faction === faction); return `<div class="lobby-player"><span class="faction-swatch" style="--faction:${player?.color || '#64716c'}"></span><div><strong>${player ? escape(player.name) : 'Waiting for opponent'}</strong><span>${player ? `${player.id === room.hostId ? 'Host' : 'Guest'} · ${player.ready ? 'Ready' : 'Not ready'}${player.connected ? '' : ' · Reconnecting'}` : ''}</span></div></div>`; }).join('')}</div><form data-form="profile" class="frontend-form lobby-profile">${this.profileFields()}<button type="submit">Apply</button></form><div class="lobby-bottom"><label class="frontend-check"><input name="ready" type="checkbox" ${self?.ready ? 'checked' : ''}>Ready</label>${host ? `<button class="primary" data-frontend-action="start" ${room.players.length !== 2 || room.players.some(player => !player.ready || !player.connected) ? 'disabled' : ''}>Start match</button>` : '<span>Waiting for host.</span>'}</div>` : '<p>Returning to games...</p>';
     }
     if (this.view === 'options') body = `<div class="frontend-form"><div class="frontend-bandits"><label for="bandit-intensity"><span class="frontend-slider-heading">Bandit intensity<output data-bandit-value for="bandit-intensity"></output></span></label><input id="bandit-intensity" name="bandit-intensity" type="range" min="${MIN_BANDIT_INTENSITY * 100}" max="${MAX_BANDIT_INTENSITY * 100}" step="25" value="${this.settings.banditIntensity * 100}" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>Off</span><span>3×</span></div></div><div class="frontend-bandits"><label for="enemy-strength"><span class="frontend-slider-heading">Enemy strength<output data-enemy-value for="enemy-strength"></output></span></label><input id="enemy-strength" name="enemy-strength" type="range" min="25" max="300" step="25" value="${this.settings.enemyStrength * 100}" ${this.online || this.room ? 'disabled' : ''}><div class="frontend-slider-scale" aria-hidden="true"><span>25%</span><span>300%</span></div></div><label class="frontend-check"><input name="auto-rebuild-defenses" type="checkbox" ${this.settings.autoRebuildDefenses ? 'checked' : ''}>Automatically rebuild defenses</label><label class="frontend-check"><input name="infinite-gold" type="checkbox" ${this.settings.infiniteGold ? 'checked' : ''} ${this.online || this.room ? 'disabled' : ''}>Infinite gold</label>${this.settings.revealMapAvailable ? `<label><input name="reveal-map" type="checkbox" ${this.settings.revealMap ? 'checked' : ''}>Reveal map</label>` : ''}<label>Camera zoom<input name="zoom" type="range" min="${this.settings.minZoom}" max="${this.settings.maxZoom}" step=".05" value="${this.settings.zoom}"></label><label class="frontend-check"><input name="follow" type="checkbox" ${this.settings.follow ? 'checked' : ''}>Follow the Leader</label><button data-frontend-action="fullscreen">${document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'}</button><button data-view="controls">Controls</button></div>`;
-    if (this.view === 'controls') body = `<dl class="frontend-controls"><dt>WASD / arrows</dt><dd>Move the Leader; in Formation 3, W/S advance/reverse and A/D strafe; in a boat, W/S control throttle</dd><dt>Right click</dt><dd>Move, attack, or diplomacy</dd><dt>Left click</dt><dd>Select units and buildings</dd><dt>1 / E</dt><dd>Recall; hold E to steer right in a boat or rotate Formation 3</dd><dt>2 / Q</dt><dd>Change stance; hold Q to steer left in a boat or rotate Formation 3</dd><dt>3</dt><dd>Toggle close ranks after Infantry Drill; hold Q/E to rotate continuously; release to stop</dd><dt>4 / 5</dt><dd>Raise/dismiss levy; garrison/recall city defenders</dd><dt>Boats</dt><dd>Hold Q/E to steer; allow room to coast and brake</dd><dt>Shift</dt><dd>Separate mob / travel movement setting</dd><dt>B / F</dt><dd>Buildings / fortifications</dd><dt>C</dt><dd>Clear trees and structures</dd><dt>Mouse wheel</dt><dd>Camera zoom</dd><dt>Home</dt><dd>Center on the Leader</dd><dt>Space / + / -</dt><dd>Pause / speed in single player</dd><dt>Escape</dt><dd>Close panels or open the menu</dd></dl>`;
+    if (this.view === 'controls') body = `<dl class="frontend-controls"><dt>WASD / arrows</dt><dd>Move the Leader; in Formation 3, W/S advance/reverse and A/D strafe; in a boat, W/S control throttle</dd><dt>Right click</dt><dd>Move, attack, or diplomacy</dd><dt>Left click</dt><dd>Select units and buildings</dd><dt>1 / E</dt><dd>Recall; hold E to steer right in a boat or rotate Formation 3</dd><dt>2 / Q</dt><dd>Change stance; hold Q to steer left in a boat or rotate Formation 3</dd><dt>3</dt><dd>Toggle formation after Infantry Drill; hold Q/E to rotate continuously; release to stop</dd><dt>4 / 5</dt><dd>Raise/dismiss levy; garrison/recall city defenders</dd><dt>Boats</dt><dd>Hold Q/E to steer; allow room to coast and brake</dd><dt>Shift</dt><dd>Separate mob / travel movement setting</dd><dt>B / F</dt><dd>Buildings / fortifications</dd><dt>C</dt><dd>Clear trees and structures</dd><dt>Mouse wheel</dt><dd>Camera zoom</dd><dt>Home</dt><dd>Center on the Leader</dd><dt>Space / + / -</dt><dd>Pause / speed in single player</dd><dt>Escape</dt><dd>Close panels or open the menu</dd></dl>`;
     if (this.view === 'loading') body = `${this.movementGuide ? movementGuideMarkup() : ''}<div class="frontend-loading">${this.movementGuide ? '' : '<span class="frontend-loading-spinner" aria-hidden="true"></span>'}<progress class="frontend-progress" aria-labelledby="frontend-title" ${this.progress === undefined ? '' : `value="${this.progress}"`} max="1"></progress><output class="frontend-loading-percent" aria-hidden="true">${this.progress === undefined ? '' : `${Math.round(this.progress * 100)}%`}</output></div>${this.cancellableLoading ? '<button data-frontend-action="cancel-loading">Cancel</button>' : ''}`;
     if (this.view === 'error') body = `<div class="frontend-error-actions"><button class="primary" data-frontend-action="retry">Retry</button>${this.canReturnFromError ? '<button data-frontend-action="main">Main menu</button>' : ''}</div>`;
-    const heading = this.view === 'main'
-      ? '<h1 id="frontend-title" class="menu-title"><span>TinyCiv</span></h1>'
+    const heading = this.view === 'game-menu' ? ''
+      : this.view === 'main' ? '<h1 id="frontend-title" class="menu-title"><span>TinyCiv</span></h1>'
       : this.view === 'single' ? '<header class="worldgen-heading"><span class="worldgen-brand" aria-label="TinyCiv">TinyCiv</span><h1 id="frontend-title">World Generation</h1></header>'
       : this.view === 'loading' ? `<h1 id="frontend-title" class="frontend-loading-title">${escape(this.loadingTitle)}</h1>`
-      : this.view === 'game-menu' ? '<h1 id="frontend-title" tabindex="-1">Game Menu</h1><button type="button" class="close-dialog" data-frontend-action="resume" aria-label="Close"></button>'
-      : `<header><h1 id="frontend-title"${this.inGame ? ' tabindex="-1"' : ''}>${escape(title[this.view])}</h1>${this.view !== 'error' ? '<button class="frontend-back" data-frontend-action="back">Back</button>' : ''}</header>`;
+      : `<header><h1 id="frontend-title"${this.inGame ? ' tabindex="-1"' : ''}>${escape(title[this.view])}</h1>${this.view === 'error' ? '' : ['scenarios', 'saves'].includes(this.view)
+        ? `<button class="menu-button frontend-back" data-frontend-action="back">${menuPlate}<span>Back</span></button>`
+        : '<button class="frontend-back" data-frontend-action="back">Back</button>'}</header>`;
+    if (heading) {
+      this.element.setAttribute('aria-labelledby', 'frontend-title');
+      this.element.removeAttribute('aria-label');
+    } else {
+      this.element.removeAttribute('aria-labelledby');
+      this.element.setAttribute('aria-label', title[this.view]);
+    }
     this.element.classList.toggle('is-world-generation', this.view === 'single');
-    const panel = this.inGame ? 'dialog ' : this.view === 'main' || this.view === 'single' ? '' : 'menu-sheet ';
+    const panel = ['main', 'game-menu', 'single'].includes(this.view) ? '' : 'menu-sheet ';
     this.content.innerHTML = `<section class="frontend-panel ${panel}${isAccountView(this.view) ? 'frontend-account ' : ''}frontend-${this.view}">${heading}${body}<p class="frontend-status" role="status" aria-live="polite">${isAccountView(this.view) || this.view === 'loading' ? '' : escape(this.status)}</p></section>`;
     if (this.view === 'saves' || this.view === 'save') {
       this.content.firstElementChild?.setAttribute('aria-busy', String(this.savesBusy));

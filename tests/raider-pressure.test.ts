@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { RAIDER_ATTACK_MULTIPLIER, raiderEquipmentMultiplier, raiderWaveInterval, updateRaiderEquipment, raiderPartySize, raiderPartySizeMultiplier } from '../src/game/raider-pressure';
+import { RAIDER_ATTACK_MULTIPLIER, raiderPartySize, raiderPartySizeMultiplier } from '../src/game/raider-pressure';
+import { raidArcherFraction, raidEquipment, raidProfile } from '../src/game/raid-director';
+import { fogRaidProfile } from '../src/game/fog-raids';
 import { unitAttack, unitDamage, unitDefense } from '../src/game/veterancy';
 import type { Unit } from '../src/game/types';
 
-describe('raider equipment and frequency escalation', () => {
-  it('reduces opening parties once, then restores full strength gradually without exceeding the old size', () => {
+describe('raider strength', () => {
+  it('reduces early camp defender sorties once, then restores full strength gradually', () => {
     expect([0, 60, 300, 600, 900, 7200].map(raiderPartySizeMultiplier)).toEqual([.6, .6, .6, .8, 1, 1]);
     expect([0, 60, 300, 600, 900, 7200].map(time => raiderPartySize(30, time))).toEqual([18, 18, 18, 24, 30, 30]);
     expect([1, 2, 3, 4, 5].map(count => raiderPartySize(count, 0))).toEqual([1, 1, 2, 2, 3]);
@@ -14,7 +16,7 @@ describe('raider equipment and frequency escalation', () => {
   it('reduces every raider hit once by fifteen percent after armor, independent of source and equipment', () => {
     const sources = [
       { kind: 'warrior', attack: 10 }, // Wilderness.
-      { kind: 'warrior', attack: 6, marauderPack: 1 }, // Opening camp wave.
+      { kind: 'warrior', attack: 6, marauderPack: 1 }, // Opening camp raid.
       { kind: 'warrior', attack: 14, marauderPack: 2, marauderLeader: true, kills: 100 },
       { kind: 'archer', attack: 11.2, marauderPack: 3, raiderEquipmentMultiplier: 1.6 },
       { kind: 'warrior', attack: 8, marauderPack: 4, raiderGarrison: 10 }, // Camp defense/reserve.
@@ -30,38 +32,23 @@ describe('raider equipment and frequency escalation', () => {
       expect(unitAttack({ ...ordinary, faction: 0 })).toBe(unitAttack(ordinary));
     }
   });
-  it('retains the independent 1.6× cap at fifteen minutes despite reduced blacksmith upgrades', () => {
-    for (const [time, multiplier] of [[0, 1], [225, 1.15], [450, 1.3], [675, 1.45], [900, 1.6], [1800, 1.6]])
-      expect(raiderEquipmentMultiplier(time)).toBeCloseTo(multiplier);
-    expect(raiderEquipmentMultiplier(-10)).toBe(1);
-    expect(raiderEquipmentMultiplier(Number.NaN)).toBe(1);
+  it('steps equipment by whole progress eras up to the 1.6× cap', () => {
+    for (const [era, multiplier] of [[0, 1], [.9, 1], [1, 1.1], [3.5, 1.3], [6, 1.6], [9, 1.6], [-1, 1]])
+      expect(raidEquipment(era)).toBeCloseTo(multiplier);
   });
-
-  it('increases attack frequency independently of bounded party size', () => {
-    expect([0, 450, 900, 7200].map(raiderWaveInterval)).toEqual([26, 20, 14, 14]);
-  });
-
-  it('upgrades living veterans, leaders, archers and new recruits without compounding or changing base stats', () => {
-    const units = [
-      { id: 1, faction: -2, kind: 'warrior', hp: 70, attack: 14, defense: 2, kills: 10, marauderLeader: true },
-      { id: 2, faction: -2, kind: 'archer', hp: 50, attack: 11, defense: 1, kills: 100 },
-      { id: 3, faction: 0, kind: 'warrior', hp: 100, attack: 20, defense: 4 },
-    ] as Unit[];
-    const state = { units, time: 0 };
-    const attacks = units.map(unit => unitAttack(unit)), defenses = units.map(unit => unitDefense(unit));
-    state.time = 450; updateRaiderEquipment(state); updateRaiderEquipment(state);
-    for (const index of [0, 1]) {
-      expect(unitAttack(units[index])).toBeCloseTo(attacks[index] * 1.3);
-      expect(unitDefense(units[index])).toBeCloseTo(defenses[index] * 1.3);
+  it('grows raider stats and archer share with era alone', () => {
+    let previous = raidProfile(0);
+    expect(previous).toEqual({ hp: 40, attack: 6, defense: 1 });
+    for (let era = .5; era <= 6; era += .5) {
+      const next = raidProfile(era);
+      expect(next.hp).toBeGreaterThanOrEqual(previous.hp);
+      expect(next.attack).toBeGreaterThanOrEqual(previous.attack);
+      expect(next.defense).toBeGreaterThanOrEqual(previous.defense);
+      previous = next;
     }
-    expect(units[0]).toMatchObject({ hp: 70, attack: 14, defense: 2, kills: 10 });
-    expect(units[2].raiderEquipmentMultiplier).toBeUndefined();
-    expect(unitAttack(units[2])).toBe(attacks[2]);
-    state.time = 900; updateRaiderEquipment(state);
-    expect(unitAttack(units[0])).toBeCloseTo(attacks[0] * 1.6);
-    expect(unitDefense(units[1])).toBeCloseTo(defenses[1] * 1.6);
-    units.push({ ...units[0], id: 4, raiderEquipmentMultiplier: undefined });
-    state.time = 1800; updateRaiderEquipment(state);
-    expect(unitAttack(units[3])).toBe(unitAttack(units[0]));
+    expect(raidProfile(6)).toEqual({ hp: 110, attack: 17, defense: 3 });
+    // The marauder halving still applies on top of the era stats.
+    expect(fogRaidProfile(0)).toEqual({ hp: 70, attack: (6 + 17 / .85) / 2, defense: 2.5 });
+    expect([0, 1, 2, 4].map(raidArcherFraction)).toEqual([0, .1, .2, .2]);
   });
 });

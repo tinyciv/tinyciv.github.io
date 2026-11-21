@@ -2,6 +2,7 @@ import { villageAllyView } from './settlement-bridge';
 import { nearbyUnits } from './spatial';
 import { distance, type GameState, type Unit, type Particle } from './types';
 import { playerFaction } from './player-context';
+import { announceCombatDamage } from './army-warnings';
 
 export const DEFENSIVE_RADIUS = 5;
 export const DAMAGE_NUMBER_DURATION = .85;
@@ -9,6 +10,7 @@ export const DAMAGE_NUMBER_DURATION = .85;
 export function recordUnitDamage(state: GameState, target: Unit, previousHp: number, attackerId?: number): void {
   const lost = Math.max(0, previousHp - target.hp);
   if (!lost) return;
+  announceCombatDamage(state, target);
   const fatal = target.hp <= 0;
   if (fatal) for (const particle of state.particles)
     if (particle.kind === 'damage' && particle.damageUnitId === target.id) particle.damageFatal = true;

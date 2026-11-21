@@ -1,7 +1,7 @@
 import type { GameState, Point } from './types';
 
-const HOLD_SECONDS = 5;
-const FADE_SECONDS = 1;
+const HOLD_SECONDS = 1.25;
+const FADE_SECONDS = .25;
 const LIFETIME = HOLD_SECONDS + FADE_SECONDS;
 const NOISE_SPEED = .12;
 const WIND_SPEED = NOISE_SPEED * .1;

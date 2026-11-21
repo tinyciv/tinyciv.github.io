@@ -33,10 +33,10 @@ describe('joined dry salt pans', () => {
         expect(saltPanJoinMask(boundary, 6, 6)).toBe(0);
     });
 
-    it('does not connect across water, creeks or cliff faces', () => {
+    it('does not connect across water, creeks or elevated terrain', () => {
         const world = fixture([[2, 2], [3, 2]]), original = { ...world.tiles[2 * 7 + 3] };
         expect(saltPanJoinMask(world, 2, 2)).toBe(2);
-        for (const change of [{ terrain: 'coast' as const }, { ridge: 1 }, { creek: true }, { stair: 'north' as const }]) {
+        for (const change of [{ terrain: 'coast' as const }, { relief: 'hills' as const }, { creek: true }]) {
             const neighbor = world.tiles[2 * 7 + 3] = { ...original, ...change };
             expect(isSaltPan(neighbor)).toBe(false);
             expect(saltPanJoinMask(world, 2, 2)).toBe(0);

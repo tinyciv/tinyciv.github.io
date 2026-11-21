@@ -47,9 +47,13 @@ export interface FogView {
 // A local development view never writes exploration or changes the simulation's
 // sight samples, so disabling it restores fog and does not suppress hidden raids.
 const revealedMaps = new WeakSet<GameState>();
-const revealedViews = new WeakMap<GameState, { view: FogView; time: number; buildings: readonly Building[]; buildingRevision?: number; fields?: FarmField[] }>();
+const revealedViews = new WeakMap<GameState, {
+    view: FogView; buildings?: readonly Building[]; buildingRevision?: number; structureRevision?: number;
+    fields?: FarmField[]; fieldCount?: number; fieldVersion?: number; fieldsSampledAt: number;
+}>();
 const revealedScenarios = new Set<GameState['world']['scenario']>(['tutorial', 'island-deathmatch', 'musketry-deathmatch']);
-export const isMapRevealed = (state: GameState): boolean => !state.multiplayer && (revealedScenarios.has(state.world.scenario) || revealedMaps.has(state));
+const mapRevealEnabled = (state: GameState): boolean => !state.multiplayer && (revealedScenarios.has(state.world.scenario) || revealedMaps.has(state));
+export const isMapRevealed = (state: GameState): boolean => !state.multiplayer && (!!state.observing || mapRevealEnabled(state));
 export function setMapRevealed(state: GameState, enabled: boolean): void {
     if (enabled && !state.multiplayer) revealedMaps.add(state); else revealedMaps.delete(state);
     revealedViews.delete(state);
@@ -60,13 +64,18 @@ function revealedFog(state: GameState): FogView {
         const { width, height } = state.world, all = new Uint8Array(width * height).fill(1);
         const view: FogView = { width, height, world: state.world, faction: playerFaction(state), visible: all, owned: all,
             explored: Array(width * height).fill(1), sources: [], buildings: [], fields: [], revision: 1e9, explorationRevision: 1e9 };
-        old = { view, time: -Infinity, buildings: [] }; revealedViews.set(state, old);
+        old = { view, fieldsSampledAt: -Infinity }; revealedViews.set(state, old);
     }
-    const buildingRevision = entityStore(state).buildings.revision;
-    if (old.time !== state.time || old.buildings !== state.buildings || old.buildingRevision !== buildingRevision || old.fields !== state.fields) {
+    const buildingRevision = entityStore(state).buildings.revision, structureRevision = structureChangeRevision(state);
+    if (old.buildings !== state.buildings || old.buildingRevision !== buildingRevision || old.structureRevision !== structureRevision) {
         old.view.buildings = state.buildings.filter(b => b.hp > 0);
+        old.buildings = state.buildings; old.buildingRevision = buildingRevision; old.structureRevision = structureRevision;
+    }
+    const fieldCount = state.fields?.length ?? 0;
+    if (old.fields !== state.fields || old.fieldCount !== fieldCount || old.fieldVersion !== state.farmVersion
+        || state.time < old.fieldsSampledAt || state.time >= old.fieldsSampledAt + FOG_SAMPLE_INTERVAL) {
         old.view.fields = (state.fields ?? []).map(field => rememberField(field, state.time));
-        old.time = state.time; old.buildings = state.buildings; old.buildingRevision = buildingRevision; old.fields = state.fields;
+        old.fields = state.fields; old.fieldCount = fieldCount; old.fieldVersion = state.farmVersion; old.fieldsSampledAt = state.time;
     }
     return old.view;
 }
@@ -163,6 +172,22 @@ export function invalidateFog(state: GameState): void {
     if (frame) { frame.view = undefined; frame.sourcesDirty = true; frame.staticSources = undefined; }
 }
 
+/** Observe an appearance change without resampling sight or terrain. */
+export function invalidateFogBuildingMemories(state: GameState): void {
+    const keys = contextKeys.get(state);
+    if (!keys) return;
+    for (const key of keys.values()) {
+        const fog = cache.get(key);
+        if (fog) {
+            fog.rememberedAt = undefined;
+            fog.memorySignature = '';
+        }
+        published.delete(key);
+        const frame = frames.get(key);
+        if (frame) frame.view = undefined;
+    }
+}
+
 function reconcileFrameSources(state: GameState, frame: FogFrame): void {
     frame.sources.clear();
     for (const unit of state.units) if ((unit.faction === playerFaction(state) || (isSoldier(unit) || unit.kind === 'leader' || unit.kind === 'militia') && diplomaticAllies(state, playerFaction(state), unit.faction)) && unit.hp > 0 && !unit.inside)
@@ -254,14 +279,14 @@ function rememberField(field: FarmField, time: number): FarmFieldMemory {
     // dictionary objects for every remembered farm plot on every visible frame.
     return { id: field.id, camp: field.camp, faction: field.faction, x: field.x, y: field.y,
         planted: field.planted, orchard: field.orchard && { ...field.orchard }, food: field.food, nextHarvest: field.nextHarvest, expiresAt: field.expiresAt,
-        harvestStaggered: field.harvestStaggered, harvestedAt: field.harvestedAt, wheatRipe: field.wheatRipe, observedAt: time };
+        harvestStaggered: field.harvestStaggered, harvestedAt: field.harvestedAt, observedAt: time };
 }
 
 function fieldMemoryCurrent(memory: FarmFieldMemory, field: FarmField): boolean {
     return memory.camp === field.camp && memory.faction === field.faction && memory.x === field.x && memory.y === field.y
         && memory.planted === field.planted && memory.food === field.food && memory.nextHarvest === field.nextHarvest
         && memory.expiresAt === field.expiresAt && memory.harvestStaggered === field.harvestStaggered
-        && memory.harvestedAt === field.harvestedAt && memory.wheatRipe === field.wheatRipe
+        && memory.harvestedAt === field.harvestedAt
         && memory.orchard?.startedAt === field.orchard?.startedAt && memory.orchard?.readyAt === field.orchard?.readyAt
         && !!memory.orchard === !!field.orchard;
 }
@@ -333,6 +358,7 @@ export interface FogRevealMask {
     previousRevision?: number; dirtyCells?: number[];
 }
 export const FOG_MASK_SCALE = 8;
+const MAX_FOG_TEXTURE_SIDE = 4096;
 export const FOG_MEMORY_ALPHA = 163;
 export const FOG_RETURN_DELAY = 1.25;
 export const FOG_RETURN_FADE = .8;
@@ -360,7 +386,7 @@ interface FogTransition {
 }
 const transitionCaches = new WeakMap<FogView, FogTransition>();
 const edgeTemplates = new Map<number, Uint8ClampedArray>();
-const smoothEdge = (distance: number, guard = .5 / FOG_MASK_SCALE): number => {
+const smoothEdge = (distance: number, guard: number): number => {
     // Keep the first sample fully closed. Linear image scaling then cannot
     // bleed terrain from an unknown cell across the cell's exact boundary.
     const t = Math.max(0, Math.min(1, (distance - guard) / FOG_EDGE_WIDTH));
@@ -370,33 +396,35 @@ const smoothEdge = (distance: number, guard = .5 / FOG_MASK_SCALE): number => {
 /** Local eight-neighbor stencils soften a cell frontier without drawing radial
  * sight circles or blurring an entire map. Multiplying edge falloffs rounds
  * exposed corners; diagonal holes receive a small inward curved corner too. */
-function edgeTemplate(neighbors: number): Uint8ClampedArray {
-    let template = edgeTemplates.get(neighbors);
+function edgeTemplate(neighbors: number, scale: number): Uint8ClampedArray {
+    const key = (scale << 8) | neighbors;
+    let template = edgeTemplates.get(key);
     if (template) return template;
-    template = new Uint8ClampedArray(FOG_MASK_SCALE ** 2);
+    template = new Uint8ClampedArray(scale ** 2);
     const top = !!(neighbors & 1), right = !!(neighbors & 2), bottom = !!(neighbors & 4), left = !!(neighbors & 8);
-    for (let y = 0; y < FOG_MASK_SCALE; y++) for (let x = 0; x < FOG_MASK_SCALE; x++) {
-        const px = (x + .5) / FOG_MASK_SCALE, py = (y + .5) / FOG_MASK_SCALE;
-        let reveal = (top ? 1 : smoothEdge(py)) * (right ? 1 : smoothEdge(1 - px))
-            * (bottom ? 1 : smoothEdge(1 - py)) * (left ? 1 : smoothEdge(px));
-        const cornerGuard = Math.SQRT2 * .5 / FOG_MASK_SCALE;
+    const edgeGuard = .5 / scale, cornerGuard = Math.SQRT2 * edgeGuard;
+    for (let y = 0; y < scale; y++) for (let x = 0; x < scale; x++) {
+        const px = (x + .5) / scale, py = (y + .5) / scale;
+        let reveal = (top ? 1 : smoothEdge(py, edgeGuard)) * (right ? 1 : smoothEdge(1 - px, edgeGuard))
+            * (bottom ? 1 : smoothEdge(1 - py, edgeGuard)) * (left ? 1 : smoothEdge(px, edgeGuard));
         if (top && left && !(neighbors & 16)) reveal *= smoothEdge(Math.hypot(px, py), cornerGuard);
         if (top && right && !(neighbors & 32)) reveal *= smoothEdge(Math.hypot(1 - px, py), cornerGuard);
         if (bottom && right && !(neighbors & 64)) reveal *= smoothEdge(Math.hypot(1 - px, 1 - py), cornerGuard);
         if (bottom && left && !(neighbors & 128)) reveal *= smoothEdge(Math.hypot(px, 1 - py), cornerGuard);
-        template[y * FOG_MASK_SCALE + x] = Math.round(reveal * 255);
+        template[y * scale + x] = Math.round(reveal * 255);
     }
-    edgeTemplates.set(neighbors, template);
+    edgeTemplates.set(key, template);
     return template;
 }
 
 function fogPresentation(fog: FogView): FogPresentation {
-    const scale = FOG_MASK_SCALE, width = fog.width * scale, height = fog.height * scale;
+    const scale = Math.max(1, Math.min(FOG_MASK_SCALE, Math.floor(MAX_FOG_TEXTURE_SIDE / Math.max(fog.width, fog.height))));
+    const width = fog.width * scale, height = fog.height * scale;
     let cached = revealCaches.get(fog);
     if (!cached || cached.render.width !== width || cached.render.height !== height) {
-        const mask = (): FogRevealMask => ({ scale, width, height, alpha: new Uint8ClampedArray(width * height) });
+        const mask = (): FogRevealMask => ({ scale, width, height, alpha: new Uint8ClampedArray(width * height), revision: 0 });
         cached = { revision: -1, explorationRevision: -1, reveal: mask(), render: mask(),
-            cellStates: new Uint8Array(fog.width * fog.height).fill(255) };
+            cellStates: new Uint8Array(fog.width * fog.height) };
         cached.render.alpha.fill(255);
         revealCaches.set(fog, cached);
     }
@@ -435,7 +463,7 @@ function fogPresentation(fog: FogView): FogPresentation {
             if (fog.visible[next] || fog.explored[next]) knownNeighbors |= 1 << d;
         }
         const owned = !!fog.owned?.[index];
-        const sight = visible ? edgeTemplate(sightNeighbors) : undefined, known = edgeTemplate(knownNeighbors);
+        const sight = visible ? edgeTemplate(sightNeighbors, scale) : undefined, known = edgeTemplate(knownNeighbors, scale);
         for (let sy = 0; sy < scale; sy++) {
             const offset = (y * scale + sy) * width + x * scale, source = sy * scale;
             for (let sx = 0; sx < scale; sx++) {
@@ -467,7 +495,7 @@ export function fogRenderMask(fog: FogView): FogRevealMask {
     const tick = Math.floor((time + 1e-8) / FOG_ANIMATION_STEP);
     // Source movement may change logical sight every frame. Keep only its
     // latest state for the next visual tick, before doing any mask work.
-    if (transition && transition.mask.width === fog.width * FOG_MASK_SCALE && transition.mask.height === fog.height * FOG_MASK_SCALE
+    if (transition && transition.mask.width === fog.width * transition.mask.scale && transition.mask.height === fog.height * transition.mask.scale
         && time >= transition.time && tick === transition.tick && fog.ownershipRevision === transition.ownershipRevision) return transition.mask;
     const desired = fogPresentation(fog).render;
     if (!transition || transition.mask.width !== desired.width || transition.mask.height !== desired.height || time < transition.time) {
@@ -733,7 +761,7 @@ export function updateFog(state: GameState, faction = playerFaction(state), reme
     return fog;
 }
 
-export function isVisible(state: GameState, x: number, y: number): boolean { return pointInSight(isMapRevealed(state) ? revealedFog(state) : updateFog(state), x, y); }
+export function isVisible(state: GameState, x: number, y: number): boolean { return pointInSight(mapRevealEnabled(state) ? revealedFog(state) : updateFog(state), x, y); }
 /** Wilderness spawning must stay hidden from every human, not just the host. */
 export function humanFogViews(state: GameState): FogView[] {
     return state.multiplayer ? state.multiplayer.humanFactionIds.map(faction => updateFog(state, faction)) : [updateFog(state)];
@@ -745,9 +773,9 @@ export function humanVisibilityViews(state: GameState): FogView[] {
     return state.multiplayer ? state.multiplayer.humanFactionIds.map(faction => updateFog(state, faction, false))
         : [updateFog(state, playerFaction(state), false)];
 }
-export function isExplored(state: GameState, x: number, y: number): boolean { return pointExplored(isMapRevealed(state) ? revealedFog(state) : updateFog(state), x, y); }
-export function entityVisible(state: GameState, entity: Unit | Building): boolean {
-    if (isMapRevealed(state)) return !('inside' in entity && entity.inside);
+export function isExplored(state: GameState, x: number, y: number): boolean { return pointExplored(mapRevealEnabled(state) ? revealedFog(state) : updateFog(state), x, y); }
+export function entityVisible(state: GameState, entity: Unit | Building, inspecting = false): boolean {
+    if (inspecting ? isMapRevealed(state) : mapRevealEnabled(state)) return !('inside' in entity && entity.inside);
     if ('inside' in entity && entity.inside || !('capacity' in entity) && !observationPostVisibleTo(entity, playerFaction(state))) return false;
     if (entity.faction === playerFaction(state)) return true;
     const fog = updateFog(state);

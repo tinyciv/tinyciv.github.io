@@ -25,9 +25,9 @@ describe('sailing connectivity precheck', () => {
     const connected = createSailingConnectivity(world, (x, y) => x === y);
     expect(connected({x:.5,y:.5},{x:1.5,y:1.5})).toBe(false);
   });
-  it('rejects out-of-world, blocked and disconnected ledge levels', () => {
+  it('rejects out-of-world, blocked and channels separated by a barrier', () => {
     const world = waterWorld();
-    for (let y = 0; y < 8; y++) for (let x = 4; x < 8; x++) world.tiles[y*8+x].ridge = 1;
+    for (let y = 0; y < 8; y++) world.tiles[y * 8 + 4].rockRelief = 0;
     const connected = createSailingConnectivity(world, (x, y) => x !== 2 || y !== 2);
     expect(connected({x:1.5,y:1.5},{x:-.5,y:1.5})).toBe(false);
     expect(connected({x:1.5,y:1.5},{x:2.5,y:2.5})).toBe(false);

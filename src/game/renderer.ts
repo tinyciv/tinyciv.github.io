@@ -1,4 +1,5 @@
 import { drawExplorationSite, paintExplorationMessage } from './exploration-art';
+import { explorationSiteSize } from './exploration-content';
 import type { ExplorationSite } from './exploration-native';
 import { maritimeArtApproved, vesselArtKey, drawMaritimeVessel, whaleSurfaceFrame, drawWhale } from './maritime-art';
 import { loyaltyOf, loyaltyPanelAlpha } from './settlement-bridge';
@@ -21,8 +22,8 @@ import { drawBraceShield } from './leader-ability-art';
 import { observationPostVisibleTo } from './observation-visibility';
 import { drawObservationCampfire, observationFireFrame, drawObservationSmoke } from './observation-post-art';
 import { playerFaction } from './player-context';
-import { siteViews } from './sites-native';
-import { drawSiteBrackets } from './site-art';
+import { nearbySiteIds } from './sites-native';
+import { drawSiteOutline, SITE_OUTLINE_PADDING } from './site-art';
 import { PixiScene } from './pixi-scene';
 import { PresentationIndex, type BuildingIndex } from './presentation-index';
 import { entityStore } from './entity-store';
@@ -77,7 +78,8 @@ import { constructionProgress } from './construction-cancellation';
 import { constructionHead } from './bridge-construction';
 import { BRIDGE_CONSTRUCTION_BAR_WIDTH, BRIDGE_CONSTRUCTION_BAR_Y, CONSTRUCTION_TIMER_RADIUS, CONSTRUCTION_TIMER_STEPS, drawBridgeConstructionBar, drawConstructionTimer } from './construction-timer';
 import { hasGateWall } from './network-placement';
-import { terrainMinimapColor, waterArtKey, waterSpriteKey, waterAnimationFrame, clipFarmToLand, paintTerrain, drawAnimatedWater } from './terrain';
+import { terrainMinimapColor, waterArtKey, waterSpriteKey, waterAnimationFrame, clipFarmToLand, TerrainChunkSource, drawAnimatedWater,
+    fjordRockFootprint, FJORD_ROCK_OVERVIEW_COLOR } from './terrain';
 import { drawFrostTile } from './frost-art';
 import { isMapRevealed, type FogView, buildingInSight, pointExplored, pointInSight, unitInSight, presentationFog, fogRenderMask, withPresentationReads, FOG_RETURN_DELAY, FOG_RETURN_FADE } from './fog';
 import { createMinimapProjection, MinimapTerritoryMemory, minimapToWorld, worldToMinimap, type MinimapProjection } from './minimap';
@@ -91,7 +93,8 @@ import { canShareWallTowerTile, sharedWallForTower, sharedTowerForWall, type Tow
 import { drawCityRibbon, CITY_RIBBON_HEIGHT, CITY_NAME_RIBBON_HEIGHT, CITY_RIBBON_MAX_WIDTH } from './city-ribbon';
 import { drawNameplate, nameplateWidth, NAMEPLATE_HEIGHT } from './nameplate';
 import { fortName } from './fort-names';
-import { citySummariesForFaction, withCitySummarySnapshot, type CitySummary } from './cities';
+import { cityResidents, citySummariesForFaction, withCitySummarySnapshot, type CitySummary } from './cities';
+import { settlementPopulationLimit } from './settlement-upgrades';
 import { RESEARCH_BAR_WIDTH, RESEARCH_BAR_HEIGHT, RESEARCH_BAR_GAP } from './research-bar';
 import { researchStatus } from './research';
 import { alliedVillageCamps, drawAllianceMarker } from './village-marker';
@@ -100,16 +103,44 @@ import { drawForbiddenCell, drawForbiddenMarker } from './forbidden-art';
 import { drawQuestCell, drawQuestMarker, QUEST_MARKER_SIZE } from './quest-art';
 import { questAreaCells, questGiverPosition, questMarkerRevealed } from './quest-presentation';
 import { RESOURCE_COLORS } from './geography';
-import { ResourceArtMemory, drawResourceRoad, resourceHasObject, type ResourceCellArt } from './resource-art';
+import { ResourceArtMemory, drawResourceRoad, pastureFenceCells, resourceHasObject, type PastureFenceCell, type ResourceCellArt } from './resource-art';
+import { isLivestock, livestockApproached, livestockHerd } from './livestock';
+import { drawRockFormation, rockFormationArt, rockFormationBounds, rockPalette, rockTreeFooting,
+    type RockFormationArt, type RockPalette } from './rock-range-art';
+import { drawRockBacking, rockBackingVisibility, visibleRockRangeBackings, ROCK_BACKING_MIN_TILE_PIXELS } from './rock-range-backing';
+import { drawRockContactShade, rockContactShade } from './rock-contact-shade';
+import { drawRockFootPlant, ROCK_FOOT_PLANT_BOUNDS, rockFootPlant, type RockFootPlant } from './rock-foot-plants';
 import { drawLooseRocks } from './outcrop-art';
 import { trailArtVariant } from './road-sprites';
 import { MEADOW_TUFT_SCALE, MeadowPlacementCache, meadowFrame, type MeadowTuft } from './meadow-art';
+import { fertilityGrassFooting } from './fertility';
+import { drawRockyGround, rockyGroundVariant } from './rocky-deposit-art';
 export { TERRAIN_COLORS } from './terrain';
 export const MIN_ZOOM = .65;
 export const MAX_ZOOM = 2.2;
+const EDGE_PAN_ZONE = 40;
+const EDGE_PAN_SPEED = 680;
+function edgePanStrength(position: number, extent: number): number {
+    return Math.max(0, 1 - (extent - position) / EDGE_PAN_ZONE) - Math.max(0, 1 - position / EDGE_PAN_ZONE);
+}
+function panCameraAxis(position: number, offset: number, extent: number, viewRadius: number): number {
+    const margin = Math.min(extent / 2, viewRadius);
+    return offset ? Math.max(margin, Math.min(extent - margin, position + offset)) : position;
+}
 const directions = [['north', 0, -1], ['east', 1, 0], ['south', 0, 1], ['west', -1, 0]] as const;
 const tileKey = (x: number, y: number) => `${x},${y}`;
 const WATER_TILE_BOUNDS = Object.freeze({ x: 0, y: 0, width: 32, height: 32 });
+const ROCK_TREE_SIZE = 20;
+const ROCK_TREE_TRUNK = ROCK_TREE_SIZE * 15 / 16;
+
+function rockTreeClear(world: World, fog: FogView, x: number, y: number): boolean {
+    const radius = ROCK_TREE_SIZE / (2 * TILE_SIZE);
+    for (let row = Math.floor(y - ROCK_TREE_TRUNK / TILE_SIZE); row <= Math.floor(y); row++)
+        for (let col = Math.floor(x - radius); col <= Math.floor(x + radius); col++)
+            if (!pointExplored(fog, col, row) || tileAt(world, col, row)?.resource) return false;
+    return true;
+}
+
 const isPerson = (u: Unit) => !u.aboardRowboat && !u.aboardRiverTrade && (u.kind === 'leader' || (u.kind === 'levyInfantry' || u.kind === 'slinger') || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'scout' || u.kind === 'militia' || u.kind === 'worker' || u.kind === 'merchant');
 // A person's world position is their footing, beneath the three-quarter figure.
 const unitTop = (u: Unit) => u.y - (isPerson(u) ? .85 : .5);
@@ -125,13 +156,17 @@ export interface PresentationStamp {
 type Scenery = { x: number; y: number; tile: Tile };
 type SceneObject = { depth: number; exploration?: ExplorationSite; hermit?: Hermit; hermitHome?: Hermit; b?: Building; u?: Unit; death?: UnitDeath; feature?: Scenery; sign?: Point & { variant: number };
     meadow?: { x: number; y: number; tuft: MeadowTuft };
-    geothermal?: Point & { variant: NonNullable<Tile['geothermal']>; mask: number };
+    geothermal?: Point & { variant: NonNullable<Tile['geothermal']>; mask: number; highlight: boolean };
     destruction?: BuildingDestruction;
     shellImpact?: { effect: ShellImpact; frame: number };
     unitDust?: { track: UnitTrack; age: number };
     fish?: FishingFish; whale?: WhaleResource; fishingBoat?: FishingBoat | HarborTradeShip; riverPost?: Point;
     resource?: { x: number; y: number; art: ResourceCellArt; fence?: boolean };
+    pastureFence?: { cell: PastureFenceCell; front: boolean };
     resourceOutline?: { patch: ResourceInteractionPatch; color: string };
+    rock?: RockFormationArt;
+    rockFootPlant?: RockFootPlant;
+    rockTree?: { x: number; y: number; tile: Tile };
     orchard?: { field: FarmField; time: number };
     presentationStamp?: PresentationStamp };
 
@@ -144,8 +179,10 @@ interface PresentationChecks {
     enclosures: ReturnType<typeof palaceEnclosures>;
     borders: ReturnType<typeof territory>;
     villageOwners: Set<number>;
+    owners: ReadonlyMap<number, GameState['factions'][number]>;
     colors: Map<number, string>;
     packColors: Map<number, string>;
+    settlementPopulations: ReadonlyMap<number, number>;
     highlights: Map<number, { nextRefreshAt: number; active: boolean }>;
     alliedCamps: { camp: Building; center: Point }[];
     research: ReturnType<typeof researchStatus> | undefined;
@@ -207,6 +244,7 @@ export function buildingRenderDepth(b: Building, index: BuildingIndex): number {
 interface GroundIrrigation { layout: IrrigationLayout; road?: IrrigationRoad }
 interface StructureLinks {
     network: Connections; secondary?: Connections; attached: boolean; towerWall?: TowerWallKind;
+    minePalette?: RockPalette;
     irrigation?: GroundIrrigation;
     /** Atlas key of a still picture; fog memories are immutable, so it holds per index. */
     artKey?: string; artColor?: string; artRevision?: number;
@@ -237,7 +275,8 @@ function structureLinks(b: Building, index: BuildingIndex, world: World, epoch: 
     if (!links) {
         const towerWall = towerSupportingWallKind(b, index), network = buildingConnections(b, index, world, waterKnown);
         links = { network, secondary: b.kind === 'bridge' ? bridgeBanks(b, index, network) : gateConnections(b, index, world),
-            attached: wellAttachedToHouse(b, index) || towerWall !== undefined, towerWall };
+            attached: wellAttachedToHouse(b, index) || towerWall !== undefined, towerWall,
+            minePalette: b.kind === 'goldMine' ? rockPalette(tileAt(world, b.x, b.y)?.terrain ?? 'grassland') : undefined };
         if (b.kind === 'irrigation' && buildingReady(b)) {
             const occupants = (x: number, y: number) => index.get(tileKey(x, y)) ?? [];
             const road = occupants(b.x, b.y).find(other => other.kind === 'road' && buildingReady(other));
@@ -340,10 +379,10 @@ export class Renderer {
     buildPreview: Point[] = [];
     constructionGesture?: ConstructionGesturePreview;
     pendingConstruction: { kind: 'road' | 'irrigation'; points: readonly Point[] }[] = [];
-    areaPreview: { tool: 'clear' | 'forbid'; start: Point; end: Point; erase?: boolean } | null = null;
+    areaPreview: { tool: 'clear' | 'forbid' | 'cancel'; start: Point; end: Point; erase?: boolean } | null = null;
     moveMarker: MoveMarker | null = null;
     movementModeMarker: { mode: 'travel' | 'formation'; elapsed: number } | null = null;
-    private terrain = document.createElement('canvas');
+    private terrain = new TerrainChunkSource();
     private miniature = document.createElement('canvas');
     private minimapTerritory = document.createElement('canvas');
     private minimapContent = document.createElement('canvas');
@@ -370,7 +409,7 @@ export class Renderer {
     private unitTrails = new UnitTrails();
     private waterWakes = new WaterWakes();
     private ambientBirds = new AmbientBirds();
-    private citySummaryCache?: { state: GameState; world: World; faction: number; nextRefreshAt: number; values: CitySummary[] };
+    private citySummaryCache?: { state: GameState; world: World; faction: number; nextRefreshAt: number; values: ReadonlyMap<Building, CitySummary> };
     private presentationChecks?: PresentationChecks;
     private constructionPreview?: { state: GameState; world: World; kind: GameState['buildMode']; key: string;
         nextRefreshAt: number; plan: ConstructionPlan };
@@ -398,10 +437,32 @@ export class Renderer {
     }
     screenPoint(p: Point): Point { return { x: (p.x - this.camera.x) * TILE_SIZE * this.zoom + this.width / 2,
         y: (p.y - this.camera.y) * TILE_SIZE * this.zoom + this.height / 2 }; }
-    center(state: GameState) { const leader = indexedLeader(state, playerFaction(state)); if (leader) {
-        this.camera = { x: leader.x, y: leader.y };
-        this.follow = true;
-    } }
+    panCameraAtEdge(cursor: Point, world: Pick<World, 'width' | 'height'>, elapsed: number): void {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = cursor.x - rect.left, y = cursor.y - rect.top;
+        if (x < 0 || y < 0 || x >= rect.width || y >= rect.height) return;
+        const dx = edgePanStrength(x, rect.width), dy = edgePanStrength(y, rect.height);
+        if (!dx && !dy) return;
+        const tilePixels = TILE_SIZE * this.zoom;
+        const travel = EDGE_PAN_SPEED * Math.min(elapsed, .05) / (tilePixels * Math.max(1, Math.hypot(dx, dy)));
+        this.follow = false;
+        this.camera.x = panCameraAxis(this.camera.x, dx * travel, world.width, rect.width / (2 * tilePixels));
+        this.camera.y = panCameraAxis(this.camera.y, dy * travel, world.height, rect.height / (2 * tilePixels));
+    }
+    center(state: GameState) {
+        if (state.observing) {
+            const town = entityStore(state).buildings.query('palace').find(buildingReady);
+            this.camera = town ? { x: town.x + buildingWidth(town) / 2, y: town.y + buildingHeight(town) / 2 }
+                : { x: state.world.width / 2, y: state.world.height / 2 };
+            this.follow = false;
+            return;
+        }
+        const leader = indexedLeader(state, playerFaction(state));
+        if (leader) {
+            this.camera = { x: leader.x, y: leader.y };
+            this.follow = true;
+        }
+    }
     changeZoom(delta: number) { this.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, this.zoom + delta)); }
     showMoveMarker(point: Point, attack = false) { this.moveMarker = { ...point, elapsed: 0, attack }; }
     showMovementMode(mode: 'travel' | 'formation') { this.movementModeMarker = { mode, elapsed: 0 }; }
@@ -418,9 +479,9 @@ export class Renderer {
         this.worldSeed = w.seed;
         this.worldAppearanceRevision = revisions.appearance;
         this.preparedWorld = w;
-        const changed = paintTerrain(this.terrain, w, changes);
+        const changed = this.terrain.prepare(w, changes);
         this.terrainJournalRevision = changes.revision; this.terrainGeometryRevision = revisions.geometry;
-        if (changed) for (const region of changed.regions ?? [changed])
+        for (const region of changed)
             this.gpu?.invalidateTerrain({ x: region.x * TILE_SIZE, y: region.y * TILE_SIZE,
                 width: region.width * TILE_SIZE, height: region.height * TILE_SIZE });
         if (resetMiniature) {
@@ -457,8 +518,10 @@ export class Renderer {
             state, world: state.world, faction, nextRefreshAt: now + CHECK_INTERVAL_MS,
             enclosures: palaceEnclosures(state), borders: territory(state),
             villageOwners: new Set(state.factions.filter(candidate => candidate.villageId !== undefined).map(candidate => candidate.id)),
+            owners: new Map(state.factions.map(candidate => [candidate.id, candidate])),
             colors: new Map(state.factions.map(candidate => [candidate.id, candidate.color])),
             packColors: new Map((state.marauderPacks ?? []).filter(pack => pack.color).map(pack => [pack.id, pack.color!])),
+            settlementPopulations: new Map(cityResidents(state).map(city => [city.palace.id, city.population])),
             highlights: sameSession ? previous.highlights : new Map(),
             alliedCamps: alliedVillageCamps(state).map(camp => ({ camp, center: centers.get(camp.id) ?? camp })),
             research: player && !player.defeated ? researchStatus(state, faction) : undefined,
@@ -474,7 +537,7 @@ export class Renderer {
             || now >= this.nextTerrainRefreshAt && this.worldAppearanceRevision !== worldRevisions(state.world).appearance)
             this.prepare(state);
         const leader = indexedLeader(state, playerFaction(state));
-        if (leader && this.follow) {
+        if (leader && this.follow && !state.observing) {
             const k = Math.min(1, dt * 8);
             this.camera.x += (leader.x - this.camera.x) * k;
             this.camera.y += (leader.y - this.camera.y) * k;
@@ -493,26 +556,43 @@ export class Renderer {
         scene.setCamera(screenOx, screenOy);
         const ox = 0, oy = 0;
         const art = scene.art, scale = s / 32;
+        const settlementCapPulse = .65 + .35 * Math.cos(now * Math.PI / 900);
         const bake = (key: string, x: number, y: number, width: number, height: number, paint: (c: CanvasRenderingContext2D) => void, alpha = 1) =>
             scene.sprite(art.paint(key, { x: 0, y: 0, width, height }, paint), x, y, scale, alpha);
-        const building = (b: Building, index: BuildingIndex = buildingIndex, alpha = 1) => {
+        const building = (b: Building, index: BuildingIndex = buildingIndex, alpha = 1, heightScale = 1) => {
             if (constructionSiteHidden(b)) return;
             const links = structureLinks(b, index, w, linkEpoch, knownWater);
             const color = colorFor(b.faction, b.faction === -2 ? RAIDER_CAMP_COLOR : '#9c9d80');
             let key: string | undefined;
-            if (stillBuildings && (b.construction || !ANIMATED_BUILDING_KINDS.has(b.kind))) {
+            if (stillBuildings && b.kind !== 'palace' && (b.construction || !ANIMATED_BUILDING_KINDS.has(b.kind))) {
                 const revision = pavedRoadArtRevision();
                 if (links.artKey === undefined || links.artColor !== color || links.artRevision !== revision) {
-                    links.artKey = buildingKey(b, time, color, links.network, links.secondary, links.attached, links.towerWall);
+                    links.artKey = buildingKey(b, time, color, links.network, links.secondary, links.attached, links.towerWall, links.minePalette);
                     links.artColor = color; links.artRevision = revision;
                 }
                 key = links.artKey;
             }
-            const picture = art.building(b, time, color, links.network, links.secondary, links.attached, links.towerWall, key);
-            return scene.sprite(picture, (ox + b.x * s), (oy + b.y * s), scale,
-                b.kind === 'road' && b.construction ? .25 : alpha);
+            const picture = art.building(b, time, color, links.network, links.secondary, links.attached, links.towerWall, key, links.minePalette);
+            const x = ox + b.x * s, y = oy + b.y * s;
+            if (heightScale < 1) {
+                // Compress the building texture toward the ground while the dust rises.
+                const base = buildingHeight(b) * 32;
+                return scene.image(picture.texture, x + picture.x * scale,
+                    y + (base + (picture.y - base) * heightScale) * scale,
+                    picture.width * scale, picture.height * scale * heightScale, alpha);
+            }
+            return scene.sprite(picture, x, y, scale, b.kind === 'road' && b.construction ? .25 : alpha);
         };
         scene.terrain(this.terrain, screenOx, screenOy, scale, this.width, this.height);
+        // Give fjord rock spines a connected silhouette at whole-map scale.
+        // The layer uses one texel per tile and rebuilds only with geometry or exploration.
+        if (s < ROCK_BACKING_MIN_TILE_PIXELS) scene.rasterLayer('fjord-rock-overview',
+            [w, w.tiles, linkEpoch.geometry, fog.explored, fog.explorationRevision], w.width, w.height, context => {
+                context.fillStyle = FJORD_ROCK_OVERVIEW_COLOR;
+                for (const [cell, tile] of w.tiles.entries()) {
+                    if (fog.explored[cell] && fjordRockFootprint(tile)) context.fillRect(cell % w.width, Math.floor(cell / w.width), 1, 1);
+                }
+            }, ox, oy, s);
         const left = Math.max(0, Math.floor(-screenOx / s) - 5), right = Math.min(w.width, Math.ceil((this.width - screenOx) / s) + 2), top = Math.max(0, Math.floor(-screenOy / s) - 3), bottom = Math.min(w.height, Math.ceil((this.height - screenOy) / s) + 4);
         const time = state.time;
         const coastalBounds = { left, right, top, bottom }, viewer = playerFaction(state);
@@ -523,7 +603,11 @@ export class Renderer {
         const scenery: { depth: number; feature: Scenery }[] = [];
         const objects: SceneObject[] = [];
         const drawnOres = new Set<NonNullable<ResourceCellArt['ore']>>();
+        const visibleRocks = new Map<number, RockFormationArt>();
+        const drawnRockRanges = new Set<number>();
+        const rockBackingView = { ...coastalBounds, tilePixels: s };
         const geothermalSeen = new Set<number>();
+        const nearbySites = this.overlays ? nearbySiteIds(state, now) : undefined;
         const presentation = this.presentation ??= new PresentationIndex();
         presentation.update(fog);
         const buildingIndex = presentation.buildings, roadCells = presentation.roads, fields = presentation.fields;
@@ -549,18 +633,40 @@ export class Renderer {
         // Two extra footing cells also retain towers whose upper storey is
         // visible while their occupied cell lies below the viewport.
         const structures = presentation.inViewport(left - 2, right + 2, top - 2, bottom + 2);
-        // Finish water animation before blending settlement clearings into the
-        // ground. Clip each fringe to its actual shoreline, including corners.
+        // Draw ground details before clearings and scenery so foliage and rock
+        // silhouettes naturally cover the grass.
         for (let y = top; y < bottom; y++) for (let x = left; x < right; x++) {
-            const tile = w.tiles[y * w.width + x];
+            const cell = y * w.width + x, tile = w.tiles[cell];
             const frost = tile.seaIce ?? tile.snow;
             const water = WATER.has(tile.terrain);
-            if (!(water || frost) || !pointExplored(fog, x, y)) continue;
+            const density = s >= 16 ? tile.fertilityGrass : undefined;
+            const host = tile.rockHost;
+            if (!(water || frost || density || host !== undefined) || !pointExplored(fog, x, y)) continue;
+            if (host !== undefined && !visibleRocks.has(host)) {
+                const rock = rockFormationArt(w, fog, host);
+                if (rock) visibleRocks.set(host, rock);
+            }
             // Water animations and the static frost share native atlas resolution.
             if (water) scene.sprite(art.paint(waterSpriteKey(w, x, y, waterAnimationFrame(tile, time)), WATER_TILE_BOUNDS,
                 c => drawAnimatedWater(c, w, x, y, 0, 0, 32, time), NATIVE_TILE_RESOLUTION), ox + x * s, oy + y * s, scale);
             if (frost) scene.sprite(art.paint(`frost:${tile.seaIce ? 'ice' : 'snow'}:${frost}`, WATER_TILE_BOUNDS,
                 c => drawFrostTile(c, !!tile.seaIce, frost, 32), NATIVE_TILE_RESOLUTION), ox + x * s, oy + y * s, scale);
+            if (density && !cellFields[cell] && !cellBuildings[cell]?.length && fertilityGrassFooting(tile)) {
+                const grass = art.fertilityGrass(density, tile.variation);
+                if (!grass) continue;
+                scene.sprite(grass, ox + x * s, oy + y * s, scale);
+                const chips = rockyGroundVariant(tile);
+                if (chips >= 0) scene.sprite(art.paint(`rocky-ground:${chips}`, WATER_TILE_BOUNDS,
+                    c => drawRockyGround(c, chips, TILE_SIZE), NATIVE_TILE_RESOLUTION), ox + x * s, oy + y * s, scale);
+            }
+        }
+        if (s >= 8 && visibleRocks.size) {
+            const shadedGround = new Set<number>();
+            for (const rock of visibleRocks.values()) {
+                const shade = rockContactShade(w, fog, rock, shadedGround);
+                if (shade) scene.sprite(art.paint(shade.key, shade.bounds, c => drawRockContactShade(c, shade), NATIVE_TILE_RESOLUTION),
+                    ox + rock.x * s, oy + rock.y * s, scale);
+            }
         }
         // Wake marks belong on the water under bridge decks and hulls. New
         // samples from the visible-vessel pass appear on the next draw.
@@ -590,7 +696,7 @@ export class Renderer {
                             if (!pointExplored(fog, x, y)) continue;
                             const px = (x - b.x + 1) * 32, py = (y - b.y + 1) * 32;
                             c.save(); c.beginPath(); c.rect(px, py, 32, 32); c.clip();
-                            clipFarmToLand(c, this.terrain, x, y, px, py, 32); drawBuildingGround(c, b, 32, 32, 32); c.restore();
+                            clipFarmToLand(c, w, x, y, px, py, 32); drawBuildingGround(c, b, 32, 32, 32); c.restore();
                         }
                 });
         }
@@ -648,13 +754,15 @@ export class Renderer {
         const inlet = (x: number, y: number, side: 0 | 1 | 2 | 3, alpha = 1) =>
             bake(`inlet:${side}:${Math.floor(time * 3) % 4}`, ox + x * s, oy + y * s, 32, 32, c => drawIrrigationInlet(c, 0, 0, 32, time, side), alpha);
         const crop = (field: FarmField, fieldTime: number, ditch?: GroundIrrigation) => {
-            const key = `${landKey(field.x, field.y)}:${ditch ? irrigationCropKey(ditch.layout, ditch.road) : ''}`;
-            const picture = art.field(field, fieldTime, key, c => {
-                clipFarmToLand(c, this.terrain, field.x, field.y, 0, 0, 32);
-                // Irrigation cuts a gap in ground crops, never through a tree's
-                // trunk or crown. Orchards sit above the channel by footing.
-                if (ditch && !field.orchard) clipFarmAroundIrrigation(c, 0, 0, 32, ditch.layout, ditch.road);
-            }, fieldJoins(field, fieldTime));
+            const groundKey = landKey(field.x, field.y);
+            // Orchards sit above a channel by footing. Only ground crops need its gap.
+            const channel = field.orchard ? undefined : ditch;
+            const clip = groundKey !== 'land' || channel ? (c: CanvasRenderingContext2D) => {
+                if (groundKey !== 'land') clipFarmToLand(c, w, field.x, field.y, 0, 0, 32);
+                if (channel) clipFarmAroundIrrigation(c, 0, 0, 32, channel.layout, channel.road);
+            } : undefined;
+            const key = `${groundKey}:${channel ? irrigationCropKey(channel.layout, channel.road) : ''}`;
+            const picture = art.field(field, fieldTime, key, clip, fieldJoins(field, fieldTime));
             scene.sprite(picture, ox + field.x * s, oy + field.y * s, scale);
         };
         const ditchOnGround = (b: Building, alpha = 1) => {
@@ -681,39 +789,69 @@ export class Renderer {
         }
         const expiry = (x: number, y: number) => scene.sprite(art.paint(`expiry:${s}`,
             { x: -16, y: -16, width: 32, height: 32 }, c => drawFoodExpiryClock(c, 0, 0, s, 0)), (x), Math.round(y - Math.abs(Math.sin(time * 5)) * 3 * Math.max(1, Math.round(s / 36))));
+        const occupiedRockFoot = (cell: number) => !!cellFields[cell] || !!cellBuildings[cell]?.length;
+        for (const [host, rock] of visibleRocks) {
+            for (const backing of visibleRockRangeBackings(w, host, linkEpoch.geometry, rockBackingView, fog, drawnRockRanges)) {
+                const visible = rockBackingVisibility(backing, fog);
+                const bounds = { x: 0, y: 0, width: backing.width * TILE_SIZE, height: backing.height * TILE_SIZE };
+                const picture = art.paint(`rock-backing:${backing.id}:${visible.key}`, bounds,
+                    c => drawRockBacking(c, backing, w.width, visible), NATIVE_TILE_RESOLUTION);
+                scene.sprite(picture, ox + backing.x * s, oy + backing.y * s, scale);
+            }
+            const depth = rock.y + rock.height - 1 / 16 - .002;
+            objects.push({ depth, rock });
+            const plant = s >= 16 ? rockFootPlant(w, fog, rock, occupiedRockFoot) : undefined;
+            if (plant) objects.push({ depth: Math.max(plant.y, depth + .0003), rockFootPlant: plant });
+        }
         for (let y = top; y < bottom; y++)
             for (let x = left; x < right; x++) {
                 if (!pointExplored(fog, x, y)) continue;
                 const t = w.tiles[y * w.width + x], px = ox + x * s, py = oy + y * s;
+                const host = t.rockHost;
                 if (t.geothermal && t.geothermalAnchor !== undefined && !geothermalSeen.has(t.geothermalAnchor)) {
                     const gx = t.geothermalAnchor % w.width, gy = Math.floor(t.geothermalAnchor / w.width);
                     geothermalSeen.add(t.geothermalAnchor);
                     let mask = 0;
                     for (let bit = 0; bit < 4; bit++) if (pointExplored(fog, gx + bit % 2, gy + Math.floor(bit / 2))) mask |= 1 << bit;
                     if (!buildingIndex.get(tileKey(gx, gy))?.some(b => b.kind === 'thermalBath' && buildingPresent(b)))
-                        objects.push({ depth: gy + 1.9, geothermal: { x: gx, y: gy, variant: t.geothermal, mask } });
+                        objects.push({ depth: gy + 1.9, geothermal: { x: gx, y: gy, variant: t.geothermal, mask,
+                            highlight: !!nearbySites?.has(t.geothermalAnchor) && pointInSight(fog, gx + 1, gy + 1) } });
                 }
                 const occupants = cellBuildings[y * w.width + x];
                 const rubble = this.resourceMemory.looseRocks.get(y * w.width + x);
                 if (rubble && !occupants?.length && !fields.has(tileKey(x, y)) && !t.resource && t.overlay === 'none'
                     && !WATER.has(t.terrain) && !t.creek && !t.palm && !t.marsh && !t.villageTrail)
                     bake(`outcrop-rubble:${rubble.key}`, px, py, 32, 32, c => drawLooseRocks(c, rubble));
-                if (t.desertStone !== undefined && t.terrain === 'desert' && !occupants?.length && !fields.has(tileKey(x, y)) && !t.resource && !t.villageTrail)
+                if (t.desertStone !== undefined && host === undefined && t.terrain === 'desert' && !occupants?.length && !fields.has(tileKey(x, y)) && !t.resource && !t.villageTrail)
                     bake(`desert-stone:${t.desertStone}:${Math.floor(t.variation * 16)}`, px, py, 32, 32,
                         c => drawDesertStone(c, t.desertStone!, Math.floor(t.variation * 16) / 16));
                 if (t.villageTrail && !WATER.has(t.terrain) && !roadCells.has(y * w.width + x)) {
                     const links = villageTrailLinks(w, x, y, roadCells);
-                    bake(`village-trail:${dirtRoadArtKey(links, x, y, 'trail')}`, ox + x * s, oy + y * s, 32, 32,
+                    bake(`village-trail:${dirtRoadArtKey(links, x, y, 'trail')}`, px, py, 32, 32,
                         c => drawDirtRoad(c, links, x, y, 'trail'));
                 }
                 const field = cellFields[y * w.width + x];
                 const resource = resources.get(y * w.width + x);
+                if (t.rockTree && host !== undefined && w.tiles[host]?.rockOre === undefined) {
+                    const rock = visibleRocks.get(host);
+                    const footing = rock && rockTreeFooting(rock, x, y);
+                    if (rock && footing) {
+                        const treeX = rock.x + footing.x / TILE_SIZE, treeY = rock.y + footing.y / TILE_SIZE;
+                        if (rockTreeClear(w, fog, treeX, treeY)) {
+                            // The first source in each family is its full, short sprite.
+                            const treeClass = t.terrain === 'tundra' ? 'snowy' : t.terrain === 'plains' ? 'dry' : 'conifer';
+                            const tile: Tile = { ...t, overlay: 'forest', palm: false, marsh: false, treeClass, variation: 0 };
+                            objects.push({ depth: rock.y + rock.height - 1 / 16 - .0015, rockTree: { x: treeX, y: treeY, tile } });
+                        }
+                    }
+                }
                 // Decoration consumes the same constant-time observed occupancy
                 // indices as crops and roads. No simulation or entity scan.
-                // Omit meadow grass in fit-to-world overview cameras.
-                if (s >= 16 && !field && !occupants?.length && !resource && !rubble)
+                if (s >= 16 && host === undefined && !field && !occupants?.length && !resource && !rubble
+                    && !(t.fertilityGrass && fertilityGrassFooting(t))) {
                     for (const tuft of this.meadowPlacements.get(w, x, y, linkEpoch.geometry))
                         objects.push({ depth: y + tuft.y, meadow: { x, y, tuft } });
+                }
                 if (resource?.ore && !drawnOres.has(resource.ore)) {
                     // The peaks cover units walking behind the solid front row.
                     // Structures can occupy the open ground under the overhang.
@@ -726,7 +864,10 @@ export class Renderer {
                     const color = resourceInteractionColor(state, x, y, fog), patch = resourcePatches.get(y * w.width + x);
                     if (color && patch && !outlinedPatches.has(patch)) {
                         outlinedPatches.add(patch);
-                        objects.push({ depth: patch.y - .01, resourceOutline: { patch, color } });
+                        // The ore-face halo sits above the host rock, and behind the ore itself.
+                        const ore = resource.ore;
+                        const depth = ore?.host ? ore.y + ore.height - 1 / 16 - .001 : patch.y - .01;
+                        objects.push({ depth, resourceOutline: { patch, color } });
                     }
                     if (resource.road && !roadCells.has(y * w.width + x))
                         bake(`resource-road:${resource.road}:${trailArtVariant(x, y)}`, px, py, 32, 32, c => drawResourceRoad(c, resource, x, y));
@@ -768,7 +909,7 @@ export class Renderer {
         const enclosures = checks.enclosures;
         if (enclosures.cells.length) scene.rasterLayer('enclosure-shimmer',
             [enclosures, fog, fog.revision, screenOx, screenOy, s, time], this.width, this.height, shimmer => {
-                shimmer.fillStyle = '#aaffce';
+                shimmer.fillStyle = '#ffda83';
                 forEachEnclosureShimmerSpan(state, fog, screenOx, screenOy, s, time, { width: this.width, height: this.height },
                     (x, y, width, height, alpha) => { shimmer.globalAlpha = alpha; shimmer.fillRect(x, y, width, height); }, enclosures);
             }, -screenOx, -screenOy);
@@ -823,7 +964,7 @@ export class Renderer {
                 c => c.drawImage(atlas, TREASURE_SPRITE.x, TREASURE_SPRITE.y, 16, 16, 0, 0, 32, 32));
         for (const site of state.explorationSites ?? []) {
             if (site.status === 2) continue;
-            const size = site.kind === 0 ? 2 : 1;
+            const size = explorationSiteSize(site.kind);
             if (!visible(site) || !pointExplored(fog, site.x + size / 2, site.y + size / 2)) continue;
             objects.push({ depth: site.y + size, exploration: site });
         }
@@ -834,8 +975,9 @@ export class Renderer {
         }
         const unitTrails = this.unitTrails ??= new UnitTrails();
         const sampleUnitTrails = unitTrails.beginFrame(w, viewer, time);
+        const unitStore = entityStore(state).units;
         const visibleUnits:Unit[]=[],vesselAlpha=new Map<number,number>(),vesselGhosts=new Set<number>(),ghostPassengers=new Map<number,Unit>();
-        for(const u of entityStore(state).units.query('unit')) {
+        for(const u of unitStore.query('unit')) {
             if(u.inside||u.hp<=0||u.kind!=='sailboat'&&!visible(u)||!isMapRevealed(state)&&!observationPostVisibleTo(u,playerFaction(state)))continue;
             const seen=isMapRevealed(state)||u.faction===playerFaction(state)||unitInSight(fog,u);
             if(seen) {
@@ -864,13 +1006,33 @@ export class Renderer {
                 }
             }
         }
+        const approachedHerds = new Map<number, boolean>();
+        const showHerdOutline = (animal: Unit): boolean => {
+            const id = animal.livestockHerd;
+            if (id === undefined || !leader || leader.hp <= 0 || leader.inside || leader.embarkedOn !== undefined || state.gameOver) return false;
+            let approached = approachedHerds.get(id);
+            if (approached === undefined) {
+                approached = livestockHerd(state, id)?.animals.some(id => {
+                    const member = unitStore.get(id);
+                    return !!member && member.hp > 0 && livestockApproached(leader, member) && unitInSight(fog, member);
+                }) ?? false;
+                approachedHerds.set(id, approached);
+            }
+            return approached;
+        };
+        for (const cell of pastureFenceCells(state.livestock)) {
+            const { x, y, faction, fences } = cell;
+            if (!visible(cell, 1) || !(faction === viewer ? pointExplored(fog, x + .5, y + .5) : pointInSight(fog, x + .5, y + .5))) continue;
+            if (fences & 11) objects.push({ depth: y + (fences & 1 ? -.01 : .99), pastureFence: { cell, front: false } });
+            if (fences & 4) objects.push({ depth: y + 1.01, pastureFence: { cell, front: true } });
+        }
         unitTrails.forEachVisible(coastalBounds, fog, (track, age) => {
             drawUnitTrack(scene, track, age, s);
             if (unitDustVisible(track, age)) objects.push({ depth: track.y, unitDust: { track, age } });
         });
         for (const post of checks.riverPosts) if (visible(post) && pointInSight(fog, post.x + .5, post.y + .5))
             objects.push({ depth: post.y + .6, riverPost: post });
-        for (const fish of state.fishing?.fish ?? []) if (fishSurfaceFrame(fish, time) >= 0 && visible(fish) && pointInSight(fog, fish.x, fish.y))
+        for (const fish of state.fishing?.fish ?? []) if (visible(fish) && fishSurfaceFrame(fish, time) >= 0 && pointInSight(fog, fish.x, fish.y))
             objects.push({ depth: fish.y, fish });
         for (const whale of state.fishing?.whales ?? []) if (whaleSurfaceFrame(whale, time) >= 0 && visible(whale) && pointInSight(fog, whale.x, whale.y))
             objects.push({ depth: whale.y + 1, whale });
@@ -939,7 +1101,7 @@ export class Renderer {
                     stamp.width * 32, stamp.height * 32,
                     c => c.drawImage(stamp.image, 0, 0, stamp.width * 32, stamp.height * 32));
             } else if (object.exploration) {
-                const site = object.exploration, size = site.kind === 0 ? 2 : 1;
+                const site = object.exploration, size = explorationSiteSize(site.kind);
                 bake(`exploration:${site.kind}:${site.variant}`, ox + site.x * s, oy + site.y * s, size * 32, size * 32,
                     c => { c.scale(2, 2); drawExplorationSite(c, site.kind, site.variant); });
             } else if (object.hermitHome) {
@@ -951,9 +1113,27 @@ export class Renderer {
                 const h = object.hermit, p = hermitPosition(h), highlight = hermitAvailable(state, h, playerFaction(state), fog), frame = Math.floor(time * 7) % 6;
                 bake(`hermit:${highlight}:${h.status}:${frame}`, (ox + (p.x - .42) * s), (oy + (p.y - .72) * s), 28, 28,
                     c => drawHermit(c, highlight, h.status === 'fleeing', frame));
+            } else if (object.rock) {
+                const rock = object.rock;
+                const bounds = rockFormationBounds(rock);
+                const key = `rock-range:${rock.palette}:${rock.variant}:${Number(rock.alternate)}:${Number(rock.mirror)}:${rock.explored}`;
+                const picture = art.paint(key, bounds, c => drawRockFormation(c, rock, bounds), NATIVE_TILE_RESOLUTION);
+                scene.sprite(picture, ox + rock.x * s, oy + rock.y * s, scale);
             } else if (object.resourceOutline) {
                 const { patch, color } = object.resourceOutline;
                 scene.sprite(art.resourcePatchOutline(patch, color), ox + patch.x * s, oy + patch.y * s, scale);
+            } else if (object.rockFootPlant) {
+                const { x, y, frame } = object.rockFootPlant;
+                const picture = art.paint(`rock-foot-plant:${frame}`, ROCK_FOOT_PLANT_BOUNDS,
+                    c => drawRockFootPlant(c, frame), NATIVE_TILE_RESOLUTION);
+                scene.sprite(picture, ox + x * s, oy + y * s, scale);
+            } else if (object.rockTree) {
+                const { x, y, tile } = object.rockTree;
+                scene.sprite(art.vegetation(tile), ox + x * s - ROCK_TREE_SIZE * scale / 2,
+                    oy + y * s - ROCK_TREE_TRUNK * scale, scale * ROCK_TREE_SIZE / TILE_SIZE);
+            } else if (object.pastureFence) {
+                const { cell, front } = object.pastureFence;
+                scene.sprite(art.resourceFence(cell, front), ox + cell.x * s, oy + cell.y * s, scale);
             } else if (object.resource) {
                 const resource = object.resource;
                 const x = (ox + resource.x * s), y = (oy + resource.y * s);
@@ -991,9 +1171,15 @@ export class Renderer {
                     c => c.drawImage(atlas, 112 + sign.variant * 16, 480, 16, 16, 0, 0, 32, 32));
             }
             else if (object.geothermal) {
-                const { x, y, variant, mask } = object.geothermal, frame = geothermalFrame(variant, time, x, y);
-                bake(`geothermal:centered:${variant}:${frame}:${mask}`, ox + x * s, oy + y * s + geothermalArtOffsetY(variant) * scale, 64, 64,
-                    c => drawGeothermal(c, variant, frame, mask));
+                const { x, y, variant, mask, highlight } = object.geothermal, frame = geothermalFrame(variant, time, x, y);
+                const px = ox + x * s, py = oy + y * s + geothermalArtOffsetY(variant) * scale;
+                if (highlight) {
+                    const padding = SITE_OUTLINE_PADDING, side = 64 + 2 * padding;
+                    const outline = art.paint(`geothermal:outline:${variant}:${mask}`, { x: -padding, y: -padding, width: side, height: side },
+                        c => drawSiteOutline(c, variant, mask));
+                    scene.sprite(outline, px, py, scale);
+                }
+                bake(`geothermal:centered:${variant}:${frame}:${mask}`, px, py, 64, 64, c => drawGeothermal(c, variant, frame, mask));
             }
             else if (object.feature) {
                 const { x, y, tile } = object.feature;
@@ -1012,7 +1198,8 @@ export class Renderer {
             else if (object.destruction) {
                 const effect = object.destruction, pose = buildingDestructionPose(effect, time);
                 if (!pose) continue;
-                if (pose.showBuilding && effect.building) building(effect.building, previewIndex);
+                if (pose.buildingHeightScale > 0 && effect.building)
+                    building(effect.building, previewIndex, 1, pose.buildingHeightScale);
                 const picture = art.buildingDestruction(pose.size, pose.frame, pose.rubble);
                 if (picture) for (let dy = 0; dy < effect.height; dy += pose.size)
                     for (let dx = 0; dx < effect.width; dx += pose.size)
@@ -1026,9 +1213,15 @@ export class Renderer {
                     highlight = { active: buildingInteractionHighlighted(state, b, fog), nextRefreshAt: now + CHECK_INTERVAL_MS };
                     checks.highlights.set(b.id, highlight);
                 }
-                if (highlight.active && buildingInSight(fog, b))
-                    scene.sprite(art.paint(`activity:${buildingKey(b, time, colorFor(b.faction))}`, { x: -32, y: -64, width: (buildingWidth(b) + 2) * 32, height: (buildingHeight(b) + 3) * 32 },
-                        c => drawBuildingActivityOutline(c, b, 0, 0, 32, colorFor(b.faction))), ox + b.x * s, oy + b.y * s, scale);
+                const capped = b.kind === 'palace' && buildingReady(b)
+                    && (checks.settlementPopulations.get(b.id) ?? 0) >= settlementPopulationLimit(b);
+                if ((capped || highlight.active) && buildingInSight(fog, b)) {
+                    const color = colorFor(b.faction), top = Math.min(-64, buildingArtTop(b) * 32 - 6);
+                    const picture = art.paint(`activity:${buildingKey(b, time, color)}`,
+                        { x: -32, y: top, width: (buildingWidth(b) + 2) * 32, height: (buildingHeight(b) + 1) * 32 - top },
+                        c => drawBuildingActivityOutline(c, b, 0, 0, 32, color));
+                    scene.sprite(picture, ox + b.x * s, oy + b.y * s, scale, capped ? settlementCapPulse : 1);
+                }
                 building(b, previewIndex);
             }
             else if (object.u) {
@@ -1052,6 +1245,8 @@ export class Renderer {
                     const animationTime = this.mountedAnimation.forUnit(u.kind, time);
                     const firearm = (passenger ?? u).kind === 'leader' && usesFirearm(state, passenger ?? u);
                     const equipment = passenger || firearm ? { passenger, firearm } : undefined;
+                    if (isLivestock(u) && showHerdOutline(u))
+                        scene.sprite(art.livestockOutline(u, animationTime), x, y, figureScale);
                     scene.sprite(art.unit(u, animationTime, color, equipment), (x), (y), figureScale,vesselAlpha.get(u.id)??1);
                     const flash = damageFlashWeight(time - (u.damageFlashAt ?? -Infinity));
                     if (flash > 0) scene.sprite(art.unit(u, animationTime, color, { damageMask: true, passenger, firearm }), (x), (y), figureScale, flash);
@@ -1072,10 +1267,10 @@ export class Renderer {
                     const joins = fieldJoins(field, fieldTime);
                     const key = `wheat-front:${fieldKey(field, fieldTime, joins)}:${footColumn},${footRow}:${continuesSouth}:${landKey(column, row)}:${ditch ? irrigationCropKey(ditch.layout, ditch.road) : ''}`;
                     const foreground = art.paint(key, { x: 0, y: 0, width: 32, height: 32 }, c => {
-                        c.save(); clipFarmToLand(c, this.terrain, column, row, 0, 0, 32);
+                        c.save(); clipFarmToLand(c, w, column, row, 0, 0, 32);
                         if (ditch) clipFarmAroundIrrigation(c, 0, 0, 32, ditch.layout, ditch.road);
                         drawFarmOcclusion(c, 0, 0, 32, fieldTime, field, footColumn * 2, footRow * 2, continuesSouth, joins); c.restore();
-                    });
+                    }, NATIVE_TILE_RESOLUTION);
                     scene.sprite(foreground, ox + column * s, oy + row * s, scale);
                 }
             }
@@ -1152,15 +1347,17 @@ export class Renderer {
                 const top = u.kind === 'sailboat' ? -.85 : u.kind === 'worker' ? .04 : u.kind === 'leader' || (u.kind === 'levyInfantry' || u.kind === 'slinger') || u.kind === 'skirmisher' || u.kind === 'supplyCart' || isRetinueMember(u) || u.kind === 'militia' ? -.035 : -.13;
                 this.healthBar(scene, x + s * .5, y + s * top, u.hp / unitMaxHp(u), s * (u.kind === 'sailboat' ? 1.2 : .72));
             }
-            if (u.hp > 0 && (u.lastDamagedAt ?? -Infinity) < (u.healerHealingAt ?? -Infinity) && state.time - (u.healerHealingAt ?? -Infinity) < .2) {
+            const healedAt = u.healerHealingAt ?? -Infinity, sinceHeal = time - healedAt;
+            if (u.hp > 0 && (u.lastDamagedAt ?? -Infinity) < healedAt && sinceHeal >= 0 && sinceHeal < 1.25) {
                 const pixel = Math.max(1, Math.round(s / 24)), cx = Math.round(x + s * .5), cy = Math.round(y - s * (u.warship ? 2.8 : .35));
-                const pulse = .6 + .35 * Math.sin(time * 5 + u.id);
+                const pulse = .77 + .09 * Math.sin(time * 2.2 + u.id);
+                const fade = Math.min(1, (1.25 - sinceHeal) / .25);
                 scene.sharedGraphics(`healing:${pixel}`, context => context.rect(-pixel, -3 * pixel, 2 * pixel, 6 * pixel)
-                    .rect(-3 * pixel, -pixel, 6 * pixel, 2 * pixel).fill('#83ef91'), cx, cy, pulse);
+                    .rect(-3 * pixel, -pixel, 6 * pixel, 2 * pixel).fill('#83ef91'), cx, cy, pulse * fade);
             }
             const routingWarning = u.morale < 35 || u.order === 'flee';
             if (routingWarning) warning(x + s * .5 + Math.sin(time * 30) * 2, y - s * .3, '#fffbe9', '#5f5544');
-            if (this.overlays && hasUnpaidUpkeep(u)) {
+            if (this.overlays && (hasUnpaidUpkeep(u, checks.owners.get(u.faction)) || u.warship?.funded === false)) {
                 const size = QUEST_MARKER_SIZE;
                 const icon = art.paint('upkeep-warning', { x: -size / 2, y: -size, width: size, height: size }, c => {
                     // Tint the generated exclamation mark while keeping its outline and transparency.
@@ -1175,7 +1372,7 @@ export class Renderer {
                 scene.sprite(icon, x + s * .5, y - rise, upkeepWarningScale, upkeepWarningAlpha);
             }
             // Hold stays on the opposite side from the compact rank emblem.
-            if (u.order === 'hold' && u.kind !== 'militia' && u.kind !== 'sailboat') {
+            if (this.overlays && u.retinueStance === 'hold' && u.order === 'hold') {
                 const spacing = Math.round(s * .12);
                 scene.sharedGraphics(`hold:${spacing}`,
                     context => context.rect(0, 0, 3, 8).rect(spacing, 0, 3, 8).fill('#fff0ba'), x + s * .04, y + s * .24);
@@ -1237,15 +1434,6 @@ export class Renderer {
         scene.drawFog(ox, oy, w.width * s, w.height * s);
         // Political boundaries stay legible while terrain, units and structures
         // retain their ordinary fog visibility.
-        for (const site of siteViews(state, now)) {
-            if (!site.showBrackets || !visible(site)) continue;
-            if (buildingIndex.get(tileKey(site.x, site.y))?.some(b => b.hp > 0)
-                || !site.available && pointInSight(fog, site.x + 1, site.y + 1)) continue;
-            let mask = 0;
-            for (let bit = 0; bit < 4; bit++) if (pointExplored(fog, site.x + bit % 2, site.y + Math.floor(bit / 2))) mask |= 1 << bit;
-            if (mask) scene.sharedGraphics(`site-brackets:${s}:${site.near}:${mask}`, g => drawSiteBrackets(g, site.width * s, site.height * s, site.near, mask),
-                ox + site.x * s, oy + site.y * s);
-        }
         drawBorders();
         if (this.overlays) {
             const offensive = state.offensives?.find(order => order.faction === playerFaction(state));
@@ -1475,15 +1663,16 @@ export class Renderer {
             && (!this.citySummaryCache || !samePresentationSession(this.citySummaryCache.state, state) || this.citySummaryCache.world !== w
                 || this.citySummaryCache.faction !== labelFaction || now >= this.citySummaryCache.nextRefreshAt)) {
             this.citySummaryCache = { state, world: w, faction: labelFaction, nextRefreshAt: now + 1000,
-                values: citySummariesForFaction(state, labelFaction) };
+                values: new Map(citySummariesForFaction(state, labelFaction).map(city => [city.palace, city])) };
         }
         for (const palace of labelPalaces) {
             const city: CitySummary | undefined = palace.faction === labelFaction
-                ? this.citySummaryCache?.values.find(city => city.palace === palace)
+                ? this.citySummaryCache?.values.get(palace)
                 : { palace, name: palace.cityName ?? labelOwners.get(palace.faction)!.name, population: 0, housing: 0, food: 0, gold: 0 };
             if (!city) continue;
             const height = city.palace.faction === playerFaction(state) ? CITY_RIBBON_HEIGHT : CITY_NAME_RIBBON_HEIGHT;
-            const x = ox + (city.palace.x + buildingWidth(city.palace) / 2) * s, y = oy + city.palace.y * s - 6 - height / 2;
+            const x = ox + (city.palace.x + buildingWidth(city.palace) / 2) * s;
+            const y = oy + (city.palace.y + buildingArtTop(city.palace)) * s - 6 - height / 2;
             const loyalty = loyaltyOf(state, city.palace);
             const key = `city:${playerFaction(state)}:${city.name}:${city.palace.faction}:${city.population}:${city.housing}:${Math.round(city.food)}:${Math.round(city.gold)}:${Math.round(loyalty.value)}:${loyalty.warning}`;
             // Use screen-sized clearance around the ribbon so the player stays
@@ -1594,9 +1783,12 @@ export class Renderer {
     }
     private healthBar(scene: PixiScene, x: number, y: number, value: number, width: number) {
         if (!this.overlays) return;
-        const marks = scene.graphics().rect(Math.floor(x - width / 2) - 1, y - 1, width + 2, 5).fill('#354e39');
-        for (let i = 0; i < 5; i++) marks.rect(Math.floor(x - width / 2 + i * width / 5), y, width / 5 - 1, 3)
-            .fill(i / 5 < value ? value < .3 ? '#df8265' : '#c4d78a' : '#5a6651');
+        const left = Math.round(x - width / 2), barWidth = Math.max(1, Math.round(width));
+        const filled = Math.floor(Math.max(0, Math.min(1, value)) * barWidth);
+        const marks = scene.graphics().rect(left - 1, y - 1, barWidth + 2, 5).fill('#354e39')
+            .rect(left, y, barWidth, 3).fill('#5a6651');
+        if (filled > 0) marks.rect(left, y, filled, 3).fill(value < .3 ? '#df8265' : '#c4d78a');
+        for (let i = 1; i < 5; i++) marks.rect(left + Math.round(i * barWidth / 5) - 1, y, 1, 3).fill('#354e39');
     }
     private prepareFog(fog: FogView) {
         const mask = fogRenderMask(fog), { width, height } = mask;

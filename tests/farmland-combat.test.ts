@@ -39,7 +39,7 @@ function marauder(state: GameState, raid: boolean): { attacker: Unit; pack: Mara
   Object.assign(attacker, { attack: 24, speed: 2.35, marauderPack: 999, order: 'raid', target: 2 });
   const pack: MarauderPack = { id: 999, name: 'Scythians', color: '#e87535', targetFaction: 0,
     home: { x: 17.5, y: 12.5 }, waypoint: { x: 17.5, y: 12.5 }, nextWanderAt: 1e9,
-    raid, targetBuilding: raid ? 2 : undefined, spawnedAt: 0, retinueAtSpawn: 2 };
+    raid, targetBuilding: raid ? 2 : undefined, spawnedAt: 0, raidEra: 0 };
   entityStore(state).units.add(attacker); state.marauderPacks!.push(pack);
   return { attacker, pack };
 }

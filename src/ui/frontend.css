@@ -1,4 +1,4 @@
-.frontend{position:fixed;z-index:20;inset:0;overflow:hidden;background:#262420;font-family:var(--game-font);color:#ebdbb5;overscroll-behavior:contain}
+.frontend{position:fixed;z-index:20;inset:0;overflow:hidden;background:#262420;font-family:var(--game-font);color:#ebdbb5;overscroll-behavior:contain;container:frontend / size}
 .frontend *,.frontend *::before,.frontend *::after{box-sizing:border-box}
 .menu-back{
   position:absolute;
@@ -19,59 +19,63 @@
 }
 .menu-front>.frontend-panel{flex:none;margin:auto}
 
-/* The title and stack share an axis, independent of the backdrop crop. */
-.frontend-main{
+.frontend:has(>.menu-front>:is(.frontend-main,.frontend-game-menu)){padding:0}
+.frontend>.menu-front:has(>:is(.frontend-main,.frontend-game-menu)){
+  padding:3cqh 3cqw;
+  scrollbar-gutter:auto;
+}
+/* Fit the 600-unit menu to the viewport as a single composition. */
+:is(.frontend-main,.frontend-game-menu){
+  --menu-unit:calc(min(88cqw,64cqh) / 600);
+  --menu-row:calc(52 * var(--menu-unit));
+  --menu-label:calc(36 * var(--menu-unit));
   display:grid;
   justify-items:center;
-  gap:clamp(12px,2dvh,20px);
-  width:min(600px,100%,80dvh);
+  gap:calc(20 * var(--menu-unit));
+  width:calc(600 * var(--menu-unit));
+  max-width:100%;
 }
 .frontend .menu-title{
   display:grid;
   place-items:center;
   width:100%;
   aspect-ratio:1040/272;
-  container-type:inline-size;
   background:url('/assets/ui/main-menu/title-plaque.webp') center/100% 100% no-repeat;
   color:#8d130b;
-  text-shadow:0 1px #ffe6a6,0 -1px #5b120a;
+  text-shadow:0 var(--menu-unit) #ffe6a6,0 calc(-1 * var(--menu-unit)) #5b120a;
 }
-.menu-title span{font-size:22.8cqi;line-height:1;letter-spacing:.015em;white-space:nowrap}
-.frontend-main .menu-buttons{
+.menu-title span{font-size:calc(137 * var(--menu-unit));line-height:1;letter-spacing:.015em;white-space:nowrap}
+:is(.frontend-main,.frontend-game-menu) .menu-buttons{
   display:grid;
-  width:min(78%,440px);
-  container-type:inline-size;
-  grid-auto-rows:minmax(clamp(42px,5.45dvh,60px),auto);
-  gap:clamp(6px,1.2dvh,10px);
+  width:73.333%;
+  grid-auto-rows:minmax(var(--menu-row),auto);
+  gap:calc(10 * var(--menu-unit));
 }
-.frontend .menu-button{position:relative;isolation:isolate;display:flex;align-items:center;min-width:0;min-height:0;height:66px;margin:0;padding:0 14px 3px 76px;border:0;background:none;box-shadow:none;color:#f2e4ba;font:700 40px/1 var(--game-font);letter-spacing:.5px;text-align:left;white-space:nowrap;overflow:visible;cursor:pointer;text-shadow:2px 2px 0 #18150d,0 0 8px #0009}
-.frontend .frontend-main .menu-button{
+.frontend .menu-button{position:relative;isolation:isolate;display:flex;align-items:center;min-width:0;min-height:0;height:66px;margin:0;padding:0 14px 3px 34px;border:0;background:none;box-shadow:none;color:#f2e4ba;font:700 40px/1 var(--game-font);letter-spacing:.5px;text-align:left;white-space:nowrap;overflow:visible;cursor:pointer;text-shadow:2px 2px 0 #18150d,0 0 8px #0009}
+.frontend :is(.frontend-main,.frontend-game-menu) .menu-button{
+  --plate-unit:min(.6px,var(--menu-unit));
   height:auto;
-  padding:2px 10px 4px 20%;
-  font-size:clamp(20px,8.5cqi,36px);
-  letter-spacing:.3px;
+  padding:calc(2 * var(--menu-unit)) calc(10 * var(--menu-unit)) calc(4 * var(--menu-unit)) 20%;
+  font-size:var(--menu-label);
+  letter-spacing:.008em;
   white-space:normal;
 }
-.frontend .frontend-main .menu-button[data-view="login"]{font-size:clamp(16px,5.8cqi,26px)}
-.frontend .menu-button::before,.frontend .menu-button::after{content:'';position:absolute;inset:-9px;z-index:-1;background:url('/assets/runtime/ui/main-menu/button.png') 0 0/100% 100% no-repeat}
-.frontend-main .menu-button::before,.frontend-main .menu-button::after{inset:-6px -8px}
-.frontend .menu-button::after{background-image:url('/assets/runtime/ui/main-menu/button-active.png');opacity:0;transition:opacity .12s}
+.frontend :is(.frontend-main,.frontend-game-menu) .menu-button[data-view="login"]{font-size:calc(25.5 * var(--menu-unit))}
 /* One lit plate: the hovered one, else keyboard focus, else the first (as in the art). */
-.frontend .menu-button:focus-visible{outline:none}
-.frontend .menu-button:hover:not(:disabled),.menu-buttons:not(:hover) .menu-button:focus-visible{color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99;background:none}
-.frontend .menu-button:hover:not(:disabled)::after,.menu-buttons:not(:hover) .menu-button:focus-visible::after,
-.frontend-main .menu-buttons:not(:hover):not(:has(:focus-visible)) .menu-button:first-child::after{opacity:1}
-.frontend-main .menu-buttons:not(:hover):not(:has(:focus-visible)) .menu-button:first-child{color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99}
-.frontend .menu-button:active:not(:disabled)>span{transform:translateY(1px)}
+.frontend .menu-button:hover:not(:disabled),.menu-buttons:not(:hover) .menu-button:focus-visible{color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99;background:none;--menu-button-lit:1}
+.frontend .menu-button:focus-visible{--menu-button-lit:1}
+:is(.frontend-main,.frontend-game-menu) .menu-buttons:not(:hover):not(:has(:focus-visible)) .menu-button:first-child:not(:disabled){color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99;--menu-button-lit:1}
+.frontend .menu-button:active:not(:disabled)>span:not([aria-hidden]){transform:translateY(1px)}
 .frontend .menu-button:disabled{opacity:1;cursor:default;color:#9b957f;text-shadow:2px 2px 0 #14120c}
-.frontend .menu-button:disabled::before{filter:saturate(.45) brightness(.78)}
-.frontend-main>:is(.frontend-hint,.frontend-status){margin:0;text-align:center;text-shadow:1px 1px #17130b}
-@media(max-width:600px){
-  .frontend-main .menu-buttons{width:min(100%,400px)}
+.frontend .menu-button:disabled>.menu-plate{filter:saturate(.45) brightness(.78)}
+:is(.frontend-main,.frontend-game-menu)>:is(.frontend-hint,.frontend-status){margin:0;font-size:calc(17 * var(--menu-unit));text-align:center;text-shadow:1px 1px #17130b}
+.frontend .frontend-main>.menu-account{min-height:calc(32 * var(--menu-unit));padding-block:calc(3 * var(--menu-unit));font-size:calc(19 * var(--menu-unit))}
+@container frontend (max-aspect-ratio:3/4){
+  :is(.frontend-main,.frontend-game-menu){--menu-row:max(calc(52 * var(--menu-unit)),11cqw)}
+  :is(.frontend-main,.frontend-game-menu) .menu-buttons{width:82%}
 }
-@media(max-aspect-ratio:3/4){
-  .frontend-main{width:min(92%,600px)}
-  .frontend-main .menu-buttons{width:min(82%,440px)}
+@media (pointer:coarse) and (orientation:landscape){
+  :is(.frontend-main,.frontend-game-menu){--menu-row:11cqh;--menu-label:4.75cqh}
 }
 
 /* Submenus sit over the same center panel. */
@@ -84,9 +88,33 @@
 .frontend-scenarios>header{flex:none}
 .scenario-browser{display:grid;grid-template-columns:340px minmax(0,1fr);flex:1;min-height:0;gap:28px}
 .scenario-list.menu-buttons{display:flex;flex-direction:column;align-items:stretch;gap:14px;overflow:auto;min-height:0;padding:9px 15px 14px 9px;border-right:1px solid #7e6a47;scrollbar-width:thin;scrollbar-color:#a88a51 #141311;overscroll-behavior:contain}
-.frontend .scenario-choice.menu-button{flex:none;min-height:66px;height:auto;padding:15px 12px 16px 52px;font-size:29px;white-space:normal;line-height:1}
-.scenario-list:not(:hover):not(:has(:focus-visible)) .is-selected::after{opacity:1}
-.scenario-list:not(:hover):not(:has(:focus-visible)) .is-selected{color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99}
+.frontend .scenario-choice.menu-button{flex:none;min-height:66px;height:auto;padding:15px 12px 16px 34px;font-size:29px;white-space:normal;line-height:1}
+.scenario-list:not(:hover):not(:has(:focus-visible)) .is-selected{color:#fff7dc;text-shadow:2px 2px 0 #5a3206,0 0 10px #8a4b0a99;--menu-button-lit:1}
+
+/* Keep the 64 × 47 stud slice proportional as the surrounding plate stretches. */
+.menu-plate{
+  --plate-scale:var(--plate-unit,.6px);
+  position:absolute;
+  inset:-5px;
+  z-index:-1;
+  display:grid;
+  grid-template-rows:1fr calc(47 * var(--plate-scale)) 1fr;
+  pointer-events:none;
+}
+:is(.frontend-main,.frontend-game-menu) .menu-plate{inset:calc(-6 * var(--menu-unit)) calc(-8 * var(--menu-unit))}
+.menu-plate>span{position:relative}
+.menu-plate>span::before,.menu-plate>span::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  border:solid transparent;
+  border-width:var(--plate-top,0px) calc(22 * var(--plate-scale)) var(--plate-bottom,0px) calc(64 * var(--plate-scale));
+  border-image:url('/assets/runtime/ui/main-menu/button.png') var(--plate-slice) fill;
+}
+.menu-plate>span::after{border-image-source:url('/assets/runtime/ui/main-menu/button-active.png');opacity:var(--menu-button-lit,0);transition:opacity .12s}
+.menu-plate>span:first-child{--plate-slice:21 22 63 64;--plate-top:calc(21 * var(--plate-scale));margin-bottom:-1px}
+.menu-plate>span:nth-child(2){--plate-slice:21 22 17 64;z-index:1}
+.menu-plate>span:last-child{--plate-slice:67 22 17 64;--plate-bottom:calc(17 * var(--plate-scale));margin-top:-1px}
 .scenario-information{display:grid;grid-template-columns:minmax(0,1fr) 240px;grid-template-rows:auto minmax(0,1fr) auto;gap:14px 24px;min-height:0;overflow:auto;padding:0 9px 8px 0;scrollbar-width:thin;scrollbar-color:#a88a51 #141311}
 .scenario-heading{grid-column:1/-1}
 .frontend .scenario-heading h2{margin:0 0 5px;font-size:35px;color:#f4d68e}
@@ -96,12 +124,7 @@
 .scenario-world figcaption{margin-top:10px;color:#aaa184;text-align:center;font-size:17px}
 .scenario-copy{grid-column:2;grid-row:2;align-self:start}
 .scenario-description{margin:0;font-size:21px;line-height:1.25;color:#e8d3a6}
-.scenario-features{margin:18px 0 0;padding-left:19px;font-size:19px;line-height:1.3;color:#cfc7aa}
-.scenario-features li+li{margin-top:7px}
-.frontend .scenario-start.menu-button{grid-column:2;grid-row:3;justify-content:center;width:100%;height:54px;margin:5px 0;padding:0 8px 3px;font-size:27px;text-align:center}
-.frontend .scenario-start.menu-button:hover:not(:disabled)::after,.frontend .scenario-start.menu-button:focus-visible::after{opacity:1}
-.frontend-scenarios .frontend-back{border:0;border-radius:0;box-shadow:none;background:url('/assets/runtime/ui/main-menu/button.png') center/100% 100% no-repeat;text-align:center;padding:8px 24px;color:#f2e4ba}
-.frontend-scenarios .frontend-back:hover,.frontend-scenarios .frontend-back:focus-visible{background:url('/assets/runtime/ui/main-menu/button-active.png') center/100% 100% no-repeat}
+.frontend .scenario-start.menu-button{grid-column:2;grid-row:3;justify-content:center;width:100%;height:54px;margin:5px 0;padding:0 8px 3px 30px;font-size:27px;text-align:center;white-space:normal}
 .frontend-panel>*{min-width:0}
 .frontend-panel>header{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
 .frontend h1{flex:1;min-width:0;margin:0;color:#f4d68e;font-size:34px;line-height:1.05;font-weight:700;text-shadow:2px 2px 0 #120f08;overflow-wrap:anywhere}
@@ -174,9 +197,7 @@ dl.frontend-controls dd{margin:0;color:#cfc7aa;min-width:0;overflow-wrap:anywher
 .save-list strong{font-size:24px;color:#f4d68e;overflow-wrap:anywhere}
 .save-list span{font-size:17px;color:#cfc7aa;overflow-wrap:anywhere}
 .save-list .save-seed{color:#aaa184;font-size:16px}
-/* Reuse the generated brass plates for save controls. */
-.frontend-saves :is(.save-button,.frontend-back){border:0;border-radius:0;box-shadow:none;background:url('/assets/runtime/ui/main-menu/button.png') center/100% 100% no-repeat;text-align:center;padding:12px 20px;color:#f2e4ba}
-.frontend-saves :is(.save-button,.frontend-back):hover:not(:disabled){background:url('/assets/runtime/ui/main-menu/button-active.png') center/100% 100% no-repeat}
+.frontend .menu-button:is(.save-button,.frontend-back){height:44px;justify-content:center;padding:0 14px 2px 32px;font-size:21px;text-align:center}
 .save-list .save-button{justify-self:start;min-width:130px;margin-top:7px}
 .credits-list{display:grid;gap:4px;margin:0}
 .credits-list dt{margin-top:10px;color:#f4d68e;font-size:19px}
@@ -199,57 +220,36 @@ div.frontend-loading{display:grid;justify-items:center;gap:12px;padding:0}
 .game-area.frontend-active :is(.resource-bar,.hud,.selection-panel,#paused,#build-status,#tile-tooltip,#leader-action-feedback){visibility:hidden}
 .game-area.frontend-active #world{cursor:default}
 
-.frontend.in-game { background: #100d0bb3; }
+.frontend.in-game:not(.is-world-generation) {
+  background: #100d0b80;
+  backdrop-filter: sepia(1);
+  animation: frontend-menu-fade 280ms ease-out;
+}
 .frontend.in-game > .menu-back { display: none; }
-.frontend.in-game > .menu-front { padding: 16px; }
-.frontend.in-game .dialog { max-height: calc(100dvh - 32px); }
-.frontend.in-game .dialog h1 {
-  margin: 0 0 16px;
-  padding: 0 44px 16px 0;
-  border-bottom: 2px solid var(--popup-edge);
-  color: var(--popup-ink);
-  font: 700 24px/28px var(--game-font);
+@keyframes frontend-menu-fade {
+  from { background-color: transparent; backdrop-filter: sepia(0); }
 }
-.frontend.in-game .dialog header { position: relative; }
-.frontend.in-game .dialog header h1 { padding-right: 92px; }
-.frontend.in-game .dialog .frontend-back { position: absolute; top: 0; right: 0; min-height: 28px; padding: 3px 12px; }
-.frontend.in-game .dialog button:not(.close-dialog) {
-  border: 2px solid transparent;
-  border-radius: 0;
-  border-image: var(--popup-button-art) 8 12 8 12 fill / 6px 8px / 0 stretch;
-  background: var(--popup-surface);
-  box-shadow: none;
-}
-.frontend.in-game .save-form { padding-bottom: 0; border: 0; }
-.frontend.in-game input[type=range] { width: 100%; padding: 0; border: 0; box-shadow: none; }
-.frontend.in-game input[type=checkbox] { width: 22px; padding: 0; }
-.frontend.in-game .frontend-controls { grid-template-columns: minmax(76px, 1fr) minmax(0, 2fr); font-size: 16px; }
-.game-menu-actions { display: grid; gap: 8px; }
-.frontend .frontend-game-menu { width: min(344px, 100%); }
-.game-menu-actions button { text-align: left; }
-.game-menu-actions button:last-child { margin-top: 8px; }
 
 /* Compact submenu controls. */
 .is-compact .menu-sheet{max-width:min(100%,560px);font-size:18px}
 .is-compact .frontend-scenarios.menu-sheet{max-width:min(100%,900px);height:100%;min-height:450px;padding:16px}
 .is-compact .scenario-browser{grid-template-columns:minmax(130px,32%) minmax(0,1fr);gap:15px}
 .is-compact .scenario-list.menu-buttons{padding:9px 12px 9px 5px;gap:12px}
-.frontend.is-compact .scenario-choice.menu-button{aspect-ratio:auto;min-height:58px;padding:12px 8px 12px 18%;font-size:clamp(18px,3.4vw,26px)}
+.frontend.is-compact .scenario-choice.menu-button{aspect-ratio:auto;min-height:58px;padding:12px 8px 12px 31px;font-size:clamp(18px,3.4vw,26px)}
 .is-compact .scenario-information{display:flex;flex-direction:column;gap:14px;padding-right:2px}
 .is-compact .scenario-heading h2{font-size:28px}
 .is-compact .scenario-heading>span{font-size:16px}
 .is-compact .scenario-world{flex:none;min-height:110px;padding:8px}
 .is-compact .scenario-world img{max-height:230px}
 .is-compact .scenario-description{font-size:18px}
-.is-compact .scenario-features{font-size:17px;margin-top:12px}
 .frontend.is-compact .scenario-start.menu-button{aspect-ratio:auto;min-height:50px;font-size:22px;margin-top:auto}
 .is-compact .server-create,.is-compact .lobby-profile{grid-template-columns:1fr}
 .is-compact .server-create>*{grid-column:1!important}
 .is-compact dl.frontend-controls{grid-template-columns:105px minmax(0,1fr);font-size:16px;gap:10px}
 .is-compact .frontend table{table-layout:fixed}
 .is-compact .frontend th,.is-compact .frontend td{white-space:normal;overflow-wrap:anywhere;padding:8px 4px;font-size:14px}
-@media(prefers-reduced-motion:reduce){.frontend *{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){.frontend,.frontend *{animation:none!important;transition:none!important}}
 
 .network-status{position:absolute;z-index:6;top:54px;right:270px;max-width:320px;padding:6px 10px;font:14px/1.3 var(--game-font);pointer-events:none}
 .game-area.frontend-active #network-status{visibility:hidden}
-@media(max-width:720px){.network-status{top:66px;right:auto;left:10px;max-width:160px;font-size:12px}}
+@container game-area (max-width:720px){.network-status{top:66px;right:auto;left:10px;max-width:160px;font-size:12px}}

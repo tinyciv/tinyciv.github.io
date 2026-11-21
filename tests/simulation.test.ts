@@ -9,7 +9,7 @@ import { type GameState, type InputState, type Overlay, type World, distance, ti
 import { atWar, buildAt, createGame, diplomacyAction, getLeader, housingCapacity, interactAt, MARAUDER_FACTION, migrateGame, recallRetinue, setRetinueOrder, updateGame, updateLeaderRespawns, validateBuildAt } from '../src/game/simulation';
 import { canMove, canWalk, findPath, movementMultiplier } from '../src/game/pathfinding';
 import { generateWorld, terrainYields } from '../src/world/generator';
-import { FIELD_HARVEST_SECONDS, synchronizeFarms } from '../src/game/farms';
+import { synchronizeFarms } from '../src/game/farms';
 import { updateFogRaids } from '../src/game/fog-raids';
 import { getFactionStrategy } from '../src/game/faction-strategy';
 import { citySummaries } from '../src/game/cities';
@@ -72,14 +72,14 @@ describe('settlements and economy', () => {
     for (const faction of a.factions.filter(faction => faction.villageId === undefined)) {
       expect([faction.food, faction.gold, faction.production]).toEqual([500, faction.id === 0 ? 500 : 1600, 0]);
       expect(faction.population).toBe(faction.id === 0 ? 20 : 5);
-      expect(housingCapacity(a, faction.id)).toBe(faction.id === 0 ? 20 : 12);
+      expect(housingCapacity(a, faction.id)).toBe(faction.id === 0 ? 24 : 12);
       const camps = a.buildings.filter(building => building.faction === faction.id && building.kind === 'camp');
       expect(camps.length).toBeGreaterThan(2);
       expect(camps.every(camp => camp.residents === 0)).toBe(true);
       expect(camps.every(camp => camp.capacity === 0)).toBe(true);
       const houses = a.buildings.filter(building => building.faction === faction.id && building.kind === 'house');
-      expect(houses).toHaveLength(faction.id === 0 ? 8 : 4);
-      expect(houses.map(house => house.residents)).toEqual(faction.id === 0 ? [2, 2, 2, 2, 2, 2, 2, 2] : [2, 2, 1, 0]);
+      expect(houses).toHaveLength(faction.id === 0 ? 10 : 4);
+      expect(houses.map(house => house.residents)).toEqual(faction.id === 0 ? [2, 2, 2, 2, 2, 2, 2, 2, 0, 0] : [2, 2, 1, 0]);
       expect(a.buildings.filter(building => building.faction === faction.id && building.kind === 'road')).toHaveLength(36);
       expect(a.units.filter(unit => unit.faction === faction.id && unit.kind === 'warrior')).toHaveLength(faction.id === 0 ? 5 : 4);
       const workers = a.units.filter(unit => unit.faction === faction.id && unit.collector);
@@ -96,29 +96,19 @@ describe('settlements and economy', () => {
   it('harvests into physical bags before delivery and grows population into ready housing', () => {
     const state = game(), player = state.factions[0];
     const food = player.food;
-    advance(state, 29);
+    const firstHarvest = Math.min(...state.fields!.filter(field => field.faction === 0 && field.planted).map(field => field.nextHarvest));
+    expect(firstHarvest).toBe(8);
+    advance(state, firstHarvest - .01);
     expect(player.food).toBe(food);
     expect(state.fields!.every(field => field.food === 0)).toBe(true);
-    advance(state, 1);
-    expect(state.tick).toBe(1);
-    // All initial beds are occupied: credit waits for the first new house.
-    expect(player.population).toBe(20);
-    expect(state.buildings.find(building => building.kind === 'palace' && building.faction === 0)!.populationGrowth).toBeGreaterThan(0);
-    // Four garden rations and twenty consumed; births wait for housing.
-    expect(player.food).toBe(food + 4 - 20);
-    expect(state.fields!.every(field => field.food === 0)).toBe(true);
-    const firstHarvest = Math.min(...state.fields!.filter(field => field.faction === 0 && field.planted).map(field =>
-      field.nextHarvest + Math.max(0, Math.ceil(((field.wheatYieldAfter ?? field.nextHarvest) - field.nextHarvest - 1e-7)
-        / FIELD_HARVEST_SECONDS)) * FIELD_HARVEST_SECONDS));
     advance(state, firstHarvest - state.time + CHECK_INTERVAL + .001);
     expect(state.fields!.some(field => field.faction === 0 && field.food > 0)).toBe(true);
-    const storedBeforeDelivery = player.food, harvestTick = state.tick;
-    advance(state, Math.min(20, (harvestTick + 1) * 30 - state.time - .001));
-    // No next consumption tick has fired yet: only returning couriers can
-    // increase these stores, not theoretical yields or uncollected crops.
-    expect(state.tick).toBe(harvestTick);
-    expect(player.food).toBeGreaterThan(storedBeforeDelivery);
-    advance(state, 60);
+    expect(player.food).toBe(food);
+    advance(state, 30 - state.time - .001);
+    expect(state.tick).toBe(0);
+    expect(player.food).toBeGreaterThan(food);
+    advance(state, .002);
+    expect(state.tick).toBe(1);
     expect(player.population).toBeGreaterThan(20);
     expect(housingCapacity(state)).toBeGreaterThanOrEqual(player.population);
     expect(state.buildings.filter(building => building.kind === 'house').every(building => building.capacity === 2)).toBe(true);

@@ -21,6 +21,7 @@ export interface RoadPurchase {
   step(currentState?: GameState): RoadPurchaseResult;
   /** Stop an unfinished gesture; accepted cells and their queued cleanup remain. */
   finish(): RoadPurchaseResult;
+  cancelMatching(matches: (point: Point) => boolean): number;
   readonly result: RoadPurchaseResult;
   readonly kind: LinearPurchaseKind;
   /** Number of unique finite input cells, including free/existing cells. */
@@ -122,6 +123,20 @@ export function createLinearPurchase(state: GameState, kind: LinearPurchaseKind,
     get remaining() { return remaining ??= Object.freeze([...pending.values()]); },
     get result() { return result(); },
     finish: () => finish(),
+    cancelMatching(matches) {
+      let count = 0;
+      for (const [index, point] of pending) {
+        if (!matches(point)) continue;
+        reserved?.delete(point.y * width + point.x);
+        remove(index); count++;
+      }
+      skipped += count;
+      if (count) {
+        message ||= 'Placement cancelled.';
+        if (!pending.size) finish();
+      }
+      return count;
+    },
     step(currentState = state) {
       if (done) return result();
       const leader = getLeader(state, faction), owner = state.factions.find(candidate => candidate.id === faction);

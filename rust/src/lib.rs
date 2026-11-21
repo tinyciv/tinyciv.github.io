@@ -19,12 +19,16 @@ mod village_plan;
 mod settlement;
 mod sim;
 mod rivers;
+mod fjord_coasts;
 mod relief;
 mod woodland;
+mod forest_ponds;
 mod ore;
 mod terrain_sites;
 mod terrain_rays;
 mod frost;
+mod longitude_climate;
+mod fertility_grass;
 
 use std::cell::RefCell;
 
@@ -35,8 +39,11 @@ thread_local! {
     static HERMIT_PLAN: RefCell<sim::quest_hermits::Planner> = RefCell::new(sim::quest_hermits::Planner::default());
     static RELIEF: RefCell<relief::Relief> = RefCell::new(relief::Relief::default());
     static WOODLAND: RefCell<woodland::Woodland> = RefCell::new(woodland::Woodland::default());
+    static LONGITUDE_CLIMATE: RefCell<longitude_climate::LongitudeClimate> = RefCell::new(longitude_climate::LongitudeClimate::default());
     static RIVERS: RefCell<rivers::Rivers> = RefCell::new(rivers::Rivers::default());
+    static FJORD_COASTS: RefCell<fjord_coasts::CoastDraft> = RefCell::new(fjord_coasts::CoastDraft::default());
     static FROST: RefCell<frost::WinterTerrain> = RefCell::new(frost::WinterTerrain::default());
+    static FERTILITY_GRASS: RefCell<fertility_grass::FertilityGrass> = RefCell::new(fertility_grass::FertilityGrass::default());
     static NAVIGATION: RefCell<navigation::Navigation> = RefCell::new(navigation::Navigation::default());
     static OUTPUT: RefCell<[f64; 8]> = const { RefCell::new([0.0; 8]) };
     static HEALTH: RefCell<health::Engines> = RefCell::new(health::Engines::default());
@@ -63,6 +70,10 @@ pub extern "C" fn terrain_rays_clear(handle: u32, sx: f64, sy: f64, tx: f64, ty:
     TERRAIN_RAYS.with_borrow(|t| t.get(handle).terrain().0.first_blocked(sx, sy, tx, ty, visible_target != 0).is_none() as u32)
 }
 #[unsafe(no_mangle)]
+pub extern "C" fn terrain_rays_sight_penalty(handle: u32, sx: f64, sy: f64, tx: f64, ty: f64) -> f64 {
+    TERRAIN_RAYS.with_borrow(|t| t.get(handle).terrain().0.sight_penalty(sx, sy, tx, ty))
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn terrain_rays_nearby(handle: u32, x: f64, y: f64, radius: f64) -> u32 {
     TERRAIN_RAYS.with_borrow(|t| t.get(handle).terrain().0.nearby(x, y, radius) as u32)
 }
@@ -80,8 +91,12 @@ pub extern "C" fn terrain_rays_landmark_visible(handle: u32, cell: usize, kind: 
 #[unsafe(no_mangle)]
 pub extern "C" fn relief_input(length: usize) -> *mut f64 { RELIEF.with_borrow_mut(|r| r.prepare(length)) }
 #[unsafe(no_mangle)]
-pub extern "C" fn ledge_generate(width: usize, height: usize, seed: u32, coverage: f64) -> *const f64 {
-    RELIEF.with_borrow_mut(|relief| relief.ledges(width, height, seed, coverage))
+pub extern "C" fn fjord_coasts_input(count: usize) -> *mut u8 {
+    FJORD_COASTS.with_borrow_mut(|coasts| coasts.prepare(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn fjord_coasts_generate(width: usize, height: usize, seed: u32, polar_lane: usize) -> *const u8 {
+    FJORD_COASTS.with_borrow_mut(|coasts| coasts.generate(width, height, seed, polar_lane))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn woodland_input(count: usize) -> *mut f64 {
@@ -89,7 +104,19 @@ pub extern "C" fn woodland_input(count: usize) -> *mut f64 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn woodland_generate(width: usize, height: usize, seed: u32, patch_scale: f64) -> *const u8 {
-    WOODLAND.with_borrow_mut(|woodland| woodland.generate(width, height, seed, patch_scale))
+    WOODLAND.with_borrow_mut(|woodland| woodland.generate(width, height, seed, patch_scale, woodland::WoodlandLayout::Open))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn forest_biomes_generate(width: usize, height: usize, seed: u32, patch_scale: f64) -> *const u8 {
+    WOODLAND.with_borrow_mut(|woodland| woodland.generate(width, height, seed, patch_scale, woodland::WoodlandLayout::Dense))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn forest_ponds_generate(width: usize, height: usize, seed: u32, density: f64) -> *const u8 {
+    WOODLAND.with_borrow_mut(|woodland| woodland.generate(width, height, seed, density, woodland::WoodlandLayout::Ponds))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn longitude_climate_generate(width: usize) -> *const f64 {
+    LONGITUDE_CLIMATE.with_borrow_mut(|climate| climate.generate(width))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn relief_prune_mountains(width: usize, height: usize) -> *const f64 { RELIEF.with_borrow_mut(|r| r.prune_mountains(width, height)) }
@@ -104,6 +131,10 @@ pub extern "C" fn terrain_sites_calculate(width:usize,height:usize)->*const u8 {
 #[unsafe(no_mangle)]
 pub extern "C" fn terrain_sites_mountain_gap()->u32 { terrain_sites::MOUNTAIN_GAP as u32 }
 #[unsafe(no_mangle)]
+pub extern "C" fn terrain_sites_opening_library(span: i32, origin: i32) -> i32 {
+    TERRAIN_SITES.with_borrow(|sites| sites.opening_library(span, origin))
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn ore_generate(width:usize,height:usize,seed:u32,first_group:u32,tutorial:u32)->*const f64 { ORES.with_borrow_mut(|o|o.generate(width,height,seed,first_group,tutorial!=0)) }
 #[unsafe(no_mangle)]
 pub extern "C" fn ore_produce_gold(cells:usize,now:f64,due:f64,interval:f64)->*const f64 { ORES.with_borrow_mut(|o|o.produce_gold(cells,now,due,interval)) }
@@ -112,7 +143,7 @@ pub extern "C" fn resource_habitats(width:usize,height:usize)->*const f64 { ORES
 #[unsafe(no_mangle)]
 pub extern "C" fn resource_group_limit(resource:u32)->u32 { ore::group_limit(resource) }
 #[unsafe(no_mangle)]
-pub extern "C" fn resource_ground_policy(resource:u32,behind_front:u32)->u32 { ore::footprint_ground_policy(resource,behind_front!=0) }
+pub extern "C" fn resource_ground_policy(resource:u32)->u32 { ore::ground_policy(resource) }
 #[unsafe(no_mangle)]
 pub extern "C" fn prefer_marble_quarry(owned:u32, developed:u32, anchor:u32, current:u32, current_anchor:u32) -> u32 {
     ore::prefer_marble_quarry(owned, developed, anchor, current, current_anchor) as u32
@@ -219,6 +250,12 @@ pub extern "C" fn sim_fort_upgrade(handle: u32, id: f64, level: u32, gold: f64, 
 #[unsafe(no_mangle)]
 pub extern "C" fn progression_constant(index: u32) -> f64 { progression::constant(index) }
 #[unsafe(no_mangle)]
+pub extern "C" fn opening_house_credit(orders: u32) -> f64 { progression::opening_house_credit(orders) }
+#[unsafe(no_mangle)]
+pub extern "C" fn opening_harvest_seconds(seed: u32, x: i32, y: i32, cycle_seconds: f64) -> f64 {
+    progression::opening_harvest_seconds(seed, x, y, cycle_seconds)
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn progression_xp_required(level: f64) -> f64 { progression::xp_required(level) }
 #[unsafe(no_mangle)]
 pub extern "C" fn progression_skill_cap(skill: u32) -> f64 { progression::skill_cap(skill) }
@@ -260,15 +297,20 @@ pub extern "C" fn combat_incoming_damage(kills: f64, damage: f64) -> f64 { comba
 #[unsafe(no_mangle)]
 pub extern "C" fn combat_attack_damage(attack: f64, defense: f64) -> f64 { combat::attack_damage(attack, defense) }
 #[unsafe(no_mangle)]
+pub extern "C" fn combat_tower_damage(attack: f64, defense: f64) -> f64 { combat::tower_damage(attack, defense) }
+#[unsafe(no_mangle)]
 pub extern "C" fn combat_record_kill(kills: f64) -> f64 { combat::record_kill(kills) }
 #[unsafe(no_mangle)]
-pub extern "C" fn combat_unit_attack(scout: u32, attack: f64, kills: f64, weapon: u32, equipment: f64, archer_multiplier: f64, raider: u32, strength: f64, technology_bonus: f64, raider_bonus: f64, culture: u32, context: u32, quests: u32, unpaid: u32) -> f64 {
+pub extern "C" fn combat_unit_attack(kind: u32, attack: f64, kills: f64, weapon: u32, equipment: f64, archer_multiplier: f64, raider: u32, strength: f64, technology_bonus: f64, raider_bonus: f64, culture: u32, context: u32, quests: u32, unpaid: u32) -> f64 {
+    let scout = u32::from(kind == sim::kinds::unit::SCOUT);
     combat::unit_attack_cultural(scout, attack, kills, weapon, equipment, archer_multiplier, raider, strength, technology_bonus, raider_bonus, culture, context, quests)
-        * combat::upkeep_combat_multiplier(unpaid == 0)
+        * combat::upkeep_combat_multiplier(unpaid == 0) * combat::unit_hit_multiplier(kind)
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn combat_unit_damage(scout: u32, attack: f64, kills: f64, weapon: u32, equipment: f64, archer_multiplier: f64, raider: u32, strength: f64, technology_bonus: f64, raider_bonus: f64, defense: f64, culture: u32, context: u32, quests: u32) -> f64 {
+pub extern "C" fn combat_unit_damage(kind: u32, attack: f64, kills: f64, weapon: u32, equipment: f64, archer_multiplier: f64, raider: u32, strength: f64, technology_bonus: f64, raider_bonus: f64, defense: f64, culture: u32, context: u32, quests: u32, unpaid: u32) -> f64 {
+    let scout = u32::from(kind == sim::kinds::unit::SCOUT);
     combat::unit_damage_cultural(scout, attack, kills, weapon, equipment, archer_multiplier, raider, strength, technology_bonus, raider_bonus, defense, culture, context, quests)
+        * combat::upkeep_combat_multiplier(unpaid == 0) * combat::unit_hit_multiplier(kind)
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn combat_unit_defense(defense: f64, kills: f64, armor: u32, equipment: f64, brace: f64, technology_bonus: f64, raider_bonus: f64, culture: u32, context: u32, unpaid: u32) -> f64 {
@@ -298,14 +340,20 @@ pub extern "C" fn population_configure(handle: u32, cities: u32, houses: u32) ->
     POPULATION.with_borrow_mut(|engines| engines.get_mut(handle).configure(cities as usize, houses as usize))
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn population_run(handle: u32, food: f64, population: f64, hunting: f64, unfed: f64, growth: f64, achievements: u32) -> *const f64 {
+pub extern "C" fn population_run(handle: u32, food: f64, population: f64, hunting: f64, unfed: f64, growth: f64,
+    achievements: u32, opening_id: f64, opening_peak: f64) -> *const f64 {
+    let opening = (opening_id >= 0.0).then_some(population::OpeningCapital { id: opening_id as i64, peak: opening_peak });
     POPULATION.with_borrow_mut(|engines| engines.get_mut(handle).run_with_growth(food, population, hunting, unfed,
-        sim::achievements::effect(achievements, 4, growth, 0)))
+        sim::achievements::effect(achievements, 4, growth, 0), opening))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn population_opening_peak(handle: u32) -> f64 {
+    POPULATION.with_borrow_mut(|engines| engines.get_mut(handle).opening_peak())
 }
 
 /// 6: coastal village founding and native harbor commerce.
 #[unsafe(no_mangle)]
-pub extern "C" fn simulation_abi_version() -> u32 { 13 }
+pub extern "C" fn simulation_abi_version() -> u32 { 19 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn research_constant(index: u32) -> f64 { research::constant(index) }
@@ -322,7 +370,7 @@ pub extern "C" fn research_library_multiplier(count: u32) -> f64 { research::lib
 #[unsafe(no_mangle)]
 pub extern "C" fn research_graph_prepare(count: u32) -> *mut f64 { RESEARCH.with_borrow_mut(|values| values.prepare_graph(count as usize)) }
 #[unsafe(no_mangle)]
-pub extern "C" fn research_graph_commit(count: u32, fixed_costs: f64) { RESEARCH.with_borrow_mut(|values| values.commit_graph(count as usize, fixed_costs as u64)); }
+pub extern "C" fn research_graph_commit(count: u32) { RESEARCH.with_borrow_mut(|values| values.commit_graph(count as usize)); }
 #[unsafe(no_mangle)]
 pub extern "C" fn research_cost(branch: u32, bonus: f64, scenario: u32) -> f64 { RESEARCH.with_borrow(|values| values.cost(branch as usize, bonus, scenario==2)) }
 #[unsafe(no_mangle)]
@@ -534,7 +582,7 @@ pub extern "C" fn construction_access(x: f64, y: f64, width: i32, height: i32) -
 #[unsafe(no_mangle)]
 pub extern "C" fn water_cell_navigable(flags: u32) -> u32 {
     // A ford changes land traversal; boats still use the underlying water,
-    // including a ford on a creek. Ice, waterfalls and stairs are impassable.
+    // including a ford on a creek. Ice and waterfalls are impassable.
     u32::from(flags & (27 | 64) == 17 && (flags & 4 == 0 || flags & 32 != 0))
 }
 #[unsafe(no_mangle)]
@@ -546,6 +594,18 @@ pub extern "C" fn frost_input(count: usize) -> *mut u8 { FROST.with_borrow_mut(|
 #[unsafe(no_mangle)]
 pub extern "C" fn frost_generate(width: usize, height: usize, seed: u32) -> *const u16 {
     FROST.with_borrow_mut(|pockets| pockets.generate(width, height, seed))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn fertility_grass_input(count: usize) -> *mut u8 {
+    FERTILITY_GRASS.with_borrow_mut(|grass| grass.prepare(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn fertility_grass_generate(width: usize, height: usize, seed: u32, mirror: u32) -> *const u8 {
+    FERTILITY_GRASS.with_borrow_mut(|grass| grass.generate(width, height, seed, mirror != 0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn fertility_grass_soil(base: f64, density: u32) -> f64 {
+    fertility_grass::soil_with_grass(base, density.min(u8::MAX as u32) as u8)
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn rowboat_eligible(kind: u32, engineer: u32) -> u32 {
@@ -804,7 +864,9 @@ pub extern "C" fn ai_investment_constant(kind:u32, upkeep:u32)->f64 {sim::ai_inv
 #[unsafe(no_mangle)]
 pub extern "C" fn watchtower_upkeep(human:u32)->f64 {sim::maintenance::watchtower(human!=0)}
 #[unsafe(no_mangle)]
-pub extern "C" fn town_upkeep(cities: u32, discounted: u32) -> f64 { sim::maintenance::town(cities, discounted != 0) }
+pub extern "C" fn town_upkeep() -> f64 { sim::maintenance::SETTLEMENT_UPKEEP }
+#[unsafe(no_mangle)]
+pub extern "C" fn settlement_upkeep_grace() -> f64 { sim::maintenance::SETTLEMENT_UPKEEP_GRACE }
 #[unsafe(no_mangle)]
 pub extern "C" fn town_founding_residents(available: u32) -> u32 { sim::maintenance::founding_residents(available != 0) }
 #[unsafe(no_mangle)]
@@ -916,6 +978,92 @@ pub extern "C" fn sim_bird_plan(handle:u32,count:usize,now:f64,gx:f64,gy:f64,wan
     with_sim(handle,|game|game.world.resource_mut::<sim::bird_flocks::BirdFlocks>().plan(count,now,gx,gy,wandering!=0,fleeing!=0,tx,ty))
 }
 #[unsafe(no_mangle)]
+pub extern "C" fn deer_stat(index: u32) -> f64 { sim::deer_herds::stat(index) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_terrain_input(handle: u32, width: usize, height: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>().prepare_terrain(width, height))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_terrain_finish(handle: u32) -> usize {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>().finish_terrain())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_spawn_input(handle: u32, count: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>().prepare_spawn(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_exclude_herd(handle: u32, x: f64, y: f64) {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>().exclude_herd(x, y))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_spawn(handle: u32, seed: u32, groups: usize) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>().spawn(seed, groups))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_deer_waypoints(handle: u32, x: f64, y: f64, home_x: f64, home_y: f64,
+    threat_x: f64, threat_y: f64, fleeing: u32, seed: u32) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::deer_herds::DeerHerds>()
+        .waypoints((x, y), (home_x, home_y), (fleeing != 0).then_some((threat_x, threat_y)), seed))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn livestock_stat(species: usize, index: usize) -> f64 {
+    sim::livestock::stat(species, index)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn livestock_step(species: usize, remaining: f64, elapsed: f64) -> f64 {
+    sim::livestock::step(species, remaining, elapsed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn livestock_missing_fence_research(species: usize, animal_husbandry: f64, horseback_riding: f64) -> u32 {
+    sim::livestock::missing_fence_research(species, animal_husbandry, horseback_riding)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_terrain_input(handle: u32, width: usize, height: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().prepare_terrain(width, height))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_terrain_finish(handle: u32) {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().finish_terrain());
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_spawn_input(handle: u32, count: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().prepare_spawn(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_start_input(handle: u32, count: usize) -> *mut f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().prepare_starts(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_spawn(handle: u32, seed: u32) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().spawn(seed))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_herd_input(handle: u32, count: usize) -> *mut f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().prepare_herd(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_goals(handle: u32, seed: u32, home_x: f64, home_y: f64,
+    x: i32, y: i32, width: i32, height: i32) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>()
+        .goals(seed, (home_x, home_y), (x, y, width, height)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_access(handle: u32, x: f64, y: f64) -> u32 {
+    with_sim(handle, |game| game.world.resource::<sim::livestock::Livestock>().access(x, y))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_fence_plan(handle: u32, x: f64, y: f64) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().fence_plan(x, y))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_fence_input(handle: u32, count: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::livestock::Livestock>().prepare_fence(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_livestock_fence_finish(handle: u32) -> u32 {
+    with_sim(handle, |game| u32::from(game.world.resource_mut::<sim::livestock::Livestock>().finish_fence()))
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn galley_constant(index: u32, transport: u32) -> f64 { sim::galleys::constant(index, transport != 0) }
 #[unsafe(no_mangle)]
 pub extern "C" fn barbarian_galley_constant(index:u32)->f64{sim::barbarian_galleys::constant(index)}
@@ -923,6 +1071,10 @@ pub extern "C" fn barbarian_galley_constant(index:u32)->f64{sim::barbarian_galle
 pub extern "C" fn barbarian_galley_fleet(army:usize)->usize{sim::barbarian_galleys::fleet(army)}
 #[unsafe(no_mangle)]
 pub extern "C" fn barbarian_galley_board(occupant:f64,person:f64)->u32{sim::barbarian_galleys::can_board(occupant as i64,person as i64)as u32}
+#[unsafe(no_mangle)]
+pub extern "C" fn barbarian_galley_beach_step(remaining: f64, elapsed: f64) -> f64 {
+    sim::barbarian_galleys::beach_step(remaining, elapsed)
+}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_barbarian_input(handle:u32,n:usize)->*mut f64{with_sim(handle,|g|g.world.resource_mut::<sim::barbarian_galleys::BarbarianGalleys>().input(n))}
 #[unsafe(no_mangle)]
@@ -1089,12 +1241,28 @@ pub extern "C" fn battle_ready_shot(kind: u32, cooldown: f64, attack: f64, recal
     sim::battle_support::ready_shot(kind, cooldown, attack, recall != 0, forced != 0) as u32
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn farm_site_allowed(stair: u32) -> u32 { sim::battle_support::farm_site(stair) as u32 }
+pub extern "C" fn sim_farm_parcels_input(handle: u32, length: usize) -> *mut u32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::farm_parcels::FarmParcels>().input(length))
+}
 #[unsafe(no_mangle)]
-pub extern "C" fn governor_purchase_allowed(handle: u32, faction: f64, placing: u32, kind: u32) -> u32 {
+pub extern "C" fn sim_farm_parcels_plan(handle: u32, width: i32, height: i32, x: i32, y: i32, city: i32,
+    sites: usize, owned: usize) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::farm_parcels::FarmParcels>().plan(width, height, x, y, city, sites, owned))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_starting_farms_input(handle: u32, sites: usize, existing: usize) -> *mut f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::starting_farms::StartingFarms>().input(sites, existing))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_starting_farms_plan(handle: u32, width: i32, height: i32, sites: usize, target: f64) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::starting_farms::StartingFarms>().plan(width, height, sites, target))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn governor_purchase_allowed(handle: u32, faction: f64, placing: u32, spending_paused: u32, kind: u32) -> u32 {
     with_sim(handle, |game| {
         let intents = &game.world.resource::<sim::battle_support::BattleSupport>().placing_factions;
-        sim::battle_support::governor_purchase(faction, faction, placing != 0 || intents.contains(&(faction as i64)), kind) as u32
+        let placing = placing != 0 || intents.contains(&(faction as i64));
+        sim::battle_support::governor_purchase(placing || spending_paused != 0, kind) as u32
     })
 }
 #[unsafe(no_mangle)]
@@ -1109,6 +1277,8 @@ pub extern "C" fn sim_placement_intent(handle: u32, faction: f64, placing: u32) 
 pub extern "C" fn siege_attack(cannon: u32, attack: f64) -> f64 { sim::battle_support::siege_attack(cannon != 0, attack) }
 #[unsafe(no_mangle)]
 pub extern "C" fn siege_cooldown(cooldown: f64, dt: f64, fired: u32) -> f64 { sim::battle_support::siege_cooldown(cooldown, dt, fired != 0) }
+#[unsafe(no_mangle)]
+pub extern "C" fn siege_cannon_range() -> f64 { sim::battle_support::CANNON_RANGE }
 #[unsafe(no_mangle)]
 pub extern "C" fn tower_cooldown(cooldown: f64, dt: f64, fired: u32) -> f64 { sim::battle_support::tower_cooldown(cooldown, dt, fired != 0) }
 #[unsafe(no_mangle)]
@@ -1191,6 +1361,20 @@ pub extern "C" fn sim_scenario_channel(handle:u32,width:f64)->*const f64 {with_s
 #[unsafe(no_mangle)]
 pub extern "C" fn scenario_gold_income(scenario:u32,amount:f64,earned:u32)->f64 {sim::scenarios::gold_income(scenario,amount,earned!=0)}
 #[unsafe(no_mangle)]
+pub extern "C" fn sim_city_planning_input(handle: u32, cells: usize) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::city_planning::CityPlanning>().input(cells))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_city_street(handle: u32, palace_x: i32, palace_y: i32) -> *const i32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::city_planning::CityPlanning>().street(palace_x, palace_y))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_stone_exterior(handle: u32, width: usize, height: usize) -> *const u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::city_planning::CityPlanning>().stone_exterior(width, height))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn stone_city_wealth_bonus(taxable: f64) -> f64 { taxable * 0.20 }
+#[unsafe(no_mangle)]
 pub extern "C" fn sim_scenario_length(handle: u32) -> usize {
     with_sim(handle, |game| sim::scenarios::length(&game.world))
 }
@@ -1213,9 +1397,9 @@ pub extern "C" fn sim_scenario_access_audit(handle:u32,starts:usize)->*const f64
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_scenario_access_length(handle:u32)->usize{with_sim(handle,|g|g.world.resource::<sim::scenario_access::ScenarioAccess>().length())}
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_scenario_roads(handle:u32,targets:usize,roads:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::scenario_access::ScenarioAccess>().roads(targets,roads))}
+pub extern "C" fn sim_scenario_roads(handle:u32,targets:usize,roads:usize,owned_roads:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::scenario_access::ScenarioAccess>().roads(targets,roads,owned_roads))}
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_scenario_street_audit(handle:u32,targets:usize,roads:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::scenario_access::ScenarioAccess>().street_audit(targets,roads))}
+pub extern "C" fn sim_scenario_street_audit(handle:u32,targets:usize,roads:usize,owned_roads:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::scenario_access::ScenarioAccess>().street_audit(targets,roads,owned_roads))}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_scenario_street_sites(handle:u32,id:f64,roads:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::scenario_access::ScenarioAccess>().street_sites(id as i64,roads))}
 #[unsafe(no_mangle)]
@@ -1235,6 +1419,11 @@ pub extern "C" fn sim_retinue_set_fraction(handle: u32, role: u32, fraction: f64
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn sim_retinue_set_count(handle: u32, role: u32, count: f64, total: usize, schools: f64, unlocked: u32, trainable: u32) -> u32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::retinue::RetinueComposition>().set_count(role as usize, count, total, schools as u64, unlocked, trainable) as u32)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn sim_retinue_plan(handle: u32, total: f64, unlocked: u32) -> *const f64 {
     with_sim(handle, |game| game.world.resource_mut::<sim::retinue::RetinueComposition>().plan(total, unlocked))
 }
@@ -1243,13 +1432,27 @@ pub extern "C" fn sim_retinue_recruits_input(handle: u32) -> *mut f64 {
     with_sim(handle, |game| game.world.resource_mut::<sim::retinue::RetinueComposition>().2.as_mut_ptr())
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_retinue_recruit(handle: u32, schools: f64, spears_available: u32) -> u32 {
-    with_sim(handle, |game| game.world.resource::<sim::retinue::RetinueComposition>().recruit(schools as u64, spears_available != 0) as u32)
+pub extern "C" fn sim_retinue_recruit(handle: u32, schools: f64, spears_available: u32, horses_available: u32) -> u32 {
+    with_sim(handle, |game| game.world.resource::<sim::retinue::RetinueComposition>()
+        .recruit(schools as u64, spears_available != 0, horses_available != 0) as u32)
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn retinue_stat(role: u32, field: u32) -> f64 { sim::retinue::stat(role as usize, field as usize) }
 #[unsafe(no_mangle)]
 pub extern "C" fn retinue_upkeep(kind: u32) -> f64 { sim::retinue::upkeep(kind) }
+#[unsafe(no_mangle)]
+pub extern "C" fn fort_upkeep(brigade_capacity: u32) -> f64 { sim::forts::upkeep(brigade_capacity) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_retinue_payroll(handle: u32, gold: f64, due: f64) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::retinue::RetinuePayroll>().settle(gold, due))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_retinue_recruitment_tick(handle: u32, faction: f64, now: f64, next_at: f64, previous_interval: f64, starting_escort: u32) -> *const f64 {
+    with_sim(handle, |game| {
+        let barracks = game.world.resource::<sim::structures::StructureIndex>().ready_barracks(faction);
+        game.world.resource_mut::<sim::retinue::RetinueRecruitment>().tick(now, next_at, previous_interval, barracks, starting_escort != 0)
+    })
+}
 #[unsafe(no_mangle)]
 pub extern "C" fn retinue_uses_firearm(kind: u32, gunpowder: u32) -> u32 { sim::retinue::uses_firearm(kind, gunpowder != 0) as u32 }
 #[unsafe(no_mangle)]
@@ -1398,9 +1601,68 @@ pub extern "C" fn sim_work_reset(handle: u32) { with_sim(handle, |game| game.wor
 // ----------------------------------------------------------------- marauders
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_raider_provoke(handle: u32, camp: f64, faction: i32) { with_sim(handle, |game| game.raider_aggression().provoke(camp as i64, faction)) }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn camp_population(realms: usize) -> usize {
+    sim::camp_sites::CampSites::population(realms)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn camp_next_size(large: usize, small: usize, unavailable: u32) -> u32 {
+    sim::camp_sites::CampSites::next_size(large, small, unavailable)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn camp_capacity(compact: u32, supply: f64) -> f64 {
+    sim::camp_sites::CampSites::capacity(compact != 0, supply)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn camp_party(compact: u32, supply: f64, wanted: f64) -> f64 {
+    sim::camp_sites::CampSites::party(compact != 0, supply, wanted)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn camp_travel_limit() -> f64 { sim::camp_sites::MAX_TRAVEL_SECONDS }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_sites_input(handle: u32, count: usize, realms: usize) -> *mut f32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().input(count, realms))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_sites_points(handle: u32, count: usize) -> *mut f32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().points(count))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_sites_prepare(handle: u32, width: usize, height: usize, realms: usize) -> *const u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().prepare(width, height, realms))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_sites_order(handle: u32, width: usize, height: usize) -> *const u32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().order(width, height))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_sites_length(handle: u32) -> usize {
+    with_sim(handle, |game| game.world.resource::<sim::camp_sites::CampSites>().output_len())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_compact_input(handle: u32) -> *mut u8 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().compact_input())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_camp_compact(handle: u32, variant: usize) -> *const u32 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::camp_sites::CampSites>().compact(variant))
+}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_raider_may_attack(handle: u32, intensity: f64, camp: f64, faction: i32) -> u32 {
     with_sim(handle, |game| game.raider_aggression().may_attack(intensity, camp as i64, faction) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raider_population_cap(intensity: f64, now: f64, base: f64) -> f64 {
+    sim::marauders::population_cap(intensity, now, base)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raider_spawn_delay(intensity: f64, now: f64, seconds: f64) -> f64 {
+    sim::marauders::spawn_delay(intensity, now, seconds)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raider_retime_spawn(previous: f64, next: f64, origin: f64, now: f64, deadline: f64) -> f64 {
+    sim::marauders::retime_spawn(previous, next, origin, now, deadline)
 }
 /// Start of a simulation step for the hidden-marauder clocks.
 #[unsafe(no_mangle)]
@@ -1414,6 +1676,65 @@ pub extern "C" fn sim_marauder_charge(handle: u32, kind: u32, id: f64, dt: f64) 
 pub extern "C" fn sim_marauder_take(handle: u32, kind: u32, id: f64) -> f64 { with_sim(handle, |game| game.marauders().take(kind, id as i64)) }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_marauder_pack_due(handle: u32, pack: f64) -> u32 { with_sim(handle, |game| game.marauders().pack_due(pack as i64) as u32) }
+
+// ------------------------------------------------------------ raid director
+fn raid_director<R>(handle: u32, f: impl FnOnce(&mut sim::raid_director::RaidDirector) -> R) -> R {
+    with_sim(handle, |game| f(&mut game.world.resource_mut::<sim::raid_director::RaidDirector>()))
+}
+/// Once-per-second realm facts; returns the raid size to field now, or 0.
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_step(handle: u32, faction: i32, now: f64, intensity: f64, techs: f64, population: f64, gold: f64,
+    soldiers: f64, towers: f64, active: f64, alive: u32) -> f64 {
+    let facts = sim::raid_director::Facts { techs, population, gold, soldiers, towers, active, alive: alive != 0 };
+    raid_director(handle, |director| director.step(faction, now, intensity, facts))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_defer(handle: u32, faction: i32) { raid_director(handle, |director| director.defer(faction)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_reset(handle: u32) { raid_director(handle, |director| *director = Default::default()) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_launched(handle: u32, faction: i32, now: f64, raiders: f64, motive: u32, bands: f64) {
+    raid_director(handle, |director| director.launched(faction, now, raiders, motive, bands))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_cancel(handle: u32, faction: i32, raiders: f64) { raid_director(handle, |director| director.cancel(faction, raiders)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_loss(handle: u32, faction: i32, now: f64, weight: f64) { raid_director(handle, |director| director.loss(faction, now, weight)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_raider_lost(handle: u32, faction: i32) { raid_director(handle, |director| director.raider_lost(faction)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_pacify(handle: u32, faction: i32, now: f64) { raid_director(handle, |director| director.pacify(faction, now)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_claim_sea(handle: u32, faction: i32, intensity: f64, active: f64) -> u32 {
+    raid_director(handle, |director| director.claim_sea(faction, intensity, active) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_open(handle: u32, faction: i32) -> u32 { raid_director(handle, |director| director.open(faction) as u32) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_pacified(handle: u32, faction: i32, now: f64) -> u32 { raid_director(handle, |director| director.pacified(faction, now) as u32) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_era(handle: u32, faction: i32) -> f64 { raid_director(handle, |director| director.era_of(faction)) }
+/// Candidate rows for `sim_raid_choose` (`raid_director::CANDIDATE_WORDS` each).
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_input(handle: u32, rows: usize) -> *mut f64 { raid_director(handle, |director| director.input(rows)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_choose(handle: u32, faction: i32, budget: f64, gold: f64, soldiers: f64, rows: usize) -> *const f64 {
+    raid_director(handle, |director| director.choose(faction, budget, gold, soldiers, rows))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_raid_view(handle: u32, faction: i32) -> *const f64 { raid_director(handle, |director| director.view(faction)) }
+/// Raw raider stat by era: 0 HP, 1 attack, 2 defense.
+#[unsafe(no_mangle)]
+pub extern "C" fn raid_profile(era: f64, field: u32) -> f64 { sim::raid_director::profile(era).get(field as usize).copied().unwrap_or(f64::NAN) }
+#[unsafe(no_mangle)]
+pub extern "C" fn raid_equipment(era: f64) -> f64 { sim::raid_director::equipment(era) }
+#[unsafe(no_mangle)]
+pub extern "C" fn raid_archer_fraction(era: f64) -> f64 { sim::raid_director::archer_fraction(era) }
+#[unsafe(no_mangle)]
+pub extern "C" fn raid_sea_fleet(era: f64) -> f64 { sim::raid_director::sea_fleet(era) }
+/// Seaborne reference stat by era: 0 HP, 1 attack, 2 defense.
+#[unsafe(no_mangle)]
+pub extern "C" fn raid_sea_profile(era: f64, field: u32) -> f64 { sim::raid_director::sea_profile(era).get(field as usize).copied().unwrap_or(f64::NAN) }
 
 // ----------------------------------------------------------------- decisions
 #[unsafe(no_mangle)]
@@ -1446,6 +1767,22 @@ pub extern "C" fn sim_structure_near(handle: u32, faction: f64, x: f64, y: f64, 
     with_sim(handle, |game| game.structures().near(faction, x, y, radius, class) as u32)
 }
 #[unsafe(no_mangle)]
+pub extern "C" fn sim_structure_civic_count(handle: u32, faction: f64, palace: f64) -> u32 {
+    with_sim(handle, |game| game.structures().civic_count(faction, palace as i64))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn settlement_tier_term(tier: u32, field: u32) -> f64 {
+    sim::settlement_tiers::term(tier as usize, field)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn settlement_tier_for_population(population: f64) -> u32 {
+    sim::settlement_tiers::for_population(population)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn settlement_tier_upgrade(tier: u32, buildings: u32, gold: f64) -> u32 {
+    sim::settlement_tiers::upgrade(tier as usize, buildings, gold)
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn fountain_radius() -> i32 { sim::structures::FOUNTAIN_RADIUS }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_fountain_covers(handle: u32, faction: f64, x: f64, y: f64) -> u32 {
@@ -1461,10 +1798,26 @@ pub extern "C" fn sim_structure_arc_cell(handle: u32, cell: f64) -> u32 { with_s
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_structure_solid_at(handle: u32, x: f64, y: f64) -> u32 { with_sim(handle, |game| game.structures().solid_at(x, y) as u32) }
 #[unsafe(no_mangle)]
+pub extern "C" fn sim_structure_road_square(handle: u32, x: i32, y: i32, height: i32) -> u32 {
+    with_sim(handle, |game| game.structures().completes_road_square(x, y, height) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_has_ready_stone_walls(handle: u32) -> u32 {
+    with_sim(handle, |game| u32::from(game.structures().has_ready_stone_walls()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn farm_can_share_tile(kind: u32, same_owner: u32, ready: u32) -> u32 {
+    sim::structures::farm_can_share_tile(kind, same_owner != 0, ready != 0) as u32
+}
+#[unsafe(no_mangle)]
 pub extern "C" fn sim_structure_refresh_defenses(handle: u32) { with_sim(handle, |game| game.structure_refresh_defenses()) }
 /// [count, ids...] of the defensive buildings assigned to a palace.
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_structure_defenses(handle: u32, palace: f64) -> *const f64 { with_sim(handle, |game| game.structures().defenses(palace as i64)) }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_structure_fallen_city_claims(handle: u32, faction: f64, palace: f64, x: f64, y: f64) -> *const f64 {
+    with_sim(handle, |game| game.structure_fallen_city_claims(faction, palace as i64, x, y))
+}
 
 /// [time, tick, rng state, speed, paused, game over, victory, victory continued].
 #[unsafe(no_mangle)]
@@ -1513,6 +1866,10 @@ pub extern "C" fn sim_clock_set(handle: u32, time: f64, tick: f64) { with_sim(ha
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_clock_flags(handle: u32, speed: f64, paused: u32, game_over: u32, victory: u32, victory_continued: u32) {
     with_sim(handle, |game| game.set_flags(speed, paused != 0, game_over != 0, victory != 0, victory_continued != 0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_continue_as_observer(handle: u32) -> u32 {
+    with_sim(handle, |game| game.continue_as_observer() as u32)
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_advance(handle: u32, dt: f64) -> f64 { with_sim(handle, |game| game.advance(dt)) }
@@ -1606,6 +1963,20 @@ pub extern "C" fn sim_diplomacy_casualty(handle: u32, a: i32, b: i32, city: u32)
 #[unsafe(no_mangle)]
 pub extern "C" fn paved_road_speed(paved: u32) -> f64 {
     if paved != 0 { sim::paved_roads::PAVED_SPEED } else { sim::paved_roads::DIRT_SPEED }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_farm_road_crossing(handle: u32, width: u32, height: u32, faction: i32, x: f64, y: f64, nx: f64, ny: f64) {
+    with_sim(handle, |game| game.world.resource_mut::<sim::farm_roads::FarmRoads>().record(width, height, faction, [x, y], [nx, ny]));
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_farm_road_pending(handle: u32) -> u32 {
+    with_sim(handle, |game| u32::from(game.world.resource::<sim::farm_roads::FarmRoads>().pending()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_farm_road_candidates(handle: u32) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_scope(|world, mut roads: bevy_ecs::prelude::Mut<sim::farm_roads::FarmRoads>| {
+        roads.take(world.resource::<sim::structures::StructureIndex>())
+    }))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_paving_reset(handle: u32) { with_sim(handle, |g| sim::paved_roads::clear(&mut g.world)); }
@@ -1717,8 +2088,6 @@ pub extern "C" fn sim_exploration_length(handle:u32)->usize{with_sim(handle,|g|g
 #[unsafe(no_mangle)]
 pub extern "C" fn exploration_ranger(field:u32,value:f64,enabled:u32)->f64{sim::exploration::ranger(field,value,enabled!=0)}
 #[unsafe(no_mangle)]
-pub extern "C" fn exploration_town_upkeep(until:f64,now:f64,value:f64)->f64{sim::exploration::town_upkeep(until,now,value)}
-#[unsafe(no_mangle)]
 pub extern "C" fn exploration_ranger_recruit(entitled:f64,alive:f64)->u32{sim::exploration::ranger_recruit(entitled,alive) as u32}
 
 #[unsafe(no_mangle)]
@@ -1824,11 +2193,28 @@ pub extern "C" fn sim_offensive_status(handle: u32, faction: i32) -> *const f64 
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_offensive_input(handle: u32, members: usize, enemies: usize) -> *mut f64 { with_sim(handle, |g| g.world.resource_mut::<sim::offensive::Offensives>().prepare(members, enemies)) }
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_offensive_step(handle: u32, faction: i32, now: f64, members: usize, enemies: usize) -> *const f64 {
+pub extern "C" fn sim_offensive_route_start(handle: u32, faction: i32) -> *const f64 {
+    with_sim(handle, |g| g.world.resource::<sim::offensive::Offensives>().route_start(faction))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_offensive_route_input(handle: u32, points: usize) -> *mut f64 {
+    with_sim(handle, |g| g.world.resource_mut::<sim::offensive::Offensives>().prepare_route(points))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_offensive_set_route(handle: u32, faction: i32, points: usize) {
+    with_sim(handle, |g| g.world.resource_mut::<sim::offensive::Offensives>().set_route(faction, points));
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_offensive_step(handle: u32, faction: i32, now: f64, members: usize, enemies: usize, army_capacity: usize) -> *const f64 {
     with_sim(handle, |g| {
         let nav = g.world.resource::<sim::offensive::Offensives>().navigation;
-        MOVEMENT.with_borrow(|engines| g.world.resource_mut::<sim::offensive::Offensives>().step(faction, now, members, enemies,
-            |x, y, tx, ty| nav.is_none_or(|n| engines.get(n.engine).sweep(n.grid, x, y, tx, ty, n.blockers, n.forbidden))))
+        g.world.resource_scope(|world, mut orders: bevy_ecs::prelude::Mut<sim::offensive::Offensives>| {
+            let cannons = world.resource::<sim::field_cannons::FieldCannons>();
+            MOVEMENT.with_borrow(|engines| orders.step(faction, now, members, enemies, army_capacity,
+                |x, y, tx, ty| nav.is_none_or(|n| engines.get(n.engine).sweep(n.grid, x, y, tx, ty, n.blockers, 0)),
+                |x, y, tx, ty| nav.map_or_else(|| cannons.road_move(x, y, tx, ty),
+                    |n| engines.get(n.engine).sweep(n.grid, x, y, tx, ty, n.blockers, n.forbidden))))
+        })
     })
 }
 #[unsafe(no_mangle)]
@@ -1868,7 +2254,7 @@ pub extern "C" fn sim_offensive_ai_status(handle: u32, faction: i32) -> *const f
 pub extern "C" fn combat_record_kill_amount(kills: f64, amount: f64) -> f64 { combat::record_kill_amount(kills, amount) }
 
 
-// Civic economy, hospital care and control-point commands.
+// Civic economy and control-point commands.
 #[unsafe(no_mangle)]
 pub extern "C" fn civic_building_constant(kind: u32, property: u32) -> f64 { sim::civic_buildings::constant(kind, property) }
 #[unsafe(no_mangle)]
@@ -1876,8 +2262,8 @@ pub extern "C" fn sim_civic_prepare(handle: u32, words: usize) -> *mut f64 {
     with_sim(handle, |game| game.world.resource_mut::<sim::civic_buildings::CivicBuildings>().prepare(words))
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_civic_step(handle: u32, count: usize, now: f64, elapsed: f64) -> *const f64 {
-    with_sim(handle, |game| game.world.resource_mut::<sim::civic_buildings::CivicBuildings>().step(count, now, elapsed))
+pub extern "C" fn sim_civic_step(handle: u32, count: usize, elapsed: f64) -> *const f64 {
+    with_sim(handle, |game| game.world.resource_mut::<sim::civic_buildings::CivicBuildings>().step(count, elapsed))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_civic_mine_progress(handle: u32, id: f64, challenger: i32, progress: f64) {
@@ -1912,17 +2298,30 @@ pub extern "C" fn sim_defense_reset(handle:u32){with_sim(handle,|g|g.world.resou
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_geometry(handle:u32,width:i32,height:i32){with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().geometry(width,height));}
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_defense_site(handle:u32,id:f64,faction:i32,kind:u32,x:i32,y:i32,flags:u32){with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().site(id as i64,faction,kind,x,y,flags));}
+pub extern "C" fn sim_defense_patch(handle:u32){with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().patch());}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_defense_site(handle:u32,id:f64,faction:i32,kind:u32,x:i32,y:i32,flags:u32,attacked_at:f64){with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().site(id as i64,faction,kind,x,y,flags,attacked_at));}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_due(handle:u32,faction:i32,now:f64,interval:f64)->u32{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().due(faction,now,interval)as u32)}
 #[unsafe(no_mangle)]
-pub extern "C" fn sim_defense_owned(handle:u32,faction:i32)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().owned(faction))}
+pub extern "C" fn sim_defense_facts(handle:u32,faction:i32,now:f64)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().facts(faction,now))}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_city(handle:u32,faction:i32)->f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().next_city(faction))}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_towers(handle:u32,id:f64)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().towers(id as i64))}
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_defense_next(handle:u32,id:f64,now:f64,budget:usize)->*const f64{with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().next(id as i64,now,budget))}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_defense_plan_order(handle:u32,faction:i32,id:f64,now:f64,population:f64,allowed:u32)->*const f64 {
+    with_sim(handle, |g| {
+        let fortify = sim::ai_policy::policy(&g.world, faction).has(sim::ai_policy::FORTIFY_CITIES);
+        g.world.resource_mut::<sim::defense_placement::DefensePlacement>().plan_order(id as i64,now,population,allowed,fortify)
+    })
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_defense_reject_order(handle:u32,id:f64,kind:u32,x:i32,y:i32,now:f64) {
+    with_sim(handle,|g|g.world.resource_mut::<sim::defense_placement::DefensePlacement>().reject_order(id as i64,kind,x,y,now));
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_scout_tower_sites(handle: u32, id: f64, blocked: usize) -> *const f64 {
@@ -1945,6 +2344,11 @@ pub extern "C" fn sim_defense_rejected(handle:u32,id:f64){with_sim(handle,|g|g.w
 pub extern "C" fn civic_building_targetable(kind: u32, hp: f64) -> u32 { sim::civic_buildings::targetable(kind,hp) as u32 }
 #[unsafe(no_mangle)]
 pub extern "C" fn civic_building_removable(kind: u32) -> u32 { sim::civic_buildings::removable(kind) as u32 }
+#[unsafe(no_mangle)]
+pub extern "C" fn sim_order_overlaps(left: f64, top: f64, right: f64, bottom: f64,
+    x: f64, y: f64, width: f64, height: f64) -> u32 {
+    sim::civic_buildings::order_overlaps(left, top, right, bottom, x, y, width, height) as u32
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn sim_structure_changes(handle: u32, since: f64) -> *const f64 {

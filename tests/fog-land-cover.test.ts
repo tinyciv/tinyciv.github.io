@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { entityVisible, fogRenderMask, fogRevealMask, isExplored, pointInSight, updateFog } from '../src/game/fog';
 import { territory } from '../src/game/borders';
 import { landCoverSightCost, sightDistance } from '../src/game/sight';
+import { mountainLineClear } from '../src/game/terrain-rays-native';
 import type { Building, Faction, GameState, Overlay, Unit, World } from '../src/game/types';
 
 function fixture(overlay: Overlay = 'none'): GameState {
@@ -83,6 +84,20 @@ describe('land-cover line of sight', () => {
         // Fractional traversal matters at both edges of a tree tile.
         expect(sightDistance(state.world, { x: 11.75, y: 12.5 }, 12.25, 12.5)).toBeCloseTo(.25 + .25 / .3);
         expect(sightDistance(state.world, { x: 12.25, y: 12.5 }, 11.75, 12.5)).toBeCloseTo(.25 + .25 / .3);
+    });
+
+    it('reveals nearby rocks through the face of a formation while keeping its physical cover', () => {
+        const state = fixture(), { world } = state, [leader] = state.units;
+        for (const x of [11, 12, 13]) world.tiles[12 * world.width + x].rockRelief = 0;
+
+        expect(sightDistance(world, leader, 12.5, 12.5)).toBeCloseTo(2.75);
+        expect(pointInSight(updateFog(state), 12.5, 12.5)).toBe(true);
+        expect(pointInSight(updateFog(state), 18.5, 12.5)).toBe(false);
+        expect(mountainLineClear(world, leader, { x: 12.5, y: 12.5 })).toBe(false);
+
+        world.tiles[12 * world.width + 14].relief = 'mountains';
+        world.revision!++;
+        expect(sightDistance(world, leader, 15.5, 12.5)).toBe(Infinity);
     });
 
     it('handles diagonal corner crossings and boundary-aligned rays without extra obstruction', () => {

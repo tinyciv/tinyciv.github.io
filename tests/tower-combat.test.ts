@@ -36,9 +36,9 @@ describe('wooden guard tower combat', () => {
     expect(state.projectiles).toHaveLength(1);
     expect(state.projectiles![0]).toMatchObject({ attacker: keep.id, target: victim.id, kind: 'arrow', towerArrow: true,
       start: { x: 4, y: 11 }, startHeight: 1.2 });
-    expect(state.projectiles![0].damage).toBeCloseTo(5.95);
+    expect(state.projectiles![0].damage).toBeCloseTo(8.925);
     updateGame(state, .5, idle);
-    expect(victim.hp).toBeCloseTo(94.05);
+    expect(victim.hp).toBeCloseTo(91.075);
     expect(state.projectiles).toHaveLength(0);
     updateGame(state, .25, idle);
     expect(state.projectiles).toHaveLength(1);
@@ -56,16 +56,16 @@ describe('wooden guard tower combat', () => {
     expect(shots).toEqual([]);
   });
 
-  it('throws a javelin at range four for half Leader base damage, with armor applied on impact', () => {
+  it('throws a javelin at range four for 50% more damage after armor', () => {
     const state = fixture(), victim = unit(20, 'warrior', 16.5, 12.5);
     entityStore(state).units.add(victim);
     updateGame(state, .1, idle);
     expect(state.projectiles).toHaveLength(1);
     expect(state.projectiles![0]).toMatchObject({ attacker: 2, target: 20, startHeight: 1.2 });
-    expect(state.projectiles![0].damage).toBeCloseTo(5.95);
+    expect(state.projectiles![0].damage).toBeCloseTo(8.925);
     expect(victim.hp).toBe(100);
     updateGame(state, .4, idle);
-    expect(victim.hp).toBeCloseTo(94.05);
+    expect(victim.hp).toBeCloseTo(91.075);
     expect(state.bloodEffects).toHaveLength(1);
     expect(state.units[0].lastCombat).toBe(-60);
   });
@@ -124,7 +124,7 @@ describe('wooden guard tower combat', () => {
     updateGame(state, .1, idle);
     expect(state.projectiles![0].target).toBe(21);
     updateGame(state, .3, idle);
-    expect(exposed.hp).toBeCloseTo(94.05);
+    expect(exposed.hp).toBeCloseTo(91.075);
     expect(blocked.hp).toBe(100);
   });
 
@@ -133,7 +133,7 @@ describe('wooden guard tower combat', () => {
     entityStore(state).units.add(victim);
     entityStore(state).buildings.add(building(3, kind, 14, 12));
     updateGame(state, .5, idle);
-    expect(victim.hp).toBeCloseTo(94.05);
+    expect(victim.hp).toBeCloseTo(91.075);
     expect(state.bloodEffects).toHaveLength(1);
   });
 

@@ -6,12 +6,13 @@ import '../../src/ui/research-toolbar.css';
 import '../../src/ui/faction-diplomacy.css';
 import '../../src/ui/mobile-controls.css';
 import '../../src/ui/reference-buttons.css';
+import { fitGameHud } from '../../src/ui/game-viewport';
 
-interface Args { activeResearch: boolean; diplomacyOffers: number }
+interface Args { activeResearch: boolean; diplomacyOffers: number; spendingPaused: boolean }
 
 const meta: Meta<Args> = {
   title: 'Menu/Top HUD',
-  args: { activeResearch: false, diplomacyOffers: 2 },
+  args: { activeResearch: false, diplomacyOffers: 2, spendingPaused: false },
   parameters: { layout: 'fullscreen' },
 };
 export default meta;
@@ -26,7 +27,7 @@ export const NeedsLibrary: StoryObj<Args> = {
     const status = args.activeResearch ? `${label} · 110 game seconds remaining` : label;
     const researchIcon = args.activeResearch ? 'metalTools' : 'woodenTower';
     const diplomacy = args.diplomacyOffers > 0 ? `Diplomacy (${args.diplomacyOffers})` : 'Diplomacy';
-    host.innerHTML = `<header class="resource-bar" aria-label="Resources">
+    host.innerHTML = `<div class="game-hud"><header class="resource-bar" aria-label="Resources">
       <div class="resources">
         <div class="resource food" title="Food · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/food.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="food">484</strong><span id="food-yield">(+4)</span></div></div>
         <div class="resource gold" title="Gold · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/gold.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="gold">483</strong><span id="gold-yield">(+70)</span></div></div>
@@ -39,15 +40,20 @@ export const NeedsLibrary: StoryObj<Args> = {
         ${args.activeResearch ? '<span class="research-toolbar-eta" aria-hidden="true">110s</span>' : ''}
       </div>
       <div class="time-controls">
+        <button type="button" id="pause-spending" aria-pressed="${args.spendingPaused}" title="Pause automatic house and farm orders"><span class="icon control-symbol symbol-check" aria-hidden="true"></span><span>Pause Spending</span></button>
         <button type="button" id="diplomacy-menu" aria-haspopup="dialog">${diplomacy}</button>
         <button type="button" id="menu" aria-haspopup="dialog" title="Game menu"><span aria-hidden="true" class="menu-glyph"></span> Menu</button>
         <button type="button" id="pause" title="Resume (Space)" aria-label="Resume"><span aria-hidden="true" class="icon control-symbol symbol-play"></span></button>
         <button type="button" id="speed" title="Simulation speed" aria-label="Change simulation speed"><span class="speed-value">1×</span></button>
       </div>
-    </header>`;
+    </header></div>`;
+    fitGameHud(host);
+    const pauseSpending = host.querySelector<HTMLButtonElement>('#pause-spending')!;
+    pauseSpending.onclick = () => pauseSpending.setAttribute('aria-pressed', String(pauseSpending.getAttribute('aria-pressed') !== 'true'));
     host.dataset.ready = 'true';
     return host;
   },
 };
 
 export const ActiveResearch: StoryObj<Args> = { ...NeedsLibrary, args: { activeResearch: true } };
+export const SpendingPaused: StoryObj<Args> = { ...NeedsLibrary, args: { spendingPaused: true } };

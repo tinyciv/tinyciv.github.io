@@ -10,7 +10,7 @@ import { stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { WebSocket, WebSocketServer } from 'ws';
 import { PROTOCOL_VERSION, FACTION_COLORS, type LobbyRoom, type LobbyPlayer, type ServerMessage, type MatchOptions } from '../src/multiplayer/protocol';
-import { LANDFORM_KINDS, WORLD_GENERATION_STYLES } from '../src/world/options';
+import { isLandformFamily, WORLD_GENERATION_STYLES } from '../src/world/options';
 import { validatedInput } from '../src/multiplayer/input';
 import { ReplicationFlow } from './replication-flow';
 
@@ -71,7 +71,7 @@ function validOptions(value: unknown): MatchOptions | undefined {
   const options = value as MatchOptions;
   if (typeof options.seed !== 'string' || !options.seed.trim() || options.seed.length > 64
     || !(WORLD_GENERATION_STYLES as readonly string[]).includes(options.style)
-    || options.landformFamily !== 'mixed' && !(LANDFORM_KINDS as readonly string[]).includes(options.landformFamily)) return;
+    || !isLandformFamily(options.landformFamily)) return;
   return { seed: safeText(options.seed, 'TinyCiv-DUEL', 64), style: options.style, landformFamily: options.landformFamily };
 }
 function startMatch(room: Room): void {

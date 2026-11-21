@@ -59,12 +59,12 @@ export function generateRiverDeltas(world: World, polarSeaRows = 0): RiverDelta[
     if (at >= 0) connected = oceanDraining[at];
     for (const cell of path) oceanDraining[cell] = connected;
   }
-  const reliefApron = new Uint8Array(count);
-  for (let cell = 0; cell < count; cell++) if (tiles[cell].ridge || tiles[cell].stair || tiles[cell].canyon === 'wall') {
+  const canyonBuffer = new Uint8Array(count);
+  for (let cell = 0; cell < count; cell++) if (tiles[cell].canyon === 'wall') {
     const x = cell % width, y = Math.floor(cell / width);
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const nx = x + dx, ny = y + dy;
-      if (nx >= 0 && ny >= 0 && nx < width && ny < height) reliefApron[ny * width + nx] = 1;
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height) canyonBuffer[ny * width + nx] = 1;
     }
   }
   const protectedWater = new Uint8Array(count);
@@ -99,7 +99,7 @@ export function generateRiverDeltas(world: World, polarSeaRows = 0): RiverDelta[
       if (beforeSea[cell]) { seaCount++; sx += dx; sy += dy; if (coastalDistance[cell] <= 4) shelter++; }
       else if (!WATER.has(tile.terrain)) {
         bankCount++;
-        if (!tile.ridge && !tile.relief && !tile.canyon && tile.elevation < .48) lowBanks++;
+        if (!tile.relief && !tile.canyon && tile.elevation < .48) lowBanks++;
       }
     }
     const flatness = lowBanks / Math.max(1, bankCount), sheltered = shelter / Math.max(1, seaCount);
@@ -117,7 +117,7 @@ export function generateRiverDeltas(world: World, polarSeaRows = 0): RiverDelta[
     for (let y = Math.max(2, polarSeaRows, my - search); y <= Math.min(height - 3, height - polarSeaRows - 1, my + search); y++)
       for (let x = Math.max(2, mx - search); x <= Math.min(width - 3, mx + search); x++) {
         const cell = y * width + x, tile = tiles[cell], dx = x - mx, dy = y - my;
-        if (!oceanDraining[cell] || tile.delta || reliefApron[cell] || tile.ridge || tile.relief || tile.canyon || (!WATER.has(tile.terrain) && tile.elevation > .48)) continue;
+        if (!oceanDraining[cell] || tile.delta || tile.fjord || canyonBuffer[cell] || tile.relief || tile.canyon || (!WATER.has(tile.terrain) && tile.elevation > .48)) continue;
         const along = dx * ax + dy * ay, across = -dx * ay + dy * ax;
         const center = size * .18, forward = size * .82 + inland * .5;
         const fanWidth = size * (.56 + clamp((along + inland) / (size + inland), 0, 1) * .40);
@@ -189,7 +189,7 @@ export function generateRiverDeltas(world: World, polarSeaRows = 0): RiverDelta[
     };
     const shuffled = cells.map(cell => ({ cell, rank: random() })).sort((a, b) => a.rank - b.rank).map(({ cell }) => cell);
     for (const cell of shuffled) if (!wet[cell] && !beforeSea[cell] && !WATER.has(tiles[cell].terrain)
-      && neighbors(cell).some(next => !candidate[next] && !WATER.has(tiles[next].terrain) && !tiles[next].ridge) && !createsSquare(cell)) grow(cell);
+      && neighbors(cell).some(next => !candidate[next] && !WATER.has(tiles[next].terrain)) && !createsSquare(cell)) grow(cell);
     if (!frontier.length) continue;
     let landCount = cells.reduce((sum, cell) => sum + dry[cell], 0), targetLand = Math.round(cells.length * .52);
     while (frontier.length && landCount < targetLand) {

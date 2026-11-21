@@ -15,10 +15,10 @@ function ancestors(id: ResearchBranchId, visiting = new Set<ResearchBranchId>())
 }
 
 describe('science dependency graph', () => {
-  it('has only three roots, no missing dependencies or cycles, eight stages and at most six technologies per earliest stage', () => {
-    expect(definitions.size).toBe(37);
+  it('makes Infantry Drill an early root and keeps the research graph acyclic, with eight stages', () => {
+    expect(definitions.size).toBe(41);
     expect(RESEARCH_BRANCHES.filter(branch => !branch.prerequisites.length).map(branch => branch.id))
-      .toEqual(['woodenTower', 'irrigation', 'scoutLodge']);
+      .toEqual(['woodenTower', 'irrigation', 'scoutLodge', 'infantryDrill', 'animalHusbandry']);
     const stage = (id: ResearchBranchId): number => 1 + Math.max(0, ...definitions.get(id)!.prerequisites.map(stage));
     const stages = new Map<number, ResearchBranchId[]>();
     for (const branch of RESEARCH_BRANCHES) {
@@ -29,18 +29,18 @@ describe('science dependency graph', () => {
       const number = stage(branch.id); stages.set(number, [...(stages.get(number) ?? []), branch.id]);
     }
     expect([...stages.keys()].sort()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect([...stages.values()].every(group => group.length <= 6)).toBe(true);
+    expect(stage('infantryDrill')).toBe(1); expect(stage('officerCorps')).toBe(2);
     expect(stage('horsebackRiding')).toBe(2); expect(stage('siegeEngines')).toBe(6);
-    expect(DEFAULT_RESEARCH_ALLOCATION).toBe(.25);
-    expect(RESEARCH_BRANCHES.map(branch => branch.tiers[0].points)).toEqual([24,28,126,261,147,50,98,25,70,180,293,600,126,273,198,325,500,231,182,98,231,182,435,147,450,600,198,273,400,750,900,750,275,126,162,600,450]);
-    expect(RESEARCH_BRANCHES.reduce((total, branch) => total + branch.tiers[0].points, 0)).toBe(10764);
+    expect(DEFAULT_RESEARCH_ALLOCATION).toBe(.10);
+    expect(definitions.get('infantryDrill')!.tiers[0].points).toBe(10);
+    expect(definitions.get('officerCorps')!.tiers[0].points).toBe(210);
   });
 
   it('links military, economic and exploration progress instead of leaving advanced branches as independent roots', () => {
     expect(definitions.get('monument')!.prerequisites).toEqual(['grainStorage']);
     expect(definitions.get('traditionalMedicine')!.prerequisites).toEqual(['grainStorage', 'scoutLodge']);
     expect(definitions.get('militaryTactics')!.prerequisites).toEqual(['blacksmith', 'archeryRange']);
-    expect(definitions.get('coinage')!.prerequisites).toEqual(['monument', 'sailing']);
+    expect(definitions.get('coinage')!.prerequisites).toEqual(['monument', 'commerce']);
     expect(definitions.get('urbanPlanning')!.prerequisites).toEqual(['coinage', 'metalTools']);
     expect(definitions.get('horsebackRiding')!.prerequisites).toEqual(['scoutLodge']);
     expect(definitions.get('reinforcedDefenses')!.prerequisites).toEqual(['metalTools']);
@@ -67,6 +67,6 @@ describe('science dependency graph', () => {
     expect(new Set(Object.keys(faction.research!.levels))).toEqual(required);
     const spent = [...required].reduce((sum, id) => sum + researchCost(faction, id), 0);
     expect(Object.values(faction.research!.progress).reduce((sum, value) => sum + (value ?? 0), 0)).toBeCloseTo(spent, 8);
-    expect(faction.gold).toBeCloseTo(2000 + spent * 3, 8); //25% conversion, without separate purchase charges.
+    expect(faction.gold).toBeCloseTo(2000 + spent / DEFAULT_RESEARCH_ALLOCATION - spent, 8);
   });
 });

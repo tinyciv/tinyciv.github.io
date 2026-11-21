@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "sourceBytes": 53566534,
-  "outputBytes": 10209708,
+  "sourceBytes": 52728932,
+  "outputBytes": 10379505,
   "files": [
     {
       "source": "assets/bridges/stone-2b/lr-end-e.png",
@@ -117,27 +117,10 @@
         272,
         16
       ],
-      "sourceBytes": 5321,
-      "bytes": 2056,
-      "fingerprint": "0016171fffb7b31eb72fd03c5b71b8e235d4ec7e10b625239a4c459593a1ea49",
-      "sha256": "d3e3ca0d1a68d70d95cc632851eabdf533bc9f5a5207aa0f5bd08ce0619ff3e4"
-    },
-    {
-      "source": "assets/building-destruction/1x1/rubble.png",
-      "output": "assets/runtime/building-destruction/1x1/rubble.webp",
-      "alias": true,
-      "sourceSize": [
-        16,
-        16
-      ],
-      "size": [
-        16,
-        16
-      ],
-      "sourceBytes": 496,
-      "bytes": 234,
-      "fingerprint": "f8f23ebb0a416e91d802fc56fb0a6fb3a6140914fe35acff92cc7fcefc36ba4e",
-      "sha256": "22379b0e5fc339851395cd99f76286f2808273953a1050f4627aa988217a3786"
+      "sourceBytes": 1511,
+      "bytes": 600,
+      "fingerprint": "e1fecd83390570c173b0f889945585435c4263c52079836dadf95cfecf7c7275",
+      "sha256": "f5444aa57eff3b0246eaf7502dcc8f6c9cbd5967b0d1cde8ab8120383b07a7cb"
     },
     {
       "source": "assets/building-destruction/2x2/destruction.png",
@@ -172,6 +155,23 @@
       "bytes": 254,
       "fingerprint": "9b48db90efef21b137793e170a6c5b3de85815abb1484ee1090d1ddd3f863f48",
       "sha256": "1a7e38183e5e536c1643bf102e0fbba5a0b5f74d18e360e467e77db81447bfde"
+    },
+    {
+      "source": "assets/buildings/barbarian-lair.png",
+      "output": "assets/runtime/buildings/barbarian-lair.webp",
+      "alias": true,
+      "sourceSize": [
+        48,
+        48
+      ],
+      "size": [
+        48,
+        48
+      ],
+      "sourceBytes": 1713,
+      "bytes": 682,
+      "fingerprint": "da10ee1574c8b556a7f20b16b4e72e4dc616d2669b2caa4724bfef315f1465a3",
+      "sha256": "d388dae7086044fdb4d9150efe2086506aa39b5d37d1627a545f03dad099ba67"
     },
     {
       "source": "assets/buildings/barracks.png",
@@ -1007,6 +1007,57 @@
       "sha256": "e56faee413ea38f295ce02434bcd01054b3ad98db9ba462bf1bdb437b2b50ee8"
     },
     {
+      "source": "assets/exploration/fossil-a.png",
+      "output": "assets/runtime/exploration/fossil-a.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 578,
+      "bytes": 228,
+      "fingerprint": "3548d9700800aa4badb7d88b447ebf893fba538cd335be35033a304e6d3fba5c",
+      "sha256": "3155be6b96081eefc3f48bef1565ddb0b2bee397a60a3c3cf6e465ce44c372c4"
+    },
+    {
+      "source": "assets/exploration/fossil-b.png",
+      "output": "assets/runtime/exploration/fossil-b.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 594,
+      "bytes": 216,
+      "fingerprint": "6c303a2cb24de46e2dea61848aa53659829c30b6f2e6a6edcdcb786d0e34491a",
+      "sha256": "eaa971753f6529f20834af4e11763e0db0b2b349166e4cb63fba4aa585e3c744"
+    },
+    {
+      "source": "assets/exploration/fossil-c.png",
+      "output": "assets/runtime/exploration/fossil-c.webp",
+      "alias": true,
+      "sourceSize": [
+        32,
+        32
+      ],
+      "size": [
+        32,
+        32
+      ],
+      "sourceBytes": 726,
+      "bytes": 278,
+      "fingerprint": "b286e3be1765c1616321772bb1df12acc41a00f58d29ee3b9fe37579e6a8e44e",
+      "sha256": "13d05cccdbae863ff77c3e0a9b083f48170c0e9f43bff6292345fc9e4ba4e35c"
+    },
+    {
       "source": "assets/exploration/hut-a.png",
       "output": "assets/runtime/exploration/hut-a.webp",
       "alias": true,
@@ -1018,10 +1069,10 @@
         16,
         16
       ],
-      "sourceBytes": 714,
-      "bytes": 466,
-      "fingerprint": "c210dea312b2a9af998f7912f6aa8151cf197cdd17d19aa0fc367fa054089bf2",
-      "sha256": "753cba7b9fc2462dba0c62f6353f8505583dc89c88f3a165cfd276375ee189aa"
+      "sourceBytes": 450,
+      "bytes": 212,
+      "fingerprint": "e1548c56320155df4f15f0a4d7604c90d6abc4c2aa30535e7cb78cd2e92d5375",
+      "sha256": "e17dd84ec0af19ddd4ac76d3a9fce0b330b1cc588b207f14d74ae22fd58cea13"
     },
     {
       "source": "assets/exploration/hut-b.png",
@@ -1035,27 +1086,10 @@
         16,
         16
       ],
-      "sourceBytes": 617,
-      "bytes": 392,
-      "fingerprint": "ae5cb68902b431edeeaedd7640c79e5782a2c25ef6707402c8792a42932c8a20",
-      "sha256": "b3c01627011ccbd10aa8bad514a1986eb799bded66bbcfb34d5fbf732bf0afd0"
-    },
-    {
-      "source": "assets/exploration/hut-c.png",
-      "output": "assets/runtime/exploration/hut-c.webp",
-      "alias": true,
-      "sourceSize": [
-        16,
-        16
-      ],
-      "size": [
-        16,
-        16
-      ],
-      "sourceBytes": 785,
-      "bytes": 512,
-      "fingerprint": "a8f01573761378b36c4450ff57580c6ae65e6cac0d572c5b7ebcf6588a19705e",
-      "sha256": "9150143dee535b4dc3518ab229fd8aadf4d16799bc087ae395bf747b29ffe8bd"
+      "sourceBytes": 509,
+      "bytes": 210,
+      "fingerprint": "07749761d665132e0cb44a38fbf9bcd58592b3496d281a4a937c8d93df3daca7",
+      "sha256": "8e274a2330f9b64685cd2b36cb5fbafe6bff12986775db1f5e42813fac25ff41"
     },
     {
       "source": "assets/exploration/ruins-a.png",
@@ -1226,6 +1260,23 @@
       "bytes": 752,
       "fingerprint": "fbdaaf8dedb9fc500fca7b8beef6a435f695ca7d2926aba9c9642d6202c88199",
       "sha256": "03a77bed7eb7934ba44fca89cf71df602e9979bd88abb0b05fc069c5c6633b10"
+    },
+    {
+      "source": "assets/farms/wheat-growth-joins.png",
+      "output": "assets/runtime/farms/wheat-growth-joins.png",
+      "alias": true,
+      "sourceSize": [
+        752,
+        960
+      ],
+      "size": [
+        752,
+        960
+      ],
+      "sourceBytes": 153360,
+      "bytes": 149399,
+      "fingerprint": "4b8f85515f709f4da2c8a78226272bf6dfc5be8e4a950b51c25ccc878218e155",
+      "sha256": "16ed44bb993f95c4ca9ce34939d29f1024f44dfaccfc3a9c48a007799453ee72"
     },
     {
       "source": "assets/fishing/fish-breach.png",
@@ -3523,6 +3574,57 @@
       "sha256": "2792733199b7a12075caad290e7b217e3b8b7269078f6c984fb2f94138909d56"
     },
     {
+      "source": "assets/resources/coal-open-cut.webp",
+      "output": "assets/runtime/resources/coal-open-cut.webp",
+      "alias": true,
+      "sourceSize": [
+        96,
+        48
+      ],
+      "size": [
+        96,
+        48
+      ],
+      "sourceBytes": 1228,
+      "bytes": 1216,
+      "fingerprint": "cdbf64c2ea852415e4117eb9f4104fa3b626809c458b9cd32633d405131d9107",
+      "sha256": "160600d36febd6b34f39863e270dcaaa9b160f96c900c8f05d2d27df11bff985"
+    },
+    {
+      "source": "assets/resources/ore-formations/native-b.webp",
+      "output": "assets/runtime/resources/ore-formations/native-b.webp",
+      "alias": true,
+      "sourceSize": [
+        160,
+        288
+      ],
+      "size": [
+        160,
+        288
+      ],
+      "sourceBytes": 21106,
+      "bytes": 18778,
+      "fingerprint": "2ef391aad09dad6adf7d5f2a9d4cb66ce18f109c0f38e86dfceb4312dd0959d2",
+      "sha256": "00f3798adf7018d609db350ccf60ffe29071d61e00f350987281a5f08c22da4f"
+    },
+    {
+      "source": "assets/resources/ore-formations/rocky-deposits.webp",
+      "output": "assets/runtime/resources/ore-formations/rocky-deposits.webp",
+      "alias": true,
+      "sourceSize": [
+        128,
+        32
+      ],
+      "size": [
+        128,
+        32
+      ],
+      "sourceBytes": 958,
+      "bytes": 956,
+      "fingerprint": "4c5db1dec3c532f80d1cafcb5d5ae48903f297927a5b243ad45f1c7f7b04575e",
+      "sha256": "a923e2c463caca5c5f075b87c94ef6a30525c9eddaf5db7f0d823673f6177966"
+    },
+    {
       "source": "assets/resources/outcrops/copper-overlay.png",
       "output": "assets/runtime/resources/outcrops/copper-overlay.webp",
       "alias": true,
@@ -3589,6 +3691,23 @@
       "bytes": 1100,
       "fingerprint": "e7716cf0e5cc17f462e5e2b260d4458aef3287cdc1a3db1c39fbba99c8f7d985",
       "sha256": "42b70b6a7fb0a9e3e418a6a2ec443681e97662bacb692a795836ecb7b0c11a3a"
+    },
+    {
+      "source": "assets/resources/peat-and-grapes.webp",
+      "output": "assets/runtime/resources/peat-and-grapes.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 1558,
+      "bytes": 1550,
+      "fingerprint": "033eca88e471667f3d2f50f7430281173b6ba6b539a120652ca779449a9be592",
+      "sha256": "09ffd1c718eb45b29d46fb4a3eb2946919477cbd688be54311aa3ada4af5def1"
     },
     {
       "source": "assets/resources/resource-objects.png",
@@ -3908,10 +4027,10 @@
         960,
         840
       ],
-      "sourceBytes": 53282,
-      "bytes": 23256,
-      "fingerprint": "3bc8e07d051a640695d6d1647955158808dc3526e6dafc9ad9e5fe1b14d4590e",
-      "sha256": "72dd4dc870b73b4c90e219677ab0dc324d4fb38148af33ecd4f653cd27ac9958"
+      "sourceBytes": 51989,
+      "bytes": 23046,
+      "fingerprint": "5d8b3306164619cf823e434d87524d8cdf13ff305f6d19b92cb1793d80b75107",
+      "sha256": "74093e8c85ed34a7cdde72e10f9dc0f7d41de946d047788e6e32eaae92387305"
     },
     {
       "source": "scenarios/island-deathmatch-map.png",
@@ -3942,27 +4061,27 @@
         1120,
         273
       ],
-      "sourceBytes": 5872,
-      "bytes": 2276,
-      "fingerprint": "91d7ae786aac36bfc9ac49b81b0da5d8eccbf797dc8b73588fb27d51ba8e1f7a",
-      "sha256": "016e5662ec53e33e12c7eb6dc86bbeab1332a1d0ec555461bc5b08f00143a6f0"
+      "sourceBytes": 5898,
+      "bytes": 2148,
+      "fingerprint": "2a2b576ff8886461ef1728f46eac328531ec1c0f1754268d724b21033200fe08",
+      "sha256": "e50b53103878caf70db915186f7763353c7be5cbc4fb237f9cbb352e27b1e572"
     },
     {
       "source": "scenarios/no-mans-land-map.png",
       "output": "assets/runtime/scenarios/no-mans-land-map.webp",
       "alias": true,
       "sourceSize": [
-        1200,
-        720
+        1120,
+        910
       ],
       "size": [
-        1200,
-        720
+        1120,
+        910
       ],
-      "sourceBytes": 27582,
-      "bytes": 9248,
-      "fingerprint": "51cc8053aed5c518e82aab7238c69c68ec87625bb3f60e39d4a84cbddd5d1f3a",
-      "sha256": "8f06adb23a92d61b76ea16800b77ca01f54e6b43545ffce0832c5cb72f3d36df"
+      "sourceBytes": 21903,
+      "bytes": 6974,
+      "fingerprint": "23fea1a50b9e4cfb0a7ddceda6480bf7f6dfa5004bd2d71053b59919b8ff789c",
+      "sha256": "76aa727bc572a22c8503f64ea8a116fb0c7e14f034d93af0c543fa589a12564c"
     },
     {
       "source": "scenarios/sandbox-map.png",
@@ -3976,10 +4095,10 @@
         800,
         600
       ],
-      "sourceBytes": 6504,
-      "bytes": 1716,
-      "fingerprint": "958d3778f9f777ce635df9968e5897c3a3d60b325e45059b6ec111cba2110eff",
-      "sha256": "13ec29e5f0fbe48ff8980dcc64384d860a2ab90b648066d44cf627da9495b3db"
+      "sourceBytes": 6414,
+      "bytes": 1690,
+      "fingerprint": "22b591ac6e5fd4dd8db69281d9c6046c62de168d83c8e7d8c126410672b1f47f",
+      "sha256": "c72be3d12b96c68a0d803654b9de6cd09a9f1f95ced8685a298a2b7a124586e8"
     },
     {
       "source": "scenarios/tutorial-map.png",
@@ -4135,6 +4254,23 @@
       "sha256": "fcf42147b6a6da11d25767bf2a0e80d8ecdf8a8ab9915c070ba7c8a843925768"
     },
     {
+      "source": "assets/ui/forged/cancel.webp",
+      "output": "assets/runtime/ui/forged/cancel.webp",
+      "alias": true,
+      "sourceSize": [
+        22,
+        22
+      ],
+      "size": [
+        22,
+        22
+      ],
+      "sourceBytes": 898,
+      "bytes": 878,
+      "fingerprint": "a7c4718844baa5157ddab43b6823406d1677a7c358373589a37eea98a636597d",
+      "sha256": "a0e48a39325ada5ea843f143b9584acd40f1a56e46f8b5ab422ec237759a9cd5"
+    },
+    {
       "source": "assets/ui/forged/hotbar-frame.png",
       "output": "assets/runtime/ui/forged/hotbar-frame.png",
       "alias": true,
@@ -4235,6 +4371,23 @@
       "bytes": 32504,
       "fingerprint": "5bc5f9463a644c0d4a6e2bee12dcc4166e3601feede5fc2e595c9bf27c6e457d",
       "sha256": "bccdcf5a29e93c10a8237bb2b833851623eebe496e75990fec1e3aa663e6aeeb"
+    },
+    {
+      "source": "assets/ui/loading/leader-clearing.webp",
+      "output": "assets/runtime/ui/loading/leader-clearing.webp",
+      "alias": true,
+      "sourceSize": [
+        160,
+        80
+      ],
+      "size": [
+        160,
+        80
+      ],
+      "sourceBytes": 832,
+      "bytes": 826,
+      "fingerprint": "cb77fc0a67d6484200ce5cf58bddafe23f2056005786681f998376800b27ac9b",
+      "sha256": "f12cd3bbaa120ab02c017b416145a045966baf3fc3fdacfc35cad0c3a6af539b"
     },
     {
       "source": "assets/ui/loading/spinner.png",
@@ -5091,17 +5244,17 @@
       "output": "assets/runtime/ui/resources/gold.webp",
       "alias": true,
       "sourceSize": [
-        1254,
-        1254
+        64,
+        64
       ],
       "size": [
-        128,
-        128
+        32,
+        32
       ],
-      "sourceBytes": 1036393,
-      "bytes": 11438,
-      "fingerprint": "60fde008735fe6e811826c224b0667edaa8839cc05f5d2201041321c4c93193c",
-      "sha256": "6ee45e85a77d0eff830bfca5f30d03973a5f20d7d95422f0d6cb68009b1fd59a"
+      "sourceBytes": 6971,
+      "bytes": 2162,
+      "fingerprint": "c4d63a864b9cda0bee72f0cf5353e5a4833e34eeae1dba57ea1b86890bf4f9f1",
+      "sha256": "a785bc77c81ef1569dc4fc2a2977988c88511a62469f4cc565c0b1c7fc60bc01"
     },
     {
       "source": "assets/ui/resources/population.png",
@@ -6173,6 +6326,108 @@
       "bytes": 294,
       "fingerprint": "6851d2befcac6941bc3c75dd3d0f27975dd27865d63702a1d52a3ec41bd2028c",
       "sha256": "3b07d78fd231ea09f1cd94394c94cded679cf03282f3489e2a1b3961faa9f746"
+    },
+    {
+      "source": "assets/wildlife/deer/buck.png",
+      "output": "assets/runtime/wildlife/deer/buck.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        64
+      ],
+      "size": [
+        272,
+        64
+      ],
+      "sourceBytes": 4545,
+      "bytes": 2036,
+      "fingerprint": "cf59902286d62859f0e9e55855caa856434b5946424c9b933d4799f64b04fc1e",
+      "sha256": "aad9a65441835b27693c201dc916c8460c531890060e14e2cc52e7863486f447"
+    },
+    {
+      "source": "assets/wildlife/deer/doe.png",
+      "output": "assets/runtime/wildlife/deer/doe.webp",
+      "alias": true,
+      "sourceSize": [
+        272,
+        64
+      ],
+      "size": [
+        272,
+        64
+      ],
+      "sourceBytes": 5380,
+      "bytes": 2242,
+      "fingerprint": "0b67c86c9970f9e1d81a4dcc2dacd7ce70f0d3e53d864e5396d39dfd39f33772",
+      "sha256": "456a98814e20c58ea99e04e938f24c700172342b7cf1a9b6cbff70fe0cddf554"
+    },
+    {
+      "source": "assets/wildlife/livestock/cow.png",
+      "output": "assets/runtime/wildlife/livestock/cow.webp",
+      "alias": true,
+      "sourceSize": [
+        120,
+        96
+      ],
+      "size": [
+        120,
+        96
+      ],
+      "sourceBytes": 3177,
+      "bytes": 1248,
+      "fingerprint": "2966cf2319bc8a7ea1044244510e5b84bb9aedbacba31861d611c5fcc1f83ead",
+      "sha256": "b41d080da53095e7e6bdb331715ae2078589c7c00ed419a9de18b9171a118907"
+    },
+    {
+      "source": "assets/wildlife/livestock/horse.png",
+      "output": "assets/runtime/wildlife/livestock/horse.webp",
+      "alias": true,
+      "sourceSize": [
+        64,
+        64
+      ],
+      "size": [
+        64,
+        64
+      ],
+      "sourceBytes": 1905,
+      "bytes": 732,
+      "fingerprint": "2500747df3d2355390f0b3fd1e6769df2a9f0d763731cc768ff3699887616017",
+      "sha256": "cc42e38437d51c38267a4179fe73b56d46907d72593e8ccc4adfde02282943c5"
+    },
+    {
+      "source": "assets/wildlife/livestock/sheep.png",
+      "output": "assets/runtime/wildlife/livestock/sheep.webp",
+      "alias": true,
+      "sourceSize": [
+        120,
+        96
+      ],
+      "size": [
+        120,
+        96
+      ],
+      "sourceBytes": 4249,
+      "bytes": 1580,
+      "fingerprint": "5be6bd6e56b9d661baef6951e8bc3c8126c260d4f6a3c80bc8f692dd9334ef44",
+      "sha256": "f7c913f725cc408f6e3b6305190de9b0c79804bdbfdbb42d4edf39c192d39381"
+    },
+    {
+      "source": "assets/winter/snow.webp",
+      "output": "assets/runtime/winter/snow.webp",
+      "alias": true,
+      "sourceSize": [
+        256,
+        288
+      ],
+      "size": [
+        256,
+        288
+      ],
+      "sourceBytes": 1512,
+      "bytes": 1504,
+      "fingerprint": "4f999a733f6e65a2aa170c603f923722241bf9ef36e926ad1d5f7e3bc4a23ca1",
+      "sha256": "e01a23e6d7272343fec2f3de4b7c193608da01fc263214321bfe60b779d7ed93"
     }
   ]
 }

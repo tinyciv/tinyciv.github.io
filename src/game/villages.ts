@@ -66,7 +66,7 @@ export function villageTradeActive(state: GameState, village: NeutralVillage, fa
 
 function usable(state: GameState, point: Point): boolean {
   const tile = tileAt(state.world, point.x, point.y);
-  return !!tile && !WATER.has(tile.terrain) && ['none', 'forest', 'jungle', 'swamp'].includes(tile.overlay)
+  return !!tile && tile.rockRangeGap !== 'dry' && !WATER.has(tile.terrain) && ['none', 'forest', 'jungle', 'swamp'].includes(tile.overlay)
     && tile.farm === undefined && settlementFootprintAllowed(state.world, point.x, point.y) && canWalk(state, point.x + .5, point.y + .5, -1)
     && !(state.fields ?? []).some(field => field.x === point.x && field.y === point.y)
     && !state.buildings.some(b => b.hp > 0 && point.x >= b.x && point.x < b.x + buildingWidth(b)
@@ -76,7 +76,7 @@ function usable(state: GameState, point: Point): boolean {
  * 16 clearable vegetation, ridge level in bits 8-11. */
 function patchCode(state: GameState, x: number, y: number, borders: ReturnType<typeof territory>): number {
   const tile = tileAt(state.world, x, y);
-  if (!tile) return 8;
+  if (!tile || tile.rockRangeGap === 'dry') return 8;
   let code = (reliefLevel(tile) & 15) << 8;
   if (WATER.has(tile.terrain)) {
     code |= 2;

@@ -1,4 +1,5 @@
 import type { AccountUser } from '../account/client';
+import { menuPlate } from './menu-plate';
 import './feedback-dialog.css';
 
 /** A retained form keeps a draft intact while account/menu state refreshes. */
@@ -14,12 +15,12 @@ export class FeedbackDialog {
     this.overlay.className = 'frontend-feedback-backdrop';
     this.overlay.hidden = true;
     this.overlay.innerHTML = `<section class="menu-sheet feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
-      <header><h1 id="feedback-title">Help &amp; feedback</h1><button class="feedback-plate feedback-close" type="button" data-feedback-close>Close</button></header>
+      <header><h1 id="feedback-title">Help &amp; feedback</h1><button class="menu-button feedback-plate feedback-close" type="button" data-feedback-close>${menuPlate}<span>Close</span></button></header>
       <form class="frontend-form feedback-form">
         <label for="feedback-message">Your feedback</label>
         <textarea id="feedback-message" name="feedback-message" rows="7" maxlength="4000" required></textarea>
         <p class="feedback-identity"></p>
-        <button class="feedback-plate feedback-send" type="submit">Send feedback</button>
+        <button class="menu-button feedback-plate feedback-send" type="submit">${menuPlate}<span>Send feedback</span></button>
         <p class="feedback-status" role="status" aria-live="polite"></p>
       </form>
     </section>`;

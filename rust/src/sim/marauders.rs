@@ -7,6 +7,29 @@ use bevy_ecs::prelude::*;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeSet;
 
+const OPENING_SECONDS: f64 = 300.0;
+const OPENING_RATE: f64 = 0.8;
+
+pub fn population_cap(intensity: f64, now: f64, base: f64) -> f64 {
+    let rate = if intensity >= 1.0 && now < OPENING_SECONDS { OPENING_RATE } else { 1.0 };
+    (base * intensity * rate).floor()
+}
+
+pub fn spawn_delay(intensity: f64, now: f64, seconds: f64) -> f64 {
+    let delay = seconds / intensity;
+    if intensity < 1.0 || now >= OPENING_SECONDS { return delay; }
+    let opening = OPENING_SECONDS - now;
+    let slowed = delay / OPENING_RATE;
+    slowed.min(opening) + (delay - opening * OPENING_RATE).max(0.0)
+}
+
+pub fn retime_spawn(previous: f64, next: f64, origin: f64, now: f64, deadline: f64) -> f64 {
+    let remaining = (deadline - origin).max(0.0);
+    let opening = if previous >= 1.0 { remaining.min((OPENING_SECONDS - origin).max(0.0)) } else { 0.0 };
+    let work = (remaining - opening * (1.0 - OPENING_RATE)) * previous;
+    now + spawn_delay(next, now, work)
+}
+
 /// Camp-specific retaliation is authoritative and survives a paused save.
 #[derive(Resource, Default)]
 pub struct RaiderAggression { provoked: BTreeSet<(i64, i32)> }

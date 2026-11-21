@@ -7,7 +7,9 @@ use super::kinds::{building::MILITARY_ACADEMY, unit};
 pub const WIDE: u32 = 0;
 pub const STANDARD: u32 = 1;
 pub const DEEP: u32 = 2;
+pub const LOOSE: u32 = 3;
 pub const SPACING: f64 = 0.72;
+const LOOSE_SPACING: f64 = 1.0;
 pub fn constant(index: u32) -> f64 { match index { 0 => 600.0, 1 => 750.0, _ => f64::NAN } }
 
 #[derive(Component, Clone, Copy)]
@@ -47,19 +49,20 @@ impl MilitaryAcademies {
         if self.available(faction) { self.factions.get(&faction).map_or(STANDARD, |f| f.preference) } else { STANDARD }
     }
     pub fn select(&mut self, faction: i32, choice: u32) -> bool {
-        if choice > DEEP || !self.available(faction) { return false; }
+        if choice > LOOSE || !self.available(faction) { return false; }
         self.factions.get_mut(&faction).unwrap().preference = choice;
         true
     }
 }
 
-pub fn normalize(choice: u32) -> u32 { if choice <= DEEP { choice } else { STANDARD } }
-pub fn depth(choice: u32) -> usize { match normalize(choice) { WIDE => 2, DEEP => 4, _ => 3 } }
+pub fn normalize(choice: u32) -> u32 { if choice <= LOOSE { choice } else { STANDARD } }
+pub fn depth(choice: u32) -> usize { match normalize(choice) { WIDE | LOOSE => 2, DEEP => 4, _ => 3 } }
 
-/// Exact two/three/four-rank rectangles. A central slot is reserved for the
-/// Leader in odd-depth layouts. Count changes only when membership changes.
+/// Local offset from the Leader, with forward on the x axis.
 pub fn offset(count: usize, choice: u32, index: usize, axis: u32) -> f64 {
     if count == 0 || index >= count { return f64::NAN; }
+    let spacing = if choice == LOOSE { LOOSE_SPACING } else { SPACING };
+    // Reserve a center position for the Leader in odd-depth rectangles.
     let rows = depth(choice).min(count);
     let reserve = rows % 2 == 1;
     let total = count + usize::from(reserve);
@@ -76,8 +79,8 @@ pub fn offset(count: usize, choice: u32, index: usize, axis: u32) -> f64 {
         if target >= occupied { target -= occupied; continue; }
         let skip = reserve && row == middle && target >= columns / 2;
         let column = target + usize::from(skip);
-        return if axis == 0 { (row as f64 - (rows - 1) as f64 / 2.0) * SPACING }
-            else { (column as f64 - (columns - 1) as f64 / 2.0) * SPACING };
+        return if axis == 0 { (row as f64 - (rows - 1) as f64 / 2.0) * spacing }
+            else { (column as f64 - (columns - 1) as f64 / 2.0) * spacing };
     }
     f64::NAN
 }

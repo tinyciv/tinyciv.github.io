@@ -5,7 +5,7 @@
   --compact-button-art: url('/assets/runtime/ui/reference-buttons/compact.png');
   --button-ink: #e7d7af;
   --button-key: #bc8e3d;
-  --command-width: 336px;
+  --command-width: 404px;
 }
 
 .game-area :is(.building-activity, .leader-skills, .build-actions) button,
@@ -43,14 +43,14 @@
   outline-offset: -4px;
 }
 
-/* Four text-only commands, with the flyout aligned over their right edge. */
+/* Map tools share a row, with the flyout aligned over their right edge. */
 .game-area .special-actions {
   right: 10px;
   bottom: 22px;
   width: var(--command-width);
   height: 60px;
   padding: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
   gap: 4px;
   background: none;
@@ -119,7 +119,7 @@
   line-height: 14px;
   overflow-wrap: normal;
 }
-.game-area .build-actions kbd {
+.game-area :is(.special-actions, .build-actions) kbd {
   top: 2px;
   right: 4px;
   color: var(--button-key);
@@ -176,39 +176,53 @@
   }
 }
 
-/* Keep touch targets at least 44px while retaining the same four-column row. */
+/* Keep touch targets at least 44px while retaining the same command row. */
 @media (pointer: coarse) {
   .game-area .special-actions {
     transform: none;
-    right: max(6px, env(safe-area-inset-right));
-    bottom: max(6px, env(safe-area-inset-bottom));
-    width: min(336px, calc(100cqw - 12px));
+    right: max(6px, var(--hud-safe-right, env(safe-area-inset-right)));
+    bottom: max(6px, var(--hud-safe-bottom, env(safe-area-inset-bottom)));
+    width: min(var(--command-width), calc(100cqw - 12px));
     height: 52px;
   }
   .game-area .special-actions button { min-height: 44px; }
   .game-area .special-actions .action-label { font-size: 17px; }
   .game-area .hotbar {
     right: 8px;
-    bottom: max(68px, calc(62px + env(safe-area-inset-bottom)));
+    bottom: max(68px, calc(62px + var(--hud-safe-bottom, env(safe-area-inset-bottom))));
     width: calc((100% - 256px) / .7);
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .game-area .leader-xp { left: 248px; right: 8px; bottom: 122px; }
   .game-area .build-panel,
   .game-area .build-panel.is-building-menu {
+    --build-panel-top: 58px;
+    --build-panel-bottom: max(158px, calc(152px + var(--hud-safe-bottom, env(safe-area-inset-bottom))));
     transform: none;
-    right: max(6px, env(safe-area-inset-right));
-    bottom: max(158px, calc(152px + env(safe-area-inset-bottom)));
+    right: max(6px, var(--hud-safe-right, env(safe-area-inset-right)));
+    bottom: var(--build-panel-bottom);
     width: min(336px, calc(100cqw - 12px));
-    max-height: calc(100cqh - 216px);
+    max-height: calc(100cqh - var(--build-panel-top) - var(--build-panel-bottom));
     padding: 46px 8px 10px;
   }
   .game-area .build-actions button { min-height: 44px; padding: 4px 14px 4px 4px; }
   .game-area #close-build { min-width: 44px; min-height: 44px; right: 2px; top: 0; }
 }
+@media (pointer: coarse) and (orientation: landscape) {
+  @container game-area (max-width: 800px) {
+    .game-area .build-panel,
+    .game-area .build-panel.is-building-menu {
+      --build-panel-top: 96px;
+      --build-panel-bottom: 150px;
+    }
+  }
+}
 @media (pointer: coarse) and (orientation: portrait) {
   .game-area .hotbar { right: 8px; width: calc((100% - 16px) / .7); bottom: 206px; }
   .game-area .leader-xp { left: 16px; right: 8px; bottom: 258px; }
   .game-area .build-panel,
-  .game-area .build-panel.is-building-menu { bottom: 296px; max-height: calc(100cqh - 354px); }
+  .game-area .build-panel.is-building-menu {
+    --build-panel-top: 140px;
+    --build-panel-bottom: 296px;
+  }
 }

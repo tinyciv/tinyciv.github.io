@@ -9,6 +9,7 @@ import { spendGold } from './gold-ledger';
 import { settlements } from './settlement-bridge';
 import { canWalk, createReachabilityQuery } from './pathfinding';
 import { reliefFootprintAllowed } from './relief';
+import { clearBuildingVegetation } from './construction-vegetation';
 import { invalidateSettlementDecisions } from './settlement-decisions';
 import { buildingHeight, buildingReady, buildingWidth, distance, type Building, type GameState, type Point, type Unit } from './types';
 
@@ -35,8 +36,8 @@ export function validateObservationPost(state: GameState, faction: number, point
   else if (!recruitingCity(state, faction, point)) message = 'Need 1 resident to staff the observation post.';
   else if ((territoryValue(territory(state), Math.floor(point.y) * state.world.width + Math.floor(point.x)) ?? UNCLAIMED) !== UNCLAIMED)
     message = 'Observation posts must be outside all borders.';
-  else if (!reliefFootprintAllowed(state.world, Math.floor(point.x), Math.floor(point.y))) message = 'Build clear of cliff faces.';
-  else if (!canWalk(state, point.x, point.y, faction)) message = 'Place the observation post on clear, walkable ground.';
+  else if (!reliefFootprintAllowed(state.world, Math.floor(point.x), Math.floor(point.y)) || !canWalk(state, point.x, point.y, faction))
+    message = 'Place the observation post on clear, walkable ground.';
   else if (state.units.some(unit => unit.hp > 0 && unit.observationPost && !unit.observationPost.retreating
     && Math.floor(unit.x) === Math.floor(point.x) && Math.floor(unit.y) === Math.floor(point.y))) message = 'An observation post already occupies this tile.';
   if (!message && !nearestReturn(state, { ...point, faction }).city) message = 'Observation posts need a walking route to a friendly town.';
@@ -66,6 +67,7 @@ export function placeObservationPost(state: GameState, factionId: number, point:
     order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60, facing: Math.PI / 2, moving: false, attackTime: 0,
     observationPost: { x, y, city: city.id, discoveredBy: [], nextUpkeepAt: state.time + OBSERVATION_POST_UPKEEP_SECONDS,
       nextSmokeAt: state.time + OBSERVATION_POST_SMOKE_SECONDS } });
+  clearBuildingVegetation(state.world, { kind: 'observationPost', x: Math.floor(x), y: Math.floor(y), hp: 100 });
   residentsChanged(state);
   return { ok: true, message: 'Observation post established.' };
 }

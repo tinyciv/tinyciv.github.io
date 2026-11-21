@@ -9,7 +9,7 @@ import { removeCoveredRoads } from '../src/game/covered-roads';
 import { synchronizeFarms } from '../src/game/farms';
 import { buildingAtPoint } from '../src/game/hit-testing';
 import { canWalk } from '../src/game/pathfinding';
-import { ridgeFootprintAllowed } from '../src/game/ridges';
+import { reliefFootprintAllowed } from '../src/game/relief';
 import { rasterBuildingGround } from '../src/game/building-ground';
 import type { Building, GameState } from '../src/game/types';
 
@@ -79,11 +79,11 @@ describe('two by one archery ranges', () => {
     expect(buildingWithinBorders(state, 'archeryRange', 19, 15, 0, territory)).toBe(false);
   });
 
-  it('checks only actual ridge cells and keeps the rectangular clearing rectangular', () => {
+  it('checks only actual rock cells and keeps the rectangular clearing rectangular', () => {
     const state = fixture();
-    state.world.tiles[8 * 20 + 8].ridge = 1;
-    expect(ridgeFootprintAllowed(state.world, 8, 7, 2, 1)).toBe(true);
-    expect(ridgeFootprintAllowed(state.world, 8, 7, 2, 2)).toBe(false);
+    Object.assign(state.world.tiles[8 * 20 + 8], { rockHost: 8 * 20 + 8, rockRelief: 0 });
+    expect(reliefFootprintAllowed(state.world, 8, 7, 2, 1)).toBe(true);
+    expect(reliefFootprintAllowed(state.world, 8, 7, 2, 2)).toBe(false);
     const pixels = new Uint8ClampedArray(64 * 64 * 4).fill(255);
     const raster = rasterBuildingGround(2, 0, { width: 64, height: 64, data: pixels }, 1);
     expect(raster.width).toBe(92); expect(raster.height).toBe(60);

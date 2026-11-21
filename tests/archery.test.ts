@@ -2,6 +2,7 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { ARCHER_RANGE, evadeMelee, updateArcheryTraining, nextRecruitRole, retinueComposition, setArcherFraction, setSoldierRole } from '../src/game/archery';
 import { arrowLineClear } from '../src/game/arrows';
+import { unitsCollide } from '../src/game/collisions';
 import { retinueFormation } from '../src/game/formation';
 import { buildAt, updateGame } from '../src/game/simulation';
 import { citySummaries } from '../src/game/cities';
@@ -46,8 +47,8 @@ describe('archery ranges and retinues', () => {
     expect(WOODEN_TOWER_RANGE).toBe(ARCHER_RANGE + 2);
   });
   it.each([
-    { kills: 250, archerAttack: 26.88, archerDefense: 15 },
-    { kills: 500, archerAttack: 32.844, archerDefense: 3 },
+    { kills: 250, archerAttack: 53.76, archerDefense: 15 },
+    { kills: 500, archerAttack: 65.688, archerDefense: 3 },
   ])('preserves the full rank benefit when retraining at $kills kills', ({ kills, archerAttack, archerDefense }) => {
     const unit: Unit = { ...soldier(1, 1, 1), kills, weaponLevel: 3, armorLevel: 3 };
     const warriorAttack = unitAttack(unit), warriorDefense = unitDefense(unit);
@@ -84,6 +85,18 @@ describe('archery ranges and retinues', () => {
     for (let i = 0; i < 150; i++) updateGame(state, .1, idle);
     expect(original.every(u => u.kind === 'warrior')).toBe(true);
   });
+  it('dispatches the whole assigned group on the next step and restores collisions after training', () => {
+    const state = fixture(), [leader, ...trainees] = state.units;
+    Object.assign(leader, { x: 12.5, y: 12.5 });
+    for (const unit of trainees) Object.assign(unit, { x: 12.5, y: 14.5, retinueStance: 'aggressive', lastDamagedAt: state.time });
+    expect(setArcherFraction(state, state.buildings[1], 1)).toBe(true);
+    expect(trainees.every(unit => unit.training && !unitsCollide(leader, unit) && !unitsCollide(unit, leader))).toBe(true);
+
+    updateGame(state, .1, idle);
+    expect(trainees.every(unit => unit.y < 14.5)).toBe(true);
+    for (let i = 0; i < 60 && trainees.some(unit => unit.training); i++) updateGame(state, .1, idle);
+    expect(trainees.every(unit => unit.kind === 'archer' && !unit.training && unitsCollide(unit, leader))).toBe(true);
+  });
   it('lets defensive soldiers leave their post to retrain, preserving their stance', () => {
     const state = fixture(), unit = state.units[1]; entityStore(state).units.replace([state.units[0], unit]);
     Object.assign(unit, { x: 23.5, y: 18.5, retinueStance: 'defensive', defensiveAnchor: { x: 23.5, y: 18.5 } });
@@ -100,10 +113,10 @@ describe('archery ranges and retinues', () => {
     updateGame(state, .1, idle);
     expect(unit.x).toBeGreaterThan(23.5); expect(unit.retinueStance).toBe('defensive');
   });
-  it('charges each archer half a gold more than a warrior each economy interval', () => {
+  it('charges each archer one gold more than a warrior each economy interval', () => {
     const state = fixture(), before = citySummaries(state)[0].gold;
     setSoldierRole(state.units[1], 'archer');
-    expect(citySummaries(state)[0].gold).toBeCloseTo(before - .5);
+    expect(citySummaries(state)[0].gold).toBeCloseTo(before - 1);
   });
   it('shoots past buildings but cannot shoot through a wall or its diagonal corner', () => {
     const state = fixture(), from = { x: 18.5, y: 20.5 }, to = { x: 22.5, y: 20.5 };

@@ -1,14 +1,16 @@
 import { entityStore } from './entity-store';
-import { armyAverages, armySoldier } from './raider-technology';
-import { unitAttack, unitDefense } from './veterancy';
+import { raidDirectorClaimSea, raidDirectorLaunched, raidEra, raidSeaFleet, raidSeaProfile } from './raid-director';
+import { ARCHER_HIT_MULTIPLIER, unitAttack, unitDefense } from './veterancy';
 import { sailingNavigation, sailingPath, updateSailingVessel } from './sailing';
-import { canWalk, findPath } from './pathfinding';
-import { refreshIndexedUnit } from './spatial';
+import { canMove, canTraverseEdge, canWalk, findPath } from './pathfinding';
+import { earlyCombatUnits, refreshIndexedUnit, withEarlyCombatQueries } from './spatial';
 import { banditIntensity } from './bandit-intensity';
 import { raiderMayAttack } from './raider-aggression';
+import { MARAUDER_MAX_MORALE } from './battle-morale';
 import { rustEngine } from './rust-engine';
 import { refreshFogUnit } from './fog';
-import { buildingReady, distance, type Building, type GameState, type Point, type Unit } from './types';
+import { refreshWaterTraffic } from './water-traffic';
+import { buildingReady, distance, tileAt, WATER, type Building, type GameState, type Point, type Unit } from './types';
 
 export const SEA_RAID_MIN_POPULATION = 100;
 export const SEA_RAID_FIRST_SECONDS = 480;
@@ -17,6 +19,8 @@ export const SEA_RAID_COLOR = '#a4a8ad';
 interface Transport { id:number; shore:Point; berth:Point; cargo:number; arrived:boolean; nextUnloadAt:number }
 export interface SeaInvasion {
  id:number; faction:number; target:number; boats:Transport[]; packs:number[]; leader?:number; total:number;
+ /** Target realm's progress era at launch. */
+ era?:number;
  attack:number; defense:number; hp:number; landing:Point; origin:Point; remaining:number; nextPlanAt:number;
  stage:'launching'|'sailing'|'landed'|'collapsed'; nextStrategyAt:number; startedAt:number;
 }
@@ -29,6 +33,19 @@ const hull=(id:number,p:Point,invasion:number):Unit=>({id,kind:'sailboat',factio
  seaInvasion:invasion,sailboat:{dock:-1},barbarianGalley:{}});
 interface CoastSearch { city:number; cursor:number; candidates:{shore:Point;berth:Point;score:number}[] }
 const searches=new WeakMap<GameState,CoastSearch>();
+function shoreFromBerth(state: GameState, berth: Point, nav: ReturnType<typeof sailingNavigation>): Point | undefined {
+  for (const [dx, dy] of directions) {
+    let from = berth;
+    for (let step = 1; step <= 2; step++) {
+      const point = { x: berth.x + dx * step, y: berth.y + dy * step };
+      if (!canTraverseEdge(state.world, from, point)) break;
+      const tile = tileAt(state.world, point.x, point.y);
+      if (tile && !WATER.has(tile.terrain) && canWalk(state, point.x, point.y, -2)) return point;
+      if (!nav.water(point.x, point.y)) break;
+      from = point;
+    }
+  }
+}
 /** At most 512 tiles per update. Coast discovery never runs a whole-world
  * search in the spawn/click frame, and each ship gets its route on a later turn. */
 function chooseCoast(state:GameState,city:Building):{shore:Point;origin:Point}|undefined|null {
@@ -40,9 +57,8 @@ function chooseCoast(state:GameState,city:Building):{shore:Point;origin:Point}|u
   if(tile.terrain!=='coast'&&tile.terrain!=='ocean')continue;
   const berth={x:cell%w+.5,y:Math.floor(cell/w)+.5};
   if(distance(berth,center(city))>70||!nav.position(berth,0)||!nav.position(berth,Math.PI/2))continue;
-  for(const [dx,dy] of directions){const shore={x:berth.x+dx*2,y:berth.y+dy*2};
-   if(canWalk(state,shore.x,shore.y,-2)){search.candidates.push({shore,berth,score:distance(shore,center(city))});break;}
-  }
+  const shore = shoreFromBerth(state, berth, nav);
+  if (shore) search.candidates.push({ shore, berth, score: distance(shore, center(city)) });
  }
  if(search.cursor<state.world.tiles.length)return null;
  searches.delete(state);
@@ -61,11 +77,11 @@ function chooseCoast(state:GameState,city:Building):{shore:Point;origin:Point}|u
 }
 export function beginSeaInvasion(state:GameState,city:Building,landing:Point,origin:Point):SeaInvasion {
  const clock=state.seaRaids??={nextAt:SEA_RAID_FIRST_SECONDS,sequence:0,invasions:[]};
- const army=state.units.filter(u=>u.faction===city.faction&&armySoldier(u));
- const averages=armyAverages(state,army),total=rustEngine.barbarian_galley_fleet(army.length);
- const invasion:SeaInvasion={id:++clock.sequence,faction:city.faction,target:city.id,boats:[],packs:[],total,
-  ...averages,landing,origin,remaining:total,nextPlanAt:state.time,stage:'launching',nextStrategyAt:state.time,startedAt:state.time};
- clock.invasions.push(invasion);return invasion;
+ // Fleet and crews follow the target realm's era, never the size or kit of its army.
+ const era=raidEra(state,city.faction),reference=raidSeaProfile(era),total=raidSeaFleet(era);
+ const invasion:SeaInvasion={id:++clock.sequence,faction:city.faction,target:city.id,boats:[],packs:[],total,era,
+  ...reference,landing,origin,remaining:total,nextPlanAt:state.time,stage:'launching',nextStrategyAt:state.time,startedAt:state.time};
+ clock.invasions.push(invasion);raidDirectorLaunched(state,city.faction,total,'sea');return invasion;
 }
 function launchTransport(state:GameState,invasion:SeaInvasion):boolean {
  const nav=sailingNavigation(state,undefined,false,true),index=invasion.boats.length;
@@ -79,14 +95,15 @@ function launchTransport(state:GameState,invasion:SeaInvasion):boolean {
  for(let y=-12;y<=12;y++)for(let x=-12;x<=12;x++){
   const p={x:invasion.landing.x+x,y:invasion.landing.y+y};
   if(!nav.position(p,0)||!nav.position(p,Math.PI/2)||invasion.boats.some(b=>distance(b.berth,p)<3))continue;
-  for(const [dx,dy]of directions){const land={x:p.x+dx*2,y:p.y+dy*2};
-   if(canWalk(state,land.x,land.y,-2)){candidates.push({p,shore:land,score:distance(p,invasion.landing)});break;}}
+  const land = shoreFromBerth(state, p, nav);
+  if (land) candidates.push({ p, shore: land, score: distance(p, invasion.landing) });
  }
  if(!launch)return false;
  const boat=hull(newId(state),launch,invasion.id);
  for(const candidate of candidates.sort((a,b)=>a.score-b.score).slice(0,6)){
-  const path=sailingPath(state,boat,candidate.p,false,true);
-  if(path.length){boat.path=path;boat.destination=candidate.p;berth=candidate.p;shore=candidate.shore;break;}
+  const pose = { ...candidate.p, facing: Math.atan2(candidate.shore.y - candidate.p.y, candidate.shore.x - candidate.p.x) };
+  const path = sailingPath(state, boat, pose, false, true, nav);
+  if (path.length) { boat.path = path; boat.destination = pose; berth = pose; shore = candidate.shore; break; }
  }
  if(!berth||!shore)return false;
  const cargo=Math.min(SEA_RAID_CAPACITY,invasion.remaining);invasion.remaining-=cargo;
@@ -102,34 +119,76 @@ function embarkArcher(state:GameState,invasion:SeaInvasion,boat:Unit):void {
  if(!pack){const id=Math.max(0,...(state.marauderPacks??[]).map(p=>p.id))+1;
   pack={id,name:'Sea raiders',color:SEA_RAID_COLOR,targetFaction:invasion.faction,targetBuilding:invasion.target,
    home:invasion.landing,waypoint:invasion.landing,nextWanderAt:state.time+60,raid:true,motivation:'assault',phase:'muster',
-   spawnedAt:state.time,seaInvasion:invasion.id};(state.marauderPacks??=[]).push(pack);invasion.packs[group]=id;}
+   spawnedAt:state.time,seaInvasion:invasion.id,directorFaction:invasion.faction,raidEra:invasion.era};(state.marauderPacks??=[]).push(pack);invasion.packs[group]=id;}
  const commander=pack.leaderId===undefined;
  const unit:Unit={id:newId(state),kind:'archer',faction:-2,...point,
-  hp:invasion.hp,maxHp:invasion.hp,attack:17,defense:4,morale:100,speed:3.2,range:rustEngine.barbarian_galley_constant(1),
+  hp:invasion.hp,maxHp:invasion.hp,attack:17,defense:4,morale:MARAUDER_MAX_MORALE,speed:3.2,range:rustEngine.barbarian_galley_constant(1),
   order:'raid',cooldown:0,lastCombat:-100,moving:false,facing:0,attackTime:0,marauderPack:pack.id,seaInvasion:invasion.id,
   marauderLeader:commander||undefined,inside:true,embarkedOn:boat.id};
- unit.raiderBonus={attack:Math.max(0,invasion.attack-unitAttack(unit)),defense:Math.max(0,invasion.defense-unitDefense(unit))};
+ unit.raiderBonus={attack:Math.max(0,invasion.attack-unitAttack(unit)/ARCHER_HIT_MULTIPLIER),defense:Math.max(0,invasion.defense-unitDefense(unit))};
  if(commander){pack.leaderId=unit.id;invasion.leader??=unit.id;pack.startingTroops=invasion.total-1;}
  entityStore(state).units.add(unit);boat.sailboat!.passenger=unit.id;
 }
-function unload(state:GameState,invasion:SeaInvasion,transport:Transport):void {
+function unload(state:GameState,transport:Transport):void {
  if(!transport.cargo||state.time<transport.nextUnloadAt)return;
+ transport.nextUnloadAt = state.time + .5;
  const boat=entityStore(state).units.get(transport.id),archer=entityStore(state).units.get(boat?.sailboat?.passenger??-1);
  if(!boat||!archer||archer.hp<=0){transport.cargo=0;return;}
- const candidates=[transport.shore,...directions.map(([dx,dy])=>({x:transport.shore.x+dx,y:transport.shore.y+dy}))];
- const point=candidates.find(p=>!!rustEngine.galley_landing(boat.x,boat.y,boat.facing,p.x,p.y)&&canWalk(state,p.x,p.y,-2)&&!state.units.some(u=>u.hp>0&&!u.inside&&distance(u,p)<.7));
+ const inland = { x: transport.shore.x + Math.round(Math.cos(boat.facing)),
+   y: transport.shore.y + Math.round(Math.sin(boat.facing)) };
+ const candidates=[inland,...directions.map(([dx,dy])=>({x:transport.shore.x+dx,y:transport.shore.y+dy}))];
+ const point=candidates.find(p=>!!rustEngine.galley_landing(boat.x,boat.y,boat.facing,p.x,p.y)&&canMove(state,boat,p,-2)
+   && !earlyCombatUnits(state,p,.7).some(u=>u.id!==boat.id&&u.hp>0&&!u.inside&&distance(u,p)<.7));
  if(!point)return;
  Object.assign(archer,point,{inside:false,embarkedOn:undefined});boat.sailboat!.passenger=undefined;
  refreshIndexedUnit(state,archer);refreshFogUnit(state,archer);transport.cargo=0;
+}
+
+/** A stalled route may use another bank within landing reach. */
+function beginBeaching(state: GameState, boat: Unit, transport: Transport): void {
+  if (state.time < transport.nextUnloadAt) return;
+  transport.nextUnloadAt = state.time + .5;
+  const berth = { x: Math.floor(boat.x) + .5, y: Math.floor(boat.y) + .5 };
+  const shore = shoreFromBerth(state, berth, sailingNavigation(state, boat, false, true));
+  if (!shore) return;
+  const facing = Math.atan2(shore.y - boat.y, shore.x - boat.x);
+  if (!rustEngine.galley_landing(boat.x, boat.y, facing, shore.x, shore.y)) return;
+  transport.shore = shore;
+  transport.arrived = true;
+  boat.destination = undefined;
+  boat.path = undefined;
+  boat.facing = facing;
+  boat.sailboat!.velocity = { x: 0, y: 0 };
+}
+
+function advanceBeaching(state: GameState, boat: Unit, shore: Point, dt: number): void {
+  const gap = distance(boat, shore), step = rustEngine.barbarian_galley_beach_step(gap, dt);
+  if (step < gap) {
+    boat.x += (shore.x - boat.x) * step / gap;
+    boat.y += (shore.y - boat.y) * step / gap;
+    boat.moving = step > 0;
+  } else {
+    // The center is on walkable ground, within ordinary melee contact.
+    boat.x = shore.x; boat.y = shore.y;
+    boat.moving = false;
+    boat.barbarianGalley!.beached = true;
+  }
+  refreshIndexedUnit(state, boat);
+  refreshFogUnit(state, boat);
+  refreshWaterTraffic(state, boat);
 }
 export function seaInvasionFor(state:GameState,unit:Unit):SeaInvasion|undefined {return state.seaRaids?.invasions.find(i=>i.id===unit.seaInvasion);}
 export function updateSeaRaids(state:GameState,dt:number):void {
  const clock=state.seaRaids??={nextAt:SEA_RAID_FIRST_SECONDS,sequence:0,invasions:[]};
  if(state.time>=clock.nextAt&&banditIntensity(state)>0&&!clock.invasions.some(i=>i.stage!=='collapsed')){
-  const cities=state.buildings.filter(b=>raiderMayAttack(state,b.faction)&&b.kind==='palace'&&buildingReady(b)&&state.factions.some(f=>f.id===b.faction&&!f.defeated&&f.villageId===undefined&&f.population>=SEA_RAID_MIN_POPULATION));
+  // A fleet sails only against a realm whose raid cycle is building up.
+  const cities=state.buildings.filter(b=>raiderMayAttack(state,b.faction)&&b.kind==='palace'&&buildingReady(b)&&raidDirectorClaimSea(state,b.faction,0)&&state.factions.some(f=>f.id===b.faction&&!f.defeated&&f.villageId===undefined&&f.population>=SEA_RAID_MIN_POPULATION));
   const city=cities.sort((a,b)=>a.id-b.id)[clock.sequence%Math.max(1,cities.length)];
-  if(!city)clock.nextAt=state.time+60;
-  else {const coast=chooseCoast(state,city);if(coast!==null){clock.nextAt=state.time+(coast?Math.max(360,600-Math.max(0,(state.factions.find(f=>f.id===city.faction)?.population??100)-100)):60);if(coast)beginSeaInvasion(state,city,coast.shore,coast.origin);}}
+  if(!city)clock.nextAt=state.time+30;
+  else {const coast=chooseCoast(state,city);if(coast!==null){
+   const ready=!!coast&&raidDirectorClaimSea(state,city.faction,0);
+   clock.nextAt=state.time+(ready?Math.max(360,600-Math.max(0,(state.factions.find(f=>f.id===city.faction)?.population??100)-100)):30);
+   if(ready)beginSeaInvasion(state,city,coast.shore,coast.origin);}}
  }
  for(const invasion of clock.invasions){
   const store=entityStore(state),livingBoats=invasion.boats.map(t=>store.units.get(t.id)).filter((u):u is Unit=>!!u&&u.hp>0);
@@ -144,22 +203,24 @@ export function updateSeaRaids(state:GameState,dt:number):void {
    if(!launchTransport(state,invasion)){invasion.nextPlanAt=state.time+5;if(!invasion.boats.length&&state.time-invasion.startedAt>30){invasion.stage='collapsed';continue;}}
    if(!invasion.remaining)invasion.stage='sailing';
   }
-  for(const transport of invasion.boats){
-   const boat=store.units.get(transport.id);if(!boat||boat.hp<=0){transport.cargo=0;continue;}
-   if(!transport.arrived){
-    // Ships keep the fleet close instead of racing to individual beaches.
-    // A straggler whose route is blocked (often by the fleet waiting for it)
-    // must not hold the others back, or the fleet deadlocks in the channel.
-    const slowest=Math.max(...livingBoats.filter(u=>u.destination&&!u.sailingRouteFailures).map(u=>distance(u,invasion.landing)),0);
-    if(distance(boat,invasion.landing)>=slowest-8||distance(boat,invasion.landing)<12)updateSailingVessel(state,boat,dt);
-    // A transport whose last stretch stays blocked (another hull parked in the
-    // channel) lands where it is instead of searching for a route forever.
-    transport.arrived=distance(boat,transport.berth)<.2||(boat.sailingRouteFailures??0)>=3&&distance(boat,transport.berth)<8;
-    if(transport.arrived){boat.destination=undefined;boat.path=undefined;boat.moving=false;boat.sailboat!.velocity={x:0,y:0};}
-    refreshIndexedUnit(state,boat);
-   }
-   if(transport.arrived)unload(state,invasion,transport);
-  }
+  const slowest=Math.max(...livingBoats.filter(u=>u.destination&&!u.sailingRouteFailures).map(u=>distance(u,invasion.landing)),0);
+  withEarlyCombatQueries(state, () => {
+    for (const transport of invasion.boats) {
+      const boat = store.units.get(transport.id);
+      if (!boat || boat.hp <= 0) { transport.cargo = 0; continue; }
+      if (!transport.arrived) {
+        // A blocked straggler cannot hold the rest of the fleet offshore.
+        const gap = distance(boat, invasion.landing);
+        if (gap >= slowest - 8 || gap < 12) updateSailingVessel(state, boat, dt);
+        const berthGap = distance(boat, transport.berth);
+        if (berthGap < .2 || (boat.sailingRouteFailures ?? 0) >= 3 && berthGap < 8)
+          beginBeaching(state, boat, transport);
+      }
+      if (!transport.arrived) continue;
+      if (!boat.barbarianGalley!.beached) advanceBeaching(state, boat, transport.shore, dt);
+      if (boat.barbarianGalley!.beached) unload(state, transport);
+    }
+  });
   if(!invasion.remaining&&invasion.boats.every(t=>!t.cargo))invasion.stage='landed';
   if(state.time>=invasion.nextStrategyAt){
    invasion.nextStrategyAt=state.time+3;

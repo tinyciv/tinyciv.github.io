@@ -1,13 +1,13 @@
 import { MarketplacePanel } from './marketplace-panel';
 import { orderMarketRoute } from '../game/trade';
 import './marketplace-panel.css';
-import { militaryFormationControl, selectMilitaryFormation } from '../game/military-academy';
+import { militaryFormationControl, selectMilitaryFormation, type MilitaryFormationType } from '../game/military-academy';
 import { ShipyardPanel } from './shipyard-panel';
 import { AchievementTree } from './achievement-tree';
 import { purchaseAchievement } from '../game/achievements';
 import { affiliationBreakdown, loyaltyOf } from '../game/settlement-bridge';
 import { levySlingerFraction, setLevySlingerFraction } from '../game/mass-levy';
-import { upgradeFort, upgradeFortStatus, upgradeFortBrigade, upgradeFortBrigadeStatus, rebuildFort, rebuildFortStatus, fortBrigadeCapacity } from '../game/forts';
+import { upgradeFort, upgradeFortStatus, upgradeFortBrigade, upgradeFortBrigadeStatus, rebuildFort, rebuildFortStatus, fortBrigadeCapacity, fortMaintenance } from '../game/forts';
 import { CHECK_INTERVAL_MS } from '../game/work-cadence';
 import { entityStore } from '../game/entity-store';
 import { structuresOf, STRUCTURE_READY } from '../game/structure-index';
@@ -23,10 +23,11 @@ import { MeasuredSize } from './measured-size';
 import { wholeNumber } from './number-format';
 import { orchardUpgradeStatus, purchaseOrchardUpgrade, orchardReady, ORCHARD_UPGRADE_COST } from '../game/orchards';
 import { guardPostUpgradeStatus, upgradeGuardPost, setGuardPostWallsOnly, setGuardPostAvoidForbidden, guardPostUpkeep, GUARD_POST_UPKEEP_INTERVAL } from '../game/guard-posts';
-import { swordsmanFraction, archerFraction, spearmanFraction, pikemanFraction, musketmanFraction, fieldCannonFraction, horsemanFraction, horseArcherFraction, knightFraction, retinueComposition, setRetinueFraction, canRecruitSpearmen, type RetinueRole } from '../game/archery';
+import { retinueComposition, retinueUpkeep, setRetinueCount, canRecruitSpearmen, type RetinueRole } from '../game/archery';
 import { areSwordsmenUnlocked, areArchersUnlocked, areSpearmenUnlocked, arePikemenUnlocked, areMusketmenUnlocked, areHorsemenUnlocked, areHorseArchersUnlocked, areKnightsUnlocked, researchLevel, setResearchAllocation, prioritizeResearch, removeResearchPriority } from '../game/research';
-import { isKeep, KEEP_UPGRADE_COST, KEEP_HOUSING_COST, settlementLabel, settlementUpgradeStatus,
-  upgradeSettlement, keepHousingUpgradeStatus, purchaseKeepHousing } from '../game/settlement-upgrades';
+import { hasLivestock } from '../game/livestock';
+import { isKeep, KEEP_UPGRADE_COST, KEEP_HOUSING_COST, settlementLabel, settlementTierStatus, settlementUpgradeStatus,
+  upgradeSettlement, upgradeSettlementTier, keepHousingUpgradeStatus, purchaseKeepHousing } from '../game/settlement-upgrades';
 import { ResearchTree } from './research-tree';
 import type { GameCommand } from '../multiplayer/protocol';
 import { performVillageAction, villageDiplomacyStatus, VILLAGE_TRADE_COST, VILLAGE_ALLIANCE_COST } from '../game/villages';
@@ -36,16 +37,16 @@ import { villageTradeSummary } from './village-trade-summary';
 interface Size { width: number; height: number; }
 const equipmentTiers = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const compositionRows = [
-  { name: 'warriors', role: 'warrior', label: 'Warriors', count: 'warriors', current: undefined },
-  { name: 'archers', role: 'archer', label: 'Archers', count: 'archers', current: 'currentArchers' },
-  { name: 'spearmen', role: 'spearman', label: 'Spearmen', count: 'spearmen', current: 'currentSpearmen' },
-  { name: 'swordsmen', role: 'swordsman', label: 'Swordsmen', count: 'swordsmen', current: 'currentSwordsmen' },
-  { name: 'field-cannons', role: 'fieldCannon', label: 'Field cannon', count: 'fieldCannons', current: 'currentFieldCannons' },
-  { name: 'musketmen', role: 'musketman', label: 'Musketmen', count: 'musketmen', current: 'currentMusketmen' },
-  { name: 'pikemen', role: 'pikeman', label: 'Pikemen', count: 'pikemen', current: 'currentPikemen' },
-  { name: 'horsemen', role: 'horseman', label: 'Horsemen', count: 'horsemen', current: 'currentHorsemen' },
-  { name: 'horse-archers', role: 'horseArcher', label: 'Horse archers', count: 'horseArchers', current: 'currentHorseArchers' },
-  { name: 'knights', role: 'knight', label: 'Knights', count: 'knights', current: 'currentKnights' },
+  { name: 'warriors', role: 'warrior', label: 'Warriors', count: 'warriors' },
+  { name: 'archers', role: 'archer', label: 'Archers', count: 'archers' },
+  { name: 'spearmen', role: 'spearman', label: 'Spearmen', count: 'spearmen' },
+  { name: 'swordsmen', role: 'swordsman', label: 'Swordsmen', count: 'swordsmen' },
+  { name: 'field-cannons', role: 'fieldCannon', label: 'Field cannon', count: 'fieldCannons' },
+  { name: 'musketmen', role: 'musketman', label: 'Musketmen', count: 'musketmen' },
+  { name: 'pikemen', role: 'pikeman', label: 'Pikemen', count: 'pikemen' },
+  { name: 'horsemen', role: 'horseman', label: 'Horsemen', count: 'horsemen' },
+  { name: 'horse-archers', role: 'horseArcher', label: 'Horse archers', count: 'horseArchers' },
+  { name: 'knights', role: 'knight', label: 'Knights', count: 'knights' },
 ] as const;
 
 /** Preserve native-size text and pixel borders. CSS constrains the panel to the
@@ -85,14 +86,22 @@ export class BuildingActivityPopup {
     private readonly sendCommand?: (command: GameCommand) => boolean) {
     this.size = new MeasuredSize(element);
     element.innerHTML = `<button class="activity-close" type="button" aria-label="Close building activity" title="Close (Escape)">×</button>
-      <h2 id="building-activity-title">Governor permissions:</h2>
-      <div class="activity-governor"><p class="activity-note city-loyalty-summary"></p><p class="activity-note city-loyalty-factors"></p>
+      <h2 id="building-activity-title"></h2>
+      <div class="activity-governor">
+        <p class="activity-note settlement-population"></p>
+        <div class="settlement-upgrade-options">
+          <div class="settlement-civic-upgrade" hidden>
+            <button type="button" class="activity-upgrade activity-settlement" data-settlement-upgrade aria-describedby="settlement-upgrade-requirements"><span class="upgrade-label"></span><span class="upgrade-price"><span class="upgrade-cost"></span>${icon('gold')}</span></button>
+            <p class="activity-note settlement-upgrade-requirements" id="settlement-upgrade-requirements"></p>
+          </div>
+          <button type="button" class="activity-upgrade activity-settlement" data-keep hidden><span class="upgrade-label">Upgrade defenses</span><span class="upgrade-price">${KEEP_UPGRADE_COST}${icon('gold')}</span></button>
+          <button type="button" class="activity-upgrade activity-settlement" data-keep-housing hidden><span class="upgrade-label">Expand Keep housing</span><span class="upgrade-price">${KEEP_HOUSING_COST}${icon('gold')}</span></button>
+        </div>
+        <p class="activity-note city-loyalty-summary"></p><p class="activity-note city-loyalty-factors"></p>
         <label><input type="checkbox" name="farms" aria-label="Automatically build farms"><span>Farm</span></label>
         <label><input type="checkbox" name="housing" aria-label="Automatically build housing"><span>Housing</span></label>
         <button type="button" class="activity-upgrade activity-immigrants"><span class="upgrade-label">Import immigrants</span><span class="upgrade-price">${IMMIGRANT_COST}${icon('gold')}</span></button>
         <button type="button" class="activity-upgrade activity-retinue" data-retinue-slot><span class="upgrade-label">Buy retinue slot</span><span class="upgrade-price">${RETINUE_SLOT_COST}${icon('gold')}</span></button>
-        <button type="button" class="activity-upgrade activity-keep" data-keep hidden><span class="upgrade-label">Upgrade to Keep</span><span class="upgrade-price">${KEEP_UPGRADE_COST}${icon('gold')}</span></button>
-        <button type="button" class="activity-upgrade activity-retinue" data-keep-housing hidden><span class="upgrade-label">Expand Keep housing</span><span class="upgrade-price">${KEEP_HOUSING_COST}${icon('gold')}</span></button>
       </div>
       <div class="activity-levy activity-stack" hidden>
         <label class="composition-row"><span>Slingers</span><input type="range" name="levySlingers" min="0" max="100" step="5" aria-label="Slinger levy proportion"><output class="levy-mix"></output></label>
@@ -105,10 +114,8 @@ export class BuildingActivityPopup {
       <div class="activity-composition activity-stack" hidden>
         <h3>Army composition</h3>
         <p class="activity-note composition-summary"></p>
-        ${compositionRows.map(row => `<div>
-          <label class="composition-row"><span>${row.label}</span><input type="range" name="${row.name}" min="0" max="100" step="1" aria-label="${row.label} proportion" aria-describedby="composition-${row.name}-status"><output class="${row.role}-count"></output></label>
-          <p id="composition-${row.name}-status" class="activity-note ${row.role}-status"></p>
-        </div>`).join('')}
+        ${compositionRows.map(row => `
+          <label class="composition-row"><span>${row.label}</span><input type="range" name="${row.name}" min="0" max="0" step="1" aria-label="${row.label} target"><output class="${row.role}-count"></output></label>`).join('')}
       </div>
       <div class="activity-orchard activity-stack" hidden>
         <button class="activity-upgrade" data-orchard="1"><span class="upgrade-label">Plant orchard</span><span class="upgrade-price">${ORCHARD_UPGRADE_COST}${icon('gold')}</span></button>
@@ -133,6 +140,7 @@ export class BuildingActivityPopup {
       <div class="activity-militaryAcademy activity-stack" hidden>
         <label class="composition-row"><span>Formation</span><select name="militaryFormation" aria-label="Formation type">
           <option value="wide">Wide · 2 ranks</option><option value="standard">Standard · 3 ranks</option><option value="deep">Deep · 4 ranks</option>
+          <option value="loose">Loose order · 2 ranks</option>
         </select></label>
         <p class="activity-note military-formation-effect"></p>
       </div>
@@ -201,6 +209,7 @@ export class BuildingActivityPopup {
     guardWallsOnly.onchange = () => purchase((state, building) => setGuardPostWallsOnly(state, building, guardWallsOnly.checked), building => ({ type: 'guard-walls', buildingId: building.id, enabled: guardWallsOnly.checked }));
     const guardAvoidForbidden = element.querySelector<HTMLInputElement>('[name="guardAvoidForbidden"]')!;
     guardAvoidForbidden.onchange = () => purchase((state, building) => setGuardPostAvoidForbidden(state, building, guardAvoidForbidden.checked), building => ({ type: 'guard-forbidden', buildingId: building.id, enabled: guardAvoidForbidden.checked }));
+    element.querySelector<HTMLButtonElement>('[data-settlement-upgrade]')!.onclick = () => purchase(upgradeSettlementTier, building => ({ type: 'settlement-upgrade', buildingId: building.id }));
     element.querySelector<HTMLButtonElement>('[data-keep]')!.onclick = () => purchase(upgradeSettlement, building => ({ type: 'keep', buildingId: building.id }));
     element.querySelector<HTMLButtonElement>('[data-keep-housing]')!.onclick = () => purchase(purchaseKeepHousing, building => ({ type: 'keep-housing', buildingId: building.id }));
     element.querySelector<HTMLButtonElement>('[data-retinue-slot]')!.onclick = () => purchase(purchaseRetinueSlot, building => ({ type: 'retinue-slot', buildingId: building.id }));
@@ -214,14 +223,14 @@ export class BuildingActivityPopup {
     for (const row of compositionRows) {
       const input = element.querySelector<HTMLInputElement>(`[name="${row.name}"]`)!;
       const commit = () => {
-        const building = this.building(), percent = Number(input.value);
+        const building = this.building(), count = input.valueAsNumber;
         this.editingComposition.delete(row.name);
         if (input.disabled) { this.pendingComposition.delete(row.name); return; }
         if (!building || !buildingActivityAvailable(this.getState(), building)) { this.close(); return; }
         this.pendingComposition.clear();
-        this.pendingComposition.set(row.name, { value: percent, until: performance.now() + 1500 });
-        if (this.sendCommand?.({ type: row.name, buildingId: building.id, fraction: percent / 100 })) return;
-        if (setRetinueFraction(this.getState(), building, row.role, percent / 100)) this.changed();
+        this.pendingComposition.set(row.name, { value: count, until: performance.now() + 1500 });
+        if (this.sendCommand?.({ type: row.name, buildingId: building.id, count })) return;
+        if (setRetinueCount(this.getState(), building, row.role, count)) this.changed();
         else this.pendingComposition.delete(row.name);
         this.refresh();
       };
@@ -241,7 +250,7 @@ export class BuildingActivityPopup {
     };
     element.querySelector<HTMLSelectElement>('[name="militaryFormation"]')!.onchange = event => {
       const building = this.building(); if (!building || building.kind !== 'militaryAcademy') return;
-      const type = (event.target as HTMLSelectElement).value as 'wide' | 'standard' | 'deep';
+      const type = (event.target as HTMLSelectElement).value as MilitaryFormationType;
       if (this.sendCommand?.({ type: 'military-formation', buildingId: building.id, formation: type })) return;
       const result = selectMilitaryFormation(this.getState(), type);
       this.message(result.ok ? '' : result.message ?? 'Formation unavailable.', !result.ok);
@@ -315,13 +324,38 @@ export class BuildingActivityPopup {
       const select = this.element.querySelector<HTMLSelectElement>('[name="militaryFormation"]')!;
       select.value = control.type; select.disabled = !control.enabled;
       this.element.querySelector<HTMLElement>('.military-formation-effect')!.textContent = control.type === 'wide'
-        ? 'No defense bonus · +30% missile fire rate' : '+50% frontal defense';
+        ? 'No defense bonus · +30% missile fire rate'
+        : control.type === 'loose' ? '1-tile spacing · +50% frontal defense' : '+50% frontal defense';
     }
     if (kind === 'shipyard') this.shipyard.refresh(building);
     if (kind === 'marketplace') this.marketplace.refresh(this.getState(), building);
     if (kind === 'governor') {
       const state = this.getState(), loyalty = loyaltyOf(state, building), rate = Math.round(loyalty.rate * 60);
       const factors = affiliationBreakdown(state, building.id, building.faction);
+      const tier = settlementTierStatus(state, building), next = tier.next;
+      const promotion = this.element.querySelector<HTMLButtonElement>('[data-settlement-upgrade]')!;
+      const requirements = this.element.querySelector<HTMLElement>('.settlement-upgrade-requirements')!;
+      this.element.querySelector<HTMLElement>('.settlement-population')!.textContent = `Population ${wholeNumber(tier.population)}${Number.isFinite(tier.limit) ? ` / ${wholeNumber(tier.limit)}` : ' · Unlimited'}`;
+      this.element.querySelector<HTMLElement>('.settlement-civic-upgrade')!.hidden = !next;
+      if (next) {
+        promotion.disabled = !tier.available;
+        promotion.title = tier.reason;
+        promotion.querySelector<HTMLElement>('.upgrade-label')!.textContent = `Upgrade to ${next.label}`;
+        promotion.querySelector<HTMLElement>('.upgrade-cost')!.textContent = wholeNumber(next.cost);
+        const capacity = Number.isFinite(next.capacity) ? `${wholeNumber(next.capacity)} population limit` : 'Unlimited population';
+        requirements.textContent = `${Math.min(tier.buildings, next.buildings)}/${next.buildings} civic buildings · ${capacity}`;
+      }
+      const keep = isKeep(building), defense = settlementUpgradeStatus(state, building);
+      const defensesButton = this.element.querySelector<HTMLButtonElement>('[data-keep]')!;
+      defensesButton.hidden = keep;
+      defensesButton.disabled = !defense.available;
+      defensesButton.title = defense.reason;
+      const housingUpgrade = keepHousingUpgradeStatus(state, building), housingButton = this.element.querySelector<HTMLButtonElement>('[data-keep-housing]')!;
+      housingButton.hidden = !keep; housingButton.disabled = !housingUpgrade.available;
+      housingButton.classList.toggle('is-max', !!building.keepHousingExpanded);
+      housingButton.querySelector<HTMLElement>('.upgrade-label')!.textContent = building.keepHousingExpanded ? 'Keep housing expanded' : 'Expand Keep housing';
+      housingButton.querySelector<HTMLElement>('.upgrade-price')!.hidden = !!building.keepHousingExpanded;
+      housingButton.title = housingUpgrade.reason;
       this.element.querySelector<HTMLElement>('.city-loyalty-summary')!.textContent = `Loyalty ${Math.round(loyalty.value)}/100 · ${rate >= 0 ? '+' : '−'}${Math.abs(rate)}/min · Target ${Math.round(loyalty.target)}`;
       this.element.querySelector<HTMLElement>('.city-loyalty-factors')!.textContent = Number.isFinite(factors.culture)
         ? `Culture +${Math.round(factors.culture)} · Governance ${factors.governance >= 0 ? '+' : '−'}${Math.abs(Math.round(factors.governance))} · Trade +${Math.round(factors.trade)} · Threat −${Math.round(factors.threat)}${factors.snub ? ` · Snub −${Math.round(factors.snub)}` : ''}`
@@ -343,7 +377,8 @@ export class BuildingActivityPopup {
       brigade.querySelector<HTMLElement>('.icon')!.hidden = upgrade.cost === null;
       restore.querySelector<HTMLElement>('.fort-rebuild-cost')!.textContent = wholeNumber(rebuild.cost);
       const count = state.units.filter(unit => unit.fort === building.id && unit.hp > 0).length;
-      this.element.querySelector<HTMLElement>('.fort-status')!.textContent = building.fort?.destroyed ? 'Destroyed' : `${count}/${fortBrigadeCapacity(building)} skirmishers${building.fort?.funded === false ? ' · Awaiting upkeep' : ''}`;
+      this.element.querySelector<HTMLElement>('.fort-status')!.textContent = building.fort?.destroyed ? 'Destroyed'
+        : `${count}/${fortBrigadeCapacity(building)} skirmishers · ${fortMaintenance(building)} gold / 30s${building.fort?.funded === false ? ' · Unpaid' : ''}`;
     }
     if (smithy) for (const track of ['armor', 'weapon'] as const) {
       const status = blacksmithUpgradeStatus(this.getState(), building, track), button = this.upgrades[track];
@@ -363,19 +398,6 @@ export class BuildingActivityPopup {
       const retinue = retinueSlotPurchaseStatus(this.getState(), building), slotButton = this.element.querySelector<HTMLButtonElement>('[data-retinue-slot]')!;
       slotButton.disabled = !retinue.available;
       slotButton.title = retinue.reason;
-      const keep = isKeep(building), faction = this.getState().factions.find(candidate => candidate.id === building.faction);
-      const upgrade = settlementUpgradeStatus(this.getState(), building), button = this.element.querySelector<HTMLButtonElement>('[data-keep]')!;
-      button.hidden = keep || researchLevel(faction, 'woodenTower') === 0;
-      button.disabled = !upgrade.available;
-      button.classList.toggle('is-max', keep);
-      button.querySelector<HTMLElement>('.upgrade-label')!.textContent = keep ? 'Keep' : 'Upgrade to Keep';
-      button.title = upgrade.reason;
-      const housingUpgrade = keepHousingUpgradeStatus(this.getState(), building), housingButton = this.element.querySelector<HTMLButtonElement>('[data-keep-housing]')!;
-      housingButton.hidden = !keep; housingButton.disabled = !housingUpgrade.available;
-      housingButton.classList.toggle('is-max', !!building.keepHousingExpanded);
-      housingButton.querySelector<HTMLElement>('.upgrade-label')!.textContent = building.keepHousingExpanded ? 'Keep housing expanded' : 'Expand Keep housing';
-      housingButton.querySelector<HTMLElement>('.upgrade-price')!.hidden = !!building.keepHousingExpanded;
-      housingButton.title = housingUpgrade.reason;
     }
     const levyPanel = this.element.querySelector<HTMLElement>('.activity-levy')!;
     levyPanel.hidden = kind !== 'governor' || !isKeep(building) || !researchLevel(this.getState().factions.find(f => f.id === building.faction), 'massLevy');
@@ -384,8 +406,12 @@ export class BuildingActivityPopup {
       levyPanel.querySelector<HTMLInputElement>('input')!.value = String(percent);
       levyPanel.querySelector<HTMLOutputElement>('output')!.textContent = `${100 - percent}% / ${percent}%`;
     }
-    this.element.querySelector<HTMLElement>('.activity-composition')!.hidden = !isCompositionBuilding(building);
-    if (isCompositionBuilding(building)) this.refreshComposition(building);
+    const composition = this.element.querySelector<HTMLElement>('.activity-composition')!;
+    composition.hidden = !isCompositionBuilding(building);
+    if (!composition.hidden) {
+      composition.querySelector('h3')!.hidden = kind === 'archeryRange';
+      this.refreshComposition(building);
+    }
     if (kind === 'farm') {
       for (const count of [1, 10] as const) {
         const status = orchardUpgradeStatus(this.getState(), building, count), button = this.element.querySelector<HTMLButtonElement>(`[data-orchard="${count}"]`)!;
@@ -435,9 +461,8 @@ export class BuildingActivityPopup {
   }
 
   private showCompositionValue(role: RetinueRole, input: HTMLInputElement): void {
-    const percent = `${input.value}%`;
-    this.element.querySelector<HTMLOutputElement>(`.${role}-count`)!.textContent = percent;
-    input.setAttribute('aria-valuetext', percent);
+    this.element.querySelector<HTMLOutputElement>(`.${role}-count`)!.textContent = input.value;
+    input.setAttribute('aria-valuetext', `${input.value} assigned`);
   }
 
   private refreshComposition(building: Building): void {
@@ -447,9 +472,7 @@ export class BuildingActivityPopup {
     const trainingBuildings = { warrior: undefined, archer: 'archeryRange', spearman: 'blacksmith', swordsman: 'blacksmith',
       fieldCannon: 'foundry', pikeman: 'barracks', musketman: 'barracks', horseman: 'stable', horseArcher: 'stable', knight: 'stable' } as const;
     const schoolNames = { foundry: 'a foundry', archeryRange: 'an archery range', blacksmith: 'a blacksmith', stable: 'a stable', barracks: 'a barracks' };
-    const shares = { fieldCannon: fieldCannonFraction(faction), archer: archerFraction(faction), spearman: spearmanFraction(faction), swordsman: swordsmanFraction(faction),
-      pikeman: pikemanFraction(faction), musketman: musketmanFraction(faction), horseman: horsemanFraction(faction), horseArcher: horseArcherFraction(faction), knight: knightFraction(faction) };
-    const fractions = { ...shares, warrior: Math.max(0, 1 - Object.values(shares).reduce((total, value) => total + value, 0)) };
+    const horseRequirement = hasLivestock(state, faction.id, 'horse') ? '' : 'Fence a horse herd.';
     const requirements: Record<RetinueRole, string> = {
       warrior: '',
       fieldCannon: researchLevel(faction, 'fieldCannon') > 0 ? '' : 'Requires Field cannon.',
@@ -458,30 +481,28 @@ export class BuildingActivityPopup {
       swordsman: areSwordsmenUnlocked(faction) ? '' : 'Requires Metal Casting.',
       musketman: areMusketmenUnlocked(faction) ? '' : 'Requires Gunpowder.',
       pikeman: arePikemenUnlocked(faction) ? '' : 'Requires Urban Militia.',
-      horseman: areHorsemenUnlocked(faction) ? '' : 'Requires Horseback Riding.',
-      horseArcher: areHorseArchersUnlocked(faction) ? '' : 'Requires Horseback Riding and Compound Bow.',
-      knight: areKnightsUnlocked(faction) ? '' : 'Requires Horseback Riding and Stirrups.',
+      horseman: areHorsemenUnlocked(faction) ? horseRequirement : 'Requires Horseback Riding.',
+      horseArcher: areHorseArchersUnlocked(faction) ? horseRequirement : 'Requires Horseback Riding and Compound Bow.',
+      knight: areKnightsUnlocked(faction) ? horseRequirement : 'Requires Horseback Riding and Stirrups.',
     };
     this.element.querySelector<HTMLElement>('.composition-summary')!.textContent = `${counts.total} retinue slots${counts.training ? ` · ${counts.training} retraining` : ''}`;
-    const now = performance.now();
+    const now = performance.now(), max = String(counts.slots);
     for (const row of compositionRows) {
       const input = this.element.querySelector<HTMLInputElement>(`[name="${row.name}"]`)!;
-      const percent = Math.round(fractions[row.role] * 100), pending = this.pendingComposition.get(row.name);
-      if (pending && (pending.value === percent || now >= pending.until)) this.pendingComposition.delete(row.name);
+      const assigned = counts[row.count], pending = this.pendingComposition.get(row.name);
+      if (pending && (pending.value === assigned || pending.value > counts.slots || now >= pending.until)) this.pendingComposition.delete(row.name);
       const school = trainingBuildings[row.role];
       const trainingRequirement = school && !schools.has(school) ? `Build ${schoolNames[school]} to train.` : '';
       const requirement = requirements[row.role] || trainingRequirement;
-      input.disabled = !!requirement;
-      input.title = requirement;
-      if (requirement) input.setAttribute('aria-description', requirement);
-      else input.removeAttribute('aria-description');
+      input.disabled = !!requirement || counts.slots === 0;
+      input.title = requirement || `${retinueUpkeep({ kind: row.role })} gold / 30s per unit`;
+      input.setAttribute('aria-description', input.title);
+      if (input.max !== max) input.max = max;
       if (!this.editingComposition.has(row.name)) {
-        const value = String(this.pendingComposition.get(row.name)?.value ?? percent);
+        const value = String(this.pendingComposition.get(row.name)?.value ?? assigned);
         if (input.value !== value) input.value = value;
       }
       this.showCompositionValue(row.role, input);
-      const trained = row.current ? `${counts[row.current]} trained · ` : '';
-      this.element.querySelector<HTMLElement>(`.${row.role}-status`)!.textContent = `${trained}${counts[row.count]} assigned`;
     }
   }
 

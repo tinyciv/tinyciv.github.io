@@ -401,12 +401,14 @@ export function lastCollidingUnitInCell(state: GameState, cell: number, unit: Un
   return Number.isNaN(id) ? undefined : entityStore(state).units.get(id);
 }
 
+const unblockedUnitCells = { has: () => false };
 /** Read-only unit occupancy for synchronous navigation probes. During a unit
  * frame this follows refreshed tile entries and checks live health/hiding;
  * public calls outside a frame receive an ordinary request-local snapshot.
  * Keep the indexed query lazy: serializing every unit for short probes is slower
  * than checking the few cells visited by JavaScript navigation. */
 export function unitOccupancy(state: GameState, unit: Unit): Pick<ReadonlySet<number>, 'has'> {
+  if (unit.training) return unblockedUnitCells;
   const index = frames.get(state);
   if (!index) {
     const occupied = new Set<number>();

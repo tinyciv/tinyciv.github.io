@@ -17,9 +17,9 @@ import { drawBuilding, drawOverlay, drawUnit, NO_CONNECTIONS, type Connections }
 import { factionSheet, personFrame } from './unit-sprites';
 import { refugeeFrame, refugeeImage, REFUGEE_BOUNDS } from './refugee-art';
 import { auxiliaryArtKey } from './auxiliary-art';
-import { wildlifeFrame, wildlifeImage } from './wildlife-art';
+import { drawLivestockOutline, livestockOutlineBounds, wildlifeFrame, wildlifeImage, wildlifeKind, wildlifePose } from './wildlife-art';
 import { merchantFrame, merchantImage } from './merchant-art';
-import { drawFarmField, fieldStage, orchardAppearance } from './farm-art';
+import { drawFarmField, orchardAppearance, wheatFrame, wheatTile } from './farm-art';
 import { drawVegetation, vegetationArtBounds, vegetationVariant } from './vegetation-art';
 import type { MarshRushPlacement } from './marsh-rush-placement';
 import { nativeHouseTier } from './puny-building-art';
@@ -27,25 +27,26 @@ import { nativeHouseVariant } from './house-variant-art';
 import type { TowerWallKind } from './wall-towers';
 import type { FordAxis } from './ford-art';
 import { punyWorldImage } from './puny-world';
-import { palaceArtHeight } from './palace-sprite';
 import { drawPalm } from './palm-art';
 import { armorVisualLevel } from './armor-art';
 import { horsemanBounds, horsemanPose, horsemanSheet } from './cavalry-art';
 import { ballistaFrame, spearmanBounds, spearmanPose, spearmanSheet } from './siege-art';
 import { cannonFrame, drawCannon } from './cannon-art';
-import { cannonFireImage, cannonFireStamp, CANNON_FIRE_FRAME_SIZE } from './cannon-fire-art';
+import { cannonFireStamp, CANNON_FIRE_FRAME_SIZE, gunSmokeFrame } from './cannon-fire-art';
 import { shellImpactImage, SHELL_IMPACT_FRAME_SIZE, SHELL_IMPACT_BOUNDS } from './shell-impact-art';
 import { FOUNTAIN_ART_BOUNDS, FOUNTAIN_FRAME_SIZE, fountainFrame, fountainSheet, thermalBathFrame } from './civic-art';
 import { dockArtBounds, dockConstructionBounds, rowboatFrame, drawRowboat, rowboatOccupant, warshipAnchorMarker } from './naval-art';
 import { galleyPose, galleyHullImage, galleyRigImage, galleyAttachmentOffset, drawGalleyHull, drawGalleyRig, drawGalleyPassenger, GALLEY_ART_BOUNDS, GALLEY_PIVOT, TRADING_BOAT_SCALE } from './galley-art';
 import { trailArtVariant } from './road-sprites';
-import { drawResourceObject, drawResourceFence, resourceObjectBounds, resourceObjectKey, type ResourceCellArt } from './resource-art';
+import { drawResourceObject, drawResourceFence, resourceObjectBounds, resourceObjectKey, type FenceArt, type ResourceCellArt } from './resource-art';
 import { damageMaskSheet, deathAnimationFrame, deathAnimationImage, decayAnimationImage, DEATH_FRAME_SIZE, DEATH_GROUND_ANCHOR,
     DEATH_FALL_FRAME_DURATIONS_MS, DECAY_FRAME_SIZE, DECAY_GROUND_ANCHOR } from './combat-effect-art';
 import { MUSKETMAN_BOUNDS, musketmanPose, musketmanSheet, musketmanDeathPose } from './musketman-art';
 import { PIKEMAN_BOUNDS, pikemanPose, pikemanSheet } from './pikeman-art';
 import { BRIGAND_BOUNDS, brigandPose, brigandSheet, brigandDeathPose, usesBrigandArt } from './brigand-art';
 import { MEADOW_SPRITES, meadowImage, type MeadowVariant } from './meadow-art';
+import { FERTILITY_GRASS_CELL, FERTILITY_GRASS_VARIANTS, fertilityGrassImage } from './fertility-grass-art';
+import type { RockPalette } from './rock-range-art';
 
 export interface ArtBounds { x: number; y: number; width: number; height: number }
 export interface BakedArt extends ArtBounds { texture: Texture; overlays?: BakedArt[]; rotation?: number; rotationPivot?: { x: number; y: number } }
@@ -75,7 +76,8 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
     if (unit.kind === 'musketman') return `musketman:${musketmanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
     if (unit.kind === 'pikeman') return `pikeman:${pikemanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
     if (unit.kind === 'spearman') return `spearman:${spearmanPose(unit, time).rect.join(':')}:${color}:${!!unit.inside}`;
-    if (unit.kind === 'boar' || unit.kind === 'marshBird') { const { row, frame } = wildlifeFrame(unit, time); return `${unit.kind}:${row}:${frame}`; }
+    const animal = wildlifeKind(unit);
+    if (animal) { const { row, frame } = wildlifeFrame(unit, time); return `${animal}:${row}:${frame}`; }
     if (unit.kind === 'merchant') { const { row, column } = merchantFrame(unit, time); return `merchant:${row}:${column}:${!!unit.inside}`; }
     if (unit.explorationRefugee) return `refugee:${refugeeFrame(unit, time).join(':')}:${!!unit.inside}`;
     if (!['leader', 'warrior', 'swordsman', 'archer', 'scout', 'militia', 'levyInfantry', 'skirmisher', 'slinger', 'worker'].includes(unit.kind)) return `empty:${unit.kind}`;
@@ -86,21 +88,22 @@ export function unitKey(unit: Unit, time: number, color: string, passenger?: Uni
 /** Kinds whose picture changes with the animation clock once built. */
 export const ANIMATED_BUILDING_KINDS: ReadonlySet<Building['kind']> = new Set(['observationPost', 'ballista', 'siegeCannon', 'library', 'thermalBath', 'irrigation', 'fountain']);
 
-export function buildingKey(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind): string {
+export function buildingKey(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind,
+    minePalette: RockPalette = 'temperate'): string {
     if (b.construction && b.kind !== 'well' && b.kind !== 'road') return `construction:${buildingWidth(b)}:${buildingHeight(b)}${b.kind === 'dock' ? `:dock:${b.dockFacing ?? 2}` : ''}`;
     if (b.kind === 'fountain') return `fountain:${fountainFrame(time)}`;
-    if (b.kind === 'goldMine') return `gold-mine:${b.faction >= 0}`;
+    if (b.kind === 'goldMine') return `gold-mine:${b.faction >= 0}:${minePalette}`;
     const phase = b.kind === 'observationPost' ? Math.floor(time * 4) % 2 : b.kind === 'ballista' ? Object.values(ballistaFrame(b, time)).join(':')
         : b.kind === 'siegeCannon' ? Object.values(cannonFrame(b, time)).join(':')
         : b.kind === 'library' ? Math.floor(time * 5) % 4 : b.kind === 'thermalBath' ? thermalBathFrame(time) : b.kind === 'irrigation' ? Math.floor(time * 3) % 4 : 0;
-    return `building:${b.kind}:${b.fort?.destroyed ?? false}:${color}:${nativeHouseTier(b)}:${connectionsKey(links)}:${!!gate}:${connectionsKey(gate)}:${attached}:${phase}${b.kind === 'fort' ? `:${b.fortLevel ?? 1}` : b.kind === 'woodenTower' ? `:${towerWall ?? 'none'}` : b.kind === 'house' ? `:${nativeHouseVariant(b) ?? 'original'}` : b.kind === 'road' ? `:${Number(!!b.roadPaved)}:${links.pavedEnds ?? 0}:${pavedRoadArtRevision()}:${b.roadStyle ?? 'road'}${b.roadStyle === 'trail' ? `:${trailArtVariant(b.x, b.y)}` : ''}` : b.kind === 'palace' ? `:${b.palaceLevel ?? 1}` : b.kind === 'dock' ? `:${b.dockFacing ?? 2}` : ''}`;
+    if (b.kind === 'palace') return `palace:${color}:${b.palaceLevel ?? 1}:${b.settlementTier ?? 0}`;
+    return `building:${b.kind}:${b.fort?.destroyed ?? false}:${color}:${nativeHouseTier(b)}:${connectionsKey(links)}:${!!gate}:${connectionsKey(gate)}:${attached}:${phase}${b.kind === 'fort' ? `:${b.fortLevel ?? 1}` : b.kind === 'woodenTower' ? `:${towerWall ?? 'none'}` : b.kind === 'house' ? `:${nativeHouseVariant(b) ?? 'original'}` : b.kind === 'road' ? `:${Number(!!b.roadPaved)}:${links.pavedEnds ?? 0}:${pavedRoadArtRevision()}:${b.roadStyle ?? 'road'}${b.roadStyle === 'trail' ? `:${trailArtVariant(b.x, b.y)}` : ''}` : b.kind === 'dock' ? `:${b.dockFacing ?? 2}` : ''}`;
 }
 
 export function fieldKey(field: FarmField, time: number, joins = 0): string {
-    const stage = fieldStage(field, time);
     const orchard = field.orchard && orchardAppearance(field, time);
     return orchard ? `orchard:${field.camp & 1}:${orchard.mature}:${orchard.fruit}`
-        : `wheat:${stage}:${joins}`;
+        : `wheat:${wheatFrame(field, time)}:${joins}`;
 }
 
 /** Offscreen art baking only. World composition uses native Pixi sprites. Small
@@ -108,6 +111,7 @@ export function fieldKey(field: FarmField, time: number, joins = 0): string {
 export class NativeArt {
     private cache = new Map<string, CachedArt>();
     private meadowFrames = new Map<MeadowVariant, BakedArt[]>();
+    private fertilityGrassFrames: BakedArt[] = [];
     private resourcePatchDescriptions = new WeakMap<ResourceInteractionPatch, { key: string; bounds: ArtBounds; cells: ResourceInteractionPatch['cells'] }>();
     private atlases: Atlas[] = [];
     private images = new Map<HTMLImageElement | HTMLCanvasElement, { source: TextureSource; frames: Map<string, BakedArt> }>();
@@ -188,10 +192,8 @@ export class NativeArt {
     }
 
     gunSmoke(variant: number): BakedArt | undefined {
-        const image = cannonFireImage();
-        // Reuse the smoke-only tail of the approved black-powder animation.
-        return image && this.image(image, [(6 + variant) * CANNON_FIRE_FRAME_SIZE + 6, 3, 18, 19],
-            { x: -16, y: -16, width: 32, height: 32 });
+        const frame = gunSmokeFrame(variant);
+        return frame && this.image(frame.image, frame.rect, { x: -16, y: -16, width: 32, height: 32 });
     }
 
     private cannonFire(shotAt: number | undefined, time: number, facing: number, centerX: number, centerY: number,
@@ -314,9 +316,10 @@ export class NativeArt {
                 const sheet = spearmanSheet(color), pose = spearmanPose(unit, time);
                 if (sheet) return this.image(effectSheet(sheet, effect?.damageMask), [...pose.rect], spearmanBounds(pose));
             }
-            if ((unit.kind === 'boar' || unit.kind === 'marshBird') && wildlifeImage(unit.kind)) {
-                const { row, frame } = wildlifeFrame(unit, time);
-                return this.image(effectSheet(wildlifeImage(unit.kind)!, effect?.damageMask), [frame * 16, row * 16, 16, 16], { x: 0, y: 0, width: 32, height: 32 });
+            const animal = wildlifeKind(unit), sheet = animal && wildlifeImage(animal);
+            if (sheet) {
+                const { rect, bounds } = wildlifePose(unit, time);
+                return this.image(effectSheet(sheet, effect?.damageMask), rect, bounds);
             }
             if (unit.kind === 'merchant' && !unit.aboardRiverTrade && merchantImage()) {
                 const { row, column } = merchantFrame(unit, time);
@@ -380,8 +383,9 @@ export class NativeArt {
         else this.stats.rasterCacheHits++;
         return art;
     }
-    /** `key`, when supplied, must equal buildingKey(b, time, color, links, gate, attached, towerWall). */
-    building(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind, key?: string): BakedArt {
+    /** `key`, when supplied, must describe the same art as the remaining arguments. */
+    building(b: Building, time: number, color: string, links = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind,
+        key?: string, minePalette?: RockPalette): BakedArt {
         if (b.kind === 'fountain' && !b.construction) {
             const sheet = fountainSheet();
             const size = FOUNTAIN_FRAME_SIZE;
@@ -397,16 +401,27 @@ export class NativeArt {
         if (b.kind === 'dock') return this.paint(buildingKey(b, time, color), b.construction ? dockConstructionBounds(b) : dockArtBounds(b),
             c => drawBuilding(c, b, 0, 0, 32, time, color));
         const x = attached && b.kind === 'well' ? -12 : 0, y = buildingArtTop(b) * 32;
-        const bottom = b.kind === 'palace' && !b.construction ? palaceArtHeight(b.palaceLevel) : buildingHeight(b) * 32;
-        return this.paint(key ?? buildingKey(b, time, color, links, gate, attached, towerWall),
+        const bottom = buildingHeight(b) * 32;
+        return this.paint(key ?? buildingKey(b, time, color, links, gate, attached, towerWall, minePalette),
             { x, y, width: buildingWidth(b) * 32 - x, height: bottom - y + (attached && b.kind === 'well' ? 8 : 0) },
-            c => drawBuilding(c, b, 0, 0, 32, time, color, links, gate, attached, towerWall));
+            c => drawBuilding(c, b, 0, 0, 32, time, color, links, gate, attached, towerWall, minePalette),
+            b.kind === 'palace' && !b.construction ? NATIVE_TILE_RESOLUTION : undefined);
     }
     vegetation(tile: Tile, rush?: MarshRushPlacement): BakedArt {
         const source = vegetationVariant(tile, rush);
         const shoots = rush && (rush.left || rush.right) ? `:${Number(rush.left)}:${Number(rush.right)}:${rush.shootVariant}` : '';
         return this.paint(`vegetation:${source?.sheet}:${source?.x}:${source?.y}${shoots}`, vegetationArtBounds(tile, 32, rush, source),
             c => drawVegetation(c, tile, 0, 0, 32, rush), source?.sheet === 'rushes' ? .5 : undefined);
+    }
+    fertilityGrass(density: NonNullable<Tile['fertilityGrass']>, variation: number): BakedArt | undefined {
+        const column = Math.min(FERTILITY_GRASS_VARIANTS - 1, Math.floor(variation * FERTILITY_GRASS_VARIANTS));
+        const row = density - 1, frame = row * FERTILITY_GRASS_VARIANTS + column;
+        const cached = this.fertilityGrassFrames[frame];
+        if (cached) return cached;
+        const image = fertilityGrassImage(), size = FERTILITY_GRASS_CELL;
+        if (!image) return undefined;
+        return this.fertilityGrassFrames[frame] = this.image(image, [column * size, row * size, size, size],
+            { x: 0, y: 0, width: size * 2, height: size * 2 });
     }
     /** Every tuft of one pose shares its sheet texture and fixed native bounds. */
     meadow(variant: MeadowVariant, frame: number): BakedArt | undefined {
@@ -455,18 +470,29 @@ export class NativeArt {
                     // Groves and salt beds contain gaps in their art. Their
                     // interaction boundary follows the joined patch footprint.
                     if (art.resource === 'salt' || art.resource === 'olives') mask.fillRect(px, py, 32, 32);
-                    else drawResourceObject(mask, art, px, py);
+                    else drawResourceObject(mask, art, px, py, 32, true);
                 }
                 c.drawImage(silhouetteOutline(sprite, color), left - padding, top - padding);
             });
     }
-    resourceFence(resource: ResourceCellArt, front: boolean): BakedArt {
+    livestockOutline(unit: Unit, time: number): BakedArt {
+        const { row, frame } = wildlifeFrame(unit, time);
+        return this.paint(`livestock-outline:${unit.kind}:${row}:${frame}`,
+            livestockOutlineBounds(unit), c => drawLivestockOutline(c, unit, time), NATIVE_TILE_RESOLUTION);
+    }
+    resourceFence(resource: FenceArt, front: boolean): BakedArt {
         return this.paint(`resource-fence:${resource.fences}:${resource.gate}:${front}`, { x: 0, y: -8, width: 32, height: 40 },
             c => drawResourceFence(c, resource, front));
     }
     field(field: FarmField, time: number, clipKey = '', clip?: (c: CanvasRenderingContext2D) => void, joins = 0): BakedArt {
-        return this.paint(`${fieldKey(field, time, joins)}:${clipKey}`, { x: 0, y: 0, width: 32, height: 32 },
-            c => { clip?.(c); drawFarmField(c, 0, 0, 32, time, field, joins); });
+        const bounds = { x: 0, y: 0, width: 32, height: 32 };
+        if (!field.orchard && !clip) {
+            const tile = wheatTile(wheatFrame(field, time), joins);
+            if (tile) return this.image(tile.image, tile.rect, bounds);
+        }
+        return this.paint(`${fieldKey(field, time, joins)}:${clipKey}`, bounds,
+            c => { clip?.(c); drawFarmField(c, 0, 0, 32, time, field, joins); },
+            field.orchard ? this.resolution : NATIVE_TILE_RESOLUTION);
     }
     overlay(tile: Tile, axis: FordAxis = 'vertical'): BakedArt {
         if (tile.palm) return this.paint('palm', { x: 0, y: 0, width: 32, height: 32 }, c => drawPalm(c, 0, 0, 32));
@@ -494,7 +520,8 @@ export class NativeArt {
         for (const { art } of this.cache.values()) art.texture.destroy();
         const sources: TextureSource[] = this.atlases.map(atlas => atlas.source);
         for (const { source, frames } of this.images.values()) { for (const art of frames.values()) art.texture.destroy(); sources.push(source); }
-        this.images.clear(); this.meadowFrames.clear(); this.cache.clear(); this.atlases = []; return sources;
+        this.images.clear(); this.meadowFrames.clear(); this.fertilityGrassFrames.length = 0;
+        this.cache.clear(); this.atlases = []; return sources;
     }
     destroy(): void { for (const source of this.clear()) source.destroy(); }
 }

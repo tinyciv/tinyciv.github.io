@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { scoutRealm } from './helpers/scouts';
+import { withHorsePasture } from './helpers/horse-pasture';
 import { entityStore } from '../src/game/entity-store';
 import { applyGameCommand } from '../src/multiplayer/commands';
 import { areSwordsmenUnlocked, RESEARCH_BRANCHES } from '../src/game/research';
@@ -20,14 +21,14 @@ describe('Metal Casting swordsmen', () => {
     const {state,faction,smithy}=realm();
     expect(areSwordsmenUnlocked(faction)).toBe(false);
     expect(setSwordsmanFraction(state,smithy,.5)).toBe(false);
-    expect(applyGameCommand(state,0,{type:'swordsmen',buildingId:smithy.id,fraction:.5}).ok).toBe(false);
+    expect(applyGameCommand(state,0,{type:'swordsmen',buildingId:smithy.id,count:2}).ok).toBe(false);
     faction.research!.levels.metalCasting=1;
     expect(RESEARCH_BRANCHES.find(b=>b.id==='metalCasting')!.prerequisites).toEqual(['reinforcedDefenses','infantryDrill']);
     expect(setSwordsmanFraction(state,state.buildings[1],.5)).toBe(false);
     expect(setSwordsmanFraction(state,smithy,NaN)).toBe(false);
     smithy.construction={startedAt:0,duration:20}; expect(setSwordsmanFraction(state,smithy,.5)).toBe(false);delete smithy.construction;
-    expect(applyGameCommand(state,1,{type:'swordsmen',buildingId:smithy.id,fraction:.5}).ok).toBe(false);
-    expect(applyGameCommand(state,0,{type:'swordsmen',buildingId:smithy.id,fraction:.5}).ok).toBe(true);
+    expect(applyGameCommand(state,1,{type:'swordsmen',buildingId:smithy.id,count:2}).ok).toBe(false);
+    expect(applyGameCommand(state,0,{type:'swordsmen',buildingId:smithy.id,count:2}).ok).toBe(true);
     expect(state.units.filter(u=>u.training?.role==='swordsman')).toHaveLength(2);
   });
   it('trains by visiting the smithy, preserves wounds/upgrades, and can retrain back without stat inflation', () => {
@@ -51,6 +52,7 @@ describe('Metal Casting swordsmen', () => {
     expect(state.units.filter(isRetinueMember)).toHaveLength(4);
     setArcherFraction(state,state.buildings[0],1);expect(faction.archerFraction).toBe(1);
     const stable={...smithy,id:103,kind:'stable' as const};entityStore(state).buildings.add(stable);faction.research!.levels.horsebackRiding=1;
+    withHorsePasture(state);
     setHorsemanFraction(state,stable,.75);
     expect(retinueComposition(state,0)).toMatchObject({horsemen:3,swordsmen:0,archers:1,warriors:0});
   });

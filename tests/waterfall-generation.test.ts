@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ridgeEdgeAllowed, ridgeGroundWalkable, ridgeLevel } from '../src/game/ridges';
 import { WATER, type World } from '../src/game/types';
-import { generateWorld } from '../src/world/generator';
 import { addWaterfallTributaries, isSouthWaterfallLip, markRiverWaterfalls } from '../src/world/waterfalls';
 
 function shelves(): World {
@@ -94,25 +93,5 @@ describe('rivers descending native ledges', () => {
     }
     const repeat = shelves(); expect(addWaterfallTributaries(repeat)).toEqual(result); expect(repeat).toEqual(world);
   });
-
-  it('produces legal waterfalls in a real procedural world while retaining an acyclic runoff graph', () => {
-    const world = generateWorld('CROWN'), { tiles, width } = world;
-    expect(checkFalls(world).length).toBeGreaterThan(0);
-    const incoming = new Uint16Array(tiles.length);
-    for (const tile of tiles) if ((tile.drainage ?? -1) >= 0) incoming[tile.drainage!]++;
-    const order = tiles.flatMap((_, cell) => incoming[cell] ? [] : [cell]);
-    for (let head = 0; head < order.length; head++) {
-      const cell = order[head], tile = tiles[cell], next = tile.drainage ?? -1;
-      if (next >= 0) {
-        expect(tile.elevation + 1e-9).toBeGreaterThanOrEqual(tiles[next].elevation);
-        if (tile.channel) { expect(tile.channelNext).toBe(next); expect(WATER.has(tiles[next].terrain)).toBe(true); }
-        if (!--incoming[next]) order.push(next);
-      }
-    }
-    expect(order).toHaveLength(tiles.length);
-    const accessible = reachable(world);
-    for (const [cell, tile] of tiles.entries()) if (tile.ridge && !WATER.has(tile.terrain) && ridgeGroundWalkable(world, cell % width, Math.floor(cell / width)))
-      expect(accessible.has(cell), `terrace bank ${cell % width},${Math.floor(cell / width)}`).toBe(true);
-  }, 120000);
 
 });

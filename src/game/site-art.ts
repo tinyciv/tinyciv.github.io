@@ -1,14 +1,19 @@
-import type { GraphicsContext } from 'pixi.js';
+import { drawGeothermal, geothermalArtOffsetY } from './geothermal-art';
+import { silhouetteOutline } from './silhouette-outline';
+import type { Tile } from './types';
 
-/** Runtime footprint annotation, like selection outlines. Four square corner
- * brackets are cached vector geometry, with no image or per-frame raster work. */
-export function drawSiteBrackets(g: GraphicsContext, width: number, height: number, near: boolean, mask = 15): void {
-    const inset = width * .035, arm = width * .17;
-    for (let corner = 0; corner < 4; corner++) {
-        if (!(mask & 1 << corner)) continue;
-        const right = !!(corner & 1), bottom = !!(corner & 2);
-        const x = right ? width - inset : inset, y = bottom ? height - inset : inset;
-        g.moveTo(x + (right ? -arm : arm), y).lineTo(x, y).lineTo(x, y + (bottom ? -arm : arm));
-    }
-    g.stroke({ color: near ? '#e45b55' : '#b8bab8', alpha: near ? .95 : .38, width: Math.max(1, width / 48), cap: 'square', join: 'miter' });
+export const SITE_OUTLINE_PADDING = 6;
+
+/** Trace a fixed frame to keep the outline steady as the steam animates. */
+export function drawSiteOutline(context: CanvasRenderingContext2D, variant: NonNullable<Tile['geothermal']>, mask: number): void {
+    const padding = SITE_OUTLINE_PADDING;
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 64 + 2 * padding;
+    const source = sprite.getContext('2d')!;
+    source.translate(padding, padding);
+    source.beginPath();
+    source.rect(0, -geothermalArtOffsetY(variant), 64, 64);
+    source.clip();
+    drawGeothermal(source, variant, 0, mask);
+    context.drawImage(silhouetteOutline(sprite, '#ed574c'), -padding, -padding);
 }

@@ -1,7 +1,7 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
-import { beginBattleRout, casualtyPressure, MARAUDER_MIN_ROUT_SECONDS, recordBattleDeath } from '../src/game/battle-morale';
+import { beginBattleRout, casualtyPressure, MARAUDER_MAX_MORALE, MARAUDER_MIN_ROUT_SECONDS, recordBattleDeath } from '../src/game/battle-morale';
 import { atWar, updateGame } from '../src/game/simulation';
 import { firingTowerThreats, recordTowerShot } from '../src/game/tower-threats';
 import type { Building, GameState, Unit } from '../src/game/types';
@@ -181,7 +181,7 @@ describe('local battle morale', () => {
 describe('hostile rout contagion and marauder rally delay', () => {
   function line(morale = 60, extraStanding = 0) {
     const state = fixture();
-    state.raiderCamps = []; state.raiderSkirmishes = { nextByFaction: {}, wavesByFaction: {} };
+    state.raiderCamps = [];
     const broken = { ...unit(20, -2, 19.5, 12.5), morale: 0, lastCombat: -60 };
     const wavering = { ...unit(21, -2, 20.5, 12.5), morale, lastCombat: -60 };
     const steady = { ...unit(22, -2, 21.5, 12.5), morale: 60, lastCombat: -60 };
@@ -206,11 +206,11 @@ describe('hostile rout contagion and marauder rally delay', () => {
   });
 
   it('does not guarantee a chain rout in a healthy formation with only one fugitive', () => {
-    const { state, wavering, steady } = line(100, 5);
-    steady.morale = 100;
+    const { state, wavering, steady } = line(MARAUDER_MAX_MORALE, 5);
+    steady.morale = MARAUDER_MAX_MORALE;
     updateGame(state, 5, idle);
     expect(wavering.order).not.toBe('flee'); expect(steady.order).not.toBe('flee');
-    expect(wavering.morale).toBeGreaterThan(85);
+    expect(wavering.morale).toBeGreaterThan(MARAUDER_MAX_MORALE - 15);
   });
 
   it('does not spread panic away from fighting, beyond five tiles, or into the friendly retinue', () => {
@@ -244,7 +244,7 @@ describe('hostile rout contagion and marauder rally delay', () => {
     entityStore(state).units.retain(candidate => candidate !== wavering && candidate !== steady && candidate !== enemy);
     const deadline = broken.routUntil!;
     expect(deadline).toBe(MARAUDER_MIN_ROUT_SECONDS);
-    broken.morale = 100;
+    broken.morale = MARAUDER_MAX_MORALE;
     beginBattleRout(state, broken); // Repeat notifications cannot restart the clock.
     updateGame(state, 14.9, idle);
     expect(broken.order).toBe('flee'); expect(broken.routUntil).toBe(deadline);
@@ -256,12 +256,12 @@ describe('hostile rout contagion and marauder rally delay', () => {
 
   it('does not let a four-second casualty shock bypass the marauder rally deadline', () => {
     const state = fixture(), soldier = { ...unit(20, -2), lastCombat: -60 };
-    state.raiderCamps = []; state.raiderSkirmishes = { nextByFaction: {}, wavesByFaction: {} };
+    state.raiderCamps = [];
     entityStore(state).units.add(soldier); losses(state, 6, -2);
     updateGame(state, 2.1, idle);
     expect(soldier.order).toBe('flee');
     const deadline = soldier.routUntil!;
-    expect(deadline).toBeGreaterThan(16.9);
+    expect(deadline).toBeGreaterThan(state.time);
     updateGame(state, 3, idle);
     expect(soldier.morale).toBeGreaterThan(48);
     expect(soldier.order).toBe('flee'); expect(soldier.routUntil).toBe(deadline);

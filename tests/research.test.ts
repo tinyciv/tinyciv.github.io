@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { entityStore } from '../src/game/entity-store';
-import { researchCost, researchStatus, prioritizeResearch, updateResearch, isBuildingUnlocked, areArchersUnlocked, areScoutsUnlocked, isInfantryDrillUnlocked, buildingResearchRequirement, RESEARCH_BRANCHES } from '../src/game/research';
+import { researchCost, researchStatus, prioritizeResearch, updateResearch, isBuildingUnlocked, areArchersUnlocked, areScoutsUnlocked, isInfantryDrillUnlocked, buildingResearchRequirement } from '../src/game/research';
 import { grantIncome } from '../src/game/resource-income';
 import { buildAt, validateBuildAt } from '../src/game/simulation';
 import { buildStroke, constructionLine } from '../src/game/construction';
@@ -52,11 +52,10 @@ describe('income-funded technology unlocks', () => {
   });
   it('unlocks archers, infantry drill and scouts through their entire prerequisite chains', () => {
     const state = fixture(), faction = state.factions[0], range = building(3,'archeryRange'); entityStore(state).buildings.add(range);
+    complete(state,'infantryDrill'); expect(isInfantryDrillUnlocked(faction)).toBe(true); expect(faction.research?.levels).toEqual({ infantryDrill:1 });
     faction.archerFraction=1; expect(setArcherFraction(state,range,1)).toBe(false); expect(nextRecruitRole(state,faction)).toBe('warrior');
     complete(state,'archeryRange'); expect(areArchersUnlocked(faction)).toBe(true); expect(setArcherFraction(state,range,1)).toBe(true); expect(nextRecruitRole(state,faction)).toBe('archer');
-    complete(state,'infantryDrill'); expect(isInfantryDrillUnlocked(faction)).toBe(true); expect(faction.research?.levels).toMatchObject({ blacksmith:1, woodenTower:1, militaryTactics:1, infantryDrill:1 });
     complete(state,'scoutLodge'); expect(areScoutsUnlocked(faction)).toBe(true); expect(buildingResearchRequirement('guardPost')).toBe('woodenTower');
-    expect(RESEARCH_BRANCHES).toHaveLength(25);
   });
 });
 

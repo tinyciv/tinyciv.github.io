@@ -3,6 +3,7 @@ import { decisionDue, type DecisionClock } from './decision-schedule';
 import { simulationReadsActive } from './simulation-reads';
 import { CHECK_INTERVAL } from './work-cadence';
 import { spendGold } from './gold-ledger';
+import { recordRaidTheft } from './raid-director';
 import { maximumUnitRange, unitAttackRange } from './combat-range';
 import { constructionEdges } from './builders';
 import { canMove, canWalk, travelTimeMap } from './pathfinding';
@@ -30,17 +31,6 @@ const clearJourney = (unit: Unit): void => {
   unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0;
 };
 
-/** Early raids keep the original assault. Later small harassment/theft parties
- * alternate with assaults, and only one wave in eight attempts a siege. */
-export function raiderMotivationForWave(waves: number): RaiderMotivation {
-  return (['assault', 'assault', 'harass', 'assault', 'theft', 'assault', 'harass', 'siege'] as const)[Math.max(0, Math.floor(waves)) % 8];
-}
-export function raiderMotivationSize(motivation: RaiderMotivation, ordinary: number, defendingSoldiers: number): { initial: number; total: number } {
-  if (motivation === 'harass') { const total = Math.min(10, Math.max(2, Math.round(ordinary / 3))); return { initial: total, total }; }
-  if (motivation === 'theft') { const total = Math.min(10, Math.max(1, 1 + Math.ceil(Math.max(0, defendingSoldiers) / 5))); return { initial: total, total }; }
-  if (motivation === 'siege') { const total = Math.min(30, Math.max(10, 10 + Math.ceil(Math.max(0, defendingSoldiers) / 2))); return { initial: Math.min(10, total), total }; }
-  return { initial: ordinary, total: ordinary };
-}
 
 /** Theft uses real weighted travel times without deleting walls from planning.
  * A fully closed city is never selected as a supposedly open theft route. */
@@ -127,7 +117,7 @@ export function siegeRallyPoint(state: GameState, from: Point, target: Building)
 function campHouse(state: GameState, pack: MarauderPack, from: Point): Building | undefined {
   const camp = state.raiderCamps?.find(camp => camp.id === pack.raiderCamp);
   return (camp?.houses ?? []).map(id => indexedBuilding(state, id)).filter((building): building is Building => !!building
-    && building.faction === RAIDER_FACTION && building.kind === 'house' && buildingReady(building))
+    && building.faction === RAIDER_FACTION && (building.kind === 'villageTent' || building.kind === 'house') && buildingReady(building))
     .sort((a, b) => edgeDistance(from, a) - edgeDistance(from, b))[0];
 }
 function finishLootReturn(state: GameState, pack: MarauderPack, members: readonly Unit[]): void {
@@ -231,7 +221,7 @@ function theftUnit(state: GameState, pack: MarauderPack, unit: Unit, dt: number,
   const faction = state.factions.find(candidate => candidate.id === palace.faction);
   if (!pack.raidObjectiveDone && edgeDistance(unit, palace) <= .8) {
     const amount = Math.min(Math.max(0, faction?.gold ?? 0), Math.max(200, (faction?.gold ?? 0) / 2));
-    if (faction) spendGold(state, faction, amount, 'raided');
+    if (faction) { spendGold(state, faction, amount, 'raided'); recordRaidTheft(state, faction.id, amount); }
     unit.stolenGold = (unit.stolenGold ?? 0) + amount;
     pack.lootCarrier = unit.id; pack.raidObjectiveDone = true;
     if (amount) state.particles.push({ ...center(palace), text: `−${Math.round(amount)} gold`, color: '#ffe33d', life: 1.8, duration: 1.8 });

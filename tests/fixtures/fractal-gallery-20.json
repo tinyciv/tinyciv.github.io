@@ -19,7 +19,7 @@
     "desertThreshold": 0.4759,
     "forestThreshold": 0.5668,
     "forestPatchScale": 0.9499,
-    "forestNorthBias": 0.1114,
+    "forestLatitudeBias": 0.1114,
     "riparianBoost": 0.2281,
     "ruggednessScale": 0.9685,
     "reliefCoverage": 0.0924,

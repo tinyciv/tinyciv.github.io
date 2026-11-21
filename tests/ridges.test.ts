@@ -1,13 +1,8 @@
-import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { generateWorld } from '../src/world/generator';
 import { placeRidges, ridgeStatistics } from '../src/world/ridges';
-import { ridgeEdgeAllowed, ridgeFootprintAllowed, ridgeGroundWalkable, ridgeIsLedge, ridgeLevel, STAIR_UP } from '../src/game/ridges';
-import { canMove, canWalk, findPath, hasStaticPath, canTraverseEdge, traversable, travelTimeMap } from '../src/game/pathfinding';
-import { ridgeQuads, STAIR_SOURCES } from '../src/game/ridge-art';
-import { rasterTerrain } from '../src/game/terrain';
-import { punyAtlas } from './puny-atlas';
-import { type World, type GameState, type Tile, type Point } from '../src/game/types';
+import { ridgeEdgeAllowed, ridgeFootprintAllowed, ridgeGroundWalkable } from '../src/game/ridges';
+import { ridgeQuads } from '../src/game/ridge-art';
+import { type World, type Tile } from '../src/game/types';
 
 function flat(width = 24, height = 20): World {
   return { width, height, seed: 'ridge-test', source: 'fixture', spawns: [], revision: 0,
@@ -17,120 +12,7 @@ function flat(width = 24, height = 20): World {
 function raised(world: World, left = 8, top = 6, width = 7, height = 7) {
   for (let y = top; y < top + height; y++) for (let x = left; x < left + width; x++) world.tiles[y * world.width + x].ridge = 1;
 }
-const stateOf = (world: World) => ({ world, buildings: [], units: [], factions: [] } as unknown as GameState);
-const center = (point: Point): Point => ({ x: point.x + .5, y: point.y + .5 });
-
-function reachable(world: World, start: Point) {
-  const seen = new Set<number>(), queue = [{ x: Math.floor(start.x), y: Math.floor(start.y) }];
-  seen.add(queue[0].y * world.width + queue[0].x);
-  for (let i = 0; i < queue.length; i++) {
-    const p = queue[i];
-    for (const up of Object.values(STAIR_UP)) {
-      const n = { x: p.x + up.x, y: p.y + up.y }, key = n.y * world.width + n.x;
-      if (!seen.has(key) && traversable(world, n.x, n.y) && canTraverseEdge(world, p, n)) { seen.add(key); queue.push(n); }
-    }
-  }
-  return seen;
-}
-
-describe('native ledges and correctly oriented stairs', () => {
-  it.each(['north','east','south','west'] as const)('climbs %s from low approach through the stair to a high landing', direction => {
-    const world = flat(); raised(world);
-    const high = direction === 'north' ? { x: 11, y: 12 } : direction === 'south' ? { x: 11, y: 6 }
-      : direction === 'east' ? { x: 8, y: 9 } : { x: 14, y: 9 };
-    const up = STAIR_UP[direction], low = { x: high.x - up.x, y: high.y - up.y }, inside = { x: high.x + up.x, y: high.y + up.y };
-    world.tiles[high.y * world.width + high.x].stair = direction;
-    const state = stateOf(world);
-    expect(world.tiles[low.y * world.width + low.x].ridge).toBeUndefined();
-    expect(world.tiles[inside.y * world.width + inside.x].ridge).toBe(1);
-    expect(canMove(state, center(low), center(inside), 0)).toBe(true);
-    expect(canMove(state, center(inside), center(low), 0)).toBe(true);
-    expect(hasStaticPath(state, center(low), center(inside), 0)).toBe(true);
-    const path = findPath(state, center(low), center(inside), 0);
-    expect(path.length).toBeGreaterThan(0);
-    expect(path.some(p => Math.floor(p.x) === high.x && Math.floor(p.y) === high.y)).toBe(true);
-    const diagonalInterior = { x: inside.x - up.y, y: inside.y + up.x };
-    expect(canMove(state, center(diagonalInterior), center(high), 0)).toBe(false);
-    expect(traversable(world, high.x, high.y)).toBe(true);
-    const wrong = direction === 'north' ? 'south' : direction === 'south' ? 'north' : direction === 'east' ? 'west' : 'east';
-    world.tiles[high.y * world.width + high.x].stair = wrong; world.revision!++;
-    expect(canMove(state, center(low), center(inside), 0)).toBe(false);
-    expect(hasStaticPath(state, center(low), center(inside), 0)).toBe(false);
-    expect(canWalk(state, high.x, high.y, 0)).toBe(false);
-  });
-
-  it('blocks every full ledge tile from above as well as below, including inner-corner art', () => {
-    const world = flat(); raised(world);
-    delete world.tiles[6 * world.width + 8].ridge;
-    const state = stateOf(world), interior = { x: 11.5, y: 9.5 };
-    expect(ridgeIsLedge(world, 9, 7)).toBe(true);
-    const costs = travelTimeMap(state, interior, 0, 1, Infinity);
-    for (let index = 0; index < world.tiles.length; index++) {
-      const x = index % world.width, y = Math.floor(index / world.width);
-      if (!ridgeIsLedge(world, x, y)) continue;
-      expect(traversable(world, x, y), `ledge ${x},${y}`).toBe(false);
-      expect(canWalk(state, x + .5, y + .5, 0)).toBe(false);
-      expect(hasStaticPath(state, interior, { x: x + .5, y: y + .5 }, 0)).toBe(false);
-      expect(costs[index]).toBe(Infinity);
-      expect(ridgeFootprintAllowed(world, x, y)).toBe(false);
-    }
-    expect(canMove(state, { x: 11.5, y: 7.5 }, { x: 11.5, y: 6.5 }, 0)).toBe(false);
-    expect(canMove(state, interior, { x: 12.5, y: 10.5 }, 0)).toBe(true);
-    expect(ridgeFootprintAllowed(world, 10, 8)).toBe(true);
-  });
-
-  it('does not make ledges walkable with a road or misplaced river bridge', () => {
-    const world = flat(); raised(world);
-    const state = stateOf(world), x = 11, y = 6;
-    entityStore(state).buildings.add({ id: 1, kind: 'road', faction: 0, x, y, hp: 100, maxHp: 100, capacity: 0 });
-    expect(canWalk(state, x, y, 0)).toBe(false);
-    state.buildings[0].kind = 'bridge'; world.tiles[y * world.width + x].terrain = 'river'; world.revision!++;
-    expect(canWalk(state, x, y, 0)).toBe(false);
-    expect(hasStaticPath(state, { x: 11.5, y: 9.5 }, { x: 11.5, y: 6.5 }, 0)).toBe(false);
-  });
-
-  it('does not jump ledges, cut diagonal corners, or use roads to bypass a cliff', () => {
-    const world = flat(); raised(world); const state = stateOf(world);
-    expect(canMove(state, { x: 11.5, y: 4.5 }, { x: 11.5, y: 8.5 }, 0)).toBe(false);
-    expect(ridgeEdgeAllowed(world, { x: 7, y: 5 }, { x: 8, y: 6 })).toBe(false);
-    expect(ridgeEdgeAllowed(world, { x: 7, y: 6 }, { x: 8, y: 5 })).toBe(false);
-    world.tiles[6 * world.width + 11].stair = 'south';
-    expect(canMove(state, { x: 10.5, y: 5.5 }, { x: 11.5, y: 6.5 }, 0)).toBe(false);
-    entityStore(state).buildings.add({ id: 1, kind: 'road', faction: 0, x: 8, y: 9, hp: 100, maxHp: 100, capacity: 0 });
-    expect(canMove(state, { x: 7.5, y: 9.5 }, { x: 8.5, y: 9.5 }, 0)).toBe(false);
-  });
-
-  it('keeps zero-stair summits inaccessible while the low route goes around the hill', () => {
-    const world = flat(); raised(world); const state = stateOf(world);
-    expect(findPath(state, { x: 5.5, y: 9.5 }, { x: 18.5, y: 9.5 }, 0).length).toBeGreaterThan(0);
-    expect(hasStaticPath(state, { x: 5.5, y: 9.5 }, { x: 11.5, y: 9.5 }, 0)).toBe(false);
-  });
-
-  it('allows building on stairs and both landings but rejects a footprint straddling elevations', () => {
-    const world = flat(); raised(world); world.tiles[6 * world.width + 11].stair = 'south';
-    expect(ridgeFootprintAllowed(world, 10, 5, 3)).toBe(false);
-    for (const y of [5, 6, 7]) expect(ridgeFootprintAllowed(world, 11, y)).toBe(true);
-    expect(ridgeFootprintAllowed(world, 10, 8, 3)).toBe(true);
-  });
-
-  it('uses authored cardinal stair sprites without rotations or invented pixels', () => {
-    const world = flat(), atlas = punyAtlas(); raised(world);
-    const stairs = [{ x: 11, y: 6, direction: 'south' }, { x: 14, y: 9, direction: 'west' },
-      { x: 11, y: 12, direction: 'north' }, { x: 8, y: 9, direction: 'east' }] as const;
-    for (const { x, y, direction } of stairs) world.tiles[y * world.width + x].stair = direction;
-    expect(STAIR_SOURCES).toEqual({ north: [96,96], east: [80,80], south: [96,64], west: [112,80] });
-    const raster = rasterTerrain(world, undefined, atlas);
-    for (const { x, y, direction } of stairs) {
-      const [sx, sy] = STAIR_SOURCES[direction];
-      for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) {
-        const target = ((y * 16 + py) * raster.width + x * 16 + px) * 4;
-        const source = ((sy + py) * atlas.width + sx + px) * 4;
-        expect(raster.pixels.slice(target, target + 4)).toEqual(atlas.data.slice(source, source + 4));
-      }
-    }
-    expect(ridgeQuads(world, 11, 9)!.every(q => q.sx >= 16 && q.sx < 32 && q.sy >= 80 && q.sy < 96)).toBe(true);
-  });
-
+describe('offline ridge geometry', () => {
   it('retains the inner halves of full native boundary tiles so north and side ledges remain visible', () => {
     const world = flat(); raised(world);
     for (const [x, y, sourceX, sourceY] of [[11,6,16,64],[8,9,0,80],[14,9,32,80],[11,12,16,96]]) {
@@ -163,26 +45,6 @@ describe('world ridge placement', () => {
     expect(stacked).toBeGreaterThan(0);
     expect(concave).toBeGreaterThan(0);
   });
-
-  it('keeps enabled ledges clear of settlements and preserves land access', async () => {
-    for (let seed = 0; seed < 20; seed++) {
-      await new Promise(resolve => setTimeout(resolve, 0));
-      const world = generateWorld(`ridge-coverage-${seed}`, 194, 153, { ledges: true });
-      const faces = world.tiles.flatMap((tile, cell) => tile.ridge && tile.reliefFlags === 0 ? [cell] : []);
-      expect(faces.length, `ledge faces on seed ${seed}`).toBeGreaterThan(0);
-      expect(world.tiles.some(tile => tile.stair)).toBe(true);
-      for (const cell of faces) {
-        const tile = world.tiles[cell];
-        expect(tile.resource).toBeUndefined();
-        expect(tile.overlay).toBe('none');
-        expect(traversable(world, cell % world.width, Math.floor(cell / world.width))).toBe(false);
-      }
-      const connected = reachable(world, world.spawns[0]);
-      for (const town of [...world.spawns, ...world.secondarySpawns ?? []]) {
-        expect(connected.has(Math.floor(town.y) * world.width + Math.floor(town.x)), `town connectivity on seed ${seed}`).toBe(true);
-      }
-    }
-  }, 180000);
 });
 
 describe('stacked ledge shelves', () => {
@@ -194,20 +56,6 @@ describe('stacked ledge shelves', () => {
     world.tiles[11 * world.width + 15].stair = 'south';
     return world;
   }
-
-  it('routes up both stair flights and keeps the lower shelf flat around the higher cliff', () => {
-    const world = stacked(), state = stateOf(world), low = { x: 15.5, y: 3.5 }, summit = { x: 15.5, y: 14.5 };
-    expect([3, 9, 14].map(y => ridgeLevel(world.tiles[y * world.width + 15]))).toEqual([0, 1, 2]);
-    expect(canMove(state, low, summit, 0)).toBe(true);
-    expect(canMove(state, summit, low, 0)).toBe(true);
-    const path = findPath(state, low, summit, 0);
-    for (const y of [4, 11]) expect(path.some(p => Math.floor(p.x) === 15 && Math.floor(p.y) === y)).toBe(true);
-    expect(ridgeIsLedge(world, 15, 10)).toBe(false);
-    expect(ridgeQuads(world, 15, 10)!.map(q => [q.sx - q.dx, q.sy - q.dy])).toEqual(Array(4).fill([16, 80]));
-    delete world.tiles[11 * world.width + 15].stair;
-    expect(ridgeIsLedge(world, 15, 11)).toBe(true);
-    expect(ridgeQuads(world, 15, 11)!.map(q => [q.sx - q.dx, q.sy - q.dy])).toEqual(Array(4).fill([16, 64]));
-  });
 
   it('forbids skipped tiers and diagonal cliff crossings while permitting structures on stair landings', () => {
     const world = stacked();

@@ -1,5 +1,5 @@
 import type { GameState, Point } from '../game/types';
-import { ArmyWarningFeed, armyWarningPosition, separateArmyWarning, type PresentedArmyWarning } from './army-warning-layout';
+import { ArmyWarningFeed, armyWarningPosition, separateArmyWarning, type PresentedArmyWarning, type WarningPosition } from './army-warning-layout';
 import './army-warnings.css';
 import { MeasuredSize } from './measured-size';
 
@@ -64,20 +64,39 @@ export class ArmyWarnings {
     this.tooltip.style.top = `${y + 30 + tooltipHeight < height - 8 ? y + 30 : Math.max(8, y - 30 - tooltipHeight)}px`;
   }
   update(now: number, enabled = true): void {
-    const events = this.feed.update(this.getState(), now), live = new Set(events.map(event => event.id));
+    const events = this.feed.update(this.getState(), now);
     if (this.generation !== this.feed.generation) {
       for (const marker of this.markers.values()) marker.remove();
       this.markers.clear(); this.selected = undefined; this.tooltip.hidden = true; this.generation = this.feed.generation;
     }
     this.layer.hidden = !enabled;
+    const { width, height } = this.parentSize.read();
+    const visible: { event: PresentedArmyWarning; position: WarningPosition }[] = [];
+    // Show the newest attack per edge. The number of markers stays bounded
+    // even when many units take simultaneous damage in different regions.
+    const attacks = new Map<string, typeof visible[number]>();
+    const sideInset = Math.min(26, width / 4);
+    if (enabled) for (const event of events) {
+      const attack = event.kind === 'attack';
+      const point = this.screenPoint(attack ? event : { x: event.x, y: event.y - 1.2 });
+      if (attack && point.x >= 0 && point.x < width && point.y >= 0 && point.y < height) continue;
+      const position = armyWarningPosition(point, width, height);
+      const entry = { event, position };
+      if (!attack) { visible.push(entry); continue; }
+      const side = position.x <= sideInset + .01 ? 'left' : position.x >= width - sideInset - .01 ? 'right'
+        : position.y < height / 2 ? 'top' : 'bottom';
+      const previous = attacks.get(side);
+      if (!previous || previous.event.id < event.id) attacks.set(side, entry);
+    }
+    visible.push(...attacks.values());
+    const live = new Set(visible.map(({ event }) => event.id));
     for (const [id, marker] of this.markers) if (!live.has(id)) {
       marker.remove(); this.markers.delete(id);
       if (this.selected === id) { this.selected = undefined; this.tooltip.hidden = true; }
     }
-    if (!enabled) return;
-    const { width, height } = this.parentSize.read(), occupied: Point[] = [];
-    for (const event of events) {
-      const position = separateArmyWarning(armyWarningPosition(this.screenPoint({ x: event.x, y: event.y - 1.2 }), width, height), occupied, width, height);
+    const occupied: Point[] = [];
+    for (const { event, position: anchor } of visible) {
+      const position = separateArmyWarning(anchor, occupied, width, height);
       occupied.push(position);
       const marker = this.marker(event);
       marker.dataset.edge = String(position.edge);

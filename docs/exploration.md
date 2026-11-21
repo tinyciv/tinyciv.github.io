@@ -1,22 +1,27 @@
 # Wilderness encounters
 
-New worlds place reachable, nonblocking 2×2 ancient ruins and 1×1 hermit huts
-outside civilization borders and initial exploration. Each site receives one
-of three seeded art variants, retained in saves. A living human Leader on
-land triggers a site once by walking onto any footprint tile. Original treasure
-chests and quest-giving hermits keep their existing behavior.
+New worlds place reachable, nonblocking 2×2 ancient ruins, 2×2 desert fossils,
+and 1×1 hermit huts outside civilization borders and initial exploration. Each
+site receives a seeded art variant, retained in saves. Ruins and fossils each
+have three variants, and huts have two. A living human Leader on land triggers a
+site once by walking onto any footprint tile. Original treasure chests and
+quest-giving hermits keep their existing behavior.
 
 ## Rewards
 
-Ruins roll a 5% clan ambush; gold, technology, settlement and refugees each have
-23.75% probability. Treasure is uniformly 100–300 gold in increments of ten.
+Desert fossils grant 25 Science on discovery. The faction can earn it before
+building a Library and use it once a completed Library can process research.
+
+Ruins offer a new settlement 12% of the time and trigger a clan ambush 5% of the
+time. Gold, technology, and refugees share the remaining 83% equally. Treasure
+is uniformly 100–300 gold in increments of ten.
 Technology is the most expensive unfinished technology with all prerequisites
 already learned, using current research prices. If all research is complete,
 that result awards treasure instead.
 
 The settlement popup uses the supplied story verbatim. Accepting replaces the
 ruins with a completed town with ten residents and ten housing places, plus
-free farms. That town's ordinary maintenance is doubled for 180 game seconds.
+free farms. Settlement upkeep starts after 180 game seconds.
 Tooltips on Accept/Leave explain the consequences. Closing the popup retains
 the offer; clicking the ruins reopens it, and leaving the visit area rearms it.
 
@@ -66,12 +71,9 @@ validates ownership on the multiplayer authority. `exploration-content.ts`
 contains the requested story text; `exploration-art.ts` shares text drawing
 between the retained renderer and isolated preview.
 
-Approved imagegen art is in `public/assets/exploration/`: three 32×32 ruin
-sprites and three 16×16 huts. It was reduced from the generated appearance
-sheet, not generated directly at native resolution. Exact source references,
-prompt, finishing provenance and the labelled preview are preserved under
-`scratch/2026-11-16-exploration/`. The preview uses actual production art,
-popup markup and message painting without starting a game.
+Approved PixelLab art in `public/assets/exploration/` includes three 32×32 ruins,
+three 32×32 fossils, and two 16×16 huts. The asset directory's `source.json`
+records the reference sprites, generation seeds and review paths.
 
 Validation for this change: Rust/WASM compilation, TypeScript checking, Vite
 production build and isolated art/popup screenshot. No tests or playtest were

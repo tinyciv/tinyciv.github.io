@@ -30,12 +30,12 @@ it('keeps joined wheat golden for 21 seconds before producing its scheduled harv
   expect(state.fields!.every(field => fieldStage(field, state.time) === 2 && field.food === 0)).toBe(true);
   for (const time of [59, 70, 79.999]) {
     state.time = time; updateHarvests(state);
-    expect(state.fields!.every(field => fieldStage(field, time) === 3 && field.food === 0 && !field.wheatRipe && field.nextHarvest === 80)).toBe(true);
+    expect(state.fields!.every(field => fieldStage(field, time) === 3 && field.food === 0 && field.nextHarvest === 80)).toBe(true);
     const fieldAt = (x: number, y: number) => state.fields!.find(field => field.x === x && field.y === y);
     expect(state.fields!.map(field => wheatJoinMask(field, time, fieldAt))).toEqual([2, 2 | 8, 8]);
   }
   state.time = 80; updateHarvests(state);
-  expect(state.fields!.every(field => field.food > 0 && field.wheatRipe && field.nextHarvest === 140)).toBe(true);
+  expect(state.fields!.every(field => field.food > 0 && fieldStage(field, 80) === 0 && field.nextHarvest === 140)).toBe(true);
 });
 
 it('shares growth and regrowth with one parcel pickup and the original expiry', () => {
@@ -48,7 +48,7 @@ it('shares growth and regrowth with one parcel pickup and the original expiry', 
   state.time = 80; updateHarvests(state);
   const total = state.fields!.reduce((sum, field) => sum + field.food, 0);
   expect(total).toBeGreaterThan(0);
-  expect(state.fields!.every(field => fieldStage(field, 80) === 3 && field.expiresAt === 80 + FIELD_SPOIL_SECONDS)).toBe(true);
+  expect(state.fields!.every(field => fieldStage(field, 80) === 0 && field.expiresAt === 80 + FIELD_SPOIL_SECONDS)).toBe(true);
   const workers = state.units.filter(unit => unit.collector);
   expect(workers).toHaveLength(1); // One real courier serves all three fields.
   const worker = workers[0]; state.time = 81;
@@ -85,7 +85,7 @@ it('merges once using the later deadline without resetting batches, then lets se
   synchronizeFarms(state);
   const deadline = left.nextHarvest;
   expect(deadline).toBeGreaterThanOrEqual(80);
-  expect(state.fields!.every(field => field.nextHarvest === deadline && field.wheatRipe)).toBe(true);
+  expect(state.fields!.every(field => field.nextHarvest === deadline)).toBe(true);
   state.time = 4; synchronizeWheatFields(state); updateHarvests(state);
   expect(left.nextHarvest).toBe(deadline);
   expect(left.foodBatches).toEqual([{ amount: 2, expiresAt: 12 }]);
@@ -93,7 +93,7 @@ it('merges once using the later deadline without resetting batches, then lets se
   entityStore(state).buildings.retain(building => building.id !== 10); synchronizeFarms(state);
   left.nextHarvest = 160; right.nextHarvest = 180; synchronizeWheatFields(state);
   expect(left.nextHarvest).toBe(160); expect(right.nextHarvest).toBe(180);
-  expect(left.wheatRipe).toBe(true); expect(right.wheatRipe).toBe(false);
+  expect(left.food).toBe(2); expect(right.food).toBe(0);
 });
 
 it('shares fallow and replanting across a patch after a visit to only one tile', () => {
@@ -162,7 +162,7 @@ it('does not postpone established crops during expansion or grant brand-new plot
   expect(state.fields!.every(field => field.nextHarvest === 90)).toBe(true);
   state.time = 90; updateHarvests(state);
   expect(state.fields!.filter(field => field.camp < 30).every(field => field.food > 0)).toBe(true);
-  expect(state.fields!.filter(field => field.camp >= 30).every(field => field.food === 0 && field.wheatRipe)).toBe(true);
+  expect(state.fields!.filter(field => field.camp >= 30).every(field => field.food === 0 && fieldStage(field, 90) === 0)).toBe(true);
   expect(state.fields!.every(field => field.nextHarvest === 150)).toBe(true);
   state.time = 150; updateHarvests(state);
   expect(state.fields!.every(field => field.food > 0)).toBe(true);
@@ -194,9 +194,8 @@ it('expires individual remaining bags without resetting the patch clock or dupli
   state.time = 9; updateHarvests(state); const deadline = a.nextHarvest;
   state.time = 10; updateHarvests(state);
   expect(a.food).toBe(0); expect(b.food).toBe(3); expect(c.food).toBe(0);
-  expect(state.fields!.every(field => field.wheatRipe)).toBe(true);
   state.time = 12; updateHarvests(state);
-  expect(state.fields!.every(field => field.food === 0 && !field.wheatRipe && field.nextHarvest === deadline)).toBe(true);
+  expect(state.fields!.every(field => field.food === 0 && field.nextHarvest === deadline)).toBe(true);
   expect(state.factions[0].food).toBe(100);
 });
 
@@ -209,15 +208,18 @@ it('keeps different owners, diagonal fields and orchards on independent clocks',
   expect([a,b,c,d].map(field => field.nextHarvest)).toEqual([60,70,80,90]);
 });
 
-it('remembers the shared ripe state in fog even on a tile whose own bag was collected', () => {
+it('freezes a joined field’s growth stage in fog while its next crop advances', () => {
   const state = fixture(); entityStore(state).buildings.replace([]); entityStore(state).units.add(leader());
   for (const field of state.fields!) field.faction = 1;
-  const [a,b] = state.fields!; a.food = 0; b.food = 2; synchronizeWheatFields(state);
+  const [a,b] = state.fields!; b.food = 2;
+  for (const field of state.fields!) field.nextHarvest = 60;
+  state.time = 18;
   let fog = updateFog(state);
-  expect(fog.fields.find(field => field.id === a.id)?.wheatRipe).toBe(true);
-  state.units[0].x = 27.5; state.time = 4; invalidateFog(state); fog = updateFog(state);
-  b.food = 0; synchronizeWheatFields(state); state.time = 5; invalidateFog(state); fog = updateFog(state);
+  expect(fieldStage(fog.fields.find(field => field.id === a.id)!, 18)).toBe(2);
+  state.units[0].x = 27.5; state.time = 19; invalidateFog(state); fog = updateFog(state);
+  b.food = 0; state.time = 45; invalidateFog(state); fog = updateFog(state);
   const memory = fog.fields.find(field => field.id === a.id)!;
-  expect(memory.wheatRipe).toBe(true); expect(fieldStage(memory, memory.observedAt)).toBe(3);
+  expect(fieldStage(memory, memory.observedAt)).toBe(2);
+  expect(fieldStage(a, state.time)).toBe(3);
 });
 

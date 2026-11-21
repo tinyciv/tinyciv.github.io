@@ -10,18 +10,11 @@ original mud-pool frequency. All three variants of each remain eligible.
 
 ## Interaction
 
-- Explored sites show faint gray square corner brackets around their 2×2
-  footprint only while the active, living Leader on land is within five tiles
-  of it. Undiscovered corners remain hidden. Mud pool bodies are centered
-  within the footprint, with steam extending above the north edge.
-- An active, living Leader on land within three tiles of the footprint turns
-  the brackets red and automatically opens the construction popup.
-- The popup shows the building benefit, build time, upkeep and purchase price.
-  Ordinary gold, faction-border, terrain and builder-route requirements still
-  apply, with an inline reason when construction is unavailable.
-- **Later** dismisses the popup for that visit. Clicking the nearby site can
-  reopen it. Moving more than four tiles away rearms the automatic offer;
-  the extra tile prevents repeated dialogs around the interaction threshold.
+- Visible, unoccupied mud pools show a red silhouette outline when the living
+  Leader is on land within three tiles. Click the pool to open its construction
+  popup.
+- The popup shows the purchase price and any unmet construction requirement.
+  **Later** closes it until the player clicks the site again.
 - Ordering construction immediately reserves the whole site. Queued and
   completed buildings hide its marker. Cancellation or demolition restores
   the opportunity on the existing underlying mud pool.
@@ -36,17 +29,15 @@ rounded to whole residents without stacking.
 
 `rust/src/sim/sites.rs` stores Site components and an anchor index. Terrain
 anchors are imported only when geometry changes; availability uses the native
-building footprint index. Four-Hz presentation samples report approach and
-visit-halo and five-tile bracket flags. Build commands recheck the site and Leader immediately, then
+building footprint index. Presentation caches actionable anchors between
+three-Hz samples. Build commands recheck the site and Leader immediately, then
 use the ordinary construction transaction. The existing direct build command
 also enforces Site approach rules.
 
 `src/game/site-types.ts` declares presentation labels, building associations
 and portraits. `sites-native.ts` transports observations and native results;
-`site-construction.ts` routes local and multiplayer construction. Popup dismissal
-is local UI state in `src/ui/site-dialog.ts`.
+`site-construction.ts` routes local and multiplayer construction.
 
-`site-art.ts` draws runtime vector footprint annotations using retained Pixi
-graphics, like selection outlines. Markers reuse geometry, respect exploration
-and preserve remembered sites outside current sight. The popup uses the existing
-imagegen thermal bath portrait and standard dialog controls, with Pixel Operator.
+`site-art.ts` traces the pool sprite to create an outline cached by the
+renderer. The popup uses the existing thermal bath portrait and standard
+dialog controls, with Pixel Operator.

@@ -2,7 +2,7 @@ import type { BuildingKind, Point } from './types';
 
 export type SiteKind = 1;
 export interface SiteView extends Point {
-    id: number; kind: SiteKind; width: number; height: number; near: boolean; withinVisit: boolean; available: boolean; showBrackets: boolean;
+    id: number; kind: SiteKind; width: number; height: number; near: boolean; available: boolean;
 }
 export const SITE_DEFINITIONS = {
     1: { label: 'Thermal bath', building: 'thermalBath' as BuildingKind, portrait: 'thermal-bath.png',

@@ -32,10 +32,10 @@ export function terrainDistance(world: Pick<World, 'width' | 'height' | 'tiles'>
   return distance;
 }
 
-export function settlementCoreMask(world: World): Uint8Array {
+export function settlementCoreMask(world: World, radius = 2): Uint8Array {
   const mask = new Uint8Array(world.tiles.length);
   for (const site of [...world.spawns, ...(world.secondarySpawns ?? [])]) {
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
       const x = Math.floor(site.x) + dx, y = Math.floor(site.y) + dy;
       if (x >= 0 && y >= 0 && x < world.width && y < world.height) mask[y * world.width + x] = 1;
     }

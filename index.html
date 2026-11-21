@@ -11,18 +11,17 @@
 </head>
 <body>
   <section id="boot-loading" class="boot-loading" aria-label="Starting TinyCiv">
-    <div class="boot-loading-film">
-      <video muted playsinline preload="none" poster="/assets/ui/loading/settlement-assault-poster.webp" aria-hidden="true"></video>
+    <div class="boot-loading-content">
+      <h1 class="boot-loading-title">TinyCiv</h1>
+      <div class="boot-loading-progress">
+        <label for="boot-progress">Loading</label>
+        <progress id="boot-progress" value="0" max="1"></progress>
+        <output aria-hidden="true">0%</output>
+      </div>
+      <p class="boot-loading-error" role="alert" hidden>Unable to load the game font. <button type="button">Retry</button></p>
     </div>
-    <div class="boot-loading-progress">
-      <label for="boot-progress">Loading TinyCiv</label>
-      <progress id="boot-progress" value="0" max="1"></progress>
-      <output aria-hidden="true">0%</output>
-    </div>
-    <p class="boot-loading-error" role="alert" hidden>Unable to load the game font. <button type="button">Retry</button></p>
   </section>
   <div id="app"></div>
-  <script type="module" src="/src/ui/boot-loading.ts"></script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

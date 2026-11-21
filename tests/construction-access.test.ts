@@ -39,7 +39,7 @@ function pairwiseAccess(state: GameState, palace: Building, proposed: Building):
 }
 
 describe('construction access components', () => {
-  it.each([false, true])('matches entrance-pair paths through walls, water, gates, ledges and forbidden cells (native=%s)', native => {
+  it.each([false, true])('matches entrance-pair paths through walls, water, gates, rocks and forbidden cells (native=%s)', native => {
     setNavigationWasmEnabled(native);
     let random = 72831;
     const next = () => { random = (Math.imul(random, 1664525) + 1013904223) >>> 0; return random / 0x100000000; };
@@ -55,7 +55,7 @@ describe('construction access components', () => {
         entityStore(state).buildings.add(building(100 + i, i % 3 === 0 ? 'house' : 'wall', x, y, i % 4 === 0 ? 1 : 0));
         if (i % 4 === 1) entityStore(state).buildings.add(building(200 + i, 'road', x, y));
       }
-      for (let x = 13; x < 19; x++) state.world.tiles[9 * 24 + x].ridge = 1;
+      for (let x = 13; x < 19; x++) state.world.tiles[9 * 24 + x].rockRelief = 0;
       if (sample % 3 === 0) state.forbiddenZones = { cells: Array.from({ length: 18 }, (_, y) => y * 24 + 15), revision: 1 };
       const proposed = building(-1, sample % 2 ? 'library' : 'camp', 18, 5 + sample % 5), before = JSON.stringify(state);
       const expected = pairwiseAccess(state, state.buildings[0], proposed);

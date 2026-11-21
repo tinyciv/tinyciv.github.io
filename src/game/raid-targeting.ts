@@ -17,9 +17,12 @@ export function isRaidObjective(state: GameState, building: Building): boolean {
     && !['road', 'bridge', 'irrigation', 'wall', 'palisade', 'ruin'].includes(building.kind);
 }
 
-/** Known settlements are strategic destinations. This never reads hidden unit positions. */
-export function selectRaidTarget(state: GameState, from: Point, ownPack?: number, previousFaction?: number, camp?: number): Building | undefined {
-  const candidates = state.buildings.filter(building => raiderMayAttack(state, building.faction, camp) && isRaidObjective(state, building));
+/** Known settlements are strategic destinations. This never reads hidden unit
+ * positions. `accept` narrows candidates, e.g. to the realm a raid was sent against. */
+export function selectRaidTarget(state: GameState, from: Point, ownPack?: number, previousFaction?: number, camp?: number,
+  accept?: (building: Building) => boolean): Building | undefined {
+  const candidates = state.buildings.filter(building => raiderMayAttack(state, building.faction, camp) && isRaidObjective(state, building)
+    && (!accept || accept(building)));
   if (!candidates.length) return;
   // Walls can be breached; rivers and disconnected islands cannot.
   const planning = wallBreachingNavigation(state, { kind: 'raider' });

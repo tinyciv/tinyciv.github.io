@@ -14,6 +14,8 @@ const step = (state: ReturnType<typeof fixture>, seconds = .1) => { state.time +
 describe('continuous, paid Science', () => {
   it('spreads a tax receipt through the whole 30-second period and visits every percentage without jumps', () => {
     const state = fixture(), faction = state.factions[0], seen = new Set<number>([0]);
+    expect(prioritizeResearch(state, state.buildings[1], 'woodenTower').ok).toBe(true);
+    expect(setResearchAllocation(state, state.buildings[1], .25).ok).toBe(true);
     grantIncome(faction, { gold: researchCost(faction, 'woodenTower') * 4 }, state, 'taxes');
     expect(researchStatus(state, 0).progress).toBe(0); expect(reserve(state)).toBe(24);
     let previous = 0;
@@ -37,11 +39,11 @@ describe('continuous, paid Science', () => {
     const state = fixture(), faction = state.factions[0]; grantIncome(faction, { gold: 100000 }, state, 'trade');
     for (let index = 1; index < 200; index++) {
       step(state);
-      expect(faction.research?.progress.woodenTower).toBeCloseTo(index * .12, 8);
-      expect(faction.research?.levels.woodenTower).toBeUndefined();
+      expect(faction.research?.progress.infantryDrill).toBeCloseTo(index * .05, 8);
+      expect(faction.research?.levels.infantryDrill).toBeUndefined();
     }
-    step(state); expect(faction.research?.levels.woodenTower).toBe(1);
-    expect(researchStatus(state, 0).focus).toBe('scoutLodge');
+    step(state); expect(faction.research?.levels.infantryDrill).toBe(1);
+    expect(researchStatus(state, 0).focus).toBe('woodenTower');
     const total = RESEARCH_BRANCHES.reduce((sum, branch) => sum + researchCost(faction, branch.id), 0);
     expect(work(state) + reserve(state)).toBeCloseTo(total, 8);
     const treasury = faction.gold; grantIncome(faction, { gold: 200 }, state, 'trade');
@@ -50,7 +52,7 @@ describe('continuous, paid Science', () => {
 
   it('preserves funded work through pause and library destruction, resumes without charging twice, and cannot advance unfunded work', () => {
     const state = fixture(), faction = state.factions[0], library = state.buildings[1];
-    grantIncome(faction, { gold: 40 }, state); step(state, 15);
+    grantIncome(faction, { gold: 100 }, state); step(state, 15);
     expect(work(state)).toBe(5); expect(reserve(state)).toBe(5);
     state.paused = true; const paused = structuredClone(faction.research); step(state, 60); expect(faction.research).toEqual(paused);
     state.paused = false; library.hp = 0; step(state, 60); expect(faction.research).toEqual(paused);
@@ -63,11 +65,11 @@ describe('continuous, paid Science', () => {
   });
 
   it('redirects the remaining paid reserve to a new priority without resetting the earlier project', () => {
-    const state = fixture(), faction = state.factions[0]; grantIncome(faction, { gold: 40 }, state); step(state, 15);
-    expect(faction.research?.progress.woodenTower).toBe(5);
+    const state = fixture(), faction = state.factions[0]; grantIncome(faction, { gold: 100 }, state); step(state, 15);
+    expect(faction.research?.progress.infantryDrill).toBe(5);
     expect(prioritizeResearch(state, state.buildings[1], 'irrigation').ok).toBe(true); step(state, 15);
-    expect(faction.research?.progress).toMatchObject({ woodenTower: 5, irrigation: 5 });
-    expect(reserve(state)).toBe(0); expect(faction.gold).toBe(2030);
+    expect(faction.research?.progress).toMatchObject({ infantryDrill: 5, irrigation: 5 });
+    expect(reserve(state)).toBe(0); expect(faction.gold).toBe(2090);
   });
 
   it('refunds a fully funded tree’s excess when a scholar alliance reduces its cost, without treating the refund as income', () => {

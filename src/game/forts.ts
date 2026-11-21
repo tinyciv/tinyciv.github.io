@@ -22,7 +22,7 @@ export const FORT_GOLD = 300;
 /** The masonry layout multiplier is applied by wall-stats, exactly as for walls. */
 export const FORT_BASE_HP = 225;
 export const FORT_BUILD_SECONDS = 240;
-export const FORT_UPKEEP = 20;
+export const FORT_UPKEEP = rustEngine.fort_upkeep(0);
 export const FORT_UPKEEP_INTERVAL = 30;
 export const FORT_BRIGADE_CAPACITIES = [0, 3, 6, 10] as const;
 export const FORT_BRIGADE_COSTS = [150, 200, 300] as const;
@@ -36,7 +36,8 @@ export const SKIRMISHER_RANGE = 5;
 const center = (fort: Building): Point => ({ x: fort.x + buildingWidth(fort) / 2, y: fort.y + buildingHeight(fort) / 2 });
 export const fortBrigadeLevel = (fort: Building): 0 | 1 | 2 | 3 => Math.max(0, Math.min(3, Math.floor(fort.fort?.brigadeLevel ?? 0))) as 0 | 1 | 2 | 3;
 export const fortBrigadeCapacity = (fort: Building): number => FORT_BRIGADE_CAPACITIES[fortBrigadeLevel(fort)];
-export const fortUpkeep = (fort: Building): number => fort.kind === 'fort' && buildingReady(fort) && fort.fort?.funded !== false ? FORT_UPKEEP : 0;
+export const fortMaintenance = (fort: Building): number => rustEngine.fort_upkeep(fortBrigadeCapacity(fort));
+export const fortUpkeep = (fort: Building): number => fort.kind === 'fort' && buildingReady(fort) && fort.fort?.funded !== false ? fortMaintenance(fort) : 0;
 function fortState(state: GameState, fort: Building): NonNullable<Building['fort']> {
   return fort.fort ??= { brigadeLevel: 0, nextUpkeepAt: state.time + FORT_UPKEEP_INTERVAL, funded: true,
     nextRecruitAt: state.time, initialGold: fort.construction?.paidGold ?? FORT_GOLD };
@@ -140,9 +141,11 @@ export function preserveDestroyedFort(state: GameState, fort: Building): boolean
 }
 function collectUpkeep(state: GameState, fort: Building, faction: Faction): void {
   const data = fortState(state, fort);
+  if (state.time + 1e-7 < data.nextUpkeepAt) return;
+  const cost = fortMaintenance(fort);
   while (state.time + 1e-7 >= data.nextUpkeepAt) {
-    if (faction.gold + 1e-7 < FORT_UPKEEP) { data.funded = false; return; }
-    spendGold(state, faction, Math.min(FORT_UPKEEP, Math.max(0, faction.gold)), 'defenses');
+    if (faction.gold + 1e-7 < cost) { data.funded = false; return; }
+    spendGold(state, faction, cost, 'defenses');
     data.nextUpkeepAt = (data.funded ? data.nextUpkeepAt : state.time) + FORT_UPKEEP_INTERVAL;
     data.funded = true;
   }

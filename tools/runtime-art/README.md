@@ -2,14 +2,9 @@
 
 The game fetches compact derivatives from `public/assets/runtime/`. Original art
 stays in its existing location for authoring, future exports, and source-coordinate
-metadata. Keep the generated images, `manifest.json`, and
-`src/generated/runtime-art.json` in version control so ordinary game builds do
-not need image tools or a browser. Keeping originals in `public/` increases the
-deployment directory size; it does not download them to players who use the
-runtime URLs.
-
-Production builds verify the checked-in derivatives before compiling. Rebuild
-art after changing a source image or profile; stale exports fail that check.
+metadata. `npm run build`, `npm run frozen`, and the deployment workflow use
+the checked-in derivatives directly. Players fetch the derivatives used by the
+game, and the originals stay available in `public/` for authoring.
 
 ## Rebuild
 
@@ -25,8 +20,10 @@ npm run check:art
 The build reuses unchanged outputs. Use `python3 tools/runtime-art/build.py
 --force` to rebuild everything, or `--jobs 2` to limit parallel encodes.
 `check:art` verifies source/profile fingerprints, generated file hashes, and the
-URL map without opening the game or rebuilding images. After changing art or
-profiles, rebuild and review the affected surfaces at their actual display size.
+URL map without opening the game or rebuilding images. After changing source art
+or profiles, rebuild and review the affected surfaces at their actual display
+size. Commit the updated sources or profiles, derivatives, `manifest.json`, and
+`src/generated/runtime-art.json` together.
 
 `npm run test:startup -- --capture-art` also captures before/after artwork at
 1× and 2× density in `output/startup/`, verifies native browser-decoded pixels,

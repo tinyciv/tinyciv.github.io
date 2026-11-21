@@ -58,9 +58,9 @@ function square(x: number, y: number, size: number): Point[] {
 }
 
 describe('compact farm placement', () => {
-  it('sequentially completes 2×2 and 3×3 squares with one-cell gaps on uniform terrain', () => {
+  it('sequentially completes rectangular parcels with one-cell gaps on uniform terrain', () => {
     const state = fixture(), crops: Building[] = [];
-    for (let order = 0; order < 20; order++) {
+    for (let order = 0; order < 40; order++) {
       const plan = planAutomaticFarmSite(state, state.buildings[0])!;
       expect(plan).toBeDefined();
       const crop = add(state, 'camp', plan.point);
@@ -69,41 +69,47 @@ describe('compact farm placement', () => {
     }
     const groups = parcels(crops);
     expect(groups.length).toBeGreaterThanOrEqual(3);
-    let incomplete = 0, squarePlots = 0;
+    let incomplete = 0, rectangularPlots = 0;
     for (const group of groups) {
       const width = Math.max(...group.map(crop => crop.x)) - Math.min(...group.map(crop => crop.x)) + 1;
       const height = Math.max(...group.map(crop => crop.y)) - Math.min(...group.map(crop => crop.y)) + 1;
-      expect(width).toBeLessThanOrEqual(3); expect(height).toBeLessThanOrEqual(3);
-      if (group.length !== width * height || Math.min(width, height) < 2) incomplete++;
-      else { expect(width).toBe(height); squarePlots += group.length; }
+      expect(width).toBeLessThanOrEqual(4); expect(height).toBeLessThanOrEqual(4);
+      if (group.length !== width * height || Math.min(width, height) < 3) incomplete++;
+      else rectangularPlots += group.length;
     }
     expect(incomplete).toBeLessThanOrEqual(1);
-    expect(squarePlots / crops.length).toBeGreaterThanOrEqual(.8);
+    expect(rectangularPlots).toBeGreaterThanOrEqual(crops.length - 15);
     expect(state.buildings.some(building => building.kind === 'road')).toBe(false);
     const closestGap = Math.min(...groups.flatMap((a, index) => groups.slice(index + 1).flatMap(b =>
       a.flatMap(first => b.map(second => Math.max(Math.abs(first.x - second.x), Math.abs(first.y - second.y)))))));
-    expect(closestGap).toBe(2); // One unplanted cell, without generating roads.
+    expect(closestGap).toBeGreaterThanOrEqual(2); // At least one unplanted cell, without generating roads.
   });
 
-  it('offers only square preferred parcels and gives a partly planted square priority', () => {
+  it('offers squares and both orientations of rectangles, giving partly planted parcels priority', () => {
     const state = fixture(), palace = state.buildings[0], points = [];
     for (let y = 1; y < 23; y++) for (let x = 1; x < 31; x++) points.push({ x, y });
     const preference = farmParcelPreferenceQuery(state, palace, points);
     const groups = parcels(points.filter(point => preference(point.x, point.y) > 0));
-    expect(new Set(groups.map(group => group.length))).toEqual(new Set([4, 9]));
-    const parcel = groups.find(group => group.length === 4)!, first = parcel[0]; add(state, 'camp', first);
+    const dimensions = groups.map(group => {
+      const width = Math.max(...group.map(point => point.x)) - Math.min(...group.map(point => point.x)) + 1;
+      const height = Math.max(...group.map(point => point.y)) - Math.min(...group.map(point => point.y)) + 1;
+      expect(group).toHaveLength(width * height);
+      return `${width}x${height}`;
+    });
+    expect(new Set(dimensions)).toEqual(new Set(['3x3', '4x3', '3x4', '4x4']));
+    const parcel = groups.find(group => group.length === 12)!, first = parcel[0]; add(state, 'camp', first);
     const after = farmParcelPreferenceQuery(state, palace, points.filter(point => point !== first));
     expect(after(parcel[1].x, parcel[1].y)).toBeGreaterThan(after(groups.find(group => group !== parcel)![0].x, groups.find(group => group !== parcel)![0].y));
   });
 
-  it('continues an intended 3×3 square after its first four plots form a 2×2 corner', () => {
+  it('continues an intended 4×4 square after its first nine plots form a 3×3 corner', () => {
     const state = fixture(), palace = state.buildings[0], points: Point[] = [];
     for (let y = 1; y < 23; y++) for (let x = 1; x < 31; x++) points.push({ x, y });
     const emptyPreference = farmParcelPreferenceQuery(state, palace, points);
-    const target = parcels(points.filter(point => emptyPreference(point.x, point.y) > 0)).find(group => group.length === 9)!;
+    const target = parcels(points.filter(point => emptyPreference(point.x, point.y) > 0)).find(group => group.length === 16)!;
     const x = Math.min(...target.map(point => point.x)), y = Math.min(...target.map(point => point.y));
-    for (const point of square(x, y, 2)) add(state, 'camp', point);
-    for (let added = 0; added < 5; added++) {
+    for (const point of square(x, y, 3)) add(state, 'camp', point);
+    for (let added = 0; added < 7; added++) {
       const remaining = points.filter(point => !state.buildings.some(crop => crop.kind === 'camp' && crop.x === point.x && crop.y === point.y));
       const preference = farmParcelPreferenceQuery(state, palace, remaining);
       const chosen = [...remaining].sort((a, b) => preference(b.x, b.y) - preference(a.x, a.y))[0];
@@ -111,12 +117,13 @@ describe('compact farm placement', () => {
       expect(preference(chosen.x, chosen.y)).toBeGreaterThan(.9);
       add(state, 'camp', chosen);
     }
-    expect(parcels(state.buildings.filter(building => building.kind === 'camp')).map(group => group.length)).toEqual([9]);
+    expect(parcels(state.buildings.filter(building => building.kind === 'camp')).map(group => group.length)).toEqual([16]);
   });
 
   it('finishes a viable 2×3 partial square before beginning another parcel', () => {
     const state = fixture(), palace = state.buildings[0], target = square(4, 6, 3);
     for (const point of target.filter(point => point.y < 8)) add(state, 'camp', point);
+    restrictPlots(state, [...target, ...square(13, 5, 4)]);
     for (let added = 0; added < 3; added++) {
       const next = planAutomaticFarmSite(state, palace)!;
       expect(target).toContainEqual(next.point); add(state, 'camp', next.point);
@@ -125,16 +132,20 @@ describe('compact farm placement', () => {
   });
 
   it('finishes a slightly more distant fourth corner before opening another square', () => {
-    const state = fixture(), palace = state.buildings[0], corner = { x: 4, y: 3 };
-    for (const point of [{ x: 5, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 3 }]) add(state, 'camp', point);
+    const state = fixture(), palace = state.buildings[0], corner = { x: 4, y: 5 };
+    const nextParcel = square(14, 10, 2);
+    for (const point of [{ x: 5, y: 6 }, { x: 4, y: 6 }, { x: 5, y: 5 }]) add(state, 'camp', point);
+    restrictPlots(state, [corner, ...nextParcel]);
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(corner);
     // Square completion remains a preference: much richer soil can win.
-    const richer = { x: 14, y: 10 }; state.world.tiles[richer.y * 32 + richer.x].fertility = 1.25;
+    const richer = nextParcel[0]; state.world.tiles[richer.y * 32 + richer.x].fertility = 1.25;
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(richer);
   });
 
-  it.each([{ x: 8, y: 3, size: 2 }, { x: 4, y: 6, size: 3 }])('keeps a completed $size×$size square separate from new parcels', ({ x, y, size }) => {
-    const state = fixture(), completed = square(x, y, size);
+  it.each([{ x: 3, y: 5, width: 4, height: 4 }, { x: 13, y: 1, width: 3, height: 3 },
+    { x: 13, y: 5, width: 3, height: 4 }, { x: 3, y: 1, width: 4, height: 3 }])(
+    'keeps a completed $width×$height parcel separate from new parcels', ({ x, y, width, height }) => {
+    const state = fixture(), completed = Array.from({ length: width * height }, (_, i) => ({ x: x + i % width, y: y + Math.floor(i / width) }));
     for (const point of completed) add(state, 'camp', point);
     const next = planAutomaticFarmSite(state, state.buildings[0])!;
     expect(Math.min(...completed.map(point => Math.max(Math.abs(point.x - next.point.x), Math.abs(point.y - next.point.y))))).toBeGreaterThanOrEqual(2);
@@ -154,7 +165,7 @@ describe('compact farm placement', () => {
 
   it('does not mistake an already finished planned square for a pending completion', () => {
     const state = fixture(), palace = state.buildings[0], points: Point[] = [];
-    const planted = square(8, 3, 2), plannedCells = new Set(planted.map(point => point.y * 32 + point.x));
+    const planted = square(3, 5, 4), plannedCells = new Set(planted.map(point => point.y * 32 + point.x));
     for (let y = 1; y < 23; y++) for (let x = 1; x < 31; x++) points.push({ x, y });
     const withPlanted = farmParcelPreferenceQuery(state, palace, points, { plannedCells });
     const emptyPoints = points.filter(point => !plannedCells.has(point.y * 32 + point.x));
@@ -185,17 +196,15 @@ describe('compact farm placement', () => {
     expect(planAutomaticFarmSite(state, palace)?.point).toEqual(gap);
   });
 
-  it.each([1.01, 1.02, 1.03])('joins a field despite slightly richer isolated soil (%s fertility)', fertility => {
-    const state = fixture(), clustered = { x: 4, y: 10 }, isolated = { x: 14, y: 10 };
-    add(state, 'camp', { x: 3, y: 10 }); restrictPlots(state, [clustered, isolated]);
-    state.world.tiles[clustered.y * 32 + clustered.x].fertility = 1;
-    state.world.tiles[isolated.y * 32 + isolated.x].fertility = fertility;
-    const plan = planAutomaticFarmSite(state, state.buildings[0])!;
-    expect(fieldHarvestFoodForState(state, isolated.x, isolated.y)).toBeGreaterThan(fieldHarvestFoodForState(state, clustered.x, clustered.y));
-    expect(plan.point).toEqual(clustered);
-    expect(plan.expectedHarvest).toBeCloseTo(.8 * 4 / 3); // The preference never manufactures extra food.
-    state.world.tiles[isolated.y * 32 + isolated.x].fertility = 1.25;
-    expect(planAutomaticFarmSite(state, state.buildings[0])?.point).toEqual(isolated);
+  it('fills an off-grid rectangle on equal soil and chooses a more fertile extension when delivery is comparable', () => {
+    const state = fixture(), corner = { x: 13, y: 11 }, extension = { x: 11, y: 11 };
+    for (const point of [{ x: 12, y: 9 }, { x: 13, y: 9 }, { x: 12, y: 10 }, { x: 13, y: 10 }, { x: 12, y: 11 }]) add(state, 'camp', point);
+    restrictPlots(state, [corner, extension]);
+    const plan = planAutomaticFarmSite(state, state.buildings[0]);
+    expect(plan?.point).toEqual(corner);
+    expect(plan?.harvest).toBeCloseTo(fieldHarvestFoodForState(state, corner.x, corner.y));
+    state.world.tiles[extension.y * 32 + extension.x].fertility = 1.01;
+    expect(planAutomaticFarmSite(state, state.buildings[0])?.point).toEqual(extension);
   });
 
   it('fills a three-sided hole before adding a single-neighbor extension of equal quality', () => {

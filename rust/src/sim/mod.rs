@@ -15,6 +15,7 @@ pub mod achievements;
 pub mod campaign;
 pub mod scenarios;
 pub mod barbarian_galleys;
+pub mod camp_sites;
 pub mod scenario_access;
 pub mod quests;
 pub mod quest_hermits;
@@ -43,6 +44,9 @@ pub mod shell_impacts;
 pub mod harbor_trade;
 pub mod land_trade;
 pub mod granaries;
+pub mod farm_parcels;
+pub mod farm_roads;
+pub mod starting_farms;
 pub mod geothermal;
 pub mod thermal_baths;
 pub mod drainage;
@@ -50,9 +54,13 @@ pub mod paved_roads;
 pub mod sites;
 pub mod exploration;
 pub mod battle_support;
+pub mod city_planning;
 pub mod bird_flocks;
+pub mod deer_herds;
+pub mod livestock;
 pub mod kinds;
 pub mod marauders;
+pub mod raid_director;
 pub mod rng;
 pub mod retinue;
 pub mod retinue_settling;
@@ -60,10 +68,14 @@ pub mod offensive;
 pub mod offensive_ai;
 pub mod save;
 pub mod structures;
+pub mod settlement_tiers;
 pub mod work;
 
 use bevy_ecs::prelude::*;
 use std::collections::BTreeMap;
+
+// Match the procedural world limit in src/world/options.ts.
+const MAX_WORLD_DIMENSION: usize = 520;
 
 #[derive(Resource, Clone, Copy, Debug, PartialEq, Default)]
 pub struct SimClock {
@@ -151,11 +163,15 @@ impl Sim {
         world.init_resource::<campaign::Campaign>();
         world.init_resource::<scenarios::Scenarios>();
         world.init_resource::<barbarian_galleys::BarbarianGalleys>();
+        world.init_resource::<camp_sites::CampSites>();
         world.init_resource::<scenario_access::ScenarioAccess>();
         world.init_resource::<quests::Quests>();
         world.init_resource::<ai_policy::Policies>();
         world.init_resource::<ai_empire::Empire>();
         world.init_resource::<ai_investment::Investments>();
+        world.init_resource::<farm_parcels::FarmParcels>();
+        world.init_resource::<farm_roads::FarmRoads>();
+        world.init_resource::<starting_farms::StartingFarms>();
         world.init_resource::<defense_placement::DefensePlacement>();
         world.init_resource::<diplomacy::Diplomacy>();
         world.init_resource::<cheats::Cheats>();
@@ -181,13 +197,19 @@ impl Sim {
         world.init_resource::<sites::Sites>();
         world.init_resource::<exploration::Exploration>();
         world.init_resource::<battle_support::BattleSupport>();
+        world.init_resource::<city_planning::CityPlanning>();
         world.init_resource::<bird_flocks::BirdFlocks>();
+        world.init_resource::<deer_herds::DeerHerds>();
+        world.init_resource::<livestock::Livestock>();
         world.init_resource::<structures::StructureIndex>();
         world.init_resource::<work::WorkScheduler>();
         world.init_resource::<marauders::MarauderSchedule>();
         world.init_resource::<marauders::RaiderAggression>();
+        world.init_resource::<raid_director::RaidDirector>();
         world.init_resource::<DecisionRevision>();
         world.init_resource::<retinue::RetinueComposition>();
+        world.init_resource::<retinue::RetinuePayroll>();
+        world.init_resource::<retinue::RetinueRecruitment>();
         world.init_resource::<retinue_settling::RetinueSettling>();
         world.init_resource::<offensive::Offensives>();
         world.init_resource::<offensive_ai::OffensiveAi>();
@@ -230,6 +252,14 @@ impl Sim {
         let mut clock = self.world.resource_mut::<SimClock>();
         clock.speed = speed; clock.paused = paused; clock.game_over = game_over; clock.victory = victory; clock.victory_continued = victory_continued;
         self.publish();
+    }
+    pub fn continue_as_observer(&mut self) -> bool {
+        let mut clock = self.world.resource_mut::<SimClock>();
+        if !clock.game_over || clock.victory { return false; }
+        clock.game_over = false;
+        clock.paused = false;
+        self.publish();
+        true
     }
     /// One simulation substep advances simulated time first (`stepGame`).
     pub fn advance(&mut self, dt: f64) -> f64 {
@@ -298,7 +328,7 @@ impl Sim {
         let Some((entity, sequence)) = self.world.resource::<entities::EntityTables>().buildings.locate(id) else { return; };
         self.world.resource_mut::<military_academies::MilitaryAcademies>().site(id, kind, faction, flags);
         self.world.resource_mut::<civic_buildings::CivicBuildings>().site(id, kind, faction, x, y, flags);
-        if matches!(kind, kinds::building::HOSPITAL | kinds::building::APARTMENTS | kinds::building::FACTORY | kinds::building::GOLD_MINE) {
+        if matches!(kind, kinds::building::APARTMENTS | kinds::building::FACTORY | kinds::building::GOLD_MINE) {
             self.world.entity_mut(entity).insert(civic_buildings::CivicStructure);
         } else { self.world.entity_mut(entity).remove::<civic_buildings::CivicStructure>(); }
         if kind == kinds::building::MILITARY_ACADEMY && faction.is_finite() && flags & 5 == 5 {
@@ -312,6 +342,10 @@ impl Sim {
     }
     pub fn structure_refresh_defenses(&mut self) {
         self.world.resource_scope(|world, mut index: Mut<structures::StructureIndex>| index.refresh_defenses(world));
+    }
+    pub fn structure_fallen_city_claims(&mut self, faction: f64, palace: i64, x: f64, y: f64) -> *const f64 {
+        self.world.resource_scope(|world, mut index: Mut<structures::StructureIndex>|
+            index.fallen_city_claims(world, faction, palace, x, y))
     }
 
     pub fn engines(&mut self) -> Mut<'_, EngineTable> { self.world.resource_mut::<EngineTable>() }
@@ -350,6 +384,8 @@ impl Sim {
         sections.push((save::OFFENSIVE_AI, &offensive_ai));
         let civic = self.world.resource::<civic_buildings::CivicBuildings>().snapshot();
         sections.push((save::CIVIC_ECONOMY, &civic));
+        let raids = self.world.resource::<raid_director::RaidDirector>().snapshot();
+        sections.push((save::RAID_DIRECTOR, &raids));
         let mut out = std::mem::take(&mut self.export);
         save::encode(&sections, &mut out);
         self.export = out;
@@ -379,6 +415,7 @@ impl Sim {
         let mut offensives = offensive::Offensives::default();
         let mut offensive_ai = offensive_ai::OffensiveAi::default();
         let mut civic = civic_buildings::CivicBuildings::default();
+        let mut raids = raid_director::RaidDirector::default();
         for (id, range) in sections {
             match id {
                 save::CORE if range.len() == save::CORE_LENGTH => core = Some(&data[range]),
@@ -407,6 +444,10 @@ impl Sim {
                     offensive_ai = restored;
                 }
                 save::CIVIC_ECONOMY => { if !civic.restore(&data[range]) { return false; } }
+                save::RAID_DIRECTOR => {
+                    let Some(restored) = raid_director::RaidDirector::restore(&data[range]) else { return false; };
+                    raids = restored;
+                }
                 save::AI_POLICIES => {
                     let Some(saved) = ai_policy::decode(&data[range]) else { return false; };
                     policies = Some(saved);
@@ -435,6 +476,7 @@ impl Sim {
         self.world.insert_resource(offensives);
         self.world.insert_resource(offensive_ai);
         self.world.insert_resource(civic);
+        self.world.insert_resource(raids);
         destruction::restore(&mut self.world, destruction);
         if let Some(saved) = policies { ai_policy::restore(&mut self.world, saved); }
         if let Some(saved) = quests { if !quests::restore(&mut self.world, &saved) { return false; } }

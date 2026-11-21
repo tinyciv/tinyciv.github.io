@@ -1,13 +1,13 @@
 /**
  * Mount a GameState with the game's real renderer (src/game/renderer.ts ->
  * PixiScene/WebGL), exactly as src/main.ts does: same art loaders, same
- * Renderer, same per-frame draw call, same simulation step clamp.
+ * Renderer, per-frame draw call, and simulation clock.
  */
 import '../../src/ui/game-font.css';
 import './harness.css';
 import { Renderer, MIN_ZOOM, MAX_ZOOM } from '../../src/game/renderer';
-import { updateGame } from '../../src/game/simulation';
-import { frameSimulationDelta } from '../../src/game/frame-time';
+import { advanceTimedGame, gameCanAdvance, updateGame } from '../../src/game/simulation';
+import { SIMULATION_TURN_BUDGET_MS, SIMULATION_UPDATE_MS, SimulationClock } from '../../src/game/simulation-clock';
 import type { GameState, Point } from '../../src/game/types';
 import { loadGameArt } from './assets';
 import { IDLE_INPUT, buildScenario, type ScenarioOptions } from './scenario';
@@ -79,11 +79,36 @@ export async function mountGameState(host: HTMLElement, state: GameState, option
   renderer.follow = false;
   renderer.overlays = options.overlays ?? true;
 
-  let frame = 0, last = performance.now(), destroyed = false;
+  let frame = 0, timer = 0, last = performance.now(), destroyed = false, ready = false;
+  let playing = !!options.play;
+  const clock = new SimulationClock();
+  const sampleClock = (now: number) => clock.sample(now, playing && !document.hidden && gameCanAdvance(state) ? state.speed : 0);
+  const onVisibilityChange = () => sampleClock(performance.now());
+  const simulate = () => {
+    if (!element.isConnected) { mounted.destroy(); return; }
+    const start = performance.now();
+    sampleClock(start);
+    if (!document.hidden) {
+      clock.consume(advanceTimedGame(state, IDLE_INPUT, clock.dueSteps, clock.stepSeconds, start + SIMULATION_TURN_BUDGET_MS, { wallNow: Date.now() }));
+    }
+    const catchingUp = clock.dueSteps > 0;
+    const end = performance.now();
+    sampleClock(end);
+    const delay = document.hidden ? 100 : catchingUp ? 4 : Math.max(4, SIMULATION_UPDATE_MS - (end - start));
+    timer = window.setTimeout(simulate, delay);
+  };
   const status = document.createElement('div');
   status.className = 'tc-status';
   const mounted: MountedScenario = {
-    state, renderer, canvas, element, playing: !!options.play,
+    state, renderer, canvas, element,
+    get playing() { return playing; },
+    set playing(value) {
+      playing = value;
+      if (!ready || destroyed) return;
+      sampleClock(performance.now());
+      window.clearTimeout(timer);
+      if (playing) timer = window.setTimeout(simulate, 0);
+    },
     step(seconds) {
       for (let remaining = seconds; remaining > 1e-8; remaining -= .1) updateGame(state, Math.min(.1, remaining), IDLE_INPUT);
       mounted.draw(Math.min(seconds, .15));
@@ -95,7 +120,9 @@ export async function mountGameState(host: HTMLElement, state: GameState, option
     snapshot: () => renderer.snapshot(),
     destroy() {
       if (destroyed) return;
-      destroyed = true; cancelAnimationFrame(frame); renderer.destroy(); element.remove();
+      destroyed = true; cancelAnimationFrame(frame); window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      renderer.destroy(); element.remove();
     },
   };
 
@@ -116,18 +143,21 @@ export async function mountGameState(host: HTMLElement, state: GameState, option
     element.append(bar);
   }
 
-  // Same per-frame shape as src/main.ts: simulate (when playing), then draw.
   const tick = (now: number) => {
     if (destroyed) return;
     if (!element.isConnected) { mounted.destroy(); return; }
     const elapsed = Math.max(0, (now - last) / 1000); last = now;
-    if (mounted.playing) updateGame(state, frameSimulationDelta(elapsed, state.speed), IDLE_INPUT);
     mounted.draw(mounted.playing ? Math.min(elapsed, .15) : 0);
     frame = requestAnimationFrame(tick);
   };
   // Settle lazily-built terrain, fog and presentation caches before reporting ready.
   for (let i = 0; i < 3; i++) { mounted.draw(0); await nextFrame(); }
   element.dataset.ready = 'true';
+  ready = true;
+  clock.reset(performance.now());
+  sampleClock(performance.now());
+  if (playing) timer = window.setTimeout(simulate, 0);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   frame = requestAnimationFrame(tick);
   return mounted;
 }

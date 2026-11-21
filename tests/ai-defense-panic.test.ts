@@ -7,8 +7,9 @@ import { selectRaidTarget } from '../src/game/raid-targeting';
 import { canWalk, hasStaticPath, invalidateNavigation } from '../src/game/pathfinding';
 import { constructionEdges } from '../src/game/builders';
 import { invalidateDecisions } from '../src/game/decision-schedule';
+import { clearObservedScalar } from '../src/game/scalar-observer';
 import { civilianThreat } from '../src/game/morale-perception';
-import { atWar, buildAt, moveUnit, updateGame, validateBuildAt } from '../src/game/simulation';
+import { atWar, buildAt, factionBuildGold, moveUnit, updateGame } from '../src/game/simulation';
 import { distance, type Building, type Faction, type GameState, type Unit } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
@@ -99,23 +100,18 @@ describe('civilian fear', () => {
     expect(civilianThreat(state, civilian, hostility, visible)?.id).toBe(11);
   });
 
-  it.each(['lake', 'ledge'] as const)('does not fear a nearby ranged marauder across impassable %s terrain', barrier => {
+  it.each(['lake', 'rocks'] as const)('does not fear a nearby ranged marauder across impassable %s terrain', barrier => {
     const { state, civilian } = sealedCity('worker');
     for (const wall of state.buildings.filter(b => b.kind === 'wall')) {
       wall.hp = 0;
       const tile = state.world.tiles[wall.y * state.world.width + wall.x];
       if (barrier === 'lake') tile.terrain = 'lake';
+      else tile.rockRelief = 0;
     }
-    if (barrier === 'ledge') for (let y = 9; y <= 15; y++) for (let x = 10; x <= 16; x++)
-      state.world.tiles[y * state.world.width + x].ridge = 1;
     state.world.revision!++;
     expect(updateCivilianPanic(state, civilian, .1, moveUnit, hostility, visible)).toBe(false);
     if (barrier === 'lake') entityStore(state).buildings.add(building(900, 'bridge', 0, 16, 12));
-    else {
-      state.world.tiles[12 * state.world.width + 16].stair = 'east'; state.world.revision!++;
-      expect(civilianThreat(state, civilian, hostility, visible)).toBeUndefined();
-      state.world.tiles[12 * state.world.width + 16].stair = 'west'; state.world.revision!++;
-    }
+    else { delete state.world.tiles[12 * state.world.width + 16].rockRelief; state.world.revision!++; }
     invalidateNavigation(state); invalidateDecisions(state); state.time += .7;
     expect(updateCivilianPanic(state, civilian, .1, moveUnit, hostility, visible)).toBe(true);
   });
@@ -218,14 +214,14 @@ describe('settlement defense and shared raider pressure', () => {
     state.factions[1].population = 20;
     state.factions[1].research = { focus: 'wall', levels: { wall: 1, woodenTower: 1 }, progress: {} };
     const before = state.factions[1].gold;
-    updateFactionDefenses(state, { validate: (faction, kind, x, y) => validateBuildAt(state, kind, x, y, faction),
+    updateFactionDefenses(state, { cost: (kind, faction) => factionBuildGold(state, kind, faction),
       build: (faction, kind, x, y) => buildAt(state, kind, x, y, faction) });
     const defenses = state.buildings.filter(building => building.faction === 1 && ['palisade', 'woodenTower'].includes(building.kind));
     expect(defenses.some(building => building.kind === 'woodenTower')).toBe(true);
     expect(defenses.some(building => building.kind === 'palisade')).toBe(false);
     expect(defenses.every(building => building.construction?.waitingForBuilder)).toBe(true);
     expect(state.factions[1].gold).toBeLessThan(before); expect(state.units.some(worker => worker.faction === 1 && worker.builder)).toBe(true);
-    const count = state.buildings.length; updateFactionDefenses(state, { validate: () => ({ ok: true }), build: () => { throw Error('Planner must be throttled'); } });
+    const count = state.buildings.length; updateFactionDefenses(state, { cost: () => 40, build: () => { throw Error('Planner must be throttled'); } });
     expect(state.buildings).toHaveLength(count);
   });
 
@@ -239,32 +235,32 @@ describe('settlement defense and shared raider pressure', () => {
     expect(leader.target).toBeUndefined(); expect(distance(leader, { x: 29, y: 17 })).toBeLessThan(9);
   });
 
-  it('replaces missing standalone towers without walling over the city approach road', () => {
+  it('replaces towers and fortifies the city while preserving its approach road', () => {
     const state = fixture(); state.factions[1].gold = 10000;
     state.factions[1].population = 100;
     state.factions[1].research = { focus: 'wall', levels: { wall: 1, woodenTower: 1 }, progress: {} };
     for (let y = 12; y <= 15; y++) entityStore(state).buildings.add(building(200 + y, 'road', 1, 28, y));
-    const orders = { validate: (faction: number, kind: DefenseKind, x: number, y: number) => validateBuildAt(state, kind, x, y, faction),
+    const orders = { cost: (kind: DefenseKind, faction: number) => factionBuildGold(state, kind, faction),
       build: (faction: number, kind: DefenseKind, x: number, y: number) => buildAt(state, kind, x, y, faction) };
     // Completion is already exercised by construction tests; here each planning round receives its completed previous orders.
     for (let round = 0; round < 22; round++) {
       state.time = 15 + round * 8;
-      for (const structure of state.buildings) delete structure.construction;
+      for (const structure of state.buildings) clearObservedScalar(structure, 'construction');
       updateFactionDefenses(state, orders);
     }
     for (const structure of state.buildings) delete structure.construction;
     state.world.revision = (state.world.revision ?? 0) + 1;
     const towers = state.buildings.filter(structure => structure.kind === 'woodenTower' && structure.faction === 1);
     expect(towers).toHaveLength(4);
-    const walls = state.buildings.filter(structure => structure.kind === 'palisade' && structure.faction === 1);
-    expect(walls).toHaveLength(0);
+    const walls = state.buildings.filter(structure => structure.kind === 'wall' && structure.faction === 1);
+    expect(walls.length).toBeGreaterThan(0);
+    expect(walls.some(wall => wall.x === 28 && wall.y >= 12 && wall.y <= 15)).toBe(false);
     for (const tower of towers) {
       const contacts = constructionEdges(state, tower);
       expect(contacts.length).toBeGreaterThan(1);
       expect(constructionEdges(state, state.buildings[1]).some(exit => contacts.some(contact => hasStaticPath(state, exit, contact, 1)))).toBe(true);
       expect(contacts.every(contact => canWalk(state, contact.x, contact.y, -2))).toBe(true);
     }
-    expect(state.buildings.some(structure => structure.kind === 'wall' && structure.faction === 1)).toBe(false);
     expect(canWalk(state, 28.5, 12.5, 1)).toBe(true); expect(canWalk(state, 28.5, 12.5, -2)).toBe(true);
     expect(canWalk(state, 29.5, 21.5, 1)).toBe(true);
   });

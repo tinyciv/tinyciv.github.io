@@ -1,4 +1,79 @@
 ### Fixes and features:
+
+
+
+- When world viewer boots, show link to the actual page, not just the app port
+- Remove 10 character restriction on password
+- When account is being created, dont show empty field in text entry area, just show a popup with a spinner saying "Creating account..." and then briefly show "Account created!" when done. For account creation, we should require a username; email is optional. If no email is provided, a popup should be shown confirming the user has no email address. It should tell them that "If you do not provide an email address, we will not be able to reset your password if you forget it."
+- Add a game mechanic to save games to the cloud for logged in users. Make sure users can't access other users' games. If users is a guest, they can save locally.
+- First player settlements should spawn at least 3 tiles from any resources like olives, salt, or marble
+- For Quick Start, start the game on pangeaea with barbarians at "roaming" level with 50% strength
+- Add mechanic whereby civilians moving to get to their farm will create road on any tile they cross which is not already occupied
+- reduce cannon damage against units by 50%, increase speed by 50%
+- Get rid of current 1x1 building destruction animation with fires; produce new ones which just involve crumbling into wisps of dust and smoke
+- When units are forming for an offensive, they MUST enter into a formation and advance in it
+- For buttons build/fortify/clear, label them as B F or C in small font in top right corner like the building buttons
+- The terrain generator biases world gen to have forests at the far north; we want the game gen logic to be symmetric about the equator, so the far south should also be biased that way.
+- For all scenario descriptions, remove bullet points like "Three cities each
+Fortified frontier
+War"
+- For Offensives, any enemy fortifications which block pathing should not force the army to go around; they should simply kill and destroy everything in their way. They should only path around obstacles like water or rocks.
+
+- Army composition sliders should be in integer # of unit each time, not percentage
+- Every barracks should reduce the recruitment time for a new unit by 6% with a cap of 60% reductions
+- Threshold for units to end current attack for offensive and return back to rally area should be 30%, not 50%
+- Loose order should be 2 ranks deep, and change spacing to 1 tile between units not 2
+
+
+- Make the formation ability / its required tech occur earlier in the tech tree so that the player can have it before the first marauder formations show up.
+- In an Offensive, the units should create a formation and attack
+- When cannon units are in an formation, they may move 25% faster
+- In the zoom-out view for placing offensive flags, moving the cursor to the edge of the screen should scroll.
+- Reduce range of cannon by 1/3
+- At the start of every game, randomly initialize each farm field to a different part of its harvest cycle.
+- Give a 1 minute cooldown to start offensives. They can be ended immediately.
+- Add a new formation to the military academy, "Loose order" which has units form up in a line with at least 2 tiles between each unit.
+- During an offensive, if fewer than half of the max army size is still actively fighting (not retreating, not dead) then the formation can continue. If not, the soldiers retreat back to the rally flag and then wait for reinforcements before their formation is remade and they can advance again.
+
+
+- We need a heuristic to place roads near a town as houses are filling it out so it does not get encircled by houses and make it difficult to pathfind. Consider having the road automatically place a few roads going out 3-4 tiles to prevent this.
+- For the sandbox scenario, remove the starting towers.
+- Move the starting fraction of gold going to research as 10%
+- Simplify the No Mans Land scenario by using a landmass that is 40% smaller with a solid interior, not a water-filled gap. Start the map fully explored but with fog of war enabled. Make the distance between towers the range of a tower x2.5
+- At victory screen, exiting should go to main game big menu, not ingame small menu
+- Fountains should require a midgame tech; add one if there is no appropriate one
+- increase archer damage by 2x
+- When a city is fully enclosed by stone walls, give it a 20% wealth producing bonus; reduce the green shine effect with a gold one. It stacks with the food bonus.
+
+
+- Marauders should have less morale; they should collapse and flee 20% more easily.
+- do not let expanding farms overwrite under-construction buildings
+- Increase tower damage by 50%
+
+
+- Remove the hospital building from the game
+- Change the arrow colors in the science tech tree to be tan/copper colored like they used to be
+- The healing animation next to the healer shack flitters too fast; let it subtly pulse and stay up
+- Currently, the ore deposits are placed by taking the original ore image and then downsizing it to match the size of the space it is in. That is wrong. We should create assets all at the same resolution but adapted to the size of the place; create these. Then, add "developed" states for all of these showing mines in them. Replace the current approach of just putting a mine entry in them. Add an animation to each of these. Do this for all ores. Show me what you produce before putting it ingame.
+
+- For the advanced starts, make sure that the bouses and buildings are closer to the settlement than the farmland is. Make sure tha all groups of buildings (4-16 tiles) are enclosed by a ring of roads and the city is easily traversable. Put the fort at the extreme end of the borders, closest to the nearest barbarian camp. Only place a dock automatically if there is ocean nearby; place it on the ocean.
+- If there is no ocean nearby, do not place a whaling post or shipyard.
+- Allow farmland plots to touch each other, but for plots greater than 16 tiles, force them to stay separate plantings which are visually separated as different fields.
+- Currently, the fields are not advancing through the soil->green->yellow stages. fix this.
+
+
+
+- When "Forbid" is used over a planned civilian job like cut tree or build something, it should automatically cancel that job
+- Make the ingame menu styling (buttons, colors) match the main menu styling
+- Add a 5th cancel button on the bottom right which will cancel any placement or building or. command active on the map on the area it is dragged over
+- Fix the WASD animation on the loading screen; it doesn't show the Leader's walking animation nor does it highlight the right key when he is walking.
+- On "Roaming" and above, the barbarians are a little too numerous. Reduce their spawn/numbers by 20% in the initial 5 mins of the game.
+- Start at peace with all factions, but allow the AI to declare war later on.
+- Add New Game to the ingame menu
+
+
+
+
 - Remove the current demolition animation for walls and towers; propose new ones that are crumbling (not fire) and top down, not isomorphic.
 - Show the basic controls on the loading screen for the world; give me some designs for a nice WASD explanation with visuals. It sohuld show the keys highlighted on the keyboard (only show WASD) and then show the Leader zooming around as they are highlighted
 - When opening the menu from within the running game, show a popup menu like most games instead of immediately returning to the main menu. Put options for Save game, Load game, Exit to menu, Preferences, etc. Style it like the other popups in the game.

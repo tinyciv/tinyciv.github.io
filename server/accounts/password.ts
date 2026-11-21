@@ -17,7 +17,7 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
 }
 
 export function validPassword(password: unknown): password is string {
-  return typeof password === 'string' && password.length >= 10 && Buffer.byteLength(password, 'utf8') <= 1024;
+  return typeof password === 'string' && password.length > 0 && Buffer.byteLength(password, 'utf8') <= 1024;
 }
 
 export function validPasswordHash(value: unknown): value is string {
@@ -25,7 +25,7 @@ export function validPasswordHash(value: unknown): value is string {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  if (!validPassword(password)) throw new Error('Use 10 or more characters, up to 1024 bytes.');
+  if (!validPassword(password)) throw new Error('Enter a password of up to 1024 bytes.');
   const salt = randomBytes(16), hash = await derive(password, salt);
   return `scrypt$${N}$${r}$${p}$${salt.toString('hex')}$${hash.toString('hex')}`;
 }

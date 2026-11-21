@@ -63,7 +63,7 @@ describe('faction equipment on defensive buildings', () => {
       expect(purchaseBlacksmithUpgrade(state, state.buildings[2], 'armor').ok).toBe(true);
       expect(purchaseBlacksmithUpgrade(state, state.buildings[2], 'weapon').ok).toBe(true);
     }
-    expect(selectionSummary(state)).toMatchObject({ defense: expect.closeTo(12.6), attack: 18.375, showCombatStats: true });
+    expect(selectionSummary(state)).toMatchObject({ defense: expect.closeTo(12.6), attack: 27.5625, showCombatStats: true });
     expect(tower).toMatchObject(baseline);
     expect(buildingArmor(building(4, 'woodenTower', 14, 12), owner)).toBeCloseTo(12.6);
     state.factions.push({ ...owner, id: 1, relation: 'war', armorLevel: 1, weaponLevel: 2 });
@@ -97,7 +97,7 @@ describe('faction equipment on defensive buildings', () => {
     for (let i = 0; i < 4; i++) { expect(buildingArmor(tower, owner)).toBe(9); applyDefenseResearch(tower, owner); }
     expect(tower.maxHp).toBe(maximum); expect(tower.armor).toBe(6);
     state.selected = 1; state.buildings[0].palaceLevel = 2;
-    expect(selectionSummary(state)).toMatchObject({ name: 'Keep', showCombatStats: true, defense: 9, attack: 8.75 });
+    expect(selectionSummary(state)).toMatchObject({ name: 'Keep', showCombatStats: true, defense: 9, attack: 13.125 });
   });
 
   it('tower shots use the current owner weapon tier exactly once', () => {

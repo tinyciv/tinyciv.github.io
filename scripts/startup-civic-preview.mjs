@@ -28,7 +28,7 @@ export async function captureCivicPreview(page) {
     }
     candidates.sort((a,b) => a.distance-b.distance || a.y-b.y || a.x-b.x);
     const placed = [];
-    for (const kind of ['hospital','apartments','factory','goldMine']) {
+    for (const kind of ['apartments','factory','goldMine']) {
       const point = candidates.find(point => ![0,1,state.world.width,state.world.width+1].some(offset => occupied.has(point.y*state.world.width+point.x+offset)));
       if (!point) throw new Error(`No natural terrain available for ${kind} preview`);
       const building = { id: entityStore(state).allocateId(), kind, faction: 0, x: point.x, y: point.y,

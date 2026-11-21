@@ -2,14 +2,15 @@ import { entityStore } from './entity-store';
 import { banditIntensity, banditPopulationCap } from './bandit-intensity';
 import { seededRandom } from '../world/generator';
 import { MAX_LIVE_RAIDERS, RAIDER_COLOR, RAIDER_FACTION, raiderCampActive, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
-import { initializeRaiderSkirmishes, RAIDER_CAMP_RESERVES } from './raider-activity';
+import { RAIDER_CAMP_RESERVES } from './raider-activity';
 import { ensureMarauderLeaders } from './marauder-leaders';
 import { marauderBaseStats, raiderPartySize } from './raider-pressure';
+import { MARAUDER_MAX_MORALE } from './battle-morale';
 import { buildingReady, type GameState, type Unit } from './types';
 
 export const ROAMING_MARAUDERS_VERSION = 1;
 
-/** Opening attacks and dormant reserve bands share one bounded population.
+/** Dormant reserve bands share one bounded population with raids.
  * Reserves occupy real camp tents; they do not patrol the wilderness. */
 export function roamingPackTarget(state: GameState): number {
   return banditPopulationCap(state, Math.min(12, Math.max(1, state.factions.filter(faction => faction.id >= 0 && faction.villageId === undefined).length) * 2,
@@ -19,7 +20,6 @@ export function roamingPackTarget(state: GameState): number {
 export function initializeRoamingMarauders(state: GameState): void {
   if ((state.roamingMaraudersVersion ?? 0) >= ROAMING_MARAUDERS_VERSION) { ensureMarauderLeaders(state); return; }
   state.roamingMaraudersVersion = ROAMING_MARAUDERS_VERSION;
-  initializeRaiderSkirmishes(state);
   if (!banditIntensity(state)) return;
   const camps = (state.raiderCamps ?? []).filter(camp => raiderCampActive(state, camp))
     .map(camp => ({ camp, tents: camp.houses.map(id => state.buildings.find(building => building.id === id))
@@ -52,7 +52,7 @@ export function initializeRoamingMarauders(state: GameState): void {
       const tent = tents[(band + member) % tents.length]!;
       const stats = marauderBaseStats(65, 10, 2);
       const unit: Unit = { id: entityStore(state).allocateId(), x: tent.x + .5, y: tent.y + .5, kind: 'warrior', faction: RAIDER_FACTION,
-        marauderPack: id, name, ...stats, maxHp: stats.hp, morale: 100, speed: 2.35, range: 1.1,
+        marauderPack: id, name, ...stats, maxHp: stats.hp, morale: MARAUDER_MAX_MORALE, speed: 2.35, range: 1.1,
         inside: true, raiderGarrison: tent.id, order: 'hold', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
         moving: false, facing: rng() * Math.PI * 2, attackTime: 0, bornAt: state.time };
       units.add(unit); entityStore(state).setUnitSleeping(unit, true);

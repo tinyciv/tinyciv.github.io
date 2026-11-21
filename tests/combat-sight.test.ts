@@ -53,8 +53,8 @@ describe('cover-limited combat sight', () => {
     Object.assign(target, { x: 20, y: 14.5 });
     Object.assign(attacker, { attack: 25 });
     entityStore(state).units.add(attacker);
-    for (let y = 13; y <= 15; y++) for (let x = 15; x <= 17; x++) state.world.tiles[y * 48 + x].ridge = 1;
-    if (targetRaised) for (let y = 13; y <= 15; y++) for (let x = 19; x <= 21; x++) state.world.tiles[y * 48 + x].ridge = 2;
+    for (let y = 13; y <= 15; y++) for (let x = 15; x <= 17; x++) state.world.tiles[y * 48 + x].reliefLevel = 1;
+    if (targetRaised) for (let y = 13; y <= 15; y++) for (let x = 19; x <= 21; x++) state.world.tiles[y * 48 + x].reliefLevel = 1;
     state.world.revision!++;
     hiddenSensingCycle(state);
     expect(attacker.target).toBe(targetRaised ? undefined : target.id);

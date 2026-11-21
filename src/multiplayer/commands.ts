@@ -1,23 +1,22 @@
 import { orderMarketRoute } from '../game/trade';
-import { selectMilitaryFormation } from '../game/military-academy';
+import { MILITARY_FORMATION_TYPES, selectMilitaryFormation } from '../game/military-academy';
 import { convertFieldCannon, orderFieldCannon } from '../game/field-cannons-native';
 import { resolveExploration } from '../game/exploration-native';
 import { shipyardOrder, warshipAction, warshipMove, warshipAttack, SHIP_CLASSES, NAVAL_WEAPONS, MARINE_TYPES } from '../game/warships-native';
 import { entityStore } from '../game/entity-store';
 import { ACHIEVEMENTS, purchaseAchievement } from '../game/achievements';
 import { buildSite } from '../game/site-construction';
-import { setLevySlingerFraction } from '../game/mass-levy';
+import { dismissLevy, levyPopulation, setLevySlingerFraction } from '../game/mass-levy';
 import { setPlacementIntent } from '../game/battle-support-native';
 import { askHermit } from '../game/hermits';
 import { performQuestAction } from '../game/quests';
 import { upgradeFort, upgradeFortBrigade, rebuildFort } from '../game/forts';
 import { toggleGarrison } from '../game/garrison';
-import { levyPopulation, dismissLevy } from '../game/mass-levy';
 import { BUILD_COSTS, buildAt, commandAttackAt, commandMove, diplomacyAction, recallRetinue, respawnLeader, setRetinueStance, toggleMovementMode } from '../game/simulation';
 import { buildStroke } from '../game/construction';
-import { clearArea } from '../game/area-tools';
+import { cancelArea, clearArea } from '../game/area-tools';
 import { setForbiddenRectangle } from '../game/forbidden-zones';
-import { withPlayerFaction, isHumanFaction } from '../game/player-context';
+import { factionById, withPlayerFaction, isHumanFaction } from '../game/player-context';
 import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from '../game/building-activity';
 import { RESEARCH_BRANCHES, prioritizeResearch, removeResearchPriority, setResearchAllocation } from '../game/research';
 import { purchaseBlacksmithUpgrade } from '../game/blacksmith';
@@ -26,14 +25,15 @@ import { importImmigrant } from '../game/immigration';
 import { purchaseRetinueSlot } from '../game/retinue-purchases';
 import { purchaseOrchardUpgrade } from '../game/orchards';
 import { upgradeGuardPost, setGuardPostWallsOnly, setGuardPostAvoidForbidden } from '../game/guard-posts';
-import { upgradeSettlement, purchaseKeepHousing } from '../game/settlement-upgrades';
-import { setRetinueFraction } from '../game/archery';
+import { upgradeSettlement, purchaseKeepHousing, upgradeSettlementTier } from '../game/settlement-upgrades';
+import { setRetinueCount } from '../game/archery';
 import { performVillageAction } from '../game/villages';
 import { learnLeaderSkill } from '../game/leader-progression';
 import { toggleInfantryFormation } from '../game/infantry-drill';
 import { beginOffensive, cancelOffensive } from '../game/offensive-native';
 import { setAutomaticallyRebuildDefenses } from '../game/defense-rebuilding';
 import { developResourceGroup } from '../game/resource-development';
+import { fenceLivestockHerd } from '../game/livestock';
 import { buildingReady, type GameState, type Point } from '../game/types';
 import type { CommandResult, GameCommand } from './protocol';
 
@@ -50,7 +50,8 @@ const compositionRoles = { 'field-cannons': 'fieldCannon', warriors: 'warrior', 
 /** Actor identity comes from the authenticated socket, never from a command.
  * Validate the untrusted envelope before calling the game's own cost/reach rules. */
 export function applyGameCommand(state: GameState, actor: number, value: unknown): CommandResult {
-  if (!isHumanFaction(state, actor) || !state.factions.some(faction => faction.id === actor && !faction.defeated)) return fail('Your faction is unavailable.');
+  const faction = factionById(state, actor);
+  if (!isHumanFaction(state, actor) || !faction || faction.defeated) return fail('Your faction is unavailable.');
   if (!record(value) || typeof value.type !== 'string') return fail();
   if (state.gameOver && value.type !== 'respawn') return fail('The match has ended.');
   const command = value as unknown as GameCommand;
@@ -60,7 +61,7 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
         ? beginOffensive(state, command.rally, command.objective, actor) : fail();
       case 'cancel-offensive': cancelOffensive(state, actor); return success();
       case 'military-formation': {
-        if (!Number.isSafeInteger(command.buildingId) || !['wide', 'standard', 'deep'].includes(command.formation)) return fail();
+        if (!Number.isSafeInteger(command.buildingId) || !MILITARY_FORMATION_TYPES.includes(command.formation)) return fail();
         const academy = entityStore(state).buildings.get(command.buildingId);
         if (!academy || academy.kind !== 'militaryAcademy' || academy.faction !== actor || !buildingActivityAvailable(state, academy)) return fail('Military Academy unavailable.');
         return selectMilitaryFormation(state, command.formation, actor);
@@ -121,6 +122,9 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
       case 'auto-rebuild-defenses':
         if (typeof command.enabled !== 'boolean') return fail();
         setAutomaticallyRebuildDefenses(state, command.enabled, actor); return success();
+      case 'pause-spending':
+        if (typeof command.enabled !== 'boolean') return fail();
+        faction.spendingPaused = command.enabled; return success();
       case 'stance':
         if (!['aggressive', 'defensive', 'hold'].includes(command.stance)) return fail();
         setRetinueStance(state, command.stance); return success();
@@ -131,6 +135,8 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
       case 'develop-resource':
         if (!point(state, command) || !Number.isInteger(command.x) || !Number.isInteger(command.y)) return fail();
         return developResourceGroup(state, command.x, command.y, actor);
+      case 'fence-herd':
+        return Number.isSafeInteger(command.herdId) && command.herdId >= 0 ? fenceLivestockHerd(state, command.herdId, actor) : fail();
       case 'build': {
         if (typeof command.kind !== 'string' || command.kind !== 'clearTrees' && !Object.hasOwn(BUILD_COSTS, command.kind)
           || !Array.isArray(command.points) || !command.points.length || command.points.length > 256 || !command.points.every(item => point(state, item))) return fail();
@@ -140,10 +146,11 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
         const result = buildStroke(state, command.kind, command.points);
         return { ok: result.ok, message: result.message };
       }
-      case 'clear': case 'forbid':
+      case 'clear': case 'forbid': case 'cancel-area':
         if (!point(state, command.start) || !point(state, command.end)) return fail();
         if ((Math.abs(command.start.x - command.end.x) + 1) * (Math.abs(command.start.y - command.end.y) + 1) > 4096) return fail('Select a smaller area.');
         if (command.type === 'clear') { const result = clearArea(state, command.start, command.end); return { ok: true, message: result.message }; }
+        if (command.type === 'cancel-area') return { ok: true, message: cancelArea(state, command.start, command.end).message };
         if (typeof command.enabled !== 'boolean') return fail();
         return { ok: true, message: setForbiddenRectangle(state, command.start, command.end, command.enabled).message };
       case 'diplomacy':
@@ -159,6 +166,7 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
       ? performVillageAction(state, building, command.action, false, actor) : fail();
     if (!building) return fail('This building no longer exists. Select another building.');
     if (building.faction !== actor) return fail('This building is no longer owned by your faction.');
+    if (command.type === 'settlement-upgrade') return upgradeSettlementTier(state, building, actor);
     if (!entityStore(state).units.query('leader').some(unit => unit.faction === actor && unit.hp > 0))
       return fail('A living Leader is required to use this building.');
     if (!buildingActivityAvailable(state, building)) return fail(!buildingReady(building)
@@ -190,8 +198,7 @@ export function applyGameCommand(state: GameState, actor: number, value: unknown
       case 'blacksmith': return command.track === 'armor' || command.track === 'weapon' ? purchaseBlacksmithUpgrade(state, building, command.track) : fail();
       case 'levy-composition': return success(setLevySlingerFraction(state, building, command.fraction));
       case 'field-cannons': case 'warriors': case 'archers': case 'swordsmen': case 'spearmen': case 'pikemen': case 'musketmen': case 'horsemen': case 'horse-archers': case 'knights':
-        if (typeof command.fraction !== 'number' || !Number.isFinite(command.fraction) || command.fraction < 0 || command.fraction > 1) return fail();
-        return success(setRetinueFraction(state, building, compositionRoles[command.type], command.fraction));
+        return success(setRetinueCount(state, building, compositionRoles[command.type], command.count));
       case 'governor':
         if (!['farms', 'housing'].includes(command.permission) || typeof command.enabled !== 'boolean' || building.kind !== 'palace') return fail();
         setGovernorPermission(building, command.permission, command.enabled); return success();

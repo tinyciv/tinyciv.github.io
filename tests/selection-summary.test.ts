@@ -25,7 +25,7 @@ describe('compact selection summaries', () => {
     expect(selectionSummary(state)).toMatchObject({ name: 'Settlement', picture: 'palace', maxHp: 650 });
     Object.assign(palace, { palaceLevel: 2, maxHp: 6500, hp: 3250 });
     const summary = selectionSummary(state)!;
-    expect(summary).toMatchObject({ name: 'Keep', picture: 'keep', hp: 3250, maxHp: 6500, attack: 8.75 });
+    expect(summary).toMatchObject({ name: 'Keep', picture: 'keep', hp: 3250, maxHp: 6500, attack: 13.125 });
     expect(summary.title).toContain('Willowhearth');
     expect(summary.title).toContain('Range 6');
     expect(summary.title).toContain('Immune to raider theft');
@@ -95,7 +95,7 @@ describe('compact selection summaries', () => {
     expect(summary).toMatchObject({ hp: 150.5, maxHp: 600, attack: 0, defense: 6 });
     expect(summary.title).toContain('Construction 25%'); expect(summary.title).toContain('15s remaining');
     delete state.buildings[1].construction;
-    expect(selectionSummary(state)!.attack).toBe(8.75);
+    expect(selectionSummary(state)!.attack).toBe(13.125);
     expect(selectionSummary(state)!.title).toContain('Range 6');
   });
 

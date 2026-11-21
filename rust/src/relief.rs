@@ -4,8 +4,6 @@ use bevy_ecs::prelude::*;
 use std::collections::VecDeque;
 #[path = "relief_shapes.rs"]
 mod shapes;
-#[path = "ledges.rs"]
-mod ledges;
 
 pub const STRIDE: usize = 8;
 pub const WALK: u32 = 1;
@@ -14,7 +12,7 @@ pub const TREES: u32 = 4;
 pub const MIN_HILL_CELLS: usize = 20;
 pub const MIN_MOUNTAIN_CELLS: usize = 20;
 
-pub fn policy(kind: u32) -> u32 { match kind { 1 => WALK | TREES, 2 => 0, _ => WALK | BUILD | TREES } }
+pub fn policy(kind: u32) -> u32 { match kind { 1 => WALK | TREES, 2 | 3 => 0, _ => WALK | BUILD | TREES } }
 /// Walls follow pathable ground, including hills; other buildings need a flat site.
 /// Use the tile's effective flags so blocked foothills cannot regain permission.
 pub fn construction_allowed(flags: u32, wall: bool) -> u32 {
@@ -210,22 +208,16 @@ fn generate(settings: Res<Settings>, input: Res<Input>, mut generated: ResMut<Ge
     }
 }
 
-pub struct Relief { world: World, schedule: Schedule, ledge_schedule: Schedule }
+pub struct Relief { world: World, schedule: Schedule }
 impl Default for Relief {
     fn default()->Self{
         let mut world=World::new();world.init_resource::<Input>();world.init_resource::<Generated>();world.init_resource::<Settings>();
         let mut schedule=Schedule::default();schedule.add_systems(generate);
-        let mut ledge_schedule = Schedule::default();ledge_schedule.add_systems(ledges::generate_ledges);
-        Self{world,schedule,ledge_schedule}
+        Self{world,schedule}
     }
 }
 impl Relief {
     pub fn prepare(&mut self,length:usize)->*mut f64{let mut input=self.world.resource_mut::<Input>();input.0.clear();input.0.resize(length,0.0);input.0.as_mut_ptr()}
-    pub fn ledges(&mut self, width: usize, height: usize, seed: u32, coverage: f64) -> *const f64 {
-        self.world.insert_resource(ledges::LedgeSettings { width, height, seed, coverage });
-        self.ledge_schedule.run(&mut self.world);
-        self.world.resource::<Generated>().0.as_ptr()
-    }
     /// Art supplies its chosen rectangles; native policy blocks only the
     /// smallest grid cells enclosing those visible silhouettes. Region IDs
     /// continue to describe geology, without becoming invisible movement walls.

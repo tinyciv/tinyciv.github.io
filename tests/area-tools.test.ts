@@ -1,6 +1,6 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
-import { buildingsInArea, cancelConstructionInArea, clearArea, demolishBuildingsInArea, tilesInRectangle } from '../src/game/area-tools';
+import { buildingsInArea, cancelArea, cancelConstructionInArea, clearArea, demolishBuildingsInArea, tilesInRectangle } from '../src/game/area-tools';
 import { ensureBuilders } from '../src/game/builders';
 import { ensureCollectors, synchronizeFarms } from '../src/game/farms';
 import { canWalk, invalidateNavigation } from '../src/game/pathfinding';
@@ -28,6 +28,17 @@ function add(state: GameState, kind: Building['kind'], x: number, y: number, fac
 }
 
 describe('rectangular area tools', () => {
+  it('cancels friendly map orders at their destination and preserves completed buildings', () => {
+    const state = fixture(), leader = state.units[0], house = add(state, 'house', 9, 8);
+    state.treeClearings = [{ x: 10, y: 8, faction: 0 }, { x: 11, y: 8, faction: 1 }];
+    state.world.tiles[8 * 24 + 10].overlay = 'forest';
+    leader.destination = { x: 9.5, y: 9.5 };
+    expect(cancelArea(state, { x: 11, y: 9 }, { x: 9, y: 8 })).toMatchObject({ count: 2, refund: 0 });
+    expect(leader.destination).toBeUndefined();
+    expect(state.buildings).toContain(house);
+    expect(state.treeClearings).toEqual([{ x: 11, y: 8, faction: 1 }]);
+    expect(state.world.tiles[8 * 24 + 10].overlay).toBe('forest');
+  });
   it('covers the entire rectangle in either drag direction and clamps it to the map', () => {
     const state = fixture();
     const points = tilesInRectangle(state, { x: 4.9, y: 6.1 }, { x: 2.2, y: 3.9 });

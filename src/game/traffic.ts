@@ -125,7 +125,7 @@ export function hasNeighboringRoad(state: GameState, x: number, y: number, { inc
 /** Ordinary roads extend the network; a road inside an existing wall opens a gate. */
 export function canPlaceRoad(state: GameState, x: number, y: number, faction = playerFaction(state), borders?: Territory): boolean {
   const { world } = state, cell = Math.floor(y) * world.width + Math.floor(x);
-  if (resourceBlocksGround(tileAt(world, x, y), false, cell, world.width) || hermitCabinOverlaps(state, x, y)) return false;
+  if (resourceBlocksGround(tileAt(world, x, y)) || hermitCabinOverlaps(state, x, y)) return false;
   if (isForbidden(state, x, y, faction) || !buildingWithinBorders(state, 'road', x, y, faction, borders)) return false;
   const structures = trafficStructures(state), owners = structures?.walls.get(cell);
   const gate = structures ? !!owners && (owners.has(faction) || owners.has(-1)) : hasGateWall(state, x, y, faction);

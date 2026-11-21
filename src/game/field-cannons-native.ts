@@ -4,12 +4,11 @@ import { entityStore, BUILDING_KIND_CODES, UNIT_KIND_CODES, type EntityObserver,
 import { observeScalars, type ScalarObserver } from './scalar-observer';
 import { nearbyUnits, nearbyBuildings, refreshIndexedUnit } from './spatial';
 import { refreshFogUnit } from './fog';
-import { traversable, nativeMoveLayers, canWalk } from './pathfinding';
+import { traversable, nativeMoveLayers, canWalk, terrainNavigationRevision } from './pathfinding';
 import { updateArcheryTraining, setRetinueFraction, interruptOutboundTraining } from './archery';
 import { infantryFormationGoal } from './infantry-drill';
 import { retinueFormation } from './formation';
 import { offensiveDirective } from './offensive-native';
-import { worldRevisions } from './world-revisions';
 import { recordGoldOutlay } from './gold-ledger';
 import { researchLevel } from './research';
 import { playerFaction } from './player-context';
@@ -111,23 +110,29 @@ class CannonBridge implements ScalarObserver {
       if (u.inside || u.kind !== 'fieldCannon') continue;
       const layers = nativeMoveLayers(this.state, u.faction, true);
       if (layers) rustEngine.sim_field_navigation(this.handle, u.faction, layers.engine.handle, layers.grid, layers.blockers, layers.forbidden,
-        this.state.world.width, this.state.world.height, worldRevisions(this.state.world).geometry);
+        this.state.world.width, this.state.world.height, terrainNavigationRevision(this.state.world));
       const f = this.state.factions.find(f => f.id === u.faction); if (!f) continue;
       const forced = u.forcedAttack ? this.store.units.get(u.forcedAttack.target) ?? this.store.buildings.get(u.forcedAttack.target) : undefined;
       const leader = u.order === 'follow' ? this.store.units.query('leader').find(l => l.faction === u.faction && l.hp > 0) : undefined;
-      const formation = leader ? infantryFormationGoal(this.state, u) ?? retinueFormation(this.state, leader).goals.get(u.id) : undefined;
+      const drilledGoal = leader && infantryFormationGoal(this.state, u);
+      const formation = drilledGoal ?? (leader && retinueFormation(this.state, leader).goals.get(u.id));
       const goal = trainingGoal ?? u.destination ?? forced ?? formation ?? leader;
       const directive = offensiveDirective(this.state, u);
+      const offensiveSlot = goal === directive?.goal && (directive?.mode === 1 || directive?.mode === 2);
+      const inFormation = !u.training && !u.routed && u.order !== 'flee'
+        && (goal === drilledGoal && !!drilledGoal || offensiveSlot);
       const goalFlags = Number(!!u.destination) | Number(directive?.mode === 3) << 1
-        | Number(directive?.mode === 1) << 2 | Number(u.order === 'follow') << 3;
+        | Number(directive?.mode === 1 || directive?.mode === 5) << 2 | Number(u.order === 'follow') << 3
+        | Number(inFormation) << 4 | Number(offensiveSlot) << 5;
+      const marchSpeed = offensiveSlot && directive?.mode === 2 ? directive.marchSpeed : 0;
       const a = combat.attack(u), w = u.fieldCannon;
       const supplyCity = w && this.state.time >= w.nextUpkeepAt ? cannonSupplyCity(this.state, u) : undefined;
       const peatSupplied = !!supplyCity && (peatCities ??= citiesWithDevelopedPeat(this.state)).has(supplyCity.id);
-      const candidates: (Unit | Building)[] = rustEngine.sim_field_due(this.handle, u.id, this.state.time) && u.cooldown <= dt && !u.training
+      const candidates: (Unit | Building)[] = directive?.mode !== 5 && rustEngine.sim_field_due(this.handle, u.id, this.state.time) && u.cooldown <= dt && !u.training
         ? [...nearbyBuildings(this.state, u, FIELD_CANNON_RANGE + 4), ...nearbyUnits(this.state, u, FIELD_CANNON_RANGE + 4)] : [];
-      const values = [u.id, u.faction, u.x, u.y, u.hp, u.speed, goal?.x ?? NaN, goal?.y ?? NaN, u.facing, u.cooldown,
+      const values = [u.id, u.faction, u.x, u.y, u.hp, marchSpeed, goal?.x ?? NaN, goal?.y ?? NaN, u.facing, u.cooldown,
         w?.shotAt ?? -1000, w?.nextUpkeepAt ?? NaN, Number(w?.funded ?? true), u.attackTime, goalFlags,
-        u.forcedAttack ? u.target ?? -1 : -1, a.attack, f.gold, a.strength, f.whalingUntil && f.whalingUntil > this.state.time ? 1.05 : 1,
+        u.forcedAttack ? u.target ?? -1 : directive?.target ?? -1, a.attack, f.gold, a.strength, f.whalingUntil && f.whalingUntil > this.state.time ? 1.05 : 1,
         Number(peatSupplied), -1, 0, Number(!u.forcedAttack || !!forced && combat.validOrder(u, forced))];
       for (const target of candidates) {
         const building = 'capacity' in target, observation = combat.observe(u, target);
@@ -142,7 +147,7 @@ class CannonBridge implements ScalarObserver {
       u.x = r[2]; u.y = r[3]; u.facing = r[8]; u.cooldown = r[9]; u.attackTime = r[13]; u.moving = !!r[20];
       u.fieldCannon = { nextUpkeepAt: r[11], funded: !!r[12], shotAt: r[10] >= 0 ? r[10] : undefined, supplyCity: w?.supplyCity };
       if (r[15] < 0 && u.forcedAttack) combat.finishOrder(u);
-      if (r[23]) u.destination = undefined;
+      if (r[23] && u.destination !== directive?.goal) u.destination = undefined;
       const target = candidates.find(t => t.id === r[21]); if (target) combat.shoot(u, target, r[22]);
       refreshIndexedUnit(this.state, u); refreshFogUnit(this.state, u);
     }

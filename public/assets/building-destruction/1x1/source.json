@@ -5,7 +5,7 @@
     1,
     1
   ],
-  "view": "high top-down",
+  "view": "high top-down orthographic",
   "frameSize": [
     16,
     16
@@ -31,23 +31,22 @@
     236
   ],
   "animationDurationMs": 4000,
-  "rubbleFadeDurationMs": 10000,
+  "playbackRate": 3,
   "groundAnchor": [
-    8.0,
+    8,
     16
   ],
   "loop": false,
-  "rubble": "rubble.png",
-  "sourceEndpoint": "rubble.png",
   "sheet": "destruction.png",
-  "processing": "Raw API pixels only; frames placed horizontally without resampling or repainting.",
+  "prompt": "One compact dust and smoke overlay for a 16x16 building tile crumbling in place. Fixed high top-down orthographic camera, aligned to the cardinal grid, no isometric view. A little quiet gray-brown dust at the center swells low and outward as masonry gives way. A brief broad soft dust cloud partly fills the square. It breaks into drifting wisps and clears completely, with the last 3 frames almost empty. The building is drawn separately. Show only thin matte neutral dust and wisps of smoke inside the footprint. True transparent background, no scenery, actual building, solid rubble, heat, flames, embers, flash, or lighting changes. A muted sandstone-gray dust cloud cracks into several irregular shapes. Smaller cool gray wisps curl upward and thin away. Restrained naturalistic pixel art with subdued contrast.",
+  "seed": 261119411,
+  "references": [
+    "scratch/2026-11-17-shell-impact-review/1C/04.png",
+    "scratch/2026-11-17-shell-impact-review/1C/08.png"
+  ],
+  "processing": "PixelLab frames packed horizontally at native game scale.",
   "sha256": {
-    "destruction.png": "e48e53d3e866929dbea91e3842cb3b3b67197621d0b0b63743a7f0fe51928d30",
-    "rubble.png": "cc1f6c22ee82308bc3a2e0163614eaaa5bee566e497a9fcebfa4ddc1c2d195c1"
+    "destruction.png": "8c1f097d6ca1ed0b75cb0b35daeaa063dc73954a84515856b3096e8a04893302"
   },
-  "approvedVariant": "1B",
-  "approvedOn": "2026-11-14",
-  "sourceReview": "scratch/2026-11-14-building-destruction/index.html",
-  "sourceFrames": "scratch/2026-11-14-building-destruction/1B/animation",
-  "status": "integrated"
+  "sourceReview": "scratch/2026-11-19-building-collapse/index.html"
 }

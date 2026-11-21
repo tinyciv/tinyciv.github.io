@@ -11,9 +11,11 @@
     },
     {
       "name": "gold",
-      "prompt": "Use case: background-extraction / precise-object-edit. The reference is the game's existing dark slate-and-brass resource bar. Deliver one isolated resource symbol ONLY as a transparent PNG. Preserve the selected symbol's silhouette, warm gold/brown palette, painted Warcraft-style highlights, and compact readable proportions. Remove ALL slate/black rectangular backdrop, frame, border, text, numbers, baseline, pedestal, and detached cast shadow. Real transparent alpha, never a checkerboard drawn in the pixels. Center the symbol in a square canvas; symbol should occupy about 85% of the canvas height and be readable at 28\u201332px. No scene, no UI panel, no lettering. Crisp edges and broad coherent details; avoid extra ornamentation. Extract/recreate ONLY the stack of three gold ingots in the reference (the symbol before the number 4). Preserve that simple three-bar arrangement, metallic ochre facets and bright gold faces. Nothing else.",
-      "generated_file": "exec-cf8a727d-5f80-4a44-9315-f7ad2d4e731a.png",
-      "file": "gold.png"
+      "prompt": "Use case: stylized-concept. Asset type: one isolated in-game gold currency HUD icon. Reference image: existing gold bars, for color, materials and rendering style only. Create a single gold coin, nearly front-facing with a slight tilt and a visible thin dark bronze edge on the bottom right. One bold raised concentric rim and one simple embossed four-point motif on the face. Use warm amber-gold with bright upper-left highlights, antique bronze shadows, and the reference's softly painted fantasy strategy art. Clean round silhouette distinct at 16 pixels, with broad forms and restrained detail. Center the coin on a square canvas. Genuine transparent alpha background. No words, letters, numbers, piles, bars, other objects, background, frame, or detached shadow.",
+      "generated_file": "exec-4c585dcd-24e0-42c7-9438-6211533f0dce.png",
+      "file": "gold.png",
+      "reference": "Previous gold-bars HUD icon (style reference).",
+      "preparation": "Centered the transparent cutout at 64\u00d764 and baked a 32\u00d732 runtime WebP."
     },
     {
       "name": "population",

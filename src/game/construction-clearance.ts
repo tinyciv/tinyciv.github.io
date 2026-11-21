@@ -1,6 +1,6 @@
 import { unitRespectsForbidden } from './forbidden-zones';
-import { buildingBlockers, canMove, invalidateNavigation } from './pathfinding';
-import { refreshIndexedUnit } from './spatial';
+import { buildingBlockerView, canMove, invalidateNavigation } from './pathfinding';
+import { earlyCombatUnits, refreshEarlyCombatUnit, refreshIndexedUnit } from './spatial';
 import { refreshFogUnit } from './fog';
 import { unitCollisionRadius, unitObstructs } from './collisions';
 import { militiaMovementLimits } from './guard-posts';
@@ -13,21 +13,20 @@ export function clearBuildingFootprint(state: GameState, building: Building): bo
   const spanX = buildingWidth(building), spanY = buildingHeight(building), width = state.world.width;
   const onSite = (point: Point): boolean => point.x >= building.x && point.x < building.x + spanX
     && point.y >= building.y && point.y < building.y + spanY;
-  const occupants = state.units.filter(unit => unit.hp > 0 && !unit.inside && onSite(unit));
+  const occupants = earlyCombatUnits(state, building, Math.max(spanX, spanY)).filter(unit => unit.hp > 0 && !unit.inside && onSite(unit));
   for (const unit of occupants) {
     // Birds evacuate through their own marsh-and-water movement. The ordinary
     // land search could relocate them onto upland; keep the site open until
     // their habitat-aware update has moved them clear.
     if (unit.kind === 'marshBird') continue;
-    const blockers = buildingBlockers(state, unit.faction);
-    for (let y = building.y; y < building.y + spanY; y++) for (let x = building.x; x < building.x + spanX; x++) blockers.delete(y * width + x);
-    for (const cell of militiaMovementLimits(state, unit) ?? []) blockers.add(cell);
+    const blocked = buildingBlockerView(state, unit.faction), militiaLimits = militiaMovementLimits(state, unit);
+    const blockers = { has: (cell: number) => militiaLimits?.has(cell) || !onSite({ x: cell % width, y: Math.floor(cell / width) }) && blocked.has(cell) };
     const queue: Point[] = [{ x: Math.floor(unit.x) + .5, y: Math.floor(unit.y) + .5 }];
     const visited = new Set<number>([Math.floor(unit.y) * width + Math.floor(unit.x)]);
     let destination: Point | undefined;
     for (let head = 0; head < queue.length; head++) {
       const point = queue[head];
-      if (!onSite(point) && !state.units.some(other => unitObstructs(unit, other)
+      if (!onSite(point) && !earlyCombatUnits(state, point, 2).some(other => unitObstructs(unit, other)
         && Math.hypot(other.x - point.x, other.y - point.y) < unitCollisionRadius(unit) + unitCollisionRadius(other))) { destination = point; break; }
       const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]
         .map(([dx, dy]) => ({ x: point.x + dx, y: point.y + dy }))
@@ -42,6 +41,7 @@ export function clearBuildingFootprint(state: GameState, building: Building): bo
     if (destination) {
       unit.x = destination.x; unit.y = destination.y;
       refreshIndexedUnit(state, unit);
+      refreshEarlyCombatUnit(state, unit);
       refreshFogUnit(state, unit);
       unit.path = undefined; unit.pathGoal = undefined; unit.repathAt = 0;
     }

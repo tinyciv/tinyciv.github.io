@@ -4,7 +4,7 @@ import { BUILDING_KIND_CODES, UNIT_KIND_CODES, entityStore } from './entity-stor
 import { playerFaction } from './player-context';
 import { buildingTargetable } from './building-targeting';
 import { buildingWidth, buildingHeight, unitMaxHp,
-  type Building, type BuildingKind, type GameState, type Point, type Unit } from './types';
+  type Building, type BuildingKind, type Faction, type GameState, type Point, type Unit } from './types';
 
 const STRIDE = 12;
 type Target = Building | Unit;
@@ -49,10 +49,10 @@ export function deliverSupplyHealing(state: GameState, leader: Unit, cart: Unit)
   }
 }
 
-export const farmRampAllowed = (stair: unknown): boolean => !!rustEngine.farm_site_allowed(Number(!!stair));
-export function governorPurchaseAllowed(state: GameState, faction: number, kind: BuildingKind): boolean {
-  const localPlacing = faction === playerFaction(state) && !!state.buildMode && state.buildMode !== 'clearTrees';
-  return !!rustEngine.governor_purchase_allowed(simCore(state).handle, faction, Number(localPlacing), BUILDING_KIND_CODES[kind]);
+export function governorPurchaseAllowed(state: GameState, faction: Faction, kind: BuildingKind): boolean {
+  const localPlacing = faction.id === playerFaction(state) && !!state.buildMode && state.buildMode !== 'clearTrees';
+  return !!rustEngine.governor_purchase_allowed(simCore(state).handle, faction.id, Number(localPlacing),
+    Number(!!faction.spendingPaused), BUILDING_KIND_CODES[kind]);
 }
 
 export function setPlacementIntent(state: GameState, faction: number, placing: boolean): void {

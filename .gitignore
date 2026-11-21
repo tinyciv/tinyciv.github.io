@@ -19,6 +19,7 @@ scripts/*
 !scripts/startup-check.mjs
 !scripts/startup-arms-preview.mjs
 !scripts/startup-offensive-preview.mjs
+!scripts/startup-military-preview.mjs
 !scripts/startup-building-preview.mjs
 !scripts/startup-cannon-fire-preview.mjs
 !scripts/startup-shell-impact-preview.mjs
@@ -28,6 +29,8 @@ scripts/*
 !scripts/startup-analytics-preview.mjs
 !scripts/startup-feedback-preview.mjs
 !scripts/startup-civic-preview.mjs
+!scripts/startup-settlement-tier-preview.mjs
+!scripts/startup-town-growth-preview.mjs
 !scripts/startup-civic-art-gallery.mjs
 !scripts/frozen.mjs
 !scripts/world.mjs

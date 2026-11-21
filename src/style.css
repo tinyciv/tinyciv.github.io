@@ -89,7 +89,9 @@ button:focus-visible, canvas:focus-visible, input:focus-visible, select:focus-vi
 .activity-upgrade:disabled .upgrade-price { color: #a6ad91; }
 .activity-upgrade.is-max { border-color: #748554; }
 .activity-upgrade.is-max .upgrade-price { color: #c2d69c; font-size: 12px; }
-.activity-immigrants, .activity-keep, .activity-retinue { width: 100%; margin-top: 12px; }
+.activity-immigrants, .activity-retinue { width: 100%; margin-top: 12px; }
+.settlement-upgrade-options { display: grid; gap: 6px; margin: 6px 0 8px; }
+.activity-settlement { width: 100%; }
 .activity-retinue .upgrade-price { grid-row: 1; }
 .activity-message { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .activity-message.is-error { position: static; display: block; width: auto; height: auto; overflow: visible; clip-path: none; margin-top: 8px; color: #f2a58d; font-size: 12px; line-height: 16px; }
@@ -160,9 +162,13 @@ button:focus-visible, canvas:focus-visible, input:focus-visible, select:focus-vi
 .activity-village .village-war { min-height: 40px; color: #efb49a; }
 .building-activity.is-archery { width: 300px; }
 .building-activity .composition-row { display: grid; grid-template-columns: 56px minmax(0,1fr) 26px; gap: 8px; font-size: 14px; min-height: 36px; }
-.activity-composition { margin-top: 12px; }
+.activity-composition { margin-top: 12px; gap: 4px; }
 .activity-composition h3 { margin: 0; font-size: 16px; }
-.building-activity .activity-composition .composition-row { grid-template-columns: 76px minmax(0,1fr) 36px; }
+.building-activity .activity-composition .composition-row { grid-template-columns: 96px minmax(0,1fr) 36px; min-height: 28px; }
+@media (pointer: coarse) {
+  .building-activity .activity-composition .composition-row { min-height: 36px; }
+  .activity-composition .composition-row input { height: 32px; }
+}
 .activity-composition input:disabled { opacity: .5; cursor: not-allowed; }
 .composition-row input { appearance: none; width: 100%; height: 24px; min-width: 0; margin: 0; background: transparent; cursor: pointer; }
 .composition-row input::-webkit-slider-runnable-track { height: 8px; border: 2px solid var(--popup-edge); background: var(--popup-inset); }

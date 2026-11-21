@@ -1,4 +1,5 @@
 import type { GameState } from './types';
+import { rustEngine } from './rust-engine';
 
 export const DEFAULT_BANDIT_INTENSITY = 1;
 export const MIN_BANDIT_INTENSITY = 0;
@@ -15,10 +16,12 @@ export const banditIntensity = (state: BanditSettings): number => normalizeBandi
 
 /** Cadence and population budgets scale independently of combat strength or
  * individual party size. Doubling intensity does not also double each wave. */
-export const banditPopulationCap = (state: BanditSettings, base: number): number => Math.floor(base * banditIntensity(state));
-export function banditSpawnDelay(state: Pick<GameState, 'banditIntensity' | 'banditSpawnPause'>, seconds: number): number {
+export const banditPopulationCap = (state: BanditSettings & Pick<GameState, 'time'>, base: number): number =>
+  rustEngine.sim_raider_population_cap(banditIntensity(state), state.time, base);
+export function banditSpawnDelay(state: Pick<GameState, 'time' | 'banditIntensity' | 'banditSpawnPause'>, seconds: number): number {
   // While disabled, retain finite frozen deadlines that survive JSON saves.
-  return seconds / (banditIntensity(state) || state.banditSpawnPause?.intensity || DEFAULT_BANDIT_INTENSITY);
+  const intensity = banditIntensity(state) || state.banditSpawnPause?.intensity || DEFAULT_BANDIT_INTENSITY;
+  return rustEngine.sim_raider_spawn_delay(intensity, state.banditSpawnPause?.at ?? state.time, seconds);
 }
 export function banditSpawnDeadline(state: Pick<GameState, 'time' | 'banditIntensity' | 'banditSpawnPause'>, seconds: number): number {
   const origin = banditIntensity(state) ? state.time : state.banditSpawnPause?.at ?? state.time;
@@ -32,25 +35,21 @@ export function setBanditIntensity(state: GameState, value: unknown): void {
   state.banditIntensity = next;
   if (!next) {
     state.banditSpawnPause ??= { at: state.time, intensity: previous || DEFAULT_BANDIT_INTENSITY };
-    for (const camp of state.raiderCamps ?? []) camp.pressureUpdatedAt = state.time;
     return;
   }
   if (next === previous && !state.banditSpawnPause) return;
   const origin = state.banditSpawnPause?.at ?? state.time;
-  const ratio = (state.banditSpawnPause?.intensity ?? (previous || DEFAULT_BANDIT_INTENSITY)) / next;
+  const from = state.banditSpawnPause?.intensity ?? (previous || DEFAULT_BANDIT_INTENSITY);
   const retime = (deadline: number): number => Number.isFinite(deadline)
-    ? state.time + Math.max(0, deadline - origin) * ratio : deadline;
+    ? rustEngine.sim_raider_retime_spawn(from, next, origin, state.time, deadline) : deadline;
+  // Announced raids keep their warning; the director re-reads intensity every second.
   for (const camp of state.raiderCamps ?? []) {
-    camp.pressureUpdatedAt = state.time;
-    camp.nextRaidAt = retime(camp.nextRaidAt);
     if (camp.replacementAt !== undefined) camp.replacementAt = retime(camp.replacementAt);
     for (const key of Object.keys(camp.defenderReadyAt ?? {})) camp.defenderReadyAt![Number(key)] = retime(camp.defenderReadyAt![Number(key)]);
   }
   if (state.raiderCampPopulationRetryAt !== undefined) state.raiderCampPopulationRetryAt = retime(state.raiderCampPopulationRetryAt);
-  if (state.fogRaids) state.fogRaids.nextAt = retime(state.fogRaids.nextAt);
+  if (state.fogRaids) state.fogRaids.nextAt = state.time;
   for (const pack of state.marauderPacks ?? []) if (pack.siegeNextReinforceAt !== undefined)
     pack.siegeNextReinforceAt = retime(pack.siegeNextReinforceAt);
-  const skirmishes = state.raiderSkirmishes?.nextByFaction;
-  for (const key of Object.keys(skirmishes ?? {})) skirmishes![Number(key)] = retime(skirmishes![Number(key)]);
   delete state.banditSpawnPause;
 }

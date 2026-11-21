@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { ridgeEdgeAllowed, ridgeGroundWalkable, ridgeIsLedge, ridgeLevel, STAIR_UP } from '../src/game/ridges';
 import { type World, WATER } from '../src/game/types';
 import { buildReliefShowcase, placeRegionalRelief } from '../src/world/regional-relief';
-import { applyTerrainEcology } from '../src/world/terrain-ecology';
 import { DEFAULT_LANDSCAPE_PARAMETERS } from '../src/world/options';
 
 function flat(width = 144, height = 120): World {
@@ -59,8 +58,6 @@ describe('regional ledge terrain', () => {
       }
     }
     expect(passes).toBeGreaterThan(0); expect(stairs).toBeGreaterThan(0);
-    for (const cell of clearings) expect(world.tiles[cell]).toMatchObject({ overlay: 'none', food: 4, production: 1, gold: 0 });
-    applyTerrainEcology(world);
     for (const cell of clearings) expect(world.tiles[cell]).toMatchObject({ overlay: 'none', food: 4, production: 1, gold: 0 });
   });
 

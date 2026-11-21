@@ -4,8 +4,9 @@ import type { BuildingDestruction } from './types';
 export const BUILDING_DESTRUCTION_SECONDS = 4 / 3;
 export const BUILDING_RUBBLE_FADE_SECONDS = 10 / 3;
 export const BUILDING_DESTRUCTION_LIFETIME = BUILDING_DESTRUCTION_SECONDS + BUILDING_RUBBLE_FADE_SECONDS;
+const BUILDING_COLLAPSE_SECONDS = .45;
 const FRAME_COUNTS = { 1: 17, 2: 16 } as const;
-const sheets = new Map<number, { animation: HTMLImageElement; rubble: HTMLImageElement }>();
+const sheets = new Map<number, { animation: HTMLImageElement; rubble?: HTMLImageElement }>();
 let loading: Promise<void> | undefined;
 
 export function loadBuildingDestructionArt(): Promise<void> {
@@ -19,7 +20,10 @@ export function loadBuildingDestructionArt(): Promise<void> {
                     throw new Error(`Invalid building destruction artwork: ${size}x${size}/${file}`);
                 return image;
             };
-            const [animation, rubble] = await Promise.all([load('destruction.png', FRAME_COUNTS[size]), load('rubble.png', 1)]);
+            const [animation, rubble] = await Promise.all([
+                load('destruction.png', FRAME_COUNTS[size]),
+                size === 2 ? load('rubble.png', 1) : undefined,
+            ]);
             sheets.set(size, { animation, rubble });
         }));
     })();
@@ -29,16 +33,21 @@ export const buildingDestructionImage = (size: 1 | 2, rubble: boolean): HTMLImag
 
 /** Rendering interpolation only. The ECS owns the underlying event lifetime. */
 export function buildingDestructionPose(effect: BuildingDestruction, time: number):
-    { size: 1 | 2; frame: number; rubble: boolean; alpha: number; showBuilding: boolean } | undefined {
+    { size: 1 | 2; frame: number; rubble: boolean; alpha: number; buildingHeightScale: number } | undefined {
     const kind = effect.kind ?? effect.building?.kind;
     if (kind === 'wall' || kind === 'palisade' || kind === 'tower' || kind === 'woodenTower' || kind === 'scoutTower') return;
     const age = time - effect.time;
     if (!Number.isFinite(age) || age < 0 || age >= BUILDING_DESTRUCTION_LIFETIME) return;
     const size = effect.width === 2 && effect.height === 2 ? 2 : 1;
-    if (age >= BUILDING_DESTRUCTION_SECONDS)
-        return { size, frame: 0, rubble: true, alpha: 1 - (age - BUILDING_DESTRUCTION_SECONDS) / BUILDING_RUBBLE_FADE_SECONDS, showBuilding: false };
+    if (age >= BUILDING_DESTRUCTION_SECONDS) {
+        if (size === 1) return;
+        return { size, frame: 0, rubble: true, alpha: 1 - (age - BUILDING_DESTRUCTION_SECONDS) / BUILDING_RUBBLE_FADE_SECONDS, buildingHeightScale: 0 };
+    }
     const count = FRAME_COUNTS[size];
     let frame = 0;
     while (frame < count - 1 && age * 3000 + 1e-7 >= Math.floor((frame + 1) * 4000 / count)) frame++;
-    return { size, frame, rubble: false, alpha: 1, showBuilding: age < 2.5 / 3 };
+    const buildingHeightScale = size === 1
+        ? 1 - Math.min(1, age / BUILDING_COLLAPSE_SECONDS) ** 2
+        : Number(age < 2.5 / 3);
+    return { size, frame, rubble: false, alpha: 1, buildingHeightScale };
 }

@@ -81,10 +81,11 @@ class FisheryBridge implements ScalarObserver {
     const edges = harborWaterEdges(state); if (edges === this.geometry) return;
     const values = new Float64Array(edges.length * 3); values.set(edges);
     for (let i = 0; i < edges.length; i++) {
-      const terrain = state.world.tiles[i]?.terrain;
+      const tile = state.world.tiles[i], terrain = tile?.terrain;
       // Preserve ocean/coast identity for native offshore whale placement.
       values[edges.length + i] = terrain === 'lake' ? 1 : terrain === 'ocean' ? 2 : terrain === 'coast' ? 3 : 0;
-      values[edges.length * 2 + i] = Number(!!terrain && WATER.has(terrain));
+      const fjord = tile?.fjord === 'water' && (terrain === 'ocean' || terrain === 'coast');
+      values[edges.length * 2 + i] = Number(!!terrain && WATER.has(terrain)) | Number(fjord) << 1;
     }
     this.publish(state, 0, values, edges.length); this.geometry = edges;
   }
@@ -148,12 +149,14 @@ class FisheryBridge implements ScalarObserver {
       z.stock = stock; z.capacity = capacity; z.collapsed = !!collapsed;
       if (count) z.cells = Array.from(values.subarray(p, p + count)); p += count; f.zones.push(z);
       // Presentation proxies: never used as harvestable stock or navigation targets.
-      const countVisible = Math.floor(FISHING_ZONE_CAPACITY * stock / capacity);
+      const countVisible = Math.min(z.cells.length, Math.floor(FISHING_ZONE_CAPACITY * stock / capacity));
       let fish = this.fishViews.get(id);
-      if (!fish || fish.length !== countVisible) {
+      if (!fish || count || fish.length !== countVisible) {
         fishChanged = true;
         fish = Array.from({ length: countVisible }, (_, k) => {
-          const cell = z!.cells[(Math.imul(id, 17) + k * 29) % z!.cells.length];
+          const cells = z!.cells, offset = Math.imul(id, 17) % cells.length;
+          const slot = cells.length % 29 === 0 ? Math.floor(k * cells.length / FISHING_ZONE_CAPACITY) : k * 29;
+          const cell = cells[(offset + slot) % cells.length];
           return { id: id * 16 + k, zone: id, x: cell % width + .5, y: Math.floor(cell / width) + .5, facing: k % 2 ? Math.PI : 0, food: 0, spawnedAt: f.startedAt };
         }); this.fishViews.set(id, fish);
       }

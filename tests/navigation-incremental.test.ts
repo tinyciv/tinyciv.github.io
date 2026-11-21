@@ -115,7 +115,7 @@ it('sees road-gate ownership and construction transitions without terrain edits'
   expect(times(state, 1)).toEqual(freshTimes(state, 1));
 });
 
-it('refreshes localized terrain and the full stair dependency halo', () => {
+it('refreshes localized terrain and adjacent rock edges', () => {
   const state = fixture(), { world } = state;
   times(state);
   const distant = world.tiles[255], terrain = distant.terrain;
@@ -126,9 +126,8 @@ it('refreshes localized terrain and the full stair dependency halo', () => {
   expect(reads).toBe(0);
   const edited: number[] = [];
   for (let y = 3; y <= 8; y++) for (let x = 3; x <= 8; x++) {
-    const cell = y * 16 + x; world.tiles[cell].ridge = 1; edited.push(cell);
+    const cell = y * 16 + x; world.tiles[cell].rockRelief = 0; edited.push(cell);
   }
-  world.tiles[5 * 16 + 3].stair = 'east';
   markWorldChanged(world, 'geometry', edited);
   const directions = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
   const check = () => {
@@ -140,8 +139,7 @@ it('refreshes localized terrain and the full stair dependency halo', () => {
     expect(times(state)).toEqual(freshTimes(state));
   };
   check();
-  // Two cells away from the stair, this invalidates its upper approach's ledge.
-  world.tiles[5 * 16 + 5].ridge = undefined; markWorldChanged(world, 'geometry', [5 * 16 + 5]);
+  delete world.tiles[5 * 16 + 3].rockRelief; markWorldChanged(world, 'geometry', [5 * 16 + 3]);
   check();
 });
 

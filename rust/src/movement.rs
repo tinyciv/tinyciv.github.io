@@ -11,13 +11,16 @@ const WALL_PATROL: u32 = 4;
 const INSIDE: u32 = 8;
 const HUMAN_CONTROLLED: u32 = 16;
 const VESSEL_OR_PASSENGER: u32 = 32;
+const RETRAINING: u32 = 64;
 pub(crate) const FIELD_CANNON: u32 = 18;
+const LIVESTOCK: u32 = 19;
 const DIRECTIONS: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
 
 // Kind codes: other/wildlife=0, worker=1, scout=2, merchant=3, supplyCart=4,
 // leader=5, militia=6, warrior=7, swordsman=8, spearman=9, archer=10,
 // horseman=11, horseArcher=12, knight=13, levyInfantry=14, slinger=15,
-// skirmisher=16, marshBird=17, fieldCannon=18. The host only encodes enum names; rules live here.
+// skirmisher=16, marshBird=17, fieldCannon=18, livestock=19.
+// The host only encodes enum names; rules live here.
 fn military(kind: u32) -> bool { (5..=16).contains(&kind) || kind == FIELD_CANNON }
 fn same_faction(a: f64, b: f64) -> bool { a == b || a.is_nan() && b.is_nan() }
 pub fn civilian(kind: u32, flags: u32) -> bool { flags & ENGINEER == 0 && (1..=4).contains(&kind) }
@@ -27,7 +30,8 @@ pub fn collision_radius(kind: u32) -> f64 {
 
 pub fn collides(a_kind: u32, a_faction: f64, a_flags: u32, a_drill: f64,
     b_kind: u32, b_faction: f64, b_flags: u32, b_drill: f64) -> bool {
-    if (a_flags | b_flags) & WALL_PATROL != 0 { return false; }
+    if a_kind == LIVESTOCK || b_kind == LIVESTOCK { return false; }
+    if (a_flags | b_flags) & (WALL_PATROL | RETRAINING) != 0 { return false; }
     let friendly = same_faction(a_faction, b_faction);
     if friendly && (a_flags | b_flags) & LEVY_ASSEMBLING != 0 { return false; }
     if (a_flags | b_flags) & ENGINEER != 0 {
@@ -52,6 +56,11 @@ pub fn obstructs(a_id: i64, a_kind: u32, a_faction: f64, a_flags: u32, a_drill: 
 struct Actor {
     id: i64, x: f64, y: f64, kind: u32, faction: f64, hp: f64, flags: u32, drill: f64,
     order: i64, bucket_order: f64, priority_epoch: u64, indexed_cell: Option<i64>, overlay: bool,
+}
+impl Actor {
+    fn collision_cell(&self) -> Option<i64> {
+        if self.flags & RETRAINING == 0 { self.indexed_cell } else { None }
+    }
 }
 
 struct Geometry {
@@ -144,6 +153,9 @@ impl Engine {
         self.census.for_each_in_rect(x0, y0, x1, y1, visit);
     }
     fn cell(&self, actor: &Actor) -> i64 { actor.y.floor() as i64 * self.width as i64 + actor.x.floor() as i64 }
+    fn collision_overlay(&self, actor: &Actor) -> Option<i64> {
+        (actor.overlay && actor.flags & RETRAINING == 0).then(|| self.cell(actor))
+    }
     fn remove_cell(map: &mut FxHashMap<i64, SmallVec<[i64; 4]>>, cell: i64, id: i64) {
         if let Some(ids) = map.get_mut(&cell) {
             if let Some(index) = ids.iter().position(|&candidate| candidate == id) { ids.swap_remove(index); }
@@ -161,12 +173,14 @@ impl Engine {
         self.census.update(crate::census::Member { id, x, y, kind, faction }, crate::census::counted(kind, hp, flags & INSIDE != 0));
         let entity = self.actors.get(&id).copied();
         let previous = entity.map(|entity| *self.world.get::<Actor>(entity).unwrap());
-        if previous.and_then(|actor| actor.indexed_cell) != indexed_cell {
-            if let Some(cell) = previous.and_then(|actor| actor.indexed_cell) { Self::remove_cell(&mut self.indexed, cell, id); }
-            if let Some(cell) = indexed_cell { self.indexed.entry(cell).or_default().push(id); }
+        let old_cell = previous.and_then(|actor| actor.collision_cell());
+        let new_cell = next.collision_cell();
+        if old_cell != new_cell {
+            if let Some(cell) = old_cell { Self::remove_cell(&mut self.indexed, cell, id); }
+            if let Some(cell) = new_cell { self.indexed.entry(cell).or_default().push(id); }
         }
-        let old_overlay = previous.filter(|actor| actor.overlay).map(|actor| self.cell(&actor));
-        let new_overlay = overlay.then(|| self.cell(&next));
+        let old_overlay = previous.and_then(|actor| self.collision_overlay(&actor));
+        let new_overlay = self.collision_overlay(&next);
         if old_overlay != new_overlay {
             if let Some(cell) = old_overlay { Self::remove_cell(&mut self.overlays, cell, id); }
             if let Some(cell) = new_overlay { self.overlays.entry(cell).or_default().push(id); }
@@ -178,8 +192,8 @@ impl Engine {
         self.census.remove(id);
         if let Some(entity) = self.actors.remove(&id) {
             let previous = *self.world.get::<Actor>(entity).unwrap();
-            if let Some(cell) = previous.indexed_cell { Self::remove_cell(&mut self.indexed, cell, id); }
-            if previous.overlay { let cell = self.cell(&previous); Self::remove_cell(&mut self.overlays, cell, id); }
+            if let Some(cell) = previous.collision_cell() { Self::remove_cell(&mut self.indexed, cell, id); }
+            if let Some(cell) = self.collision_overlay(&previous) { Self::remove_cell(&mut self.overlays, cell, id); }
             self.world.despawn(entity);
         }
     }
@@ -191,7 +205,7 @@ impl Engine {
         self.candidate_output.as_ptr()
     }
     pub fn occupant(&self, cell: i64, observer_id: i64, kind: u32, faction: f64, flags: u32, drill: f64, mode: u32) -> f64 {
-        if mode == 0 && civilian(kind, flags) { return f64::NAN; }
+        if flags & RETRAINING != 0 || mode == 0 && civilian(kind, flags) { return f64::NAN; }
         let mut chosen = f64::NAN;
         let mut priority = if mode == 0 { f64::INFINITY } else { -1.0 };
         let mut consider = |id: i64| {
@@ -235,6 +249,7 @@ impl Engine {
             .map(|actor| (actor.id, (actor.x, actor.y)))
     }
     fn artillery_obstruction(&self, id: i64, x: f64, y: f64, nx: f64, ny: f64, leaving: bool) -> Option<Actor> {
+        if self.resident(id).is_some_and(|actor| actor.flags & RETRAINING != 0) { return None; }
         const SPACING: f64 = 0.9;
         let min_x = ((x.min(nx) - SPACING).floor() as i32).max(0);
         let max_x = ((x.max(nx) + SPACING).floor() as i32).min(self.width - 1);
@@ -277,15 +292,18 @@ impl Engine {
         let previous = *self.world.get::<Actor>(entity).unwrap();
         let mut next = previous; next.x = x; next.y = y;
         self.census.moved(id, x, y);
-        if previous.overlay {
-            let (from, to) = (self.cell(&previous), self.cell(&next));
+        if let Some(from) = self.collision_overlay(&previous) {
+            let to = self.cell(&next);
             if from != to { Self::remove_cell(&mut self.overlays, from, id); self.overlays.entry(to).or_default().push(id); }
         }
         if reindex && previous.indexed_cell.is_some() {
             let to = self.cell(&next);
             if previous.indexed_cell != Some(to) {
-                Self::remove_cell(&mut self.indexed, previous.indexed_cell.unwrap(), id);
-                self.indexed.entry(to).or_default().push(id); next.indexed_cell = Some(to);
+                if let Some(from) = previous.collision_cell() {
+                    Self::remove_cell(&mut self.indexed, from, id);
+                    self.indexed.entry(to).or_default().push(id);
+                }
+                next.indexed_cell = Some(to);
             }
         }
         *self.world.get_mut::<Actor>(entity).unwrap() = next;
@@ -388,7 +406,7 @@ impl Engines {
                     let distance = (px - actor.x).powi(2) + (py - actor.y).powi(2);
                     if best.is_some_and(|(d, _, _)| distance >= d) { continue; }
                     let mut occupied = false;
-                    for oy in -1..=1 { for ox in -1..=1 {
+                    if actor.flags & RETRAINING == 0 { for oy in -1..=1 { for ox in -1..=1 {
                         let (nx, ny) = (x + ox, y + oy);
                         if nx < 0 || ny < 0 || nx >= engine.width || ny >= engine.height { continue; }
                         if let Some(ids) = engine.indexed.get(&((ny * engine.width + nx) as i64)) {
@@ -400,7 +418,7 @@ impl Engines {
                                 }
                             }
                         }
-                    } }
+                    } } }
                     if !occupied { best = Some((distance, px, py)); }
                 }
             }
@@ -489,6 +507,7 @@ impl Engines {
             let plain_probe = Probe { engine: row[8] as u32, grid: row[9] as u32, masks: [row[10] as u32, row[14] as u32, 0], exempt_current: false };
             let engine = self.get(handle);
             let Some(start) = engine.resident(id) else { continue; };
+            if start.flags & RETRAINING != 0 { continue; }
             neighbors.clear();
             let (cx, cy) = (start.x.floor() as i64, start.y.floor() as i64);
             for oy in -1..=1 { for ox in -1..=1 {
@@ -611,6 +630,19 @@ mod tests {
         assert!(engine.occupant(28, 1, 7, 0.0, 0, f64::NAN, 0).is_nan());
         engine.actor(2, 4.5, 2.5, 7, 0.0, 0.0, 0, f64::NAN, 1, 1.0, Some(28), false);
         assert!(engine.occupant(28, 1, 7, 0.0, 0, f64::NAN, 0).is_nan());
+    }
+    #[test]
+    fn retraining_removes_and_restores_collision_membership_even_without_movement() {
+        let mut engine = Engine::new(12, 8);
+        actor(&mut engine, 1, 2.5, 7, 0, 0, 0.0, true, false);
+        actor(&mut engine, 2, 4.5, 7, 0, 1, 1.0, true, false);
+        assert_eq!(engine.occupant(28, 1, 7, 0.0, 0, f64::NAN, 0), 2.0);
+        actor(&mut engine, 2, 4.5, 7, RETRAINING, 1, 1.0, true, false);
+        assert!(!engine.indexed.contains_key(&28));
+        assert!(engine.occupant(26, 2, 7, 0.0, RETRAINING, f64::NAN, 0).is_nan());
+        assert!(engine.occupant(28, 1, 7, 0.0, 0, f64::NAN, 0).is_nan());
+        actor(&mut engine, 2, 4.5, 10, 0, 1, 1.0, true, false);
+        assert_eq!(engine.occupant(28, 1, 7, 0.0, 0, f64::NAN, 0), 2.0);
     }
     fn open_grid(engine: &mut Engine) -> u32 {
         let grid = engine.grid_create(6, 6);

@@ -20,6 +20,7 @@ import { citiesWithDevelopedPeat, saltFoodConsumptionMultiplier } from './resour
 import { CityEconomyIndex, type CityEconomyCity, type CityEconomyGroup } from './city-economy-index';
 import { simulationReadsActive } from './simulation-reads';
 import { AchievementEffect, achievementEffect } from './achievement-effects';
+import { stoneWalledPalaces } from './enclosures';
 
 export interface CitySummary {
     palace: Building;
@@ -37,7 +38,7 @@ export interface CityResidents extends Pick<CitySummary, 'palace' | 'name' | 'po
 interface FactionEconomy {
     revision: number; residents: CityResidents[];
 }
-interface CityEconomyResult { revision: number; resident: CityResidents; value: CitySummary; }
+interface CityEconomyResult { revision: number; resident: CityResidents; stoneWalled: boolean; value: CitySummary; }
 interface SummaryScope {
     value?: CitySummary[]; residents?: CityResidents[]; live?: boolean;
     factionValues?: Map<number, CitySummary[]>;
@@ -208,18 +209,18 @@ export function citySummaries(state: GameState, faction?: number): CitySummary[]
     const indexed = indexedScope(state);
     if (indexed) {
         const index = reconcileEconomy(state, indexed);
+        const stoneWalled = stoneWalledPalaces(state);
         if (faction !== undefined) {
             const cities: CitySummary[] = [];
             for (const resident of indexed.factions.get(faction)?.residents ?? []) {
                 const id = resident.palace.id, inputs = index.cities.get(id);
-                if (inputs) cities.push(indexedCitySummary(state, indexed, id, resident, inputs));
+                if (inputs) cities.push(indexedCitySummary(state, indexed, id, resident, inputs, stoneWalled.has(id)));
             }
             return cities;
         }
-        for (const [id, city] of index.cities) {
-            const resident = indexed.factions.get(city.palace.faction)?.residents.find(value => value.palace === city.palace);
-            if (!resident) continue;
-            indexedCitySummary(state, indexed, id, resident, city);
+        for (const { residents } of indexed.factions.values()) for (const resident of residents) {
+            const id = resident.palace.id, inputs = index.cities.get(id);
+            if (inputs) indexedCitySummary(state, indexed, id, resident, inputs, stoneWalled.has(id));
         }
         for (const id of indexed.cities.keys()) if (!index.cities.has(id)) indexed.cities.delete(id);
         return indexed.value = orderedCities(state, [Array.from(indexed.cities.values(), value => value.value)]);
@@ -246,29 +247,34 @@ export function citySummariesForFaction(state: GameState, faction: number): City
     return cities;
 }
 
-function indexedCitySummary(state: GameState, scope: SummaryScope, id: number, resident: CityResidents, city: CityEconomyCity): CitySummary {
+function indexedCitySummary(state: GameState, scope: SummaryScope, id: number, resident: CityResidents, city: CityEconomyCity, stoneWalled: boolean): CitySummary {
     const cached = scope.cities.get(id), old = cached?.resident;
-    if (cached && cached.revision === city.revision && old!.palace === resident.palace
+    if (cached && cached.revision === city.revision && cached.stoneWalled === stoneWalled && old!.palace === resident.palace
         && old!.name === resident.name && old!.population === resident.population
         && old!.housing === resident.housing && old!.housingGold === resident.housingGold) return cached.value;
-    const value = calculateIndexedCitySummary(state, resident, city);
-    scope.cities.set(id, { revision: city.revision, resident, value });
+    const value = calculateIndexedCitySummary(state, resident, city, stoneWalled);
+    scope.cities.set(id, { revision: city.revision, resident, stoneWalled, value });
     return value;
 }
 
-function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents,
+function taxIncome(state: GameState, faction: Faction | undefined, taxable: number): number {
+    return rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0,
+        achievementEffect(faction, AchievementEffect.tax, taxable * TAX_INCOME_MULTIPLIER), 1);
+}
+
+function initialCitySummary(state: GameState, { housingGold, ...city }: CityResidents, stoneWalled: boolean,
     factoryMultiplier: number, salt = saltFoodConsumptionMultiplier(state, city.palace.faction)): CitySummary {
-    const rawGold = rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0,
-        achievementEffect(state.factions.find(faction => faction.id === city.palace.faction), AchievementEffect.tax,
-            (city.population + housingGold) * TAX_INCOME_MULTIPLIER), 1);
+    const taxable = city.population + housingGold;
+    const rawGold = taxIncome(state, state.factions.find(faction => faction.id === city.palace.faction),
+        taxable + (stoneWalled ? rustEngine.stone_city_wealth_bonus(taxable) : 0));
     return { ...city,
         food: palaceFoodProduction(city.palace) + fishingCityFoodPerEconomyCycle(state, city.palace.id)
             - city.population * salt,
         gold: Math.max(0, rawGold) * factoryMultiplier };
 }
 
-function calculateIndexedCitySummary(state: GameState, resident: CityResidents, inputs: CityEconomyCity): CitySummary {
-    const city = initialCitySummary(state, resident, inputs.factoryMultiplier, inputs.saltConsumption);
+function calculateIndexedCitySummary(state: GameState, resident: CityResidents, inputs: CityEconomyCity, stoneWalled: boolean): CitySummary {
+    const city = initialCitySummary(state, resident, stoneWalled, inputs.factoryMultiplier, inputs.saltConsumption);
     if (inputs.capital) {
         const faction = state.factions.find(faction => faction.id === city.palace.faction);
         if (faction) city.gold -= retinueSlotUpkeep(faction);
@@ -276,7 +282,7 @@ function calculateIndexedCitySummary(state: GameState, resident: CityResidents, 
     for (const building of inputs.buildings)
         city.gold -= building.kind === 'guardPost'
             ? building.guardPost?.funded === true && isHumanFaction(state, building.faction) ? guardPostUpkeep(building) : 0
-            : buildingMaintenance(state, building, inputs.maintenanceCapital, inputs.maintenanceCities,
+            : buildingMaintenance(state, building, inputs.maintenanceCapital,
                 building.kind === 'factory' ? factoryMaintenance(!!inputs.peatSupplied) : undefined);
     for (const field of inputs.fields) city.food += harvestFoodPerEconomyCycle(fieldHarvestYield(state, field));
     for (const cost of inputs.unitCosts) city.gold -= cost;
@@ -285,7 +291,8 @@ function calculateIndexedCitySummary(state: GameState, resident: CityResidents, 
 
 function calculateCitySummaries(state: GameState, residents: readonly CityResidents[], faction?: number): CitySummary[] {
     const quoteFactoryIncome = factoryIncomeQuote(state);
-    const cities: CitySummary[] = residents.map(city => initialCitySummary(state, city, quoteFactoryIncome(city.palace.faction, 1)));
+    const stoneWalled = stoneWalledPalaces(state);
+    const cities: CitySummary[] = residents.map(city => initialCitySummary(state, city, stoneWalled.has(city.palace.id), quoteFactoryIncome(city.palace.faction, 1)));
     const byPalace = new Map(cities.map(city => [city.palace.id, city]));
     // Purchased capacity is one faction-wide expense, including vacant slots.
     // Attribute it once to the capital rather than charging it in every city.
@@ -303,7 +310,7 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
         if (!city) continue;
         const upkeep = building.kind === 'guardPost'
             ? building.guardPost?.funded === true && isHumanFaction(state, building.faction) ? guardPostUpkeep(building) : 0
-            : buildingMaintenance(state, building, undefined, undefined,
+            : buildingMaintenance(state, building, undefined,
                 building.kind === 'factory' ? factoryMaintenance(peatCities.has(city.palace.id)) : undefined);
         city.gold -= upkeep;
     }
@@ -342,7 +349,14 @@ function calculateCitySummaries(state: GameState, residents: readonly CityReside
 
 /** Match the city cards and treasury. */
 export function cityTaxIncome(state: GameState, faction: Faction): number {
-    const base = rustEngine.scenario_gold_income(state.world.scenario === 'tutorial' || state.world.scenario === 'island-deathmatch' ? 2 : 0,
-        achievementEffect(faction, AchievementEffect.tax, (faction.population + housingGoldBonus(state, faction.id)) * TAX_INCOME_MULTIPLIER), 1);
-    return factoryIncomeQuote(state)(faction.id, base);
+    let taxable = faction.population + housingGoldBonus(state, faction.id);
+    const stoneWalled = stoneWalledPalaces(state);
+    if (stoneWalled.size) {
+        const scope = indexedScope(state);
+        if (scope) reconcileEconomy(state, scope, true);
+        const residents = scope ? scope.factions.get(faction.id)?.residents ?? [] : cityResidents(state);
+        for (const city of residents) if (city.palace.faction === faction.id && stoneWalled.has(city.palace.id))
+            taxable += rustEngine.stone_city_wealth_bonus(city.population + city.housingGold);
+    }
+    return factoryIncomeQuote(state)(faction.id, taxIncome(state, faction, taxable));
 }

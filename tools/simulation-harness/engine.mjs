@@ -23,6 +23,7 @@ export async function bundleEngine({ retinueRestBaseline = false, fixtureFile } 
 export { createGame, createDuelGame, updateGame, migrateGame } from './src/game/simulation.ts';
 export { parseGameSave } from './src/game/game-save.ts';
 export { generateWorld } from './src/world/generator.ts';
+export { generateFertilityGrass } from './src/world/fertility-native.ts';
 export { territory } from './src/game/borders.ts';
 export { navigationWasmStatus } from './src/game/navigation-wasm.ts';
 export { settlementRow, affiliationBreakdown } from './src/game/settlement-bridge.ts';
@@ -40,6 +41,7 @@ export { simRandom } from './src/game/sim-handle.ts';
 export { markWorldChanged } from './src/game/world-revisions.ts';
 export { canWalk, hasStaticPath } from './src/game/pathfinding.ts';
 export { isRetinueMember, buildingWidth, buildingHeight } from './src/game/types.ts';
+export { raidDirectorView } from './src/game/raid-director.ts';
 `, resolveDir: ROOT, loader: 'ts' }, bundle: true, platform: 'node', target: 'node22', format: 'esm',
       outfile: bundle, logLevel: 'silent',
       // Paired diagnostic baseline keeps the original exact-slot behavior.

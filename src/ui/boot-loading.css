@@ -2,43 +2,38 @@
   position: fixed;
   inset: 0;
   z-index: 30;
+  background: #201c16 url('/assets/ui/loading/brass-meridian.webp') center / cover no-repeat;
+  color: #efd7a1;
+  font: clamp(16px, 2vw, 27px)/1.15 var(--game-font, 'Pixel Operator'), monospace;
+  text-shadow: 1px 2px #150f0b;
+}
+.boot-loading-content {
+  position: absolute;
+  inset-inline: 0;
+  top: 51%;
   display: grid;
-  align-content: center;
   justify-items: center;
-  gap: 18px;
-  padding: 20px;
-  background: #1b1712;
-  color: #e8d3a6;
-  font: 19px/1.15 var(--game-font, 'Pixel Operator'), monospace;
+  gap: clamp(12px, 2.2vh, 22px);
+  padding-inline: 20px;
+}
+.boot-loading-title {
+  margin: 0;
+  font-size: clamp(40px, min(8.4vw, 15vh), 140px);
+  line-height: .9;
+  text-shadow: 2px 3px #150f0b;
 }
 .boot-loading [hidden] { display: none; }
-.boot-loading-film {
-  width: min(100%, 1152px, 145dvh, calc((100dvh - 96px) * 384 / 208));
-  aspect-ratio: 384 / 208;
-  border: 2px solid #8b7952;
-  box-shadow: 0 0 0 4px #32271b, 0 12px 32px #100c09;
-  background: #4e5535 url('/assets/ui/loading/settlement-assault-poster.webp') center / cover;
-  image-rendering: pixelated;
-}
-.boot-loading-film video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-  transition: filter 1.15s ease-in-out;
-}
-.boot-loading-film video.is-finished { filter: sepia(1); }
 .boot-loading-progress {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px 16px;
-  width: min(100%, 320px);
+  gap: clamp(6px, 1.4vh, 12px) 12px;
+  width: min(100%, clamp(220px, 42vw, 650px));
 }
-.boot-loading-progress label { grid-column: 1 / -1; }
+.boot-loading-progress label { grid-column: 1 / -1; text-align: center; }
 .boot-loading-progress progress {
   width: 100%;
-  height: 10px;
+  height: clamp(8px, 1.25vw, 17px);
   appearance: none;
   border: 1px solid #846d47;
   background: #15130f;
@@ -56,4 +51,7 @@
   background: #30261d;
   color: inherit;
   font: inherit;
+}
+@media (min-aspect-ratio: 7/3) {
+  .boot-loading { background-size: auto 100%; }
 }

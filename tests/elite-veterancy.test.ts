@@ -45,17 +45,17 @@ describe('Hardened and Elite combat', () => {
     { name: 'Regular', kills: 10, attackBonus: 3, defenseBonus: 2 },
     { name: 'Veteran', kills: 100, attackBonus: 7, defenseBonus: 5 },
     { name: 'Hardened', kills: 250, attackBonus: 12, defenseBonus: 8 },
-  ])('grants equal $name attack and armor bonuses to warriors and archers at every equipment tier', ({ kills, attackBonus, defenseBonus }) => {
+  ])('applies $name rank bonuses before the archer damage multiplier', ({ kills, attackBonus, defenseBonus }) => {
     for (const [tier, multiplier] of [[0, 1], [1, 1.15], [2, 1.3], [3, 1.5]] as const) {
       const warrior = { ...person(20, 'warrior', 10.5, 12.5), armorLevel: tier, weaponLevel: tier };
       const archer = { ...warrior }; setSoldierRole(archer, 'archer');
       const trainedWarrior = { ...warrior, kills }, trainedArcher = { ...archer, kills };
-      // Role-specific base stats stay distinct; each rank adds the same benefit.
-      expect(unitAttack(archer)).toBeCloseTo(unitAttack(warrior) * .8);
+      expect(unitAttack(archer)).toBeCloseTo(unitAttack(warrior) * 1.6);
       expect(unitDefense(archer)).toBeCloseTo(unitDefense(warrior) * .5);
       for (const [ordinary, trained] of [[warrior, trainedWarrior], [archer, trainedArcher]]) {
-        expect(unitAttack(trained) - unitAttack(ordinary)).toBeCloseTo(attackBonus * multiplier * .7);
-        expect(unitDamage(trained, 4) - unitDamage(ordinary, 4)).toBeCloseTo(attackBonus * multiplier * .7);
+        const damageBonus = attackBonus * multiplier * .7 * (ordinary.kind === 'archer' ? 2 : 1);
+        expect(unitAttack(trained) - unitAttack(ordinary)).toBeCloseTo(damageBonus);
+        expect(unitDamage(trained, 4) - unitDamage(ordinary, 4)).toBeCloseTo(damageBonus);
         expect(unitDefense(trained) - unitDefense(ordinary)).toBeCloseTo(defenseBonus * multiplier);
       }
     }

@@ -8,7 +8,6 @@ import { setSoldierRole } from '../src/game/archery';
 import { updateWallStats } from '../src/game/wall-stats';
 import { marauderBaseStats, RAIDER_ATTACK_MULTIPLIER } from '../src/game/raider-pressure';
 import { fogRaidProfile } from '../src/game/fog-raids';
-import { refreshRaiderCampPressure, updateRaiderCampPressure } from '../src/game/raider-camp-pressure';
 import { defendRaiderCamp } from '../src/game/raider-activity';
 import { updateFactionStrategies, getFactionStrategy } from '../src/game/faction-strategy';
 import { advanceInfantryFormations, infantryFormationGoal, infantryRectangleOffsets } from '../src/game/infantry-drill';
@@ -108,45 +107,15 @@ describe('marauder recruitment pressure', () => {
       expect(4 - stats.defense).toBeCloseTo((4 - defense) / 2);
       expect(17 - stats.attack * RAIDER_ATTACK_MULTIPLIER).toBeCloseTo((17 - attack * RAIDER_ATTACK_MULTIPLIER) / 2);
     }
-    expect(fogRaidProfile(0, 0)).toMatchObject({ hp: 70, attack: 13, defense: 2 });
+    expect(fogRaidProfile(0)).toMatchObject({ hp: 70, attack: 13, defense: 2.5 });
   });
 
-  it('doubles timer progress for ten seconds, renews under proximity, then expires without compounding', () => {
-    const { state, camp } = campFixture();
-    state.marauderPacks = [{ id: 1, name: 'siege', color: '#000', targetFaction: 0, home: camp.gate, waypoint: camp.gate, nextWanderAt: 0,
-      raiderCamp: 1, siegeNextReinforceAt: 30 }];
-    refreshRaiderCampPressure(state, camp);
-    state.time = 5; updateRaiderCampPressure(state);
-    expect(camp.nextRaidAt).toBe(25); expect(camp.defenderReadyAt![10]).toBe(25);
-    expect(state.marauderPacks[0].siegeNextReinforceAt).toBe(25);
-    updateRaiderCampPressure(state); expect(camp.nextRaidAt).toBe(25);
-    state.time = 12; updateRaiderCampPressure(state); expect(camp.nextRaidAt).toBe(20);
-    state.time = 13; updateRaiderCampPressure(state); expect(camp.nextRaidAt).toBe(20);
-    entityStore(state).units.replace([soldier(1, 0, 26, 14)]);
-    updateRaiderCampPressure(state); expect(camp.pressureUntil).toBe(23);
-    state.time = 18; updateRaiderCampPressure(state); expect(camp.pressureUntil).toBe(28);
-    expect(camp.nextRaidAt).toBe(18);
-  });
-
-  it('damage refreshes the surge even during a defender cooldown; neutral village visitors do not', () => {
+  it('attacking a camp credits the attacker without hastening its raids or cooldowns', () => {
     const { state, camp } = campFixture();
     expect(defendRaiderCamp(state, state.buildings[0], { faction: 0, x: 29, y: 12 })).toBe(0);
-    expect(camp.pressureUntil).toBe(10);
+    expect(camp.lastAttacker).toBe(0);
     state.time = 5; defendRaiderCamp(state, state.buildings[0], { faction: 0, x: 29, y: 12 });
-    expect(camp.pressureUntil).toBe(15);
-    state.factions.push({ ...state.factions[1], id: 2, villageId: 1 });
-    entityStore(state).units.replace([soldier(2, 2, 28.5, 14.5)]);
-    state.time = 6; updateRaiderCampPressure(state); expect(camp.pressureUntil).toBe(15);
-  });
-
-  it('wakes the shared wave scheduler when a damage event advances a camp clock', () => {
-    const { state, camp } = campFixture();
-    state.fogRaids = { nextAt: 30, waves: 0 };
-    refreshRaiderCampPressure(state, camp);
-    state.time = 5; refreshRaiderCampPressure(state, camp);
-    expect(camp.nextRaidAt).toBe(25); expect(state.fogRaids.nextAt).toBe(25);
-    updateRaiderCampPressure(state); // Same timestamp must neither lose nor double the earned acceleration.
-    expect(camp.nextRaidAt).toBe(25); expect(state.fogRaids.nextAt).toBe(25);
+    expect(camp.nextRaidAt).toBe(30); expect(camp.defenderReadyAt![10]).toBe(30);
   });
 });
 

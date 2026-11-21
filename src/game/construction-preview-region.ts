@@ -13,7 +13,7 @@ interface PreviewRegion {
 }
 const regions = new WeakMap<GameState, PreviewRegion>();
 const tileKey = (tile: Tile): string => [tile.terrain, tile.overlay, tile.biome, tile.resource, tile.relief,
-  tile.reliefFlags, tile.reliefLevel, tile.reliefSpeed, tile.waterfall, tile.villageTrail, tile.farm, tile.palm, tile.marsh, tile.fertility].join(',');
+  tile.reliefFlags, tile.rockHost, tile.rockRelief, tile.reliefLevel, tile.reliefSpeed, tile.waterfall, tile.villageTrail, tile.farm, tile.palm, tile.marsh, tile.fertility, tile.fertilityGrass].join(',');
 
 /** Infrastructure gestures depend on local placement geometry. Remote routine city work
  * must not discard every pointer endpoint. Farm ranking can share the live

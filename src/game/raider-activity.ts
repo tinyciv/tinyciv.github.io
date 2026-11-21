@@ -2,23 +2,19 @@ import { entityStore, buildingWithId } from './entity-store';
 import { raiderMayAttack, provokeRaiderCamp } from './raider-aggression';
 import { simRandom } from './sim-handle';
 import { banditIntensity, banditPopulationCap, banditSpawnDeadline } from './bandit-intensity';
-import { canRallyFromRout } from './battle-morale';
+import { canRallyFromRout, MARAUDER_MAX_MORALE } from './battle-morale';
 import { constructionEdges } from './builders';
-import { canMove, canWalk, hasStaticPath, travelTimeMap } from './pathfinding';
-import { pointInSight, updateFog } from './fog';
+import { canMove, canWalk, hasStaticPath } from './pathfinding';
 import { fogRaidProfile } from './fog-raids';
 import { campSpawnTiles, MAX_LIVE_RAIDERS, RAIDER_COLOR, raiderCampActive, raiderCampPartySize, raiderCampPopulationCap, raiderCampRefuge } from './raider-camps';
 import { ensureMarauderLeaders } from './marauder-leaders';
-import { marauderBaseStats, raiderEquipmentMultiplier, raiderPartySize } from './raider-pressure';
-import { refreshRaiderCampPressure } from './raider-camp-pressure';
+import { marauderBaseStats, raiderPartySize } from './raider-pressure';
 import { setSoldierRole } from './archery';
 import { selectRaidTarget } from './raid-targeting';
 import { refreshEarlyCombatUnit } from './spatial';
-import { buildingReady, buildingWidth, buildingHeight, distance, isSoldier, isWallKind, type Building, type GameState, type MarauderPack, type Point, type RaiderCamp, type Unit } from './types';
+import { directedFactions, raidDirectorOpen, raidEquipment, raidEra } from './raid-director';
+import { buildingReady, buildingWidth, buildingHeight, distance, type Building, type GameState, type MarauderPack, type Point, type RaiderCamp, type Unit } from './types';
 
-export const RAIDER_SKIRMISH_MIN_SECONDS = 18;
-export const RAIDER_SKIRMISH_MAX_SECONDS = 24;
-export const RAIDER_OPENING_TRAVEL_SECONDS = 18;
 export const RAIDER_CAMP_RESERVES = 30;
 export const RAIDER_DEFENDER_COOLDOWN = 30;
 const planningAt = new WeakMap<GameState, number>();
@@ -27,7 +23,6 @@ const center = (building: Building): Point => ({ x: building.x + buildingWidth(b
 const edgeDistance = (point: Point, building: Building): number => Math.hypot(Math.max(building.x - point.x, 0, point.x - building.x - buildingWidth(building)),
   Math.max(building.y - point.y, 0, point.y - building.y - buildingHeight(building)));
 const membersOf = (state: GameState, pack: MarauderPack): Unit[] => state.units.filter(unit => unit.hp > 0 && unit.marauderPack === pack.id);
-const fullFactions = (state: GameState) => state.factions.filter(faction => faction.id >= 0 && faction.villageId === undefined && !faction.defeated && faction.relation !== 'confederated');
 const clearOrders = (unit: Unit): void => {
   unit.target = undefined; unit.destination = undefined; unit.path = undefined; unit.pathGoal = undefined;
   unit.repathAt = 0; unit.moving = false; unit.attackTime = 0;
@@ -75,15 +70,15 @@ function assignParty(state: GameState, target: Building, units: Unit[], origin: 
   ensureMarauderLeaders(state);
   return pack;
 }
-function recruit(state: GameState, points: readonly Point[], defendingSoldiers: number, defense = false): Unit[] {
-  const profile = fogRaidProfile(defendingSoldiers, state.time);
+function recruit(state: GameState, points: readonly Point[], era: number, defense = false): Unit[] {
+  const profile = fogRaidProfile(era), equipment = raidEquipment(era);
   const defenderMinimum = marauderBaseStats(55, 8, 0);
   return points.map((point, index) => {
     const unit: Unit = { id: entityStore(state).allocateId(), kind: 'warrior', faction: -2, ...point,
       hp: defense ? Math.max(defenderMinimum.hp, profile.hp) : profile.hp, maxHp: defense ? Math.max(defenderMinimum.hp, profile.hp) : profile.hp,
       attack: defense ? Math.max(defenderMinimum.attack, profile.attack) : profile.attack, defense: profile.defense,
-      morale: 100, speed: 2.35, range: 1.1, order: 'raid', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
-      moving: false, facing: 0, attackTime: 0, bornAt: state.time, raiderEquipmentMultiplier: raiderEquipmentMultiplier(state.time) };
+      morale: MARAUDER_MAX_MORALE, speed: 2.35, range: 1.1, order: 'raid', cooldown: 0, lastCombat: -60, lastDamagedAt: -60,
+      moving: false, facing: 0, attackTime: 0, bornAt: state.time, raiderEquipmentMultiplier: equipment };
     // Retain two-thirds of the former archer assignments across small parties.
     if (defense && index % 3 === 1 && simRandom(state) < 2 / 3) setSoldierRole(unit, 'archer');
     entityStore(state).units.add(unit); return unit;
@@ -114,7 +109,7 @@ function defenderSpawnTiles(state: GameState, building: Building, attacker: Poin
   }
   return points;
 }
-function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendingSoldiers: number, defense = false,
+function takeCampParty(state: GameState, camp: RaiderCamp, size: number, era: number, defense = false,
   attackedBuilding?: Building, attacker?: Point): Unit[] {
   const minimum = defense ? raiderPartySize(2, state.time) : 1;
   size = defense ? Math.max(minimum, raiderCampPartySize(state, camp, size)) : raiderCampPartySize(state, camp, size);
@@ -126,6 +121,7 @@ function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendi
     if (reserve.marauderLeader && (defense || units.some(unit => unit.marauderLeader))) continue;
     const before = { ...reserve };
     if (!releaseRaiderReserve(state, reserve)) continue;
+    reserve.raiderEquipmentMultiplier = raidEquipment(era);
     previous.set(reserve, before); units.push(reserve);
   }
   const packs = new Set((state.marauderPacks ?? []).filter(pack => pack.raiderCamp === camp.id).map(pack => pack.id));
@@ -143,38 +139,8 @@ function takeCampParty(state: GameState, camp: RaiderCamp, size: number, defendi
     }
     return [];
   }
-  units.push(...recruit(state, points.slice(0, needed), defendingSoldiers, defense));
+  units.push(...recruit(state, points.slice(0, needed), era, defense));
   return units;
-}
-
-/** Place one real, reachable opening band per full faction. These groups
- * begin marching at game start, rather than waiting for the large-wave clock. */
-export function initializeRaiderSkirmishes(state: GameState): void {
-  if (state.raiderSkirmishes) return;
-  state.raiderSkirmishes = { nextByFaction: {}, wavesByFaction: {} };
-  const fog = updateFog(state);
-  for (const faction of fullFactions(state).sort((a, b) => a.id - b.id)) {
-    const palace = state.buildings.find(building => building.kind === 'palace' && building.faction === faction.id && buildingReady(building));
-    const leader = state.units.find(unit => unit.kind === 'leader' && unit.faction === faction.id && unit.hp > 0);
-    if (!palace || !leader) continue;
-    state.raiderSkirmishes.nextByFaction[faction.id] = banditSpawnDeadline(state, RAIDER_SKIRMISH_MIN_SECONDS + faction.id % 7);
-    state.raiderSkirmishes.wavesByFaction[faction.id] = 0;
-    if (!raiderMayAttack(state, faction.id)) continue;
-    const travel = travelTimeMap(state, leader, -2, 2.35, RAIDER_OPENING_TRAVEL_SECONDS);
-    const candidates: { point: Point; cost: number; hidden: boolean }[] = [];
-    const occupied = new Set(state.units.filter(unit => unit.hp > 0 && !unit.inside).map(unit => Math.floor(unit.y) * state.world.width + Math.floor(unit.x)));
-    for (let cell = 0; cell < travel.length; cell++) {
-      if (!Number.isFinite(travel[cell]) || travel[cell] < 5 || travel[cell] > RAIDER_OPENING_TRAVEL_SECONDS || occupied.has(cell)) continue;
-      const point = { x: cell % state.world.width + .5, y: Math.floor(cell / state.world.width) + .5 };
-      if (distance(point, leader) < 10 || edgeDistance(point, palace) < 9 || !canWalk(state, point.x, point.y, -2)) continue;
-      if (state.units.some(unit => unit.hp > 0 && unit.faction >= 0 && !unit.inside && distance(unit, point) < 7)) continue;
-      candidates.push({ point, cost: travel[cell], hidden: !pointInSight(fog, point.x, point.y) });
-    }
-    candidates.sort((a, b) => Number(b.hidden) - Number(a.hidden) || Math.abs(a.cost - 10) - Math.abs(b.cost - 10));
-    const source = candidates[0], living = state.units.filter(unit => unit.hp > 0 && unit.faction === -2).length;
-    const points = source ? candidates.filter(candidate => distance(candidate.point, source.point) <= 2).slice(0, Math.max(0, Math.min(raiderPartySize(3 * banditIntensity(state), state.time), banditPopulationCap(state, MAX_LIVE_RAIDERS) - living))).map(candidate => candidate.point) : [];
-    if (source && points.length) assignParty(state, palace, recruit(state, points, 0), source.point);
-  }
 }
 
 /** Every physical camp structure gets its own bounded response, including a
@@ -182,14 +148,15 @@ export function initializeRaiderSkirmishes(state: GameState): void {
 export function defendRaiderCamp(state: GameState, building: Building, attacker: Pick<Unit, 'faction'> & Point): number {
   if (!banditIntensity(state) || building.faction !== -2 || building.raiderCamp === undefined || attacker.faction < 0) return 0;
   const camp = state.raiderCamps?.find(camp => camp.id === building.raiderCamp);
+  // Credit the realm even for the blow that just burned the camp.
+  if (camp) camp.lastAttacker = attacker.faction;
   if (!camp || !raiderCampActive(state, camp)) return 0;
   provokeRaiderCamp(state, camp.id, attacker.faction);
-  refreshRaiderCampPressure(state, camp);
   if ((camp.defenderReadyAt?.[building.id] ?? -Infinity) > state.time) return 0;
   (camp.defenderReadyAt ??= {})[building.id] = banditSpawnDeadline(state, RAIDER_DEFENDER_COOLDOWN);
   const count = raiderPartySize(2 + Math.floor(simRandom(state) * 4), state.time);
   const target: Building = { id: -1, kind: 'house', faction: attacker.faction, x: attacker.x, y: attacker.y, hp: 1, maxHp: 1, capacity: 0 };
-  const party = takeCampParty(state, camp, count, state.units.filter(unit => unit.faction === attacker.faction && unit.hp > 0 && isSoldier(unit)).length, true, building, attacker);
+  const party = takeCampParty(state, camp, count, raidEra(state, attacker.faction), true, building, attacker);
   if (!party.length) return 0;
   const pack = assignParty(state, target, party, { x: camp.gate.x + .5, y: camp.gate.y + .5 }, camp, true);
   pack.targetBuilding = undefined; pack.waypoint = { x: attacker.x, y: attacker.y };
@@ -205,6 +172,12 @@ function nearestCamp(state: GameState, point: Point, returningMembers: readonly 
     .sort((a, b) => distance(point, a.gate) - distance(point, b.gate))
     .find(camp => hasStaticPath(state, point, { x: camp.gate.x + .5, y: camp.gate.y + .5 }, -2));
 }
+/** Nearest objective of a realm whose director is building up or raiding.
+ * Skips routing entirely while every realm is resting. */
+function openRaidTarget(state: GameState, from: Point, pack: number): Building | undefined {
+  if (!directedFactions(state).some(faction => raidDirectorOpen(state, faction.id))) return;
+  return selectRaidTarget(state, from, pack, undefined, undefined, building => raidDirectorOpen(state, building.faction));
+}
 function returnToCamp(state: GameState, pack: MarauderPack, members: Unit[]): void {
   const origin = members.find(unit => !unit.inside) ?? members[0]; if (!origin) return;
   const current = state.raiderCamps?.find(camp => camp.id === pack.raiderCamp && raiderCampActive(state, camp)
@@ -214,7 +187,7 @@ function returnToCamp(state: GameState, pack: MarauderPack, members: Unit[]): vo
     pack.raiderCamp = camp.id; pack.home = raiderCampRefuge(camp);
     pack.returning = true; pack.waypoint = { ...pack.home }; delete pack.siegeNextReinforceAt;
   } else {
-    const target = selectRaidTarget(state, origin, pack.id);
+    const target = openRaidTarget(state, origin, pack.id);
     pack.returning = false; pack.raid = !!target; pack.campDefense = false; pack.motivation = 'assault';
     pack.targetBuilding = target?.id; if (target) { pack.targetFaction = target.faction; pack.waypoint = center(target); }
     else { pack.home = { x: origin.x, y: origin.y }; pack.nextWanderAt = state.time; }
@@ -278,43 +251,8 @@ export function updateRaiderReturn(state: GameState, unit: Unit, pack: MarauderP
   return true;
 }
 
-function launchSkirmish(state: GameState, faction: number, size: number): boolean {
-  // Walls can be breached; water and ledges still separate unreachable realms.
-  const planning = { ...state, buildings: state.buildings.filter(building => !(building.faction >= 0 && isWallKind(building.kind))) };
-  const targets = state.buildings.filter(building => building.kind === 'palace' && building.faction === faction && buildingReady(building));
-  if (!targets.length) return false;
-  for (const camp of (state.raiderCamps ?? []).filter(camp => raiderMayAttack(state, faction, camp.id) && raiderCampActive(state, camp) && campReserves(state, camp).length)
-    .sort((a, b) => Math.min(...targets.map(target => distance(a.gate, target))) - Math.min(...targets.map(target => distance(b.gate, target))))) {
-    const origin = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
-    const target = targets.find(target => constructionEdges(state, target).some(point => hasStaticPath(planning, origin, point, -2)));
-    if (!target) continue;
-    const party = takeCampParty(state, camp, size, state.units.filter(unit => unit.hp > 0 && unit.faction === faction && isSoldier(unit)).length);
-    if (party.length) { assignParty(state, target, party, origin, camp); return true; }
-  }
-  // Reassign an existing local idle band before manufacturing another party.
-  for (const pack of (state.marauderPacks ?? []).filter(pack => raiderMayAttack(state, faction, pack.raiderCamp) && pack.seaInvasion === undefined && !pack.campDefense && (!pack.raid || pack.returning && pack.raiderCamp === undefined))
-    .sort((a, b) => Math.min(...targets.map(target => distance(a.home, target))) - Math.min(...targets.map(target => distance(b.home, target))))) {
-    const members = membersOf(state, pack).filter(unit => !unit.inside && unit.order !== 'flee' && canRallyFromRout(state, unit)); if (!members.length) continue;
-    const target = targets.slice().sort((a, b) => distance(members[0], a) - distance(members[0], b))
-      .find(target => constructionEdges(state, target).some(point => hasStaticPath(planning, members[0], point, -2)));
-    if (!target) continue;
-    const chosen = members.sort((a, b) => Number(!!b.marauderLeader) - Number(!!a.marauderLeader)).slice(0, size);
-    assignParty(state, target, chosen, pack.home); return true;
-  }
-  const choices = (state.raiderCamps ?? []).filter(camp => raiderMayAttack(state, faction, camp.id) && raiderCampActive(state, camp))
-    .flatMap(camp => targets.map(target => ({ camp, target, d: distance(camp.gate, target) }))).sort((a, b) => a.d - b.d);
-  for (const { camp, target } of choices) {
-    const origin = { x: camp.gate.x + .5, y: camp.gate.y + .5 };
-    if (!constructionEdges(state, target).some(point => hasStaticPath(planning, origin, point, -2))) continue;
-    const party = takeCampParty(state, camp, size, state.units.filter(unit => unit.hp > 0 && unit.faction === faction && isSoldier(unit)).length);
-    if (!party.length) continue;
-    assignParty(state, target, party, origin, camp); return true;
-  }
-  return false;
-}
-
 /** One cheap lifecycle pass per second; expensive routing happens only when a
- * camp is lost or an actual small-raid deadline is reached. */
+ * camp is lost. Raid launches belong to the raid director. */
 export function updateRaiderActivity(state: GameState): void {
   if (state.time < (planningAt.get(state) ?? -Infinity)) return;
   planningAt.set(state, state.time + 1);
@@ -343,21 +281,14 @@ export function updateRaiderActivity(state: GameState): void {
     // immediately acquires an actual faction objective.
     if (!pack.raid && !pack.returning && !pack.campDefense && pack.raiderCamp !== undefined) returnToCamp(state, pack, members);
     if (!pack.raid && !pack.returning && !pack.campDefense && pack.raiderCamp === undefined) {
-      const target = selectRaidTarget(state, position, pack.id, undefined, pack.raiderCamp);
+      // Orphaned bands only strike realms the director has not put to rest.
+      const target = openRaidTarget(state, position, pack.id);
       if (target) {
         pack.raid = true; pack.microRaid = true; pack.motivation = 'assault';
         pack.targetBuilding = target.id; pack.targetFaction = target.faction; pack.waypoint = center(target);
         for (const unit of active) if (unit.order !== 'flee' && !unit.routed) { clearOrders(unit); unit.order = 'raid'; }
-      } else returnToCamp(state, pack, members);
+      } else if (state.raiderCamps?.some(camp => raiderCampActive(state, camp))) returnToCamp(state, pack, members);
     }
-  }
-  const clock = state.raiderSkirmishes; if (!banditIntensity(state) || !clock || state.gameOver || state.paused || state.victory && !state.victoryContinued) return;
-  for (const faction of fullFactions(state).sort((a, b) => (clock.nextByFaction[a.id] ?? 0) - (clock.nextByFaction[b.id] ?? 0) || a.id - b.id)) {
-    if (state.time < (clock.nextByFaction[faction.id] ?? Infinity)) continue;
-    const wave = clock.wavesByFaction[faction.id] ?? 0;
-    const launched = launchSkirmish(state, faction.id, raiderPartySize(1 + wave % 5, state.time));
-    if (launched) clock.wavesByFaction[faction.id] = wave + 1;
-    clock.nextByFaction[faction.id] = banditSpawnDeadline(state, launched ? RAIDER_SKIRMISH_MIN_SECONDS + simRandom(state) * (RAIDER_SKIRMISH_MAX_SECONDS - RAIDER_SKIRMISH_MIN_SECONDS) : 5);
   }
   const living = new Set(state.units.filter(unit => unit.hp > 0).map(unit => unit.marauderPack));
   state.marauderPacks = (state.marauderPacks ?? []).filter(pack => living.has(pack.id));

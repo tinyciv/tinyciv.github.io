@@ -17,6 +17,7 @@ export const MARAUDER_LEADER_LOSS_RADIUS = rustEngine.morale_constant(6);
 export const MARAUDER_LEADER_LOSS_MORALE = rustEngine.morale_constant(7);
 export const ROUT_CONTAGION_MORALE_DRAIN = rustEngine.morale_constant(8);
 export const MARAUDER_MIN_ROUT_SECONDS = rustEngine.morale_constant(9);
+export const MARAUDER_MAX_MORALE = rustEngine.morale_constant(11);
 const ORDERS: readonly UnitOrder[] = ['follow', 'hold', 'work', 'raid', 'wander', 'flee'];
 const CASUALTY_KINDS = new Set<Unit['kind']>(['leader', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'scout', 'militia', 'worker']);
 const unitFlags = (unit: Unit): number => (CASUALTY_KINDS.has(unit.kind) ? 1 : 0)

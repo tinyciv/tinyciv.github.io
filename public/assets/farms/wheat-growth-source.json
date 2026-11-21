@@ -1,0 +1,104 @@
+{
+  "provider": "PixelLab",
+  "layout": "16\u00d716 tiles. Columns are valid wheat join masks. Rows concatenate the three transitions without their original keyframes.",
+  "size": [
+    752,
+    960
+  ],
+  "masks": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    19,
+    23,
+    27,
+    31,
+    38,
+    39,
+    46,
+    47,
+    55,
+    63,
+    76,
+    77,
+    78,
+    79,
+    95,
+    110,
+    111,
+    127,
+    137,
+    139,
+    141,
+    143,
+    155,
+    159,
+    175,
+    191,
+    205,
+    207,
+    223,
+    239,
+    255
+  ],
+  "frames": [
+    24,
+    18,
+    18
+  ],
+  "keyframes": [
+    {
+      "path": "farms/turned-loam-joins.png",
+      "sha256": "819ec3a77c6aedc0ec4f01e200601fc29b5389783317dd67b0676cbf71a47697"
+    },
+    {
+      "path": "pixelhole-overworld/Seedling-Wheat-Joins.png",
+      "sha256": "77fb46cc01fd785bf20b5b64305617874ef722d604954c1c95f3ae9401090570"
+    },
+    {
+      "path": "pixelhole-overworld/Green-Wheat-Joins.png",
+      "sha256": "0bfa784a2b859540a56150fb5e0350df0c6d0369a9e70112ba38090bf9ad12ad"
+    },
+    {
+      "path": "pixelhole-overworld/Wheatfield-Joins.png",
+      "sha256": "aa8798e3741b80a67ec05a37a9ec86487eab863c77ab131b9542509c58958418"
+    }
+  ],
+  "previewSources": [
+    {
+      "path": "scratch/2026-11-19-even-soil-emergence/frames/soil-to-seedling.png",
+      "sha256": "63239e1896127bdc9f8966ec2e782cca186d0e26aea079b00240ffacd855dd79"
+    },
+    {
+      "path": "scratch/2026-11-19-uniform-wheat-growth/frames/1A-seedling-green/sheet.png",
+      "sha256": "9bd9d039b3fc40ca43cf9fd5e2654fb03d3f7888a863355c61deaf12cf057e7e"
+    },
+    {
+      "path": "scratch/2026-11-19-uniform-wheat-growth/frames/2B-seedling-green/sheet.png",
+      "sha256": "8701ecb3994079c6b84c39d2d1c5ed6a475e628ae696e6fc2fc0d09109010fda"
+    },
+    {
+      "path": "scratch/2026-11-19-uniform-wheat-growth/frames/1A-green-golden/sheet.png",
+      "sha256": "fb6bb0b01318230b623e3a395e37ec05e39f7809ac8ffd6b3d9e64b3d8b31cfe"
+    },
+    {
+      "path": "scratch/2026-11-19-uniform-wheat-growth/frames/2B-green-golden/sheet.png",
+      "sha256": "2327174e4ad26f7cbd194e49233b96fc96add50db8dca15491daeeede4863c6a"
+    }
+  ],
+  "packing": "Approved 2\u00d72 frames split into the existing 8\u00d78 join pieces. Isolated later frames use the reviewed 1\u00d71 sequence. Isolated soil uses the same field-wide blend with the native isolated endpoints. Concave corners reuse the original keyframe pixels.",
+  "sha256": "4b8aba515960d50123ff4568516d718d5e6911ad2027ce2668174764717b5936"
+}

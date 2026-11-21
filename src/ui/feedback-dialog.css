@@ -11,8 +11,7 @@
 .feedback-identity{margin:0;color:#b9b195;font:18px/1.25 var(--game-font)}
 .feedback-status{margin:0;color:#f0c977;white-space:pre-wrap;overflow-wrap:anywhere;font:20px/1.25 var(--game-font)}
 .feedback-status:empty{display:none}
-.frontend .feedback-dialog .feedback-plate{border:0;border-radius:0;box-shadow:none;background:url('/assets/runtime/ui/main-menu/button.png') center/100% 100% no-repeat;text-align:center;padding:12px 24px;font:700 23px/1 var(--game-font);color:#f2e4ba}
-.frontend .feedback-dialog .feedback-plate:hover:not(:disabled),.frontend .feedback-dialog .feedback-plate:focus-visible{background:url('/assets/runtime/ui/main-menu/button-active.png') center/100% 100% no-repeat}
-.frontend .feedback-dialog .feedback-close{flex:none;padding:10px 20px;font-size:20px}
-.feedback-send{justify-self:start;min-width:210px}
-@media(max-width:480px){.frontend-feedback-backdrop{padding:14px}.frontend .feedback-dialog.menu-sheet{max-height:calc(100dvh - 28px);padding:18px}.frontend .feedback-dialog h1{font-size:28px}.frontend .feedback-dialog>header{gap:12px}.frontend .feedback-dialog .feedback-close{padding:10px 16px}}
+.frontend .feedback-dialog .feedback-plate{height:44px;justify-content:center;padding:0 14px 2px 32px;font-size:21px;text-align:center}
+.frontend .feedback-dialog .feedback-close{flex:none}
+.feedback-send{justify-self:start}
+@media(max-width:480px){.frontend-feedback-backdrop{padding:14px}.frontend .feedback-dialog.menu-sheet{max-height:calc(100dvh - 28px);padding:18px}.frontend .feedback-dialog h1{font-size:28px}.frontend .feedback-dialog>header{gap:12px}}

@@ -19,7 +19,7 @@ pub const ALLOCATION: u32 = 128;
 pub const PROGRESS: u32 = 256;
 pub const TRADE_CREDIT: u32 = 512;
 
-pub fn constant(index: u32) -> f64 { match index { 0 => 0.25, 1 | 2 => 30.0, 3 => 5.0, _ => panic!("unknown research constant") } }
+pub fn constant(index: u32) -> f64 { match index { 0 => 0.10, 1 | 2 => 30.0, 3 => 5.0, _ => panic!("unknown research constant") } }
 fn minimum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.min(b) } }
 fn maximum(a: f64, b: f64) -> f64 { if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) } }
 fn or_zero(value: f64) -> f64 { if value.is_nan() { 0.0 } else { value } }
@@ -43,11 +43,8 @@ struct Node { points: f64, prerequisites: u64 }
 pub struct Graph { nodes: Vec<Node> }
 impl Graph { pub fn cost(&self, branch: usize, bonus: f64, tutorial: bool) -> f64 { self.nodes[branch].points * if tutorial {0.1} else {1.0} / (1.0 + maximum(0.0, bonus)) } }
 
-/// Tech cost rises linearly with tree depth: roots cost 1.2x their listed
-/// points and the deepest tier 5x. Depth is the longest prerequisite chain.
-const ROOT_COST_SCALE: f64 = 1.2;
-const DEEPEST_COST_SCALE: f64 = 5.0;
-fn depth_scaled(mut nodes: Vec<Node>, fixed_costs: u64) -> Vec<Node> {
+/// Six depth stages raise the authored costs up to 5x. A zero factor marks a fixed price.
+fn depth_scaled(mut nodes: Vec<Node>, factors: &[f64]) -> Vec<Node> {
     let count = nodes.len();
     let mut depth = vec![0usize; count];
     // Longest-path relaxation; prerequisite chains are acyclic and at most `count` long.
@@ -59,11 +56,10 @@ fn depth_scaled(mut nodes: Vec<Node>, fixed_costs: u64) -> Vec<Node> {
         }
         if !changed { break; }
     }
-    let max_depth = depth.iter().copied().max().unwrap_or(0);
-    for (id, (node, &d)) in nodes.iter_mut().zip(&depth).enumerate() {
-        if fixed_costs & (1u64 << id) != 0 { continue; }
-        let t = if max_depth == 0 { 0.0 } else { d as f64 / max_depth as f64 };
-        node.points *= ROOT_COST_SCALE + (DEEPEST_COST_SCALE - ROOT_COST_SCALE) * t;
+    for ((node, d), factor) in nodes.iter_mut().zip(depth).zip(factors.iter().copied()) {
+        if factor == 0.0 { continue; }
+        let stage = (d + 1).min(6) as f64;
+        node.points = (node.points * (1.0 + 4.0 * stage / 6.0)).round() * factor;
     }
     nodes
 }
@@ -234,10 +230,11 @@ fn record_receipt(account: &mut Account, now: f64, science: f64) {
     account.receipts_present = true;
 }
 
-fn earn_trade_science(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Query<(&mut Account, &Context)>) {
-    if step.mode != 7 || !step.gross.is_finite() || step.gross <= 0.0 { return; }
+fn earn_bonus_science(content: Res<Content>, mut step: ResMut<Step>, mut accounts: Query<(&mut Account, &Context)>) {
+    if !matches!(step.mode, 7 | 8) || !step.gross.is_finite() || step.gross <= 0.0 { return; }
     for (mut account, context) in &mut accounts {
-        if context.defeated || context.game_over || !context.library { continue; }
+        // Trade needs a library to earn science; discoveries can bank it for later.
+        if context.defeated || context.game_over || step.mode == 7 && !context.library { continue; }
         let Some(selected) = focus(&account, &content.0) else { continue; };
         let room = remaining(&account, &content.0) - account.trade_credit;
         let earned = step.gross.min(room);
@@ -327,7 +324,7 @@ impl ResearchEngine {
         let mut world = World::new(); world.insert_resource(Content(graph.clone())); world.init_resource::<Step>();
         let entity = world.spawn((Account::default(), Context::default())).id();
         let mut schedule = Schedule::default(); schedule.set_executor(SingleThreadedExecutor::new());
-        schedule.add_systems((control_account, refund_excess, allocate_income, earn_trade_science, advance_funded).chain());
+        schedule.add_systems((control_account, refund_excess, allocate_income, earn_bonus_science, advance_funded).chain());
         Self { world, schedule, entity, graph, input: Vec::new(), output: Vec::new(), priorities: 0, funding: 0, receipts: 0 }
     }
     pub fn prepare(&mut self, priorities: usize, funding: usize, receipts: usize) -> *mut f64 {
@@ -390,13 +387,15 @@ pub struct Engines { next: u32, engines: BTreeMap<u32, ResearchEngine>, graph: A
 impl Engines {
     pub fn prepare_graph(&mut self, count: usize) -> *mut f64 {
         assert!(count > 0 && count <= 53, "research graph supports at most 53 safe mask bits");
-        self.metadata.resize(count * 2, 0.0); self.metadata.as_mut_ptr()
+        self.metadata.resize(count * 3, 0.0); self.metadata.as_mut_ptr()
     }
-    pub fn commit_graph(&mut self, count: usize, fixed_costs: u64) {
+    pub fn commit_graph(&mut self, count: usize) {
         assert!(self.engines.is_empty(), "research metadata must be installed before accounts");
-        assert!(count > 0 && count <= 53 && count * 2 <= self.metadata.len(), "invalid research graph");
-        let nodes: Vec<Node> = (0..count).map(|id| Node { points: self.metadata[id * 2], prerequisites: self.metadata[id * 2 + 1] as u64 }).collect();
-        self.graph = Arc::new(Graph { nodes: depth_scaled(nodes, fixed_costs) });
+        assert!(count > 0 && count <= 53 && count * 3 <= self.metadata.len(), "invalid research graph");
+        let rows = self.metadata[..count * 3].chunks_exact(3);
+        let factors: Vec<f64> = rows.clone().map(|row| row[2]).collect();
+        let nodes = rows.map(|row| Node { points: row[0], prerequisites: row[1] as u64 }).collect();
+        self.graph = Arc::new(Graph { nodes: depth_scaled(nodes, &factors) });
     }
     pub fn cost(&self, branch: usize, bonus: f64, tutorial:bool) -> f64 { self.graph.cost(branch, bonus, tutorial) }
     pub fn create(&mut self) -> u32 {
@@ -466,10 +465,9 @@ mod tests {
     }
     #[test]
     fn tech_cost_scales_linearly_with_depth() {
-        let scaled = depth_scaled(vec![Node { points: 10.0, prerequisites: 0 }, Node { points: 10.0, prerequisites: 1 }, Node { points: 10.0, prerequisites: 2 }], 0);
-        assert!((scaled[0].points - 12.0).abs() < 1e-9);
-        assert!((scaled[1].points - 31.0).abs() < 1e-9);
-        assert!((scaled[2].points - 50.0).abs() < 1e-9);
+        let scaled = depth_scaled(vec![Node { points: 30.0, prerequisites: 0 }, Node { points: 42.0, prerequisites: 1 },
+            Node { points: 24.0, prerequisites: 2 }, Node { points: 60.0, prerequisites: 4 }], &[1.0, 1.0, 0.5, 0.0]);
+        assert_eq!(scaled.iter().map(|node| node.points).collect::<Vec<_>>(), vec![50.0, 98.0, 36.0, 60.0]);
     }
     #[test]
     fn reduced_costs_refund_actual_gold_not_bonus_science() {

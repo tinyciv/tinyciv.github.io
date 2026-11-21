@@ -49,32 +49,35 @@ describe('maintenance through the live economy', () => {
     entityStore(state).buildings.add(building(10, 'woodenTower', 13), building(11, 'tower', 33),
       { ...building(12, 'woodenTower', 53), construction: { startedAt: 0, duration: 90, waitingForBuilder: true } },
       { ...building(13, 'tower', 54), hp: 0 });
-    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(60);
+    expect(factionBuildingMaintenance(state, state.factions[0])).toBe(20);
     nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(261);
+    expect(state.factions[0].gold).toBe(301);
     expect(state.factions[0].incomeTotals?.gold).toBe(21);
     expect(goldFlowSummary(state, state.factions[0])).toMatchObject({
       inputs: [{ category: 'taxes', amount: 21 }],
-      totalInputs: 21, totalOutlays: 60, net: -39,
+      totalInputs: 21, totalOutlays: 20, net: 1,
     });
     expect(goldFlowSummary(state, state.factions[0]).outlays).toEqual(expect.arrayContaining([
-      expect.objectContaining({ category: 'settlements', amount: 50 }),
+      expect.objectContaining({ category: 'settlements', amount: 10 }),
       expect.objectContaining({ category: 'defenses', amount: 10 }),
     ]));
-    expect(state.factions[0].yields.gold).toBe(-39);
-    expect(citySummaries(state).map(city => city.gold)).toEqual([2, -23, -18]);
+    expect(state.factions[0].yields.gold).toBe(1);
+    expect(citySummaries(state).map(city => city.gold)).toEqual([2, -3, 2]);
     nextEconomyTick(state);
-    expect(state.factions[0].gold).toBe(222);
+    expect(state.factions[0].gold).toBe(302);
     expect(state.factions[0].incomeTotals?.gold).toBe(42);
-    expect(goldFlowSummary(state, state.factions[0])).toMatchObject({ totalInputs: 42, totalOutlays: 120, net: -78 });
+    expect(goldFlowSummary(state, state.factions[0])).toMatchObject({ totalInputs: 42, totalOutlays: 40, net: 2 });
     expect(state.factions[0].population).toBe(30);
   });
 
   it('stops maintenance at zero across repeated ticks and lets later income accumulate without arrears', () => {
     const state = fixture([10, 10]); state.factions[0].gold = 5;
+    const towers = [building(10, 'woodenTower', 13), building(11, 'tower', 32), building(12, 'woodenTower', 33)];
+    entityStore(state).buildings.add(...towers);
     for (let i = 0; i < 3; i++) { nextEconomyTick(state); expect(state.factions[0].gold).toBe(0); }
     expect(state.factions[0].gold).toBe(0);
     state.buildings.find(candidate => candidate.id === 2)!.hp = 0;
+    for (const tower of towers) tower.hp = 0;
     nextEconomyTick(state);
     expect(state.factions[0].gold).toBe(14);
     expect(state.factions[0].yields.gold).toBe(14);
@@ -123,11 +126,11 @@ describe('maintenance through the live economy', () => {
     const summary = goldFlowSummary(state, faction);
     expect(summary.inputs).toMatchObject([{ category: 'taxes', amount: 14 }]);
     expect(summary.outlays).toEqual(expect.arrayContaining([
-      expect.objectContaining({ category: 'army', amount: 11.5 }),
+      expect.objectContaining({ category: 'army', amount: 12 }),
       expect.objectContaining({ category: 'science', amount: 3.5 }),
     ]));
-    expect(summary.totalOutlays).toBe(15);
-    expect(summary.net).toBe(-1);
+    expect(summary.totalOutlays).toBe(15.5);
+    expect(summary.net).toBe(-1.5);
     expect(faction.gold - before).toBe(summary.net);
   });
 });

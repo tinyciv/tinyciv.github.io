@@ -2,11 +2,11 @@ import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it } from 'vitest';
 import { geographicDiscoveryAt, initializeTreasureChests, TREASURE_GOLD, updateTreasureChests } from '../src/game/treasure';
 import { updateFog } from '../src/game/fog';
-import { travelTimeMap } from '../src/game/pathfinding';
+import { traversable, travelTimeMap } from '../src/game/pathfinding';
 import type { GameState } from '../src/game/types';
 import { createGame } from '../src/game/simulation';
 import { generateWorld } from '../src/world/generator';
-import { ridgeFootprintAllowed, ridgeGroundWalkable, ridgeIsLedge } from '../src/game/ridges';
+import { reliefGroundWalkable } from '../src/game/relief';
 import { nativeFixture } from './helpers/native-fixture';
 
 function fixture(): GameState {
@@ -72,11 +72,10 @@ describe('wilderness treasure', () => {
             expect(fog.explored[cell]).toBe(0);
             expect(state.world.tiles[cell].overlay).toBe('none');
             expect(['ocean', 'coast', 'river', 'lake']).not.toContain(state.world.tiles[cell].terrain);
-            expect(ridgeFootprintAllowed(state.world, chest.x, chest.y)).toBe(true);
+            expect(traversable(state.world, chest.x, chest.y)).toBe(true);
         }
         for (const unit of state.units) if (!unit.inside) {
-            expect(ridgeGroundWalkable(state.world, unit.x, unit.y)).toBe(true);
-            expect(ridgeIsLedge(state.world, unit.x, unit.y)).toBe(false);
+            expect(reliefGroundWalkable(state.world, unit.x, unit.y)).toBe(true);
         }
     });
 
@@ -110,12 +109,13 @@ describe('wilderness treasure', () => {
         initializeTreasureChests(field); expect(field.treasures).toEqual([]);
     });
 
-    it('keeps treasure off ledges, ramps and their landings while allowing reachable plateau floor', () => {
+    it('prefers reachable open ground over rock footprints', () => {
         const state = fixture(), { world } = state;
-        for (let y = 32; y <= 45; y++) for (let x = 40; x <= 54; x++) world.tiles[y * world.width + x].ridge = 1;
-        world.tiles[38 * world.width + 40].stair = 'east'; world.revision = 1;
+        const rocks = [[45, 32], [40, 38], [39, 38], [41, 38]];
+        for (const [x, y] of rocks) world.tiles[y * world.width + x].rockRelief = 0;
+        world.revision = 1;
         const fog = updateFog(state); fog.explored.fill(1);
-        for (const [x, y] of [[45, 32], [40, 38], [39, 38], [41, 38], [46, 38]]) fog.explored[y * world.width + x] = 0;
+        for (const [x, y] of [...rocks, [46, 38]]) fog.explored[y * world.width + x] = 0;
         initializeTreasureChests(state);
         expect(state.treasures).toEqual([{ id: 1, x: 46, y: 38 }]);
     });

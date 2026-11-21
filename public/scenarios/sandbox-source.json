@@ -4,8 +4,8 @@
   "width": 80,
   "height": 60,
   "simulatedSeconds": 0,
-  "wallSeconds": 0.300334333,
-  "bytes": 224606,
+  "wallSeconds": 0.48303887500000003,
+  "bytes": 224546,
   "cities": [
     {
       "id": 1,
@@ -14,7 +14,8 @@
       "y": 33,
       "population": 20,
       "housing": 20,
-      "food": 9.09333333333333
+      "food": 9.333333333333329,
+      "settlementTier": 0
     }
   ],
   "resources": {
@@ -22,9 +23,9 @@
     "copper": 4,
     "iron": 9,
     "gold": 15,
-    "stone": 9,
-    "salt": 31,
-    "olives": 71,
+    "stone": 10,
+    "salt": 17,
+    "olives": 20,
     "fish": 138
   },
   "whales": 1,
@@ -52,15 +53,6 @@
       "developed": false
     }
   ],
-  "bundleSha256": "ccbd97dc2d447f94ef2f53aaebfb285f15dc05588f7a31ebd90a64ab6b58015a",
-  "wasmSha256": "1bf9531829fe4c325368e97cca98110f1f158953ec9555edc526d9af510f4c1b",
-  "snowBands": {
-    "snowTiles": 33,
-    "rowRange": [
-      5,
-      6
-    ],
-    "generatorWasmSha256": "07af81acda56df7d0adc68ea32c10b69e97b9328cf16983ca71fdb25847bfb2f",
-    "previousSha256": "e0b1d41c8ee939e091555146371457a5f954534b3c1fdb9c2d1a3dca78398dce"
-  }
+  "bundleSha256": "9585ae301e16add4f38f95805dee4e2850dfff47a23576226ba1eba722bbacbe",
+  "wasmSha256": "77813dc8616a43991047876b82203d4ded9f898156f8862a5a5483148d65ef20"
 }

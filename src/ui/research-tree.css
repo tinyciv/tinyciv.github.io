@@ -14,7 +14,7 @@
 .research-funding { flex: none; display: grid; grid-template-columns: 245px minmax(80px, 1fr); align-items: center; gap: 20px; padding: 5px 10px; border: 1px solid #6d5938; background: var(--popup-inset); }
 .building-activity.is-library .research-funding label { min-height: 22px; gap: 10px; font-size: 16px; white-space: nowrap; }
 .research-allocation-value { color: var(--science-color); font-size: 18px; min-width: 38px; text-align: right; margin-left: auto; }
-.research-funding input[type="range"] { --allocation: 25%; width: 100%; min-width: 0; height: 20px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
+.research-funding input[type="range"] { --allocation: 10%; width: 100%; min-width: 0; height: 20px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
 .research-funding input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: linear-gradient(to right, var(--science-color) 0 var(--allocation), #17120e var(--allocation) 100%); border: 1px solid var(--popup-edge); border-radius: 2px; }
 .research-funding input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 20px; margin-top: -8px; border: 2px ridge var(--science-color); border-radius: 2px; background: var(--science-color); box-shadow: 0 1px 3px #000; }
 .research-funding input[type="range"]::-moz-range-track { height: 6px; background: #17120e; border: 1px solid var(--popup-edge); }
@@ -35,7 +35,6 @@
 .research-edge .research-edge-halo { stroke: #30261d; stroke-width: 5px; stroke-linecap: round; }
 .research-edge path { vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .research-edge.is-open { stroke: #b3a772; }.research-edge.is-selected { stroke: #f0d187; stroke-width: 2; }
-.activity-research .research-edge:is(.is-open, .is-selected) { stroke: var(--science-color); }
 .research-edge.is-open .research-edge-line { opacity: .85; }.research-edge.is-selected .research-edge-line { opacity: 1; }
 .building-activity.is-library .research-node {
   position: absolute; width: var(--research-card-width); height: var(--research-card-height);

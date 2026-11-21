@@ -1,0 +1,225 @@
+{
+  "provider": "PixelLab",
+  "referenceAtlas": "public/assets/resources/ore-formations/atlas.webp",
+  "review": "scratch/2026-11-19-native-ore-mines",
+  "sha256": "b38831442ad1d01ecfb7c7f62d15ce578c15bcad69dc9224613effbb37373202",
+  "nativePixelsPerTile": 16,
+  "sprites": [
+    {
+      "variant": "copper-1B",
+      "state": "deposit",
+      "source": "copper-1B/deposit.png",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "sha256": "573cf34ff889f10fec854d7876f50ee191b9cc369523c544f3d18736c4f1eadd"
+    },
+    {
+      "variant": "copper-1B",
+      "state": "developed",
+      "source": "copper-1B/frames/00.png",
+      "rect": [
+        0,
+        48,
+        32,
+        32
+      ],
+      "sha256": "0eba3b8e047ad96cc7508b1bd63a1b0d9f0e3a1a28c22264355a2dc390fc08b2"
+    },
+    {
+      "variant": "copper-2B",
+      "state": "deposit",
+      "source": "copper-2B/deposit.png",
+      "rect": [
+        32,
+        0,
+        48,
+        48
+      ],
+      "sha256": "b88ed10eb11a88813d146d7ee6935163aeb6978c2fb2864edac5fa471377f6ce"
+    },
+    {
+      "variant": "copper-2B",
+      "state": "developed",
+      "source": "copper-2B/frames/00.png",
+      "rect": [
+        32,
+        48,
+        48,
+        48
+      ],
+      "sha256": "0314eb566739b04f8390f198ab7ad9ecf98114d6f0a02aaed165b453cf80963e"
+    },
+    {
+      "variant": "copper-3B",
+      "state": "deposit",
+      "source": "copper-3B/deposit.png",
+      "rect": [
+        80,
+        0,
+        80,
+        48
+      ],
+      "sha256": "ec6ae9e66b1d72a494f01bb15298930dd1fdc7b564f9c5a389cca3742d97baaf"
+    },
+    {
+      "variant": "copper-3B",
+      "state": "developed",
+      "source": "copper-3B/frames/00.png",
+      "rect": [
+        80,
+        48,
+        80,
+        48
+      ],
+      "sha256": "2aa3ad67e67f99eaf35a108b9c5f3c22a281b7259a03a13d0a9dcb74b463df4f"
+    },
+    {
+      "variant": "iron-1B",
+      "state": "deposit",
+      "source": "iron-1B/deposit.png",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "sha256": "841ca1a4553af1d2298d888e09ccfee039d502a9a18fe2b284f0df76b600ecea"
+    },
+    {
+      "variant": "iron-1B",
+      "state": "developed",
+      "source": "iron-1B/frames/00.png",
+      "rect": [
+        0,
+        144,
+        32,
+        32
+      ],
+      "sha256": "0feb9b038b1ecc853ff05573aa7f1039f968f971b2af2a50b50ba39613c10e71"
+    },
+    {
+      "variant": "iron-2B",
+      "state": "deposit",
+      "source": "iron-2B/deposit.png",
+      "rect": [
+        32,
+        96,
+        48,
+        48
+      ],
+      "sha256": "8e83ebacd35914a0dc53c93ec5beab8e618f2e7acf2965ededab7a6110a687df"
+    },
+    {
+      "variant": "iron-2B",
+      "state": "developed",
+      "source": "iron-2B/frames/00.png",
+      "rect": [
+        32,
+        144,
+        48,
+        48
+      ],
+      "sha256": "92931c4775e491a6673f0cd53ff79992c521ce1bbc15ae53d45ff58cd2d893e9"
+    },
+    {
+      "variant": "iron-3B",
+      "state": "deposit",
+      "source": "iron-3B/deposit.png",
+      "rect": [
+        80,
+        96,
+        80,
+        48
+      ],
+      "sha256": "9bc32b46df0120b313faef874fb82b416bdbda83899e1d4ec72f7238fd3fdf46"
+    },
+    {
+      "variant": "iron-3B",
+      "state": "developed",
+      "source": "iron-3B/frames/00.png",
+      "rect": [
+        80,
+        144,
+        80,
+        48
+      ],
+      "sha256": "14e2e2d391deadb7061d4f9808f75e095375394a57b12df4cc22b9ee1814c844"
+    },
+    {
+      "variant": "gold-1B",
+      "state": "deposit",
+      "source": "gold-1B/deposit.png",
+      "rect": [
+        0,
+        192,
+        32,
+        32
+      ],
+      "sha256": "ffca0a1390ae2702e6d2a3b31d9ae4a62432b0bfaebea7a9df93c3ae166c523c"
+    },
+    {
+      "variant": "gold-1B",
+      "state": "developed",
+      "source": "gold-1B/frames/00.png",
+      "rect": [
+        0,
+        240,
+        32,
+        32
+      ],
+      "sha256": "c169f6d371d095cc0596dea2b2c691c17157ac6a664a6b637c1fb4d3436564bb"
+    },
+    {
+      "variant": "gold-2B",
+      "state": "deposit",
+      "source": "gold-2B/deposit.png",
+      "rect": [
+        32,
+        192,
+        48,
+        48
+      ],
+      "sha256": "f95b89d4caa57e0d532434287e5445b682361151a437870e971ce8b93b0727e1"
+    },
+    {
+      "variant": "gold-2B",
+      "state": "developed",
+      "source": "gold-2B/frames/00.png",
+      "rect": [
+        32,
+        240,
+        48,
+        48
+      ],
+      "sha256": "bc39f4d4546d9e2b13c87fd2fc73c4e49d26c04c2f1efa331aa4b84d4216f589"
+    },
+    {
+      "variant": "gold-3B",
+      "state": "deposit",
+      "source": "gold-3B/deposit.png",
+      "rect": [
+        80,
+        192,
+        80,
+        48
+      ],
+      "sha256": "c43a4df4bb779411ed004a40198d96d42bf2faed7f65b716366d124e2bc18f8f"
+    },
+    {
+      "variant": "gold-3B",
+      "state": "developed",
+      "source": "gold-3B/frames/00.png",
+      "rect": [
+        80,
+        240,
+        80,
+        48
+      ],
+      "sha256": "6dd386c807e1bdfe0c1d84d487e7b4ef4ba3e70b5cf3d7a4695535798fc3c79b"
+    }
+  ]
+}

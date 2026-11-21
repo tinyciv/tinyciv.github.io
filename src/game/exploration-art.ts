@@ -1,14 +1,20 @@
 import { runtimeArtUrl } from './runtime-art';
 import { gameFont } from './game-font';
-let sprites: HTMLImageElement[] = [];
+const spriteNames = [
+    ['ruins-a', 'ruins-b', 'ruins-c'],
+    ['hut-a', 'hut-b'],
+    ['fossil-a', 'fossil-b', 'fossil-c'],
+];
+let sprites: HTMLImageElement[][] = [];
 export async function loadExplorationArt(): Promise<void> {
-    sprites = await Promise.all(['ruins-a', 'ruins-b', 'ruins-c', 'hut-a', 'hut-b', 'hut-c'].map(name => new Promise<HTMLImageElement>((resolve, reject) => {
+    const load = (name: string) => new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image(); image.onload = () => resolve(image); image.onerror = reject;
         image.src = runtimeArtUrl(`${import.meta.env.BASE_URL}assets/exploration/${name}.png`);
-    })));
+    });
+    sprites = await Promise.all(spriteNames.map(group => Promise.all(group.map(load))));
 }
 export function drawExplorationSite(c: CanvasRenderingContext2D, kind: number, variant: number): void {
-    const image = sprites[kind * 3 + variant];
+    const image = sprites[kind]?.[variant];
     c.imageSmoothingEnabled = false;
     if (image) c.drawImage(image, 0, 0);
 }

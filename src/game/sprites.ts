@@ -17,6 +17,7 @@ import { drawFordStones, type FordAxis } from './ford-art';
 import { drawPalace } from './palace-sprite';
 import { drawFrontierVillage } from './frontier-village-art';
 import { drawFort } from './fort-art';
+import { drawBarbarianLair } from './barbarian-lair-art';
 import { drawPunyWall } from './wall-sprites';
 import { drawStoneBridge } from './stone-bridge-art';
 import { drawPalisade } from './palisade-art';
@@ -34,12 +35,13 @@ import { drawArcheryRange } from './archery-art';
 import { drawScoutsLodge } from './scout-art';
 import { drawBlacksmith } from './blacksmith-art';
 import { drawGoldMine } from './resource-art';
+import type { RockPalette } from './rock-range-art';
 import { drawHealerShack } from './healer-art';
 import { drawStable } from './cavalry-art';
 import { drawBallista } from './siege-art';
 import { drawCannon } from './cannon-art';
 import { drawGuardPost } from './guard-post-art';
-import { drawWildlife } from './wildlife-art';
+import { drawWildlife, wildlifeKind } from './wildlife-art';
 import { drawMerchant } from './merchant-art';
 import { HOUSE_WELL_OFFSET } from './house-wells';
 import { dockArtBounds, drawDock, drawRowboat, rowboatOccupant } from './naval-art';
@@ -83,10 +85,11 @@ export function drawUnit(c: Ctx, unit: Unit, x: number, y: number, size: number,
   if (unit.barbarianGalley) { if (!unit.inside) drawBarbarianGalley(c,unit,passenger,x,y,size,time,color,firearm);return; }
   if (unit.kind === 'sailboat') { if (!unit.inside) drawLeaderGalley(c, unit, passenger, x, y, size, time, color, firearm); return; }
   if (unit.aboardRiverTrade) { if (!unit.inside) drawTradingBoat(c, unit, x, y, size, time); return; }
-  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'pikeman' && unit.kind !== 'musketman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'slinger' && unit.kind !== 'worker' && unit.kind !== 'boar' && unit.kind !== 'marshBird' && unit.kind !== 'merchant') return;
+  const animal = wildlifeKind(unit);
+  if (unit.kind !== 'leader' && unit.kind !== 'warrior' && unit.kind !== 'swordsman' && unit.kind !== 'spearman' && unit.kind !== 'pikeman' && unit.kind !== 'musketman' && unit.kind !== 'horseman' && unit.kind !== 'horseArcher' && unit.kind !== 'knight' && unit.kind !== 'archer' && unit.kind !== 'scout' && unit.kind !== 'militia' && unit.kind !== 'slinger' && unit.kind !== 'worker' && !animal && unit.kind !== 'merchant') return;
   setup(c, x, y, size);
   if (unit.observationPost && !unit.observationPost.retreating) drawObservationCampfire(c, time);
-  if (unit.kind === 'boar' || unit.kind === 'marshBird') drawWildlife(c, unit, time);
+  if (animal) drawWildlife(c, unit, time);
   else if (unit.kind === 'merchant') drawMerchant(c, unit, time);
   else if (unit.explorationRefugee) drawRefugee(c, unit, time);
   else drawPerson(c, unit, time, color, firearm);
@@ -151,7 +154,8 @@ export function buildingImageAnchor(b: Building, attachedWell = false): { x: num
 
 /** Attached wells use their front-left overlay. Watchtowers use the approved
  * timber artwork unless supported by a completed stone wall. */
-export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: number, time: number, color: string, links: Connections = NO_CONNECTIONS, gate?: Connections, attached = false, towerWall?: TowerWallKind): void {
+export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: number, time: number, color: string, links: Connections = NO_CONNECTIONS,
+  gate?: Connections, attached = false, towerWall?: TowerWallKind, minePalette?: RockPalette): void {
   // Farms are four real crop plots. Their bookkeeping anchor has no house,
   // tent, or other solid artwork sitting over the middle field.
   if (isFarmKind(b.kind) && !b.construction) return;
@@ -171,16 +175,16 @@ export function drawBuilding(c: Ctx, b: Building, x: number, y: number, size: nu
     case 'whalingPost': if (!drawWhalingPost(c)) drawWoodenHouse(c, b, 0, 0, 64, color); break;
     case 'dock': drawDock(c, b, 0, 0, 32); break;
     case 'palace':
-      drawPalace(c, 0, 0, 64, color, b.palaceLevel);
+      drawPalace(c, 0, buildingArtTop(b) * 32, 64, color, b.palaceLevel, b.settlementTier);
       break;
     case 'frontierVillage': drawFrontierVillage(c, 0, 0, 64, color); break;
+    case 'barbarianLair': drawBarbarianLair(c, 96); break;
     case 'villageTent': drawVillageTent(c, 0, 0, 32, color); break;
     case 'camp': case 'shack': case 'cottage': break; // Farm aliases render their fields separately.
     // Approved existing buildings stand in until the new art is selected.
-    case 'hospital': drawThermalBath(c, 0, 0, 32, time); break;
     case 'apartments': drawPalace(c, 0, 0, 64, color, 1); break;
     case 'factory': drawFoundry(c); break;
-    case 'goldMine': drawGoldMine(c, b.faction >= 0); break;
+    case 'goldMine': drawGoldMine(c, b.faction >= 0, minePalette); break;
     case 'house': drawWoodenHouse(c, b, 0, 0, 32, color); break;
     case 'tower':
       guardTower(c);

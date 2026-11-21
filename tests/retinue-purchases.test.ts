@@ -126,7 +126,7 @@ describe('purchased faction retinue capacity', () => {
     expect(faction.yields.gold).toBe(-10); expect(faction.incomeTotals?.gold ?? 0).toBe(0);
     expect(retinue(state)).toHaveLength(0);
     expect(citySummaries(state)[0].gold).toBe(-10);
-    expect(factionCommittedBudget(state, faction)).toEqual({ upkeep: 10, surplus: -10 });
+    expect(factionCommittedBudget(state, faction)).toMatchObject({ upkeep: 10, surplus: -10 });
   });
 
   it.each([0, 1])('reserves the next capacity bill before automatic farm orders (gold shortfall: %i)', shortfall => {
@@ -148,7 +148,7 @@ describe('purchased faction retinue capacity', () => {
     entityStore(state).buildings.add({ ...first, id: 2, x: 30, unhousedResidents: 0 });
     entityStore(state).units.add({ ...person(200, 'warrior', 12, 14), home: first.id });
     expect(citySummaries(state).map(city => city.gold)).toEqual([3.5, -37.5]);
-    expect(factionCommittedBudget(state, faction)).toEqual({ upkeep: 47.5, surplus: -34 });
+    expect(factionCommittedBudget(state, faction)).toMatchObject({ upkeep: 48, surplus: -34 });
     economyTick(state);
     expect(faction.gold).toBe(66); expect(faction.yields.gold).toBe(-34);
     expect(citySummaries(state).reduce((sum, city) => sum + city.gold, 0)).toBe(faction.yields.gold);

@@ -36,7 +36,7 @@
     },
     {
       "file": "existing-battle-dust-16.png",
-      "source": "public/assets/building-destruction/1x1/destruction.png",
+      "source": "scratch/2026-11-14-building-destruction/1B/exports/destruction.png",
       "source_rectangle": [
         224,
         0,

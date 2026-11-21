@@ -29,9 +29,8 @@ function adjacent(cell: number, width: number, height: number, visit: (next: num
 }
 const sea = (tile: Tile) => tile.terrain === 'ocean' || tile.terrain === 'coast';
 
-/** Retain broad geology while allowing rivers to incise the native ledge
- * footprint. Sampling a warped, smoothed surface produces changing valley
- * directions instead of routing around every individual ridge tile. */
+/** Retain broad geology while sampling a warped, smoothed surface so river
+ * valleys can change direction across the landscape. */
 function planningSurface(world: World, parameters: LandscapeParameters): Tile[] {
   const { tiles, width, height } = world;
   const noise = createNoise2D(environmentRandom(`${world.seed}:river-valleys`));
@@ -151,6 +150,7 @@ function windingDrainage(tiles: Tile[], width: number, height: number, seed: str
     const next = directions[cell]; if (next >= 0) flow[next] += flow[cell];
   }
   for (const lake of lakes) {
+    if (tiles[lake[0]].lakeShape === 'forest-pond') continue;
     const outlet = lake.find(cell => directions[cell] >= 0 && lakeGroup[directions[cell]] !== lakeGroup[cell]);
     if (outlet === undefined) continue;
     const outletPath = new Set<number>();
@@ -217,7 +217,7 @@ export function repairRiverDrainage(world: World): number {
  * leaves of real catchments, never independently drawn rivers or comb teeth. */
 export function generateRiverNetwork(world: World, parameters: LandscapeParameters = DEFAULT_LANDSCAPE_PARAMETERS): RiverNetwork {
   const { tiles, width, height } = world, count = tiles.length;
-  const originalRelief = Uint8Array.from(tiles, tile => Number(!!tile.ridge || !!tile.relief));
+  const originalRelief = Uint8Array.from(tiles, tile => Number(!!tile.relief));
   const virtual = planningSurface(world, parameters), drainage = windingDrainage(virtual, width, height, world.seed, parameters.riverMeander);
   const landCount = tiles.reduce((sum, tile) => sum + Number(!sea(tile)), 0);
   const developmentScale = Math.min(width, height) < 128 ? Math.min(1, width * height / (128 * 128)) : 1;
@@ -228,15 +228,19 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
     delete tiles[cell].channel; delete tiles[cell].channelWidth; delete tiles[cell].channelNext;
     const next = drainage.directions[cell]; if (next >= 0) parents[next].push(cell);
   }
-  // Every reservoir keeps its one real outlet, including lakes outside the
-  // selected major catchments. Marking a lake never replaces its terrain.
-  for (let cell = 0; cell < count; cell++) if (tiles[cell].terrain === 'lake') {
-    let at = cell;
-    while (at >= 0 && !sea(tiles[at]) && !skeleton[at]) { skeleton[at] = 1; at = drainage.directions[at]; }
-  }
+  // Reservoirs outside selected catchments keep a visible outlet. Small
+  // forest ponds only gain a visible outlet if the main routing selects one.
+  for (let cell = 0; cell < count; cell++)
+    if (tiles[cell].terrain === 'lake' && tiles[cell].lakeShape !== 'forest-pond') skeleton[cell] = 1;
   const leafOrder = graphOrder(tiles);
-  // Carve the connected bed before deriving canyon ledges. A downstream cap
-  // propagates any incision through the outlet, including level lake interiors.
+  // Pin every downstream receiver of the visible network before widening can
+  // change a bank receiver. Processing upstream cells first closes the chain.
+  for (const cell of leafOrder) {
+    const next = drainage.directions[cell];
+    if (skeleton[cell] && next >= 0 && !sea(tiles[next])) skeleton[next] = 1;
+  }
+  // A downstream cap propagates incision through the outlet, including level
+  // lake interiors.
   const bed = Float64Array.from(virtual, tile => tile.elevation);
   for (const cell of leafOrder) {
     if (!skeleton[cell] && tiles[cell].terrain !== 'lake') continue;
@@ -315,11 +319,10 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
         if (!lakeMargin[bank]) paint(bank);
       }
     }
-    // Route newly widened bank cells through water to their fixed spine. All
-    // visible centerline receivers stay pinned; the added water cannot drain
-    // into dry ground or introduce a receiver cycle.
+    // Only the sea and the pinned spine drain independently of bank cells.
+    // An isolated pond can drain through a bank and cannot also receive it.
     const bankDistance = new Int16Array(count).fill(-1), bankQueue: number[] = [];
-    for (let cell = 0; cell < count; cell++) if (WATER.has(tiles[cell].terrain) && (!painted[cell] || skeleton[cell])) {
+    for (let cell = 0; cell < count; cell++) if (skeleton[cell] || sea(tiles[cell])) {
       bankDistance[cell] = 0; bankQueue.push(cell);
     }
     for (let n = 0; n < bankQueue.length; n++) adjacent(bankQueue[n], width, height, next => {
@@ -338,7 +341,7 @@ export function generateRiverNetwork(world: World, parameters: LandscapeParamete
     const tile = tiles[cell];
     if (tile.terrain === 'river') continue;
     tile.terrain = 'lake'; tile.overlay = 'none'; tile.oxbow = true;
-    delete tile.ridge; delete tile.ridgeTier; delete tile.stair; delete tile.relief;
+    delete tile.relief;
     delete tile.palm; delete tile.beach;
   }
   const finalOrder = graphOrder(tiles);
@@ -373,7 +376,7 @@ export function placeNetworkFords(world: World): boolean {
   }
   const oldFords = tiles.map(tile => tile.overlay === 'ford' ? tile.fordAxis : undefined);
   for (const tile of tiles) if (tile.terrain === 'river' && tile.overlay === 'ford') { tile.overlay = 'none'; delete tile.fordAxis; }
-  const dry = (cell: number) => !!tiles[cell] && !WATER.has(tiles[cell].terrain) && !tiles[cell].ridge && !tiles[cell].stair
+  const dry = (cell: number) => !!tiles[cell] && !WATER.has(tiles[cell].terrain)
     && tiles[cell].overlay !== 'volcano' && tiles[cell].overlay !== 'glacier';
   const install = (cell: number): boolean => {
     const tile = tiles[cell], next = tile.channelNext ?? -1;
@@ -388,7 +391,7 @@ export function placeNetworkFords(world: World): boolean {
         const at = cell + step * distance * sign;
         if (at < 0 || at >= tiles.length || axis === 'horizontal' && Math.floor(at / width) !== Math.floor(cell / width)) return false;
         if (dry(at)) { bank = true; break; }
-        if (tiles[at].terrain !== 'river' || tiles[at].ridge || tiles[at].stair || parents[at].length > 1) return false;
+        if (tiles[at].terrain !== 'river' || parents[at].length > 1) return false;
         cells.push(at);
       }
       if (!bank) return false;

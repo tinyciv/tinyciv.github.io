@@ -111,16 +111,16 @@ describe('Infantry Drill commands and ownership', () => {
     } finally { searches.mockRestore(); }
   });
 
-  it.each([0, 1, 4, 7])('rejects activation with %i soldiers, excluding the Leader from the requirement', count => {
+  it.each([0, 1, 4])('rejects activation with %i soldiers, excluding the Leader from the requirement', count => {
     const { state, leader } = fixture(count, 'field', false);
     expect(infantryFormationSoldierCount(state)).toBe(count);
-    expect(toggleInfantryFormation(state)).toEqual({ ok: false, message: 'Formation requires 8 living retinue soldiers.' });
+    expect(toggleInfantryFormation(state)).toMatchObject({ ok: false, message: expect.stringContaining('Formation needs 5 available soldiers') });
     expect(leader.infantryFormation).toBeUndefined();
     expect(state.units.every(unit => unit.infantryDrillLeader === undefined && unit.morale === 100)).toBe(true);
   });
 
   it('counts living available retinue soldiers, excluding guards, scouts, embarked troops and distant recruits', () => {
-    const { state, leader } = fixture(7, 'field', false);
+    const { state, leader } = fixture(4, 'field', false);
     const excluded = [
       soldier(90, 9, 14, 'scout'), { ...soldier(91, 9, 14), guardPost: 200 },
       { ...soldier(92, 9, 14), hp: 0 }, { ...soldier(93, 9, 14), inside: true },
@@ -129,15 +129,15 @@ describe('Infantry Drill commands and ownership', () => {
       { ...soldier(98, 35, 14), joiningRetinue: true }, soldier(99, 9, 14, 'warrior', 1),
     ];
     entityStore(state).units.add(...excluded);
-    expect(infantryFormationSoldierCount(state)).toBe(7);
+    expect(infantryFormationSoldierCount(state)).toBe(4);
     expect(toggleInfantryFormation(state).ok).toBe(false);
-    const eighth = soldier(200, leader.x + 1, leader.y); entityStore(state).units.add(eighth);
+    const fifth = soldier(200, leader.x + 1, leader.y); entityStore(state).units.add(fifth);
     expect(toggleInfantryFormation(state).ok).toBe(true);
-    expect(eighth.infantryDrillLeader).toBe(leader.id);
+    expect(fifth.infantryDrillLeader).toBe(leader.id);
     expect(excluded.every(unit => unit.infantryDrillLeader === undefined)).toBe(true);
   });
 
-  it.each([5, 6, 7])('sustains an active formation with %i survivors but needs eight to reform', remaining => {
+  it.each([5, 6, 7])('sustains and reforms a formation with %i survivors', remaining => {
     const { state, leader, members } = fixture(8); step(state);
     for (const member of members.slice(remaining)) member.hp = 0;
     expect(enforceInfantryFormationStrength(state)).toBe(false);
@@ -146,7 +146,7 @@ describe('Infantry Drill commands and ownership', () => {
     expect(leader.infantryFormation!.slots).toHaveLength(remaining);
     expect(leader.morale).toBe(100);
     expect(toggleInfantryFormation(state).ok).toBe(true);
-    expect(toggleInfantryFormation(state).ok).toBe(false);
+    expect(toggleInfantryFormation(state).ok).toBe(true);
   });
 
   it('collapses below five, routes surviving participants including the Leader, and removes their bonuses immediately', () => {

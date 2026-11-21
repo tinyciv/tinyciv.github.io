@@ -166,18 +166,19 @@ describe('Leader construction', () => {
   it.each(['forest', 'jungle', 'swamp'] as const)('clears %s under a manually placed house', overlay => {
     const state = fixture(), tile = state.world.tiles[9 * 32 + 9];
     tile.overlay = overlay; state.world.revision = 1;
+    if (overlay === 'forest') tile.biome = 'forest';
     expect(validateBuildAt(state, 'house', 9, 9).ok).toBe(true);
     expect(tile.overlay).toBe(overlay);
     expect(buildAt(state, 'house', 9, 9).ok).toBe(true);
     expect(tile.overlay).toBe('none');
   });
 
-  it.each(['water', 'ledge', 'occupied', 'outside borders'] as const)('still rejects physically invalid or unowned house sites: %s', reason => {
+  it.each(['water', 'rock', 'occupied', 'outside borders'] as const)('still rejects physically invalid or unowned house sites: %s', reason => {
     const state = fixture(), point = reason === 'outside borders' ? { x: 31, y: 0 } : { x: 9, y: 9 };
     state.units[0].x = point.x + .5; state.units[0].y = point.y + .5;
     const tile = state.world.tiles[point.y * 32 + point.x];
     if (reason === 'water') tile.terrain = 'lake';
-    if (reason === 'ledge') tile.ridge = 1;
+    if (reason === 'rock') Object.assign(tile, { rockHost: point.y * 32 + point.x, rockRelief: 0 });
     if (reason === 'occupied') extra(state, 'wall', point.x, point.y);
     state.world.revision = 1;
     const before = JSON.stringify(state);

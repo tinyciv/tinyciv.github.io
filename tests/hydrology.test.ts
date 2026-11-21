@@ -56,12 +56,8 @@ describe('terrain-driven watersheds', () => {
     expect(riverRadius(100, 1.2)).toBeCloseTo(riverRadius(100) * 1.2);
   });
 
-  it('publishes downhill flow through a complete generated world without flooding ledges', () => {
+  it('publishes downhill flow through a complete generated world', () => {
     const world = generateWorld('watershed-invariants', 160, 128); audit(world.tiles);
-    for (const tile of world.tiles) if (tile.ridge || tile.stair) {
-      if (tile.terrain === 'river' && tile.ridge && !tile.stair) expect(tile.riverArt).toBe('banked');
-      else expect(['river', 'lake', 'coast', 'ocean']).not.toContain(tile.terrain);
-    }
     for (const tile of world.tiles) if (tile.terrain === 'river' && tile.drainage! >= 0)
       expect(['river', 'lake', 'coast', 'ocean']).toContain(world.tiles[tile.drainage!].terrain);
     const inland = world.tiles.filter(tile => tile.drainage! >= 0);
@@ -70,7 +66,7 @@ describe('terrain-driven watersheds', () => {
     expect(output).toBeCloseTo(input, 6);
   }, 15000);
 
-  it('keeps smoothed river banks cardinally connected around protected ridge aprons', () => {
+  it('keeps smoothed river banks cardinally connected to the coast', () => {
     const world = generateWorld('connected-world-16'), reached = new Uint8Array(world.tiles.length), queue: number[] = [];
     const water = new Set(['river', 'lake', 'coast', 'ocean']);
     world.tiles.forEach((tile, cell) => {

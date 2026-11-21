@@ -5,7 +5,9 @@ import { grainStorageMultiplier } from './research-bonuses';
 import { cityResidents, invalidateCitySummarySnapshot, withCitySummarySnapshot, withLiveCitySummaries, type CityResidents } from './cities';
 import { palaceFoodProduction } from './city-support';
 import { cityOwnership } from './city-ownership';
+import { nearestReadyPalace } from './structure-index';
 import { saltFoodConsumptionMultiplier } from './resource-development';
+import { settlementPopulationLimit } from './settlement-upgrades';
 
 export interface GovernorPermissions { farms: boolean; housing: boolean; }
 const DEFAULT_PERMISSIONS: Readonly<GovernorPermissions> = Object.freeze({ farms: true, housing: true });
@@ -86,7 +88,7 @@ export function governingPalace(state: GameState, point: Point, faction: number)
 export function pauseCityConstruction(state: GameState, building: Building): void {
   const kind = isFarmKind(building.kind) ? 'camp' : (building.kind === 'house' || building.kind === 'apartments') ? 'house' : undefined;
   if (!kind) return;
-  const palace = governingPalace(state, { x: building.x + buildingWidth(building) / 2, y: building.y + buildingHeight(building) / 2 }, building.faction);
+  const palace = nearestReadyPalace(state, building.faction, building.x + buildingWidth(building) / 2, building.y + buildingHeight(building) / 2);
   if (palace) (palace.governorPauseUntil ??= {})[kind] = state.time + 30;
 }
 
@@ -111,7 +113,8 @@ export function cityDevelopmentNeeds(state: GameState, palace: Building): CityDe
     && ((building.kind === 'house' || building.kind === 'apartments') ? ownership.building(building)?.id === palace.id
       : isFarmKind(building.kind) && farmCity(building)?.id === palace.id));
   const population = city?.population ?? 0;
-  const housing = palace.capacity + buildings.filter(building => (building.kind === 'house' || building.kind === 'apartments')).reduce((sum, house) => sum + house.capacity, 0);
+  const limit = settlementPopulationLimit(palace);
+  const housing = Math.min(limit, palace.capacity + buildings.filter(building => (building.kind === 'house' || building.kind === 'apartments')).reduce((sum, house) => sum + house.capacity, 0));
   const collection = farmCollectionQuery(state, palace);
   const shelfLife = FIELD_SPOIL_SECONDS * grainStorageMultiplier(state.factions.find(faction => faction.id === palace.faction));
   // Budget surviving deliveries, not grain that will spoil around a long bend.
@@ -125,7 +128,7 @@ export function cityDevelopmentNeeds(state: GameState, palace: Building): CityDe
   const permissions = governorPermissions(palace);
   const priority = !buildingReady(palace) ? null
     : permissions.farms && foodCapacity + 1e-7 < foodTarget ? 'farm'
-    : permissions.housing && foodCapacity > population ? 'house' : null;
+    : permissions.housing && housing < limit && population < limit && foodCapacity > population ? 'house' : null;
   const result: CityDevelopmentNeeds = { population, housing, foodCapacity, foodTarget, priority };
   scope?.needs.set(palace, result);
   return result;

@@ -41,8 +41,9 @@ export function hasSightCover(world: World | undefined, source: Point, radius: n
 export function sightDistance(world: World | undefined, source: Point, x: number, y: number, limit = Infinity): number {
     const dx = x - source.x, dy = y - source.y, distance = Math.hypot(dx, dy);
     if (!world || !world.tiles.length || !distance || distance > limit) return distance;
-    if (!rustEngine.terrain_rays_clear(mountainTerrainHandle(world), source.x, source.y, x, y, 1)) return Infinity;
-    let tileX = Math.floor(source.x), tileY = Math.floor(source.y), t = 0, cost = 0;
+    let cost = rustEngine.terrain_rays_sight_penalty(mountainTerrainHandle(world), source.x, source.y, x, y);
+    if (!Number.isFinite(cost) || cost > limit) return cost;
+    let tileX = Math.floor(source.x), tileY = Math.floor(source.y), t = 0;
     const stepX = Math.sign(dx), stepY = Math.sign(dy);
     const deltaX = dx ? 1 / Math.abs(dx) : Infinity, deltaY = dy ? 1 / Math.abs(dy) : Infinity;
     let nextX = dx ? (stepX > 0 ? tileX + 1 - source.x : source.x - tileX) / Math.abs(dx) : Infinity;

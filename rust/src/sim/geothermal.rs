@@ -1,7 +1,7 @@
 //! One-time landscape placement in the game's ECS. The host mirrors the four
 //! occupied cells into its existing impassable volcanic terrain layer.
 use bevy_ecs::prelude::*;
-use super::rng::Mulberry32;
+use super::{MAX_WORLD_DIMENSION, rng::Mulberry32};
 
 #[derive(Resource, Default)]
 pub struct Geothermal {
@@ -22,7 +22,8 @@ impl Geothermal {
     pub fn generate(&mut self, width: usize, height: usize, starts: usize, seed: u32) -> *const f64 {
         self.output.clear(); self.output.push(0.0);
         let cells = width.saturating_mul(height);
-        if width < 64 || height < 64 || cells > 512 * 512 || self.input.len() != (cells + starts) * 2 {
+        if !(64..=MAX_WORLD_DIMENSION).contains(&width) || !(64..=MAX_WORLD_DIMENSION).contains(&height)
+            || self.input.len() != (cells + starts) * 2 {
             return self.output.as_ptr();
         }
         let open = |cell: usize| self.input[cell * 2] > 0.0 && self.input[cell * 2 + 1] == 0.0;
@@ -44,7 +45,7 @@ impl Geothermal {
                 dx * dx + dy * dy < 22.0 * 22.0
             }) { continue; }
             // A two-cell ring of ordinary walkable land protects waterways,
-            // deposits and ledges, and leaves a complete local bypass. Forest
+            // deposits and other obstacles, and leaves a complete local bypass. Forest
             // is walkable; only trees inside the actual footprint are replaced.
             if !(y - 2..=y + 3).all(|ny| (x - 2..=x + 3).all(|nx| open(ny * width + nx))) { continue; }
             let inside = |nx, ny| (x..=x + 1).contains(&nx) && (y..=y + 1).contains(&ny);

@@ -26,14 +26,16 @@ import { canDepartFarm, departFarm, finishFarmTrip, farmDispatchWakeAt, invalida
 import { invalidateCourierSleep, wakeFarmCouriers } from './courier-sleep';
 import { markWorldChanged, worldRevisions, worldStructureRevision } from './world-revisions';
 import { ECONOMY_INTERVAL } from './economy-constants';
-import { reliefBuildable } from './relief';
-import { refreshWheatReadiness, wheatFieldGroups, type WheatGroups } from './wheat-fields';
+import { reliefFootprintAllowed } from './relief';
+import { wheatFieldGroups, type WheatGroups } from './wheat-fields';
 import { farmFieldIndex, invalidateFarmFieldIndex, type FarmFieldIndex } from './farm-index';
 import { simulationReadsActive, structureChangeRevision } from './simulation-reads';
 import { invalidateWorkerHomes, settlementBuildings, settlementWorkers } from './settlement-rosters';
 import { decisionDue, type DecisionClock } from './decision-schedule';
 import { CHECK_INTERVAL, recurringWorkElapsed } from './work-cadence';
 import { farmWorkGroups, type FarmWorkGroup, type FarmWorkGroups } from './farm-work-groups';
+import { recordFarmRoadCrossing } from './farm-roads';
+import { rustEngine } from './rust-engine';
 
 /** Larger, less frequent batches reduce courier trips without cutting production. */
 export const FIELD_HARVEST_SECONDS = 60;
@@ -182,7 +184,7 @@ export function isHome(building: Building): boolean {
 /** Reserve the future plot while its camp is being built, without growing food early. */
 export function isPendingCampField(state: GameState, x: number, y: number): boolean {
   const tile = tileAt(state.world, x, y);
-  if (!tile || !reliefBuildable(tile) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none')) return false;
+  if (!tile || !reliefFootprintAllowed(state.world, x, y) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none')) return false;
   return state.buildings.some(site => site.hp > 0 && site.construction && isHome(site) && !site.farmSuppressed
     && x >= site.x && y >= site.y && x < site.x + buildingWidth(site) && y < site.y + buildingHeight(site)
     && !state.buildings.some(building => building.id !== site.id && building.hp > 0 && building.kind !== 'irrigation' && x >= building.x && y >= building.y
@@ -317,7 +319,7 @@ export function synchronizeFarms(state: GameState): void {
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const x = camp.x + dx, y = camp.y + dy, key = y * state.world.width + x;
       const tile = tileAt(state.world, x, y);
-      if (!tile || !reliefBuildable(tile) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none') || reserved.has(key)) continue;
+      if (!tile || !reliefFootprintAllowed(state.world, x, y) || WATER.has(tile.terrain) || (!CLEARABLE.has(tile.overlay) && tile.overlay !== 'none') || reserved.has(key)) continue;
       const occupants = occupied.get(key);
       if (occupants && (occupants.size > 1 || !occupants.has(camp.id))) continue;
       const old = previousPlots.get(camp.id)?.get(key);
@@ -665,7 +667,6 @@ function scheduledHarvestState(state: GameState): ScheduledHarvests {
   }
   const wheat = wheatFieldGroups(state);
   synchronizeWheatGroups(state, camps, wheat);
-  refreshWheatReadiness(state);
   schedule = { index, farmMembers, time: state.time, camps, wheat,
     clock: harvestClock(state), dirty: new Set(index.source),
     claimed: new Set(index.source.filter(field => field.claimedBy !== undefined)),
@@ -746,7 +747,28 @@ function farmDormantAt(state: GameState, camp: Building): number {
  * merge onto the later clock. Existing batches/expiry are never changed. */
 export function synchronizeWheatFields(state: GameState, camps = new Map(state.buildings.filter(building => isHome(building) && buildingReady(building)).map(camp => [camp.id, camp]))): void {
   synchronizeWheatGroups(state, camps, wheatFieldGroups(state));
-  refreshWheatReadiness(state);
+}
+
+/** Start each crop parcel at a seeded point in the harvest cycle. Keep its
+ * tiles on the same clock so the whole field grows and ripens together. */
+export function scheduleOpeningHarvests(state: GameState): void {
+  const buildings = entityStore(state).buildings;
+  let changed = false;
+  for (const { fields } of farmWorkGroups(state).groups) {
+    const { x, y } = fields[0];
+    const at = state.time + rustEngine.opening_harvest_seconds(state.rngState, x, y, FIELD_HARVEST_SECONDS);
+    for (const field of fields) {
+      if (!field.planted) continue;
+      field.nextHarvest = at;
+      field.wheatSynchronized = !field.orchard;
+      delete field.wheatYieldAfter;
+      const farm = buildings.get(field.camp);
+      if (farm) farm.farmFirstHarvestAt = at;
+      harvestFieldChanged(state, field);
+      changed = true;
+    }
+  }
+  if (changed) state.farmVersion = (state.farmVersion ?? 0) + 1;
 }
 
 /** A harvest pass already owns a validated membership snapshot. Food and crop
@@ -779,8 +801,7 @@ function synchronizeWheatGroups(state: GameState, camps: ReadonlyMap<number, Bui
     }
     let changed = false;
     for (const field of group.fields) {
-      const priorNext = field.nextHarvest;
-      changed ||= priorNext !== nextHarvest || field.planted !== planted;
+      changed ||= field.nextHarvest !== nextHarvest || field.planted !== planted;
       field.nextHarvest = nextHarvest; field.planted = planted; field.wheatSynchronized = true;
       const camp = camps.get(field.camp);
       if (!camp) continue;
@@ -851,7 +872,6 @@ export function updateHarvests(state: GameState): void {
     }
     if (visited.has(camp.id)) visitFarm(state, camp, wheat);
   }
-  refreshWheatReadiness(state);
   // Panic and blocked routes do not suspend a harvest's perishability.
   for (const unit of state.units) if (unit.collector && unit.hp > 0) spoilCargo(state, unit);
   removeAbandonedFarms(state, camps);
@@ -897,7 +917,6 @@ export function updateScheduledHarvests(state: GameState): void {
     rememberFieldClock(clock, field, dormantAt, state.time);
     if (field.food > 0) schedule.ready.add(field); else schedule.ready.delete(field);
     farmParcelChanged(state, field);
-    refreshWheatReadiness(state, field);
   }
   for (const camp of dueCamps.values()) if (state.time + 1e-7 >= farmDormantAt(state, camp) && !camp.farmFallow) {
     camp.farmFallow = true; wakeFarmCouriers(state, camp.id);
@@ -1011,7 +1030,6 @@ function collectParcel(state: GameState, unit: Unit, group: FarmWorkGroup): void
     }
     field.food = 0; field.foodBatches = []; field.expiresAt = undefined; field.harvestedAt = state.time; delete field.claimedBy;
     harvestFieldChanged(state, field);
-    refreshWheatReadiness(state, field);
   }
   unit.cargoBatches = [...batches].sort((a, b) => a[0] - b[0]).map(([expiresAt, amount]) => ({ amount, expiresAt }));
   refreshCargo(unit);
@@ -1156,7 +1174,9 @@ export function updateCollector(state: GameState, unit: Unit, dt: number, move: 
       const home = harvestReturn(state, unit, unit, palace);
       if (home) setJourney(unit, home.entrance, home.path);
     } else {
+      const { x, y } = unit;
       move(state, unit, { x: field.x + .5, y: field.y + .5 }, dt);
+      recordFarmRoadCrossing(state, unit, x, y);
       return;
     }
   }

@@ -93,14 +93,14 @@ describe('marsh bird habitat and flocks', () => {
     expect(canMarshBirdMove(state, unit, { x: 3.5, y: 3.5 })).toBe(true);
   });
 
-  it('checks the whole swimming segment, including new buildings, terrain edits, ridges and diagonal corners', () => {
+  it('checks the whole swimming segment, including new buildings, terrain edits, rocks and diagonal corners', () => {
     const state = fixture(), unit = bird(state, 29.5, 20.5);
     const target = { x: 34.5, y: 20.5 }, obstacle = state.world.tiles[20 * 60 + 31];
     Object.assign(obstacle, { terrain: 'grassland', marsh: false, overlay: 'volcano' });
     expect(canMarshBirdMove(state, unit, target)).toBe(false);
-    obstacle.marsh = true; obstacle.overlay = 'none'; obstacle.ridge = 4;
+    obstacle.marsh = true; obstacle.overlay = 'none'; obstacle.rockRelief = 0;
     expect(canMarshBirdMove(state, unit, target)).toBe(false);
-    delete obstacle.ridge;
+    delete obstacle.rockRelief;
     entityStore(state).buildings.add({ id: 1, kind: 'house', faction: 0, x: 31, y: 20, hp: 100, maxHp: 100, capacity: 0 });
     expect(canMarshBirdMove(state, unit, target)).toBe(false);
     entityStore(state).buildings.replace([]);

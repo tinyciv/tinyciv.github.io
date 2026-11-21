@@ -74,12 +74,13 @@ export function buildLooseRockLayout(world: World, resourceCells: Iterable<numbe
     for (const cell of resourceCells) {
         if (explored && !explored[cell]) continue;
         const x = cell % world.width, y = Math.floor(cell / world.width);
-        if (!isOutcrop(world.tiles[cell])) continue;
+        if (!isOutcrop(world.tiles[cell]) || world.tiles[cell].rockHost !== undefined) continue;
         STEPS.forEach(([dx, dy], bit) => {
             const nx = x + dx, ny = y + dy, next = ny * world.width + nx;
             if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) return;
             const tile = world.tiles[next];
-            if (tile.resource || tile.relief || tile.overlay !== 'none' || WATER.has(tile.terrain) || tile.creek || tile.palm || tile.marsh || tile.villageTrail) return;
+            if (tile.resource || tile.rockHost !== undefined || tile.rockRangeGap || tile.relief || tile.overlay !== 'none'
+                || WATER.has(tile.terrain) || tile.creek || tile.palm || tile.marsh || tile.villageTrail) return;
             candidates.set(next, (candidates.get(next) ?? 0) | 1 << ((bit + 4) & 7));
         });
     }
@@ -94,16 +95,16 @@ export function buildLooseRockLayout(world: World, resourceCells: Iterable<numbe
         const count = (h >>> 16) % 5 === 0 ? 2 : 1, rocks: LooseRock[] = [];
         for (let i = 0; i < count; i++) {
             const k = hash(x * 2 + i, y, seed ^ h);
+            if (k % 5 !== 0) continue;
             // Place the rubble towards its source deposit, with a small gap.
-            // Sprite cells are 16px; their actual stones occupy the central 9px.
-            const frame = k % 5 === 0 ? 4 + (k >>> 4) % 4 : k % 4;
-            const inset = frame < 4 ? 3 : 4;
-            const rx = Math.max(inset, Math.min(16 - inset, 8 + dx * 3 + ((k >>> 8) % 7 - 3)));
-            const ry = Math.max(inset, Math.min(16 - inset, 8 + dy * 3 + ((k >>> 12) % 7 - 3)));
+            // The larger sprites occupy the bottom row of the atlas.
+            const frame = 4 + (k >>> 4) % 4;
+            const rx = Math.max(4, Math.min(12, 8 + dx * 3 + ((k >>> 8) % 7 - 3)));
+            const ry = Math.max(4, Math.min(12, 8 + dy * 3 + ((k >>> 12) % 7 - 3)));
             if (rocks.some(rock => Math.hypot(rock.x - rx, rock.y - ry) < 4)) continue;
             rocks.push({ x: rx, y: ry, frame });
         }
-        result.set(cell, { key: rocks.map(rock => `${rock.x},${rock.y},${rock.frame}`).join(';'), rocks,
+        if (rocks.length) result.set(cell, { key: rocks.map(rock => `${rock.x},${rock.y},${rock.frame}`).join(';'), rocks,
             source: (y + dy) * world.width + x + dx });
     }
     return result;

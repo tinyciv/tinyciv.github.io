@@ -40,16 +40,16 @@ describe('authoritative multiplayer Infantry Drill', () => {
     expect(infantryFormationActive(state, 1)).toBe(false);
   });
 
-  it.each([0, 1])('counts only authenticated faction %s living soldiers toward the eight-soldier requirement', actor => {
-    const state = fixture(), casualty = state.units.find(unit => unit.faction === actor && isSoldier(unit))!;
-    casualty.hp = 0;
-    expect(infantryFormationSoldierCount(state, actor)).toBe(7);
+  it.each([0, 1])('counts only authenticated faction %s living soldiers toward the five-soldier requirement', actor => {
+    const state = fixture(), casualties = state.units.filter(unit => unit.faction === actor && isSoldier(unit)).slice(0, 4);
+    for (const casualty of casualties) casualty.hp = 0;
+    expect(infantryFormationSoldierCount(state, actor)).toBe(4);
     expect(infantryFormationSoldierCount(state, 1 - actor)).toBe(8);
     expect(applyGameCommand(state, actor, { type: 'infantry-formation', faction: 1 - actor, soldierCount: 8 }))
-      .toMatchObject({ ok: false, message: 'Formation requires 8 living retinue soldiers.' });
+      .toMatchObject({ ok: false, message: expect.stringContaining('Formation needs 5 available soldiers') });
     expect(infantryFormationActive(state, actor)).toBe(false);
     expect(applyGameCommand(state, 1 - actor, { type: 'infantry-formation' }).ok).toBe(true);
-    casualty.hp = casualty.maxHp ?? 100;
+    casualties[0].hp = casualties[0].maxHp ?? 100;
     expect(applyGameCommand(state, actor, { type: 'infantry-formation' }).ok).toBe(true);
     expect(infantryFormationActive(state, actor)).toBe(true);
   });

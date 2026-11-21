@@ -1,5 +1,5 @@
 import { tileAt, type Tile, type World } from './types';
-import { drawPuny, punyWorldPixels, punyDesertLedgePixels, type PunyPixels } from './puny-world';
+import { drawPuny, punyWorldPixels, punySandBankPalette, type PunyPixels } from './puny-world';
 
 /** Approved 1A: original 16px waterfall with its full rocky flanks and foam. */
 export const WATERFALL_SOURCE = [64, 352, 16, 16] as const;
@@ -28,43 +28,42 @@ export function bankedRiverSprite(world: World, x: number, y: number, frame = 0)
     return [sx, sy + frame * 64, 16, 16];
 }
 
-interface SandSheet { source: PunyPixels; ledges: PunyPixels; pixels: PunyPixels; canvas?: HTMLCanvasElement }
+interface SandSheet { source: PunyPixels; palette: PunyPixels; pixels: PunyPixels; canvas?: HTMLCanvasElement }
 let sandSheet: SandSheet | undefined;
 const rgbKey = (r: number, g: number, b: number) => r * 65536 + g * 256 + b;
 
-/** Reuse the already-approved desert ledge palette. Water, alpha and every
- * pixel position remain unchanged. Extra bank shades use the nearest existing
- * ledge color instead of inventing another desert material palette. */
-export function bankedRiverPixels(source: PunyPixels, sand: boolean, desertLedges?: PunyPixels): PunyPixels {
-    if (!sand || !desertLedges) return source;
-    if (sandSheet?.source === source && sandSheet.ledges === desertLedges) return sandSheet.pixels;
-    const palette = new Map<number, readonly [number, number, number]>();
-    for (let y = 0; y < desertLedges.height; y++) for (let x = 0; x < desertLedges.width; x++) {
-        const from = ((y + 64) * source.width + x) * 4, to = (y * desertLedges.width + x) * 4;
-        if (!source.data[from + 3] || !desertLedges.data[to + 3]) continue;
-        palette.set(rgbKey(source.data[from], source.data[from + 1], source.data[from + 2]),
-            [desertLedges.data[to], desertLedges.data[to + 1], desertLedges.data[to + 2]]);
+/** Recolor riverbanks with existing sand shades. Preserve water, alpha, and
+ * pixel positions, mapping additional bank shades to their nearest match. */
+export function bankedRiverPixels(source: PunyPixels, sand: boolean, palette?: PunyPixels): PunyPixels {
+    if (!sand || !palette) return source;
+    if (sandSheet?.source === source && sandSheet.palette === palette) return sandSheet.pixels;
+    const colors = new Map<number, readonly [number, number, number]>();
+    for (let y = 0; y < palette.height; y++) for (let x = 0; x < palette.width; x++) {
+        const from = ((y + 64) * source.width + x) * 4, to = (y * palette.width + x) * 4;
+        if (!source.data[from + 3] || !palette.data[to + 3]) continue;
+        colors.set(rgbKey(source.data[from], source.data[from + 1], source.data[from + 2]),
+            [palette.data[to], palette.data[to + 1], palette.data[to + 2]]);
     }
-    const choices = [...palette].map(([key, color]) => ({ source: [key >>> 16, key >>> 8 & 255, key & 255], color }));
+    const choices = [...colors].map(([key, color]) => ({ source: [key >>> 16, key >>> 8 & 255, key & 255], color }));
     const data = new Uint8ClampedArray(source.data);
     for (const [sx, sy, width, height] of [[0,160,64,256],[64,352,64,16]])
         for (let y = sy; y < sy + height; y++) for (let x = sx; x < sx + width; x++) {
             const i = (y * source.width + x) * 4, r = data[i], g = data[i + 1], b = data[i + 2];
             if (!data[i + 3] || riverWaterPixel(r, g, b)) continue;
             const key = rgbKey(r, g, b);
-            let color = palette.get(key);
+            let color = colors.get(key);
             if (!color && choices.length) {
                 let distance = Infinity;
                 for (const choice of choices) {
                     const d = (r - choice.source[0]) ** 2 + (g - choice.source[1]) ** 2 + (b - choice.source[2]) ** 2;
                     if (d < distance) { distance = d; color = choice.color; }
                 }
-                palette.set(key, color!);
+                if (color) colors.set(key, color);
             }
             if (color) data.set(color, i);
         }
     const pixels = { width: source.width, height: source.height, data };
-    sandSheet = { source, ledges: desertLedges, pixels };
+    sandSheet = { source, palette, pixels };
     return pixels;
 }
 
@@ -72,9 +71,9 @@ export function drawBankedRiver(c: CanvasRenderingContext2D, world: World, tx: n
     x: number, y: number, size: number, frame: number, sand: boolean): void {
     const rect = bankedRiverSprite(world, tx, ty, frame);
     if (!rect) return;
-    const source = punyWorldPixels(), ledges = punyDesertLedgePixels();
-    if (!sand || !source || !ledges) { drawPuny(c, ...rect, x, y, size, size); return; }
-    const pixels = bankedRiverPixels(source, true, ledges);
+    const source = punyWorldPixels(), palette = punySandBankPalette();
+    if (!sand || !source || !palette) { drawPuny(c, ...rect, x, y, size, size); return; }
+    const pixels = bankedRiverPixels(source, true, palette);
     if (!sandSheet!.canvas) {
         const canvas = document.createElement('canvas'); canvas.width = pixels.width; canvas.height = pixels.height;
         const context = canvas.getContext('2d')!, image = context.createImageData(pixels.width, pixels.height);

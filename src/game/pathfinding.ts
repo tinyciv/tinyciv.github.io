@@ -7,7 +7,7 @@ import { simulationReadsActive, recordStructureChange, structureChangeRevision }
 import { worldChangesSince, worldStructureRevision } from './world-revisions';
 import { wasmNearestOriginMap, wasmPath, wasmPathBetween, wasmTravelTimeMap, wasmPreferLandRoute, wasmRouteIsGround, wasmPreferLandBetween } from './navigation-wasm';
 import { type GameState, type Point, type Tile, type World, type Building, type Unit, WATER, tileAt, buildingReady, buildingPresent, buildingWidth, buildingHeight, isFarmKind, isWallKind } from './types';
-import { reliefEdgeAllowed, reliefGroundWalkable } from './relief';
+import { reliefEdgeAllowed, reliefGroundWalkable, rockFootprint } from './relief';
 import { invalidateIrrigation, IRRIGATION_MOVEMENT_MULTIPLIER } from './irrigation';
 import { applySnowSpeed, groundMovementMultiplier } from './geography';
 import { factionRespectsForbidden, forbiddenCells, forbiddenRevision, isForbidden } from './forbidden-zones';
@@ -15,10 +15,11 @@ import { resourceBlocksGround } from './resource-terrain';
 import { NativeMovementGeometry, NativeMovementWorld, nativeMovement, nativeBlockerSource, registerNativeBlockers } from './movement-native';
 import { navigableWaterCell } from './water-navigation';
 import { rowboatProfile, mirrorRowboat } from './rowboats-native';
+import { offensiveBuildingTargetable } from './building-targeting';
 
 export function traversable(world: World, x: number, y: number, saltAccess = false): boolean {
   const tile = tileAt(world, x, y);
-  return !!tile && !tile.waterfall && !resourceBlocksGround(tile, saltAccess, Math.floor(y) * world.width + Math.floor(x), world.width) && reliefGroundWalkable(world, x, y)
+  return !!tile && !tile.waterfall && !resourceBlocksGround(tile, saltAccess) && reliefGroundWalkable(world, x, y)
     && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier') || tile.terrain === 'river' && tile.overlay === 'ford');
 }
 
@@ -36,8 +37,8 @@ export function canTraverseEdge(world: World, from: Point, to: Point, saltAccess
     || x >= world.width || nx >= world.width || y >= world.height || ny >= world.height) return false;
   const a = world.tiles[y * world.width + x], b = world.tiles[ny * world.width + nx];
   const allowed = (cell: number) => saltAccess === true || !!saltAccess?.has(cell);
-  if (!a || !b || a.waterfall || b.waterfall || resourceBlocksGround(a, allowed(y * world.width + x), y * world.width + x, world.width)
-    || resourceBlocksGround(b, allowed(ny * world.width + nx), ny * world.width + nx, world.width)) return false;
+  if (!a || !b || a.waterfall || b.waterfall || resourceBlocksGround(a, allowed(y * world.width + x))
+    || resourceBlocksGround(b, allowed(ny * world.width + nx))) return false;
   return reliefEdgeAllowed(world, from, to, saltAccess);
 }
 
@@ -281,7 +282,7 @@ function structures(state: GameState): StructureGrid {
   return remember(grid);
 }
 
-export type WallBreachingPolicy = { kind: 'raider' } | { kind: 'faction'; faction: number; hostile: (owner: number) => boolean };
+export type WallBreachingPolicy = { kind: 'raider' } | { kind: 'faction' | 'offensive'; faction: number; hostile: (owner: number) => boolean };
 interface PlanningView { state: GameState; buildings: readonly Building[]; source?: readonly StructureSnapshot[]; policy: string; inherited?: (building: Building) => boolean }
 const planningViews = new WeakMap<GameState, Map<string, PlanningView>>();
 /** Navigation-only view with stable identity and live source state. Strategic
@@ -289,10 +290,11 @@ const planningViews = new WeakMap<GameState, Map<string, PlanningView>>();
 export function wallBreachingNavigation(state: GameState, policy: WallBreachingPolicy): GameState {
   let views = planningViews.get(state);
   if (!views) { views = new Map(); planningViews.set(state, views); }
-  const key = policy.kind === 'raider' ? 'raider' : `faction:${policy.faction}`;
+  const key = policy.kind === 'raider' ? 'raider' : `${policy.kind}:${policy.faction}`;
   const topology = structures(state);
   const ignored = new Set<number>();
-  for (const building of topology.buildings) if (isWallKind(building.kind)
+  const isBreachable = policy.kind === 'offensive' ? offensiveBuildingTargetable : (building: Building) => isWallKind(building.kind);
+  for (const building of topology.buildings) if (isBreachable(building.entity)
     && (policy.kind === 'raider' ? building.faction >= 0 : policy.hostile(building.faction))) ignored.add(building.faction);
   const signature = [...ignored].sort((a, b) => a - b).join(',');
   let entry = views.get(key);
@@ -309,7 +311,7 @@ export function wallBreachingNavigation(state: GameState, policy: WallBreachingP
   if (entry.source !== topology.buildings || entry.policy !== signature || entry.inherited !== inherited) {
     let include = navigationFilters.get(entry.state);
     if (!include || entry.policy !== signature || entry.inherited !== inherited) {
-      include = (building: Building) => (!inherited || inherited(building)) && (!isWallKind(building.kind) || !ignored.has(building.faction));
+      include = (building: Building) => (!inherited || inherited(building)) && (!ignored.has(building.faction) || !isBreachable(building));
       navigationFilters.set(entry.state, include);
     }
     entry.buildings = state.buildings.filter(include);
@@ -391,7 +393,7 @@ export function buildingBlockerView(state: GameState, faction: number): CellBloc
 export function canWalk(state: GameState, x: number, y: number, faction: number, blockers?: CellBlockers, avoidForbidden = false, landOnly = false): boolean {
   if (avoidForbidden && isForbidden(state, x, y, faction)) return false;
   const tile = tileAt(state.world, x, y);
-  if (!tile || tile.waterfall || resourceBlocksGround(tile, !!saltAccessViews.get(state)?.has(Math.floor(y) * state.world.width + Math.floor(x)), Math.floor(y) * state.world.width + Math.floor(x), state.world.width)
+  if (!tile || tile.waterfall || resourceBlocksGround(tile, !!saltAccessViews.get(state)?.has(Math.floor(y) * state.world.width + Math.floor(x)))
     || !reliefGroundWalkable(state.world, x, y)) return false;
   const tx = Math.floor(x), ty = Math.floor(y);
   const index = ty * state.world.width + tx;
@@ -538,6 +540,7 @@ interface SearchScratch {
 }
 interface NavigationGrid {
   open: Uint8Array; cost: Float64Array; edges: Uint8Array; component: Int32Array; offsets: Int32Array;
+  componentParents: Map<number, number>;
   land?: Uint8Array; landVersion: number;
   nativeChangesSince: (version: number) => ReadonlySet<number> | undefined;
   nativeHistory: CellChanges[];
@@ -546,12 +549,24 @@ interface NavigationGrid {
   reachability?: ReachabilityWorkspace;
   version: number; regionColumns: number; accessRegions: Uint32Array; costRegions: Uint32Array;
 }
+function componentAt(grid: NavigationGrid, cell: number): number {
+  let label = grid.component[cell];
+  let parent = grid.componentParents.get(label);
+  while (parent !== undefined) {
+    const next = grid.componentParents.get(parent);
+    if (next === undefined) return parent;
+    grid.componentParents.set(label, next);
+    label = parent;
+    parent = next;
+  }
+  return label;
+}
 function searchScratch(grid: NavigationGrid): SearchScratch {
   const count = grid.open.length;
   return grid.search ??= { costs: new Float64Array(count), previous: new Int32Array(count),
     seen: new Uint32Array(count), closed: new Uint32Array(count), stamp: 0, frontier: new MinHeap() };
 }
-type TerrainSnapshot = Pick<Tile, 'terrain' | 'overlay' | 'biome' | 'resource' | 'oreAnchor' | 'oreWidth' | 'oreHeight' | 'ridge' | 'ridgeTier' | 'stair' | 'relief' | 'reliefFlags' | 'reliefSpeed' | 'waterfall' | 'creek' | 'villageTrail' | 'snow' | 'seaIce'>;
+type TerrainSnapshot = Pick<Tile, 'terrain' | 'overlay' | 'biome' | 'resource' | 'relief' | 'reliefFlags' | 'reliefSpeed' | 'waterfall' | 'creek' | 'villageTrail' | 'snow' | 'seaIce'> & { rock: boolean };
 interface TerrainNavigation {
   tiles: World['tiles']; width: number; height: number; cursor: number; version: number; geometryVersion: number;
   snapshots: TerrainSnapshot[]; history: CellChanges[];
@@ -561,15 +576,12 @@ interface TerrainNavigation {
 const terrainNavigationCaches = new WeakMap<World, TerrainNavigation>();
 function terrainSnapshot(tile: Tile): TerrainSnapshot {
   return { terrain: tile.terrain, overlay: tile.overlay, biome: tile.biome, resource: tile.resource,
-    oreAnchor: tile.oreAnchor, oreWidth: tile.oreWidth, oreHeight: tile.oreHeight, ridge: tile.ridge, ridgeTier: tile.ridgeTier, stair: tile.stair,
-    relief:tile.relief,reliefFlags:tile.reliefFlags,reliefSpeed:tile.reliefSpeed, waterfall: tile.waterfall, creek: tile.creek, villageTrail: tile.villageTrail,
+    relief:tile.relief,reliefFlags:tile.reliefFlags,rock:rockFootprint(tile),reliefSpeed:tile.reliefSpeed, waterfall: tile.waterfall, creek: tile.creek, villageTrail: tile.villageTrail,
     snow: tile.snow, seaIce: tile.seaIce };
 }
 function terrainMatches(tile: Tile, old: TerrainSnapshot): boolean {
   return tile.terrain === old.terrain && tile.overlay === old.overlay && tile.biome === old.biome && tile.resource === old.resource
-    && tile.oreAnchor === old.oreAnchor && tile.oreWidth === old.oreWidth && tile.oreHeight === old.oreHeight
-    && tile.ridge === old.ridge && tile.ridgeTier === old.ridgeTier && tile.stair === old.stair
-    && tile.relief === old.relief && tile.reliefFlags === old.reliefFlags && tile.reliefSpeed === old.reliefSpeed
+    && tile.relief === old.relief && tile.reliefFlags === old.reliefFlags && rockFootprint(tile) === old.rock && tile.reliefSpeed === old.reliefSpeed
     && tile.waterfall === old.waterfall && tile.creek === old.creek && tile.villageTrail === old.villageTrail
     && tile.snow === old.snow && tile.seaIce === old.seaIce;
 }
@@ -579,8 +591,8 @@ function addHalo(cells: Set<number>, cell: number, radius: number, width: number
     for (let nx = Math.max(0, x - radius); nx <= Math.min(width - 1, x + radius); nx++) cells.add(ny * width + nx);
 }
 
-/** One world-owned terrain layer. Journaled edits touch only their cells and
- * the ridge/stair dependency halo; unknown/editor edits keep exact validation. */
+/** One world-owned terrain layer. Journaled edits update their cells and any
+ * adjacent edges affected by changed obstacles. */
 function terrainNavigation(world: World): TerrainNavigation {
   let cached = terrainNavigationCaches.get(world);
   const compatible = cached?.tiles === world.tiles && cached.width === world.width && cached.height === world.height;
@@ -597,14 +609,10 @@ function terrainNavigation(world: World): TerrainNavigation {
     const tile = world.tiles[i], old = terrain.snapshots[i];
     if (old && terrainMatches(tile, old)) return;
     terrain.snapshots[i] = terrainSnapshot(tile); values.add(i);
-    if (!old || tile.ridge !== old.ridge || tile.ridgeTier !== old.ridgeTier || tile.stair !== old.stair
-      || tile.relief !== old.relief || tile.reliefFlags !== old.reliefFlags
-      || tile.waterfall !== old.waterfall || tile.resource !== old.resource
-      || tile.oreAnchor !== old.oreAnchor || tile.oreWidth !== old.oreWidth || tile.oreHeight !== old.oreHeight) {
-      // Stair validity reads its approaches and their ledge neighbors (two
-      // cells); an outgoing edge can read a neighboring stair (three cells).
-      addHalo(values, i, 2, world.width, world.height);
-      addHalo(edges, i, 3, world.width, world.height);
+    if (!old || tile.relief !== old.relief || tile.reliefFlags !== old.reliefFlags || rockFootprint(tile) !== old.rock
+      || tile.waterfall !== old.waterfall || tile.resource !== old.resource) {
+      // Diagonal movement reads both side cells as well as the endpoints.
+      addHalo(edges, i, 1, world.width, world.height);
     }
   };
   if (!compatible) for (let i = 0; i < count; i++) { terrain.snapshots[i] = terrainSnapshot(world.tiles[i]); values.add(i); edges.add(i); }
@@ -614,11 +622,11 @@ function terrainNavigation(world: World): TerrainNavigation {
   let restrictionChanged = false;
   for (const i of values) {
     const tile = world.tiles[i], x = i % world.width, y = Math.floor(i / world.width);
-    const restricted = resourceBlocksGround(tile, false, i, world.width) && !resourceBlocksGround(tile, true, i, world.width);
+    const restricted = resourceBlocksGround(tile) && !resourceBlocksGround(tile, true);
     if (terrain.restricted.has(i) !== restricted) { changed.add(i); restrictionChanged = true; }
     if (restricted) terrain.restricted.add(i);
     else terrain.restricted.delete(i);
-    const ground = !tile.waterfall && !resourceBlocksGround(tile, false, i, world.width) && reliefGroundWalkable(world, x, y);
+    const ground = !tile.waterfall && !resourceBlocksGround(tile) && reliefGroundWalkable(world, x, y);
     const open = Number(ground && ((!WATER.has(tile.terrain) && tile.overlay !== 'volcano' && tile.overlay !== 'glacier')
       || tile.terrain === 'river' && tile.overlay === 'ford'));
     const bridgeGround = Number(ground && WATER.has(tile.terrain)), cost = 1 / groundMovementMultiplier(tile);
@@ -650,7 +658,7 @@ function terrainNavigation(world: World): TerrainNavigation {
 }
 
 /** Borrowed world-owned eight-direction edge mask; callers must not mutate it.
- * Bit order: NW, N, NE, W, E, SW, S, SE. Includes ridge/resource geometry only. */
+ * Bit order: NW, N, NE, W, E, SW, S, SE. Includes terrain obstacles only. */
 export function terrainNavigationEdges(world: World): Uint8Array { return terrainNavigation(world).edges; }
 
 /** Only actual passability, edge or travel-cost changes advance this revision;
@@ -801,6 +809,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
   const compatible = cached?.terrain === terrain;
   const grid: NavigationGrid = compatible ? cached.grid : {
     open: new Uint8Array(count), cost: new Float64Array(count), edges: new Uint8Array(count), component: new Int32Array(count),
+    componentParents: new Map(),
     land: rowboatViews.has(state) ? new Uint8Array(count) : undefined, landVersion: 0,
     offsets: Int32Array.from(directions, ([dx, dy]) => dy * world.width + dx),
     nativeHistory: [], nativeChangesSince(version) { return changedCells(this.nativeHistory, version, this.version); }, version: 0,
@@ -816,6 +825,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
   const edgeCells = new Set<number>(terrainCells);
   const nativeDirty = new Set<number>();
   let connectivityChanged = !compatible;
+  let connectivityRemoved = full;
   let navigationChanged = !compatible;
   const accessChanged = new Set<number>(), costChanged = new Set<number>();
   const region = (cell: number): number => Math.floor(cell % world.width / NAVIGATION_REGION_SIZE)
@@ -826,8 +836,9 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
     const blocked = blockers.has(i);
     const open = Number(!blocked && !forbiddenSet?.has(i) && (terrain.open[i] || (flags & BRIDGE) && terrain.bridgeGround[i]));
     if (grid.open[i] !== open) {
+      if (!open) connectivityRemoved = true;
       connectivityChanged = true; accessChanged.add(region(i));
-      if (!full) addHalo(edgeCells, i, 1, world.width, world.height);
+      if (!full) { addHalo(edgeCells, i, 1, world.width, world.height); nativeDirty.add(i); }
     }
     grid.open[i] = open;
     // Transport the existing ground profile; native navigation owns the
@@ -854,6 +865,7 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
       if (terrain.edges[i] & (1 << d) && grid.open[next]) edges |= 1 << d;
     }
     if (grid.edges[i] !== edges) {
+      if (grid.edges[i] & ~edges) connectivityRemoved = true;
       accessChanged.add(region(i)); connectivityChanged = true;
       if (!full) nativeDirty.add(i);
     }
@@ -861,19 +873,29 @@ function navigationGrid(state: GameState, faction: number, avoidForbidden = fals
   };
   if (full) for (let i = 0; i < count; i++) refreshEdges(i);
   else for (const i of edgeCells) refreshEdges(i);
-  // Cost-only edits never touch connectivity. Access changes keep the exact
-  // global flood, while edge reconstruction itself is limited to dirty halos.
+  // Opening ground can only merge components. Relabel those components lazily
+  // through their roots, and flood only when a closure may split one.
   if (connectivityChanged) {
-    grid.component.fill(0);
     if (grid.reachability) grid.reachability.owner = undefined;
+  }
+  if (connectivityChanged && !connectivityRemoved) {
+    for (const cell of edgeCells) if (grid.open[cell] && !grid.component[cell]) grid.component[cell] = cell + 1;
+    for (const cell of edgeCells) for (let d = 0; d < directions.length; d++) {
+      if (!(grid.edges[cell] & (1 << d))) continue;
+      const from = componentAt(grid, cell), to = componentAt(grid, cell + grid.offsets[d]);
+      if (from !== to) grid.componentParents.set(Math.max(from, to), Math.min(from, to));
+    }
+  } else if (connectivityChanged) {
+    grid.component.fill(0);
+    grid.componentParents.clear();
     // Components reject impossible orders immediately instead of exhaustively
     // searching the entire reachable continent each time a unit reconsidered one.
     let queue = componentQueues.get(world);
     if (!queue || queue.length !== count) { queue = new Int32Array(count); componentQueues.set(world, queue); }
-    let component = 0;
     for (let i = 0; i < count; i++) {
       if (!grid.open[i] || grid.component[i]) continue;
-      component++; grid.component[i] = component; queue[0] = i;
+      const component = i + 1;
+      grid.component[i] = component; queue[0] = i;
       let head = 0, tail = 1;
       while (head < tail) {
         const current = queue[head++];
@@ -962,7 +984,7 @@ export class ReversePathQuery {
     const gx = Math.floor(this.destination.x), gy = Math.floor(this.destination.y), goal = gy * width + gx;
     const result: ReversePathResult = { expanded: 0, restarted };
     if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= width || y >= height
-      || !grid.open[start] || !grid.open[goal] || grid.component[start] !== grid.component[goal]) return result;
+      || !grid.open[start] || !grid.open[goal] || componentAt(grid, start) !== componentAt(grid, goal)) return result;
     if (start === goal) return { ...result, path: [{ ...this.destination }] };
     while (this.frontier.length && !this.nodes.get(start)?.settled) {
       if (result.expanded >= maxExpansions || this.nodes.size + 8 > this.maxNodes) return result;
@@ -1013,14 +1035,14 @@ export function staticReachabilityMask(state: GameState, starts: readonly Point[
   const components = new Set<number>(), mask = new Uint8Array(width * height);
   for (const start of starts) {
     if (!Number.isFinite(start.x) || !Number.isFinite(start.y) || start.x < 0 || start.y < 0 || start.x >= width || start.y >= height) continue;
-    const component = grid.component[Math.floor(start.y) * width + Math.floor(start.x)];
+    const component = componentAt(grid, Math.floor(start.y) * width + Math.floor(start.x));
     if (component) components.add(component);
   }
   if (components.size === 1) {
     const component = components.values().next().value!;
-    for (let i = 0; i < mask.length; i++) mask[i] = Number(grid.component[i] === component);
+    for (let i = 0; i < mask.length; i++) mask[i] = Number(componentAt(grid, i) === component);
   } else if (components.size) {
-    for (let i = 0; i < mask.length; i++) mask[i] = Number(components.has(grid.component[i]));
+    for (let i = 0; i < mask.length; i++) mask[i] = Number(components.has(componentAt(grid, i)));
   }
   return mask;
 }
@@ -1042,7 +1064,7 @@ export function hasStaticPath(state: GameState, from: Point, to: Point, faction:
     || from.x < 0 || from.y < 0 || to.x < 0 || to.y < 0
     || from.x >= width || to.x >= width || from.y >= height || to.y >= height) return false;
   const grid = navigationGrid(state, faction, avoidForbidden), source = Math.floor(from.y) * width + Math.floor(from.x), target = Math.floor(to.y) * width + Math.floor(to.x);
-  return !!grid.open[source] && !!grid.open[target] && grid.component[source] === grid.component[target];
+  return !!grid.open[source] && !!grid.open[target] && componentAt(grid, source) === componentAt(grid, target);
 }
 
 /** Exact reachability between entrance sets on one unchanged static graph.
@@ -1055,7 +1077,7 @@ export function hasStaticPathBetween(state: GameState, origins: readonly Point[]
   const { width, height } = state.world, grid = navigationGrid(state, faction, avoidForbidden);
   const component = (point: Point): number => Number.isFinite(point.x) && Number.isFinite(point.y)
     && point.x >= 0 && point.y >= 0 && point.x < width && point.y < height
-    ? grid.component[Math.floor(point.y) * width + Math.floor(point.x)] : 0;
+    ? componentAt(grid, Math.floor(point.y) * width + Math.floor(point.x)) : 0;
   const originsAt = new Set(origins.map(component)); originsAt.delete(0);
   return goals.some(point => originsAt.has(component(point)));
 }
@@ -1068,15 +1090,15 @@ export function hasStaticPathBetween(state: GameState, origins: readonly Point[]
 export function createReachabilityQuery(state: GameState, from: Point, faction: number, dynamicBlockers?: CellBlockers, avoidForbidden = false): (to: Point) => boolean {
   const { width, height } = state.world;
   if (!Number.isFinite(from.x) || !Number.isFinite(from.y) || from.x < 0 || from.y < 0 || from.x >= width || from.y >= height) return () => false;
-  const grid = navigationGrid(state, faction, avoidForbidden), start = Math.floor(from.y) * width + Math.floor(from.x), component = grid.component[start];
+  const grid = navigationGrid(state, faction, avoidForbidden), start = Math.floor(from.y) * width + Math.floor(from.x), component = componentAt(grid, start);
   if (!grid.open[start]) return () => false;
   if (!dynamicBlockers) return to => Number.isFinite(to.x) && Number.isFinite(to.y) && to.x >= 0 && to.y >= 0 && to.x < width && to.y < height
-    && grid.component[Math.floor(to.y) * width + Math.floor(to.x)] === component;
+    && componentAt(grid, Math.floor(to.y) * width + Math.floor(to.x)) === component;
   const owner = {};
   return to => {
     if (!Number.isFinite(to.x) || !Number.isFinite(to.y) || to.x < 0 || to.y < 0 || to.x >= width || to.y >= height) return false;
     const goal = Math.floor(to.y) * width + Math.floor(to.x);
-    if (!grid.open[goal] || grid.component[goal] !== component || goal !== start && dynamicBlockers.has(goal)) return false;
+    if (!grid.open[goal] || componentAt(grid, goal) !== component || goal !== start && dynamicBlockers.has(goal)) return false;
     if (goal === start) return true;
     const count = grid.open.length;
     const work = grid.reachability ??= { seen: new Uint32Array(count), queue: new Int32Array(count), stamp: 0, head: 0, tail: 0,
@@ -1220,10 +1242,10 @@ export function findShortestPathBetween(state: GameState, origins: readonly Poin
     && point.x % 1 === .5 && point.y % 1 === .5)
     .map(point => Math.floor(point.y) * width + Math.floor(point.x)).filter(cell => grid.open[cell]))];
   let starts = cells(origins), ends = cells(goals);
-  const components = new Set(starts.map(cell => grid.component[cell]));
-  ends = ends.filter(cell => components.has(grid.component[cell]));
-  const targetComponents = new Set(ends.map(cell => grid.component[cell]));
-  starts = starts.filter(cell => targetComponents.has(grid.component[cell]));
+  const components = new Set(starts.map(cell => componentAt(grid, cell)));
+  ends = ends.filter(cell => components.has(componentAt(grid, cell)));
+  const targetComponents = new Set(ends.map(cell => componentAt(grid, cell)));
+  starts = starts.filter(cell => targetComponents.has(componentAt(grid, cell)));
   if (!starts.length || !ends.length) return;
   const point = (cell: number): Point => ({ x: cell % width + .5, y: Math.floor(cell / width) + .5 });
   const unpack = (route: readonly number[] | Int32Array, cost: number): PathBetween => ({
@@ -1279,9 +1301,9 @@ export function findPath(state: GameState, from: Point, to: Point, faction: numb
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height;
   if (!inside(startX, startY)) return [];
   const start = startY * width + startX, goal = goalY * width + goalX;
-  const grid = navigationGrid(state, faction, avoidForbidden), component = grid.component[start];
+  const grid = navigationGrid(state, faction, avoidForbidden), component = componentAt(grid, start);
   const open = (index: number) => !!grid.open[index] && (index === start || !dynamicBlockers?.has(index));
-  const goalOpen = inside(goalX, goalY) && open(goal) && grid.component[goal] === component;
+  const goalOpen = inside(goalX, goalY) && open(goal) && componentAt(grid, goal) === component;
   if (!open(start) || !allowPartial && !goalOpen) return [];
   if (start === goal) return [{ x: to.x, y: to.y }];
   const heuristic = (x: number, y: number) => {
@@ -1300,7 +1322,7 @@ export function findPath(state: GameState, from: Point, to: Point, faction: numb
     const y0 = bounded ? Math.max(0, goalY - radius) : 0, y1 = bounded ? Math.min(height - 1, goalY + radius) : height - 1;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const i = y * width + x;
-      if (grid.component[i] === component && open(i)) nearestOpenDistance = Math.min(nearestOpenDistance, heuristic(x, y));
+      if (componentAt(grid, i) === component && open(i)) nearestOpenDistance = Math.min(nearestOpenDistance, heuristic(x, y));
     }
   }
   const native = wasmPath(grid, grid.version, width, start, goalX, goalY, goalOpen, allowPartial, preferCardinal,

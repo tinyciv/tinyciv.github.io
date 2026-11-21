@@ -5,6 +5,7 @@ use bevy_ecs::prelude::*;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::cmp::Reverse;
 use super::kinds::building as b;
+use super::structures::completes_tile_square;
 
 #[derive(Clone, Copy, PartialEq)]
 struct Site { kind:u32, x:i32, y:i32, w:i32, h:i32, ready:bool }
@@ -156,13 +157,16 @@ impl ScenarioAccess {
     /// building covering either is relocated rather than leaving a road gap.
     /// Output: blockers, blocked road cells, missing ring cells, unserved civic
     /// IDs; each section is prefixed by its length in the four-value header.
-    pub fn street_audit(&mut self,targets:usize,roads:usize)->*const f64{
+    pub fn street_audit(&mut self,targets:usize,roads:usize,owned_roads:usize)->*const f64{
         self.reconcile();let n=self.open.len();
         let existing:BTreeSet<_>=self.input[targets..targets+roads].iter().map(|v|*v as usize).filter(|i|*i<n).collect();
+        let owned=self.input[targets..targets+owned_roads].iter().map(|v|*v as usize).filter(|i|*i<n);
         let targets_set=self.input[..targets].iter().map(|v|*v as i64).collect();
-        let open=self.street_view(&targets_set,&existing);let labels=self.components(&open).0;
+        let open=self.street_view(&targets_set,&existing);
+        let roadable:Vec<_>=(0..n).map(|i|open[i]&&self.terrain[i]&4!=0).collect();
+        let labels=self.components(&roadable).0;
         let mut blockers=BTreeSet::new();let mut blocked=BTreeSet::new();let mut missing=BTreeSet::new();let mut unserved=Vec::new();
-        for &cell in &existing{if !open[cell]||self.terrain[cell]&4==0{blocked.insert(cell);blockers.extend(self.owners[cell].iter().copied());}}
+        for cell in owned.clone(){if !roadable[cell]{blocked.insert(cell);blockers.extend(self.owners[cell].iter().copied());}}
         for value in &self.input[..targets]{let id=*value as i64;let Some(&site)=self.sites.get(&id)else{continue;};
             if site.kind==b::PALACE{for cell in self.ring(site){
                 if !existing.contains(&cell)||!open[cell]{missing.insert(cell);}
@@ -171,10 +175,11 @@ impl ScenarioAccess {
             if !matches!(site.kind,b::HOUSE|b::VILLAGE_TENT|b::WALL|b::PALISADE|b::TOWER|b::WOODEN_TOWER)
                 &&!self.cells(site).into_iter().flat_map(|i|self.adjacent(i)).any(|i|open[i]&&existing.contains(&i)){unserved.push(id);}
         }
-        let road_open:Vec<_>=(0..n).map(|i|existing.contains(&i)&&open[i]&&self.terrain[i]&4!=0).collect();
-        let road_regions=self.components(&road_open).1.len();
-        let land_regions:BTreeSet<_>=existing.iter().filter(|i|road_open[**i]).map(|i|labels[*i]).collect();
-        self.output=vec![blockers.len()as f64,blocked.len()as f64,missing.len()as f64,unserved.len()as f64,road_regions as f64,land_regions.len()as f64];
+        let road_open:Vec<_>=(0..n).map(|i|existing.contains(&i)&&roadable[i]).collect();
+        let road_labels=self.components(&road_open).0;
+        let road_regions:BTreeSet<_>=owned.clone().filter(|i|road_open[*i]).map(|i|road_labels[i]).collect();
+        let land_regions:BTreeSet<_>=owned.filter(|i|road_open[*i]).map(|i|labels[i]).collect();
+        self.output=vec![blockers.len()as f64,blocked.len()as f64,missing.len()as f64,unserved.len()as f64,road_regions.len()as f64,land_regions.len()as f64];
         self.output.extend(blockers.into_iter().map(|i|i as f64));self.output.extend(blocked.into_iter().map(|i|i as f64));
         self.output.extend(missing.into_iter().map(|i|i as f64));self.output.extend(unserved.into_iter().map(|i|i as f64));self.output.as_ptr()
     }
@@ -202,16 +207,20 @@ impl ScenarioAccess {
     /// Connect real building entrances to existing streets through the shared
     /// walking graph. Input: target building IDs, then existing road cell IDs.
     /// Parent-first output lets normal road purchases extend the network.
-    pub fn roads(&mut self,targets:usize,roads:usize)->*const f64{
+    pub fn roads(&mut self,targets:usize,roads:usize,owned_roads:usize)->*const f64{
         self.reconcile();let n=self.open.len();let mut distance=vec![u64::MAX;n];let mut parent=vec![usize::MAX;n];
         let raw_roads:BTreeSet<_>=self.input[targets..targets+roads].iter().map(|v|*v as usize).filter(|i|*i<n).collect();
         let targets_set=self.input[..targets].iter().map(|v|*v as i64).collect();
-        let open=self.street_view(&targets_set,&raw_roads);let labels=self.components(&open).0;
-        let existing:BTreeSet<_>=raw_roads.into_iter().filter(|i|open[*i]&&self.terrain[*i]&4!=0).collect();
+        let open=self.street_view(&targets_set,&raw_roads);
+        let roadable:Vec<_>=(0..n).map(|i|open[i]&&self.terrain[i]&4!=0).collect();
+        let labels=self.components(&roadable).0;
+        let existing:BTreeSet<_>=raw_roads.iter().copied().filter(|i|roadable[*i]).collect();
         let mut network=vec![false;n];let mut roots=BTreeMap::new();let mut goals=BTreeSet::new();
         // One root per walking component, rather than every disconnected road
         // fragment being treated as an already-connected source.
-        for &cell in &existing{roots.entry(labels[cell]).or_insert(cell);goals.insert(cell);}
+        for cell in self.input[targets..targets+owned_roads].iter().map(|v|*v as usize).filter(|i|existing.contains(i)){
+            roots.entry(labels[cell]).or_insert(cell);goals.insert(cell);
+        }
         let mut target_sites=Vec::new();
         for value in &self.input[..targets]{if let Some(&site)=self.sites.get(&(*value as i64)){
             if site.kind==b::PALACE{for cell in self.ring(site){if open[cell]&&self.terrain[cell]&4!=0{
@@ -244,6 +253,14 @@ impl ScenarioAccess {
             while !network[cell]&&parent[cell]!=usize::MAX{branch.push(cell);cell=parent[cell];}
             for cell in branch.into_iter().rev(){network[cell]=true;if !existing.contains(&cell){orders.push(cell);}}
         }
+        // A new road needs no fourth corner when the other streets already
+        // connect both sides. Keep existing orders and reserve new ones in order.
+        let mut routes = raw_roads;
+        orders.retain(|&cell| {
+            let (x, y) = (cell as i32 % self.width, cell as i32 / self.width);
+            !completes_tile_square(self.width, self.height, x, y, |neighbor| routes.contains(&neighbor))
+                && routes.insert(cell)
+        });
         self.output=vec![orders.len()as f64];self.output.extend(orders.into_iter().map(|i|i as f64));self.output.as_ptr()
     }
 }

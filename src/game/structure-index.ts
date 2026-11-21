@@ -16,7 +16,7 @@ import { buildingPresent, type Building, type BuildingKind, type GameState } fro
 /** Row flags: hp > 0, buildingPresent and buildingReady. */
 export const STRUCTURE_ALIVE = 1, STRUCTURE_PRESENT = 2, STRUCTURE_READY = 4;
 export const FOUNTAIN_RADIUS = rustEngine.fountain_radius();
-const CLASS_REFUGE = 0, CLASS_SHELTER = 1;
+const CLASS_REFUGE = 0, CLASS_SHELTER = 1, CLASS_READY_PALACE = 2;
 const OBSERVED = ['faction', 'hp', 'kind', 'x', 'y', 'roadPaved', 'construction'] as const;
 const CONSTRUCTION_PRESENCE = ['waitingForBuilder', 'pausedAt', 'evacuating'] as const;
 
@@ -33,7 +33,7 @@ export class StructureIndex implements ScalarObserver {
   private readonly dirty = new Set<Building>();
   private constructionOwners = new WeakMap<Construction, Set<Building>>();
   private readonly queries = new Map<string, { revision: number; buildings: readonly Building[] }>();
-  private defenseKey = NaN;
+  private defenseRevision = -1;
   private readonly defenseLists = new Map<number, readonly Building[]>();
   /** Bumped whenever a row actually changes in the native index. */
   revision = 0;
@@ -57,7 +57,7 @@ export class StructureIndex implements ScalarObserver {
     // native tables, which also empties the native index.
     const collection = store.buildings;
     rustEngine.sim_structures_clear(this.handle, this.state.world.width);
-    this.rows.clear(); this.dirty.clear(); this.queries.clear(); this.defenseKey = NaN; this.revision++; this.geometry++;
+    this.rows.clear(); this.dirty.clear(); this.queries.clear(); this.revision++; this.geometry++;
     this.constructionOwners = new WeakMap();
     this.store = store; this.collection = collection;
     this.entityObserver = {
@@ -137,6 +137,9 @@ export class StructureIndex implements ScalarObserver {
   fountainCovers(house: Pick<Building, 'faction' | 'x' | 'y'>): boolean {
     return !!rustEngine.sim_fountain_covers(this.handle, house.faction, house.x, house.y);
   }
+  civicCount(palace: Pick<Building, 'faction' | 'id'>): number {
+    return rustEngine.sim_structure_civic_count(this.handle, palace.faction, palace.id);
+  }
   query(faction: number | undefined, flags: number, kinds: readonly BuildingKind[]): readonly Building[] {
     const key = `${faction}|${flags}|${kinds.join(',')}`, cached = this.queries.get(key);
     if (cached && cached.revision === this.revision) return cached.buildings;
@@ -152,10 +155,18 @@ export class StructureIndex implements ScalarObserver {
     return new Set(new Float64Array(rustEngine.memory.buffer, pointer + 8, count));
   }
   solidAt(x: number, y: number): boolean { return !!rustEngine.sim_structure_solid_at(this.handle, x, y); }
-  /** `key` names the snapshot the caller wants (a new one per time, topology
-   * or offer change). The caller flushes when it starts a snapshot. */
-  defenses(palace: number, key: number): readonly Building[] {
-    if (key !== this.defenseKey) { this.defenseKey = key; this.defenseLists.clear(); rustEngine.sim_structure_refresh_defenses(this.handle); }
+  completesRoadSquare(x: number, y: number): boolean {
+    return !!rustEngine.sim_structure_road_square(this.handle, x, y, this.state.world.height);
+  }
+  fallenCityClaims(palace: Building): readonly Building[] {
+    return this.ids(rustEngine.sim_structure_fallen_city_claims(this.handle, palace.faction, palace.id, palace.x, palace.y));
+  }
+  /** Reuse the defensive partition until the indexed structures change. */
+  defenses(palace: number): readonly Building[] {
+    if (this.defenseRevision !== this.revision) {
+      this.defenseRevision = this.revision; this.defenseLists.clear();
+      rustEngine.sim_structure_refresh_defenses(this.handle);
+    }
     let list = this.defenseLists.get(palace);
     if (!list) { list = this.ids(rustEngine.sim_structure_defenses(this.handle, palace)); this.defenseLists.set(palace, list); }
     return list;
@@ -172,6 +183,10 @@ export function structureIndex(state: GameState): StructureIndex {
  * fleeing unit (no farms, irrigation, routes or walls), by footprint distance. */
 export function nearestRefuge(state: GameState, faction: number, x: number, y: number, skip = 0): Building | undefined {
   return structureIndex(state).nearest(faction, x, y, CLASS_REFUGE, skip);
+}
+/** Nearest completed palace by center distance, with the lower ID winning a tie. */
+export function nearestReadyPalace(state: GameState, faction: number, x: number, y: number): Building | undefined {
+  return structureIndex(state).nearest(faction, x, y, CLASS_READY_PALACE, 0);
 }
 /** Whether a present non-farm, non-route building of `faction` stands within `radius`. */
 export function shelterNear(state: GameState, faction: number, x: number, y: number, radius: number): boolean {

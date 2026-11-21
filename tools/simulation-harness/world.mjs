@@ -91,6 +91,7 @@ export function snapshot(engine, state, t, counters) {
       territoryCells: territoryCells[faction.id] ?? 0,
       kills: kills[faction.id] ?? 0, deaths: counters.deaths[faction.id] ?? 0,
       projectilesFired: counters.projectilesFired[faction.id] ?? 0,
+      raids: raidSummary(engine, state, faction.id),
     });
   }
   const otherUnits = {};
@@ -145,6 +146,15 @@ export function snapshot(engine, state, t, counters) {
 }
 const SOLDIERS = new Set(['leader', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'horseman', 'horseArcher', 'knight', 'slinger', 'archer', 'militia', 'scout']);
 const sum = (items, value) => items.reduce((total, item) => total + value(item), 0);
+// Raid director cycle per realm: phase, stress, era, raid outcomes and time in each phase.
+function raidSummary(engine, state, faction) {
+  const view = engine.raidDirectorView?.(state, faction);
+  if (!view) return null;
+  return { phase: view.phase, stress: round(view.stress, 2), peakStress: round(view.peakStress, 2), era: round(view.era, 2),
+    raids: view.raids, raidersSent: view.raidersSent, raidersLost: view.raidersLost, totalStress: round(view.totalStress, 2),
+    fear: view.fear, streak: view.streak, sizeRelief: view.sizeRelief, lastMotive: view.lastMotive ?? null,
+    phaseSeconds: Object.fromEntries(Object.entries(view.phaseSeconds).map(([phase, seconds]) => [phase, round(seconds, 1)])) };
+}
 
 // Coarse hash: entity identity, kind, owner, rounded position/HP and faction
 // stocks. Exact equality is expected only for identical engines.

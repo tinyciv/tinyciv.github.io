@@ -16,6 +16,8 @@ import { clearObservedScalar } from './scalar-observer';
 import { markWorldChanged } from './world-revisions';
 import { removeBuildings } from './construction-cancellation';
 import { updateWallStats } from './wall-stats';
+import { SETTLEMENT_UPKEEP_GRACE } from './maintenance';
+import { restoreCityBorderClaims } from './borders';
 import { CONSTRUCTION_KINDS, nativeConstructionDuration, runConstructionRule, retimeNativeConstruction, forgetNativeConstruction, initializeConstructionHealth,
   CONSTRUCTION_CLEARANCE, CONSTRUCTION_COMPLETE, CONSTRUCTION_INVALIDATE, CONSTRUCTION_SKIP } from './construction-native';
 
@@ -98,10 +100,10 @@ export function updateActiveConstruction(state: GameState): boolean {
         removeBuildings(state, new Set([palisade.id]));
       if (building.kind === 'palace') {
         const faction = factions.get(building.faction);
+        building.settlementUpkeepUntil = state.time + SETTLEMENT_UPKEEP_GRACE;
         if (faction?.firstTownFoundingAvailable) {
           const residents = rustEngine.town_founding_residents(1);
           delete faction.firstTownFoundingAvailable;
-          building.foundingSubsidyFaction = faction.id;
           building.unhousedResidents = residents;
           faction.population += residents;
           recordCampaignPopulation(state, faction);
@@ -109,6 +111,7 @@ export function updateActiveConstruction(state: GameState): boolean {
         // Establish the cultural baseline when this city actually starts
         // claiming territory, rather than while its footprint is still queued.
         building.cultureAtFounding = lifetimeCulture(faction);
+        restoreCityBorderClaims(state, building);
         addPalaceRoadRing(state, building);
         announceTownFounded(state, building);
       }

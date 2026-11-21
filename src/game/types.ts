@@ -4,11 +4,12 @@ import type { HarborTradeShip } from './harbor-trade';
 import type { InfantryFormationState } from './infantry-drill';
 import type { ArmyWarning } from './army-warnings';
 import type { WorldGenerationStyle } from '../world/options';
+import { settlementSpriteHeight } from './settlement-art-layout';
 
 export type Terrain = 'ocean' | 'coast' | 'river' | 'lake' | 'desert' | 'plains' | 'grassland' | 'tundra';
 export type Overlay = 'none' | 'forest' | 'jungle' | 'swamp' | 'volcano' | 'glacier' | 'ford';
 export type TreeClass = 'tropical' | 'dry' | 'temperate' | 'conifer' | 'snowy';
-export type Biome = 'temperate' | 'taiga' | 'tundra' | 'rainforest' | 'savanna' | 'steppe' | 'desert' | 'wetland' | 'alpine';
+export type Biome = 'temperate' | 'taiga' | 'tundra' | 'rainforest' | 'savanna' | 'steppe' | 'desert' | 'wetland' | 'alpine' | 'forest' | 'fjords';
 export type HillBiome = 'desert-hills' | 'forest-hills';
 export type RegionalResource = 'clay' | 'copper' | 'iron' | 'gold' | 'stone' | 'salt' | 'olives' | 'fish' | 'marble' | 'peat' | 'grapes' | 'coal';
 export type ResourceWorkKind = Exclude<RegionalResource, 'clay' | 'fish'>;
@@ -58,11 +59,15 @@ export interface Tile {
     /** Generated climate fields, normalized to 0..1. */
     temperature?: number;
     rainfall?: number;
-    /** Base food multiplier: grass 100%, plains 75%, desert 50%, plus freshwater. */
+    /** Soil multiplier before the bonus from fertility grass. */
     fertility?: number;
+    /** Native fertility patch density, from sparse fringe to dense core. */
+    fertilityGrass?: 1 | 2 | 3;
     /** Ecological identity uses the existing terrain and vegetation artwork. */
     biome?: Biome;
-    /** Local hill-country identity, independent of the underlying climate. */
+    /** Saltwater inlet, reserved low shore, or rocky fjord headland. */
+    fjord?: 'water' | 'shore' | 'rock';
+    /** Local hill-country identity for offline terrain studies. */
     hillBiome?: HillBiome;
     resource?: RegionalResource;
     /** Connected geological deposit/grove identity, stable within this world. */
@@ -73,6 +78,25 @@ export interface Tile {
     oreVariant?: 0 | 1;
     oreWidth?: number;
     oreHeight?: number;
+    /** Formation shape at its top-left cell, alternating elongated and compact by size. */
+    rockFormation?: 0 | 1 | 2 | 3 | 4 | 5;
+    /** Top-left formation cell for positions inside the sprite footprint. */
+    rockHost?: number;
+    /** Top-left cell of the independent mineral section within this formation. */
+    rockOre?: number;
+    /** Alternate art for a bare formation with the same footprint. */
+    rockAlternate?: true;
+    rockMirror?: boolean;
+    /** The native bare rock footprint excludes movement and construction. */
+    rockRelief?: 0 | 1;
+    /** Decorative tree anchored to an upper rock shelf, without collision. */
+    rockTree?: true;
+    /** Stable center of a native rock arrangement. */
+    rockArrangement?: 'horizontal' | 'vertical' | 'diagonal';
+    rockRangeLength?: 'short' | 'medium' | 'long' | 'continental';
+    /** Focus cell shared by the hosts and deliberate crossings of a continental range. */
+    rockRangeId?: number;
+    rockRangeGap?: 'dry' | 'river';
     /** Development belongs to the land; benefits follow its current city owner. */
     resourceDeveloped?: boolean;
     /** Catchment runoff and downstream tile index in the generated drainage network. */
@@ -110,9 +134,9 @@ export interface Tile {
     palm?: boolean;
     /** Regional tree family chosen by latitude, moisture and elevation. */
     treeClass?: TreeClass;
-    /** Raised plateau identity; unset is the surrounding low ground. */
+    /** Raised plateau identity for offline terrain studies. */
     ridge?: number;
-    /** Height within a range; each upper shelf is nested inside the lower one. */
+    /** Height within an offline terrain study's raised plateau. */
     ridgeTier?: 1 | 2 | 3 | 4 | 5;
     /** Broad landform region; vegetation remains an independent overlay. */
     relief?: 'hills' | 'mountains';
@@ -129,8 +153,8 @@ export interface Tile {
     /** Low-ground corridor through a layered mountain range. */
     mountainPass?: boolean;
     /** Freshwater basin shape, independent of connected rivers. */
-    lakeShape?: 'compact' | 'snaky';
-    /** Uphill direction, from the adjacent low approach into this raised tile. */
+    lakeShape?: 'compact' | 'snaky' | 'forest-pond';
+    /** Stair direction for offline terrain studies. */
     stair?: 'north' | 'east' | 'south' | 'west';
     /** Bank-to-bank direction shared by every tile of a ford strip. */
     fordAxis?: 'horizontal' | 'vertical';
@@ -180,7 +204,7 @@ export interface World {
     source: string;
     revision?: number;
 }
-export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy' | 'hospital' | 'apartments' | 'factory' | 'goldMine' | 'marketplace' | 'scoutTower' | 'frontierVillage' | 'fountain';
+export type BuildingKind = 'fort' | 'supplyDepot' | 'palace' | 'camp' | 'house' | 'shack' | 'cottage' | 'road' | 'wall' | 'palisade' | 'bridge' | 'dock' | 'irrigation' | 'ruin' | 'tower' | 'woodenTower' | 'well' | 'monument' | 'blacksmith' | 'guardPost' | 'archeryRange' | 'scoutLodge' | 'observationPost' | 'healerShack' | 'ballista' | 'siegeCannon' | 'stable' | 'library' | 'villageTent' | 'colosseum' | 'barracks' | 'forum' | 'granary' | 'thermalBath' | 'shipyard' | 'whalingPost' | 'foundry' | 'militaryAcademy' | 'apartments' | 'factory' | 'goldMine' | 'marketplace' | 'scoutTower' | 'frontierVillage' | 'fountain' | 'barbarianLair';
 export interface BridgeConstruction extends Point {
     readonly width: number;
     readonly height: number;
@@ -195,7 +219,7 @@ export type HouseStyle = 'shack' | 'hovel' | 'cottage' | 'villa';
 export const isWallKind = (kind: BuildingKind): boolean => kind === 'wall' || kind === 'palisade';
 /** Farms are uninhabited, pathable single-tile crop plots. */
 export const isFarmKind = (kind: BuildingKind): boolean => kind === 'camp' || kind === 'shack' || kind === 'cottage';
-export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'marketplace', 'fountain'];
+export const BUILDABLE_KINDS: readonly BuildingKind[] = ['fort', 'supplyDepot', 'road', 'camp', 'house', 'wall', 'palisade', 'bridge', 'dock', 'irrigation', 'woodenTower', 'well', 'monument', 'blacksmith', 'guardPost', 'archeryRange', 'scoutLodge', 'observationPost', 'healerShack', 'ballista', 'siegeCannon', 'stable', 'library', 'palace', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'shipyard', 'whalingPost', 'foundry', 'militaryAcademy', 'apartments', 'factory', 'marketplace', 'fountain'];
 export type WarshipClass = 'warGalley' | 'caravel' | 'frigate';
 export type NavalWeapon = 'empty' | 'ballista' | 'cannon';
 export type MarineType = 'archer' | 'musketman';
@@ -215,9 +239,11 @@ export interface Warship {
 export interface Building extends Point {
     marketTrade?: { city: number; faction: number; destination: number };
     scenarioCity?: boolean;
-    explorationUpkeepUntil?: number;
+    settlementUpkeepUntil?: number;
     /** Previous sovereign for negotiated return of captured towns. */
     previousSovereign?: number;
+    /** A surviving civic building stops spreading territory after its city falls. */
+    borderClaimSuspended?: true;
     /** A confederated village's palace keeps the village identity bonus. */
     villageIdentity?: VillageIdentity;
     fort?: { brigadeLevel: 0 | 1 | 2 | 3; nextUpkeepAt: number; funded: boolean; nextRecruitAt: number; destroyed?: boolean; initialGold?: number };
@@ -225,8 +251,6 @@ export interface Building extends Point {
     id: number;
     /** Initial capital only; later settlements start with the ordinary border radius. */
     initialCity?: boolean;
-    /** This town receives lower upkeep while its original founder owns it. */
-    foundingSubsidyFaction?: number;
     kind: BuildingKind;
     /** Capturable world objective; progress is in simulated seconds. */
     mineCaptureFaction?: number;
@@ -259,6 +283,8 @@ export interface Building extends Point {
     fortLevel?: 1 | 2;
     /** Palaces begin as settlements; Fortification permits a one-time Keep upgrade. */
     palaceLevel?: 1 | 2;
+    /** Unlocked civic capacity, independent of the defensive Keep upgrade. */
+    settlementTier?: 0 | 1 | 2 | 3;
     /** One paid expansion raises the Keep's own housing from 10 to 25. */
     keepHousingExpanded?: boolean;
     /** Faction culture when this city was founded or acquired. */
@@ -329,7 +355,7 @@ export interface Building extends Point {
     roadBuildGold?: number;
     construction?: { startedAt: number; duration: number; healthProgress?: number; paidGold?: number; waitingForBuilder?: boolean; hideUntilStarted?: boolean; builderId?: number; pausedAt?: number; cleared?: boolean; evacuating?: boolean; researchSpeed?: number; replacesPalisade?: number; engineerId?: number; bridge?: BridgeConstruction };
 }
-export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich' | 'musketman' | 'fieldCannon';
+export type UnitKind = 'slinger' | 'skirmisher' | 'levyInfantry' | 'supplyCart' | 'leader' | 'warrior' | 'swordsman' | 'spearman' | 'pikeman' | 'archer' | 'horseman' | 'horseArcher' | 'knight' | 'scout' | 'militia' | 'worker' | 'merchant' | 'sailboat' | 'boar' | 'marshBird' | 'deer' | 'buffalo' | 'elephant' | 'ostrich' | 'musketman' | 'fieldCannon' | 'cow' | 'sheep' | 'horse';
 // `kind` is an observed scalar on live entities: read it once per call.
 const SOLDIER_KINDS: ReadonlySet<string> = new Set(['fieldCannon', 'warrior', 'swordsman', 'spearman', 'pikeman', 'musketman', 'archer', 'horseman', 'horseArcher', 'knight', 'levyInfantry', 'slinger', 'skirmisher']);
 export const isSoldier = (unit: Pick<Unit, 'kind'>): boolean => SOLDIER_KINDS.has(unit.kind);
@@ -391,7 +417,7 @@ export interface Unit extends Point {
     boardingBoat?: number;
     /** One boat is launched per completed dock. Landing is an explicit shore order. */
     warship?: Warship;
-    barbarianGalley?: {target?:number;firedAt?:number;aim?:number};
+    barbarianGalley?: {target?:number;firedAt?:number;aim?:number;beached?:boolean};
     sailboat?: { dock: number; passenger?: number; landing?: Point; velocity?: Point };
     /** A human-owned Leader has directional right of way through its retinue. */
     humanControlled?: boolean;
@@ -460,6 +486,9 @@ export interface Unit extends Point {
     /** Administrative retirement returns the guard to civilian life rather than killing a resident. */
     guardRetired?: boolean;
     herdId?: number;
+    livestockHerd?: number;
+    deerSex?: 'male' | 'female';
+    deerFleeing?: boolean;
     huntRewarded?: boolean;
     tradeRoute?: number;
     /** The same caravan is drawn and navigated as a boat during its river leg. */
@@ -549,8 +578,6 @@ export interface FarmField extends Point {
     food: number;
     foodBatches?: FoodBatch[];
     expiresAt?: number;
-    /** Shared ripe appearance across the connected wheat patch; food remains per tile. */
-    wheatRipe?: boolean;
     /** Existing crop clock retained when a freshly completed plot joins a patch. */
     wheatSynchronized?: boolean;
     /** A new plot can adopt a patch’s appearance before its first full growing cycle earns food. */
@@ -558,7 +585,7 @@ export interface FarmField extends Point {
     nextHarvest: number;
     /** Camp-specific harvest timing has been applied; kept in saves to avoid shifting it again. */
     harvestStaggered?: boolean;
-    /** Last harvest time drives the early crop stage and regrowth phases. */
+    /** When the previous harvest was collected or expired. */
     harvestedAt?: number;
     claimedBy?: number;
 }
@@ -582,7 +609,10 @@ export interface MarauderPack {
     raid?: boolean;
     targetBuilding?: number;
     spawnedAt?: number;
-    retinueAtSpawn?: number;
+    /** Realm whose raid-director cycle launched this band. */
+    directorFaction?: number;
+    /** Progress era of that realm at launch; sets raider stats and equipment. */
+    raidEra?: number;
     raiderCamp?: number;
     leaderId?: number;
     startingTroops?: number;
@@ -613,8 +643,6 @@ export interface RaiderCamp extends Point {
     width: number;
     height: number;
     gate: Point;
-    /** Stone refuge gate first, then independent palisade outpost gates. */
-    gates?: Point[];
     /** Native wooden signposts; decorative, without collision or combat stats. */
     signs?: Point[];
     houses: number[];
@@ -630,9 +658,23 @@ export interface RaiderCamp extends Point {
     replacementAt?: number;
     /** One defender sortie per attacked structure per thirty-second episode. */
     defenderReadyAt?: Record<number, number>;
-    /** Damage and nearby civilization units refresh a short recruitment surge. */
-    pressureUntil?: number;
-    pressureUpdatedAt?: number;
+    /** Announced raid; it departs at `nextRaidAt`. */
+    directedRaid?: DirectedRaid;
+    /** Warning shown before the announced raid departs. */
+    warningSeconds?: number;
+    /** Realm that last damaged this camp's structures. */
+    lastAttacker?: number;
+}
+/** One raid chosen by the raid director, waiting at its camp to depart. */
+export interface DirectedRaid {
+    faction: number;
+    target: number;
+    motive: 'assault' | 'harass' | 'theft' | 'siege';
+    initial: number;
+    total: number;
+    era: number;
+    entrance?: Point;
+    retries?: number;
 }
 export type VillageIdentity = 'growers' | 'merchants' | 'builders' | 'scholars';
 export type VillageRelation = 'neutral' | 'trade' | 'allied' | 'war';
@@ -661,8 +703,9 @@ export interface NeutralVillage extends Point {
 export interface WildlifeHerd {
     id: number;
     /** Unset for boar; marsh flocks remain in their original coastal delta. */
-    species?: 'marshBird';
+    species?: 'marshBird' | 'deer';
     delta?: number;
+    home?: Point;
     waypoint: Point;
     nextWanderAt: number;
     /** A brief slow forage walk; otherwise the herd grazes in place. */
@@ -714,7 +757,7 @@ export interface RetinueSquad {
 }
 export type ResearchBranchId = 'supplyTrain' | 'massLevy' | 'wall' | 'woodenTower' | 'monument' | 'blacksmith' | 'archeryRange' | 'scoutLodge' | 'sailing' | 'irrigation' | 'traditionalMedicine' | 'militaryTactics' | 'infantryDrill' | 'siegeEngines' | 'horsebackRiding' | 'compoundBow' | 'gunpowder' | 'stirrups' | 'populism' | 'urbanMilitia'
     | 'reinforcedDefenses' | 'coinage' | 'urbanPlanning' | 'metalCasting' | 'metalTools' | 'fletching' | 'grainStorage' | 'engineering' | 'culturalIdentity' | 'roadBuilding' | 'lateenSails' | 'navalEngineering' | 'whaling' | 'fieldCannon' | 'drainage' | 'militaryScience' | 'officerCorps' | 'commerce'
-    | 'cropRotation' | 'ironPlows';
+    | 'cropRotation' | 'ironPlows' | 'animalHusbandry';
 export interface ResearchState {
     /** Resolved project; explicit priorities may refer to later technologies. */
     focus: ResearchBranchId;
@@ -741,8 +784,12 @@ export interface GoldLedgerEntry {
     inputs: Partial<Record<GoldInputCategory, number>>;
     outlays: Partial<Record<GoldOutlayCategory, number>>;
 }
-export type MilitaryFormationType = 'wide' | 'standard' | 'deep';
+export type MilitaryFormationType = 'wide' | 'standard' | 'deep' | 'loose';
 export interface Faction {
+    /** Opening support belongs to the original capital and its founder. */
+    openingCapitalId?: number;
+    openingPopulationPeak?: number;
+    openingHouseOrders?: number;
     /** A normal one-city start can grant settlers and reduced upkeep to one completed town. */
     firstTownFoundingAvailable?: true;
     formationType?: MilitaryFormationType;
@@ -790,6 +837,8 @@ export interface Faction {
     bonusRetinueSlots?: number;
     /** Permanent paid retinue capacity, charged even while its slots are vacant. */
     purchasedRetinueSlots?: number;
+    /** Funding from the last standing-retinue payday. */
+    retinueFunded?: boolean;
     research?: ResearchState;
     /** Unspent culture produced by towns and monuments. */
     culture?: number;
@@ -807,10 +856,14 @@ export interface Faction {
         gold: number;
     };
     nextRaid: number;
-    /** Earliest game time for the next single palace recruit. */
+    /** Earliest game time for the next single retinue recruit. */
     nextRetinueAt?: number;
+    /** Interval used by Rust to schedule the current recruitment deadline. */
+    retinueRecruitmentInterval?: number;
     defeated: boolean;
     lastDiplomacy?: number;
+    /** Suspend new automatic house and farm orders across this faction. */
+    spendingPaused?: boolean;
     /** Briefly respect a cancelled order before automatic expansion retries it. */
     constructionPauseUntil?: Partial<Record<BuildingKind, number>>;
 }
@@ -905,6 +958,7 @@ export interface GameState {
     readonly buildings: readonly Building[];
     /** Player victories await an explicit capture/leave decision before time resumes. */
     palaceCaptures?: { palaceId: number; faction: number; captor?: number; x: number; y: number; cityName: string;
+        settlementTier?: Building['settlementTier'];
         /** Snapshot membership before the fallen palace leaves the nearest-city map. */
         buildingIds: number[]; workerIds: number[]; population: number; unhousedResidents: number; populationGrowth: number }[];
     explorationSites?: import('./exploration-native').ExplorationSite[];
@@ -949,6 +1003,7 @@ export interface GameState {
     nextResourceWorkSiteId?: number;
     /** Read-only publication of the native offensive orders. */
     offensives?: OffensiveState[];
+    offensiveReadyAt?: Record<number, number>;
     /** Temporary, walkable remains of felled trees; source coordinates preserve the tree family. */
     treeStumps?: { x: number; y: number; sourceX: number; sourceY: number; expiresAt: number }[];
     retinueStance?: RetinueStance;
@@ -960,6 +1015,8 @@ export interface GameState {
     victory: boolean;
     /** Victory was acknowledged; keep simulating this world, including defeat. */
     victoryContinued?: boolean;
+    /** The local player acknowledged defeat and continues in a read-only view. */
+    observing?: boolean;
     /** Game-wide border wave: index and each realm's claimed culture for this wave. */
     borderWave?: { index: number; culture: Record<number, number> };
     seed: string;
@@ -971,6 +1028,8 @@ export interface GameState {
     observationSmoke?: { x: number; y: number; faction: number; startedAt: number }[];
     /** Bandit spawn-rate and living-population multiplier; 1 is the default. */
     banditIntensity?: number;
+    /** Optional barbarian combat strength override for this game. */
+    banditStrength?: number;
     /** Computer unit/building HP, damage and earned gold multiplier. */
     enemyStrength?: number;
     /** Single-player cheat: add 5,000 gold per 30-second economy tick. */
@@ -980,6 +1039,7 @@ export interface GameState {
     banditSpawnPause?: { at: number; intensity: number };
     marauderPacks?: MarauderPack[];
     wildlife?: { herds: WildlifeHerd[]; nextRespawnAt: number; sequence: number; targetHerds: number };
+    livestock?: import('./livestock').LivestockState;
     /** Shared natural fish stocks and independent dock-operated fishing vessels. */
     fishing?: FishingState;
     /** Render-only mirror; authoritative harbor voyages are saved in simCore. */
@@ -1000,8 +1060,8 @@ export interface GameState {
     /** One-time migration of surviving marauders to the current threat level. */
     enemyPressureVersion?: number;
     /** Persist raid pacing so reloading cannot cause a sudden wave or reset the timer. */
+    /** `pressureVersion` is ignored; fixtures still set it. */
     fogRaids?: { nextAt: number; waves: number; pressureVersion?: number };
-    raiderSkirmishes?: { nextByFaction: Record<number, number>; wavesByFaction: Record<number, number> };
     /** Independent exploration memory for AI factions; human fog remains in player controls. */
     scoutExploration?: Record<number, NonNullable<GameState['fog']>>;
     fog?: { explored: number[]; width: number; height: number; seed: string; buildings?: Building[]; fields?: FarmFieldMemory[] };
@@ -1022,14 +1082,18 @@ export interface PlayerControlState {
 }
 export const TILE_SIZE = 32;
 /** Maximum span, for broad spatial queries. Use width/height for footprints. */
-const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
-const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'hospital', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
-export const buildingSize = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : WIDE_KINDS.has(building.kind) ? 2 : 1;
+const WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'archeryRange', 'supplyDepot', 'library', 'colosseum', 'barracks', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
+const SQUARE_WIDE_KINDS: ReadonlySet<string> = new Set(['palace', 'fort', 'library', 'colosseum', 'forum', 'granary', 'thermalBath', 'whalingPost', 'foundry', 'militaryAcademy', 'apartments', 'factory', 'goldMine', 'marketplace', 'frontierVillage']);
+const THREE_TILE_KINDS: ReadonlySet<BuildingKind> = new Set(['shipyard', 'fort', 'barbarianLair']);
+export const buildingSize = (building: Pick<Building, 'kind'>): number => THREE_TILE_KINDS.has(building.kind) ? 3 : WIDE_KINDS.has(building.kind) ? 2 : 1;
 export const buildingWidth = (building: Pick<Building, 'kind'>): number => buildingSize(building);
-export const buildingHeight = (building: Pick<Building, 'kind'>): number => building.kind === 'shipyard' || building.kind === 'fort' ? 3 : SQUARE_WIDE_KINDS.has(building.kind) ? 2 : 1;
+export const buildingHeight = (building: Pick<Building, 'kind'>): number => THREE_TILE_KINDS.has(building.kind) ? 3 : SQUARE_WIDE_KINDS.has(building.kind) ? 2 : 1;
 /** Northward art overhang, in tiles; collision footprints remain unchanged. */
-export const buildingArtTop = (building: Pick<Building, 'kind' | 'construction'>): number =>
-    building.construction ? 0 : building.kind === 'tower' || building.kind === 'woodenTower' || building.kind === 'scoutTower' ? -.75 : building.kind === 'barracks' ? -1 : 0;
+export const buildingArtTop = (building: Pick<Building, 'kind' | 'construction' | 'palaceLevel' | 'settlementTier'>): number =>
+    building.construction ? 0
+        : building.kind === 'palace' ? 2 - settlementSpriteHeight(building.palaceLevel, building.settlementTier) / 16
+        : building.kind === 'tower' || building.kind === 'woodenTower' || building.kind === 'scoutTower' ? -.75
+        : building.kind === 'barracks' ? -1 : 0;
 export const buildingReady = (building: Building): boolean => building.hp > 0 && !building.construction;
 /** A reservation is open ground until a peasant actually starts working. */
 export const buildingPresent = (building: Building): boolean => building.hp > 0 && (!building.construction

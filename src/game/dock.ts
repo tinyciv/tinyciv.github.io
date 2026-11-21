@@ -108,7 +108,8 @@ export function dockMoorings(state: GameState, building: Pick<Building, 'x' | 'y
 
 /** Deterministic automatic orientation. Prefer south to match the reviewed
  * art, then east, north and west; never reserve a bridge or other jetty. */
-export function dockPlacement(state: GameState, x: number, y: number, faction = 0): DockPlacement | undefined {
+export function dockPlacement(state: GameState, x: number, y: number, faction = 0,
+  acceptsBerth?: (berth: Point) => boolean): DockPlacement | undefined {
   x = Math.floor(x); y = Math.floor(y);
   const land = tileAt(state.world, x, y);
   if (!land || WATER.has(land.terrain) || land.marsh || !traversable(state.world, x, y)
@@ -121,6 +122,7 @@ export function dockPlacement(state: GameState, x: number, y: number, faction = 
   })) return;
   for (const facing of [2, 1, 0, 3] as const) {
     const berth = dockBerth({ x, y, dockFacing: facing }), water = tileAt(state.world, berth.x, berth.y);
+    if (acceptsBerth && !acceptsBerth(berth)) continue;
     if ((state.world.generationStyle || state.world.scenario) && isPolarSeaLane(berth.y, state.world.height)) continue;
     if (!water || !navigableWaterCell(state.world, berth.x, berth.y) || reliefLevel(water) !== reliefLevel(land)
       || dockBerthOccupiedByFootprint(state, Math.floor(berth.x), Math.floor(berth.y))) continue;

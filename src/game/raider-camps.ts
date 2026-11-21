@@ -1,37 +1,36 @@
 import { entityStore } from './entity-store';
 import { scenarioStructuresAllowed } from './scenario-access-native';
-import { raiderMayAttack } from './raider-aggression';
-import { playerFaction } from './player-context';
 import { simRandom } from './sim-handle';
 import { banditIntensity, banditPopulationCap, banditSpawnDeadline } from './bandit-intensity';
 import { markWorldChanged } from './world-revisions';
 import { constructionEdges } from './builders';
-import { canMove, canWalk, travelTimeMap, travelTimeMapFrom, wallBreachingNavigation } from './pathfinding';
+import { canMove, canWalk, hasStaticPathBetween, travelTimeMapFrom, wallBreachingNavigation, withNavigationFrame } from './pathfinding';
+import { campCapacity, campNextSize, campParty, campPopulation, campTravelLimit, orderedCampSites, planCompactCamp, prepareCampSites } from './camp-sites-native';
 import { terrainYields } from '../world/generator';
-import { isBuildable, planCamp } from './warcamp-planner';
+import { campLairCells, isBuildable, planCamp } from './warcamp-planner';
 import { pointInSight, humanFogViews } from './fog';
-import { RAIDER_OPENING_WAVE_INTERVAL } from './raider-pressure';
+import { pacifyRaidRegion, raidDirectorCancel, raidDirectorPacified } from './raid-director';
 import { type Building, type CampSize, type GameState, type Point, type RaiderCamp, buildingReady, buildingSize, buildingHeight, distance, isFarmKind, isWallKind } from './types';
 
 export const RAIDER_FACTION = -2;
 export const RAIDER_COLOR = '#191b22';
 export const RAIDER_CAMP_COLOR = '#8e6950';
-export const RAIDER_FIRST_WAVE = 60;
-export const RAIDER_WAVE_INTERVAL = RAIDER_OPENING_WAVE_INTERVAL;
 export const RAIDER_WARNING_SECONDS = 10;
-export const RAIDER_CAMP_REBUILD_SECONDS = 120;
+/** A burned camp's replacement appears after about seven minutes at normal intensity. */
+export const RAIDER_CAMP_REBUILD_SECONDS = 420;
 export const RAIDER_CAMP_RETRY_SECONDS = 30;
+/** While a realm is pacified, replacement camps keep this far from its towns. */
+export const PACIFIED_CAMP_DISTANCE = 40;
 /** Budgets at 100% intensity, shared by every source including wilderness bands. */
 export const MAX_LIVE_RAIDERS = 240;
 export const MAX_LIVE_RAIDERS_PER_CAMP = 90;
-const MAX_SITE_ATTEMPTS = 48;
-// Fit the most demanding footprint first when the population is balanced.
-const CAMP_SIZE_ORDER: readonly CampSize[] = ['large', 'medium', 'small'];
+const MAX_SITE_ATTEMPTS = 24;
+const CAMP_SIZE_ORDER = ['large', 'small'] as const;
 const NAMES = ['Scythians', 'Sarmatians', 'Cimmerians', 'Alans', 'Huns', 'Avars', 'Pechenegs', 'Cumans', 'Haiduks', 'Klephts'];
 const styledRoadRevisions = new WeakMap<GameState, number>();
 
 /** Camp tracks use the existing narrow dirt artwork while retaining real road
- * entities, which make the camp's palisade gates work. Check existing camps on
+ * entities, which make the camp's stone gate work. Check existing camps on
  * initialization or a building change, rather than scanning every frame. */
 function refreshCampRoadStyles(state: GameState): boolean {
   const revision = entityStore(state).buildings.revision;
@@ -61,17 +60,19 @@ export function raiderCampSupply(state: GameState, camp: RaiderCamp): number {
   return Math.min(1, remaining / Math.max(1, camp.tentCapacity ?? camp.houses.length));
 }
 export function raiderCampPopulationCap(state: GameState, camp: RaiderCamp): number {
-  return raiderCampActive(state, camp) ? banditPopulationCap(state, Math.round(5 + (MAX_LIVE_RAIDERS_PER_CAMP - 5) * raiderCampSupply(state, camp))) : 0;
+  return raiderCampActive(state, camp) ? banditPopulationCap(state, campCapacity(camp.size === 'small', raiderCampSupply(state, camp))) : 0;
 }
 export function raiderCampPartySize(state: GameState, camp: RaiderCamp, wanted: number): number {
-  return raiderCampActive(state, camp) ? Math.max(1, Math.min(wanted, Math.round(1 + (wanted - 1) * raiderCampSupply(state, camp)))) : 0;
+  return raiderCampActive(state, camp) ? campParty(camp.size === 'small', raiderCampSupply(state, camp), wanted) : 0;
 }
 export function raiderCampRefuge(camp: RaiderCamp): Point {
   return camp.refuge ?? { x: camp.gate.x + .5, y: camp.gate.y + .5 };
 }
 
+/** A camp shows its warning while an announced raid gathers there. */
 export function raiderCampWarning(state: GameState, camp: RaiderCamp): boolean {
-  return raiderMayAttack(state, playerFaction(state), camp.id) && raiderCampActive(state, camp) && camp.nextRaidAt - state.time <= RAIDER_WARNING_SECONDS && state.time <= camp.nextRaidAt;
+  return !!camp.directedRaid && raiderCampActive(state, camp)
+    && camp.nextRaidAt - state.time <= (camp.warningSeconds ?? RAIDER_WARNING_SECONDS) && state.time <= camp.nextRaidAt;
 }
 
 /** Establish the initial population once. Unfilled slots and destroyed camps
@@ -86,7 +87,7 @@ export function initializeRaiderCamps(state: GameState): void {
   for (const pack of state.marauderPacks) if (!pack.raid) { delete pack.approachAt; pack.color = RAIDER_COLOR; }
   const retained = new Set(state.marauderPacks.map(pack => pack.id));
   entityStore(state).units.retain(unit => unit.marauderPack === undefined || retained.has(unit.marauderPack));
-  const wanted = state.world.width * state.world.height >= 10000 ? 3 : 2;
+  const wanted = campPopulation(raiderPalaces(state).size);
   if (spawnRaiderCamps(state, wanted, false) < wanted)
     state.raiderCampPopulationRetryAt = banditSpawnDeadline(state, RAIDER_CAMP_RETRY_SECONDS);
 }
@@ -99,17 +100,22 @@ export function updateRaiderCamps(state: GameState): boolean {
   for (const camp of state.raiderCamps) if (!raiderCampActive(state, camp) && camp.replacementAt === undefined) {
     camp.destroyed = true;
     camp.replacementAt = banditSpawnDeadline(state, RAIDER_CAMP_REBUILD_SECONDS);
+    if (camp.directedRaid) { raidDirectorCancel(state, camp.directedRaid.faction, camp.directedRaid.total); delete camp.directedRaid; }
+    // The realm that burned it earns quiet, distance and an announced vendetta.
+    if (camp.lastAttacker !== undefined) pacifyRaidRegion(state, camp.lastAttacker);
     changed = true;
   }
   if (!banditIntensity(state)) return changed;
   const due = state.raiderCamps.filter(camp => camp.destroyed && camp.replacementAt !== undefined && camp.replacementAt <= state.time)
     .sort((a, b) => a.replacementAt! - b.replacementAt! || a.id - b.id);
-  const target = state.world.width * state.world.height >= 10000 ? 3 : 2;
+  const retry = state.raiderCampPopulationRetryAt !== undefined && state.raiderCampPopulationRetryAt <= state.time;
+  if (!due.length && !retry) return changed;
+  const target = campPopulation(raiderPalaces(state).size);
   // Destroyed records reserve their own replacement slots. Only the explicit
   // initial-placement retry clock can fill an additional population vacancy.
   const missing = Math.max(0, target - state.raiderCamps.length);
-  const populationDue = missing && state.raiderCampPopulationRetryAt !== undefined
-    && state.raiderCampPopulationRetryAt <= state.time ? missing : 0;
+  if (!missing) delete state.raiderCampPopulationRetryAt;
+  const populationDue = retry ? missing : 0;
   if (!due.length && !populationDue) return changed;
   const added = spawnRaiderCamps(state, due.length + populationDue, true);
   const replaced = Math.min(added, due.length);
@@ -123,20 +129,32 @@ export function updateRaiderCamps(state: GameState): boolean {
   return true;
 }
 
+function raiderPalaces(state: GameState): Map<number, Building[]> {
+  const realms = new Map<number, Building[]>();
+  for (const palace of entityStore(state).buildings.query('palace')) {
+    if (palace.faction < 0 || palace.hp <= 0 || !buildingReady(palace)) continue;
+    let cities = realms.get(palace.faction);
+    if (!cities) { cities = []; realms.set(palace.faction, cities); }
+    cities.push(palace);
+  }
+  return realms;
+}
+
 function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): number {
   const clearedCells: number[] = [];
-  const palaces = state.buildings.filter(building => building.kind === 'palace' && building.faction >= 0 && buildingReady(building));
-  if (!palaces.length) return 0;
+  const realms = [...raiderPalaces(state)].sort(([a], [b]) => a - b);
+  if (!realms.length) return 0;
   const { width, height } = state.world;
-  const sizeOrder: readonly CampSize[] = width * height >= 10000 ? CAMP_SIZE_ORDER : ['medium', 'small'];
+  // Keep the original capital locations reserved even if the cities move or fall.
+  const starts = [...state.world.spawns, ...realms.map(([, [palace]]) => ({ x: palace.x + 1, y: palace.y + 1 }))];
+  if (!hidden) for (const unit of state.units) if (unit.kind === 'leader' && unit.faction >= 0 && unit.hp > 0) starts.push(unit);
+  const travelLimit = campTravelLimit();
   const planning = wallBreachingNavigation(state, { kind: 'raider' });
-  const access = palaces.flatMap(palace => {
-    const exit = constructionEdges(planning, palace)[0];
-    return exit ? [travelTimeMap(planning, exit, RAIDER_FACTION, 2.35, 100)] : [];
-  });
-  if (!access.length) return 0;
-  const travel = new Float64Array(width * height);
-  for (let i = 0; i < travel.length; i++) travel[i] = Math.min(...access.map(map => map[i]));
+  const access = withNavigationFrame(planning, () => realms.map(([, palaces]) => {
+    const exits = palaces.flatMap(palace => constructionEdges(planning, palace));
+    return travelTimeMapFrom(planning, exits, RAIDER_FACTION, 2.35, travelLimit);
+  }));
+  const clearance = prepareCampSites(state, starts, access);
   const blocked = new Set<number>(), obstacles = new Set<number>(), occupied = new Set<number>();
   const reserve = (building: Building): void => {
     const margin = isFarmKind(building.kind) ? 2 : 1, size = buildingSize(building);
@@ -160,101 +178,112 @@ function spawnRaiderCamps(state: GameState, wanted: number, hidden: boolean): nu
   const views = hidden ? humanFogViews(state) : [];
   if (views.length) for (let y = 0; y < height; y++) for (let x = 0; x < width; x++)
     if (views.some(fog => pointInSight(fog, x + .5, y + .5))) blocked.add(y * width + x);
-  const origins = palaces.map(palace => ({ x: palace.x + 1, y: palace.y + 1 }));
-  const candidates: { point: Point; score: number; seed: number }[] = [];
-  // A sparse strategic pass feeds the bounded local shape search. It no longer
-  // demands a rectangular clearing or flattens the chosen terrain.
-  for (let y = 12; y < height - 12; y += 3) for (let x = 12; x < width - 12; x += 3) {
-    const point = { x, y }, d = Math.min(...origins.map(origin => distance(point, origin))), cell = y * width + x;
-    if (d < 21 || d > 65 || !Number.isFinite(travel[cell]) || blocked.has(cell)
-      || !isBuildable(state.world, x, y, { preserveTrees: false })) continue;
-    const jitter = simRandom(state);
-    candidates.push({ point, score: Math.abs(d - 32) + Math.abs(travel[cell] - 20) * .35 + jitter * 3,
-      seed: Math.floor(jitter * 0x7fffffff) });
-  }
-  candidates.sort((a, b) => a.score - b.score || a.point.y - b.point.y || a.point.x - b.point.x);
-  let spawned = 0;
-  const failedSizes = new Set<CampSize>();
-  let campId = Math.max(0, ...state.raiderCamps!.map(camp => camp.id),
-    ...state.buildings.map(building => building.raiderCamp ?? 0), ...(state.marauderPacks ?? []).map(pack => pack.raiderCamp ?? 0));
+  // Realms that recently burned a camp keep replacements away from their newer towns, too.
+  const keepAway = hidden ? realms.filter(([faction]) => raidDirectorPacified(state, faction))
+    .flatMap(([, palaces]) => palaces.map(palace => ({ x: palace.x + 1, y: palace.y + 1 }))) : [];
+  const outsideRespite = (point: Point): boolean => keepAway.every(origin => distance(point, origin) >= PACIFIED_CAMP_DISTANCE);
+  for (let i = 0; i < clearance.length; i++) if (!clearance[i]) blocked.add(i);
+  let spawned = 0, unavailable = 0, campId = 0;
+  for (const camp of state.raiderCamps!) campId = Math.max(campId, camp.id);
+  for (const building of state.buildings) campId = Math.max(campId, building.raiderCamp ?? 0);
+  for (const pack of state.marauderPacks ?? []) campId = Math.max(campId, pack.raiderCamp ?? 0);
   let nextId = entityStore(state).peekId() - 1;
   while (spawned < wanted) {
-    const counts: Record<CampSize, number> = { small: 0, medium: 0, large: 0 };
-    for (const camp of state.raiderCamps!) if (raiderCampActive(state, camp)) counts[camp.size]++;
-    const least = Math.min(...sizeOrder.map(size => counts[size]));
-    const size = sizeOrder.find(size => counts[size] === least && !failedSizes.has(size));
-    // Exhausting a class never turns its slot into another oversized camp.
-    // Replacements retry a missing class when suitable hidden land opens up.
+    const active = state.raiderCamps!.filter(camp => raiderCampActive(state, camp));
+    const large = active.filter(camp => camp.size === 'large').length;
+    const small = active.filter(camp => camp.size === 'small').length;
+    const sizeIndex = campNextSize(large, small, unavailable);
+    const size: CampSize | undefined = CAMP_SIZE_ORDER[sizeIndex];
     if (!size) break;
-    let placed = false, attempts = 0;
-    const searched: Point[] = [];
-    for (const candidate of candidates) {
-      if (attempts >= MAX_SITE_ATTEMPTS) break;
-      if (searched.some(point => distance(point, candidate.point) < 5)
-        || state.raiderCamps!.some(camp => !camp.destroyed && distance(raiderCampCenter(camp), candidate.point) < 20)) continue;
-      searched.push(candidate.point); attempts++;
-      const plan = planCamp(state.world, candidate.point, candidate.seed, { blocked, obstacles, access: travel, preserveTrees: false, size });
-      if (!plan.layout || !plan.bounds || !plan.checks.valid) continue;
-      const { layout, bounds } = plan, center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
-      // Do not surround somebody else's existing home, field, or road even when
-      // the new wall and tent cells themselves happen not to overlap it.
-      let enclosesExisting = false;
-      for (let y = bounds.y; y < bounds.y + bounds.height && !enclosesExisting; y++)
-        for (let x = bounds.x; x < bounds.x + bounds.width; x++) if (occupied.has(y * width + x)) { enclosesExisting = true; break; }
-      if (enclosesExisting) continue;
-      const d = Math.min(...origins.map(origin => distance(center, origin)));
-      if (d < 21 || d > 65 || state.raiderCamps!.some(camp => !camp.destroyed && distance(raiderCampCenter(camp), center) < 20)) continue;
-      const gate = layout.gates[0];
-      if (!gate || !Number.isFinite(travel[gate.y * width + gate.x])) continue;
-      const id = campId + 1, pending: Building[] = [], houses: number[] = [];
-      const add = (kind: Building['kind'], x: number, y: number): Building => {
-        const hp = kind === 'wall' ? 900 : isWallKind(kind) ? 225 : kind === 'woodenTower' ? 600 : kind === 'villageTent' ? 160 : 100;
-        const building: Building = { id: nextId + pending.length + 1, kind, x, y, faction: RAIDER_FACTION, raiderCamp: id,
-          hp, maxHp: hp, armor: kind === 'woodenTower' ? 6 : 2, capacity: 0 };
-        pending.push(building); return building;
-      };
-      // Scenarios keep physical openings usable by every Leader. Ordinary
-      // worlds retain their faction-controlled road-and-palisade gates.
-      for (const p of [...layout.walls, ...(state.world.scenario ? [] : layout.gates)]) add(p.tier === 1 ? 'wall' : 'palisade', p.x, p.y);
-      const roads = new Map([...layout.paths, ...layout.gates].map(p => [p.y * width + p.x, p]));
-      for (const p of roads.values()) add('road', p.x, p.y).roadStyle = 'trail';
-      const coreTowers: number[] = [];
-      for (const p of layout.towers) { const tower = add('woodenTower', p.x, p.y); if (p.tier === 1) coreTowers.push(tower.id); }
-      for (const p of layout.tents) houses.push(add('villageTent', p.x, p.y).id);
-      if (!scenarioStructuresAllowed(state,pending)) continue;
-      // Local access can lead into a peninsula whose only exit the camp itself
-      // closes. Probe the complete proposed structures before committing them,
-      // and preserve the routes of camps already placed during this search.
-      const proposed = { ...state, buildings: [...state.buildings.filter(building => !(isWallKind(building.kind) && building.faction >= 0)), ...pending] };
-      const exits = palaces.flatMap(palace => constructionEdges(proposed, palace));
-      const connected = travelTimeMapFrom(proposed, exits, RAIDER_FACTION, 2.35, 100);
-      const gates = [gate, ...state.raiderCamps!.filter(camp => raiderCampActive(state, camp)
-        && Number.isFinite(travel[camp.gate.y * width + camp.gate.x])).map(camp => camp.gate)];
-      if (gates.some(point => !Number.isFinite(connected[point.y * width + point.x]))) continue;
-      campId = id; nextId += pending.length;
-      const camp: RaiderCamp = { id, name: NAMES[Math.floor(simRandom(state) * NAMES.length)], size, ...bounds,
-        gate: { x: gate.x, y: gate.y }, gates: layout.gates.map(({ x, y }) => ({ x, y })),
-        signs: layout.signs.map(({ x, y }) => ({ x, y })), houses, coreTowers,
-        refuge: { x: layout.refuge.x + .5, y: layout.refuge.y + .5 }, tentCapacity: houses.length,
-        nextRaidAt: banditSpawnDeadline(state, RAIDER_FIRST_WAVE + spawned * RAIDER_WAVE_INTERVAL), waves: 0 };
-      entityStore(state).buildings.add(...pending);
-      // Clear only accepted construction cells. The surrounding woodland, water,
-      // elevation, cliff edges and natural stair connections are preserved.
-      for (const p of [...layout.walls, ...layout.gates, ...layout.tents, ...layout.towers, ...layout.paths, ...layout.signs]) {
-        const tile = state.world.tiles[p.y * width + p.x];
-        if (tile.overlay !== 'forest' && tile.overlay !== 'jungle') continue;
-        const before = terrainYields(tile.terrain, tile.overlay), after = terrainYields(tile.terrain, 'none');
-        tile.overlay = 'none'; clearedCells.push(p.y * width + p.x);
-        for (const resource of ['food', 'production', 'gold'] as const)
-          tile[resource] = Math.max(0, tile[resource] - before[resource] + after[resource]);
+    let placed = false;
+    const groups = orderedCampSites(state, active.map(camp => camp.gate));
+    // Prefer a site with a route to an underserved realm. Try the other
+    // regions when terrain cannot fit the desired camp near that realm.
+    search: for (const { realm, sites } of groups) {
+      const travel = access[realm], palaces = realms[realm][1];
+      const searched: Point[] = [];
+      for (const cell of sites) {
+        if (searched.length >= MAX_SITE_ATTEMPTS) break;
+        const point = { x: cell % width, y: Math.floor(cell / width) };
+        if (!outsideRespite(point) || !isBuildable(state.world, point.x, point.y, { blocked, preserveTrees: false })
+          || searched.some(previous => distance(previous, point) < 5)
+          || active.some(camp => distance(raiderCampCenter(camp), point) < 20)) continue;
+        searched.push(point);
+        const seed = Math.floor(simRandom(state) * 0x7fffffff);
+        const options = { blocked, obstacles, access: travel, preserveTrees: false, size };
+        const plan = size === 'small' ? planCompactCamp(state, point, seed, options) : planCamp(state.world, point, seed, options);
+        if (!plan?.layout || !plan.bounds) continue;
+        const { layout, bounds } = plan, center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+        // The entire footprint must honor the start buffer. Avoid engulfing
+        // a home, field or road even when buildings could fit around it.
+        let clear = true;
+        for (let y = bounds.y; y < bounds.y + bounds.height && clear; y++)
+          for (let x = bounds.x; x < bounds.x + bounds.width; x++) {
+            const index = y * width + x;
+            if (!clearance[index] || occupied.has(index)) { clear = false; break; }
+          }
+        if (!clear || !outsideRespite(center) || active.some(camp => distance(raiderCampCenter(camp), center) < 20)) continue;
+        const { gate } = layout;
+        if (!Number.isFinite(travel[gate.y * width + gate.x])) continue;
+        const id = campId + 1, pending: Building[] = [], houses: number[] = [];
+        const add = (kind: Building['kind'], x: number, y: number): Building => {
+          const hp = kind === 'wall' ? 900 : kind === 'woodenTower' || kind === 'barbarianLair' ? 600 : kind === 'villageTent' ? 160 : 100;
+          const building: Building = { id: nextId + pending.length + 1, kind, x, y, faction: RAIDER_FACTION, raiderCamp: id,
+            hp, maxHp: hp, armor: kind === 'woodenTower' ? 6 : 2, capacity: 0 };
+          pending.push(building); return building;
+        };
+        // Scenario entrances are open to every Leader. Ordinary worlds use
+        // a faction-controlled gate in the stone wall.
+        for (const p of layout.walls) add('wall', p.x, p.y);
+        if (!state.world.scenario && size !== 'small') add('wall', gate.x, gate.y);
+        const roads = new Map([...layout.paths, gate].map(p => [p.y * width + p.x, p]));
+        for (const p of roads.values()) add('road', p.x, p.y).roadStyle = 'trail';
+        const coreTowers: number[] = [];
+        for (const p of layout.towers) { const tower = add('woodenTower', p.x, p.y); if (p.core) coreTowers.push(tower.id); }
+        for (const p of layout.tents) houses.push(add('villageTent', p.x, p.y).id);
+        if (layout.lair) add('barbarianLair', layout.lair.x, layout.lair.y);
+        if (!scenarioStructuresAllowed(state,pending)) continue;
+        // Local access can lead into a peninsula whose only exit the camp itself
+        // closes. Probe the complete proposed structures before committing them,
+        // and preserve the routes of camps already placed during this search.
+        const proposed = { ...state, buildings: [...state.buildings.filter(building => !(isWallKind(building.kind) && building.faction >= 0)), ...pending] };
+        const routePreserved = withNavigationFrame(proposed, () => {
+          const exits = palaces.flatMap(palace => constructionEdges(proposed, palace));
+          const connected = travelTimeMapFrom(proposed, exits, RAIDER_FACTION, 2.35, travelLimit);
+          if (!Number.isFinite(connected[gate.y * width + gate.x])) return false;
+          return realms.every(([, cities], index) => {
+            const origins = index === realm ? exits : cities.flatMap(city => constructionEdges(proposed, city));
+            return active.every(camp => !Number.isFinite(access[index][camp.gate.y * width + camp.gate.x])
+              || hasStaticPathBetween(proposed, origins, [{ x: camp.gate.x + .5, y: camp.gate.y + .5 }], RAIDER_FACTION));
+          });
+        });
+        if (!routePreserved) continue;
+        campId = id; nextId += pending.length;
+        const camp: RaiderCamp = { id, name: NAMES[Math.floor(simRandom(state) * NAMES.length)], size, ...bounds,
+          gate,
+          signs: layout.signs.map(({ x, y }) => ({ x, y })), houses, coreTowers,
+          refuge: { x: layout.refuge.x + .5, y: layout.refuge.y + .5 }, tentCapacity: houses.length,
+          // Idle until the raid director announces a raid here.
+          nextRaidAt: Number.MAX_SAFE_INTEGER, waves: 0 };
+        entityStore(state).buildings.add(...pending);
+        // Clear only accepted construction cells. The surrounding woodland, water,
+        // elevation, cliff edges and natural stair connections are preserved.
+        for (const p of [...layout.walls, gate, ...layout.tents, ...layout.towers, ...(layout.lair ? campLairCells(layout.lair) : []), ...layout.paths, ...layout.signs]) {
+          const tile = state.world.tiles[p.y * width + p.x];
+          if (tile.overlay !== 'forest' && tile.overlay !== 'jungle') continue;
+          const before = terrainYields(tile.terrain, tile.overlay), after = terrainYields(tile.terrain, 'none');
+          tile.overlay = 'none'; clearedCells.push(p.y * width + p.x);
+          for (const resource of ['food', 'production', 'gold'] as const)
+            tile[resource] = Math.max(0, tile[resource] - before[resource] + after[resource]);
+        }
+        // Commit only complete plans. Reserve them before considering the next camp.
+        for (const building of pending) reserve(building);
+        for (const sign of camp.signs!) blocked.add(sign.y * width + sign.x);
+        state.raiderCamps!.push(camp); spawned++; placed = true;
+        break search;
       }
-      // Commit only complete plans. Reserve them before considering the next camp.
-      for (const building of state.buildings) if (building.raiderCamp === id) reserve(building);
-      for (const sign of camp.signs!) blocked.add(sign.y * width + sign.x);
-      state.raiderCamps!.push(camp); spawned++; placed = true;
-      break;
     }
-    if (!placed) failedSizes.add(size);
+    if (!placed) unavailable |= 1 << sizeIndex;
   }
   if (spawned) markWorldChanged(state.world, 'sight', clearedCells);
   return spawned;

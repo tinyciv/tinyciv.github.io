@@ -18,6 +18,14 @@ pub const POWER_ATTACK: f64 = 0.5;
 pub const GUARD_DEFENSE: f64 = 1.0;
 pub const DEATH_GOLD: f64 = 200.0;
 
+pub fn opening_house_credit(orders: u32) -> f64 {
+    f64::from(5_u32.saturating_sub(orders)) * 4.0
+}
+
+pub fn opening_harvest_seconds(seed: u32, x: i32, y: i32, cycle_seconds: f64) -> f64 {
+    crate::relief::hash(seed ^ 0x35e8_61af, x, y) * cycle_seconds
+}
+
 /// Stable numeric rule IDs are shared by the thin browser presentation bridge.
 pub fn constant(index: u32) -> f64 {
     match index {

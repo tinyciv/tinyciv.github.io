@@ -8,13 +8,13 @@ import { SITE_DEFINITIONS, type SiteView } from './site-types';
 import type { BuildingKind, GameState, World } from './types';
 
 interface Geometry { world: World; revision: number; values: number[] }
-interface Transport { geometry?: Geometry; views: Map<number, SiteView[]> }
+interface Transport { geometry?: Geometry; nearby: Map<number, ReadonlySet<number>> }
 const transports = new SimSlot<Transport>();
 const geometries = new WeakMap<World, Geometry>();
 
 function transport(state: GameState): Transport {
     const handle = simCore(state).handle;
-    const current = transports.get(state) ?? transports.set(state, { views: new Map() });
+    const current = transports.get(state) ?? transports.set(state, { nearby: new Map() });
     const revision = worldRevisions(state.world).geometry;
     let geometry = geometries.get(state.world);
     if (!geometry || geometry.revision !== revision) {
@@ -27,7 +27,7 @@ function transport(state: GameState): Transport {
         const pointer = rustEngine.sim_sites_input(handle, count);
         new Float64Array(rustEngine.memory.buffer, pointer, geometry.values.length).set(geometry.values);
         rustEngine.sim_sites_geometry(handle, state.world.width, state.world.height, count);
-        current.geometry = geometry; current.views.clear();
+        current.geometry = geometry; current.nearby.clear();
     }
     return current;
 }
@@ -38,24 +38,34 @@ function leaderObservation(state: GameState, actor: number) {
             | Number(leader?.embarkedOn !== undefined) << 3 | Number(!!state.gameOver) << 4 };
 }
 
-/** Presentation samples at four Hz. Tile imports happen only on geometry
- * revision changes; occupancy reads use the maintained native building index. */
-export function siteViews(state: GameState, now = performance.now(), actor = playerFaction(state)): readonly SiteView[] {
+/** Cache the actionable anchors between native presentation samples. */
+export function nearbySiteIds(state: GameState, now = performance.now(), actor = playerFaction(state)): ReadonlySet<number> {
     const current = transport(state), handle = simCore(state).handle;
-    const due = rustEngine.sim_sites_due(handle, actor, now / 1000);
-    if (current.views.has(actor) && !due) return current.views.get(actor)!;
+    const previous = current.nearby.get(actor);
+    if (!rustEngine.sim_sites_due(handle, actor, now / 1000) && previous) return previous;
+    const nearby = new Set(sampleSiteViews(state, actor).filter(site => site.near && site.available).map(site => site.id));
+    current.nearby.set(actor, nearby); return nearby;
+}
+
+/** Clicks and open dialogs read current conditions independently of the renderer cache. */
+export function currentSiteViews(state: GameState, actor = playerFaction(state)): readonly SiteView[] {
+    transport(state);
+    return sampleSiteViews(state, actor);
+}
+
+function sampleSiteViews(state: GameState, actor: number): SiteView[] {
     structureIndex(state);
     const leader = leaderObservation(state, actor);
-    const pointer = rustEngine.sim_sites_sample(handle, leader.x, leader.y, leader.flags);
+    const pointer = rustEngine.sim_sites_sample(simCore(state).handle, leader.x, leader.y, leader.flags);
     const count = new Float64Array(rustEngine.memory.buffer, pointer, 1)[0];
     const rows = new Float64Array(rustEngine.memory.buffer, pointer + 8, count * 7);
     const views: SiteView[] = [];
     for (let i = 0; i < count; i++) {
         const o = i * 7, flags = rows[o + 6];
         views.push({ id: rows[o], kind: rows[o + 1] as SiteView['kind'], x: rows[o + 2], y: rows[o + 3],
-            width: rows[o + 4], height: rows[o + 5], near: !!(flags & 1), withinVisit: !!(flags & 2), available: !!(flags & 4), showBrackets: !!(flags & 8) });
+            width: rows[o + 4], height: rows[o + 5], near: !!(flags & 1), available: !!(flags & 2) });
     }
-    current.views.set(actor, views); return views;
+    return views;
 }
 /** Fresh native validation for an action, independent of the presentation clock. */
 export function siteTarget(state: GameState, id: number, actor = playerFaction(state)): { kind: BuildingKind; x: number; y: number } | undefined {

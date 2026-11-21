@@ -40,7 +40,7 @@ export interface CityEconomyGroup {
 interface Group extends CityEconomyGroup { scalars: Scalars; }
 export interface CityEconomyCity {
   palace: Building; buildings: Building[]; fields: FarmField[]; unitCosts: number[];
-  capital: boolean; maintenanceCapital?: number; maintenanceCities?: number; saltConsumption: number; peatSupplied?: boolean;
+  capital: boolean; maintenanceCapital?: number; saltConsumption: number; peatSupplied?: boolean;
   factoryMultiplier: number; revision: number;
 }
 interface City extends CityEconomyCity { scalars: Scalars; seen: boolean; }
@@ -112,7 +112,7 @@ export class CityEconomyIndex {
     const inputs = this.prepare(state), selected = new Set(inputs.dirty);
     if (!selected.size) return;
     const ownership = cityOwnership(state), factions = new Map(state.factions.map(faction => [faction.id, faction]));
-    const capitals = new Map<number, number>(), maintenanceCapitals = new Map<number, number>(), maintenanceCities = new Map<number, number>();
+    const capitals = new Map<number, number>(), maintenanceCapitals = new Map<number, number>();
     this.palaceGeometry.begin();
     this.beginResidents(state, selected);
     for (const city of this.cities.values()) if (selected.has(city.palace.faction)) {
@@ -122,8 +122,7 @@ export class CityEconomyIndex {
       this.palaceGeometry.add(palace, palace.id, palace.faction, palace.x, palace.y, buildingReady(palace));
       if (!buildingReady(palace)) continue;
       if (palace.villageId === undefined)
-      { maintenanceCapitals.set(palace.faction, Math.min(maintenanceCapitals.get(palace.faction) ?? Infinity, palace.id));
-        maintenanceCities.set(palace.faction, (maintenanceCities.get(palace.faction) ?? 0) + 1); }
+        maintenanceCapitals.set(palace.faction, Math.min(maintenanceCapitals.get(palace.faction) ?? Infinity, palace.id));
       const faction = factions.get(palace.faction);
       if (!selected.has(palace.faction)) continue;
       if (palace.faction < 0 || !faction || faction.defeated) continue;
@@ -148,13 +147,13 @@ export class CityEconomyIndex {
       if (!factory.has(faction.id)) factory.set(faction.id, quoteFactoryIncome(faction.id, 1));
       city.capital = capitals.get(faction.id) === palace.id;
       city.maintenanceCapital = maintenanceCapitals.get(faction.id);
-      city.maintenanceCities = maintenanceCities.get(faction.id);
       city.saltConsumption = salt.get(faction.id)!;
       city.peatSupplied = inputs.peatCities.has(palace.id);
       city.factoryMultiplier = factory.get(faction.id)!;
       city.scalars.add(palace, palace.faction, palace.capacity, city.capital,
         city.capital ? faction.purchasedRetinueSlots : undefined, faction.villageId, faction.achievements,
-        maintenanceCapitals.get(faction.id), maintenanceCities.get(faction.id), city.saltConsumption, city.factoryMultiplier, stoneDefenseMultiplier(state, faction.id, 'tower'),
+        city.maintenanceCapital, (palace.settlementUpkeepUntil ?? 0) > state.time,
+        city.saltConsumption, city.factoryMultiplier, stoneDefenseMultiplier(state, faction.id, 'tower'),
         fishingCityFoodPerEconomyCycle(state, palace.id), city.peatSupplied);
     }
     for (const building of inputs.buildingsFor(selected)) {
@@ -198,7 +197,7 @@ export class CityEconomyIndex {
       city.scalars.add(field, field.faction, field.x, field.y, !!field.orchard,
         field.orchard ? state.time + 1e-7 >= field.orchard.readyAt : true,
         owner?.villageBonuses?.food, owner?.achievements, farmResearchYieldMultiplier(owner), state.world, yieldRevision, irrigation,
-        tile?.terrain, tile?.fertility, granaryYieldMultiplier(state, field.faction, field.x, field.y));
+        tile?.terrain, tile?.fertility, tile?.fertilityGrass, granaryYieldMultiplier(state, field.faction, field.x, field.y));
     }
     for (const [camp, owner] of this.farmOwners) if (selected.has(owner.faction) && !assignedFarms.has(camp)) this.farmOwners.delete(camp);
     for (const city of this.cities.values()) if (selected.has(city.palace.faction)) city.scalars.add('units');

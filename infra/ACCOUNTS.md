@@ -1,4 +1,4 @@
-# Account database and email sign-in
+# Account database and cloud saves
 
 The account service uses PostgreSQL on RDS, managed by
 [`terraform/database.tf`](terraform/database.tf). The `tinyciv-accounts` instance
@@ -8,33 +8,39 @@ TLS with hostname verification and the AWS Oregon RDS CA bundle; the database
 requires TLS. The initial size is `db.t4g.micro` with 20 GiB gp3 storage.
 
 The account API is separate from match simulation and guest multiplayer.
-Signing in stores a stable account identity and profile data; game saves still
-use the existing browser save system. Email/password sign-in is implemented.
+Registration requires a username. Players can sign in with their username or
+with the optional email address they provided. Signed-in players save games to
+their account, and guests save in the browser.
 Google OAuth and password reset mail still require separate configuration.
 Email addresses are normalized but are not yet verified through email.
 
 ## Stored authentication data
 
-`accounts.users` contains the normalized email, display name and a password hash
+`accounts.users` contains the username, optional email, display name and a password hash
 encoded as `scrypt$131072$8$1$<16-byte random salt>$<32-byte hash>`.
 Hash comparison uses constant-time comparison. The hash cost follows the
 [OWASP scrypt guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 Hashing runs asynchronously with one active operation per server process to
-bound memory use. Passwords accept at least ten characters and at most 1024
-UTF-8 bytes. No password is stored in source, Terraform, SSM deployment
+bound memory use. Passwords must be nonempty and fit within 1024 UTF-8 bytes.
+No password is stored in source, Terraform, SSM deployment
 commands, database columns, browser storage, or application logs.
 
 Sessions use random 32-byte opaque tokens. Only SHA-256 token hashes are stored
 in `accounts.sessions`; sessions expire after seven days and logout revokes
 them. The browser keeps its token in session storage and sends an Authorization
 header. This supports the GitHub Pages frontend without third-party cookies.
-Authentication attempts are limited by viewer IP and normalized email using
+Authentication attempts are limited by viewer IP and the supplied username or email using
 atomic SQL counters, so a service restart does not clear the limits.
 
 Account data is a JSON object of up to 12 KB per user in `accounts.user_data`.
 Every read/write derives the user ID from the authenticated session, and all
 input goes through SQL parameters. Password hashes and tokens never appear in
 account API responses, apart from the new opaque token at sign-in/registration.
+
+`accounts.game_saves` stores compressed game saves and compact catalog entries.
+Save IDs are scoped to a verified account, and private save responses disable
+caching. Downloads contain a single game. Catalog requests read summary fields
+without loading the save payloads.
 
 ## Deployment and credentials
 
@@ -75,7 +81,7 @@ ACCOUNT_DATABASE_CONFIG=/etc/btv-database.json \
 ```
 
 To seed a requested account, the `import-user` command accepts a JSON record
-with `email` and `passwordHash` on stdin. Compute a salted scrypt hash using the
+with `username`, `passwordHash` and an optional `email` on stdin. Compute a salted scrypt hash using the
 same password module in a trusted local process first. Transfer only that
 record through SSM; never put the raw password into a shell argument, request
 file, workflow, or deployment log. An existing account is never overwritten.

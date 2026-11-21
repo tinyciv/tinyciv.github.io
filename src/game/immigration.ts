@@ -5,9 +5,19 @@ import { buildingActivityAvailable, BUILDING_ACTIVITY_RANGE } from './building-a
 import { synchronizeFarms } from './farms';
 import { governingPalace } from './governor';
 import { cityResidents, invalidateCitySummarySnapshot, withLiveCitySummaries } from './cities';
+import { settlementPopulationLimit } from './settlement-upgrades';
 import { buildingReady, type Building, type GameState } from './types';
 
 export const IMMIGRANT_COST = 100;
+
+function immigrationCapacityError(state: GameState, palace: Building): string {
+  return withLiveCitySummaries(state, () => {
+    const city = cityResidents(state).find(city => city.palace.id === palace.id);
+    if (city && city.population + 1 > settlementPopulationLimit(palace)) return 'Population limit reached.';
+    if (!city || city.population + 1 > city.housing) return 'No vacant housing in this town.';
+    return '';
+  });
+}
 
 export function immigrationStatus(state: GameState, palace: Building): { available: boolean; reason: string } {
   const faction = state.factions.find(candidate => candidate.id === palace.faction);
@@ -16,11 +26,10 @@ export function immigrationStatus(state: GameState, palace: Building): { availab
   else if (palace.kind !== 'palace' || palace.faction !== playerFaction(state) || !faction || !state.buildings.includes(palace)) reason = 'Choose your own town.';
   else if (!buildingReady(palace)) reason = 'Complete the town first.';
   else if (!buildingActivityAvailable(state, palace)) reason = `Move your Leader within ${BUILDING_ACTIVITY_RANGE} tiles of the town.`;
-  else if (withLiveCitySummaries(state, () => {
-    const city = cityResidents(state).find(city => city.palace.id === palace.id);
-    return !city || city.population + 1 > city.housing;
-  })) reason = 'No vacant housing in this town.';
-  else if (faction.gold < IMMIGRANT_COST) reason = `Need ${IMMIGRANT_COST} gold.`;
+  else {
+    reason = immigrationCapacityError(state, palace);
+    if (!reason && faction.gold < IMMIGRANT_COST) reason = `Need ${IMMIGRANT_COST} gold.`;
+  }
   return { available: !reason, reason };
 }
 
@@ -30,6 +39,9 @@ export function importImmigrant(state: GameState, palace: Building): { ok: boole
   if (!status.available) return { ok: false, message: status.reason };
   const faction = state.factions.find(candidate => candidate.id === palace.faction)!;
   synchronizeFarms(state);
+  // Rehousing can change the receiving city's resident count and vacancies.
+  const reason = immigrationCapacityError(state, palace);
+  if (reason) return { ok: false, message: reason };
   const home = state.buildings.find(building => (building.kind === 'house' || building.kind === 'apartments') && building.faction === palace.faction
     && buildingReady(building) && (building.residents ?? 0) < building.capacity
     && governingPalace(state, { x: building.x + .5, y: building.y + .5 }, palace.faction)?.id === palace.id);

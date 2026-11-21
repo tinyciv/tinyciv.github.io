@@ -62,20 +62,22 @@ export function scenarioPlacementError(state: GameState,kind: BuildingKind,x: nu
 export interface ScenarioAccessReport {
   remove: number[]; landmasses: number; regions: number; remaining: number; unreachable: number; starts: Point[];
 }
-export function scenarioRoadPlan(state:GameState,faction:number):Point[]{
+function streetObservations(state: GameState, faction: number) {
   const native=bridge(state),targets=state.buildings.filter(b=>b.hp>0&&b.faction===faction&&!isFarmKind(b.kind)&&!['road','bridge','irrigation'].includes(b.kind));
-  const roads=state.buildings.filter(b=>b.hp>0&&b.faction===faction&&(b.kind==='road'||b.kind==='bridge'));
-  native.input([...targets.map(b=>b.id),...roads.map(b=>b.y*state.world.width+b.x)]);
-  const pointer=rustEngine.sim_scenario_roads(native.handle,targets.length,roads.length),count=new Float64Array(rustEngine.memory.buffer,pointer,1)[0];
+  const owned: number[] = [], shared: number[] = [];
+  for (const building of state.buildings) if (building.hp > 0 && (building.kind === 'road' || building.kind === 'bridge'))
+    (building.faction === faction ? owned : shared).push(building.y * state.world.width + building.x);
+  native.input([...targets.map(b => b.id), ...owned, ...shared]);
+  return [native.handle, targets.length, owned.length + shared.length, owned.length] as const;
+}
+export function scenarioRoadPlan(state:GameState,faction:number):Point[]{
+  const pointer=rustEngine.sim_scenario_roads(...streetObservations(state, faction)),count=new Float64Array(rustEngine.memory.buffer,pointer,1)[0];
   const cells=Array.from(new Float64Array(rustEngine.memory.buffer,pointer+8,count));
   return cells.map(i=>({x:i%state.world.width,y:Math.floor(i/state.world.width)}));
 }
 export interface ScenarioStreetAudit { blockers:number[]; blockedRoads:number[]; missingRing:number[]; unserved:number[]; roadRegions:number; expectedRoadRegions:number }
 export function auditScenarioStreets(state:GameState,faction:number):ScenarioStreetAudit{
-  const native=bridge(state),targets=state.buildings.filter(b=>b.hp>0&&b.faction===faction&&!isFarmKind(b.kind)&&!['road','bridge','irrigation'].includes(b.kind));
-  const roads=state.buildings.filter(b=>b.hp>0&&b.faction===faction&&(b.kind==='road'||b.kind==='bridge'));
-  native.input([...targets.map(b=>b.id),...roads.map(b=>b.y*state.world.width+b.x)]);
-  const pointer=rustEngine.sim_scenario_street_audit(native.handle,targets.length,roads.length);
+  const pointer=rustEngine.sim_scenario_street_audit(...streetObservations(state, faction));
   const counts=Array.from(new Float64Array(rustEngine.memory.buffer,pointer,6));
   const data=new Float64Array(rustEngine.memory.buffer,pointer+48,counts.slice(0,4).reduce((a,b)=>a+b,0)).slice();let offset=0;
   const section=(count:number)=>Array.from(data.subarray(offset,offset+=count));

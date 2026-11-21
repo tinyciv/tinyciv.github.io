@@ -10,6 +10,7 @@ function realm(ampleFood = true): GameState {
   const world: World = { width: 40, height: 32, seed: 'housing-economy', source: 'fixture', spawns: [{ x: 10, y: 12 }],
     tiles: Array.from({ length: 1280 }, () => ({ terrain: 'grassland', overlay: 'none', elevation: .4, moisture: .7, food: 3, production: 1, gold: 0, variation: .5 })) };
   const state = createGame(world);
+  delete state.factions[0].openingCapitalId;
   state.factions[0].gold = 10000; state.factions[0].population = 5; state.raiderCamps = []; state.villages = [];
   const retainedHomes = new Set(state.buildings.filter(building => building.kind === 'house' && building.faction === 0).slice(0, 4).map(home => home.id));
   entityStore(state).buildings.replace(state.buildings.filter(building => building.faction === 0

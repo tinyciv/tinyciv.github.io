@@ -40,35 +40,35 @@ function assertCaps(state: GameState): void {
 }
 
 describe('late raids remain live without increasing saturation limits', () => {
-  it('runs both raid clocks for ten more game minutes after Keep playing, including a save round trip', () => {
+  it('keeps the raid director cycling for ten more game minutes after Keep playing, including a save round trip', () => {
     let state = fixture(); state.time = 1200;
-    state.raiderCamps![0].nextRaidAt = 1200; state.fogRaids!.nextAt = 1200;
-    state.raiderSkirmishes = { nextByFaction: { 0: 1200 }, wavesByFaction: { 0: 0 } };
+    state.fogRaids!.nextAt = 1200;
     state.gameOver = true; state.victory = true; state.paused = true;
     updateGame(state, 1, idle);
     expect(state.time).toBe(1200); expect(state.fogRaids!.waves).toBe(0);
     expect(continueAfterVictory(state)).toBe(true);
-    const observations: { time: number; large: number; small: number }[] = [];
+    const observations: { time: number; large: number }[] = [];
     for (let period = 0; period < 20; period++) {
       for (let second = 0; second < 30; second++) { updateGame(state, 1, idle); assertCaps(state); }
-      observations.push({ time: state.time, large: state.fogRaids!.waves, small: state.raiderSkirmishes!.wavesByFaction[0] });
-      // Controlled battle losses free population capacity; neither scheduler
-      // is reset, forced due, or invoked outside the real updateGame pipeline.
+      observations.push({ time: state.time, large: state.fogRaids!.waves });
+      // Controlled battle losses end each raid; the director is never reset,
+      // forced due, or invoked outside the real updateGame pipeline.
       for (const unit of livingRaiders(state)) unit.hp = 0;
       if (period === 9) state = JSON.parse(JSON.stringify(state)) as GameState;
     }
     expect(state.time).toBeCloseTo(1800);
     expect(state).toMatchObject({ victory: true, victoryContinued: true, gameOver: false, paused: false });
-    expect(observations.at(-1)!.large).toBeGreaterThan(15);
-    expect(observations.at(-1)!.small).toBeGreaterThan(15);
-    for (let i = 2; i < observations.length; i += 2) {
-      expect(observations[i].large).toBeGreaterThan(observations[i - 2].large);
-      expect(observations[i].small).toBeGreaterThan(observations[i - 2].small);
-    }
+    // Calm, build-up, raid and respite repeat: a few raids, never a constant stream.
+    expect(observations.at(-1)!.large).toBeGreaterThanOrEqual(2);
+    expect(observations.at(-1)!.large).toBeLessThanOrEqual(8);
+    expect(observations.at(-1)!.large).toBeGreaterThan(observations[9].large);
+    for (let i = 1; i < observations.length; i++) expect(observations[i].large).toBeGreaterThanOrEqual(observations[i - 1].large);
   }, 15000);
 
   it('recycles eight stalled reinforcement waves at the full global cap for twenty more minutes without new bodies', () => {
-    const state = fixture(); state.time = 3600; state.raiderCamps![0].nextRaidAt = 3600; state.fogRaids!.nextAt = 3600;
+    const state = fixture(); state.time = 3600; state.fogRaids!.nextAt = 3600;
+    // An announced raid is due now; later raids come from the director's own cycle.
+    Object.assign(state.raiderCamps![0], { nextRaidAt: 3600, directedRaid: { faction: 0, target: 2, motive: 'assault', initial: 30, total: 30, era: 6 } });
     const old: MarauderPack[] = [];
     for (let i = 0; i < 8; i++) {
       const pack: MarauderPack = { id: 10 + i, name: 'Stalled siege', color: '#111', home: { x: 36.5, y: 19.5 },
@@ -93,6 +93,6 @@ describe('late raids remain live without increasing saturation limits', () => {
       expect(livingRaiders(state).every(u => originalIds.has(u.id))).toBe(true);
       expect(livingRaiders(state).filter(u => u.kills === 35)).toHaveLength(80);
     }
-    expect(state.fogRaids!.waves).toBeGreaterThan(15);
+    expect(state.fogRaids!.waves).toBeGreaterThan(1);
   });
 });

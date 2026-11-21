@@ -1,4 +1,5 @@
-import { tileAt, WATER, type Terrain, type World } from './types';
+import { rustEngine } from './rust-engine';
+import { tileAt, WATER, type Terrain, type Tile, type World } from './types';
 
 export const FRESHWATER_FERTILITY_BONUS = .25;
 export const FERTILITY_DISTANCE_STEP = .05;
@@ -13,11 +14,18 @@ export function freshwaterFertilityBonus(distance: number): number {
   return Math.max(0, FRESHWATER_FERTILITY_BONUS - Math.max(0, distance - 1) * FERTILITY_DISTANCE_STEP);
 }
 
-/** Generation stores the exact multiplier, making normal harvest/UI reads O(1).
- * Small hand-built worlds can derive it locally without a full-map cache scan. */
-export function soilFertility(world: World, x: number, y: number): number {
-  const tx = Math.floor(x), ty = Math.floor(y), tile = tileAt(world, tx, ty);
-  if (!tile || WATER.has(tile.terrain)) return 0;
+export function fertilityGrassTerrain(tile: Tile): boolean {
+  return tile.terrain === 'grassland' || tile.terrain === 'plains';
+}
+
+export function fertilityGrassFooting(tile: Tile): boolean {
+  return fertilityGrassTerrain(tile) && (tile.overlay === 'none' || tile.overlay === 'forest' || tile.overlay === 'jungle')
+    && !tile.beach && !tile.marsh
+    && !tile.snow && !tile.creek && !tile.relief && !tile.waterfall && !tile.geothermal
+    && tile.resource !== 'salt' && !tile.villageTrail;
+}
+
+function soilBeforeGrass(world: World, tx: number, ty: number, tile: Tile): number {
   if (tile.fertility !== undefined && Number.isFinite(tile.fertility)) return Math.max(0, Math.min(1.25, tile.fertility));
   for (let distance = 1; distance <= FERTILITY_BONUS_DISTANCE; distance++) {
     for (let dx = -distance; dx <= distance; dx++) {
@@ -29,4 +37,13 @@ export function soilFertility(world: World, x: number, y: number): number {
     }
   }
   return baseSoilFertility(tile.terrain);
+}
+
+/** Generated soil and patch density are both indexed directly by tile. */
+export function soilFertility(world: World, x: number, y: number): number {
+  const tx = Math.floor(x), ty = Math.floor(y), tile = tileAt(world, tx, ty);
+  if (!tile || WATER.has(tile.terrain)) return 0;
+  const base = soilBeforeGrass(world, tx, ty, tile);
+  return tile.fertilityGrass && fertilityGrassTerrain(tile)
+    ? rustEngine.fertility_grass_soil(base, tile.fertilityGrass) : base;
 }

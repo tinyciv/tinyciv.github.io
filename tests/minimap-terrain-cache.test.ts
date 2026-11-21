@@ -51,11 +51,11 @@ describe('cached minimap terrain', () => {
         expect(fills).toEqual([{ x: 2, y: 1, color: '#85a643' }]);
     });
 
-    it('updates relief and beaches, and repaints a replacement world even with matching dimensions', () => {
+    it('updates plains and beaches, and repaints a replacement world even with matching dimensions', () => {
         const { state, renderer, fills } = fixture(); renderer.prepare(state); fills.length = 0;
-        state.world.tiles[8].ridge = 1; state.world.tiles[9].beach = true;
+        state.world.tiles[8].terrain = 'plains'; state.world.tiles[9].beach = true;
         state.world.revision!++; renderer.prepare(state);
-        expect(fills).toEqual([{ x: 2, y: 1, color: '#758b40' }, { x: 3, y: 1, color: '#c9b266' }]);
+        expect(fills).toEqual([{ x: 2, y: 1, color: '#c4b253' }, { x: 3, y: 1, color: '#c9b266' }]);
         fills.length = 0; state.world = { ...state.world }; renderer.prepare(state);
         expect(fills).toHaveLength(30);
     });

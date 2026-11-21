@@ -1678,7 +1678,8 @@ mod tests {
         assert_eq!(e.village_status(1, 0, 5000.0, R_LEADER | R_REALM)[1], NO_REACH as f64);
         assert_eq!(e.village_status(1, 0, 5000.0, R_NEAR | R_REALM)[1], NO_LEADER as f64);
         assert_eq!(e.village_status(1, 0, 100.0, all)[1], NEED_GOLD as f64);
-        assert_eq!(e.village_command(1, 0, A_TRADE, 5000.0, all), [1.0, 0.0, 250.0, 1.0]);
+        assert_eq!(e.village_command(1, 0, A_TRADE, 199.0, all), [0.0, NEED_GOLD as f64, 200.0, 0.0]);
+        assert_eq!(e.village_command(1, 0, A_TRADE, 200.0, all), [1.0, 0.0, 200.0, 1.0]);
         assert_eq!(e.village_status(1, 0, 5000.0, all)[1], ALREADY_TRADING as f64);
         e.set_affiliation(300, 0, 50.0);
         assert_eq!(e.village_command(1, 0, A_ALLY, 5000.0, all)[3], 1.0);

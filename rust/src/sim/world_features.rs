@@ -569,7 +569,9 @@ impl WorldFeatures {
         self.output.clear(); let n = width.saturating_mul(height);
         self.output.extend([0.0, 0.0]);
         let expected = n.saturating_mul(STRIDE).saturating_add(start_count.saturating_mul(2)).saturating_add(2);
-        if n == 0 || width > 512 || height > 512 || self.input.len() != expected { return self.output.as_ptr(); }
+        if n == 0 || width > super::MAX_WORLD_DIMENSION || height > super::MAX_WORLD_DIMENSION || self.input.len() != expected {
+            return self.output.as_ptr();
+        }
         let mut cells = Vec::with_capacity(n);
         for r in self.input[..n * STRIDE].chunks_exact(STRIDE) {
             let mut row = [0.0; STRIDE]; row.copy_from_slice(r); row[15] = 0.0; cells.push(Cell { row });

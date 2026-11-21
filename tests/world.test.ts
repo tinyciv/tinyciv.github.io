@@ -191,31 +191,14 @@ describe('geographic world generation', () => {
     expect(longestStraightRiver(world)).toBeLessThan(world.width / 3);
   });
 
-  it('grows regionally varied woodland with open ground throughout every stand', () => {
+  it('grows regionally varied woodland and forest stands', () => {
     for (const seed of ['BTV-847', 'forest-patches-1', 'forest-patches-8', 'forest-patches-21']) {
       const world = generateWorld(seed, 194, 153), sizes = overlayPatches(world);
       const total = sizes.reduce((sum, size) => sum + size, 0);
       const land = world.tiles.filter(tile => !WATER.has(tile.terrain)).length;
       expect(total / land, `${seed}: recognizable woodland regions`).toBeGreaterThan(.15);
-      expect(total / land, `${seed}: open ground between trees`).toBeLessThan(.32);
+      expect(total / land, `${seed}: open ground around stands`).toBeLessThan(.5);
       expect(Math.max(...sizes) / total, `${seed}: several distinct stands`).toBeLessThan(.3);
-      const solidSquares: number[] = [], withoutOpening: number[] = [];
-      for (let i = 0; i < world.tiles.length; i++) {
-        if (world.tiles[i].overlay !== 'forest') continue;
-        const x = i % world.width, y = Math.floor(i / world.width);
-        if (x + 1 < world.width && y + 1 < world.height && [i + 1, i + world.width, i + world.width + 1]
-          .every(next => world.tiles[next].overlay === 'forest')) solidSquares.push(i);
-        const open = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= world.width || ny >= world.height) return false;
-          const next = ny * world.width + nx, neighbor = world.tiles[next];
-          return !WATER.has(neighbor.terrain) && neighbor.overlay === 'none' && passable(world, next)
-            && canTraverseEdge(world, { x, y }, { x: nx, y: ny });
-        });
-        if (!open) withoutOpening.push(i);
-      }
-      expect(solidSquares, `${seed}: no solid 2×2 canopy`).toEqual([]);
-      expect(withoutOpening, `${seed}: every tree touches traversable open ground`).toEqual([]);
       // Measure regions at a larger scale than the deliberate single-cell gaps.
       // Uniformly scattering the same number of trees would lose this variation.
       const regions: number[] = [];
@@ -229,7 +212,7 @@ describe('geographic world generation', () => {
       }
       regions.sort((a, b) => a - b);
       expect(regions[Math.floor(regions.length * .9)] - regions[Math.floor(regions.length * .1)],
-        `${seed}: distinct woodland regions survive thinning`).toBeGreaterThan(.12);
+        `${seed}: distinct woodland regions`).toBeGreaterThan(.12);
     }
   });
 

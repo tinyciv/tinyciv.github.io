@@ -3,7 +3,6 @@ import { constructionEdges } from '../src/game/builders';
 import { entityStore } from '../src/game/entity-store';
 import { ensureFactionStartingExits, establishFactionStartingDefenses } from '../src/game/faction-start';
 import { canTraverseEdge, canWalk, hasStaticPath, withNavigationFrame } from '../src/game/pathfinding';
-import { ridgeGroundWalkable } from '../src/game/ridges';
 import type { Building, GameState, Point } from '../src/game/types';
 
 function fixture(): GameState {
@@ -17,7 +16,7 @@ function fixture(): GameState {
     buildMode: null, diplomacy: null, gameOver: false, victory: false, seed: 'starting-wall-terrain', rngState: 1 };
 }
 /** Use actual eight-direction movement for friendly and hostile approaches
- * across marsh, fords, ramps and farm-sized gaps. */
+ * across marsh, fords, rocks and farm-sized gaps. */
 function exteriorRoute(state: GameState, palace: Building, faction: number): Point[] | undefined {
   return withNavigationFrame(state, () => {
     const width = state.world.width, height = state.world.height, queue: number[] = [], previous = new Map<number, number>();
@@ -57,7 +56,7 @@ describe('open starting towers on traversable terrain', () => {
     expect(state.buildings.some(building => building.kind === 'palisade')).toBe(false);
   });
 
-  it.each(['flat', 'marsh', 'ford', 'farm', 'stairs'] as const)('protects tower contacts around %s while keeping the city and countryside connected', terrain => {
+  it.each(['flat', 'marsh', 'ford', 'farm', 'rocks'] as const)('protects tower contacts around %s while keeping the city and countryside connected', terrain => {
     const state = fixture(), palace = state.buildings[0], width = state.world.width;
     if (terrain === 'marsh' || terrain === 'ford') for (let x = 0; x < width; x++) {
       if (x >= 18 && x <= 23) continue;
@@ -65,10 +64,9 @@ describe('open starting towers on traversable terrain', () => {
     }
     if (terrain === 'farm') for (let radius = 4; radius <= 10; radius++) entityStore(state).buildings.add({ id: 100 + radius,
       kind: 'camp', faction: 1, x: palace.x - radius, y: palace.y, hp: 100, maxHp: 100, capacity: 0 });
-    if (terrain === 'stairs') {
-      for (let y = 5; y <= 42; y++) for (let x = 25; x <= 42; x++) state.world.tiles[y * width + x].ridge = 1;
-      state.world.tiles[20 * width + 25].stair = 'east';
-      expect(ridgeGroundWalkable(state.world, 25, 20)).toBe(true);
+    if (terrain === 'rocks') {
+      for (let y = 5; y <= 42; y++) if (y !== 20) state.world.tiles[y * width + 25].rockRelief = 0;
+      expect(canWalk(state, 25, 20, 0)).toBe(true);
     }
     expect(exteriorRoute(state, palace, 0)).toBeDefined();
     defend(state);

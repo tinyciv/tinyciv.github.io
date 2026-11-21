@@ -90,7 +90,7 @@ describe('gold ledger records actual gameplay transactions', () => {
     const state = villageFixture(), faction = state.factions[0], village = state.factions[1], camp = state.buildings[1];
     expect(performVillageAction(state, camp, 'trade').ok).toBe(true);
     expect(performVillageAction(state, camp, 'trade').ok).toBe(false);
-    expect(goldFlowSummary(state, faction)).toMatchObject({ inputs: [], outlays: [{ category: 'diplomacy', amount: 250 }], net: -250 });
+    expect(goldFlowSummary(state, faction)).toMatchObject({ inputs: [], outlays: [{ category: 'diplomacy', amount: 200 }], net: -200 });
     const route = state.tradeRoutes!.find(candidate => candidate.villageId === 1)!;
     const merchant = state.units.find(unit => unit.id === route.merchantId)!;
     state.time = .1; updateMerchant(state, merchant, .1, () => {});
@@ -100,7 +100,7 @@ describe('gold ledger records actual gameplay transactions', () => {
     expect(route.journeys).toBe(1);
     const paid = goldFlowSummary(state, faction).inputs;
     expect(paid).toMatchObject([{ category: 'trade', amount: expect.any(Number) }]);
-    expect(faction.gold - 10000).toBeCloseTo(paid[0].amount - 250);
+    expect(faction.gold - 10000).toBeCloseTo(paid[0].amount - 200);
     // The village's share is credited to its Rust treasury, not a faction ledger.
     expect(goldFlowSummary(state, village)).toMatchObject({ inputs: [], outlays: [] });
   });

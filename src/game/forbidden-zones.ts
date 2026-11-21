@@ -2,6 +2,7 @@ import { villageAllyView } from './settlement-bridge';
 import { playerFaction, playerControl, isHumanFaction } from './player-context';
 import type { GameState, Point, Unit } from './types';
 import { entityStore } from './entity-store';
+import { cancelCivilianJobsInArea } from './area-tools';
 
 export interface ForbiddenRegion {
   id: number;
@@ -95,6 +96,8 @@ export function forbiddenRegions(state: GameState): readonly ForbiddenRegion[] {
 /** Rectangle designation is map-wide, free, and independent of fog or borders. */
 export function setForbiddenRectangle(state: GameState, start: Point, end: Point, forbidden: boolean): { count: number; message: string } {
   if (![start.x, start.y, end.x, end.y].every(Number.isFinite)) return { count: 0, message: 'Choose an area on the map' };
+  if (state.gameOver) return { count: 0, message: 'The match has ended.' };
+  const jobs = forbidden ? cancelCivilianJobsInArea(state, start, end) : undefined;
   const { width, height } = state.world;
   const left = Math.max(0, Math.floor(Math.min(start.x, end.x))), right = Math.min(width - 1, Math.floor(Math.max(start.x, end.x)));
   const top = Math.max(0, Math.floor(Math.min(start.y, end.y))), bottom = Math.min(height - 1, Math.floor(Math.max(start.y, end.y)));
@@ -110,6 +113,7 @@ export function setForbiddenRectangle(state: GameState, start: Point, end: Point
     if (state.multiplayer) playerControl(state).forbiddenZones = state.forbiddenZones;
     for (const unit of state.units) if ((!state.multiplayer || unit.faction === playerFaction(state)) && unitRespectsForbidden(state, unit)) { unit.path = undefined; unit.repathAt = 0; }
   }
-  return { count, message: count ? `${count} tile${count === 1 ? '' : 's'} ${forbidden ? 'forbidden' : 'allowed again'}`
-    : forbidden ? 'Area already forbidden' : 'No forbidden tiles in this area' };
+  const message = count ? `${count} tile${count === 1 ? '' : 's'} ${forbidden ? 'forbidden' : 'allowed again'}`
+    : forbidden ? 'Area already forbidden' : 'No forbidden tiles in this area';
+  return { count: count + (jobs?.count ?? 0), message: jobs && (jobs.count || jobs.skipped) ? `${message}. ${jobs.message}` : message };
 }

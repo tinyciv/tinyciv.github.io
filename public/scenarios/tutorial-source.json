@@ -5,7 +5,7 @@
   "height": 30,
   "simulatedSeconds": 0,
   "wallSeconds": 0.517892125,
-  "bytes": 116308,
+  "bytes": 116335,
   "cities": [
     {
       "id": 1,
@@ -14,7 +14,8 @@
       "y": 14,
       "population": 30,
       "housing": 34,
-      "food": 11.866666666666692
+      "food": 11.866666666666692,
+      "settlementTier": 0
     },
     {
       "id": 127,
@@ -23,7 +24,8 @@
       "y": 14,
       "population": 30,
       "housing": 34,
-      "food": 11.920000000000014
+      "food": 11.920000000000014,
+      "settlementTier": 0
     }
   ],
   "resources": {

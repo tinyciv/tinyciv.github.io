@@ -9,8 +9,8 @@
   {
     "source": "assets/ui/resources/gold.png",
     "output": "assets/runtime/ui/resources/gold.webp",
-    "width": 128,
-    "height": 128,
+    "width": 32,
+    "height": 32,
     "resample": "lanczos"
   },
   {

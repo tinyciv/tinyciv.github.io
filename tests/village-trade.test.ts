@@ -154,15 +154,15 @@ describe('village trade integration', () => {
     for (let time = 1; time <= 180 && !state.tradeRoutes!.some(route => route.villageId === 1 && route.faction === 2); time++) { state.time = time; settlementStep(state); }
     const rivalRoute = state.tradeRoutes!.find(route => route.villageId === 1 && route.faction === 2)!;
     expect(rivalRoute).toBeDefined(); expect(rivalRoute.id).not.toBe(playerRoute.id);
-    expect(state.factions[2].gold).toBe(1750);
+    expect(state.factions[2].gold).toBe(1800);
     const rivalMerchant = state.units.find(unit => unit.id === rivalRoute.merchantId)!, start = treasury(state);
     rivalRoute.transitSeconds = 100; rivalRoute.goal = { x: rivalMerchant.x, y: rivalMerchant.y };
     updateMerchant(state, rivalMerchant, .1, () => {});
-    expect(state.factions[2].gold).toBeCloseTo(1794.85); expect(treasury(state) - start).toBeCloseTo(44.85);
+    expect(state.factions[2].gold).toBeCloseTo(1844.85); expect(treasury(state) - start).toBeCloseTo(44.85);
     expect(allianceCost(state)).toBe(3000);
     for (let time = state.time + 5, end = state.time + 110; time < end; time += 5) { state.time = time; updateTradeRoutes(state); }
     expect(state.tradeRoutes!.filter(route => route.villageId === 1)).toHaveLength(2);
-    expect(state.factions[2].gold).toBeCloseTo(1794.85);
+    expect(state.factions[2].gold).toBeCloseTo(1844.85);
     // Player war does not end an independent village's other agreements.
     performVillageAction(state, state.buildings[2], 'war');
     expect(playerMerchant.hp).toBe(0); expect(rivalMerchant.hp).toBeGreaterThan(0);

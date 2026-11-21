@@ -7,6 +7,9 @@ pub struct BarbarianGalleys {input:Vec<f64>,output:Vec<f64>,next:BTreeMap<i64,f6
 pub fn constant(index:u32)->f64{match index{0=>1.0,1=>6.0,2=>1.8,3=>500.0,4=>4.5,_=>f64::NAN}}
 pub fn fleet(army:usize)->usize{(army.div_ceil(20)+3).clamp(4,12)}
 pub fn can_board(occupant:i64,person:i64)->bool{occupant<0||occupant==person}
+pub fn beach_step(remaining: f64, elapsed: f64) -> f64 {
+    remaining.max(0.0).min(1.8 * elapsed.max(0.0))
+}
 impl BarbarianGalleys {
     pub fn input(&mut self,n:usize)->*mut f64{self.input.resize(n,0.0);self.input.as_mut_ptr()}
     /// Boat rows: id,archer,hullHP,crewHP,x,y,firedAt,attack,target.
@@ -31,7 +34,12 @@ impl BarbarianGalleys {
                 }
                 if let Some(t)=candidates.iter().copied().filter(eligible).find(|t|t[1]==target){
                     angle=(t[3]-r[5]).atan2(t[2]-r[4]);
-                    if now>=fired+constant(2){fired=now;damage=crate::combat::attack_damage(r[7],t[5]);}
+                    if now >= fired + constant(2) {
+                        fired = now;
+                        // The archer's attack estimate already includes the hit multiplier.
+                        let multiplier = crate::combat::unit_hit_multiplier(super::kinds::unit::ARCHER);
+                        damage = crate::combat::attack_damage(r[7] / multiplier, t[5]) * multiplier;
+                    }
                 }
             }else{target=-1.0;}
             self.output.extend([id as f64,target,angle,fired,damage]);

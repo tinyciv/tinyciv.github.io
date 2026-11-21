@@ -5,13 +5,13 @@ import { constructionEdges } from './builders';
 import { buildingAlignmentQuery } from './placement';
 import { farmCityQuery, farmCollectionQuery } from './farm-travel';
 import { FARM_COLLECTION_RADIUS, farmCollectionBounds, farmCollectionRangeQuery, granaryYieldMultiplier } from './granaries-native';
-import { reliefFootprintAllowed, reliefBuildable } from './relief';
+import { reliefFootprintAllowed } from './relief';
 import { farmResearchYieldMultiplier, grainStorageMultiplier } from './research-bonuses';
 import { buildingWithinBorders } from './border-placement';
 import { territory } from './borders';
 import { farmParcelPreferenceQuery, FARM_CLUSTER_PRODUCTION_BONUS } from './farm-clusters';
 import { farmBlockPlacementQuery } from './farm-blocks';
-import { hermitCabinOverlaps } from './placement-occupancy';
+import { farmCanShareTile, hermitCabinOverlaps } from './placement-occupancy';
 import { overlapsFallenDefense } from './defense-rebuilding';
 import { type Building, type GameState, type Point, buildingReady, buildingWidth, buildingHeight } from './types';
 
@@ -19,7 +19,8 @@ import { type Building, type GameState, type Point, buildingReady, buildingWidth
 export const AUTOMATIC_FARM_RADIUS = FARM_COLLECTION_RADIUS;
 const CLEARABLE = new Set(['none', 'forest', 'jungle', 'swamp']);
 export interface FarmSitePlan { point: Point; harvest: number; irrigatedPlots: number; walkingDistance: number; expectedHarvest: number; }
-interface FarmSiteCandidate extends FarmSitePlan { streetPenalty: number; layout: number; }
+interface FarmSiteCandidate extends FarmSitePlan { soilHarvest: number; streetPenalty: number; layout: number; }
+interface RankedFarmSite { site: FarmSitePlan; production: number; layout: number; soilHarvest: number; }
 export type FarmSiteSearchResult = { done: false } | { done: true; plan?: FarmSitePlan };
 export interface AutomaticFarmSiteSearch {
   /** A deterministic candidate allowance; no gameplay time or RNG is consumed. */
@@ -31,7 +32,7 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
   for (const building of state.buildings) {
     if (building.hp > 0 && building.faction === palace.faction && building.kind === 'road') roads.add(building.y * width + building.x);
     if (building.hp <= 0 && !(building.kind === 'fort' && building.fort?.destroyed)
-      || building.faction === palace.faction && building.kind === 'irrigation') continue;
+      || farmCanShareTile(building, palace.faction)) continue;
     for (let y = building.y; y < building.y + buildingHeight(building); y++)
       for (let x = building.x; x < building.x + buildingWidth(building); x++) occupied.add(y * width + x);
   }
@@ -49,14 +50,16 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
     if (!inRange(x, y)) return;
     if (!buildingWithinBorders(state, 'camp', x, y, palace.faction, borders) || farmCity({ x, y })?.id !== palace.id
       || !reliefFootprintAllowed(state.world, x, y, 1)) return;
-    let harvest = 0, irrigatedPlots = 0, streetPenalty = 1;
+    let harvest = 0, soilHarvest = 0, irrigatedPlots = 0, streetPenalty = 1;
     for (const [dx, dy] of CAMP_FIELD_OFFSETS) {
       const px = x + dx, py = y + dy, cell = py * width + px, tile = state.world.tiles[cell];
-      if (!tile || !reliefBuildable(tile) || occupied.has(cell) || overlapsFallenDefense(state, 'camp', px, py) || !CLEARABLE.has(tile.overlay)
+      if (!tile || occupied.has(cell) || overlapsFallenDefense(state, 'camp', px, py) || !CLEARABLE.has(tile.overlay)
         || !traversable(state.world, px, py) || hermitCabinOverlaps(state, px, py)) return;
       const irrigated = !!coverage[cell];
       irrigatedPlots += Number(irrigated);
-      harvest += fieldHarvestFood(state.world, px, py) * (irrigated ? tile.terrain === 'desert' ? 3 : 2 : 1) * foodBonus
+      const baseHarvest = fieldHarvestFood(state.world, px, py);
+      soilHarvest += baseHarvest;
+      harvest += baseHarvest * (irrigated ? tile.terrain === 'desert' ? 3 : 2 : 1) * foodBonus
         * granaryYieldMultiplier(state, palace.faction, px, py);
       if (Math.hypot(px + .5 - origin.x, py + .5 - origin.y) <= 6) {
         if (roads.has(cell)) streetPenalty = 1.2;
@@ -71,7 +74,7 @@ function farmSiteReader(state: GameState, palace: Building, exactOwnership = fal
     const walkingDistance = collection({ x, y }).walkingDistance, expectedHarvest = harvest * expectedFarmDelivery(walkingDistance, shelfLife);
     if (expectedHarvest <= 0) return;
     const layout = -Math.abs(walkingDistance - 5) * .55 + alignment(x, y) * .2;
-    return { point: { x, y }, harvest, irrigatedPlots, walkingDistance, expectedHarvest, streetPenalty, layout };
+    return { point: { x, y }, harvest, irrigatedPlots, walkingDistance, expectedHarvest, soilHarvest, streetPenalty, layout };
   };
 }
 
@@ -83,21 +86,21 @@ export function validateAutomaticFarmSite(state: GameState, palace: Building, po
   const candidate = farmSiteReader(state, palace, true)(point.x, point.y);
   if (!candidate || !farmBlockPlacementQuery(state).canAdd(point).ok
     || !hasStaticPathBetween(state, constructionEdges(state, palace, true), [{ x: point.x + .5, y: point.y + .5 }], palace.faction, true)) return;
-  const { streetPenalty: _street, layout: _layout, ...plan } = candidate;
+  const { streetPenalty: _street, layout: _layout, soilHarvest: _soil, ...plan } = candidate;
   return plan;
 }
 
 /** Fill the most productive available crop tiles first. The yield estimate
  * uses the same completed-ditch bitmap as actual harvests: partial coverage is
- * counted per plot and overlapping ditches never stack. Owned ditches can
+ * counted per plot and overlapping ditches never stack. Completed owned ditches can
  * share farmland; roads reserve their cells for travel.
  * Clearable trees have no siting penalty: reserving the farm clears its whole
  * footprint. Walking distance and ripened-food expiry discount production:
  * land across a lake is not nearby merely because it looks nearby. Within
  * six tiles of the palace, prefer keeping streets and their frontages free for
- * urban buildings. Completing 2×2/3×3 squares with one-cell gaps receives at
- * most a 20% selection bonus; cramped sites remain available and estimated
- * output is unchanged. */
+ * urban buildings. Expected delivery and street access establish the winning
+ * soil tier. Within that tier, completing rectangular parcels with one-cell
+ * gaps receives at most a 20% selection bonus. */
 export function planAutomaticFarmSite(state: GameState, palace: Building): FarmSitePlan | undefined {
   const result = createAutomaticFarmSiteSearch(state, palace).advance(Infinity);
   return result.done ? result.plan : undefined;
@@ -113,10 +116,16 @@ export function createAutomaticFarmSiteSearch(state: GameState, palace: Building
   const originX = palace.x, originY = palace.y;
   const { left, right, top, bottom } = farmCollectionBounds(state, palace);
   const candidates: FarmSiteCandidate[] = [];
+  const bestBySoil = new Map<number, RankedFarmSite>();
   let phase: 'prepare' | 'scan' | 'layout' | 'score' | 'done' = 'prepare';
   let read: ReturnType<typeof farmSiteReader>, preference: ReturnType<typeof farmParcelPreferenceQuery>;
   let geometry: ReturnType<typeof farmBlockPlacementQuery>;
-  let x = left, y = top, scoreIndex = 0, best: FarmSitePlan | undefined, bestProduction = -Infinity, bestLayout = -Infinity;
+  let x = left, y = top, scoreIndex = 0, baseline: RankedFarmSite | undefined, best: FarmSitePlan | undefined;
+  const outranks = (candidate: RankedFarmSite, current?: RankedFarmSite): boolean => !current
+    || candidate.production > current.production + 1e-7
+    || Math.abs(candidate.production - current.production) < 1e-7
+      && (candidate.site.irrigatedPlots > current.site.irrigatedPlots
+        || candidate.site.irrigatedPlots === current.site.irrigatedPlots && candidate.layout > current.layout);
   return { advance(maxCandidates) {
     if (phase === 'done') return { done: true, plan: best };
     // A replaced world or captured/moved palace invalidates this city's job;
@@ -150,16 +159,16 @@ export function createAutomaticFarmSiteSearch(state: GameState, palace: Building
       // its own smaller allowance, with the same stable row-order ties.
       const allowance = bounded ? Math.min(budget, 128) : Infinity;
       for (let checked = 0; checked < allowance && scoreIndex < candidates.length; checked++, scoreIndex++) {
-        const { streetPenalty, layout, ...site } = candidates[scoreIndex];
+        const { streetPenalty, soilHarvest, layout, ...site } = candidates[scoreIndex];
         if (!geometry.canAdd(site.point).ok) continue;
-        const production = site.expectedHarvest / streetPenalty * (1 + preference(site.point.x, site.point.y) * FARM_CLUSTER_PRODUCTION_BONUS);
-        const tiedYield = !!best && Math.abs(production - bestProduction) < 1e-7;
-        if (!best || production > bestProduction + 1e-7 || tiedYield && (site.irrigatedPlots > best.irrigatedPlots
-          || site.irrigatedPlots === best.irrigatedPlots && layout > bestLayout)) {
-          best = site; bestProduction = production; bestLayout = layout;
-        }
+        const unweighted = { site, soilHarvest, layout, production: site.expectedHarvest / streetPenalty };
+        if (outranks(unweighted, baseline)) baseline = unweighted;
+        const production = unweighted.production * (1 + preference(site.point.x, site.point.y) * FARM_CLUSTER_PRODUCTION_BONUS);
+        const weighted = { ...unweighted, production };
+        if (outranks(weighted, bestBySoil.get(soilHarvest))) bestBySoil.set(soilHarvest, weighted);
       }
       if (scoreIndex < candidates.length) return { done: false };
+      if (baseline) best = bestBySoil.get(baseline.soilHarvest)?.site;
       phase = 'done'; return { done: true, plan: best };
     }
     return { done: false };

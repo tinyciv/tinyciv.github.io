@@ -1,8 +1,8 @@
 import { entityStore } from '../src/game/entity-store';
 import { describe, expect, it, vi } from 'vitest';
-import { raiderArcherFraction, initializeFogRaids, updateFogRaids } from '../src/game/fog-raids';
+import { raiderArcherFraction, initializeFogRaids, scheduleDirectedRaid, updateFogRaids } from '../src/game/fog-raids';
 import { MAX_LIVE_RAIDERS, MAX_LIVE_RAIDERS_PER_CAMP } from '../src/game/raider-camps';
-import { raiderMotivationForWave, raiderMotivationSize, selectTheftPalace, siegeRallyPoint, updateRaiderGroupMotivation, updateRaiderMotivation, type RaiderMotivationOrders } from '../src/game/raider-motivations';
+import { selectTheftPalace, siegeRallyPoint, updateRaiderGroupMotivation, updateRaiderMotivation, type RaiderMotivationOrders } from '../src/game/raider-motivations';
 import { ensureMarauderLeaders } from '../src/game/marauder-leaders';
 import { setSoldierRole } from '../src/game/archery';
 import { canWalk } from '../src/game/pathfinding';
@@ -44,14 +44,7 @@ function enclose(state: GameState, x0 = 22, y0 = 22, x1 = 27, y1 = 27): void {
 }
 
 describe('raider group motivations', () => {
-  it('retains ordinary assaults and keeps specialists in their intended size ranges', () => {
-    expect(Array.from({ length: 8 }, (_, i) => raiderMotivationForWave(i))).toEqual(['assault', 'assault', 'harass', 'assault', 'theft', 'assault', 'harass', 'siege']);
-    expect(raiderMotivationSize('harass', 4, 0).total).toBe(2);
-    expect(raiderMotivationSize('harass', 60, 100).total).toBe(10);
-    expect(raiderMotivationSize('theft', 60, 0).total).toBe(1);
-    expect(raiderMotivationSize('theft', 60, 100).total).toBe(10);
-    expect(raiderMotivationSize('siege', 60, 20)).toEqual({ initial: 10, total: 20 });
-    expect(raiderMotivationSize('siege', 60, 10000).total).toBe(30);
+  it('leaves ordinary assaults to default raid planning', () => {
     const state = fixture(), { pack, members } = band(state, 'assault');
     expect(updateRaiderGroupMotivation(state, pack, members)).toBe(false);
     expect(updateRaiderMotivation(state, members[0], .1, orders())).toBe(false);
@@ -210,8 +203,14 @@ describe('specialist wave scheduling and saturation', () => {
   function campFixture(retinue = 20): GameState {
     const state = fixture(); delete state.raiderCamps; delete state.fogRaids;
     for (let i = 0; i < retinue; i++) entityStore(state).units.add(person(1000 + i, 30.5, 30.5, 0));
-    initializeFogRaids(state); state.raiderCamps!.slice(1).forEach(camp => { camp.nextRaidAt = Infinity; });
+    initializeFogRaids(state);
     return state;
+  }
+  /** Stand-in for a raid-director decision at the first camp, departing now. */
+  function announce(state: GameState, motive: MarauderPack['motivation'] & string, initial: number, total = initial, era = 6): void {
+    const camp = state.raiderCamps![0];
+    Object.assign(camp, { nextRaidAt: state.time, directedRaid: { faction: 0, target: 2, motive, initial, total, era } });
+    state.fogRaids!.nextAt = state.time;
   }
   function saturatedCamp(state: GameState): Unit[] {
     const camp = state.raiderCamps![0], home = { x: camp.gate.x + .5, y: camp.gate.y + .5 }, veterans: Unit[] = [];
@@ -234,7 +233,7 @@ describe('specialist wave scheduling and saturation', () => {
     for (const wave of [2, 3, 6, 3, 2, 3]) {
       for (const pack of state.marauderPacks!) if (veterans.some(unit => unit.marauderPack === pack.id)) pack.returning = true;
       for (const unit of state.units) if (unit.faction === -2 && !veterans.includes(unit)) unit.lastCombat = state.time;
-      camp.waves = wave; camp.nextRaidAt = state.time; state.fogRaids!.nextAt = state.time;
+      announce(state, wave === 3 ? 'assault' : 'harass', wave === 3 ? 60 : 10);
       updateFogRaids(state);
       const active = state.marauderPacks!.find(pack => pack.raid && !pack.returning && pack.spawnedAt === state.time)!;
       expect(veterans.filter(unit => unit.marauderPack === active.id)).toHaveLength(wave === 3 ? 30 : 10);
@@ -252,7 +251,7 @@ describe('specialist wave scheduling and saturation', () => {
   it('reinforces a siege with returned reserves even when the camp cannot create more raiders', () => {
     const state = campFixture(40), veterans = saturatedCamp(state), camp = state.raiderCamps![0];
     const original = veterans.map(unit => [unit.id, unit.hp, unit.maxHp, unit.kills, unit.x, unit.y]);
-    camp.waves = 7; state.time = 1800; updateFogRaids(state);
+    state.time = 1800; announce(state, 'siege', 10, 30); updateFogRaids(state);
     const siege = state.marauderPacks!.find(pack => pack.motivation === 'siege')!;
     expect(veterans.filter(unit => unit.marauderPack === siege.id)).toHaveLength(10);
     // This isolated scheduler test holds the army at its assembly point;
@@ -269,29 +268,29 @@ describe('specialist wave scheduling and saturation', () => {
     expect(veterans.filter(unit => unit.marauderLeader)).toHaveLength(1);
   });
   it('reduces the archer share by one-third to 80:20, including commanders, without altering commander role', () => {
-    expect([0, 120, 420, 720, 7200].map(raiderArcherFraction)).toEqual([0, 0, .1, .2, .2]);
-    const state = campFixture(); state.time = 1800; updateFogRaids(state);
+    expect([0, 1, 2, 4].map(raiderArcherFraction)).toEqual([0, .1, .2, .2]);
+    const state = campFixture(); state.time = 1800; announce(state, 'assault', 60); updateFogRaids(state);
     const raiders = state.units.filter(unit => unit.faction === -2);
     expect(raiders).toHaveLength(60); expect(raiders.filter(unit => unit.kind === 'archer')).toHaveLength(12);
     expect(raiders.filter(unit => unit.marauderLeader).every(unit => unit.kind === 'warrior')).toBe(true);
   });
   it('adds siege reinforcements every 15s without delaying them until the next ordinary wave', () => {
-    const state = campFixture(), camp = state.raiderCamps![0]; camp.waves = 7;
-    state.time = 600; updateFogRaids(state);
+    const state = campFixture(), camp = state.raiderCamps![0];
+    state.time = 600; announce(state, 'siege', 8, 16, 1); updateFogRaids(state);
     const pack = state.marauderPacks!.find(pack => pack.raiderCamp === camp.id)!;
     const count = () => state.units.filter(unit => unit.hp > 0 && unit.marauderPack === pack.id).length;
     expect(pack.motivation).toBe('siege'); expect(count()).toBe(8); expect(pack.musterTarget).toBe(16);
     for (const member of state.units.filter(unit => unit.marauderPack === pack.id)) { member.x = 15.5; member.y = 20.5; }
     state.time = 614.9; updateFogRaids(state); expect(count()).toBe(8);
-    state.time = 615; updateFogRaids(state); expect(count()).toBe(12);
+    state.time = 615; updateFogRaids(state); expect(count()).toBe(13);
     for (const member of state.units.filter(unit => unit.marauderPack === pack.id)) { member.x = 15.5; member.y = 20.5; }
     state.time = 630; updateFogRaids(state); expect(count()).toBe(16);
     expect(state.fogRaids!.waves).toBe(1); expect(pack.siegeNextReinforceAt).toBeUndefined();
     expect(pack.startingTroops).toBe(15);
   });
   it('shares the global/camp caps with siege reinforcements and stops them after camp destruction', () => {
-    const state = campFixture(100), camp = state.raiderCamps![0]; camp.waves = 7;
-    state.time = 600; updateFogRaids(state);
+    const state = campFixture(100), camp = state.raiderCamps![0];
+    state.time = 600; announce(state, 'siege', 8, 24, 1); updateFogRaids(state);
     const pack = state.marauderPacks![0]; expect(pack.musterTarget).toBe(24);
     const count = () => state.units.filter(unit => unit.hp > 0 && unit.faction === -2).length;
     let id = 10000;
@@ -305,8 +304,8 @@ describe('specialist wave scheduling and saturation', () => {
     expect(state.units.filter(unit => unit.hp > 0 && unit.marauderPack === pack.id).length).toBeLessThanOrEqual(MAX_LIVE_RAIDERS_PER_CAMP);
   });
   it('limits siege reinforcement by the remaining camp budget, independently of the world budget', () => {
-    const state = campFixture(100), camp = state.raiderCamps![0]; camp.waves = 7;
-    state.time = 600; updateFogRaids(state);
+    const state = campFixture(100);
+    state.time = 600; announce(state, 'siege', 8, 24, 1); updateFogRaids(state);
     const pack = state.marauderPacks![0], old = { ...pack, id: 999, motivation: 'assault' as const, returning: false, siegeNextReinforceAt: undefined };
     state.marauderPacks!.push(old);
     for (let i = 0; i < MAX_LIVE_RAIDERS_PER_CAMP - 12; i++) entityStore(state).units.add({ ...person(10000 + i, 15.5, 20.5), marauderPack: old.id });
@@ -319,14 +318,25 @@ describe('specialist wave scheduling and saturation', () => {
     expect(state.units.filter(unit => unit.marauderPack === pack.id)).toHaveLength(12);
   });
   it('spawns bounded harass/theft parties and falls back to assault against sealed cities', () => {
-    for (const waves of [2, 4]) {
-      const state = campFixture(), camp = state.raiderCamps![0]; camp.waves = waves;
+    for (const sealed of [false, true]) {
+      // A rich realm at era one draws a theft from the director, unless its town is closed.
+      const state = campFixture(), camp = state.raiderCamps![0];
+      if (sealed) enclose(state);
       state.time = 600; updateFogRaids(state);
-      expect(state.marauderPacks![0].motivation).toBe(waves === 2 ? 'harass' : 'theft');
-      expect(state.units.filter(unit => unit.faction === -2).length).toBeLessThanOrEqual(10);
+      expect(scheduleDirectedRaid(state, 0, 9)).toBe(true);
+      const raid = state.raiderCamps!.find(candidate => candidate.directedRaid)!.directedRaid!;
+      expect(raid.motive).toBe(sealed ? 'assault' : 'theft');
+      expect(raid.total).toBe(sealed ? 9 : 3);
+      if (!sealed) {
+        state.time = state.raiderCamps!.find(candidate => candidate.directedRaid)!.nextRaidAt; updateFogRaids(state);
+        expect(state.marauderPacks!.find(pack => pack.raid)!.motivation).toBe('theft');
+        expect(state.units.filter(unit => unit.faction === -2).length).toBeLessThanOrEqual(10);
+      }
+      expect(camp).toBeDefined();
     }
-    const state = campFixture(), camp = state.raiderCamps![0]; camp.waves = 4; enclose(state);
-    state.time = 600; updateFogRaids(state);
-    expect(state.marauderPacks![0].motivation).toBe('assault');
+    const state = campFixture(); state.time = 600; announce(state, 'harass', 10);
+    updateFogRaids(state);
+    expect(state.marauderPacks![0].motivation).toBe('harass');
+    expect(state.units.filter(unit => unit.faction === -2).length).toBeLessThanOrEqual(10);
   });
 });

@@ -15,6 +15,7 @@ import { canWalk, invalidateNavigation, withNavigationFrame } from './pathfindin
 import { playerFaction } from './player-context';
 import { researchLevel } from './research';
 import { invalidateSettlementDecisions } from './settlement-decisions';
+import { MARAUDER_MAX_MORALE } from './battle-morale';
 import { distance, type GameState, type Point, type Unit } from './types';
 
 export const SLINGER_ATTACK = 17 * .8 * .75;
@@ -52,7 +53,10 @@ export interface LevyState {
   city?: number;
   nextUpkeepAt: number;
 }
-export const unitMoraleMaximum = (unit: Pick<Unit, 'kind'>): number => (unit.kind === 'levyInfantry' || unit.kind === 'slinger') ? LEVY_MORALE : 100;
+export function unitMoraleMaximum(unit: Pick<Unit, 'kind' | 'faction'>): number {
+  if (unit.faction === -2) return MARAUDER_MAX_MORALE;
+  return unit.kind === 'levyInfantry' || unit.kind === 'slinger' ? LEVY_MORALE : 100;
+}
 const activeLevies = (state: GameState, faction: number): Unit[] => state.units.filter(unit => (unit.kind === 'levyInfantry' || unit.kind === 'slinger') && unit.faction === faction && unit.hp > 0 && unit.levy);
 function musterPoint(state: GameState, unit: Unit): Point | undefined {
   if (unit.resourceWork?.phase === 'working' && canWalk(state, unit.x, unit.y, unit.faction)) return { x: unit.x, y: unit.y };

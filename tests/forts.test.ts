@@ -286,6 +286,10 @@ describe('Forts', () => {
     }
     expect(state.factions[0].population).toBe(0);
     expect(upgradeFortBrigadeStatus(state, fort).available).toBe(false);
+    const gold = state.factions[0].gold;
+    state.time = 30;
+    updateForts(state);
+    expect(state.factions[0].gold).toBe(gold - 30);
     expect(state.units.filter(soldier => soldier.kind === 'skirmisher').every(soldier => soldier.speed === SKIRMISHER_SPEED && soldier.range === 5)).toBe(true);
   });
 

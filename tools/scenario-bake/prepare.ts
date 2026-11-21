@@ -1,5 +1,5 @@
 import { provisionScenarioWhales } from '../../src/game/fishing';
-import { createGame, updateGame } from '../../src/game/simulation';
+import { createGame, refreshAfterBuildingRemoval, updateGame } from '../../src/game/simulation';
 import { scenarioPlan, scenarioEquipment } from '../../src/game/scenarios-native';
 import { positionScenarioFleet, prepareScenarioFleet } from '../../src/game/warships-native';
 import { citySummaries } from '../../src/game/cities';
@@ -21,7 +21,7 @@ import { withPlayerFaction } from '../../src/game/player-context';
 import { canReachConstruction, constructionEdges } from '../../src/game/builders';
 import { planAutomaticFarmSite } from '../../src/game/farm-siting';
 import { demolishBuildingsInArea } from '../../src/game/area-tools';
-import { buildingWidth, buildingHeight } from '../../src/game/types';
+import { buildingWidth, buildingHeight, buildingReady } from '../../src/game/types';
 import { finalizePreparedScenario } from './finalize';
 import { orderScenarioIrrigation, removeScenarioOrchards } from './irrigation';
 import { irrigatePreparedScenario } from './agriculture';
@@ -33,6 +33,8 @@ import { initializeVillages } from '../../src/game/villages';
 import { initializeVillageTrails } from '../../src/game/village-trails';
 import { grantExplorationTechnology, RESEARCH_BRANCHES, researchLevel } from '../../src/game/research';
 import { repairPreparedStreets } from './streets';
+import { removeBuildings } from '../../src/game/construction-cancellation';
+import { WOODEN_TOWER_RANGE } from '../../src/game/tower-combat';
 const NO_INPUT = {up:false,down:false,left:false,right:false};
 /** Offline authoring issues ordinary purchases at the chosen site, as a
  * player standing there would. Native placement and builder routes still apply;
@@ -112,8 +114,49 @@ function provisionIron(state: GameState): void {
   }
 }
 
+/** Construction and the access audit can skip an otherwise buildable station
+ * to preserve a walking route. Publish the longest finished line on each side. */
+function finishFrontierTowers(state: GameState): void {
+  const spacing = WOODEN_TOWER_RANGE * 2.5;
+  for (const faction of state.factions) {
+    const towers = state.buildings.filter(b => b.kind === 'woodenTower' && b.faction === faction.id)
+      .sort((a, b) => a.x - b.x || a.y - b.y);
+    let best: typeof towers = [], line: typeof towers = [];
+    for (const tower of towers) {
+      if (!buildingReady(tower)) continue;
+      const previous = line.at(-1);
+      if (previous && (tower.x !== previous.x || tower.y - previous.y !== spacing)) line = [];
+      line.push(tower);
+      if (line.length > best.length) best = line;
+    }
+    if (best.length < 2) throw new Error('Both fronts need dry, connected sites for towers spaced 15 tiles apart.');
+    const kept = new Set(best.map(tower => tower.id));
+    const surplus = new Set(towers.filter(tower => !kept.has(tower.id)).map(tower => tower.id));
+    if (surplus.size) {
+      removeBuildings(state, surplus);
+      refreshAfterBuildingRemoval(state, faction.id);
+    }
+  }
+}
+
+function finishDevelopedScenario(id: ScenarioId, state: GameState): GameState {
+  finalizeScenarioDiplomacy(state);
+  state.events = [];
+  state.particles = []; state.projectiles = []; state.shipSinkings = [];
+  finalizePreparedScenario(state);
+  if (id === 'no-mans-land') finishFrontierTowers(state);
+  repairPreparedStreets(state);
+  if (id === 'no-mans-land') revealExplorationCells(state, 0, Array.from({ length: state.world.tiles.length }, (_, i) => i));
+  if (id === 'age-of-exploration') positionScenarioFleet(state);
+  rustEngine.sim_campaign_reset(simCore(state).handle);
+  for (const faction of state.factions) rustEngine.sim_campaign_population(simCore(state).handle,faction.id,faction.population);
+  return state;
+}
+
 /** Run the ordinary simulation once while producing the reusable artifact. */
 export async function prepareScenario(id: ScenarioId, progress?: (population: number, state: GameState) => void, seed?: string, resume?: GameState): Promise<GameState> {
+  if (resume && !resume.scenarioPreparing && (id === 'no-mans-land' || id === 'age-of-exploration'))
+    return finishDevelopedScenario(id, resume);
   const scenario = resume ? { world: resume.world, population: id==='sandbox'?20:200,
     gold: id==='sandbox'?500:15000, food: id==='sandbox'?500:12000 } : scenarioPlan(id, seed);
   const state = resume ?? createGame(scenario.world, undefined, { scenario: scenario as ReturnType<typeof scenarioPlan>, banditIntensity: 0 });
@@ -208,7 +251,12 @@ export async function prepareScenario(id: ScenarioId, progress?: (population: nu
   if (phase !== 1) throw new Error('These natural city sites could not support the scenario population. Try generating it again.');
   if (id === 'no-mans-land') provisionIron(state);
   if (id === 'no-mans-land') {
-    for (const entry of scenarioEquipment(core.handle, state.world)) purchase(state, entry.kind, entry.x, entry.y, entry.faction);
+    const width = state.world.width;
+    const occupied = new Set((state.fields ?? []).map(field => field.y * width + field.x));
+    for (const building of state.buildings) if (building.hp > 0)
+      for (let dy = 0; dy < buildingHeight(building); dy++) for (let dx = 0; dx < buildingWidth(building); dx++)
+        occupied.add((building.y + dy) * width + building.x + dx);
+    for (const entry of scenarioEquipment(core.handle, state.world, occupied)) purchase(state, entry.kind, entry.x, entry.y, entry.faction);
     await advance(360);
     progress?.(1,state);
   } else {
@@ -224,14 +272,6 @@ export async function prepareScenario(id: ScenarioId, progress?: (population: nu
   await polishScenarioLayout(state);
   state.scenarioPreparing = false;
   for (const faction of state.factions) { faction.gold = scenario.gold; faction.food = scenario.food; faction.relation = faction.id === 0 ? 'self' : id === 'no-mans-land' ? 'war' : 'peace'; }
-  finalizeScenarioDiplomacy(state);
-  state.events = [];
-  state.particles = []; state.projectiles = []; state.shipSinkings = [];
-  finalizePreparedScenario(state);
-  repairPreparedStreets(state);
-  if (id === 'age-of-exploration') positionScenarioFleet(state);
-  rustEngine.sim_campaign_reset(simCore(state).handle);
-  for (const faction of state.factions) rustEngine.sim_campaign_population(simCore(state).handle,faction.id,faction.population);
-  return state;
+  return finishDevelopedScenario(id, state);
 }
 

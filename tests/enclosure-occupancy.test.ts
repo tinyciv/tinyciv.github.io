@@ -84,13 +84,16 @@ describe('enclosure security against living intruders', () => {
     visitor.faction = -1;
     expect(palaceEnclosures(state)).toBe(protectedCity);
     visitor.faction = 2;
+    expect(palaceEnclosures(state)).toBe(protectedCity);
+    state.factions[2].relation = 'war';
     expect(palaceEnclosures(state).regions).toHaveLength(0);
     visitor.inside = true;
-    expect(palaceEnclosures(state)).toBe(protectedCity);
+    const secureAtWar = palaceEnclosures(state);
+    expect(secureAtWar.regions).toHaveLength(1);
     visitor.inside = false; visitor.faction = -2;
     expect(palaceEnclosures(state).regions).toHaveLength(0);
     entityStore(state).units.replace([]);
-    expect(palaceEnclosures(state)).toBe(protectedCity);
+    expect(palaceEnclosures(state)).toBe(secureAtWar);
   });
 
   it('only suspends the city connected to an intruder and preserves the other city mask', () => {

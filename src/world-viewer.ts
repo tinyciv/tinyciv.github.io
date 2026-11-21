@@ -5,12 +5,12 @@ import { loadGameFonts } from './game/game-font';
 import { setMapRevealed } from './game/fog';
 import { BIOME_NAMES, resourceName } from './game/geography';
 import { Renderer, MAX_ZOOM } from './game/renderer';
-import { ridgeIsLedge } from './game/ridges';
+import { rockOreAtPoint } from './game/rock-range-art';
 import { createGame } from './game/simulation';
 import { TILE_SIZE, WATER, type GameState, type Point } from './game/types';
 import { generateWorldAsync } from './world/generator';
-import { LANDSCAPE_CONTROLS, LANDFORM_NAMES, LEDGES_ENABLED, resolveLandscapeParameters, type LandscapeParameter, type LandscapeParameters, type LandformFamily } from './world/options';
-import { AGES, CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_GENERATION_TITLE, WORLD_SIZES, initialWorldSetup, newGameOptions, type WorldSetup } from './ui/world-generation';
+import { LANDSCAPE_CONTROLS, LANDFORM_NAMES, resolveLandscapeParameters, type LandscapeParameter, type LandscapeParameters, type LandformFamily } from './world/options';
+import { CLIMATES, LAND_MASSES, TEMPERATURES, WORLD_GENERATION_TITLE, WORLD_SIZES, initialWorldSetup, newGameOptions, type WorldSetup } from './ui/world-generation';
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -23,13 +23,10 @@ const presets: Record<string, { label: string; settings: Partial<WorldSetup> }> 
   cool: { label: 'Cool climate', settings: { temperature: 2 } },
   arid: { label: 'Arid climate', settings: { climate: 0 } },
   wet: { label: 'Wet climate', settings: { climate: 2 } },
-  young: { label: 'Young world', settings: { age: 0 } },
-  old: { label: 'Old world', settings: { age: 2 } },
   custom: { label: 'Custom', settings: {} },
 };
 const presetControls = [
   { setting: 'water', neutral: 70, keys: ['landScale'] },
-  { setting: 'age', neutral: 1, keys: ['reliefCoverage'] },
   { setting: 'climate', neutral: 1, keys: ['moisture', 'desertThreshold', 'forestThreshold'] },
   { setting: 'temperature', neutral: 1, keys: ['equatorWidth', 'latitudeInfluence'] },
 ] as const;
@@ -38,8 +35,7 @@ const indexedOptions = (choices: readonly string[]) => options(choices.map((labe
 const parameterGroups = new Map<string, LandscapeParameter[]>();
 for (const key of Object.keys(LANDSCAPE_CONTROLS) as LandscapeParameter[]) {
   const group = LANDSCAPE_CONTROLS[key].group;
-  if (group === 'World' || group === 'Hills' || group === 'Mountains') continue;
-  if (group === 'Ledges' && !LEDGES_ENABLED) continue;
+  if (group === 'World' || group === 'Hills' || group === 'Mountains' || group === 'Relief') continue;
   parameterGroups.set(group, [...(parameterGroups.get(group) ?? []), key]);
 }
 
@@ -56,10 +52,7 @@ $('#app').innerHTML = `
         <label>Climate<select id="climate">${indexedOptions(CLIMATES)}</select></label>
         <label>Temperature<select id="temperature">${indexedOptions(TEMPERATURES)}</select></label>
       </div>
-      <div class="viewer-pair">
-        <label>Water<select id="water">${options([60, 70, 80].map(value => ({ value: String(value), label: `${value}%` })))}</select></label>
-        <label>Age<select id="age">${indexedOptions(AGES)}</select></label>
-      </div>
+      <label>Water<select id="water">${options([60, 70, 80].map(value => ({ value: String(value), label: `${value}%` })))}</select></label>
       <label>Landforms<select id="landforms">${options(Object.entries(LANDFORM_NAMES).map(([value, label]) => ({ value, label })))}</select></label>
       <label><input type="checkbox" id="deltas" checked />River deltas</label>
       <div class="viewer-actions"><button type="submit">Regenerate</button><button type="button" id="new-seed">New seed</button></div>
@@ -96,10 +89,10 @@ const form = $<HTMLFormElement>('#world-settings');
 const value = (id: string) => $<HTMLInputElement | HTMLSelectElement>(`#${id}`).value;
 const setValue = (id: string, next: string | number) => { $<HTMLInputElement | HTMLSelectElement>(`#${id}`).value = String(next); };
 const checked = (id: string) => $<HTMLInputElement>(`#${id}`).checked;
-const setupIds = ['size', 'landmass', 'climate', 'temperature', 'age', 'water'] as const;
+const setupIds = ['size', 'landmass', 'climate', 'temperature', 'water'] as const;
 function setup(): WorldSetup {
   return { ...initialWorldSetup(), size: value('size'), landmass: value('landmass') as WorldSetup['landmass'],
-    climate: Number(value('climate')), temperature: Number(value('temperature')), age: Number(value('age')), water: Number(value('water')), barbarians: 0 };
+    climate: Number(value('climate')), temperature: Number(value('temperature')), water: Number(value('water')), barbarians: 0 };
 }
 function generationOptions() {
   return newGameOptions({ seed: value('seed'), style: 'continents', landformFamily: value('landforms') as LandformFamily }, setup());
@@ -224,14 +217,12 @@ async function regenerate(): Promise<void> {
     state = next;
     renderer.overlays = checked('overlays'); renderer.showGrid = checked('grid');
     // One census per generated world; inspection and camera changes do not rescan it.
-    let land = 0, ledges = 0, rivers = 0;
-    for (const [cell, tile] of world.tiles.entries()) {
+    let land = 0, rivers = 0;
+    for (const tile of world.tiles) {
       land += Number(!WATER.has(tile.terrain));
-      if (tile.ridge && ridgeIsLedge(world, cell % world.width, Math.floor(cell / world.width))) ledges++;
       rivers += Number(tile.terrain === 'river' || !!tile.creek);
     }
-    const ledgeCount = LEDGES_ENABLED ? ` · ${ledges} ledge tiles` : '';
-    $('#world-summary').textContent = `${world.width}×${world.height} · ${Math.round(land / world.tiles.length * 100)}% land${ledgeCount} · ${rivers} river tiles`;
+    $('#world-summary').textContent = `${world.width}×${world.height} · ${Math.round(land / world.tiles.length * 100)}% land · ${rivers} river tiles`;
     $('#tile-inspection').textContent = '';
     updateLocation(selectedParameters);
     centerWorld(); progress(1);
@@ -302,7 +293,8 @@ canvas.onpointermove = event => {
   }
   const point = renderer.worldPoint(event.clientX, event.clientY), x = Math.floor(point.x), y = Math.floor(point.y);
   const tile = x >= 0 && y >= 0 && x < state.world.width && y < state.world.height ? state.world.tiles[y * state.world.width + x] : undefined;
-  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, resourceName(tile), ridgeIsLedge(state.world, x, y) && 'Ledge', tile.stair && 'Stair'].filter(Boolean).join(' · ') : '';
+  const resource = tile && rockOreAtPoint(state.world, tile, point) !== false ? resourceName(tile) : undefined;
+  $('#tile-inspection').textContent = tile ? [`${x}, ${y}`, tile.biome && BIOME_NAMES[tile.biome], tile.terrain, tile.overlay !== 'none' && tile.overlay, resource].filter(Boolean).join(' · ') : '';
 };
 function release(event: PointerEvent): void {
   touches.delete(event.pointerId);

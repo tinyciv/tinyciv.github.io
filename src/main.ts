@@ -17,19 +17,20 @@ import { ActionTooltips } from './ui/action-tooltip-view';
 import { hermitAt, hermitPosition, askHermit } from './game/hermits';
 import { questGiverAt, performQuestAction } from './game/quests';
 import { questMarkup, refreshQuestDialog } from './ui/quest-dialog';
-import { siteViews } from './game/sites-native';
+import { currentSiteViews } from './game/sites-native';
 import { buildSite, quoteSite } from './game/site-construction';
 import { isSiteBuilding, type SiteView } from './game/site-types';
-import { siteDialogMarkup, SiteVisits } from './ui/site-dialog';
+import { siteDialogMarkup } from './ui/site-dialog';
 import './ui/sites.css';
 import './ui/quests.css';
 import { RespawnCamera } from './ui/respawn-camera';
 import { researchLevel } from './game/research';
 import { CHECK_INTERVAL_MS } from './game/work-cadence';
-import { frameSimulationDelta } from './game/frame-time';
+import { FAST_FORWARD_DRAW_INTERVAL_MS, FAST_FORWARD_TURN_BUDGET_MS, SIMULATION_TURN_BUDGET_MS, SIMULATION_UPDATE_MS, SimulationClock } from './game/simulation-clock';
 import { logEvent } from './game/simulation';
 import { garrisonStatus, toggleGarrison } from './game/garrison';
-import { levyDisplayStatus, levyPopulation, dismissLevy } from './game/mass-levy';
+import { dismissLevy, levyDisplayStatus, levyPopulation,
+  LEVY_ACTION_COOLDOWN, LEVY_DRAFT_COST, LEVY_UPKEEP, LEVY_UPKEEP_INTERVAL } from './game/mass-levy';
 import { loadGameFonts } from './game/game-font';
 import { finishBootLoading, setBootProgress, showBootFontError } from './ui/boot-loading';
 import './style.css';
@@ -49,11 +50,10 @@ import { createScenarioGame } from './game/scenario-loader';
 import { OPPOSING_FACTION_COUNT } from './game/civilizations';
 import { LANDFORM_NAMES } from './world/options';
 import { BASE_BORDER_RADIUS } from './game/borders';
-import { resolvePalaceCapture, continueAfterVictory } from './game/simulation';
+import { advanceTimedGame, gameCanAdvance, resolvePalaceCapture, continueAfterVictory, continueAsObserver } from './game/simulation';
 import { createGame, updateGame, interactAt, selectAt, commandMove, commandAttackAt, warDeclarationTargetAt, toggleMovementMode, buildAt, diplomacyAction, getLeader, housingCapacity, recallRetinue, canRespawnLeader, respawnLeader, BUILD_COSTS, minimumBuildGold, advanceConstructionReconciliation, constructionReconciliationPending } from './game/simulation';
 import { Renderer, MIN_ZOOM, MAX_ZOOM } from './game/renderer';
 import { entityStore, resetEntities } from './game/entity-store';
-import { isVisible } from './game/fog';
 import { buildStroke } from './game/construction';
 import { holdSimulationReads, withSimulationReads } from './game/simulation-reads';
 import { constructionRoute, isLinearPlacement } from './game/construction-route';
@@ -67,13 +67,15 @@ import { buildMenuForSelection, buildSelectionForKey, type BuildMenu } from './u
 import { constructionActionsMarkup, buildingButtonsMarkup } from './ui/build-controls-view';
 import { CONSTRUCTION_SECONDS } from './game/structures';
 import { boardedBoat } from './game/sailing';
-import { villageCamp, villageDiplomacyStatus } from './game/villages';
+import { isHuntable } from './game/hunting';
+import { fenceLivestockHerd, isLivestock, livestockFenceStatus, livestockHerd, livestockInReach, LIVESTOCK_NAMES, pastureYield } from './game/livestock';
+import { villageCamp, villageDiplomacyStatus, VILLAGE_TRADE_COST } from './game/villages';
 import { villageDiplomacyActions, villageDiplomacyMarkup } from './ui/village-diplomacy';
 import { villageTradeEstimate } from './ui/village-trade-estimate';
 import { villageTradeSummary } from './ui/village-trade-summary';
 import { IRRIGATION_RADIUS, irrigationYieldMultiplier } from './game/irrigation';
 import { GUARD_POST_CAPACITY, GUARD_POST_UPKEEP, GUARD_POST_UPKEEP_INTERVAL } from './game/guard-posts';
-import { BUILDING_UPKEEP, settlementMaintenance, townBuildTerms, WATCHTOWER_MAINTENANCE } from './game/maintenance';
+import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE, SETTLEMENT_UPKEEP_GRACE, townBuildTerms, WATCHTOWER_MAINTENANCE } from './game/maintenance';
 import { HEALER_SHACK_RADIUS, HEALER_SHACK_MULTIPLIER } from './game/healer-shack';
 import { enemyStrength, setEnemyStrength } from './game/enemy-strength';
 import { DEFAULT_BANDIT_INTENSITY, banditIntensity, normalizeBanditIntensity, setBanditIntensity } from './game/bandit-intensity';
@@ -81,12 +83,12 @@ import { ECONOMY_INTERVAL } from './game/economy-constants';
 import { WELL_RADIUS, WELL_POPULATION_REQUIREMENT } from './game/wells';
 import { retinueCommand, toggleRetinueOrder } from './ui/retinue-controls';
 import { infantryFormationControl, leaderHeldTurnForKey, leaderHotbarActionForKey } from './ui/infantry-formation-controls';
-import { infantryFormationActive, toggleInfantryFormation } from './game/infantry-drill';
+import { infantryFormationActive, INFANTRY_FORMATION_MIN_START, toggleInfantryFormation } from './game/infantry-drill';
 import { beginOffensive, cancelOffensive } from './game/offensive-native';
 import { canWalk } from './game/pathfinding';
 import { offensiveControl, updateOffensiveButton } from './ui/offensive-controls';
 import './ui/offensive-controls.css';
-import { tilesInRectangle, clearArea } from './game/area-tools';
+import { areaOverlapTest, cancelArea, clearArea, tilesInRectangle } from './game/area-tools';
 import { culturePerSecond, cultureLevel, nextCultureThreshold, MONUMENT_CULTURE_PER_SECOND, SETTLEMENT_CULTURE_PER_SECOND } from './game/culture';
 import { BuildingActivityPopup } from './ui/building-activity';
 import { ResourceActivityPopup } from './ui/resource-activity';
@@ -94,7 +96,7 @@ import './ui/resource-activity.css';
 import { buildingActivityAvailable } from './game/building-activity';
 import { buildingAtPoint, neutralVillageEntityAt, unitAtPoint } from './game/hit-testing';
 import { buildingResearchRequirement, isBuildingUnlocked, RESEARCH_BRANCHES } from './game/research';
-import { BIOME_NAMES, HILL_BIOME_NAMES, groundMovementMultiplier, resourceName } from './game/geography';
+import { BIOME_NAMES, groundMovementMultiplier, resourceName } from './game/geography';
 import { fieldHarvestFoodForState } from './game/farms';
 import { parseGameSave, serializeGameSave, serializeGameSaveAsync } from './game/game-save';
 import { restorableSimulation, simCore } from './game/sim-handle';
@@ -104,12 +106,12 @@ import { Frontend, type FrontendAction, type FrontendView, type HallOfFameEntry 
 import { AccountClient } from './account/client';
 import { MultiplayerClient } from './multiplayer/client';
 import type { GameCommand } from './multiplayer/protocol';
-import { playerFaction } from './game/player-context';
+import { factionById, playerFaction } from './game/player-context';
 import { automaticallyRebuildDefenses, setAutomaticallyRebuildDefenses } from './game/defense-rebuilding';
 import { hasObservationLodge } from './game/observation-posts';
 import { buildCostAt } from './game/simulation';
 import { MobileControls } from './ui/mobile-controls';
-import { fitGameViewport } from './ui/game-viewport';
+import { fitGameHud, fitGameViewport } from './ui/game-viewport';
 import './ui/leader-respawn.css';
 import './ui/reference-buttons.css';
 
@@ -180,72 +182,81 @@ $('#app').innerHTML = `
 <main class="game-area" inert>
   <canvas id="world" tabindex="0" aria-label="TinyCiv game world. Right click or WASD to move, left click to select, 1 or E to recall retinue, 2 to change stance, 3 to toggle Infantry Drill formation, 9 for Offensive, hold Q/E to rotate while active, B to build, F for fortifications, C to clear trees, buildings and construction, H for controls."></canvas>
   <div id="leader-action-feedback" class="leader-action-feedback" aria-hidden="true" hidden></div>
-  <header class="resource-bar" aria-label="Resources">
-    <div class="resources">
-      <div class="resource food" title="Food · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/food.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="food"></strong><span id="food-yield"></span></div></div>
-      <div class="resource gold" title="Gold · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/gold.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="gold"></strong><span id="gold-yield"></span></div></div>
-      <div class="resource population" title="Population / housing"><img class="resource-icon" src="/assets/runtime/ui/resources/population.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="population"></strong><span id="capacity"></span></div></div>
-      <div class="resource culture" aria-label="Culture"><img id="culture-icon" class="resource-icon" src="/assets/runtime/ui/resources/culture.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="culture"></strong><span id="culture-next"></span><span id="culture-rate"></span></div></div>
-    </div>
-    <div id="research-toolbar" class="research-toolbar" aria-label="Current research"></div>
-    <div class="time-controls"><button type="button" id="diplomacy-menu" aria-haspopup="dialog">Diplomacy</button><button type="button" id="menu" aria-haspopup="dialog" title="Game menu"><span aria-hidden="true" class="menu-glyph"></span> Menu</button><button type="button" id="pause" title="Pause (Space)" aria-label="Pause">${icon('pause')}</button><button type="button" id="speed" title="Simulation speed" aria-label="Change simulation speed"><span class="speed-value">1×</span></button></div>
-  </header>
-  <div id="paused" hidden>Paused</div>
-  <div id="network-status" class="network-status" role="status" aria-live="polite" hidden></div>
-  <section class="selection-panel" id="selection-panel" aria-label="Selection">
-    <div class="portrait" id="portrait"></div>
-    <div class="selection-copy"><div class="selection-name" id="selection-name"></div><div class="selection-stats" id="selection-stats"></div><div class="health-track" role="progressbar" aria-label="Health"><div class="health-fill"><i id="selection-health"></i></div></div><div id="selection-hint" class="selection-hint" hidden></div></div>
-  </section>
-  <footer class="hud">
-    <div class="minimap-panel" aria-label="World overview">
-      <canvas id="minimap" width="212" height="212" aria-label="Minimap. Click to move camera."></canvas>
-      <div class="minimap-frame" aria-hidden="true"></div><span class="minimap-north" aria-hidden="true">N</span>
-      <button id="minimap-zoom-in" class="minimap-control" title="Zoom in" aria-label="Zoom in">+</button>
-      <button id="minimap-zoom-out" class="minimap-control" title="Zoom out" aria-label="Zoom out">-</button>
-    </div>
-    <section id="leader-xp" class="leader-xp" aria-label="Leader progression"></section>
-    <section class="hotbar" aria-label="Numbered action slots">
-      <button class="action-slot" data-slot="1" data-hotbar-action="recall" aria-label="Recall retinue" aria-keyshortcuts="1 E" title="Recall retinue (1 / E)"><kbd>1</kbd><span class="hotbar-art hotbar-recall" aria-hidden="true"></span><span class="hotbar-label">Recall</span></button>
-      <button class="action-slot" data-slot="2" data-hotbar-action="stance" aria-label="Change stance" aria-keyshortcuts="2 Q"><kbd>2</kbd><span class="hotbar-art hotbar-stance" aria-hidden="true"></span><span class="hotbar-label">Change Stance</span></button>
-      <button class="action-slot research-locked" data-slot="3" data-hotbar-action="formation" aria-label="Formation · Requires Infantry Drill" aria-keyshortcuts="3" aria-pressed="false" disabled><kbd>3</kbd><span class="hotbar-art hotbar-formation" aria-hidden="true">${icon('infantryFormation')}</span><span class="hotbar-label">Formation</span><svg class="hotbar-lock" viewBox="0 0 12 14" aria-hidden="true"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M1 6h10v8H1z" fill="currentColor"/></svg></button>
-      <button class="action-slot research-locked" data-slot="4" data-hotbar-action="levy" aria-label="Mass levy" aria-keyshortcuts="4" disabled><kbd>4</kbd><span class="hotbar-art hotbar-auxiliary" aria-hidden="true">${icon('levy')}</span><span class="hotbar-label">Mass levy</span></button>
-      <button class="action-slot" data-slot="5" data-hotbar-action="garrison" aria-label="Garrison" aria-keyshortcuts="5" disabled><kbd>5</kbd><span class="hotbar-art hotbar-auxiliary" aria-hidden="true">${icon('garrison')}</span><span class="hotbar-label">Garrison</span></button>
-      ${(['anchor', 'land', 'reinforce'] as const).map((action, i) => `<button class="action-slot" data-slot="${i + 6}" data-naval-action="${action}" disabled hidden><kbd>${i + 6}</kbd><img alt="" class="naval-hotbar-icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/naval/${action}.webp"><span class="hotbar-label">${action === 'anchor' ? 'Cast anchor' : action === 'land' ? 'Go ashore' : 'Reinforce'}</span></button>`).join('')}
-      <button class="action-slot research-locked" data-slot="9" data-hotbar-action="offensive" aria-label="Offensive · Requires Officer Corps" aria-keyshortcuts="9" aria-pressed="false" disabled><kbd>9</kbd><span class="hotbar-art hotbar-offensive" aria-hidden="true" style="background-image:url('${import.meta.env.BASE_URL}assets/runtime/ui/forged/retinue-actions-pixel.webp')"></span><span class="hotbar-label">Offensive</span></button>
-      <button class="action-slot" data-slot="10" aria-label="Empty action slot 10" disabled><kbd>10</kbd></button>
-    </section>
-    <section class="special-actions" aria-label="Actions">
-      ${constructionActionsMarkup({
-        build: actionTooltip('Opens the civilian building menu.'),
-        fortifications: actionTooltip('Opens the defenses menu.'),
-        clear: actionTooltip('Drag to clear vegetation or remove buildings; unfinished work refunds unused gold.'),
-        forbid: actionTooltip('Drag to forbid civilian and guard activity; drag from inside a zone to erase it.'),
-      })}
-    </section>
-    <section class="build-panel" id="build-panel" role="region" aria-label="Buildings" hidden>
-      <button id="close-build" aria-label="Close construction menu" title="Close (Esc)">×</button>
-      <div class="build-actions">
-        ${buildingButtonsMarkup(kind => {
-          const gold = BUILD_COSTS[buildingKindForSelection(kind)].gold;
-          const seconds = wholeNumber(CONSTRUCTION_SECONDS[buildingKindForSelection(kind)]);
-          return buildTooltip(kind, Number(gold), Number(seconds));
-        })}
+  <div class="game-hud">
+    <header class="resource-bar" aria-label="Resources">
+      <span id="observer-status" role="status" hidden>Observing</span>
+      <div class="resources">
+        <div class="resource food" title="Food · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/food.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="food"></strong><span id="food-yield"></span></div></div>
+        <div class="resource gold" title="Gold · Income received over the last 30 game seconds"><img class="resource-icon" src="/assets/runtime/ui/resources/gold.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="gold"></strong><span id="gold-yield"></span></div></div>
+        <div class="resource population" title="Population / housing"><img class="resource-icon" src="/assets/runtime/ui/resources/population.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="population"></strong><span id="capacity"></span></div></div>
+        <div class="resource culture" aria-label="Culture"><img id="culture-icon" class="resource-icon" src="/assets/runtime/ui/resources/culture.webp" alt="" aria-hidden="true"><div class="resource-values"><strong id="culture"></strong><span id="culture-next"></span><span id="culture-rate"></span></div></div>
       </div>
+      <div id="research-toolbar" class="research-toolbar" aria-label="Current research"></div>
+      <div class="time-controls">
+        <button type="button" id="pause-spending" aria-pressed="false" title="Pause automatic house and farm orders"><span class="icon control-symbol symbol-check" aria-hidden="true"></span><span>Pause Spending</span></button>
+        <button type="button" id="diplomacy-menu" aria-haspopup="dialog">Diplomacy</button><button type="button" id="menu" aria-haspopup="dialog" title="Game menu"><span aria-hidden="true" class="menu-glyph"></span> Menu</button><button type="button" id="pause" title="Pause (Space)" aria-label="Pause">${icon('pause')}</button><button type="button" id="speed" title="Simulation speed" aria-label="Change simulation speed"><span class="speed-value">1×</span></button>
+      </div>
+    </header>
+    <div id="paused" hidden>Paused</div>
+    <div id="network-status" class="network-status" role="status" aria-live="polite" hidden></div>
+    <section class="selection-panel" id="selection-panel" aria-label="Selection">
+      <div class="portrait" id="portrait"></div>
+      <div class="selection-copy"><div class="selection-name" id="selection-name"></div><div class="selection-stats" id="selection-stats"></div><div class="health-track" role="progressbar" aria-label="Health"><div class="health-fill"><i id="selection-health"></i></div></div><div id="selection-hint" class="selection-hint" hidden></div></div>
     </section>
-  </footer>
-  <div id="build-status" class="build-status" role="status" aria-live="polite"></div>
+    <footer class="hud">
+      <div class="minimap-panel" aria-label="World overview">
+        <canvas id="minimap" width="212" height="212" aria-label="Minimap. Click to move camera."></canvas>
+        <div class="minimap-frame" aria-hidden="true"></div><span class="minimap-north" aria-hidden="true">N</span>
+        <button id="minimap-zoom-in" class="minimap-control" title="Zoom in" aria-label="Zoom in">+</button>
+        <button id="minimap-zoom-out" class="minimap-control" title="Zoom out" aria-label="Zoom out">-</button>
+      </div>
+      <section id="leader-xp" class="leader-xp" aria-label="Leader progression"></section>
+      <section class="hotbar" aria-label="Numbered action slots">
+        <button class="action-slot" data-slot="1" data-hotbar-action="recall" aria-label="Recall retinue" aria-keyshortcuts="1 E" title="Recall retinue (1 / E)"><kbd>1</kbd><span class="hotbar-art hotbar-recall" aria-hidden="true"></span><span class="hotbar-label">Recall</span></button>
+        <button class="action-slot" data-slot="2" data-hotbar-action="stance" aria-label="Change stance" aria-keyshortcuts="2 Q"><kbd>2</kbd><span class="hotbar-art hotbar-stance" aria-hidden="true"></span><span class="hotbar-label">Change Stance</span></button>
+        <button class="action-slot research-locked" data-slot="3" data-hotbar-action="formation" aria-label="Formation · Requires Infantry Drill" aria-keyshortcuts="3" aria-pressed="false" disabled><kbd>3</kbd><span class="hotbar-art hotbar-formation" aria-hidden="true">${icon('infantryFormation')}</span><span class="hotbar-label">Formation</span><svg class="hotbar-lock" viewBox="0 0 12 14" aria-hidden="true"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M1 6h10v8H1z" fill="currentColor"/></svg></button>
+        <button class="action-slot research-locked" data-slot="4" data-hotbar-action="levy" aria-label="Mass levy" aria-keyshortcuts="4" disabled><kbd>4</kbd><span class="hotbar-art hotbar-auxiliary" aria-hidden="true">${icon('levy')}</span><span class="hotbar-label">Mass levy</span></button>
+        <button class="action-slot" data-slot="5" data-hotbar-action="garrison" aria-label="Garrison" aria-keyshortcuts="5" disabled><kbd>5</kbd><span class="hotbar-art hotbar-auxiliary" aria-hidden="true">${icon('garrison')}</span><span class="hotbar-label">Garrison</span></button>
+        ${(['anchor', 'land', 'reinforce'] as const).map((action, i) => `<button class="action-slot" data-slot="${i + 6}" data-naval-action="${action}" disabled hidden><kbd>${i + 6}</kbd><img alt="" class="naval-hotbar-icon" src="${import.meta.env.BASE_URL}assets/runtime/ui/naval/${action}.webp"><span class="hotbar-label">${action === 'anchor' ? 'Cast anchor' : action === 'land' ? 'Go ashore' : 'Reinforce'}</span></button>`).join('')}
+        <button class="action-slot research-locked" data-slot="9" data-hotbar-action="offensive" aria-label="Offensive · Requires Officer Corps" aria-keyshortcuts="9" aria-pressed="false" disabled><kbd>9</kbd><span class="hotbar-art hotbar-offensive" aria-hidden="true" style="background-image:url('${import.meta.env.BASE_URL}assets/runtime/ui/forged/retinue-actions-pixel.webp')"></span><span class="hotbar-label">Offensive</span></button>
+        <button class="action-slot" data-slot="10" aria-label="Empty action slot 10" disabled><kbd>10</kbd></button>
+      </section>
+      <section class="special-actions" aria-label="Actions">
+        ${constructionActionsMarkup({
+          build: actionTooltip('Opens the civilian building menu.'),
+          fortifications: actionTooltip('Opens the defenses menu.'),
+          clear: actionTooltip('Drag to clear vegetation or remove buildings; unfinished work refunds unused gold.'),
+          forbid: actionTooltip('Drag to forbid activity and cancel civilian jobs. Start inside a zone to erase it.'),
+          cancel: actionTooltip('Drag over orders to cancel them. Unused construction gold is refunded.'),
+        })}
+      </section>
+      <section class="build-panel" id="build-panel" role="region" aria-label="Buildings" hidden>
+        <button id="close-build" aria-label="Close construction menu" title="Close (Esc)">×</button>
+        <div class="build-actions">
+          ${buildingButtonsMarkup(kind => {
+            const gold = BUILD_COSTS[buildingKindForSelection(kind)].gold;
+            const seconds = wholeNumber(CONSTRUCTION_SECONDS[buildingKindForSelection(kind)]);
+            return buildTooltip(kind, Number(gold), Number(seconds));
+          })}
+        </div>
+      </section>
+    </footer>
+    <div id="build-status" class="build-status" role="status" aria-live="polite"></div>
+    <div id="tile-tooltip" hidden></div>
+    <section id="leader-skills" class="leader-skills" role="dialog" aria-modal="false" aria-labelledby="leader-skills-title" hidden></section>
+  </div>
   <div id="leader-respawn" class="leader-respawn" role="status" hidden><span>Waiting to respawn<span class="respawn-dots" aria-hidden="true">...</span></span></div>
-  <div id="tile-tooltip" hidden></div>
   <section id="building-activity" class="building-activity" role="dialog" aria-modal="false" aria-labelledby="building-activity-title" hidden></section>
   <section id="resource-activity" class="building-activity resource-activity" role="dialog" aria-modal="false" aria-labelledby="resource-activity-title" hidden></section>
-  <section id="leader-skills" class="leader-skills" role="dialog" aria-modal="false" aria-labelledby="leader-skills-title" hidden></section>
 </main>
 <div class="dialog-backdrop" id="dialog" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button id="close-dialog" class="close-dialog" aria-label="Close">${icon('close')}</button><div id="dialog-body"></div></section></div><div id="frontend" hidden></div>`;
 
 fitGameViewport($('.game-area'));
+fitGameHud($('.game-area'));
 const canvas = $<HTMLCanvasElement>('#world');
+const worldControlsLabel = canvas.getAttribute('aria-label')!;
 const renderer = new Renderer(canvas, $<HTMLCanvasElement>('#minimap'));
-let offensivePlacement: { state: GameState; rally?: Point; zoom: number; follow: boolean; paused: boolean } | undefined;
+let offensivePlacement: { state: GameState; rally?: Point; cursor?: Point; zoom: number; follow: boolean; paused: boolean } | undefined;
 const offensivePlacementPanel = document.createElement('div');
 offensivePlacementPanel.className = 'offensive-placement';
 offensivePlacementPanel.hidden = true;
@@ -282,13 +293,14 @@ const leaderProgression = new LeaderProgressionUI($('#leader-xp'), $('#leader-sk
   if (state.multiplayer) multiplayer.input(input);
 }, () => canvas.focus({ preventScroll: true }), () => sessionStarted && !frontend.active && $('#dialog').hidden && !state.gameOver);
 const input: InputState = { up: false, down: false, left: false, right: false, turnLeft: false, turnRight: false };
-const GAME_SPEEDS = [1, 2, 3, 4, 6, 8] as const;
+const GAME_SPEEDS = [1, 2, 3, 4, 6, 8, 16, 32, 64, 128] as const;
+const GAME_SPEED_RANGE = `${GAME_SPEEDS[0]}× to ${GAME_SPEEDS[GAME_SPEEDS.length - 1]}×`;
 const speedIndex = () => Math.max(0, GAME_SPEEDS.findIndex(speed => speed >= state.speed));
 let pauseBeforeDialog = false, gameEndShown = false, last = performance.now(), lastUI = 0, lastSave = 0;
 let lastVillageTradeMarkup = '';
 let dismissDialog: (() => void) | undefined;
 let buildError = '';
-type AreaTool = 'clear' | 'forbid';
+type AreaTool = 'clear' | 'forbid' | 'cancel';
 type RetinueAction = 'recall' | 'stance';
 const RETINUE_ACTION_COOLDOWN_MS = 1000;
 // HUD feedback uses wall-clock time, so commands recover even while paused.
@@ -301,14 +313,38 @@ let stroke: { start: Point; kind: BuildSelection; pointerId: number; twoClick: b
 let routePreviewKey = "";
 const constructionGesture = new ConstructionGestureCache();
 let pointerStatusDirty = false, linearCleanupDue = false, linearPurchaseNotice = "";
-const linearPurchases: { purchase: LinearPurchase; kind: 'road' | 'irrigation'; queuedAt: number }[] = [];
-let linearPurchaseState: GameState | undefined, linearPurchasesChanged = false, linearWorkSkippedFrames = 0;
+const linearPurchases: { purchase: LinearPurchase; kind: 'road' | 'irrigation' }[] = [];
+let linearPurchaseState: GameState | undefined, linearPurchasesChanged = false, linearWorkSkippedTurns = 0;
 let linearPurchasesCompleted = 0, linearPurchaseLastResult: LinearPurchaseResult | undefined;
 let linearWorkSerial = 0, linearWorkMs = 0;
 let pointer: Point | null = null;
 const clearTurnInput = () => { input.turnLeft = input.turnRight = false; if (state.multiplayer) multiplayer.input(input); };
-const clearInput = () => { input.up = input.down = input.left = input.right = false; clearTurnInput(); };
+const clearInput = () => {
+  input.up = input.down = input.left = input.right = false;
+  if (offensivePlacement) offensivePlacement.cursor = undefined;
+  clearTurnInput();
+};
 let sessionStarted = false, pauseBeforeFrontend = state.paused;
+const simulationClock = new SimulationClock();
+let simulationClockState: GameState | undefined;
+function syncSimulationClock(now = performance.now()): void {
+  const local = state.multiplayer ? undefined : state;
+  if (local !== simulationClockState) {
+    simulationClockState = local;
+    simulationClock.reset(now);
+  }
+  // A hidden tab suspends local play explicitly. Rendering has no role in this decision.
+  const running = local && sessionStarted && !frontend.active && !document.hidden && gameCanAdvance(local);
+  simulationClock.sample(now, running ? local.speed : 0);
+}
+function setGamePaused(paused: boolean): void {
+  state.paused = paused;
+  syncSimulationClock();
+}
+function setGameSpeed(speed: number): void {
+  state.speed = speed;
+  syncSimulationClock();
+}
 let saveLibraryBusy = false, loadingSavedGame = false;
 let offlineState = state;
 let onlineIncomeHistory: object = {};
@@ -322,11 +358,20 @@ const accounts = new AccountClient();
 void accounts.restore().then(user => frontend.setAccount(user)).catch(() => {});
 async function submitAccount(action: Extract<FrontendAction, { type: 'account-submit' }>): Promise<void> {
   frontend.setAccountBusy(true);
+  let signedIn = false;
   try {
-    const user = await accounts.signIn(action.mode, action.email, action.password);
-    frontend.setAccount(user); frontend.show('main');
-  } catch (error) { frontend.setAccountMessage(error instanceof Error ? error.message : 'Sign-in failed. Try again.'); }
+    const request = accounts.signIn(action);
+    action.password = '';
+    const user = await request;
+    if (action.mode === 'create-account') {
+      frontend.showAccountCreated();
+      await new Promise<void>(resolve => setTimeout(resolve, 900));
+    }
+    frontend.setAccount(user);
+    signedIn = true;
+  } catch (error) { frontend.setAccountMessage(error instanceof Error ? error.message : 'Account request failed. Try again.'); }
   finally { action.password = ''; frontend.setAccountBusy(false); }
+  if (signedIn) frontend.show('main');
 }
 function readHallOfFame(): (HallOfFameEntry & { key?: string })[] {
   try { const entries = JSON.parse(localStorage.getItem(HALL_OF_FAME_STORAGE) ?? '[]'); return Array.isArray(entries) ? entries : []; }
@@ -414,7 +459,7 @@ function syncPlacementIntent(): void {
 function showFrontend(view: FrontendView = 'main', inGame = false): void {
   endOffensivePlacement(true);
   if (!frontend.active && !state.multiplayer) pauseBeforeFrontend = state.paused;
-  if (!state.multiplayer) state.paused = true;
+  if (!state.multiplayer) setGamePaused(true);
   buildingActivity.close(); resourceActivity.close(); leaderProgression.close(); clearInput(); cancelStroke(); clearPointer(); pan = null;
   if (state.multiplayer) multiplayer.input(input);
   $('#dialog').hidden = true; dismissDialog = undefined;
@@ -426,14 +471,15 @@ function showFrontend(view: FrontendView = 'main', inGame = false): void {
 }
 function hideFrontend(): void {
   frontend.hide(); frontend.setInGame(false); $('.game-area').inert = false; $('.game-area').classList.remove('frontend-active');
-  if (!state.multiplayer) state.paused = pauseBeforeFrontend;
+  if (!state.multiplayer) setGamePaused(pauseBeforeFrontend);
+  else syncSimulationClock();
   last = performance.now(); canvas.focus({ preventScroll: true });
 }
 function syncFrontendSettings(): void {
   frontend.setSettings({ zoom: renderer.zoom, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, follow: renderer.follow,
     infiniteGold: !!state.infiniteGold,
     autoRebuildDefenses: automaticallyRebuildDefenses(state.factions.find(f => f.id === playerFaction(state))),
-    revealMapAvailable: import.meta.env.DEV && sessionStarted && !state.multiplayer, revealMap: isMapRevealed(state),
+    revealMapAvailable: import.meta.env.DEV && sessionStarted && !state.multiplayer && !state.observing, revealMap: isMapRevealed(state),
     fullscreen: !!document.fullscreenElement, enemyStrength: enemyStrength(state), banditIntensity: multiplayer.room && !state.multiplayer ? DEFAULT_BANDIT_INTENSITY : banditIntensity(state) });
 }
 function showLoading(title: string, status: string, progress?: number, cancellable = false, movementGuide = false): void {
@@ -465,6 +511,9 @@ async function openMultiplayer(): Promise<void> {
 }
 function handleFrontendAction(action: FrontendAction): void {
   if (action.type === 'account-submit') { void submitAccount(action); return; }
+  if (action.type === 'account-guest') {
+    accounts.useGuest(); frontend.setAccount(null); frontend.show('main'); return;
+  }
   if (action.type === 'feedback-submit') {
     frontend.setFeedbackBusy(true);
     void accounts.submitFeedback(action.message, action.signedIn)
@@ -474,15 +523,27 @@ function handleFrontendAction(action: FrontendAction): void {
     return;
   }
   if (action.type === 'account-logout') {
+    cancelPendingSave();
     frontend.setAccountBusy(true);
-    void accounts.logout().then(() => frontend.setAccount(null)).catch(() => frontend.setStatus('Sign-out failed. Try again.'))
+    frontend.setStatus('Signing out…');
+    void saveQueue.then(() => accounts.logout()).then(() => {
+      sessionStarted = false;
+      lastCloudAutosave = undefined;
+      frontend.setSession(false);
+      frontend.setSaves([]);
+      frontend.setAccount(null);
+      frontend.setStatus('');
+    }).catch(() => frontend.setStatus('Sign-out failed. Try again.'))
       .finally(() => frontend.setAccountBusy(false));
     return;
   }
   if (action.type === 'resume') { telemetry.ensurePlay(state); sessionStarted = true; hideFrontend(); updateUI(); return; }
   if (action.type === 'exit-game') {
     if (state.multiplayer) leaveMultiplayer('main');
-    else { save(); telemetry.stopPlay(); frontend.setStatus(''); showFrontend('main'); }
+    else {
+      if (accounts.user) void saveNow(true, undefined, true); else save();
+      telemetry.stopPlay(); frontend.setStatus(''); showFrontend('main');
+    }
     return;
   }
   if (action.type === 'saves') { void openSavedGames(); return; }
@@ -527,6 +588,7 @@ function handleFrontendAction(action: FrontendAction): void {
       save();
     }
     if (action.settings.enemyStrength !== undefined && !state.multiplayer && !multiplayer.room) {
+      delete state.banditStrength;
       setEnemyStrength(state, action.settings.enemyStrength);
       preferredEnemyStrength = enemyStrength(state);
       try { localStorage.setItem(ENEMY_SETTING_STORAGE, String(preferredEnemyStrength)); } catch { /* In-memory settings remain active. */ }
@@ -558,9 +620,13 @@ let pendingSaves = 0;
 // idle. Clicking through placements or popups no longer serializes the whole
 // game inside each input handler. Explicit and page-hide saves use saveNow.
 const SAVE_DEBOUNCE_MS = 1500;
+const CLOUD_AUTOSAVE_INTERVAL_MS = 90000;
 let saveTimer: number | undefined, saveIdle: number | undefined;
+let lastCloudAutosave: { source: GameState; userId: string; at: number } | undefined;
 function save(): void {
   if (state.multiplayer || !sessionStarted || loadingSavedGame || saveTimer !== undefined || saveIdle !== undefined) return;
+  if (accounts.user && lastCloudAutosave?.userId === accounts.user.id && lastCloudAutosave.source === state
+      && performance.now() - lastCloudAutosave.at < CLOUD_AUTOSAVE_INTERVAL_MS) return;
   saveTimer = window.setTimeout(() => {
     saveTimer = undefined;
     const run = () => { saveIdle = undefined; void saveNow(); };
@@ -576,21 +642,35 @@ function savedGameDetails(source: GameState, name = 'Autosave'): StoredGameDetai
   return { name, savedAt: Date.now(), time: source.time, seed: source.seed,
     civilization: source.factions.find(faction => faction.id === playerFaction(source))?.name ?? '' };
 }
-function saveNow(incremental = true, name?: string): Promise<boolean> {
+function saveNow(incremental = true, name?: string, forceCloudCheckpoint = false): Promise<boolean> {
   cancelPendingSave();
   if (state.multiplayer || !sessionStarted || loadingSavedGame) return Promise.resolve(false);
   const source = state, paused = frontend.active ? pauseBeforeFrontend : $('#dialog').hidden ? state.paused : pauseBeforeDialog;
+  const userId = accounts.user?.id;
+  if (userId && name === undefined) {
+    const now = performance.now();
+    if (!forceCloudCheckpoint && lastCloudAutosave?.userId === userId && lastCloudAutosave.source === source
+        && now - lastCloudAutosave.at < CLOUD_AUTOSAVE_INTERVAL_MS) return Promise.resolve(false);
+    lastCloudAutosave = { source, userId, at: now };
+  }
+  const id = name === undefined ? AUTOSAVE_ID : crypto.randomUUID();
   pendingSaves++;
   // Serialize requests in order, including their terrain preparation. A slow
   // old-world save cannot overwrite a later explicit save or a new world.
-  return saveQueue = saveQueue.then(async () => {
+  const task = saveQueue.then(async () => {
     try {
       const serialized = await serializeGameSaveAsync(source, { incremental, paused });
-      await writeStoredGame(serialized, savedGameDetails(source, name), name === undefined ? AUTOSAVE_ID : crypto.randomUUID());
+      const details = savedGameDetails(source, name);
+      if (userId) await accounts.writeGame(userId, id, serialized, details);
+      else await writeStoredGame(serialized, details, id);
       return true;
-    } catch { return false; }
-    finally { pendingSaves--; }
+    } finally { pendingSaves--; }
   });
+  saveQueue = task.catch(() => false);
+  return name === undefined ? saveQueue : task;
+}
+function listSavedGames() {
+  return accounts.user ? accounts.listGames(accounts.user.id) : listStoredGames();
 }
 async function openSavedGames(): Promise<void> {
   if (saveLibraryBusy || state.multiplayer || multiplayer.room) return;
@@ -600,8 +680,10 @@ async function openSavedGames(): Promise<void> {
   showFrontend('saves', frontend.inGame); frontend.setStatus('Loading saves…');
   try {
     await saveQueue;
-    frontend.setSaves(await listStoredGames()); frontend.setStatus('');
-  } catch { frontend.setStatus('Unable to read saved games. Browser storage may be unavailable.'); }
+    frontend.setSaves(await listSavedGames()); frontend.setStatus('');
+  } catch (error) {
+    frontend.setStatus(accounts.user && error instanceof Error ? error.message : 'Unable to read saved games. Browser storage may be unavailable.');
+  }
   finally { saveLibraryBusy = false; frontend.setSavesBusy(false); }
 }
 async function saveNamedGame(value: string): Promise<void> {
@@ -609,13 +691,13 @@ async function saveNamedGame(value: string): Promise<void> {
   if (saveLibraryBusy || !name || name.length > 80 || !sessionStarted || state.multiplayer) return;
   saveLibraryBusy = true; frontend.setSavesBusy(true); frontend.setStatus('Saving…');
   try {
-    if (!await saveNow(false, name)) {
-      frontend.setStatus('Unable to save. Browser storage may be full or unavailable.'); return;
-    }
+    if (!await saveNow(false, name)) throw new Error('Unable to save the current game.');
     frontend.setStatus(`Saved “${name}”.`);
     if (frontend.currentView === 'save') return;
-    try { frontend.setSaves(await listStoredGames()); }
+    try { frontend.setSaves(await listSavedGames()); }
     catch { frontend.setStatus(`Saved “${name}”, but the save list could not be refreshed.`); }
+  } catch (error) {
+    frontend.setStatus(accounts.user && error instanceof Error ? error.message : 'Unable to save. Browser storage may be full or unavailable.');
   } finally { saveLibraryBusy = false; frontend.setSavesBusy(false); }
 }
 async function loadSavedGame(id: string): Promise<void> {
@@ -627,7 +709,7 @@ async function loadSavedGame(id: string): Promise<void> {
     // Finish earlier writes before reading, and block autosaves until the
     // replacement is complete so an old session cannot overwrite this one.
     await saveQueue;
-    const serialized = await readStoredGame(id);
+    const serialized = accounts.user ? await accounts.readGame(accounts.user.id, id) : await readStoredGame(id);
     if (!serialized) throw new Error('This saved game is no longer available.');
     const next = parseGameSave(serialized);
     if (next.multiplayer || !next.factions?.[0] || !Array.isArray(next.units) || !Array.isArray(next.buildings) || !restorableSimulation(next))
@@ -705,7 +787,7 @@ function closeDialog() {
   dismiss?.();
   $('#dialog').hidden = true;
   state.diplomacy = null;
-  if (!state.multiplayer) state.paused = pauseBeforeDialog;
+  if (!state.multiplayer) setGamePaused(pauseBeforeDialog);
   if (dismiss) save();
   canvas.focus({ preventScroll: true });
 }
@@ -734,7 +816,7 @@ function openDialog(html: string) {
   buildingActivity.close(); resourceActivity.close();
   leaderProgression.close();
   if ($('#dialog').hidden) pauseBeforeDialog = state.paused;
-  if (!state.multiplayer) state.paused = true;
+  if (!state.multiplayer) setGamePaused(true);
   clearInput(); cancelStroke(); clearPointer();
   if (state.multiplayer) multiplayer.input(input);
   $('#dialog-body').innerHTML = html;
@@ -757,14 +839,17 @@ async function newWorld(options: NewGameOptions): Promise<void> {
   leaderProgression.reset();
   if (options.scenario) {
     state = await createScenarioGame(options.scenario, value => frontend.loading(title, '', value * .8, false, true));
-    state.paused = true;
+    setGamePaused(true);
   } else {
     const world = await generateWorldAsync(options.seed, options.width, options.height, options,
       ({ progress: value }) => frontend.loading(title, '', .04 + value * .7, false, true));
     await progress(.78);
-    state = createGame(world, undefined,
-      { advancedStart: options.advancedStart, banditIntensity: options.banditIntensity ?? preferredBanditIntensity });
-    state.paused = true;
+    state = createGame(world, undefined, {
+      advancedStart: options.advancedStart,
+      banditIntensity: options.banditIntensity ?? preferredBanditIntensity,
+      banditStrength: options.banditStrength,
+    });
+    setGamePaused(true);
   }
   preferredBanditIntensity = banditIntensity(state);
   try { localStorage.setItem(BANDIT_SETTING_STORAGE, String(preferredBanditIntensity)); } catch { /* In-memory settings remain active. */ }
@@ -779,7 +864,7 @@ async function newWorld(options: NewGameOptions): Promise<void> {
   last = performance.now();
   closeDialog();
   // Loading still owns the pause through the final progress paint.
-  state.paused = true;
+  setGamePaused(true);
   save(); updateUI();
   await progress(1);
   telemetry.startPlay(state);
@@ -823,12 +908,17 @@ function showGameEnd() {
   const respawn = !state.victory && canRespawnLeader(state);
   openDialog(state.victory
     ? `<h2 id="dialog-title">Victory</h2>${report}<div class="dialog-actions"><button class="primary" id="keep-playing">Keep playing</button><button id="play-again">Main menu</button></div>`
-    : `<h2 id="dialog-title">Defeat</h2><div class="dialog-actions"><button class="primary" id="respawn" ${respawn ? '' : 'disabled title="Requires a surviving town with clear, safe ground nearby."'}>Respawn</button><button id="play-again">Main menu</button></div><p id="respawn-error" role="status"></p>`);
+    : `<h2 id="dialog-title">Defeat</h2><div class="dialog-actions"><button ${respawn ? 'class="primary"' : 'disabled title="Requires a surviving town with clear, safe ground nearby."'} id="respawn">Respawn</button><button ${respawn ? '' : 'class="primary"'} id="stay-observer">Stay as observer</button><button id="play-again">Main menu</button></div><p id="respawn-error" role="status"></p>`);
   if (!state.victory) {
     $('#close-dialog').hidden = true;
-    $(respawn ? '#respawn' : '#play-again').focus();
+    $(respawn ? '#respawn' : '#stay-observer').focus();
   }
-  $('#play-again').onclick = () => { dismissDialog = undefined; closeDialog(); gameEndShown = false; showMenu(); };
+  $('#play-again').onclick = () => {
+    dismissDialog = undefined;
+    closeDialog();
+    gameEndShown = false;
+    handleFrontendAction({ type: 'exit-game' });
+  };
   if (state.victory) {
     const resume = () => {
       if (!continueAfterVictory(state)) return;
@@ -839,10 +929,20 @@ function showGameEnd() {
     // the player in a frozen world with no way to reopen its action button.
     dismissDialog = resume;
     $('#keep-playing').onclick = closeDialog;
+    return;
   }
-  if (!state.victory) $('#respawn').onclick = () => {
+  $('#stay-observer').onclick = () => {
+    if (!continueAsObserver(state)) return;
+    clearPlacement(); clearPointer(); discardLinearPurchases();
+    buildMenu = null; pan = null;
+    renderer.follow = false; renderer.moveMarker = null; renderer.movementModeMarker = null;
+    respawnCamera.cancel(); leaderActionFeedback.clear();
+    gameEndShown = false; pauseBeforeDialog = false; last = performance.now();
+    closeDialog(); save(); updateUI();
+  };
+  $('#respawn').onclick = () => {
     const result = respawnLeader(state);
-    if (!result.ok) { $('#respawn-error').textContent = result.message; $<HTMLButtonElement>('#respawn').disabled = true; $('#play-again').focus(); return; }
+    if (!result.ok) { $('#respawn-error').textContent = result.message; $<HTMLButtonElement>('#respawn').disabled = true; $('#stay-observer').focus(); return; }
     clearInput(); cancelStroke(); clearPointer(); pan = null;
     buildMenu = null; areaTool = null; buildError = '';
     renderer.moveMarker = null; renderer.movementModeMarker = null; leaderActionFeedback.clear(); renderer.center(state);
@@ -851,7 +951,7 @@ function showGameEnd() {
   };
 }
 function showHelp() {
-  openDialog(`<h2 id="dialog-title">Controls</h2><dl class="controls"><dt>WASD / arrows</dt><dd>Move the Leader, including while placing buildings. In Formation 3, W/S advance/reverse and A/D strafe relative to facing.</dd><dt>Right click</dt><dd>Move to ground, attack enemies, or open diplomacy on a peaceful faction’s building</dd><dt>Left click</dt><dd>Select a unit or building</dd><dt>Leader attack</dt><dd>Automatically throws javelins up to 4 tiles, or 5 when firing downhill</dd><dt>2 / Q</dt><dd>Cycle retinue stance: Defensive, Hold, Aggressive. Hold Q to rotate left while Formation 3 is active; 2 always changes stance.</dd><dt>1 / E</dt><dd>Recall the retinue without changing stance. Hold E to rotate right while Formation 3 is active; 1 always recalls.</dd><dt>3 · Infantry Drill</dt><dd>Toggle close rectangular ranks after researching Infantry Drill with at least eight retinue soldiers. If fewer than five remain, the formation disbands and its survivors and Leader rout. The Leader stays in the center with ranged troops in the rear; soldiers adjust around nearby obstacles while clear ranks keep their places. March at 105% speed, with +25% frontal damage and +50% defense. Hold Q/E to rotate continuously; release to stop. A/D strafe without changing facing.</dd><dt>Shift</dt><dd>Separate mob / travel setting: move together as a mob around the Leader at three-quarter speed</dd><dt>Farm peasants</dt><dd>Gather ripe food and carry it to the town before it spoils</dd><dt>B</dt><dd>Open / close buildings</dd><dt>F</dt><dd>Open / close fortifications</dd><dt>B then R / G / H / U</dt><dd>Road / farm / house / irrigation</dd><dt>F then P / T / G / L / N</dt><dd>Wall / wood tower / guard post / ballista / siege cannon</dd><dt>B then V / L / T</dt><dd>Bridge / well / dock</dd><dt>Sailing</dt><dd>Research Sailing after Exploration, then build a dock on shore. Each completed dock launches one sailboat. Right-click your boat to board; use WASD or right-click water to sail. Right-click a reachable shore to disembark. The empty boat stays behind for reboarding; the retinue remains on land.</dd><dt>C</dt><dd>Clear trees, buildings, and construction sites with one rectangular selection</dd><dt>B then Y</dt><dd>Stable after Horseback Riding</dd><dt>B then M / K / J / N</dt><dd>Monument / blacksmith / archery range / new town</dd><dt>Drag to build a line</dt><dd>Drag roads, walls, bridges, or irrigation ditches. On touchscreens, tap the start and then the end.</dd><dt>Clear</dt><dd>Drag a rectangle to queue tree or marsh-plant clearing, cancel unfinished friendly construction with its unused gold refunded, and remove completed owned buildings or buildings within your borders without a refund. You can also drag directly from Clear to a single tile. Occupied crossings remain when there is no safe exit.</dd><dt>Forbid</dt><dd>Drag a rectangle to keep friendly workers, merchants and guards out. The Leader and retinue may cross. Start a drag inside a forbidden zone to allow that rectangle again. One white marker identifies each connected zone.</dd><dt>9 · Offensive</dt><dd>Place a Rally flag, then an Objective flag after researching Officer Corps.</dd><dt>Space</dt><dd>Pause / resume</dd><dt>= / -</dt><dd>Increase / decrease simulation speed, from 1× to 8×</dd><dt>Home</dt><dd>Center on Leader</dd><dt>Y</dt><dd>Tile yields</dd><dt>Wheel / minimap + / -</dt><dd>Zoom</dd><dt>Middle-drag / minimap</dt><dd>Pan camera</dd><dt>N</dt><dd>New world</dd><dt>Esc</dt><dd>Cancel</dd></dl><p>Normal games begin with 20 residents. Advanced start begins with 250 residents, every building, and 12 naturally supported retinue soldiers: 3 each of warriors, archers, spearmen, and horsemen. Infantry Drill is already researched. New and replacement retinue soldiers recruit one at a time, ten game seconds apart. Farms are walkable single-tile fields costing ${wholeNumber(BUILD_COSTS.camp.gold)} gold and 4 seconds of work each; farms and other buildings can stand directly beside them. Each edge-connected farm block is limited to 16 plots. Blocks of more than six plots must be compact: the longer side can be at most 150% of the shorter side. Each plot produces about 64 food per hour before terrain and bonuses. Connected wheat plots grow and ripen together. Each contiguous same-owner crop parcel uses one peasant, subject to available residents. Towns stagger departures, and each peasant can sweep the entire parcel before returning. Peasants wait inside between trips. Ripe food has 11 seconds of freshness; its timer pauses only while the peasant is actively collecting inside that parcel, including already gathered food. Waiting, fleeing and the return journey consume the remaining time. At least 15 farmland tiles for every eight residents are needed before delivery losses. Larger cities need more farmland, and longer delivery routes lose more food to spoilage, with no hard population cap; roads, irrigation, research and bonuses can improve supply. A courier gathers only from the assigned contiguous parcel and checks that the remaining freshness allows the walk home. Ripe crops must reach the town before they spoil. After 120 seconds without a visit by an owning unit, a farm stays fallow until a unit returns; its peasant can walk back to restart cultivation. Only neutral, unclaimed farms disappear after ten minutes without an owner. Claiming cancels that timer; owned farms remain even while fallow. Click a nearby farm to plant one orchard for 5 gold or the nearest ten for 50 gold. Orchards establish for 120 seconds and then yield 50% more food. Only delivered food feeds the population. Longer journeys leave less time to return a harvest before it spoils. Roads, terrain, and traffic affect how much food reaches the town. A hopping clock warns of an expiring harvest; red numbers show food lost. Governors build farms or houses to relieve the city’s food or housing bottleneck, filling suitable enclosed housing sites first. New and relocated farms favor adjoining fields and fill gaps to form compact blocks. Farm scoring uses actual terrain-weighted walking routes from town doors, so short straight-line distances across water do not hide long delivery detours. Approach within three tiles of your town and click it to toggle Governor permissions or import an immigrant for 100 gold. Each immigrant purchase fills one vacant bed in that city; full towns cannot import immigrants. Buy retinue slot adds one permanent faction-wide slot for 1,000 gold, filled through normal recruitment. Each purchased slot costs 5 gold every 30 game seconds, even while vacant, in addition to soldier upkeep. A completed blacksmith opens armor and weapon upgrades at the same range; each purchase requires a developed iron mine within your faction’s borders. Tiers I–VI cost 200 / 400 / 600 / 800 / 1,000 / 1,200 gold and set defense or attack to 115% / 130% / 150% / 170% / 190% / 210% for your Leader and retinue, including new recruits. Armor also strengthens defensive buildings, and weapons improve tower attacks. Armor tiers I–III use buckler, oval, and legionary shields; IV–VI retain the legionary shield. Farm and Housing checkboxes independently allow automatic construction; each town uses its own development clock and construction limits with shared faction gold; Escape or the red × closes the panel. Open buildings with B or fortifications with F, choose a structure, then click to place it. Clear is available directly with C for trees, buildings, and construction sites. Construction buttons show names and an upper-right shortcut letter; hover to see prices and requirements. Footprints may be placed in fog of war. A peasant travels from the town to construct it. Generated dirt trails connect most neutral villages, using fords to cross rivers. They give 5% faster movement, cannot be constructed, and disappear beneath newly placed roads. Roads can start from either bank of a ford or extend an existing road or bridge. Dragging from or across a ford leaves the crossing intact and free. Repeated travel creates roads only inside faction borders. Construction workers, harvesters, the Leader, and the retinue cross fields without contributing to road creation. Roads block farm placement; placing a road, including a caravan or foot-traffic road, moves an existing farm to a suitable reachable plot at no cost. If no replacement plot exists, the road is not placed. Invalid cells in construction drags are skipped. Queued sites remain open ground until a builder starts work. One builder per five residents shares construction and repair duties; damaged buildings can be repaired after five seconds without a hit. Click a visible resource inside your city’s borders to develop the eligible, explored part of its connected patch for 50 gold per new tile. The popup shows the full price. Mines appear on ore and stone, fences surround olive groves, and salt pans gain a fenced excavation and dirt approach. All resource benefits serve your whole faction while the developed tiles remain within its borders. Each salt tile covers 10 residents for 25% less food consumption; coverage is shared across the whole population and total savings cannot exceed 25%. Each developed olive tree adds 2% to neutral-village trade payouts, stacking across groves; domestic trade is unchanged. Stone can be quarried but has no additional bonus yet. Losing a mine does not remove existing soldiers or completed upgrades. The advanced start’s pre-equipped escort is retained, but later spearman replacements need copper. Construction uses gold: farms cost ${BUILD_COSTS.camp.gold}, houses ${BUILD_COSTS.house.gold}, wells ${BUILD_COSTS.well.gold}, monuments ${BUILD_COSTS.monument.gold}, and blacksmiths ${BUILD_COSTS.blacksmith.gold}. Blacksmiths take 90 seconds to build. Build a forum with B then Q after Cultural Identity (requires Statehood and Traditional Medicine): 300 gold, a 2×2 footprint, 90 seconds to build, and 3 gold upkeep every 30 seconds. Approach within three tiles and click it to purchase permanent achievements with culture. Prerequisites are shown by arrows; spending culture preserves lifetime influence and borders. Build a library with B then I: ${BUILD_COSTS.library.gold} gold, a 2×2 footprint, and 90 seconds. Its research tree unlocks buildings, units, and faction bonuses. Approach within three tiles and use the library slider to direct a share of incoming gold to Science, starting at 25%. The cheapest available technology runs automatically. Select any technology and Prioritize to put it first, including distant technologies whose prerequisites are handled automatically. Add multiple priorities, move one to the front, or remove it; earned Science is retained. The top bar shows the current technology and progress. Research pauses at 0% allocation or without a completed library; additional libraries do not multiply progress. Reinforced Defenses adds 30% wall and tower health; Coinage adds 20% trade gold; Urban Planning adds one housing place per house; Metal Tools adds 25% construction and repair speed; Fletching adds 15% archer damage; Grain Storage keeps newly harvested grain fresh 50% longer. Fortification also unlocks Upgrade to Keep in the town popup: a free, immediate stone upgrade from 650 to 6,500 maximum health that preserves the current health percentage. Keeps shoot arrows, prevent gold theft, and house ten residents. A further 1,000-gold housing upgrade adds fifteen places, for twenty-five total. Houses, wells, bridges, roads, towns, and farms need no research. Military Tactics and a developed copper mine allow stronger, piercing spearmen, allocated at a blacksmith. Siege Engines allows ballistae without developed iron: F then L, 300 gold, 30 seconds of automatic assembly, eighteen-tile range and one shot every four seconds. Siege cannons still require a developed iron mine. Traditional Medicine unlocks a Healer’s shack: B then P, 200 gold, one tile, and 45 seconds to build. Friendly people within four tiles heal three times faster (72 HP every ten seconds) inside their own borders after the usual 15-second recovery delay. Overlapping shacks do not stack. Exploration unlocks Scouts’ Lodges. Build a lodge with B then O for 100 gold and 45 seconds to unlock observation posts in Fortify. Lodges no longer recruit automatic explorers. Archery ranges cost 400 gold, occupy two cells, and take 90 seconds. Their linked sliders set warrior/archer proportions and expected counts. Soldiers visit the range to retrain; replacements may spawn as archers. Archers cost an extra 1 gold each minute, have four-tile range, two-thirds health, half defense and 80% attack, and retreat from melee. Arrows pass buildings but stop at walls. Moving formations put archers behind warriors. Wells require ${WELL_POPULATION_REQUIREMENT} population. A house and a friendly well can share one tile in either build order, including pending construction; wells can also stand alone. Click the front-left well or the house entrance to select each separately. Level 3 houses require well coverage, 40 nearby residents within six tiles, and a guard post in their city’s borders. They hold nine residents and earn 50% more gold per resident. Lost requirements cause a bouncing warning, followed by downgrade after 60 seconds. Each town keeps independent population-growth progress based on its city’s net food production, at twice the previous rate, with up to ten births per 30-second economy tick. Births use only that city’s vacant homes and cost four food from the shared delivered supply. Older cities cannot take a newer city’s births. Each completed well brings friendly houses within ${WELL_RADIUS} tiles to level 2; overlapping wells do not add more levels. Fords cross the whole river in one to three lanes and allow travel at 45% of normal speed. Forest along a viewing path reduces sight, leaving 30% of normal range in continuous woodland. Fog reveals whole map cells with soft edges and lingers briefly before fading back in. Your territory is always fully observed, including woodland. Rounded borders alternate white and faction color, expand through culture, extend across rivers, and mark where your units can heal after 15 seconds without damage. Borders appear only on discovered tiles. Each completed town produces 12 culture per minute, in addition to monuments. Each completed monument immediately claims a ${BASE_BORDER_RADIUS.monument}-tile radius and produces ${wholeNumber(MONUMENT_CULTURE_PER_SECOND * 60)} culture per minute. Population does not affect borders. Towns and houses retain their 30% border buffer. Culture expands each source’s reach at 100, 300, 600, 1000 culture and progressively higher totals. New cities inherit at most 100 culture; further border growth uses culture earned after their town is completed. Buildings claimed by your territory change allegiance, except guard posts and watch towers. Outlying farms change hands when another faction’s border reaches them; farms that still touch their owner’s territory remain theirs. Forest and jungle consume more cultural reach, following the same cost as line of sight, so borders follow the terrain. Only full factions have borders; raider camps do not. Earned culture remains after a monument is destroyed. The culture counter shows the next expansion threshold. Enclosing your town with completed walls, friendly gates, and uncrossable water gives houses inside that region 30% faster population growth, marked by green pixel glints sweeping southwest to northeast. Unguarded fords, bridges, and wall breaches break the enclosure. Level-three houses within eight tiles of a completed friendly fountain become level four and hold five people before housing bonuses. Losing fountain coverage starts a 60-second recovery warning before returning to level three. Losing the well, nearby population, or city guard post can return the house to level two. The Leader collects ordinary wilderness treasure chests for 200 gold. Enemy warriors earn 6 gold and archers earn 8 gold; marauder leaders earn 50. Start with four escorts, then gain one per 20 population through 100, one per additional 50 through 500, and one per additional 75 thereafter. Escorts belong to squads of three; surviving squads keep their shared veterancy and pass it to replacements. Only losing every member destroys a squad and its veterancy. Regular requires 10 kills, Veteran 100, Hardened 250 and Elite 500. Hardened has three close gold chevrons; Elite has a thunderbolt. Elite deals 130% more damage and takes 85% less damage after armor than an otherwise equivalent untrained unit. New and replacement escorts leave the town one at a time and travel to the Leader. Held friendly soldiers step aside for the Leader and return to their posts without changing stance. When the Leader slows or stops, escorts gather around them and engage nearby enemies according to their stance. Workers flee immediately when attacked. Clear trees sends a town peasant to chop each marked tree, leaving a stump for thirty game seconds. Farms, roads, bridges, irrigation, walls, palisades, ballistae, and new towns may be built outside your borders. Towers, guard posts, and other new buildings must fit entirely inside your own borders. Neutral-village territory remains reserved against foreign construction. A town costs ${wholeNumber(BUILD_COSTS.palace.gold)} gold, takes ${wholeNumber(CONSTRUCTION_SECONDS.palace)} seconds, and requires a clear 2×2 footprint and a builder route from an existing city. It creates a named city with borders, four town beds and four food per economy cycle so its first residents can grow before farms and houses are built. Imported residents remain assigned to that city. Fleeing Leaders seek the nearest reachable completed town. Each city selects another reachable friendly city for trade. Each city pair shares one mounted caravan traveling back and forth at 13 tiles every ten seconds before terrain modifiers. Each domestic delivery pays one gold per planned route tile, with a distance premium capped at 50%. Actual resident populations at both endpoints scale the payment with diminishing returns; cities share their trading capacity across routes. Empty endpoints earn nothing. Fractions are retained internally, and detours cannot increase a quoted delivery. Merchants lay roads along eligible travel cells, including outside borders; killing one awards 200 gold. Wild boars graze in herds of 1–8, resting for 22–38 seconds between short slow forage walks. They run when humans approach. Military units hunt within range when free of enemy combat. Each kill gives 5 food and +10% growth for 30 seconds; kills stack with independent expiry. Replacement herds appear only out of sight, at most one every 3–5 minutes. Buildings can stand directly beside walls. Manual, merchant and foot-traffic roads relocate farms to reachable free plots at no cost; roads and farms cannot share a tile. Irrigation ditches remain in place. Irrigation costs ${BUILD_COSTS.irrigation.gold} gold per tile and takes four seconds to dig after a builder arrives. New ditches must connect cardinally to a river, lake or existing irrigation ditch; continuous drags can start at either end. Completed ditches double farmland harvests on other land and triple desert harvests within three tiles; overlapping coverage does not stack. Governors compare expected harvest per crop tile, prioritizing higher-yield irrigated sites within the city’s collection radius. Automatic farms can share irrigation channels, but cannot cover roads. Green placement shading shows the benefited area. Ditches share farmland and road tiles. Ditch tiles halve movement speed off roads. Enemy units cannot attack or destroy ditches. Use Clear (C) to remove ditches and other eligible building layers in a selected area. Completed structures return no gold; unfinished friendly construction refunds its unused gold. Manual houses may stand alone or fill narrow parcels inside your borders, within ten tiles of the Leader. Builders wait for access to isolated orders. Governors preserve access and choose the nearest suitable housing cell, preferring enclosed ground. When that cell is farmland, the whole farm moves to a reachable plot farther from its town at no cost; the new home gains one permanent extra housing place. Bridges span up to two water tiles initially, or eight after Engineering, across rivers, lakes, coast, or ocean. They require clear land at both ends. Click water to preview the shortest complete crossing, or drag straight across to choose its direction. Other buildings can replace roads when the placement rules are met. Completed towns receive free roads around their perimeter wherever tiles are buildable. Nearby town and blacksmith activity panels can be opened while the build menu is active. The bottom-right action card always keeps Build (B), Fortify (F), Clear (C), and Forbid; inspecting other units or buildings does not change it. Clear cancels unfinished friendly construction with unused gold refunded and removes completed eligible structures without a refund. Recall is on slot 1 (or E); slot 2 (or Q) cycles retinue stance. Click empty ground to clear selection. All construction sites show wooden pegs and a small circular countdown for remaining work until complete; each wall section takes four seconds. Wooden towers throw javelins up to six tiles. A guard post costs 200 gold and starts with three militia, upgradeable to five for 100 gold and eight for 125 gold, stronger than ordinary marauders but weaker than regular warriors. They deploy against reachable enemies in their city’s borders or nearby threats to civilians, and can pursue an engaged enemy up to 20 tiles from their post, including beyond the border. They return home after ten seconds without a reachable threat. Their veterancy belongs to the post, and deaths reduce city population. The first 30 seconds after completion are included. Upkeep is 15 / 20 / 30 gold every 30 seconds for three / five / eight guards, including peacetime; an unpaid post recalls its militia until it can pay. Casualties are replaced at the next paid upkeep interval. The guard-post popup’s Stay inside city walls option confines that post’s guards to its city enclosure. Guards outside return home; without a complete enclosure, they stay in the post. A tower and a friendly wall can share one tile in either build order; click the upper tower or lower wall face to select each separately. Gates must remain clear of towers. Walls over roads form gates for friendly units. Placing stone walls over friendly or neutral palisades costs 25 gold per tile, crediting the palisade’s 5-gold cost. The palisade remains until the replacement finishes, and canceling refunds only the unfinished upgrade. Walls lose their owner when no completed city building remains within eight tiles; the faction with the most nearby city buildings claims them, with ties remaining neutral. Neutral gates admit everyone. Roads on existing friendly or neutral walls can create gates without adjoining roads or road-junction restrictions. Gates need one intervening wall tile. Solid 2×2 wall blocks are not allowed. Ordinary road junctions need two tiles of separation. All marauders deal 15% less damage after armor. Visible routing allies can spread panic through hostile armies during nearby fighting; steady commanders reduce that pressure. Routed marauders cannot rally for at least 15 game seconds. Raiders emerge from camps with palisade watchposts and a stone-walled refuge, with wave intervals falling from 26 to 14 seconds over fifteen game minutes. Weapon and armor strength rise linearly from 100% to 160% over the same period and then stop increasing. Raiding parties are 40% smaller for the first five minutes, gradually returning to normal sizes by minute fifteen. Waves then grow to at most 60, split into parties of at most 30 including a leader. Spawning still saturates at 90 living raiders per camp and 240 globally; survivors count toward the limits. Destroying tents reduces recruitment toward a five-raider reserve. Destroy all four inner watchtowers to stop that camp’s recruitment; a replacement camp is attempted on hidden, suitable terrain after 120 seconds. ${OPPOSING_FACTION_COUNT} rival civilizations each begin with two named cities and extra gold. Rival towns build defenses and protect their homes. When your troops destroy a rival town, choose whether to capture it immediately at 10% health and retain its city name. Units prioritize other units and buildings ahead of walls, use reachable entrances, and breach blocking wall sections only when needed to reach a city target. Raider leaders are faster and tougher than ordinary raiders. When one dies, nearby marauder soldiers within six tiles immediately lose 40 morale. A bouncing red mark warns of an imminent wave. Open Diplomacy to negotiate peace, gold, technologies, trade, military access, and defensive alliances with contacted factions. Review an offer to see their decision and reasons. Peace protects a three-minute truce. Treaty withdrawal requires thirty seconds of notice; recurring payments remain due. Confederation requires peace, trust 75, affiliation 70, and an alliance honored for three game minutes. After defeat, Respawn returns an untrained Leader to a random reachable tile within four tiles of a surviving town, with no enemies on neighboring tiles. New worlds are ${DEFAULT_WORLD_WIDTH}×${DEFAULT_WORLD_HEIGHT} tiles with varied continents, island chains, and archipelagos. Rivers and coastlines share the same water colors. White neutral villages begin with three tents and 2–5 villagers, at roughly three villages per two full factions. Click any visible village building or villager to trade for 250 gold, ally from 3000 gold, or declare war. Each ten gold the village earns from completed trade journeys with you reduces the alliance price by one, to a minimum of 500 gold; spending does not reset the discount. You can also click the main tent within three tiles. Raiders ignore independent villages; allied villages defend against raiders. Trade and alliance are separate purchases. Village caravans use a separate travel-time payout without domestic population scaling. Each village requests copper, iron, stone, salt, or olives. Developing the requested resource anywhere in your faction quadruples its village trade payout. The village popup compares expected gold per 30 seconds with and without its resource. Allies defend against your hostile factions and raiders, share twenty-tile sight, and slowly replace villagers without farming. Their identity adds one faction-wide bonus: growers +10% harvests, merchants +15% trade, builders +15% construction and repairs, or scholars +15% research. Duplicate identities do not stack; losing the main tent removes its benefits. Village caravans pay both partners. Villages spend that income on houses clustered in groups of one to three, housing upgrades through level three, and defenses, up to ten houses, twelve guards, two guard posts and four wooden towers, with no walls or Leader. Prosperous rival factions can also open a village trade route; their trade does not reduce your alliance price. Progress saves automatically.</p><p>Press Y and hover a tile to inspect its biome, soil, regional resource, and any discovery. Wetlands, tundra, and alpine ground slow travel; roads restore their usual speed. Grassland has 100% base soil fertility, plains 75%, and desert 50%. Adjacent freshwater adds 25 percentage points, falling by five points per tile to the base value. Soil fertility changes farm harvests, and irrigation and orchards retain their bonuses. Cities develop local specialties from nearby accessible clay, iron, stone, salt, and fish deposits. Completed towns cost ${wholeNumber(settlementMaintenance(2))} gold every 30 seconds, rising by a quarter for each further town, with one capital exempt; watchtowers cost 5, and libraries, monuments, ballistas and other civic buildings have their own upkeep. Each controlled stone tile reduces wall and watchtower construction and upkeep by 5%, capped at 75%; development is not required. There is no per-population maintenance. Upkeep consumes only available gold; the treasury never falls below zero and unpaid costs do not become debt. Governors reserve upkeep before ordering construction. New towns cost 100 gold. Domestic trade accrues at most 7 gold per 30 active travel seconds while either city has 20 residents or fewer, including bonuses. It reaches the full population-supported rate by 30 residents at both ends. A city shares its trade capacity among its connections. Active travel time determines the receipt, paid on arrival; parked or blocked caravans earn nothing. River travel earns 250% of the land rate. Each city pair still shares one caravan. Trade earns 5% more for each specialty found at only one end of the route, up to 25%. Select a town to inspect its specialties and trade bonus. Most wilderness chests contain 200 gold; rare named discoveries have individual rewards. Boars prefer productive woodland and freshwater habitats. Marsh birds spawn in coastal wetlands, move equally across land and water, and yield 20 food per hunted bird.</p>`);
+  openDialog(`<h2 id="dialog-title">Controls</h2><dl class="controls"><dt>WASD / arrows</dt><dd>Move the Leader, including while placing buildings. In Formation 3, W/S advance/reverse and A/D strafe relative to facing.</dd><dt>Right click</dt><dd>Move to ground, attack enemies, or open diplomacy on a peaceful faction’s building</dd><dt>Left click</dt><dd>Select a unit or building</dd><dt>Leader attack</dt><dd>Automatically throws javelins up to 4 tiles</dd><dt>2 / Q</dt><dd>Cycle retinue stance: Defensive, Hold, Aggressive. Hold Q to rotate left while Formation 3 is active; 2 always changes stance.</dd><dt>1 / E</dt><dd>Recall the retinue without changing stance. Hold E to rotate right while Formation 3 is active; 1 always recalls.</dd><dt>3 · Infantry Drill</dt><dd>Toggle close rectangular ranks after researching Infantry Drill with at least ${INFANTRY_FORMATION_MIN_START} retinue soldiers. If fewer than five remain, the formation disbands and its survivors and Leader rout. The Leader stays in the center with ranged troops in the rear; soldiers adjust around nearby obstacles while clear ranks keep their places. March at 105% speed, with +25% frontal damage and +50% defense. Hold Q/E to rotate continuously; release to stop. A/D strafe without changing facing.</dd><dt>Shift</dt><dd>Separate mob / travel setting: move together as a mob around the Leader at three-quarter speed</dd><dt>Farm peasants</dt><dd>Gather ripe food and carry it to the town before it spoils</dd><dt>B</dt><dd>Open / close buildings</dd><dt>F</dt><dd>Open / close fortifications</dd><dt>B then R / G / H / U</dt><dd>Road / farm / house / irrigation</dd><dt>F then P / T / G / L / N</dt><dd>Wall / wood tower / guard post / ballista / siege cannon</dd><dt>B then V / L / T</dt><dd>Bridge / well / dock</dd><dt>Sailing</dt><dd>Research Sailing after Exploration, then build a dock on shore. Each completed dock launches one sailboat. Right-click your boat to board; use WASD or right-click water to sail. Right-click a reachable shore to disembark. The empty boat stays behind for reboarding; the retinue remains on land.</dd><dt>C</dt><dd>Clear trees, buildings, and construction sites with one rectangular selection</dd><dt>B then Y</dt><dd>Stable after Horseback Riding</dd><dt>B then M / K / J / N</dt><dd>Monument / blacksmith / archery range / Build Settlement</dd><dt>Drag to build a line</dt><dd>Drag roads, walls, bridges, or irrigation ditches. On touchscreens, tap the start and then the end.</dd><dt>Clear</dt><dd>Drag a rectangle to queue tree or marsh-plant clearing, cancel unfinished friendly construction with its unused gold refunded, and remove completed owned buildings or buildings within your borders without a refund. You can also drag directly from Clear to a single tile. Occupied crossings remain when there is no safe exit.</dd><dt>Forbid</dt><dd>Drag a rectangle to keep friendly workers, merchants and guards out. The Leader and retinue may cross. Start a drag inside a forbidden zone to allow that rectangle again. One white marker identifies each connected zone.</dd><dt>9 · Offensive</dt><dd>Place a Rally flag, then an Objective flag after researching Officer Corps.</dd><dt>Space</dt><dd>Pause / resume</dd><dt>= / -</dt><dd>Increase / decrease simulation speed, from ${GAME_SPEED_RANGE}</dd><dt>Home</dt><dd>Center on Leader</dd><dt>Y</dt><dd>Tile yields</dd><dt>Wheel / minimap + / -</dt><dd>Zoom</dd><dt>Middle-drag / minimap</dt><dd>Pan camera</dd><dt>N</dt><dd>New world</dd><dt>Esc</dt><dd>Cancel</dd></dl><p>Normal games begin with 20 residents. Advanced start begins with 250 residents, every building, and 12 naturally supported retinue soldiers: 3 each of warriors, archers, spearmen, and horsemen. Infantry Drill is already researched. New and replacement retinue soldiers recruit one at a time. Each completed barracks cuts the ten-second interval by 6%, up to 60%. Farms are walkable single-tile fields costing ${wholeNumber(BUILD_COSTS.camp.gold)} gold and 4 seconds of work each; farms and other buildings can stand directly beside them. Each edge-connected farm block is limited to 16 plots. Blocks of more than six plots must be compact: the longer side can be at most 150% of the shorter side. Each plot produces about 64 food per hour before terrain and bonuses. Connected wheat plots grow and ripen together. Each contiguous same-owner crop parcel uses one peasant, subject to available residents. Towns stagger departures, and each peasant can sweep the entire parcel before returning. Peasants wait inside between trips. Ripe food has 11 seconds of freshness; its timer pauses only while the peasant is actively collecting inside that parcel, including already gathered food. Waiting, fleeing and the return journey consume the remaining time. At least 15 farmland tiles for every eight residents are needed before delivery losses. Larger cities need more farmland, and longer delivery routes lose more food to spoilage. Roads, irrigation, research and bonuses can improve supply. A courier gathers only from the assigned contiguous parcel and checks that the remaining freshness allows the walk home. Ripe crops must reach the town before they spoil. After 120 seconds without a visit by an owning unit, a farm stays fallow until a unit returns; its peasant can walk back to restart cultivation. Only neutral, unclaimed farms disappear after ten minutes without an owner. Claiming cancels that timer; owned farms remain even while fallow. Click a nearby farm to plant one orchard for 5 gold or the nearest ten for 50 gold. Orchards establish for 120 seconds and then yield 50% more food. Only delivered food feeds the population. Longer journeys leave less time to return a harvest before it spoils. Roads, terrain, and traffic affect how much food reaches the town. A hopping clock warns of an expiring harvest; red numbers show food lost. Governors build farms or houses to relieve the city’s food or housing bottleneck, filling suitable enclosed housing sites first. New and relocated farms favor adjoining fields and fill gaps to form compact blocks. Farm scoring uses actual terrain-weighted walking routes from town doors, so short straight-line distances across water do not hide long delivery detours. Approach within three tiles of your town and click it to toggle Governor permissions or import an immigrant for 100 gold. Each immigrant purchase fills one vacant bed in that city; full towns cannot import immigrants. Buy retinue slot adds one permanent faction-wide slot for 1,000 gold, filled through normal recruitment. Each purchased slot costs 5 gold every 30 game seconds, even while vacant, in addition to soldier upkeep. A completed blacksmith opens armor and weapon upgrades at the same range; each purchase requires a developed iron mine within your faction’s borders. Tiers I–VI cost 200 / 400 / 600 / 800 / 1,000 / 1,200 gold and set defense or attack to 115% / 130% / 150% / 170% / 190% / 210% for your Leader and retinue, including new recruits. Armor also strengthens defensive buildings, and weapons improve tower attacks. Armor tiers I–III use buckler, oval, and legionary shields; IV–VI retain the legionary shield. Farm and Housing checkboxes independently allow automatic construction; each town uses its own development clock and construction limits with shared faction gold; Escape or the red × closes the panel. Open buildings with B or fortifications with F, choose a structure, then click to place it. Clear is available directly with C for trees, buildings, and construction sites. Construction buttons show names and an upper-right shortcut letter; hover to see prices and requirements. Footprints may be placed in fog of war. A peasant travels from the town to construct it. Generated dirt trails connect most neutral villages, using fords to cross rivers. They give 5% faster movement, cannot be constructed, and disappear beneath newly placed roads. Roads can start from either bank of a ford or extend an existing road or bridge. Dragging from or across a ford leaves the crossing intact and free. Repeated travel creates roads only inside faction borders. Civilian trips to farms lay roads on open ground. Roads block farm placement; placing a road, including a caravan or foot-traffic road, moves an existing farm to a suitable reachable plot at no cost. If no replacement plot exists, the road is not placed. Invalid cells in construction drags are skipped. Queued sites remain open ground until a builder starts work. One builder per five residents shares construction and repair duties; damaged buildings can be repaired after five seconds without a hit. Click a visible resource inside your city’s borders to develop the eligible, explored part of its connected patch for 50 gold per new tile. The popup shows the full price. Mines appear on ore and stone, fences surround olive groves, and salt pans gain a fenced excavation and dirt approach. All resource benefits serve your whole faction while the developed tiles remain within its borders. Each salt tile covers 10 residents for 25% less food consumption; coverage is shared across the whole population and total savings cannot exceed 25%. Each developed olive tree adds 2% to neutral-village trade payouts, stacking across groves; domestic trade is unchanged. Stone can be quarried but has no additional bonus yet. Losing a mine does not remove existing soldiers or completed upgrades. The advanced start’s pre-equipped escort is retained, but later spearman replacements need copper. Construction uses gold: farms cost ${BUILD_COSTS.camp.gold}, houses ${BUILD_COSTS.house.gold}, wells ${BUILD_COSTS.well.gold}, monuments ${BUILD_COSTS.monument.gold}, and blacksmiths ${BUILD_COSTS.blacksmith.gold}. Blacksmiths take 90 seconds to build. Build a forum with B then Q after Cultural Identity (requires Statehood and Traditional Medicine): 300 gold, a 2×2 footprint, 90 seconds to build, and 3 gold upkeep every 30 seconds. Approach within three tiles and click it to purchase permanent achievements with culture. Prerequisites are shown by arrows; spending culture preserves lifetime influence and borders. Build a library with B then I: ${BUILD_COSTS.library.gold} gold, a 2×2 footprint, and 90 seconds. Its research tree unlocks buildings, units, and faction bonuses. Approach within three tiles and use the library slider to direct a share of incoming gold to Science, starting at 10%. The cheapest available technology runs automatically. Select any technology and Prioritize to put it first, including distant technologies whose prerequisites are handled automatically. Add multiple priorities, move one to the front, or remove it; earned Science is retained. The top bar shows the current technology and progress. Research pauses at 0% allocation or without a completed library; additional libraries do not multiply progress. Reinforced Defenses adds 30% wall and tower health; Coinage adds 20% trade gold; Urban Planning adds one housing place per house; Metal Tools adds 25% construction and repair speed; Fletching adds 15% archer damage; Grain Storage keeps newly harvested grain fresh 50% longer. Fortification unlocks Upgrade defenses in the settlement panel. It costs 1,000 gold and raises maximum settlement health from 650 to 6,500 while preserving the current health percentage. Fortified settlements shoot arrows, prevent gold theft, and house ten residents. A further 1,000-gold housing upgrade adds fifteen places, for twenty-five total. Houses, wells, bridges, roads, towns, and farms need no research. Military Tactics and a developed copper mine allow stronger, piercing spearmen, allocated at a blacksmith. Siege Engines allows ballistae without developed iron: F then L, 300 gold, 30 seconds of automatic assembly, eighteen-tile range and one shot every four seconds. Siege cannons still require a developed iron mine. Traditional Medicine unlocks a Healer’s shack: B then P, 200 gold, one tile, and 45 seconds to build. Friendly people within four tiles heal three times faster (72 HP every ten seconds) inside their own borders after the usual 15-second recovery delay. Overlapping shacks do not stack. Exploration unlocks Scouts’ Lodges. Build a lodge with B then O for 100 gold and 45 seconds to unlock observation posts in Fortify. Lodges no longer recruit automatic explorers. Archery ranges cost 400 gold, occupy two cells, and take 90 seconds. Use the army composition sliders to set the number of units of each type. Soldiers visit the range to retrain; replacements may spawn as archers. Archers cost an extra 1 gold each minute, have four-tile range, two-thirds health, half defense and 80% attack, and retreat from melee. Arrows pass buildings but stop at walls. Moving formations put archers behind warriors. Wells require ${WELL_POPULATION_REQUIREMENT} population. A house and a friendly well can share one tile in either build order, including pending construction; wells can also stand alone. Click the front-left well or the house entrance to select each separately. Level 3 houses require well coverage, 40 nearby residents within six tiles, and a guard post in their city’s borders. They hold nine residents and earn 50% more gold per resident. Lost requirements cause a bouncing warning, followed by downgrade after 60 seconds. Each town keeps independent population-growth progress based on its city’s net food production, at twice the previous rate, with up to ten births per 30-second economy tick. Births use only that city’s vacant homes and cost four food from the shared delivered supply. Older cities cannot take a newer city’s births. Each completed well brings friendly houses within ${WELL_RADIUS} tiles to level 2; overlapping wells do not add more levels. Fords cross the whole river in one to three lanes and allow travel at 45% of normal speed. Forest along a viewing path reduces sight, leaving 30% of normal range in continuous woodland. Fog reveals whole map cells with soft edges and lingers briefly before fading back in. Your territory is always fully observed, including woodland. Rounded borders alternate white and faction color, expand through culture, extend across rivers, and mark where your units can heal after 15 seconds without damage. Borders appear only on discovered tiles. Each completed town produces 12 culture per minute, in addition to monuments. Each completed monument immediately claims a ${BASE_BORDER_RADIUS.monument}-tile radius and produces ${wholeNumber(MONUMENT_CULTURE_PER_SECOND * 60)} culture per minute. Population does not affect borders. Towns and houses retain their 30% border buffer. Culture expands each source’s reach at 100, 300, 600, 1000 culture and progressively higher totals. New cities inherit at most 100 culture; further border growth uses culture earned after their town is completed. Buildings claimed by your territory change allegiance, except guard posts and watch towers. Outlying farms change hands when another faction’s border reaches them; farms that still touch their owner’s territory remain theirs. Forest and jungle consume more cultural reach, following the same cost as line of sight, so borders follow the terrain. Only full factions have borders; raider camps do not. Earned culture remains after a monument is destroyed. The culture counter shows the next expansion threshold. An enclosed town’s houses grow 30% faster. A complete stone wall perimeter also gives the town 20% more tax income. Gold glints mark enclosed ground. Unguarded fords, bridges, and wall breaches break the enclosure. Level-three houses within eight tiles of a completed friendly fountain become level four and hold five people before housing bonuses. Losing fountain coverage starts a 60-second recovery warning before returning to level three. Losing the well, nearby population, or city guard post can return the house to level two. The Leader collects ordinary wilderness treasure chests for 200 gold. Enemy warriors earn 6 gold and archers earn 8 gold; marauder leaders earn 50. Start with four escorts, then gain one per 20 population through 100, one per additional 50 through 500, and one per additional 75 thereafter. Escorts belong to squads of three; surviving squads keep their shared veterancy and pass it to replacements. Only losing every member destroys a squad and its veterancy. Regular requires 10 kills, Veteran 100, Hardened 250 and Elite 500. Hardened has three close gold chevrons; Elite has a thunderbolt. Elite deals 130% more damage and takes 85% less damage after armor than an otherwise equivalent untrained unit. New and replacement escorts leave the town one at a time and travel to the Leader. Held friendly soldiers step aside for the Leader and return to their posts without changing stance. When the Leader slows or stops, escorts gather around them and engage nearby enemies according to their stance. Workers flee immediately when attacked. Clear trees sends a town peasant to chop each marked tree, leaving a stump for thirty game seconds. Farms, roads, bridges, irrigation, walls, palisades, ballistae, and new towns may be built outside your borders. Towers, guard posts, and other new buildings must fit entirely inside your own borders. Neutral-village territory remains reserved against foreign construction. A settlement costs ${wholeNumber(BUILD_COSTS.palace.gold)} gold and takes ${wholeNumber(CONSTRUCTION_SECONDS.palace)} seconds. It requires a clear 2×2 footprint and a builder route from an existing settlement. Promote a Settlement to a Town, City, or Metropolis as you add civic buildings. Each tier raises its population limit. Imported residents remain assigned to that city. Fleeing Leaders seek the nearest reachable completed town. Each city selects another reachable friendly city for trade. Each city pair shares one mounted caravan traveling back and forth at 13 tiles every ten seconds before terrain modifiers. Each domestic delivery pays one gold per planned route tile, with a distance premium capped at 50%. Actual resident populations at both endpoints scale the payment with diminishing returns; cities share their trading capacity across routes. Empty endpoints earn nothing. Fractions are retained internally, and detours cannot increase a quoted delivery. Merchants lay roads along eligible travel cells, including outside borders; killing one awards 200 gold. Wild boars graze in herds of 1–8, resting for 22–38 seconds between short slow forage walks. They run when humans approach. Military units hunt within range when free of enemy combat. Each kill gives 5 food and +10% growth for 30 seconds; kills stack with independent expiry. Replacement herds appear only out of sight, at most one every 3–5 minutes. Buildings can stand directly beside walls. Manual, merchant and foot-traffic roads relocate farms to reachable free plots at no cost; roads and farms cannot share a tile. Irrigation ditches remain in place. Irrigation costs ${BUILD_COSTS.irrigation.gold} gold per tile and takes four seconds to dig after a builder arrives. New ditches must connect cardinally to a river, lake or existing irrigation ditch; continuous drags can start at either end. Completed ditches double farmland harvests on other land and triple desert harvests within three tiles; overlapping coverage does not stack. Governors compare expected harvest per crop tile, prioritizing higher-yield irrigated sites within the city’s collection radius. Automatic farms can share irrigation channels, but cannot cover roads. Green placement shading shows the benefited area. Ditches share farmland and road tiles. Ditch tiles halve movement speed off roads. Enemy units cannot attack or destroy ditches. Use Clear (C) to remove ditches and other eligible building layers in a selected area. Completed structures return no gold; unfinished friendly construction refunds its unused gold. Manual houses may stand alone or fill narrow parcels inside your borders, within ten tiles of the Leader. Builders wait for access to isolated orders. Governors preserve access and choose the nearest suitable housing cell, preferring enclosed ground. When that cell is farmland, the whole farm moves to a reachable plot farther from its town at no cost; the new home gains one permanent extra housing place. Bridges span up to two water tiles initially, or eight after Engineering, across rivers, lakes, coast, or ocean. They require clear land at both ends. Click water to preview the shortest complete crossing, or drag straight across to choose its direction. Other buildings can replace roads when the placement rules are met. Completed towns receive free roads around their perimeter wherever tiles are buildable. Nearby town and blacksmith activity panels can be opened while the build menu is active. The bottom-right action card always keeps Build (B), Fortify (F), Clear (C), and Forbid; inspecting other units or buildings does not change it. Clear cancels unfinished friendly construction with unused gold refunded and removes completed eligible structures without a refund. Recall is on slot 1 (or E); slot 2 (or Q) cycles retinue stance. Click empty ground to clear selection. All construction sites show wooden pegs and a small circular countdown for remaining work until complete; each wall section takes four seconds. Wooden towers throw javelins up to six tiles. A guard post costs 200 gold and starts with three militia, upgradeable to five for 100 gold and eight for 125 gold, stronger than ordinary marauders but weaker than regular warriors. They deploy against reachable enemies in their city’s borders or nearby threats to civilians, and can pursue an engaged enemy up to 20 tiles from their post, including beyond the border. They return home after ten seconds without a reachable threat. Their veterancy belongs to the post, and deaths reduce city population. The first 30 seconds after completion are included. Upkeep is 15 / 20 / 30 gold every 30 seconds for three / five / eight guards, including peacetime; an unpaid post recalls its militia until it can pay. Casualties are replaced at the next paid upkeep interval. The guard-post popup’s Stay inside city walls option confines that post’s guards to its city enclosure. Guards outside return home; without a complete enclosure, they stay in the post. A tower and a friendly wall can share one tile in either build order; click the upper tower or lower wall face to select each separately. Gates must remain clear of towers. Walls over roads form gates for friendly units. Placing stone walls over friendly or neutral palisades costs 25 gold per tile, crediting the palisade’s 5-gold cost. The palisade remains until the replacement finishes, and canceling refunds only the unfinished upgrade. Walls lose their owner when no completed city building remains within eight tiles; the faction with the most nearby city buildings claims them, with ties remaining neutral. Neutral gates admit everyone. Roads on existing friendly or neutral walls can create gates without adjoining roads or road-junction restrictions. Gates need one intervening wall tile. Solid 2×2 wall blocks are not allowed. Ordinary road junctions need two tiles of separation. All marauders deal 15% less damage after armor. Visible routing allies can spread panic through hostile armies during nearby fighting; steady commanders reduce that pressure. Routed marauders cannot rally for at least 15 game seconds. Raids come from both fortified camps and small camps. Destroy a fortified camp’s inner watchtowers or a small camp’s lone watchtower to stop its raids. ${OPPOSING_FACTION_COUNT} rival civilizations each begin with two named cities and extra gold. Rival towns build defenses and protect their homes. When your troops destroy a rival town, choose whether to capture it immediately at 10% health and retain its city name. Units prioritize other units and buildings ahead of walls, use reachable entrances, and breach blocking wall sections only when needed to reach a city target. Raider leaders are faster and tougher than ordinary raiders. When one dies, nearby marauder soldiers within six tiles immediately lose 40 morale. A bouncing red mark warns of an imminent wave. Open Diplomacy to negotiate peace, gold, technologies, trade, military access, and defensive alliances with contacted factions. Review an offer to see their decision and reasons. Peace protects a three-minute truce. Treaty withdrawal requires thirty seconds of notice; recurring payments remain due. Confederation requires peace, trust 75, affiliation 70, and an alliance honored for three game minutes. After defeat, Respawn returns an untrained Leader to a random reachable tile within four tiles of a surviving town, with no enemies on neighboring tiles. New worlds are ${DEFAULT_WORLD_WIDTH}×${DEFAULT_WORLD_HEIGHT} tiles with varied continents, island chains, and archipelagos. Rivers and coastlines share the same water colors. White neutral villages begin with three tents and 2–5 villagers, at roughly three villages per two full factions. Click any visible village building or villager to trade for ${wholeNumber(VILLAGE_TRADE_COST)} gold, ally from 3000 gold, or declare war. Each ten gold the village earns from completed trade journeys with you reduces the alliance price by one, to a minimum of 500 gold; spending does not reset the discount. You can also click the main tent within three tiles. Raiders ignore independent villages; allied villages defend against raiders. Trade and alliance are separate purchases. Village caravans use a separate travel-time payout without domestic population scaling. Each village requests copper, iron, stone, salt, or olives. Developing the requested resource anywhere in your faction quadruples its village trade payout. The village popup compares expected gold per 30 seconds with and without its resource. Allies defend against your hostile factions and raiders, share twenty-tile sight, and slowly replace villagers without farming. Their identity adds one faction-wide bonus: growers +10% harvests, merchants +15% trade, builders +15% construction and repairs, or scholars +15% research. Duplicate identities do not stack; losing the main tent removes its benefits. Village caravans pay both partners. Villages spend that income on houses clustered in groups of one to three, housing upgrades through level three, and defenses, up to ten houses, twelve guards, two guard posts and four wooden towers, with no walls or Leader. Prosperous rival factions can also open a village trade route; their trade does not reduce your alliance price. Progress saves automatically.</p><p>Press Y and hover a tile to inspect its biome, soil, regional resource, and any discovery. Wetlands, tundra, and alpine ground slow travel; roads restore their usual speed. Grassland has 100% base soil fertility, plains 75%, and desert 50%. Adjacent freshwater adds 25 percentage points, falling by five points per tile to the base value. Soil fertility changes farm harvests, and irrigation and orchards retain their bonuses. Cities develop local specialties from nearby accessible clay, iron, stone, salt, and fish deposits. Settlements cost ${wholeNumber(SETTLEMENT_MAINTENANCE)} gold every 30 seconds after ${wholeNumber(SETTLEMENT_UPKEEP_GRACE)} seconds of founding grace, with the capital exempt; watchtowers cost 5, and libraries, monuments, ballistas and other civic buildings have their own upkeep. Each controlled stone tile reduces wall and watchtower construction and upkeep by 5%, capped at 75%; development is not required. There is no per-population maintenance. Upkeep consumes only available gold; the treasury never falls below zero and unpaid costs do not become debt. Governors reserve upkeep before ordering construction. Domestic trade accrues at most 7 gold per 30 active travel seconds while either city has 20 residents or fewer, including bonuses. It reaches the full population-supported rate by 30 residents at both ends. A city shares its trade capacity among its connections. Active travel time determines the receipt, paid on arrival; parked or blocked caravans earn nothing. River travel earns 250% of the land rate. Each city pair still shares one caravan. Trade earns 5% more for each specialty found at only one end of the route, up to 25%. Select a town to inspect its specialties and trade bonus. Most wilderness chests contain 200 gold; rare named discoveries have individual rewards. Boars prefer productive woodland and freshwater habitats. Marsh birds spawn in coastal wetlands, move equally across land and water, and yield 20 food per hunted bird.</p>`);
 }
 function showDiplomacy(id?: number, draft?: DiplomacyTerms, message = '') {
   const faction = state.factions.find(candidate => candidate.id === id);
@@ -937,12 +1037,21 @@ function beginAreaStroke(pointerId: number, point: Point) {
 }
 function finishAreaStroke() {
   if (!areaTool || !areaStroke) return;
-  if (sendCommand(areaTool === 'forbid' ? { type: 'forbid', start: areaStroke.start, end: areaStroke.end, enabled: !areaStroke.erase }
-    : { type: 'clear', start: areaStroke.start, end: areaStroke.end })) { cancelStroke(); updateUI(); return; }
-  const result = areaTool === 'forbid' ? setForbiddenRectangle(state, areaStroke.start, areaStroke.end, !areaStroke.erase)
-    : clearArea(state, areaStroke.start, areaStroke.end);
+  const { start, end, erase } = areaStroke;
+  const command: GameCommand = areaTool === 'forbid' ? { type: 'forbid', start, end, enabled: !erase }
+    : { type: areaTool === 'cancel' ? 'cancel-area' : 'clear', start, end };
+  const overlaps = areaOverlapTest(state, start, end);
+  if (areaTool === 'cancel' && renderer.moveMarker && overlaps(renderer.moveMarker)) renderer.moveMarker = null;
+  if (sendCommand(command)) { cancelStroke(); updateUI(); return; }
+  let placements = 0;
+  if (linearPurchaseState === state && (areaTool === 'cancel' || areaTool === 'forbid' && !erase)) {
+    for (const { purchase } of linearPurchases) placements += purchase.cancelMatching(overlaps);
+    if (placements) { syncPendingConstruction(); linearPurchaseNotice = ''; }
+  }
+  const result = areaTool === 'forbid' ? setForbiddenRectangle(state, start, end, !erase)
+    : areaTool === 'cancel' ? cancelArea(state, start, end) : clearArea(state, start, end);
   cancelStroke();
-  buildError = result.message;
+  buildError = placements ? `Cancelled ${placements} pending placement${placements === 1 ? '' : 's'}.${result.count ? ` ${result.message}` : ''}` : result.message;
   if (result.count) save();
   updateUI();
 }
@@ -962,9 +1071,15 @@ function renderUI() {
   uiRequested = false;
   // Direct actions refresh immediately and restart the periodic HUD deadline.
   lastUI = performance.now();
+  const gameArea = $('.game-area'), observing = !!state.observing;
+  if (gameArea.classList.contains('observing') !== observing) {
+    gameArea.classList.toggle('observing', observing);
+    $('#observer-status').hidden = !observing;
+    $('.resource-bar').setAttribute('aria-label', observing ? 'Observer controls' : 'Resources');
+    canvas.setAttribute('aria-label', observing ? 'TinyCiv world. Select to inspect. Middle-drag to pan.' : worldControlsLabel);
+  }
   refreshVillageTradeDialog();
   refreshQuestDialog($('#dialog-body'),state);
-  refreshSiteDialog();
   leaderProgression.refresh();
   researchToolbar.refresh(state);
   refreshWorldPointer();
@@ -998,6 +1113,8 @@ function renderUI() {
   $('.resource.culture').style.setProperty('--value-fit', String(Math.min(1, 67 / (cultureTotal.length * 14 + cultureChange.length * 9))));
   // Keep controls stable between pointerdown and pointerup; replacing their
   // children during the periodic HUD refresh can interrupt a browser click.
+  $('#pause-spending').setAttribute('aria-pressed', String(!!faction.spendingPaused));
+  $<HTMLButtonElement>('#pause-spending').disabled = faction.defeated || state.gameOver;
   const pauseLabel = state.paused ? 'Resume' : 'Pause';
   if ($('#pause').getAttribute('aria-label') !== pauseLabel) {
     $('#pause').innerHTML = icon(state.paused ? 'play' : 'pause');
@@ -1007,7 +1124,7 @@ function renderUI() {
   const speedLabel = `${state.speed}×`;
   if ($('.speed-value').textContent !== speedLabel) $('.speed-value').textContent = speedLabel;
   $('#speed').setAttribute('aria-label', `Simulation speed ${speedLabel}. Click for ${GAME_SPEEDS[(speedIndex() + 1) % GAME_SPEEDS.length]}×`);
-  $('#speed').title = 'Simulation speed · = faster · - slower · 1× to 8×';
+  $('#speed').title = `Simulation speed · = faster · - slower · ${GAME_SPEED_RANGE}`;
   $<HTMLButtonElement>('#pause').disabled = !!state.multiplayer;
   $<HTMLButtonElement>('#speed').disabled = !!state.multiplayer;
   if (state.multiplayer) { $('#pause').title = 'Online matches cannot be paused'; $('#speed').title = 'Online matches run at normal speed'; }
@@ -1056,15 +1173,19 @@ function renderUI() {
     button.disabled = !canAct || cooling;
     button.classList.toggle('cooling', cooling);
   });
-  const levy = levyDisplayStatus(state), levyButton = $<HTMLButtonElement>('[data-hotbar-action="levy"]');
-  const dismissing = levy.active > 0;
+  const levy = levyDisplayStatus(state), dismissing = levy.active > 0;
+  const levyButton = $<HTMLButtonElement>('[data-hotbar-action="levy"]');
+  const levyLabel = dismissing ? 'Dismiss levy' : 'Mass levy';
   levyButton.disabled = levy.cooldown > 0 || (dismissing ? state.gameOver : !levy.canLevy);
   levyButton.classList.toggle('research-locked', !dismissing && !researchLevel(faction, 'massLevy'));
-  levyButton.querySelector<HTMLElement>('.hotbar-label')!.textContent = dismissing ? 'Dismiss levy' : 'Mass levy';
-  levyButton.setAttribute('aria-label', dismissing ? 'Dismiss levy' : 'Mass levy');
+  levyButton.classList.toggle('cooling', levy.cooldown > 0);
+  levyButton.querySelector<HTMLElement>('.hotbar-label')!.textContent = levyLabel;
+  levyButton.setAttribute('aria-label', levyLabel);
   levyButton.setAttribute('aria-pressed', String(dismissing));
-  levyButton.title = actionTooltip(dismissing ? 'Returns drafted troops to civilian work.' : 'Drafts available citizens into your army.',
-    dismissing ? 0 : '15 gold / citizen', 30, `${levy.cooldown > 0 ? `Ready in ${Math.ceil(levy.cooldown)}s. ` : ''}${dismissing ? '' : levy.reason || 'Upkeep: 5 gold / soldier every 30s.'}`);
+  const upkeep = `${LEVY_UPKEEP} gold per unit every ${LEVY_UPKEEP_INTERVAL}s`;
+  levyButton.title = actionTooltip(dismissing ? 'Return levies to civilian work.' : 'Draft citizens into your army.',
+    dismissing ? 0 : `${LEVY_DRAFT_COST} gold per unit`, LEVY_ACTION_COOLDOWN,
+    dismissing ? (levy.cooldown > 0 ? `Ready in ${Math.ceil(levy.cooldown)}s.` : '') : levy.reason || upkeep);
   const garrison = garrisonStatus(state), garrisonButton = $<HTMLButtonElement>('[data-hotbar-action="garrison"]');
   const garrisonLabel = garrison.active ? 'Recall Garrison' : 'Garrison';
   garrisonButton.disabled = !garrison.enabled;
@@ -1113,7 +1234,7 @@ function renderUI() {
     const researchHint = researchLocked ? `Research ${researchLabel ?? 'this building'} at a library to unlock.` : '';
     const town = kind === 'palace' && !button.hidden ? townBuildTerms(state, faction) : undefined;
     const baseTitle = kind === 'clearTrees' ? actionTooltip('Orders civilians to clear vegetation.')
-      : buildTooltip(kind, buildCostAt(state, kind, 0, 0).gold, CONSTRUCTION_SECONDS[buildingKindForSelection(kind)],
+      : buildTooltip(kind, kind === 'house' ? minimumBuildGold(kind, state) : buildCostAt(state, kind, 0, 0).gold, CONSTRUCTION_SECONDS[buildingKindForSelection(kind)],
         stoneDefenseMultiplier(state, playerFaction(state), buildingKindForSelection(kind)), town);
     const lodgeHint = kind === 'observationPost' && !hasObservationLodge(state, faction.id) ? ' · Build a Scouts’ Lodge first.' : '';
     button.title = baseTitle + (researchHint ? ` · ${researchHint}` : '') + lodgeHint;
@@ -1131,22 +1252,22 @@ function renderUI() {
     button.setAttribute('aria-disabled', String(button.disabled));
     const active = action === areaTool || action === buildMenu;
     button.classList.toggle('active', active);
-    if (action === 'clear' || action === 'forbid') button.setAttribute('aria-pressed', String(active));
+    if (action === 'clear' || action === 'forbid' || action === 'cancel') button.setAttribute('aria-pressed', String(active));
   });
   for (const menu of ['build', 'fortifications'] as const)
     $(`[data-action="${menu}"]`).setAttribute('aria-expanded', String(buildMenu === menu));
   updateBuildStatus(faction);
-  if (renderer.showYields && renderer.hover && !state.buildMode && isVisible(state, renderer.hover.x, renderer.hover.y)) {
+  if (renderer.showYields && renderer.hover && !state.buildMode && pointInSight(presentationFog(state), renderer.hover.x, renderer.hover.y)) {
     const x = Math.floor(renderer.hover.x), y = Math.floor(renderer.hover.y), t = state.world.tiles[y * state.world.width + x];
     if (t && x >= 0 && y >= 0 && x < state.world.width && y < state.world.height) {
       $('#tile-tooltip').hidden = false;
       const field = state.fields?.find(field => field.x === x && field.y === y);
       const water = WATER.has(t.terrain);
       const biome = t.geothermal ? t.geothermal <= 3 ? 'Volcano' : 'Hot mud pool'
-        : !water && t.hillBiome ? HILL_BIOME_NAMES[t.hillBiome]
-        : !water && t.biome ? BIOME_NAMES[t.biome] : capitalize(t.terrain);
+        : t.biome && (!water || t.biome === 'fjords') ? BIOME_NAMES[t.biome] : capitalize(t.terrain);
       const deposit = resourceName(t);
-      const ground = `${biome}${t.landform && !water ? ` · ${LANDFORM_NAMES[t.landform]}` : ''}${t.overlay === 'forest' ? ' · Woodland' : t.overlay === 'ford' ? ' · Ford' : ''}${deposit ? ` · ${deposit}` : ''}`;
+      const landform = t.landform && !water && t.biome !== 'fjords' ? LANDFORM_NAMES[t.landform] : undefined;
+      const ground = `${biome}${landform ? ` · ${landform}` : ''}${t.overlay === 'forest' && t.biome !== 'forest' ? ' · Woodland' : t.overlay === 'ford' ? ' · Ford' : ''}${deposit ? ` · ${deposit}` : ''}`;
       const soil = water || t.geothermal ? '' : ` · Soil fertility ${multiplierPercent(soilFertility(state.world, x, y))}`;
       const speed = groundMovementMultiplier(t);
       const travel = speed < 1 && (!water || t.overlay === 'ford') ? ` · Ground speed ${Math.round(speed * 100)}%` : '';
@@ -1166,7 +1287,7 @@ function updateBuildStatus(faction = state.factions.find(owner => owner.id === p
   if (!state.buildMode) { status.textContent = ''; status.classList.remove('invalid'); }
   if (areaTool) status.textContent = buildError || (areaTool === 'forbid'
     ? areaStroke?.erase ? 'Drag to allow this area again' : 'Drag to forbid · Start inside a zone to erase'
-    : 'Drag to clear trees, buildings and construction · Unused construction gold refunded');
+    : areaTool === 'cancel' ? 'Drag over orders to cancel' : 'Drag to clear trees, buildings and construction · Unused construction gold refunded');
 
   if (state.buildMode) {
     const preview = renderer.buildPreview.length ? renderer.buildPreview
@@ -1176,7 +1297,8 @@ function updateBuildStatus(faction = state.factions.find(owner => owner.id === p
     const plan = gesturePreview?.plan ?? previewConstructionPlan(state, state.buildMode, preview);
     if (stroke) buildError = plan.ok ? '' : shortBuildError(plan.message);
     const count = preview.length ? plan.tiles.length : 1;
-    const gold = preview.length ? plan.costs.gold : state.buildMode === 'clearTrees' ? 0 : buildCostAt(state, state.buildMode, 0, 0).gold;
+    const gold = preview.length ? plan.costs.gold : state.buildMode === 'clearTrees' ? 0
+      : state.buildMode === 'house' ? minimumBuildGold('house', state) : buildCostAt(state, state.buildMode, 0, 0).gold;
     const requested = gesturePreview?.requestedTiles ?? count;
     const area = state.buildMode === 'shipyard' ? count * 9 : state.buildMode === 'palace' ? count * 4 : count;
     const countText = requested > count ? `${count} of ${requested}` : String(area);
@@ -1255,7 +1377,7 @@ function endOffensivePlacement(restoreCamera: boolean): void {
   renderer.offensivePreview = undefined;
   offensivePlacementPanel.hidden = true;
   $('.game-area').classList.remove('placing-offensive');
-  if (placement.state === state && !state.multiplayer) state.paused = placement.paused;
+  if (placement.state === state && !state.multiplayer) setGamePaused(placement.paused);
   if (restoreCamera) { renderer.zoom = placement.zoom; renderer.follow = placement.follow; }
 }
 function performOffensiveAction(): void {
@@ -1269,7 +1391,7 @@ function performOffensiveAction(): void {
   clearPlacement(); buildingActivity.close(); resourceActivity.close(); leaderProgression.close();
   buildMenu = null;
   offensivePlacement = { state, zoom: renderer.zoom, follow: renderer.follow, paused: state.paused };
-  if (!state.multiplayer) state.paused = true;
+  if (!state.multiplayer) setGamePaused(true);
   renderer.zoom = MIN_ZOOM; renderer.follow = false;
   renderer.offensivePreview = {};
   offensivePlacementPanel.querySelector('strong')!.textContent = 'Rally flag';
@@ -1300,10 +1422,10 @@ function placeOffensiveFlag(point: Point): boolean {
 $('[data-hotbar-action="offensive"]').onclick = () => { performOffensiveAction(); canvas.focus({ preventScroll: true }); };
 
 function performLevyAction(): void {
-  const dismiss = levyDisplayStatus(state).active > 0;
-  const command: GameCommand = { type: dismiss ? 'dismiss-levy' : 'levy' };
+  const dismissing = levyDisplayStatus(state).active > 0;
+  const command: GameCommand = { type: dismissing ? 'dismiss-levy' : 'levy' };
   if (!sendCommand(command)) {
-    const result = dismiss ? dismissLevy(state) : levyPopulation(state);
+    const result = dismissing ? dismissLevy(state) : levyPopulation(state);
     if (!result.ok) { showCommandError(result.message); return; }
     logEvent(state, result.message, 'good');
   }
@@ -1335,7 +1457,7 @@ $('#dialog').onclick = e => { if (e.target === $('#dialog')) closeDialog(); };
 $('[data-action="build"]').onclick = () => toggleBuildMenu('build');
 $('[data-action="fortifications"]').onclick = () => toggleBuildMenu('fortifications');
 $('#close-build').onclick = () => selectBuild(null);
-for (const tool of ['clear', 'forbid'] as const) {
+for (const tool of ['clear', 'forbid', 'cancel'] as const) {
   const button = $<HTMLButtonElement>(`[data-action="${tool}"]`);
   let buttonDrag: { x: number; y: number; moved: boolean } | null = null;
   let suppressClick = false;
@@ -1365,8 +1487,16 @@ for (const tool of ['clear', 'forbid'] as const) {
   };
   button.onpointercancel = () => { buttonDrag = null; cancelStroke(); clearPointer(); };
 }
-$('#pause').onclick = () => { if (state.multiplayer) return; state.paused = !state.paused; clearInput(); updateUI(); save(); };
-$('#speed').onclick = () => { if (state.multiplayer) return; state.speed = GAME_SPEEDS[(speedIndex() + 1) % GAME_SPEEDS.length]; updateUI(); save(); };
+$('#pause-spending').onclick = () => {
+  const faction = factionById(state, playerFaction(state));
+  if (!faction || faction.defeated || state.gameOver) return;
+  const enabled = !faction.spendingPaused;
+  if (sendCommand({ type: 'pause-spending', enabled })) return;
+  faction.spendingPaused = enabled;
+  updateUI(); save();
+};
+$('#pause').onclick = () => { if (state.multiplayer) return; setGamePaused(!state.paused); clearInput(); updateUI(); save(); };
+$('#speed').onclick = () => { if (state.multiplayer) return; setGameSpeed(GAME_SPEEDS[(speedIndex() + 1) % GAME_SPEEDS.length]); updateUI(); save(); };
 $('#menu').onclick = showMenu;
 $('#diplomacy-menu').onclick = () => showDiplomacy();
 for (const [selector, delta] of [['#minimap-zoom-in', .15], ['#minimap-zoom-out', -.15]] as const) {
@@ -1381,13 +1511,14 @@ document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => b
 window.addEventListener('keydown', e => {
   if (frontend.active || state.multiplayer || e.metaKey || e.ctrlKey || e.altKey || !$('#dialog').hidden || ![' ', '=', '+', '-'].includes(e.key)) return;
   const target = e.target;
+  if (e.key === ' ' && target === $('#pause-spending')) return;
   if (target instanceof HTMLElement && target.isContentEditable
     || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
     || target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(target.type)) return;
   e.preventDefault(); e.stopImmediatePropagation();
   if (e.repeat) return;
-  if (e.key === ' ') { state.paused = !state.paused; clearInput(); }
-  else state.speed = GAME_SPEEDS[Math.max(0, Math.min(GAME_SPEEDS.length - 1, speedIndex() + (e.key === '-' ? -1 : 1)))];
+  if (e.key === ' ') { setGamePaused(!state.paused); clearInput(); }
+  else setGameSpeed(GAME_SPEEDS[Math.max(0, Math.min(GAME_SPEEDS.length - 1, speedIndex() + (e.key === '-' ? -1 : 1)))]);
   updateUI(); save();
 }, { capture: true });
 window.addEventListener('keydown', e => {
@@ -1396,7 +1527,7 @@ window.addEventListener('keydown', e => {
   if (key === 'escape') {
     if (e.repeat) return;
     if (offensivePlacement) endOffensivePlacement(true);
-    else if (!$('#dialog').hidden) closeDialog();
+    else if (!$('#dialog').hidden) { if (!$('#close-dialog').hidden) closeDialog(); }
     else if (leaderProgression.isOpen) leaderProgression.close(true);
     else if (resourceActivity.isOpen) { resourceActivity.close(); canvas.focus({ preventScroll: true }); }
     else if (buildingActivity.isOpen) { buildingActivity.close(); canvas.focus({ preventScroll: true }); }
@@ -1408,7 +1539,7 @@ window.addEventListener('keydown', e => {
   }
   if (!$('#dialog').hidden) {
     if (key === 'tab') {
-      const elements = Array.from($('#dialog').querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]'));
+      const elements = Array.from($('#dialog').querySelectorAll<HTMLElement>('button:not([disabled]):not([hidden]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]'));
       if (e.shiftKey && document.activeElement === elements[0]) { e.preventDefault(); elements.at(-1)?.focus(); }
       else if (!e.shiftKey && document.activeElement === elements.at(-1)) { e.preventDefault(); elements[0]?.focus(); }
     }
@@ -1417,6 +1548,10 @@ window.addEventListener('keydown', e => {
   // Focused HUD controls keep native activation without trapping movement keys.
   if (e.target instanceof HTMLInputElement && (e.target.type !== 'checkbox' || key === ' ' || key === 'enter')) return;
   if (e.target instanceof HTMLButtonElement && (key === ' ' || key === 'enter')) return;
+  if (state.observing) {
+    if (key === 'y' && !e.repeat) { renderer.showYields = !renderer.showYields; updateUI(); }
+    return;
+  }
   if (key === '9') { e.preventDefault(); if (!e.repeat) performOffensiveAction(); return; }
   if (offensivePlacement) return;
   if (key === 'b') { e.preventDefault(); if (!e.repeat) toggleBuildMenu('build'); return; }
@@ -1467,9 +1602,12 @@ window.addEventListener('blur', () => { clearInput(); cancelStroke(); clearPoint
 document.addEventListener('focusin', e => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) clearInput();
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { clearInput(); cancelStroke(); clearPointer(); void saveNow(); } });
+document.addEventListener('visibilitychange', () => {
+  syncSimulationClock();
+  if (document.hidden) { clearInput(); cancelStroke(); clearPointer(); void saveNow(); }
+});
 window.addEventListener('beforeunload', () => {
-  if (state.multiplayer || !sessionStarted || loadingSavedGame || pendingSaves) return;
+  if (accounts.user || state.multiplayer || !sessionStarted || loadingSavedGame || pendingSaves) return;
   // Unload cannot wait for cooperative tasks. Retain the synchronous best-
   // effort final checkpoint; ordinary play and explicit saves use short tasks.
   try {
@@ -1484,7 +1622,7 @@ function syncPendingConstruction() {
 function discardLinearPurchases() {
   for (const { purchase } of linearPurchases) purchase.finish();
   linearPurchases.length = 0; linearPurchaseState = undefined; linearPurchasesChanged = false;
-  linearWorkSkippedFrames = 0; linearCleanupDue = false; renderer.pendingConstruction = [];
+  linearWorkSkippedTurns = 0; linearCleanupDue = false; renderer.pendingConstruction = [];
 }
 function cancelLinearPurchases() {
   let placed = 0, cancelled = 0;
@@ -1494,20 +1632,17 @@ function cancelLinearPurchases() {
     linearPurchasesCompleted++; linearPurchaseLastResult = result;
   }
   linearPurchases.length = 0; renderer.pendingConstruction = [];
-  // Accepted cells retain their payment and pending reconciliation. The frame
-  // pump finishes staffing and saving even when gameplay is paused.
+  // Accepted cells retain their payment. The host finishes staffing and saving while paused.
   linearCleanupDue = true;
   linearPurchaseNotice = `${cancelled} remaining tile${cancelled === 1 ? '' : 's'} cancelled${placed ? ` · ${placed} ordered` : ''}`;
   updateBuildStatus();
 }
-function advanceLinearPurchases(frameStarted: number, frameTimestamp: number) {
+function advanceLinearPurchases(deadline: number) {
   if (state.multiplayer || linearPurchaseState && linearPurchaseState !== state) { discardLinearPurchases(); return; }
   if (!linearPurchaseState && !constructionReconciliationPending(state)) return;
-  if (linearPurchases[0] && frameTimestamp <= linearPurchases[0].queuedAt) return;
-  // Share the frame with simulation, while guaranteeing paused and busy-world
-  // progress. Each purchase and cleanup phase owns a separate turn.
-  if (performance.now() - frameStarted >= 12 && linearWorkSkippedFrames < 4) { linearWorkSkippedFrames++; return; }
-  linearWorkSkippedFrames = 0;
+  // Share the host budget with simulation and guarantee progress under load.
+  if (performance.now() >= deadline && linearWorkSkippedTurns < 4) { linearWorkSkippedTurns++; return; }
+  linearWorkSkippedTurns = 0;
   const started = performance.now();
   try {
     // Ordinary building orders and governors share this housekeeping queue.
@@ -1551,11 +1686,10 @@ function commitStroke() {
     if (linearPurchaseState !== state) discardLinearPurchases();
     linearPurchaseState = state;
     const purchase = createLinearPurchase(state, stroke.kind, preview.points);
-    // Accept the first tile in the input event, including while paused. The
-    // bounded frame pump purchases the rest of a drag and handles staffing.
+    // Accept the first tile in the input event, including while paused.
     const first = purchase.step(state);
     linearPurchasesChanged ||= first.placed > 0;
-    linearPurchases.push({ kind: stroke.kind, purchase, queuedAt: performance.now() });
+    linearPurchases.push({ kind: stroke.kind, purchase });
     syncPendingConstruction();
     cancelStroke(); buildError = ''; linearPurchaseNotice = ''; updateUI(); return;
   }
@@ -1603,17 +1737,14 @@ function openRuinsDialog(site: ExplorationSite): void {
   $('#ruins-decline').onclick = () => choose(false);
 }
 function offerRuinsDiscovery(): void {
-  if (frontend.active || state.gameOver || !$('#dialog').hidden) return;
-  const leader = state.units.find(u => u.kind === 'leader' && u.faction === playerFaction(state) && u.hp > 0);
+  if (frontend.active || state.gameOver || state.observing || !$('#dialog').hidden) return;
+  const leader = dismissedRuins.size ? getLeader(state, playerFaction(state)) : undefined;
   for (const site of state.explorationSites ?? []) if (dismissedRuins.has(site.id) && (!leader || leader.x < site.x - 1 || leader.x > site.x + 3 || leader.y < site.y - 1 || leader.y > site.y + 3)) dismissedRuins.delete(site.id);
   const site = state.explorationSites?.find(s => s.status === 1 && s.outcome === 2 && s.actor === playerFaction(state) && !dismissedRuins.has(s.id));
   if (site) openRuinsDialog(site);
 }
-const siteVisits = new SiteVisits();
 let nextSiteDialogRefreshAt = 0;
 function openSiteDialog(site: SiteView): void {
-  siteVisits.observe(state.world, siteViews(state));
-  siteVisits.dismiss(site);
   clearInput(); clearPlacement();
   openDialog(siteDialogMarkup(site));
   nextSiteDialogRefreshAt = 0;
@@ -1633,7 +1764,7 @@ function refreshSiteDialog(now = performance.now()): void {
   const dialog = document.querySelector<HTMLElement>('.site-dialog');
   if (!dialog || $('#dialog').hidden || now < nextSiteDialogRefreshAt) return;
   nextSiteDialogRefreshAt = now + 500;
-  const site = siteViews(state, now).find(site => site.id === Number(dialog.dataset.siteId));
+  const site = currentSiteViews(state).find(site => site.id === Number(dialog.dataset.siteId));
   if (!site?.near || !site.available || !pointInSight(presentationFog(state), site.x + 1, site.y + 1)) { closeDialog(); return; }
   const button = $<HTMLButtonElement>('#site-build');
   if (button.dataset.pending) return;
@@ -1642,18 +1773,10 @@ function refreshSiteDialog(now = performance.now()): void {
   button.disabled = !quote.ok; $('#site-error').textContent = quote.ok ? '' : quote.message;
 }
 function openSiteAt(point: Point): boolean {
-  const sites = siteViews(state); siteVisits.observe(state.world, sites);
-  const site = sites.find(site => site.available && site.near && point.x >= site.x && point.x < site.x + site.width && point.y >= site.y && point.y < site.y + site.height);
+  const site = currentSiteViews(state).find(site => site.available && site.near && point.x >= site.x
+    && point.x < site.x + site.width && point.y >= site.y && point.y < site.y + site.height);
   if (!site || !pointInSight(presentationFog(state), site.x + 1, site.y + 1)) return false;
   openSiteDialog(site); return true;
-}
-function offerNearbySite(now: number): void {
-  if (frontend.active || !sessionStarted || state.gameOver) return;
-  const sites = siteViews(state, now); siteVisits.observe(state.world, sites);
-  if (!$('#dialog').hidden || buildMenu || state.buildMode || areaTool || stroke || buildingActivity.isOpen || resourceActivity.isOpen) return;
-  const fog = presentationFog(state);
-  const site = sites.find(site => siteVisits.offer(site) && pointInSight(fog, site.x + 1, site.y + 1));
-  if (site) openSiteDialog(site);
 }
 function openHermitAt(point: Point): boolean {
   const ruins = state.explorationSites?.find(s => s.status === 1 && s.outcome === 2 && s.actor === playerFaction(state)
@@ -1670,9 +1793,31 @@ function openHermitAt(point: Point): boolean {
   };
   return true;
 }
+function openLivestockAt(point: Point): boolean {
+  const animal = unitAtPoint(state, point);
+  const herd = animal && isLivestock(animal) ? livestockHerd(state, animal.livestockHerd) : undefined;
+  if (!herd || !livestockInReach(state, herd)) return false;
+  const title = LIVESTOCK_NAMES[herd.species];
+  const income = pastureYield(herd);
+  if (herd.pasture) {
+    openDialog(`<h2 id="dialog-title">${title} pasture</h2><p>+${income.food} food · +${income.gold} gold / ${ECONOMY_INTERVAL}s</p>`);
+    return true;
+  }
+  const status = livestockFenceStatus(state, herd.id);
+  openDialog(`<h2 id="dialog-title">${title}</h2><div class="dialog-actions"><button id="fence-herd"${status.ok ? '' : ' disabled'}>Fence herd</button></div><p id="pasture-status" role="status">${status.ok ? `+${income.food} food · +${income.gold} gold / ${ECONOMY_INTERVAL}s` : status.message}</p>`);
+  $('#fence-herd').onclick = () => {
+    if (sendCommand({ type: 'fence-herd', herdId: herd.id })) { closeDialog(); return; }
+    const result = fenceLivestockHerd(state, herd.id);
+    if (!result.ok) { $('#pasture-status').textContent = result.message; return; }
+    closeDialog(); save(); updateUI();
+  };
+  return true;
+}
+
 function commandWorldPoint(point: Point) {
   if (placeOffensiveFlag(point)) return;
   if (!state.buildMode && !areaTool && openSiteAt(point)) return;
+  if (!state.buildMode && !areaTool && openLivestockAt(point)) return;
   if (openQuestAt(point)) return;
   if (openHermitAt(point)) return;
   clearInput();
@@ -1690,7 +1835,8 @@ function commandWorldPoint(point: Point) {
       : cannon && !(target && atWar(state, cannon.faction, target.faction)) ? { type: 'field-cannon-move', unitId: cannon.id, x: point.x, y: point.y } : ship && target?.id !== ship.id && getLeader(state)?.embarkedOn !== ship.id
       ? { type: 'warship-move', shipId: ship.id, x: point.x, y: point.y } : { type: 'interact', x: point.x, y: point.y };
     if (sendCommand(command))
-      renderer.showMoveMarker(point, !!target && atWar(state, playerFaction(state), target.faction));
+      renderer.showMoveMarker(point, !!target && (atWar(state, playerFaction(state), target.faction)
+        || command.type === 'interact' && !('capacity' in target) && isHuntable(target)));
   } else if (commandAttackAt(state, point.x, point.y)) renderer.showMoveMarker(point, true);
   else if (commandMove(state, point.x, point.y)) {
     const selected = state.selectedType === 'unit' && state.selected !== null ? entityStore(state).units.get(state.selected) : undefined;
@@ -1701,9 +1847,15 @@ function commandWorldPoint(point: Point) {
 }
 function primaryWorldPoint(point: Point, pointerId: number, touch: boolean) {
   canvas.focus({ preventScroll: true });
+  if (state.observing) {
+    selectAt(state, point.x, point.y);
+    updateUI();
+    return;
+  }
   if (placeOffensiveFlag(point)) return;
   if (stroke?.twoClick) { commitStroke(); return; }
   if (!areaTool && !state.buildMode && openSiteAt(point)) return;
+  if (!areaTool && !state.buildMode && openLivestockAt(point)) return;
   if (!areaTool && !state.buildMode && openQuestAt(point)) return;
   if (!areaTool && !state.buildMode && openHermitAt(point)) return;
   const villageTarget = !areaTool ? neutralVillageEntityAt(state, point) : undefined;
@@ -1745,8 +1897,18 @@ function startTouchGesture() {
   gesture = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), zoom: renderer.zoom, camera: { ...renderer.camera } };
   touchMoved = true; areaStroke = null; renderer.areaPreview = null; renderer.follow = false;
 }
+function worldPointerAvailable(): boolean {
+  return !frontend.active && $('#dialog').hidden && !state.gameOver
+    && (!!state.observing || !factionById(state, playerFaction(state))?.leaderRespawn);
+}
+$('.game-area').addEventListener('pointermove', event => {
+  if (offensivePlacement && event.pointerType !== 'touch') offensivePlacement.cursor = { x: event.clientX, y: event.clientY };
+}, { passive: true });
+$('.game-area').addEventListener('pointerleave', () => {
+  if (offensivePlacement) offensivePlacement.cursor = undefined;
+});
 canvas.addEventListener('pointerdown', e => {
-  if (frontend.active || !$('#dialog').hidden || state.gameOver || state.factions.find(f => f.id === playerFaction(state))?.leaderRespawn) return;
+  if (!worldPointerAvailable()) return;
   e.preventDefault(); pointer = { x: e.clientX, y: e.clientY }; renderer.hover = renderer.worldPoint(e.clientX, e.clientY);
   if (e.pointerType === 'touch') {
     if (!touches.size) touchMoved = false;
@@ -1762,6 +1924,7 @@ canvas.addEventListener('pointerdown', e => {
   }
   if (e.button === 2) {
     canvas.focus({ preventScroll: true });
+    if (state.observing) return;
     if (stroke?.twoClick) { cancelStroke(); updateUI(); return; }
     commandWorldPoint(renderer.worldPoint(e.clientX, e.clientY)); return;
   }
@@ -1793,7 +1956,7 @@ canvas.addEventListener('pointerup', e => {
   if (areaStroke) refreshWorldPointer();
   if (e.pointerType === 'touch') {
     if (!touches.has(e.pointerId)) return;
-    if (frontend.active || !$('#dialog').hidden || state.gameOver || state.factions.find(f => f.id === playerFaction(state))?.leaderRespawn) {
+    if (!worldPointerAvailable()) {
       touches.delete(e.pointerId); if (!touches.size) gesture = null;
       cancelStroke(); if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
       return;
@@ -1821,98 +1984,122 @@ $('#minimap').addEventListener('click', e => {
   renderer.follow = false;
 });
 new ResizeObserver(() => { renderer.resize(); refreshWorldPointer(); }).observe(canvas);
-const mobileControls = new MobileControls($('.game-area'), input, () => { if (state.multiplayer) multiplayer.input(input); }, () => { renderer.follow = true; renderer.center(state); });
+const mobileControls = new MobileControls($('.game-hud'), input, () => { if (state.multiplayer) multiplayer.input(input); }, () => { renderer.follow = true; renderer.center(state); });
 let wasWaitingForRespawn = false;
 let deathCamera: Point | undefined;
 const respawnCamera = new RespawnCamera();
 let wasRespawnPanning = false;
-// Input-priority frames: when event handlers since the last frame already
-// spent noticeable main-thread time (placing, opening a popup, a diplomacy
-// action), this frame skips the simulation step and only draws, so the
-// response appears without also paying for a full step. The skipped time is
-// carried into the next step; no simulated time is lost.
-const INPUT_PRIORITY_MS = 6;
-let inputWorkMs = 0, inputStartedAt: number | undefined, carriedFrameSeconds = 0;
+let nextGameplayUiCheck = 0;
+let lastWorldDrawAt = 0, lastWorldDrawState: GameState | undefined;
 // Input handlers read the same published state the renderer just drew, so
 // they share its trusted simulation reads (cached fog, territory, navigation).
 // The window capture/bubble pair brackets every handler of one event; a
-// handler that stops propagation leaves the scope to close at the next frame.
+// handler that stops propagation leaves the scope to close at the next turn.
 let inputDepth = 0, releaseInputReads: (() => void) | undefined;
-function closeInputReads() { inputDepth = 0; releaseInputReads?.(); releaseInputReads = undefined; inputStartedAt = undefined; }
+function closeInputReads() { inputDepth = 0; releaseInputReads?.(); releaseInputReads = undefined; }
 for (const type of ['pointerdown', 'pointerup', 'click', 'contextmenu', 'keydown', 'keyup', 'change', 'input', 'wheel'] as const) {
   window.addEventListener(type, () => {
-    if (!inputDepth++) { inputStartedAt = performance.now(); releaseInputReads = state.multiplayer ? undefined : holdSimulationReads(state); }
+    if (!inputDepth++) releaseInputReads = state.multiplayer ? undefined : holdSimulationReads(state);
   }, { capture: true, passive: true });
   window.addEventListener(type, () => {
-    if (!inputDepth || --inputDepth) return;
-    if (inputStartedAt !== undefined) inputWorkMs += performance.now() - inputStartedAt;
-    closeInputReads();
+    if (inputDepth && !--inputDepth) closeInputReads();
   }, { passive: true });
 }
-function frame(now: number) {
-  syncPlacementIntent();
-  if (inputDepth) { if (inputStartedAt !== undefined) inputWorkMs += performance.now() - inputStartedAt; closeInputReads(); }
-  const frameStarted = performance.now();
-  const elapsed = Math.max(0, (now - last) / 1000); last = now;
-  const inputPriority = !state.multiplayer && inputWorkMs >= INPUT_PRIORITY_MS && carriedFrameSeconds === 0;
-  inputWorkMs = 0;
-  // Animation and camera use real frame time; only the simulation step carries.
-  const elapsedFrame = elapsed, simElapsed = inputPriority ? 0 : elapsed + carriedFrameSeconds;
-  carriedFrameSeconds = inputPriority ? elapsed : 0;
-  const dt = frameSimulationDelta(simElapsed, state.speed);
-  if ((input.turnLeft || input.turnRight) && (!infantryFormationActive(state) && !boardedBoat(state) || state.paused || frontend.active || !$('#dialog').hidden)) clearTurnInput();
-  if (state.multiplayer) multiplayer.input(input);
-  else if (!inputPriority) updateGame(state, dt, input, { interactive: true, wallNow: Date.now() });
-  if (state.multiplayer) multiplayer.updatePresentation(now);
-  // Presentation and HUD reads share the trusted view of the state just published.
-  // Online clients apply server snapshots outside the simulation's revisions.
-  if (state.multiplayer) presentFrame(now, frameStarted, elapsedFrame);
-  else withSimulationReads(state, () => presentFrame(now, frameStarted, elapsedFrame));
-  telemetry.frame(now, performance.now() - frameStarted, sessionStarted && !frontend.active && !state.paused && !state.gameOver);
-  requestAnimationFrame(frame);
+function simulationTurn() {
+  if (inputDepth) closeInputReads();
+  const started = performance.now();
+  syncSimulationClock(started);
+  if (sessionStarted && !document.hidden) {
+    const steering = infantryFormationActive(state) || !!boardedBoat(state);
+    const inputEnabled = !frontend.active && $('#dialog').hidden && !wasWaitingForRespawn && !state.gameOver && !state.observing && !state.paused;
+    if ((input.turnLeft || input.turnRight) && (!steering || !inputEnabled)) clearTurnInput();
+    mobileControls.update(inputEnabled, steering);
+    if (state.multiplayer) {
+      syncPlacementIntent();
+      multiplayer.input(input);
+      refreshGameplayUi(started);
+    } else withSimulationReads(state, () => {
+      const deadline = started + (simulationClock.fastForwardBehind ? FAST_FORWARD_TURN_BUDGET_MS : SIMULATION_TURN_BUDGET_MS);
+      const advanced = advanceTimedGame(state, input, simulationClock.dueSteps, simulationClock.stepSeconds, deadline, { interactive: true, wallNow: Date.now() });
+      simulationClock.consume(advanced);
+      if (!gameCanAdvance(state)) syncSimulationClock();
+      advanceLinearPurchases(deadline);
+      refreshGameplayUi(started);
+    });
+    if (started - lastSave > 15000) { save(); lastSave = started; }
+  }
+  const finished = performance.now();
+  syncSimulationClock(finished);
+  const catchingUp = simulationClock.dueSteps > 0;
+  const delay = !sessionStarted || document.hidden ? 100 : catchingUp ? 4 : Math.max(4, SIMULATION_UPDATE_MS - (finished - started));
+  window.setTimeout(simulationTurn, delay);
 }
-function presentFrame(now: number, frameStarted: number, elapsedFrame: number) {
-  advanceLinearPurchases(frameStarted, now);
-  let beganRespawnPan = false;
-  const waitingForRespawn = !!state.factions.find(faction => faction.id === playerFaction(state))?.leaderRespawn;
-  const respawnOverlay = $('#leader-respawn');
+
+function refreshGameplayUi(now: number) {
+  const respawn = state.observing ? undefined : state.factions.find(faction => faction.id === playerFaction(state))?.leaderRespawn;
+  const waitingForRespawn = !!respawn;
   if (waitingForRespawn !== wasWaitingForRespawn) {
-    if (waitingForRespawn) {
-      deathCamera = { ...state.factions.find(faction => faction.id === playerFaction(state))!.leaderRespawn!.position };
+    if (respawn) {
+      deathCamera = { ...respawn.position };
       respawnCamera.cancel(); renderer.camera = { ...deathCamera }; renderer.follow = false;
       clearInput(); clearPlacement(); buildingActivity.close(); resourceActivity.close(); leaderProgression.close();
     } else {
       const leader = getLeader(state);
-      if (leader && deathCamera) { respawnCamera.start(deathCamera, leader); beganRespawnPan = true; }
+      if (leader && deathCamera) respawnCamera.start(deathCamera, leader);
       deathCamera = undefined;
     }
     wasWaitingForRespawn = waitingForRespawn;
     updateUI(); save();
   }
-  respawnOverlay.hidden = !waitingForRespawn || frontend.active;
-  mobileControls.update(!frontend.active && $('#dialog').hidden && !waitingForRespawn && !state.gameOver && !state.paused, infantryFormationActive(state) || !!boardedBoat(state));
-  const respawnPan = respawnCamera.advance(beganRespawnPan ? 0 : elapsedFrame);
-  if (respawnPan) { renderer.camera = respawnPan; renderer.follow = false; }
-  else if (!waitingForRespawn && wasRespawnPanning) renderer.follow = true;
-  wasRespawnPanning = !!respawnPan;
-  if (!frontend.active || frontend.inGame) renderer.draw(state, Math.min(elapsedFrame, .15), refreshWorldPointer);
-  if (pointerStatusDirty) updateBuildStatus();
-  actionTooltips.update();
-  armyWarnings.update(now, !frontend.active && !state.gameOver && $('#dialog').hidden);
-  buildingActivity.update(now);
-  resourceActivity.update(now);
-  leaderActionFeedback.update(now);
-  if (uiRequested || now - lastUI >= CHECK_INTERVAL_MS) {
-    renderUI();
+  $('#leader-respawn').hidden = !waitingForRespawn || frontend.active;
+  if (now >= nextGameplayUiCheck) {
+    nextGameplayUiCheck = now + CHECK_INTERVAL_MS;
+    refreshSiteDialog(now);
     if (!frontend.active && state.palaceCaptures?.some(offer => !pendingCaptures.has(offer.palaceId) && (offer.captor === undefined || offer.captor === playerFaction(state))) && $('#dialog').hidden) showPalaceCapture();
     offerRuinsDiscovery();
-    offerNearbySite(now);
   }
-  if (now - lastSave > 15000) { save(); lastSave = now; }
   if (!frontend.active && state.gameOver && !gameEndShown) {
     gameEndShown = true;
     showGameEnd();
   }
+}
+
+function frame(now: number) {
+  if (inputDepth) closeInputReads();
+  const frameStarted = performance.now();
+  const elapsed = Math.max(0, (now - last) / 1000); last = now;
+  // Presentation and HUD reads share the trusted view of the state just published.
+  if (state.multiplayer) {
+    multiplayer.updatePresentation(now);
+    presentFrame(now, elapsed);
+  } else withSimulationReads(state, () => presentFrame(now, elapsed));
+  telemetry.frame(now, performance.now() - frameStarted, sessionStarted && !frontend.active && !state.paused && !state.gameOver);
+  requestAnimationFrame(frame);
+}
+
+function presentFrame(now: number, elapsedFrame: number) {
+  const respawnPan = respawnCamera.advance(Math.min(elapsedFrame, .15));
+  if (respawnPan) { renderer.camera = respawnPan; renderer.follow = false; }
+  else if (!wasWaitingForRespawn && wasRespawnPanning) renderer.follow = true;
+  wasRespawnPanning = !!respawnPan;
+  if (offensivePlacement?.cursor && offensivePlacement.state === state && !pan && !touches.size && worldPointerAvailable()) {
+    renderer.panCameraAtEdge(offensivePlacement.cursor, state.world, elapsedFrame);
+  }
+  if (!frontend.active || frontend.inGame) {
+    const sameState = lastWorldDrawState === state;
+    const sinceDraw = now - lastWorldDrawAt;
+    if (!sameState || uiRequested || !simulationClock.fastForwardBehind || sinceDraw >= FAST_FORWARD_DRAW_INTERVAL_MS) {
+      renderer.draw(state, Math.min(sameState ? sinceDraw / 1000 : elapsedFrame, .15), refreshWorldPointer);
+      lastWorldDrawAt = now; lastWorldDrawState = state;
+    }
+  } else lastWorldDrawState = undefined;
+  if (pointerStatusDirty) updateBuildStatus();
+  actionTooltips.update();
+  armyWarnings.update(now, !frontend.active && !state.gameOver && !state.observing && $('#dialog').hidden);
+  buildingActivity.update(now);
+  resourceActivity.update(now);
+  leaderActionFeedback.update(now);
+  if (uiRequested || now - lastUI >= CHECK_INTERVAL_MS) renderUI();
 }
 document.documentElement.dataset.assets = 'loading';
 const assets = loadGameAssets(renderer);
@@ -1920,13 +2107,12 @@ let loadedAssets = 0;
 void Promise.all(assets.map(task => task.then(() => setBootProgress(.8 + .2 * ++loadedAssets / assets.length)))).then(() => {
   document.documentElement.dataset.assets = 'ready';
   frontend.setStatus('');
-  // Account services are optional for now; guest access leads to the game menu,
-  // where an existing save can be loaded explicitly.
-  showFrontend('login');
+  showFrontend(accounts.user ? 'main' : 'login');
   finishBootLoading();
   chooseInitialWorld = false;
   last = performance.now();
   updateUI(); requestAnimationFrame(frame);
+  window.setTimeout(simulationTurn, 0);
 }).catch(error => {
   document.documentElement.dataset.assets = 'error';
   telemetry.error(error, 'asset');

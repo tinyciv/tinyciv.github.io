@@ -36,7 +36,8 @@ impl Scenarios {
     }
     fn fertile(&self,x:i32,y:i32)->f64 {self.input[((y*self.width+x)*2+1)as usize]}
     fn town(&self,x:i32,y:i32)->bool {
-        (-3..=4).all(|dy|(-3..=4).all(|dx|self.flags(x+dx,y+dy)&2!=0))
+        (0..=1).all(|dy|(0..=1).all(|dx|self.flags(x+dx,y+dy)&64!=0))
+        && (-3..=4).all(|dy|(-3..=4).all(|dx|self.flags(x+dx,y+dy)&2!=0))
         && (0..4).all(|corner|(0..6).all(|step|{
             let(dx,dy)=super::battle_support::road_arm(corner,step);
             self.flags(x+dx as i32,y+dy as i32)&2!=0
@@ -44,19 +45,21 @@ impl Scenarios {
     }
     /// Mirror one ordinary generated half-landscape. The host only copies the
     /// selected source tiles and these transformed links/footprint anchors.
-    /// Input rows: drainage, channelNext, oreAnchor, oreWidth, geothermalAnchor,
-    /// stair (N/E/S/W), resourceGroup. Output adds the source cell first.
+    /// Input rows carry drainage and channel links, both footprint anchors,
+    /// ore width and resource group. Output adds the source cell and x direction.
     pub fn symmetry(&mut self)->*const f64 {
+        const INPUT_STRIDE: usize = 6;
         self.output.clear();
         let reflect=|cell:i32,span:i32| if cell<0 {-1} else {(cell/self.width)*self.width+self.width-cell%self.width-span};
         for y in 0..self.height {for x in 0..self.width {
             let mirrored=x>=self.width/2;let source=y*self.width+if mirrored {self.width-1-x}else{x};
-            let row=&self.input[source as usize*7..source as usize*7+7];
+            let start = source as usize * INPUT_STRIDE;
+            let row = &self.input[start .. start + INPUT_STRIDE];
             let link=|value:f64| {let c=value as i32;if c<0||c%self.width>=self.width/2 {-1.0}else if mirrored {reflect(c,1)as f64}else{value}};
             let anchor=|value:f64,span:i32| {let c=value as i32;if c<0||c%self.width+span>self.width/2 {-1.0}else if mirrored {reflect(c,span)as f64}else{value}};
-            let stair=if mirrored {match row[5]as i32 {1=>3.0,3=>1.0,_=>row[5]}} else {row[5]};
-            self.output.extend([source as f64,link(row[0]),link(row[1]),anchor(row[2],row[3]as i32),row[3],anchor(row[4],2),stair,
-                if row[6]<0.0 {-1.0}else{row[6]+if mirrored {100000.0}else{0.0}}]);
+            let group = if row[5] < 0.0 { -1.0 } else { row[5] + if mirrored { 100000.0 } else { 0.0 } };
+            self.output.extend([source as f64, link(row[0]), link(row[1]), anchor(row[2], row[3] as i32),
+                anchor(row[4], 2), group, if mirrored { -1.0 } else { 1.0 }]);
         }}
         self.output.as_ptr()
     }
@@ -244,7 +247,9 @@ pub fn prepare(world:&mut World,scenario:u32,width:i32,height:i32)->*const f64 {
         for faction in 0..2 {for band in 0..3 {
             let target_x=if faction==0 {width as f64*0.28} else {width as f64*0.72};let target_y=(band as f64+0.5)*height as f64/3.0;
             let margin=10.min(height/20);
-            let choice=sites.iter().filter(|s|s.1>=band*height/3+margin&&s.1<(band+1)*height/3-margin&&if faction==0 {s.0<width/2-24} else {s.0>width/2+24})
+            let choice=sites.iter().filter(|s|s.1>=band*height/3+margin&&s.1<(band+1)*height/3-margin
+                &&net.starts.first().is_none_or(|p|components[(p.2*width+p.1)as usize]==s.2)
+                &&if faction==0 {s.0<width/2-24} else {s.0>width/2+24})
                 .max_by(|a,b|(a.3-((a.0 as f64-target_x).hypot(a.1 as f64-target_y))*0.08).total_cmp(&(b.3-((b.0 as f64-target_x).hypot(b.1 as f64-target_y))*0.08)));
             if let Some(s)=choice {net.starts.push((faction,s.0,s.1));}
         }}
@@ -421,15 +426,48 @@ pub fn progress(world:&mut World,elapsed:f64,population:f64,housing:f64,food:f64
 /// grass rectangle. Foundations are completed by ordinary builders.
 pub fn equipment(world:&mut World)->*const f64 {
     let mut net=world.resource_mut::<Scenarios>();let mut rows=Vec::new();
+    let tower_spacing = (crate::combat::WOODEN_TOWER_RANGE * 2.5).ceil() as i32;
     for faction in 0..2 {let wall=net.width/2+if faction==0 {-11} else {10};
+        let direction = if faction == 0 { -1 } else { 1 };
+        let (tower_x, first, last) = frontier_tower_line(&net, wall, direction, tower_spacing);
         for y in 1..net.height-1 {if net.flags(wall,y)&2==0 {continue;}
             rows.extend([b::WALL as f64,faction as f64,wall as f64,y as f64,0.0,0.0,0.0]);
-            let rear=wall+if faction==0 {-3} else {3};
-            if y%12==0&&net.flags(rear,y)&2!=0 {rows.extend([b::WOODEN_TOWER as f64,faction as f64,rear as f64,y as f64,0.0,0.0,0.0]);}
-            if y%12==6&&net.flags(rear,y)&2!=0 {rows.extend([b::BALLISTA as f64,faction as f64,rear as f64,y as f64,0.0,0.0,0.0]);}
+            let rear=wall+3*direction;
+            if y%tower_spacing==(first+tower_spacing/2)%tower_spacing&&net.flags(rear,y)&2!=0 {
+                rows.extend([b::BALLISTA as f64,faction as f64,rear as f64,y as f64,0.0,0.0,0.0]);
+            }
+        }
+        if first > 0 {
+            for y in (first..=last).step_by(tower_spacing as usize) {
+                rows.extend([b::WOODEN_TOWER as f64, faction as f64, tower_x as f64, y as f64, 0.0, 0.0, 0.0]);
+            }
         }
     }
     net.output=vec![(rows.len()/7)as f64];net.output.extend(rows);net.output.as_ptr()
+}
+
+/// Shift the line and its starting row to find consecutive dry, vacant
+/// stations while keeping the actual distance between them fixed.
+fn frontier_tower_line(net: &Scenarios, wall: i32, rear: i32, spacing: i32) -> (i32, i32, i32) {
+    let mut best = (0, i32::MIN, i32::MIN);
+    let mut line = (wall + 3 * rear, 0, 0);
+    let mut lengths = vec![0; net.height as usize];
+    for setback in 2_i32..=9 {
+        lengths.fill(0);
+        let x = wall + setback * rear;
+        for y in 1..net.height - 1 {
+            if net.flags(x, y) & (2 | 32) != 2 { continue; }
+            let length = 1 + if y > spacing { lengths[(y - spacing) as usize] } else { 0 };
+            lengths[y as usize] = length;
+            let first = y - (length - 1) * spacing;
+            let score = (length, -(setback - 3).abs(), -(first + y - net.height).abs());
+            if score > best {
+                best = score;
+                line = (x, first, y);
+            }
+        }
+    }
+    line
 }
 pub fn city_claim(world:&mut World,scenario:u32,x:i32,y:i32,radius:f64,width:i32,height:i32)->*const f64 {
     let mut claim=vec![0.0;5];

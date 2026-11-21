@@ -45,7 +45,9 @@ pub fn constant(index: u32, class: u32) -> f64 {
     match index { 0 => BUILD, 1 => UPKEEP, 2 => BOUNTY, 3 => CITY_POPULATION, 4 => 90.0, 5 => 30.0,
         6 => GALLEY_SPEED * 1.15_f64.powi(class.min(2) as i32), 7 => (class.min(2) + 2) as f64,
         8 => [900.0, 1100.0, 1400.0][class.min(2) as usize], 9 => MARINES,
-        10 => 2.0 * (HULL_HALF_SPINE + HULL_RADIUS), 11 => 2.0 * HULL_RADIUS, _ => f64::NAN }
+        10 => 2.0 * (HULL_HALF_SPINE + HULL_RADIUS), 11 => 2.0 * HULL_RADIUS,
+        12 => weapon_stats(class).map_or(0.0, |stats| stats.0),
+        13 => marine_stats(class).map_or(0.0, |stats| stats.0), _ => f64::NAN }
 }
 // Tech mask: sailing, lateen sails, naval engineering, siege engines,
 // gunpowder, archery.
@@ -70,7 +72,10 @@ impl Default for Gunner {
     fn default() -> Self { Self { target: None, angle: 0.0, fired: -1000.0, next: 0.0 } }
 }
 fn weapon_stats(kind: u32) -> Option<(f64, f64, f64)> {
-    match kind { BALLISTA => Some((12.0,28.0,3.0)), CANNON => Some((14.0,80.0,5.0)), _ => None }
+    match kind { BALLISTA => Some((12.0,28.0,3.0)), CANNON => Some((14.0 * 2.0 / 3.0,80.0,5.0)), _ => None }
+}
+fn marine_stats(kind: u32) -> Option<(f64, f64, f64)> {
+    match kind { ARCHER => Some((6.0,3.0,1.8)), MUSKETMAN => Some((7.0,5.0,2.5)), _ => None }
 }
 fn gun_origin(s: &Ship, slot: usize) -> (f64,f64) {
     let (side,forward) = if slot < 4 {
@@ -85,7 +90,7 @@ fn gun_origin(s: &Ship, slot: usize) -> (f64,f64) {
 fn gun_stats(s:&Ship, slot:usize) -> Option<(f64,f64,f64)> {
     if slot<4 { return weapon_stats(s.weapons[slot]); }
     if slot-4 >= (s.crew/100.0).ceil()as usize { return None; }
-    match s.marine { ARCHER => Some((6.0,3.0,1.8)), MUSKETMAN => Some((7.0,5.0,2.5)), _ => None }
+    marine_stats(s.marine)
 }
 // The outward contact normal identifies the reinforced prow, stern or broadside.
 fn impact_exposure(angle:f64,nx:f64,ny:f64)->f64 {
@@ -628,7 +633,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                 }
             }
             let until=faction_info.get(&s.faction).map_or(0.0, |row| row.1);
-            let top=super::fisheries::speed(until,now,constant(6,s.class))*if s.funded{1.0}else{0.4};
+            let top=super::fisheries::speed(until,now,constant(6,s.class))*crate::combat::upkeep_combat_multiplier(s.funded);
             if s.anchored { s.speed=0.0; continue; }
             let mut remaining=dt;
             while remaining>0.000001{let elapsed=remaining.min(0.05);remaining-=elapsed;
@@ -696,7 +701,8 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
         let by_id: BTreeMap<_,_> = snapshot.iter().enumerate().map(|(i,ship)|(ship.id,i)).collect();
         for i in 0..ships.len() {
             let a=&snapshot[i];
-            if a.hp<=0.0||now<a.ready||!a.funded {continue;}
+            if a.hp<=0.0||now<a.ready {continue;}
+            let funded = crate::combat::upkeep_combat_multiplier(a.funded);
             let veterancy=1.0+0.1*(a.kills/2.0).floor().min(5.0);
             for slot in 0..12 {
                 let Some((range,damage,reload))=gun_stats(a,slot) else {continue;};
@@ -708,7 +714,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                 if now<ships[i].guns[slot].next||(x-tx).hypot(y-ty)>range||net.mountains.0.first_blocked(x,y,tx,ty,false).is_some() {continue;}
                 ships[i].guns[slot].next=now+reload;ships[i].guns[slot].fired=now;
                 if let Some(j)=sea{
-                    let damage = damage * veterancy;
+                    let damage = damage * veterancy * funded;
                     if slot >= 4 && ships[j].crew > 0.0 {
                         ships[j].crew = (ships[j].crew - damage).max(0.0);
                     } else {
@@ -719,7 +725,7 @@ pub fn step(world:&mut World,count:usize,factions:usize,targets:usize,now:f64,dt
                     }
                     ships[j].last_attacker=a.faction;ships[j].last_ship=a.id;
                 }else if let Some(t)=land{
-                    shots.extend([a.id as f64,t.id as f64,slot as f64,crate::combat::attack_damage(damage*veterancy,t.defense)]);
+                    shots.extend([a.id as f64,t.id as f64,slot as f64,crate::combat::attack_damage(damage*veterancy,t.defense)*funded]);
                 }
             }
         }

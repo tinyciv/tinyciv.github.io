@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MARAUDER_LEADER_LOSS_MORALE, MARAUDER_LEADER_LOSS_RADIUS, recordBattleDeath } from '../src/game/battle-morale';
+import { MARAUDER_LEADER_LOSS_MORALE, MARAUDER_LEADER_LOSS_RADIUS, MARAUDER_MAX_MORALE, recordBattleDeath } from '../src/game/battle-morale';
 import { entityStore } from '../src/game/entity-store';
 import { entityVisible } from '../src/game/fog';
 import { beginUnitFrame, endUnitFrame } from '../src/game/spatial';
@@ -8,7 +8,7 @@ import type { Building, GameState, Unit } from '../src/game/types';
 
 const idle = { up: false, down: false, left: false, right: false };
 const unit = (id: number, faction = -2, x = 20.5, y = 12.5): Unit => ({
-  id, faction, x, y, kind: 'warrior', hp: 100, maxHp: 100, morale: 100,
+  id, faction, x, y, kind: 'warrior', hp: 100, maxHp: 100, morale: faction === -2 ? MARAUDER_MAX_MORALE : 100,
   attack: 0, defense: 0, speed: 0, range: 1.1, order: 'hold', cooldown: 0,
   lastCombat: -60, moving: false, facing: 0, attackTime: 0,
 });
@@ -43,9 +43,10 @@ describe('marauder commander death morale', () => {
     if (indexed) beginUnitFrame(state);
     try { recordBattleDeath(state, commander); }
     finally { if (indexed) endUnitFrame(state); }
-    expect(close.morale).toBe(100 - MARAUDER_LEADER_LOSS_MORALE);
-    expect(edge.morale).toBe(60);
-    for (const unaffected of [outside, civilian, reserve, player, rival, neutral, dead]) expect(unaffected.morale).toBe(100);
+    expect(close.morale).toBe(40);
+    expect(edge.morale).toBe(40);
+    for (const unaffected of [outside, civilian, reserve, dead]) expect(unaffected.morale).toBe(MARAUDER_MAX_MORALE);
+    for (const unaffected of [player, rival, neutral]) expect(unaffected.morale).toBe(100);
     expect(state.casualties).toHaveLength(1);
   });
 
@@ -72,7 +73,7 @@ describe('marauder commander death morale', () => {
     recordBattleDeath(state, { ...unit(10), hp: 0 });
     recordBattleDeath(state, { ...unit(12, 0), hp: 0, marauderLeader: true });
     recordBattleDeath(state, { ...unit(13, 1), kind: 'leader', hp: 0 });
-    expect(survivor.morale).toBe(100);
+    expect(survivor.morale).toBe(MARAUDER_MAX_MORALE);
   });
 
   it.each(['melee', 'javelin', 'arrow', 'tower', 'orphaned projectile'] as const)('applies once through a real %s death and persists through subsequent morale updates', cause => {
@@ -97,14 +98,15 @@ describe('marauder commander death morale', () => {
     for (let step = 0; step < 10 && commander.hp > 0; step++) updateGame(state, .1, idle);
     expect(commander.hp).toBe(0);
     expect(state.casualties?.filter(event => event.unit === commander.id)).toHaveLength(1);
-    expect(survivor.morale).toBeGreaterThanOrEqual(60); expect(survivor.morale).toBeLessThan(62);
-    expect(distant.morale).toBe(100);
+    const shockedMorale = MARAUDER_MAX_MORALE - MARAUDER_LEADER_LOSS_MORALE;
+    expect(survivor.morale).toBeGreaterThanOrEqual(shockedMorale); expect(survivor.morale).toBeLessThan(shockedMorale + 2);
+    expect(distant.morale).toBe(MARAUDER_MAX_MORALE);
     if (attacker) attacker.attack = 0;
     const afterDeath = survivor.morale;
     updateGame(state, .5, idle); recordBattleDeath(state, commander);
     expect(state.units).not.toContain(commander);
     expect(survivor.morale).toBeGreaterThanOrEqual(afterDeath);
-    expect(survivor.morale).toBeLessThan(70);
+    expect(survivor.morale).toBeLessThan(shockedMorale + 10);
     expect(state.casualties?.filter(event => event.unit === commander.id)).toHaveLength(1);
   });
 });

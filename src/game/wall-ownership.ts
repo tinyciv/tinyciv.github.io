@@ -107,6 +107,7 @@ export function updateWallOwnership(state: GameState): boolean {
             building.cultureAtFounding = lifetimeCulture(winner);
         }
         building.faction = owner;
+        if (owner >= 0) delete building.borderClaimSuspended;
         applyDefenseResearch(building, winner);
         if (isFarmKind(building.kind)) {
             if (owner === NEUTRAL_WALL_FACTION) building.farmAbandonedAt = state.time;

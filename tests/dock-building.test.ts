@@ -37,7 +37,7 @@ describe('coastal dock placement', () => {
       { ...building(8, 'dock', 5, 10), dockFacing: 0 },
       { ...building(9, 'dock', 12, 10), dockFacing: 3 },
       { ...building(10, 'house', 14, 2), hp: 0 });
-    state.world.tiles[8 * 18 + 8].ridge = 1;
+    state.world.tiles[8 * 18 + 8].rockRelief = 0;
     const query = createDockShoreCrossingQuery(state);
     for (const proposed of [undefined, { x: 8, y: 8, dockFacing: 2 as const }]) {
       for (let y = 0; y < 14; y++) for (let x = 0; x < 18; x++) {

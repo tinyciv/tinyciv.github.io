@@ -233,6 +233,12 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
     }
   }
 
+  const expedition = factionEmpireGoal(state,leader.faction);
+  if (expedition?.kind === 1 && !closeEnemies.length) {
+    abandonCampaign();
+    return make('patrol', expedition.point);
+  }
+
   const service = prepareFactionArmy(state, leader, palace);
   if (service && !memory.campaign && !closeEnemies.length) return make('patrol', service);
 
@@ -257,7 +263,6 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
         ?? closeEnemies.slice().sort((a, b) => distance(a, leader) - distance(b, leader) || a.id - b.id)[0];
       return make('attack', contact, contact.id);
     }
-    const expedition = factionEmpireGoal(state,leader.faction);
     if (expedition?.kind === 2) return make('attack',expedition.point);
     const defenses = nearbyBuildings(state,target,12)
       .filter(building=>buildingReady(building)&&['palisade','wall','woodenTower','tower','fort'].includes(building.kind)&&queries.hostile(leader.faction,building.faction)&&distance(building,target)<=10
@@ -268,7 +273,6 @@ function plan(state: GameState, leader: Unit, palace: Building, memory: Strategy
   };
   const underway = campaignMission();
   if (underway) return underway;
-  const expedition = factionEmpireGoal(state,leader.faction);
   if(expedition && !closeEnemies.length) return make('patrol',expedition.point);
 
   const huntExpired = memory.huntingSince !== undefined && state.time - memory.huntingSince > HUNT_SECONDS;
@@ -432,7 +436,8 @@ export function updateFactionStrategies(state: GameState, queries: FactionStrate
       ?? palaces.sort((a, b) => distance(a, leader ?? a) - distance(b, leader ?? b))[0];
     if (!palace) { memories.delete(faction.id); continue; }
     if (!memory) { memory = { policyCode: policy.code, nextAt: -Infinity, patrolIndex: 0 }; memories.set(faction.id, memory); }
-    const offensive = updateFactionOffensive(state, faction, leader, palace, queries.visible);
+    const founding = factionEmpireGoal(state, faction.id)?.kind === 1;
+    const offensive = founding ? undefined : updateFactionOffensive(state, faction, leader, palace, queries.visible);
     if (offensive) {
       memory.campaign = undefined; memory.recovering = false; memory.huntingSince = undefined; memory.lastContact = undefined;
       memory.regroupSince = undefined; memory.formationPosition = undefined;
