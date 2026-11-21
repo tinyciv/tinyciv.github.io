@@ -5,6 +5,7 @@ import { updateGame, commandAttackAt } from '../src/game/simulation';
 import { DEFAULT_RESEARCH_ALLOCATION, researchStatus, updateResearch } from '../src/game/research';
 import { updateTreasureChests } from '../src/game/treasure';
 import { updateTradeRoutes, updateMerchant } from '../src/game/trade';
+import { BUILDING_UPKEEP, SETTLEMENT_MAINTENANCE } from '../src/game/maintenance';
 const idle={up:false,down:false,left:false,right:false};
 const points=(state: ReturnType<typeof fixture>)=>Object.values(state.factions[0].research?.progress??{}).reduce((a,b)=>a+(b??0),0);
 
@@ -13,11 +14,12 @@ describe('research receives every positive gold source',()=>{
   const state=fixture(),faction=state.factions[0]; state.units[1].hp=0;
   Object.assign(state.buildings[0],{capacity:20,unhousedResidents:20,governorPermissions:{farms:false,housing:false}});
   entityStore(state).buildings.add({...building(40,'palace',23,15),capacity:4,unhousedResidents:0,governorPermissions:{farms:false,housing:false}});
-  // A second empty city costs25, exceeding the twenty-person city's tax receipts.
+  // Upkeep on the library and second city reduces the net income for this tick.
   state.time=29.9;updateGame(state,.1,idle);
   const gross=faction.incomeTotals?.gold??0; expect(gross).toBe(14); updateResearch(state,1000);
   const science = gross * DEFAULT_RESEARCH_ALLOCATION;
-  expect(points(state)).toBeCloseTo(science); expect(faction.gold).toBeCloseTo(2000 + gross - science - 25);
+  expect(points(state)).toBeCloseTo(science);
+  expect(faction.gold).toBeCloseTo(2000 + gross - science - SETTLEMENT_MAINTENANCE - BUILDING_UPKEEP.library!);
  });
  it('splits a treasure exactly once and leaves its displayed gross value unchanged',()=>{
   const state=fixture(),leader=state.units[0];state.treasures=[{id:1,x:Math.floor(leader.x),y:Math.floor(leader.y),rewardGold:200}];

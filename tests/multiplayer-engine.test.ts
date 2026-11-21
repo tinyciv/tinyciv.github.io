@@ -37,15 +37,19 @@ function fixture(): GameState {
 }
 
 describe('authoritative two-human engine', () => {
-  it('creates two equally funded human capitals at separated starting sites without rival governors or villages', () => {
+  it('creates two equally funded human capitals at separated starting sites alongside neutral villages', () => {
     const state = createDuelGame(world(), ['Host', 'Guest'], ['#3366ff', '#dd3333']);
-    expect(state.factions.map(f => [f.id, f.name, f.gold, f.food, f.population])).toEqual([
+    const realms = state.factions.filter(faction => faction.villageId === undefined);
+    expect(realms.map(f => [f.id, f.name, f.gold, f.food, f.population])).toEqual([
       [0, 'Host', 300, 500, 20], [1, 'Guest', 300, 500, 20],
     ]);
     expect(state.buildings.filter(b => b.kind === 'palace').map(b => b.faction)).toEqual([0, 1]);
     expect(state.buildings.filter(b => b.kind === 'library' && !b.construction).map(b => b.faction)).toEqual([0, 1]);
     expect(state.multiplayer?.humanFactionIds).toEqual([0, 1]);
-    expect(state.villages ?? []).toEqual([]);
+    const villages = state.villages ?? [];
+    expect(villages.length).toBeGreaterThan(0);
+    expect(state.factions.filter(faction => faction.villageId !== undefined).map(faction => faction.villageId))
+      .toEqual(villages.map(village => village.id));
     expect(state.world.spawns).toEqual([world().spawns[0], world().spawns[1]]);
     expect(state.units.filter(u => u.kind === 'leader').every(u => u.humanControlled)).toBe(true);
   });

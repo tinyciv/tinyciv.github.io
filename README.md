@@ -34,7 +34,7 @@ Rival AI defaults to the expansionist policy: earlier housing, new towns, Forts,
 
 ## Multiplayer
 
-Choose **Multiplayer**, enter a player name and faction color, and create a game. A second player selects that game and joins. Both players check **Ready**, then the host chooses **Start match**. Each player controls a separate faction with equal starting resources and forces; the two realms start at war. Capturing or destroying the opposing faction’s last settlement wins the duel. A fallen Leader returns after ten real seconds while a settlement survives. There are no AI-controlled rival factions or neutral villages in this mode.
+Choose **Multiplayer**, enter a player name and faction color, and create a game. A second player selects that game and joins. Both players check **Ready**, then the host chooses **Start match**. Each player controls a separate faction with equal starting resources and forces; the two realms start at war. Capturing or destroying the opposing faction’s last settlement wins the duel. A fallen Leader returns after ten real seconds while a settlement survives. Neutral villages offer quests during the two-player duel.
 
 The AWS server owns the simulation, economy, combat, and command validation. Online matches run at normal speed; opening a menu does not pause the opponent. A disconnected player has 60 seconds to reconnect to their faction while the match pauses. Leaving forfeits the match. Multiplayer never overwrites the single-player save.
 

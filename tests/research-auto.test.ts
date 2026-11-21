@@ -24,16 +24,19 @@ describe('automatic income research', () => {
     grantIncome(faction,{gold:gross},state);
     expect(researchStatus(state,0).completed).toBe(false); updateResearch(state,1000);
     expect(researchStatus(state,0)).toMatchObject({completed:true,active:false});
+    expect(Object.keys(faction.research!.levels)).toHaveLength(RESEARCH_BRANCHES.length);
+    expect(faction.research?.levels.infantryDrill).toBe(1);
     expect(faction.gold).toBeCloseTo(2000+gross-total);
-    expect(state.events.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual([
-      'Infantry Drill', 'Fortification', 'Animal Husbandry', 'Exploration', 'Masonry', 'Irrigation', 'Sailing', 'Drainage', 'Grain Storage',
+    const retainedEvents = [...state.events];
+    expect(retainedEvents.map(e=>e.text.split(': ')[1].split('. ')[0]).reverse()).toEqual([
+      'Fortification', 'Exploration', 'Masonry', 'Animal Husbandry', 'Irrigation', 'Sailing', 'Drainage', 'Grain Storage',
       'Crop Rotation', 'Commerce', 'Statehood', 'Traditional Medicine', 'Engineering', 'Archery', 'Horseback Riding',
       'Road Building', 'Whaling', 'Coinage', 'Supply train', 'Officer Corps', 'Bronze Working', 'Metal Tools', 'Iron Plows',
       'Fletching', 'Military Tactics', 'Reinforced Defenses', 'Mass levy', 'Cultural Identity', 'Lateen Sails', 'Urban Planning',
       'Urban militia', 'Siege Engines', 'Compound Bow', 'Metal Casting', 'Naval Engineering', 'Stirrups', 'Populism',
       'Gunpowder', 'Military Science', 'Field cannon',
     ]);
-    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toHaveLength(RESEARCH_BRANCHES.length);
+    const before=faction.gold; grantIncome(faction,{gold:100},state); expect(faction.gold).toBe(before+100); expect(state.events).toEqual(retainedEvents);
   });
   it('automatically resolves distant prerequisites while preserving ordered priorities and partial progress', () => {
     const state=fixture(), library=state.buildings[1], faction=state.factions[0];

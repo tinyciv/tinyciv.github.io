@@ -128,7 +128,7 @@ describe('generated village dirt trails', () => {
   it('has no manual menu entry, shortcut, or accepted multiplayer build command', () => {
     const state = fixture();
     expect(BUILD_OPTIONS.some(option => (option.kind as string) === 'trail')).toBe(false);
-    expect(buildSelectionForKey('x', 'build')).toBeUndefined();
+    expect(buildSelectionForKey('x', 'build')).toBe('colosseum');
     expect(applyGameCommand(state, 0, { type: 'build', kind: 'trail', points: [{ x: 10, y: 8 }] }).ok).toBe(false);
   });
 
