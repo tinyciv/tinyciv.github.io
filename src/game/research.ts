@@ -20,7 +20,7 @@ export type { ResearchBranchId } from './types';
 export interface ResearchTier { name: string; points: number; description: string }
 export interface ResearchBranch { id: ResearchBranchId; label: string; prerequisites: readonly ResearchBranchId[]; tiers: readonly ResearchTier[]; fixedCost?: boolean; costScale?: number }
 const BASE_RESEARCH_BRANCHES: readonly ResearchBranch[] = [
-  { id: 'woodenTower', label: 'Fortification', prerequisites: [], fixedCost: true, tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, militia, and town upgrades to Keeps with ten times the health.' }] },
+  { id: 'woodenTower', label: 'Fortification', prerequisites: [], fixedCost: true, tiers: [{ name: 'Fortification', points: 24, description: 'Unlocks wooden towers, guard posts, and town upgrades to Keeps with ten times the health.' }] },
   { id: 'wall', label: 'Masonry', prerequisites: ['woodenTower'], costScale: .5, tiers: [{ name: 'Masonry', points: 24, description: 'Unlocks walls and gates.' }] },
   { id: 'monument', label: 'Statehood', prerequisites: ['grainStorage'], tiers: [{ name: 'Statehood', points: 42, description: 'Unlocks culture-producing monuments.' }] },
   { id: 'blacksmith', label: 'Bronze Working', prerequisites: ['wall'], tiers: [{ name: 'Bronze Working', points: 87, description: 'Unlocks blacksmiths. Armor/weapon upgrades require three additional developed iron tiles per purchase across both tracks.' }] },

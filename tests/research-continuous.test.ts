@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { grantIncome } from '../src/game/resource-income';
 import { goldFlowSummary } from '../src/game/gold-ledger';
-import { researchCost, researchStatus, prioritizeResearch, setResearchAllocation, updateResearch, RESEARCH_BRANCHES } from '../src/game/research';
+import { DEFAULT_RESEARCH_ALLOCATION, researchCost, researchStatus, prioritizeResearch, setResearchAllocation, updateResearch, RESEARCH_BRANCHES } from '../src/game/research';
 import { fixture } from './helpers/research-income';
 
 const reserve = (state: ReturnType<typeof fixture>) => {
@@ -36,7 +36,9 @@ describe('continuous, paid Science', () => {
   });
 
   it('limits enormous trade deliveries to one percentage point per two simulation steps', () => {
-    const state = fixture(), faction = state.factions[0]; grantIncome(faction, { gold: 100000 }, state, 'trade');
+    const state = fixture(), faction = state.factions[0];
+    const total = RESEARCH_BRANCHES.reduce((sum, branch) => sum + researchCost(faction, branch.id), 0);
+    grantIncome(faction, { gold: (total + 10) / DEFAULT_RESEARCH_ALLOCATION }, state, 'trade');
     for (let index = 1; index < 200; index++) {
       step(state);
       expect(faction.research?.progress.infantryDrill).toBeCloseTo(index * .05, 8);
@@ -44,7 +46,6 @@ describe('continuous, paid Science', () => {
     }
     step(state); expect(faction.research?.levels.infantryDrill).toBe(1);
     expect(researchStatus(state, 0).focus).toBe('woodenTower');
-    const total = RESEARCH_BRANCHES.reduce((sum, branch) => sum + researchCost(faction, branch.id), 0);
     expect(work(state) + reserve(state)).toBeCloseTo(total, 8);
     const treasury = faction.gold; grantIncome(faction, { gold: 200 }, state, 'trade');
     expect(faction.gold).toBeCloseTo(treasury + 200, 8); // The already fully funded tree takes no more gold.
@@ -73,13 +74,17 @@ describe('continuous, paid Science', () => {
   });
 
   it('refunds a fully funded tree’s excess when a scholar alliance reduces its cost, without treating the refund as income', () => {
-    const state = fixture(), faction = state.factions[0]; grantIncome(faction, { gold: 100000 }, state, 'trade');
-    const originalCost = reserve(state), treasury = faction.gold;
+    const state = fixture(), faction = state.factions[0];
+    const originalCost = RESEARCH_BRANCHES.reduce((sum, branch) => sum + researchCost(faction, branch.id), 0);
+    const gross = (originalCost + 10) / DEFAULT_RESEARCH_ALLOCATION;
+    grantIncome(faction, { gold: gross }, state, 'trade');
+    expect(reserve(state)).toBeCloseTo(originalCost, 8);
+    const treasury = faction.gold;
     faction.villageBonuses = { food: 0, trade: 0, construction: 0, research: 1 };
     step(state);
     expect(work(state) + reserve(state)).toBeCloseTo(originalCost / 2, 8);
     expect(faction.gold).toBeCloseTo(treasury + originalCost / 2, 8);
-    expect(faction.incomeTotals?.gold).toBe(100000);
+    expect(faction.incomeTotals?.gold).toBe(gross);
     expect(goldFlowSummary(state, faction).inputs.find(row => row.category === 'refunds')?.amount).toBeCloseTo(originalCost / 2, 8);
     updateResearch(state, 1000); expect(researchStatus(state, 0).completed).toBe(true); expect(reserve(state)).toBeCloseTo(0, 8);
   });

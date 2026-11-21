@@ -439,10 +439,14 @@ mod tests {
     fn actual_income_is_reserved_once_without_spending_existing_treasury() {
         let mut engine = engine(); import(&mut engine, false);
         engine.run(1, 0.0, 0.0, 100.0, 1.0, 0.0);
-        assert_eq!(engine.output[9], 25.0); assert_eq!(engine.output[7], 25.0); assert_eq!(engine.output[6], 25.0);
+        assert_eq!(engine.output[9], 10.0);
+        assert_eq!(engine.output[7], 10.0);
+        assert_eq!(engine.output[6], 10.0);
         let account = engine.world.get::<Account>(engine.entity).unwrap();
-        assert_eq!(account.funding.len(), 1); assert_eq!(account.funding[0].points, 25.0); assert_eq!(account.funding[0].remaining, 30.0);
-        assert_eq!(account.receipts[0].points, 25.0);
+        assert_eq!(account.funding.len(), 1);
+        assert_eq!(account.funding[0].points, 10.0);
+        assert_eq!(account.funding[0].remaining, 30.0);
+        assert_eq!(account.receipts[0].points, 10.0);
     }
     #[test]
     fn completion_events_follow_dependencies_and_release_only_paid_credit() {

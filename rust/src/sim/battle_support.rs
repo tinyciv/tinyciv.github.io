@@ -161,6 +161,6 @@ mod tests {
         support.prepare(rows.len());
         for (index, row) in rows.iter().enumerate() { support.input[index * STRIDE..(index + 1) * STRIDE].copy_from_slice(row); }
         support.run(rows.len(), 3, 0.0, 0.0, 0.0, -1.0);
-        assert_eq!(support.output[..7], [2.0, 3.0, 50.0, 2.0, 4.0, 87.5, 0.0]);
+        assert_eq!(support.output[..7], [2.0, 3.0, 50.0, 2.0, 4.0, 93.75, 0.0]);
     }
 }

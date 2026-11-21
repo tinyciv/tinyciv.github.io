@@ -258,7 +258,7 @@ Infantry Drill costs 10 Science and Fortification costs 24. Technologies without
 
 | Technology | Prerequisites | Science | Effect |
 | --- | --- | --- | --- |
-| Fortification | None | 24 | Wooden towers, guard posts, militia and Keeps |
+| Fortification | None | 24 | Wooden towers, guard posts and Keeps |
 | Masonry | Fortification | 56 | Walls and gates |
 | Engineering | Masonry | 126 | Extends bridges from two to eight water tiles |
 | Reinforced Defenses | Metal Tools | 273 | +30% wall and tower health, preserving current health percentage |
