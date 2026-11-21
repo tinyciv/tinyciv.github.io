@@ -113,7 +113,16 @@ try {
   await a.until(() => !a.state.paused && !b.state.paused);
   assert.equal(b.state.playerFaction, 1); assert.equal((await b.command({ type: 'stance', stance: 'aggressive' })).ok, true);
   check('Disconnect pauses the match; authenticated reconnect restores faction and command sequence');
+  const afterLeaveNonce = 1;
   b.send({ type: 'leave' });
+  b.send({ type: 'input', input: { right: false, left: false, up: false, down: false } });
+  b.send({ type: 'sync' });
+  b.send({ type: 'ping', nonce: afterLeaveNonce });
+  const reply = await b.wait(message => message.type === 'error' || (message.type === 'pong' && message.nonce === afterLeaveNonce));
+  assert.deepEqual(reply, { type: 'pong', nonce: afterLeaveNonce }, 'Late gameplay input and sync after leaving must not produce an error');
+  b.send({ type: 'start' });
+  assert.equal((await b.wait(message => message.type === 'error')).message, 'Join a game first.');
+  check('Leaving ignores late gameplay traffic and rejects actions that require a room');
   await a.until(() => a.state.gameOver && a.state.victory);
   check('Leaving an active match awards victory to the remaining player');
   a.send({ type: 'leave' }); await delay(200);

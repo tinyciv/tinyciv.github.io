@@ -126,7 +126,11 @@ function handle(session: Session, message: any): void {
     target.info.players.push({ id: session.id, name: safeText(message.name, 'Player 2'), faction: 1, color: selectedColor, ready: false, connected: true });
     target.info.players.forEach(player => player.ready = false); session.roomId = target.info.id; session.seq = 0; roomChanged(target); return;
   }
-  if (!room || !player) { error(session, 'Join a game first.'); return; }
+  if (!room || !player) {
+    // A heartbeat or resync can arrive before the client receives the leave acknowledgement.
+    if (message.type !== 'input' && message.type !== 'sync') error(session, 'Join a game first.');
+    return;
+  }
   if (message.type === 'profile' && room.info.phase === 'waiting') {
     const selectedColor = color(message.color);
     if (room.info.players.some(other => other.id !== player.id && other.color === selectedColor)) { error(session, 'That color is already selected.'); return; }
